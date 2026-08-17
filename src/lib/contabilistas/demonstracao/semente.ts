@@ -286,6 +286,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "online",
       assunto: "Fecho do trimestre e retenções em falta.",
       localOuLigacao: "https://meet.exemplo-demonstracao.pt/marta",
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -6, 10),
     },
     {
@@ -298,6 +300,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "presencial",
       assunto: "Clientes em Espanha: registo no VIES e recibos sem IVA.",
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: horasAtras(agora, 5),
     },
     {
@@ -310,6 +314,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "online",
       assunto: null,
       localOuLigacao: "https://meet.exemplo-demonstracao.pt/marta",
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -2, 9),
     },
     {
@@ -322,6 +328,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "presencial",
       assunto: "Preparar a entrega do IRS.",
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: horasAtras(agora, 30),
     },
     // O histórico. Serve as contas da ficha de cliente e o cartão.
@@ -334,7 +342,12 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       estado: "realizada",
       modalidade: "presencial",
       assunto: "Revisão das despesas do semestre.",
-      localOuLigacao: "Rua de exemplo, 1 · Matosinhos",
+      // Uma morada com ponto: é o que a demonstração tem de mostrar, porque
+      // é o que o painel real passou a permitir. A rua existe (Matosinhos);
+      // o consultório é de demonstração, como todo o resto destes dados.
+      localOuLigacao: "Rua Brito Capelo, 4450-073 Matosinhos",
+      localLat: 41.1836,
+      localLng: -8.6929,
       criadoEm: instante(agora, -25, 9),
     },
     {
@@ -347,6 +360,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "online",
       assunto: null,
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -55, 9),
     },
     {
@@ -359,6 +374,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "online",
       assunto: null,
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -40, 12),
     },
     {
@@ -371,6 +388,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "presencial",
       assunto: null,
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -16, 11),
     },
     {
@@ -383,6 +402,8 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       modalidade: "online",
       assunto: null,
       localOuLigacao: null,
+      localLat: null,
+      localLng: null,
       criadoEm: instante(agora, -20, 10),
     },
   ];

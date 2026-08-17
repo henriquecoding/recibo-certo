@@ -27,7 +27,7 @@ const consulta = (cliente: string, inicio: string, estado: Agendamento["estado"]
   estado,
   modalidade: "online",
   assunto: null,
-  localOuLigacao: null,
+  localOuLigacao: null, localLat: null, localLng: null,
   criadoEm: inicio,
 });
 

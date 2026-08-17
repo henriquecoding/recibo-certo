@@ -571,8 +571,17 @@ function paraAgendamento(l: Linha): Agendamento {
     modalidade: l.modalidade as Modalidade,
     assunto: (l.assunto as string | null) ?? null,
     localOuLigacao: (l.local_ou_ligacao as string | null) ?? null,
+    localLat: numeroOuNulo(l.local_lat),
+    localLng: numeroOuNulo(l.local_lng),
     criadoEm: (l.criado_em as string) ?? "",
   };
+}
+
+/** `double precision` pode chegar como número ou como texto do PostgREST. */
+function numeroOuNulo(v: unknown): number | null {
+  if (v === null || v === undefined || v === "") return null;
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -689,17 +698,34 @@ export interface ConclusaoDaConsulta {
   cupaoId?: string | null;
 }
 
+/**
+ * O local com que uma consulta é confirmada, ou corrigida depois.
+ *
+ * O ponto viaja com a morada e nunca sozinho: a RPC recusa meia coordenada
+ * com `ponto_incompleto`, e o tipo diz o mesmo antes de sair do browser.
+ */
+export interface LocalEscolhido {
+  texto: string;
+  lat?: number | null;
+  lng?: number | null;
+}
+
 export async function decidirConsulta(
   id: string,
   estado: EstadoAgendamento,
-  localOuLigacao?: string,
+  local?: LocalEscolhido,
   conclusao?: ConclusaoDaConsulta
 ): Promise<{ erro?: string; fidelidade?: FidelidadeAposConsulta | null }> {
   const sb = getSupabase();
 
   const chamada =
     estado === "confirmado"
-      ? sb.rpc("confirmar_consulta", { p_agendamento: id, p_local: localOuLigacao ?? null })
+      ? sb.rpc("confirmar_consulta", {
+          p_agendamento: id,
+          p_local: local?.texto ?? null,
+          p_lat: local?.lat ?? null,
+          p_lng: local?.lng ?? null,
+        })
       : estado === "realizada"
         ? sb.rpc("concluir_consulta", {
             p_agendamento: id,
@@ -729,7 +755,34 @@ const MOTIVO_CONSULTA: Record<string, string> = {
   preco_obrigatorio: "Indica o valor real desta consulta antes de a dar por realizada.",
   cupao_invalido: "Esse benefício não é deste cliente, ou já foi usado.",
   cupao_expirado: "Esse benefício já passou da validade.",
+  ponto_incompleto: "O ponto do mapa ficou a meio. Volta a escolher o local.",
+  local_vazio: "Escreve onde é, ou qual é o link da chamada.",
+  nao_editavel: "Só se muda o local de uma consulta que ainda vai acontecer.",
 };
+
+/**
+ * Corrigir o local sem reconfirmar a consulta.
+ *
+ * Existe porque salas mudam e links expiram: até aqui o campo só se
+ * escrevia no instante da confirmação, e quem confirmasse primeiro ficava
+ * sem maneira de dizer ao cliente onde é. O cliente é avisado.
+ */
+export async function definirLocalConsulta(
+  id: string,
+  local: LocalEscolhido
+): Promise<{ erro?: string }> {
+  const { data, error } = await getSupabase().rpc("definir_local_consulta", {
+    p_agendamento: id,
+    p_local: local.texto,
+    p_lat: local.lat ?? null,
+    p_lng: local.lng ?? null,
+  });
+  if (error) return { erro: error.message };
+
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  if (r.ok) return {};
+  return { erro: MOTIVO_CONSULTA[r.motivo ?? ""] ?? "Não foi possível guardar o local." };
+}
 
 export async function listarAgendamentos(filtro: {
   contabilistaId?: string;

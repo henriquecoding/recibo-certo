@@ -266,7 +266,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       estado: "confirmado",
       modalidade: "online",
       assunto: null,
-      localOuLigacao: null,
+      localOuLigacao: null, localLat: null, localLng: null,
       criadoEm: new Date().toISOString(),
     });
 
@@ -290,7 +290,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       estado: "confirmado",
       modalidade: "online",
       assunto: null,
-      localOuLigacao: null,
+      localOuLigacao: null, localLat: null, localLng: null,
       criadoEm: new Date().toISOString(),
     });
 
@@ -317,7 +317,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       estado: "confirmado",
       modalidade: "online",
       assunto: null,
-      localOuLigacao: null,
+      localOuLigacao: null, localLat: null, localLng: null,
       criadoEm: new Date().toISOString(),
     });
 
@@ -346,7 +346,7 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       estado: "confirmado",
       modalidade: "online",
       assunto: null,
-      localOuLigacao: null,
+      localOuLigacao: null, localLat: null, localLng: null,
       criadoEm: new Date().toISOString(),
     });
 

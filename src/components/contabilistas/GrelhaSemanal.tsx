@@ -17,6 +17,14 @@
 //
 //  A cor diz o ESTADO, que é o que exige ação: por confirmar, confirmada,
 //  fechada. A modalidade vai em ícone, porque é informação e não decisão.
+//  E há uma legenda por baixo: um código de cores sem legenda é um código
+//  que só quem o escreveu sabe ler.
+//
+//  Duas consultas à mesma hora dividem a coluna em vez de se taparem. Não
+//  devia acontecer — a restrição GIST da migração 042 impede o duplo
+//  agendamento — mas acontece com uma cancelada por baixo de uma nova, e
+//  uma agenda que esconde uma consulta atrás de outra é pior do que uma
+//  agenda apertada.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -78,10 +86,12 @@ interface Props {
   agendamentos: Agendamento[];
   /** Qual consulta está a ser escrita agora — desliga-lhe o clique. */
   ocupado: string | null;
+  /** Como tratar cada cliente. Sem isto, a grelha diz «quando» e não «quem». */
+  nomeDoCliente?: (clienteId: string) => string;
   onAbrir: (a: Agendamento) => void;
 }
 
-export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props) {
+export default function GrelhaSemanal({ agendamentos, ocupado, nomeDoCliente, onAbrir }: Props) {
   const [ancora, setAncora] = useState(() => diaLocal(new Date()));
   const [diaMovel, setDiaMovel] = useState(() => diaLocal(new Date()));
   const [agora, setAgora] = useState(() => new Date());
@@ -132,6 +142,17 @@ export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props)
   const minutosAgora = agora.getHours() * 60 + agora.getMinutes();
   const semanaTemHoje = dias.includes(hoje);
 
+  // Canceladas não contam: dizer «5 consultas» quando três foram desmarcadas
+  // é dar uma semana cheia a quem tem uma semana vazia.
+  const vivasNaSemana = useMemo(
+    () =>
+      dias.reduce(
+        (n, dia) => n + (porDia.get(dia) ?? []).filter((a) => !a.estado.startsWith("cancelado")).length,
+        0
+      ),
+    [dias, porDia]
+  );
+
   // Ao abrir, a vista começa perto da hora a que se trabalha, não à
   // meia-noite. Sem isto, uma agenda das 8 às 20 abre sempre no cimo.
   useEffect(() => {
@@ -153,7 +174,11 @@ export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props)
           <h2 className="font-display text-lg leading-tight text-ink sm:text-xl">
             {rotuloSemana(dias)}
           </h2>
-          <p className="mt-0.5 text-xs text-stone-400">Horas de Lisboa</p>
+          <p className="mt-0.5 text-xs text-stone-400">
+            {vivasNaSemana === 0
+              ? "Sem consultas esta semana"
+              : `${vivasNaSemana} ${vivasNaSemana === 1 ? "consulta" : "consultas"} · horas de Lisboa`}
+          </p>
         </div>
 
         <div className="flex shrink-0 items-center gap-1">
@@ -262,6 +287,7 @@ export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props)
                 horaMin={horaMin}
                 minutosAgora={semanaTemHoje && dia === hoje ? minutosAgora : null}
                 ocupado={ocupado}
+                nomeDoCliente={nomeDoCliente}
                 onAbrir={onAbrir}
                 className={visivelNoMovel ? "" : "hidden lg:block"}
               />
@@ -269,12 +295,30 @@ export default function GrelhaSemanal({ agendamentos, ocupado, onAbrir }: Props)
           })}
         </div>
       </div>
+
+      {/* ── Legenda ────────────────────────────────────────────────── */}
+      <ul className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-stone-100 px-4 py-2.5 sm:px-5">
+        {LEGENDA.map(({ estado, rotulo }) => (
+          <li key={estado} className="flex items-center gap-1.5 text-[0.6875rem] text-stone-500">
+            <span className={`h-2 w-2 rounded-full ${TOM[estado].ponto}`} aria-hidden />
+            {rotulo}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
 
+const LEGENDA: { estado: EstadoAgendamento; rotulo: string }[] = [
+  { estado: "pedido", rotulo: "Por confirmar" },
+  { estado: "confirmado", rotulo: "Confirmada" },
+  { estado: "realizada", rotulo: "Realizada" },
+  { estado: "cancelado_cliente", rotulo: "Cancelada" },
+  { estado: "nao_compareceu", rotulo: "Não compareceu" },
+];
+
 function Coluna({
-  dia, hoje, lista, horas, horaMin, minutosAgora, ocupado, onAbrir, className,
+  dia, hoje, lista, horas, horaMin, minutosAgora, ocupado, nomeDoCliente, onAbrir, className,
 }: {
   dia: string;
   hoje: boolean;
@@ -283,9 +327,12 @@ function Coluna({
   horaMin: number;
   minutosAgora: number | null;
   ocupado: string | null;
+  nomeDoCliente?: (clienteId: string) => string;
   onAbrir: (a: Agendamento) => void;
   className: string;
 }) {
+  const disposicao = useMemo(() => distribuir(lista), [lista]);
+
   return (
     <div className={`relative border-l border-stone-100 ${hoje ? "bg-brand/[0.05] dark:bg-brand/[0.09]" : ""} ${className}`}>
       {horas.map((h) => (
@@ -303,7 +350,7 @@ function Coluna({
         </div>
       )}
 
-      {lista.map((a) => {
+      {disposicao.map(({ agendamento: a, coluna, colunas }) => {
         const inicio = minutosDeHora(horaLocal(new Date(a.inicio))) ?? 0;
         const fim = minutosDeHora(horaLocal(new Date(a.fim))) ?? inicio + 60;
         const topo = ((inicio - horaMin * 60) / 60) * ALTURA_HORA;
@@ -311,6 +358,9 @@ function Coluna({
         const altura = Math.max(((fim - inicio) / 60) * ALTURA_HORA, 34);
         const tom = TOM[a.estado] ?? TOM.cancelado_cliente;
         const fechada = a.estado.startsWith("cancelado");
+        const nome = nomeDoCliente?.(a.clienteId);
+        // Duas ao mesmo tempo repartem a largura em vez de se taparem.
+        const largura = 100 / colunas;
 
         return (
           <m.button
@@ -319,8 +369,13 @@ function Coluna({
             layout
             disabled={ocupado === a.id}
             onClick={() => onAbrir(a)}
-            style={{ top: topo, height: altura }}
-            className={`absolute inset-x-1 overflow-hidden rounded-xl border px-2 py-1 text-left transition-shadow hover:shadow-lift disabled:opacity-60 ${tom.caixa}`}
+            style={{
+              top: topo,
+              height: altura,
+              left: `calc(${coluna * largura}% + 0.25rem)`,
+              width: `calc(${largura}% - 0.5rem)`,
+            }}
+            className={`absolute overflow-hidden rounded-xl border px-2 py-1 text-left transition-shadow hover:shadow-lift disabled:opacity-60 ${tom.caixa}`}
           >
             <span className={`flex items-center gap-1 text-[0.6875rem] font-semibold tabular-nums ${tom.texto}`}>
               <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tom.ponto}`} aria-hidden />
@@ -329,13 +384,21 @@ function Coluna({
                 ? <Laptop size={11} className="shrink-0 opacity-70" aria-label="Online" />
                 : <MapPin size={11} className="shrink-0 opacity-70" aria-label="Presencial" />}
             </span>
-            {altura > 44 && (
-              <span className={`mt-0.5 block truncate text-[0.6875rem] leading-tight ${tom.texto} ${fechada ? "line-through" : ""}`}>
-                {a.assunto || rotuloEstado(a.estado)}
+            {/* Quem, antes de o quê: numa agenda cheia é o nome que
+                identifica a consulta, não o assunto. */}
+            {altura > 44 && (nome || a.assunto) && (
+              <span className={`mt-0.5 block truncate text-[0.6875rem] font-medium leading-tight ${tom.texto} ${fechada ? "line-through" : ""}`}>
+                {nome ?? a.assunto}
+              </span>
+            )}
+            {altura > 62 && nome && a.assunto && (
+              <span className={`block truncate text-[0.625rem] leading-tight opacity-75 ${tom.texto}`}>
+                {a.assunto}
               </span>
             )}
             <span className="sr-only">
-              {rotularDia(dia)}, {horaLocal(new Date(a.inicio))} — {rotuloEstado(a.estado)}
+              {rotularDia(dia)}, {horaLocal(new Date(a.inicio))}
+              {nome ? `, ${nome}` : ""} — {rotuloEstado(a.estado)}
             </span>
           </m.button>
         );
@@ -349,6 +412,65 @@ function Coluna({
       )}
     </div>
   );
+}
+
+// ─── Sobreposições ─────────────────────────────────────────────────────
+
+interface Posicionada {
+  agendamento: Agendamento;
+  /** Índice da faixa vertical em que a consulta é desenhada. */
+  coluna: number;
+  /** Quantas faixas o grupo sobreposto a que pertence ocupa. */
+  colunas: number;
+}
+
+/**
+ * Reparte a largura da coluna entre consultas que se sobrepõem no tempo.
+ *
+ * A restrição GIST da migração 042 impede duas consultas ABERTAS ao mesmo
+ * tempo, mas não impede uma cancelada por baixo de uma nova — e antes disto
+ * a segunda ficava desenhada exatamente por cima da primeira, com a de
+ * baixo invisível e clicável só por acidente.
+ *
+ * O algoritmo é o mínimo que resolve o caso: varre por ordem de início,
+ * fecha um grupo sempre que uma consulta começa depois de todas as
+ * anteriores acabarem, e dentro do grupo dá a cada uma a primeira faixa
+ * livre.
+ */
+export function distribuir(lista: Agendamento[]): Posicionada[] {
+  const ordenada = [...lista].sort((a, b) => a.inicio.localeCompare(b.inicio));
+  const saida: Posicionada[] = [];
+
+  let grupo: { pos: Posicionada; fim: number }[] = [];
+  let fimDoGrupo = -Infinity;
+
+  const fecharGrupo = () => {
+    const colunas = Math.max(1, ...grupo.map((g) => g.pos.coluna + 1));
+    for (const g of grupo) {
+      g.pos.colunas = colunas;
+      saida.push(g.pos);
+    }
+    grupo = [];
+    fimDoGrupo = -Infinity;
+  };
+
+  for (const a of ordenada) {
+    const inicio = Date.parse(a.inicio);
+    const fim = Date.parse(a.fim);
+    if (grupo.length > 0 && inicio >= fimDoGrupo) fecharGrupo();
+
+    // A primeira faixa cuja última consulta já acabou.
+    const ocupadas = new Set(grupo.filter((g) => g.fim > inicio).map((g) => g.pos.coluna));
+    let coluna = 0;
+    while (ocupadas.has(coluna)) coluna += 1;
+
+    const pos: Posicionada = { agendamento: a, coluna, colunas: 1 };
+    grupo.push({ pos, fim });
+    fimDoGrupo = Math.max(fimDoGrupo, fim);
+  }
+  if (grupo.length > 0) fecharGrupo();
+
+  return saida;
 }
 
 // ─── Datas ─────────────────────────────────────────────────────────────

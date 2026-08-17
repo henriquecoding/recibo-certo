@@ -38,9 +38,11 @@ const COR: Record<EstadoAgendamento, string> = {
 };
 
 export default function VistaMes({
-  agendamentos, onAbrir,
+  agendamentos, nomeDoCliente, onAbrir,
 }: {
   agendamentos: Agendamento[];
+  /** Como tratar cada cliente — o dia diz «quando» e tem de dizer «quem». */
+  nomeDoCliente?: (clienteId: string) => string;
   onAbrir: (a: Agendamento) => void;
 }) {
   const hoje = diaLocal(new Date());
@@ -207,7 +209,7 @@ export default function VistaMes({
                           {horaLocal(new Date(a.inicio))} — {horaLocal(new Date(a.fim))}
                         </span>
                         <span className="block truncate text-xs text-stone-500">
-                          {a.modalidade === "online" ? "Online" : "Presencial"}
+                          {nomeDoCliente?.(a.clienteId) ?? (a.modalidade === "online" ? "Online" : "Presencial")}
                           {a.assunto ? ` · ${a.assunto}` : ""}
                         </span>
                       </span>

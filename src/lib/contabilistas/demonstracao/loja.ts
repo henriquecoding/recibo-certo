@@ -269,7 +269,7 @@ export interface FidelidadeAposConsulta {
 export async function decidirConsulta(
   id: string,
   novoEstado: EstadoAgendamento,
-  localOuLigacao?: string,
+  local?: { texto: string; lat?: number | null; lng?: number | null },
   conclusao?: { precoCents: number; cupaoId?: string | null }
 ): Promise<{ erro?: string; fidelidade?: FidelidadeAposConsulta | null }> {
   const d = bd();
@@ -278,8 +278,18 @@ export async function decidirConsulta(
 
   if (novoEstado === "confirmado") {
     if (a.estado !== "pedido") return { erro: "Esta consulta já não estava por confirmar." };
+    // A mesma precondição da RPC: meia coordenada não entra.
+    if ((local?.lat == null) !== (local?.lng == null)) {
+      return { erro: "O ponto do mapa ficou a meio. Volta a escolher o local." };
+    }
     a.estado = "confirmado";
-    if (localOuLigacao?.trim()) a.localOuLigacao = localOuLigacao.trim();
+    if (local?.texto.trim()) {
+      a.localOuLigacao = local.texto.trim();
+      // O ponto acompanha a morada com que veio; sem morada nova, mantém-se
+      // o anterior, para o pino não ficar numa rua e o texto noutra.
+      a.localLat = local.lat ?? a.localLat;
+      a.localLng = local.lng ?? a.localLng;
+    }
     return { fidelidade: null };
   }
 
@@ -308,6 +318,29 @@ export async function decidirConsulta(
   }
   a.estado = "cancelado_contabilista";
   return { fidelidade: null };
+}
+
+/** O que `definir_local_consulta` faz, com as mesmas precondições. */
+export async function definirLocalConsulta(
+  id: string,
+  local: { texto: string; lat?: number | null; lng?: number | null }
+): Promise<{ erro?: string }> {
+  const d = bd();
+  const a = d.agendamentos.find((x) => x.id === id);
+  if (!a) return { erro: "Esta consulta não é tua." };
+  if ((local.lat == null) !== (local.lng == null)) {
+    return { erro: "O ponto do mapa ficou a meio. Volta a escolher o local." };
+  }
+  const texto = local.texto.trim();
+  if (!texto) return { erro: "Escreve onde é, ou qual é o link da chamada." };
+  if (a.estado !== "pedido" && a.estado !== "confirmado") {
+    return { erro: "Só se muda o local de uma consulta que ainda vai acontecer." };
+  }
+
+  a.localOuLigacao = texto;
+  a.localLat = local.lat ?? null;
+  a.localLng = local.lng ?? null;
+  return {};
 }
 
 /** O que `carimbar_consulta` faz (migração 042), com os mesmos passos. */

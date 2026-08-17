@@ -168,6 +168,20 @@ export interface Agendamento {
    * Quem marcava presencial nunca soube a morada.
    */
   localOuLigacao: string | null;
+  /**
+   * O ponto que o contabilista escolheu no mapa para a consulta presencial.
+   *
+   * Acompanha a morada, não a substitui: a morada é o que se lê, o ponto é
+   * o que abre direito na aplicação de mapas do cliente e o que torna o
+   * local verificável. Nulo em consultas online, e nas presenciais
+   * anteriores à migração `20260817120000_local_verificado_da_consulta` —
+   * que continuam a valer como texto.
+   *
+   * As duas coordenadas existem juntas ou não existem: meia coordenada é
+   * um ponto no mar, e a base recusa-a.
+   */
+  localLat: number | null;
+  localLng: number | null;
   criadoEm: string;
 }
 

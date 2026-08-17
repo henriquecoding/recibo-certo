@@ -16,6 +16,25 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.72.0",
+    data: "2026-08-17",
+    titulo: "Onde é a consulta deixa de ser uma frase escrita à mão",
+    itens: [
+      "As consultas presenciais passam a ter um local escolhido no mapa. O contabilista pesquisa a morada, usa a localização atual ou arrasta o pino até à porta — e o que fica guardado é o ponto, não uma descrição.",
+      "Quem marcou a consulta abre esse local com um toque no Google Maps, no Apple Maps ou no OpenStreetMap, e vê um mapa com o pino onde ele foi mesmo posto. Antes lia «Rua de exemplo, 1 · Matosinhos» e tinha de adivinhar o resto.",
+      "Quando a consulta é anterior a esta mudança e só tem morada escrita, diz-se: as ligações fazem uma pesquisa pelo texto, e o produto não finge que sabe onde é.",
+      "Os links das chamadas passam a ser verificados enquanto se escrevem. O Google Meet, o Zoom, o Teams, o Whereby, o Jitsi, o Webex e o Skype são reconhecidos pelo nome; um endereço que não abre em lado nenhum é recusado antes de ser enviado, e um «http» sem segurança é assinalado.",
+      "E há um atalho para reutilizar o link da última consulta — a sala é quase sempre a mesma, e voltar a colá-la é onde nascem as gralhas.",
+      "Uma consulta online pode agora ser por telefone. O número fica formatado, marca-se com um toque no telemóvel do cliente, e deixa de ser um link falso escrito num campo à espera de um endereço.",
+      "Enquanto escreve, o contabilista vê exatamente o cartão que o cliente vai receber. Não é uma aproximação — é o mesmo cartão.",
+      "O local de uma consulta já confirmada passa a poder ser corrigido sem a desmarcar, e o cliente é avisado da mudança. Antes só se escrevia no instante da confirmação: quem confirmasse primeiro e recebesse a morada da sala depois ficava sem maneira de a dizer.",
+      "A agenda passa a abrir com o que espera por ti: a próxima consulta, quantas estão confirmadas nos próximos sete dias, e a fila do que falta confirmar — inclusive o que está marcado para daqui a três semanas, que a grelha de sete dias nunca mostrava.",
+      "E avisa quando há consultas confirmadas sem local. O cliente já sabe a hora e ainda não sabe onde é: era um engano silencioso, e agora tem nome e ligação direta.",
+      "Na grelha da semana e na vista de mês passa a ler-se o nome de quem vem, e não só a hora. Duas consultas à mesma hora repartem o espaço em vez de se taparem uma à outra.",
+      "A grelha ganhou legenda das cores. O código existia desde sempre e só quem o escreveu sabia lê-lo.",
+    ],
+  },
+  {
     version: "2.71.0",
     data: "2026-08-17",
     titulo: "A pesquisa do painel de contabilista passa a ser a mesma do site",

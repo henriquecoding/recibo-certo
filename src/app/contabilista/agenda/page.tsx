@@ -7,19 +7,22 @@
 // transação, com a identidade de quem pede e as regras do lado da base de
 // dados. Se o carimbo falhar, a consulta não fica concluída.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import GrelhaSemanal from "@/components/contabilistas/GrelhaSemanal";
 import VistaMes from "@/components/contabilistas/VistaMes";
 import DetalheConsulta from "@/components/contabilistas/DetalheConsulta";
+import ResumoDaAgenda from "@/components/contabilistas/ResumoDaAgenda";
 import CabecalhoPainel from "@/components/contabilistas/CabecalhoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import ConcluirConsulta, { type ConclusaoEscolhida } from "@/components/contabilistas/ConcluirConsulta";
+import type { CanalEscolhido } from "@/components/contabilistas/local/CanalDaConsulta";
+import { ehTelefone } from "@/lib/contabilistas/local-consulta";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
-  decidirConsulta,
+  decidirConsulta, definirLocalConsulta,
   meusCupoes,
   type CupaoLido,
 } from "@/lib/contabilistas/fonte/dados";
@@ -135,6 +138,47 @@ export default function AgendaPage() {
   useEffect(() => { if (ficha) void carregar(ficha.userId); }, [ficha, carregar]);
 
   /**
+   * A sala de sempre: o link da última consulta online que foi confirmada.
+   *
+   * Um contabilista costuma ter uma sala fixa, e voltar a colá-la a cada
+   * confirmação é onde nascem as gralhas. O compositor oferece-a com um
+   * toque. Só links — um número de telefone não é uma sala.
+   */
+  const sugestaoLigacao = useMemo(() => {
+    const candidatas = agendamentos
+      .filter(
+        (a) =>
+          a.modalidade === "online" &&
+          (a.localOuLigacao ?? "").trim() &&
+          !ehTelefone(a.localOuLigacao ?? "") &&
+          a.estado !== "cancelado_cliente" &&
+          a.estado !== "cancelado_contabilista"
+      )
+      .sort((a, b) => b.inicio.localeCompare(a.inicio));
+    return candidatas[0]?.localOuLigacao ?? null;
+  }, [agendamentos]);
+
+  /** Corrigir o local sem tocar no estado da consulta. */
+  async function guardarLocal(a: Agendamento, canal: CanalEscolhido): Promise<boolean> {
+    if (!ficha || !canal.texto.trim()) return false;
+    setOcupado(a.id);
+    try {
+      const { erro } = await definirLocalConsulta(a.id, {
+        texto: canal.texto,
+        lat: canal.lat,
+        lng: canal.lng,
+      });
+      if (erro) { avisos.erro(erro); return false; }
+      avisos.sucesso("Local atualizado.", { detalhe: "O cliente foi avisado da mudança." });
+      await carregar(ficha.userId);
+      return true;
+    } catch {
+      avisos.erro("Falha de rede. Tenta outra vez.");
+      return false;
+    } finally { setOcupado(null); }
+  }
+
+  /**
    * Dar por REALIZADA passa por um diálogo, e não por uma confirmação.
    *
    * A Fidelidade V2 exige o preço real: `concluir_consulta` recusa com
@@ -153,7 +197,7 @@ export default function AgendaPage() {
   async function mudarEstado(
     a: Agendamento,
     estado: EstadoAgendamento,
-    localOuLigacao?: string,
+    canal?: CanalEscolhido,
     conclusao?: ConclusaoEscolhida,
   ) {
     if (!ficha) return;
@@ -166,8 +210,11 @@ export default function AgendaPage() {
 
     setOcupado(a.id);
     try {
+      const local = canal?.texto.trim()
+        ? { texto: canal.texto.trim(), lat: canal.lat, lng: canal.lng }
+        : undefined;
       const { erro, fidelidade: f } = await decidirConsulta(
-        a.id, estado, localOuLigacao?.trim() || undefined,
+        a.id, estado, local,
         conclusao ? { precoCents: conclusao.precoCents, cupaoId: conclusao.cupaoId } : undefined,
       );
       if (erro) { avisos.erro(erro); return; }
@@ -198,6 +245,18 @@ export default function AgendaPage() {
         descricao="As consultas marcadas e os horários que os clientes veem no teu perfil."
       />
 
+      {/* Primeiro o que espera por ti, depois o mapa do tempo.
+          Uma grelha de sete dias responde a «o que tenho na quinta» e não
+          responde a «tenho alguma coisa por fazer» — e um pedido para daqui
+          a três semanas nunca lá aparece. */}
+      <ResumoDaAgenda
+        agendamentos={agendamentos}
+        nomeDoCliente={nomeDoCliente}
+        ocupado={ocupado}
+        onAbrir={(a) => setAberta(a)}
+        onConfirmar={(a) => setAberta(a)}
+      />
+
       {/* Semana e mês respondem a perguntas diferentes: a semana a «o que
           tenho na quinta às três?», o mês a «como está o mês?». Não é a
           mesma vista com mais dias, e por isso são dois separadores. */}
@@ -226,11 +285,16 @@ export default function AgendaPage() {
               </div>
             )}
             {aba === "mes" ? (
-              <VistaMes agendamentos={agendamentos} onAbrir={(a) => setAberta(a)} />
+              <VistaMes
+                agendamentos={agendamentos}
+                nomeDoCliente={nomeDoCliente}
+                onAbrir={(a) => setAberta(a)}
+              />
             ) : (
               <GrelhaSemanal
                 agendamentos={agendamentos}
                 ocupado={ocupado}
+                nomeDoCliente={nomeDoCliente}
                 onAbrir={(a) => setAberta(a)}
               />
             )}
@@ -250,10 +314,12 @@ export default function AgendaPage() {
             ocupado={ocupado === aberta.id}
             fidelidadeAtiva={ficha.fidelidadeAtiva}
             nomeCliente={nomeDoCliente(aberta.clienteId)}
-            onEstado={async (a, estado, local) => {
-              await mudarEstado(a, estado, local);
+            sugestaoLigacao={sugestaoLigacao}
+            onEstado={async (a, estado, canal) => {
+              await mudarEstado(a, estado, canal);
               setAberta(null);
             }}
+            onGuardarLocal={guardarLocal}
             onFechar={() => setAberta(null)}
           />
         )}

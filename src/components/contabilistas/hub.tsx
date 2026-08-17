@@ -20,7 +20,9 @@ import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabi
 import type { CupaoLido } from "@/lib/contabilistas/dados";
 import { ROTULO_PARTILHA, ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import { diaLocal, horaLocal, rotularDia, tempoAte } from "@/lib/contabilistas/agenda";
+import { lerLocal } from "@/lib/contabilistas/local-consulta";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
+import CartaoDoLocal from "@/components/contabilistas/local/CartaoDoLocal";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
@@ -147,6 +149,12 @@ export function ProximaConsulta({
 
   const inicio = new Date(consulta.inicio);
   const meta = ESTADO_CONSULTA[consulta.estado];
+  const local = lerLocal(
+    consulta.modalidade,
+    consulta.localOuLigacao,
+    consulta.localLat,
+    consulta.localLng
+  );
 
   return (
     <section aria-labelledby="proxima-titulo" className="rounded-4xl border border-brand/25 bg-brand-light/40 p-5 sm:p-6">
@@ -181,26 +189,16 @@ export function ProximaConsulta({
         </p>
       )}
 
-      {/* Onde é. Até agora o cliente marcava presencial e nunca ficava a
-          saber a morada — a coluna existia e nenhum ecrã a lia. */}
-      {consulta.localOuLigacao && (
-        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-white/70 px-4 py-3 text-sm leading-relaxed text-stone-700 dark:bg-white/10">
-          {consulta.modalidade === "online"
-            ? <Laptop size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
-            : <MapPin size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />}
-          {consulta.modalidade === "online" && /^https?:\/\//i.test(consulta.localOuLigacao) ? (
-            <a
-              href={consulta.localOuLigacao}
-              target="_blank"
-              rel="noopener noreferrer nofollow"
-              className="min-w-0 break-all font-medium underline underline-offset-2"
-            >
-              Entrar na chamada
-            </a>
-          ) : (
-            <span className="min-w-0 break-words">{consulta.localOuLigacao}</span>
-          )}
-        </p>
+      {/* Onde é.
+          Era uma linha de texto: um link que se clicava, ou uma morada que
+          não levava a lado nenhum. Passa a ser o mesmo cartão que o
+          contabilista vê enquanto o escreve — com o mapa no ponto onde ele
+          pôs mesmo o pino, e com as direções a abrir na aplicação que o
+          cliente já usa. */}
+      {local && (
+        <div className="mt-3">
+          <CartaoDoLocal local={local} tom="sobre-cor" />
+        </div>
       )}
 
       {consulta.estado === "pedido" && (

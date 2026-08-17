@@ -11,7 +11,7 @@ import type { EventoXPLido } from "../dados";
 import type { EstadoProgressao } from "../progressao/catalogo";
 import { emDemonstracao, loja } from "./nucleo";
 
-export type { CartaoAberto, ConclusaoDaConsulta, CupaoLido, EventoXPLido, FidelidadeAposConsulta, TipoEventoXP } from "../dados";
+export type { CartaoAberto, ConclusaoDaConsulta, CupaoLido, EventoXPLido, FidelidadeAposConsulta, LocalEscolhido, TipoEventoXP } from "../dados";
 
 // ─── Ficha ─────────────────────────────────────────────────────────────
 
@@ -82,13 +82,21 @@ export async function listarAgendamentos(filtro: {
 export async function decidirConsulta(
   id: string,
   estado: EstadoAgendamento,
-  localOuLigacao?: string,
+  local?: real.LocalEscolhido,
   conclusao?: real.ConclusaoDaConsulta
 ): Promise<{ erro?: string; fidelidade?: real.FidelidadeAposConsulta | null }> {
   if (emDemonstracao()) {
-    return (await loja()).decidirConsulta(id, estado, localOuLigacao, conclusao);
+    return (await loja()).decidirConsulta(id, estado, local, conclusao);
   }
-  return real.decidirConsulta(id, estado, localOuLigacao, conclusao);
+  return real.decidirConsulta(id, estado, local, conclusao);
+}
+
+export async function definirLocalConsulta(
+  id: string,
+  local: real.LocalEscolhido
+): Promise<{ erro?: string }> {
+  if (emDemonstracao()) return (await loja()).definirLocalConsulta(id, local);
+  return real.definirLocalConsulta(id, local);
 }
 
 export async function obterDisponibilidade(contabilistaId: string): Promise<RegraDisponibilidade[]> {
