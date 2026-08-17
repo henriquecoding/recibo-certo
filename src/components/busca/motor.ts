@@ -97,17 +97,63 @@ export function useBuscaAberta(): boolean {
  * │ actualizações em ninguém.                                            │
  * └─────────────────────────────────────────────────────────────────────┘
  */
-let lancadoresDeSecretaria = 0;
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ «ANCORADO», E JÁ NÃO «DE SECRETÁRIA»                                 │
+ * │                                                                     │
+ * │ Chamava-se `lancadoresDeSecretaria` porque durante um tempo só o     │
+ * │ computador tinha uma barra com painel próprio: no telemóvel a        │
+ * │ pesquisa era um diálogo modal, e o registo servia para o diálogo     │
+ * │ saber que não devia responder onde já havia barra.                   │
+ * │                                                                     │
+ * │ Agora as duas superfícies são barras com painel ancorado — a de      │
+ * │ secretária abre para baixo, a do telemóvel para cima — e o nome      │
+ * │ tinha deixado de descrever a coisa. A pergunta que este contador     │
+ * │ responde é a mesma de sempre e continua a ser a certa: «há uma       │
+ * │ barra onde este gesto possa abrir?». Se houver, é ela que abre. Se   │
+ * │ não houver — no /dashboard, no /admin, dentro de `/pesquisar` — o    │
+ * │ diálogo global responde, que é o que um botão de pesquisa sem barra  │
+ * │ por baixo tem de fazer.                                             │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+let lancadoresAncorados = 0;
 
-export function registarLancadorSecretaria(): () => void {
-  lancadoresDeSecretaria += 1;
+export function registarLancadorAncorado(): () => void {
+  lancadoresAncorados += 1;
   return () => {
-    lancadoresDeSecretaria -= 1;
+    lancadoresAncorados -= 1;
   };
 }
 
-export function haLancadorDeSecretaria(): boolean {
-  return lancadoresDeSecretaria > 0;
+export function haLancadorAncorado(): boolean {
+  return lancadoresAncorados > 0;
+}
+
+/**
+ * Regista uma barra ancorada — mas SÓ ENQUANTO ELA ESTIVER NO ECRÃ.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ ESTAR MONTADO NÃO É ESTAR VISÍVEL, E A DIFERENÇA CALA A PESQUISA     │
+ * │                                                                     │
+ * │ As duas barras escondem-se por CSS (`hidden lg:block` numa,          │
+ * │ `lg:hidden` na outra), portanto estão as duas montadas em todas as   │
+ * │ larguras. Um registo incondicional fazia a de telemóvel declarar-se  │
+ * │ presente num ecrã de 1280 px, onde ninguém a vê — e como o diálogo   │
+ * │ global se cala onde há barra, bastava uma página sem cabeçalho de    │
+ * │ secretária para o `⌘K` e o botão de pesquisa deixarem de fazer nada. │
+ * │ Sem erro, sem aviso: um atalho que simplesmente não responde.        │
+ * │                                                                     │
+ * │ Passa a registar-se pela consulta de media, que é a mesma que decide │
+ * │ se a barra se vê. «Há uma barra onde este gesto possa abrir?» volta  │
+ * │ a ser uma pergunta sobre o que está no ecrã.                         │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export function useRegistarLancador(consulta: string) {
+  const visivel = useMediaQuery(consulta);
+  useEffect(() => {
+    if (!visivel) return;
+    return registarLancadorAncorado();
+  }, [visivel]);
 }
 
 export function useAtalhoBusca({
@@ -117,7 +163,14 @@ export function useAtalhoBusca({
   abrir,
   fechar,
 }: {
-  ativaQuando: string;
+  /**
+   * A largura em que esta superfície é a que está no ecrã. Opcional: o
+   * diálogo global não tem largura própria — responde por AUSÊNCIA de
+   * barra, seja qual for o tamanho do ecrã, e por isso só traz
+   * `tambemQuando`. Escrever-lhe uma consulta que nunca casa era a
+   * alternativa, e é a que obriga o leitor seguinte a perceber porquê.
+   */
+  ativaQuando?: string;
   /** Condição extra, avaliada no momento do gesto. Ver o quadro acima. */
   tambemQuando?: () => boolean;
   aberto: boolean;
@@ -141,9 +194,9 @@ export function useAtalhoBusca({
   });
 
   useEffect(() => {
-    const consulta = window.matchMedia(ativaQuando);
+    const consulta = ativaQuando ? window.matchMedia(ativaQuando) : null;
 
-    const naSuperficieCerta = () => consulta.matches || (ref.current.tambemQuando?.() ?? false);
+    const naSuperficieCerta = () => (consulta?.matches ?? false) || (ref.current.tambemQuando?.() ?? false);
 
     const onTecla = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {

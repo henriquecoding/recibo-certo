@@ -29,6 +29,18 @@ import { NAV_PRINCIPAL } from "@/components/nav-config";
 const SRC = join(__dirname, "..", "..");
 const ler = (...p: string[]) => readFileSync(join(SRC, ...p), "utf8");
 
+/**
+ * A fonte sem os comentários.
+ *
+ * Os ficheiros deste projecto explicam-se em quadros, e os quadros CITAM o
+ * que não está lá: «declarar `aria-modal="true"` seria mentir», «disparava
+ * `EVENTO_BUSCA_ABRIR`». Uma asserção de ausência sobre o texto todo
+ * falha por causa da explicação de porque é que a coisa está ausente — e a
+ * saída óbvia (apagar a explicação) é exactamente a errada.
+ */
+const semComentarios = (fonte: string) =>
+  fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
 const CHROME = ler("components", "ChromeMobile.tsx");
 const TOPO = ler("components", "ChromeMobileTopo.tsx");
 const DOCK = ler("components", "busca", "DockMovel.tsx");
@@ -128,6 +140,70 @@ describe("chrome-movel:folha-de-conta", () => {
 });
 
 describe("chrome-movel:dock", () => {
+  it("abre um painel ancorado, e NÃO o diálogo modal", () => {
+    // A pesquisa do telemóvel era um `SuperficieModal`: véu por cima da
+    // página, foco preso, scroll bloqueado e sem o rodapé com as teclas. O
+    // computador nunca fez isso. Duas superfícies com o mesmo nome e duas
+    // identidades — e a do telemóvel era a que quase ninguém revia.
+    expect(DOCK).toContain('variante="movel"');
+    expect(DOCK).toContain('import("./PainelPesquisa")');
+    // Já não delega no diálogo global: dispará-lo abria os dois ao mesmo
+    // gesto, com dois campos a disputar o foco.
+    expect(semComentarios(DOCK)).not.toContain("EVENTO_BUSCA_ABRIR");
+  });
+
+  it("regista-se como barra ancorada, que é o que cala o diálogo global", () => {
+    // A regra não é a largura, é «existe uma barra onde este gesto possa
+    // abrir?». Sem este registo o diálogo continuava a responder ao ⌘K e ao
+    // evento, por cima do painel que a barra acabou de abrir.
+    // E regista-se pela LARGURA em que se vê. As duas barras escondem-se
+    // por CSS e ficam montadas em todas as larguras; um registo
+    // incondicional punha a do telemóvel a declarar-se presente num ecrã de
+    // 1280 px, calando o diálogo global onde ninguém a vê.
+    expect(DOCK).toContain("useRegistarLancador(CONSULTA_MOVEL)");
+    expect(ler("components", "busca", "LancadorBusca.tsx")).toContain(
+      "useRegistarLancador(CONSULTA_SECRETARIA)",
+    );
+    expect(BUSCA_GLOBAL).toContain("tambemQuando: () => !haLancadorAncorado()");
+    // E deixa de responder por largura — era isso que o punha a abrir
+    // ao mesmo tempo que a barra do telemóvel.
+    expect(BUSCA_GLOBAL).not.toContain("ativaQuando: CONSULTA_MOVEL");
+  });
+
+  it("o painel do telemóvel continua a ser uma região, e não um diálogo", () => {
+    const PAINEL = ler("components", "busca", "PainelPesquisa.tsx");
+    // `aria-modal` é uma promessa: «o resto da página não existe agora».
+    // Aqui a página continua legível e clicável por trás, portanto declará-lo
+    // seria mentir ao leitor de ecrã — e é a razão de este painel não usar
+    // `SuperficieModal` em nenhuma das duas variantes.
+    // Sobre o CÓDIGO: o quadro no topo do ficheiro cita o atributo para
+    // explicar porque é que ele não está lá.
+    expect(semComentarios(PAINEL)).not.toMatch(/aria-modal=/);
+    expect(semComentarios(PAINEL)).not.toContain("SuperficieModal");
+    expect(PAINEL).toContain('role="search"');
+    // Um só painel para as duas superfícies: o que muda é geometria.
+    expect(PAINEL).toContain('variante === "movel"');
+  });
+
+  it("a ordem do DOM não se inverte com a ordem visual", () => {
+    const PAINEL = ler("components", "busca", "PainelPesquisa.tsx");
+    // No telemóvel o campo desce para a zona do polegar com `order-*`. Trocar
+    // os elementos em vez disso trocava a ordem do `Tab` e a que o leitor de
+    // ecrã anuncia, pondo quem navega por teclado a atravessar a lista
+    // inteira antes de chegar ao sítio onde se escreve.
+    expect(PAINEL).toContain("order-3");
+    expect(PAINEL.indexOf("<FormularioBusca")).toBeLessThan(PAINEL.indexOf("<CorpoResultados"));
+  });
+
+  it("o tecto do painel conta com o que está por baixo da âncora", () => {
+    // Esteve a ser medido dentro do painel, que não sabe onde está pousado:
+    // media a janela toda, ignorava os 64 px da barra de navegação e o topo
+    // do painel saía do ecrã, levando com ele o rodapé das teclas.
+    expect(CSS).toContain("--rc-painel-movel-max");
+    expect(CSS).toContain("calc(100dvh - var(--rc-barra-h)");
+    expect(DOCK).toContain("visualViewport");
+  });
+
   it("é uma ligação para /pesquisar e não um botão", () => {
     // O diálogo entra por `next/dynamic`: entre o HTML chegar e o chunk
     // carregar há uma janela real em que um `<button>` não faz nada. Uma

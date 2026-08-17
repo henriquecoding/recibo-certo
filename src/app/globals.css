@@ -118,6 +118,42 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════
+   O MESMO PAINEL, ANCORADO PELO FUNDO (telemóvel)
+
+   A variante de secretária ancora em `top: 0` do invólucro da barra e
+   cresce para baixo. No telemóvel a barra vive no FUNDO do ecrã, e
+   crescer para baixo seria crescer para fora dele — ancora em
+   `bottom: 0` e cresce para cima.
+
+   Não precisa da aritmética de centragem da outra: aqui o painel tem
+   exactamente a largura do invólucro (o ecrã menos as margens), e uma
+   caixa que não é mais larga do que aquilo que a contém centra-se
+   sozinha.
+
+   O TECTO é o valor sem teclado virtual, e conta com o que está por
+   baixo da âncora: a barra de navegação e o ar entre as duas. Sem essa
+   subtracção o painel media a janela toda, o topo saía do ecrã e o
+   rodapé com as teclas ficava por cima da borda, invisível.
+
+   Com o teclado aberto o `dvh` deixa de servir — mede a janela toda,
+   incluindo a faixa que o teclado ocupa — e aí é o `DockMovel` que
+   escreve `--rc-painel-movel-max` a partir do `visualViewport`. O valor
+   por omissão fica aqui para o painel nunca aparecer sem tecto nenhum
+   se o JavaScript falhar.
+   ════════════════════════════════════════════════════════════════════ */
+.rc-dock-painel-movel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  max-height: var(
+    --rc-painel-movel-max,
+    calc(100dvh - var(--rc-barra-h) - var(--rc-dock-movel-ar) - 1.25rem)
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
    O FOCO VISÍVEL DO CABEÇALHO E DA PESQUISA
 
    ┌──────────────────────────────────────────────────────────────────┐
