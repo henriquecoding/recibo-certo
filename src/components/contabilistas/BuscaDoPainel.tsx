@@ -41,8 +41,9 @@ import {
   type RegistoDoPainel,
 } from "@/lib/contabilistas/busca";
 import { MIN_CARACTERES } from "@/lib/busca/pontuar";
+import { useFecharAoSair, useTecladoVirtual } from "@/components/busca/ancoragem";
+import { CONSULTA_SECRETARIA, useMediaQuery } from "@/components/busca/motor";
 import { Realce } from "@/components/busca/partes";
-import { SuperficieModal } from "@/components/overlays/SuperficieModal";
 import type { Painel } from "@/components/contabilistas/usarPainel";
 import {
   Briefcase, Calendar, Close, PaperClip, Search, Target, User,
@@ -87,14 +88,87 @@ export default function BuscaDoPainel({
   const [dados, setDados] = useState<RegistoDoPainel[] | null>(null);
   const campo = useRef<HTMLInputElement>(null);
   const lista = useRef<HTMLUListElement>(null);
+  const caixa = useRef<HTMLDivElement>(null);
   const gatilho = useRef<HTMLButtonElement>(null);
   const gatilhoMovel = useRef<HTMLButtonElement>(null);
   const idLista = useId();
+  const idPalete = `${idLista}-palete`;
 
   // O portal só existe depois de haver `document`. Sem esta guarda o
   // servidor tentava renderizar para um `<body>` que ainda não é dele.
   const [montado, setMontado] = useState(false);
   useEffect(() => setMontado(true), []);
+
+  /**
+   * Qual das duas âncoras está no ecrã — decidido em JS e não por CSS.
+   *
+   * As duas existem no DOM (uma na barra do topo, outra no dock por
+   * portal), mas a palete só pode ser montada numa: duas instâncias dão
+   * dois campos com o mesmo `id`, dois ouvintes de setas e dois sítios a
+   * disputar o foco. A consulta é a mesma que decide qual das barras se vê.
+   */
+  const emSecretaria = useMediaQuery(CONSULTA_SECRETARIA);
+
+  /**
+   * Fechar devolve o foco — mas nem sempre, e nunca antes do commit.
+   *
+   * A barra é DESMONTADA enquanto a palete está aberta (a palete ocupa-lhe
+   * o lugar, como no site), portanto no instante em que se decide fechar o
+   * gatilho ainda não existe: um `focus()` aqui não encontraria nada. Por
+   * isso a decisão fica numa ref e o foco é dado num efeito, já depois de a
+   * barra voltar ao ecrã.
+   *
+   * E só quem fechou SEM indicar destino é que o recebe de volta: Escape e
+   * o ✕ não indicam; um clique fora, o `Tab` que sai e a navegação indicam.
+   */
+  const devolverFoco = useRef(false);
+
+  const fecharComFoco = useCallback(() => {
+    devolverFoco.current = true;
+    setAberta(false);
+  }, []);
+
+  const fechar = useCallback(() => {
+    devolverFoco.current = false;
+    setAberta(false);
+  }, []);
+
+  useEffect(() => {
+    if (aberta || !devolverFoco.current) return;
+    devolverFoco.current = false;
+    // O gatilho que está NO ECRÃ: abaixo de `lg` o do topo tem
+    // `display: none`, e um elemento escondido recusa foco em silêncio.
+    const alvo = gatilho.current?.offsetParent ? gatilho.current : gatilhoMovel.current;
+    alvo?.focus();
+  }, [aberta]);
+
+  // O contrato de fecho de uma região não modal — o mesmo da pesquisa do
+  // site. O chrome que não pode ser destruído pelo próprio gesto é a barra
+  // do topo do painel e a navegação inferior. Ver `busca/ancoragem.ts`.
+  useFecharAoSair({
+    ativo: aberta,
+    caixa,
+    chrome: 'header, nav[aria-label="Painel de contabilista"]',
+    aoFechar: fechar,
+    aoFecharComFoco: fecharComFoco,
+  });
+
+  // O teclado virtual levanta a âncora do telemóvel e dá o tecto à palete.
+  const { tecladoInset, alturaVisivel } = useTecladoVirtual(aberta && !emSecretaria);
+
+  const comTeclado = tecladoInset > 0;
+  const geometriaMovel = {
+    bottom: comTeclado
+      ? `calc(${tecladoInset}px + var(--rc-painel-dock-ar))`
+      : "calc(var(--rc-painel-barra-h) + var(--rc-painel-dock-ar))",
+  } as React.CSSProperties;
+
+  // O foco entra no campo quando a palete abre — depois de ela existir.
+  useEffect(() => {
+    if (!aberta) return;
+    const id = requestAnimationFrame(() => campo.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [aberta, emSecretaria]);
 
   // ── O índice ─────────────────────────────────────────────────────────
   const carregar = useCallback(async () => {
@@ -284,86 +358,60 @@ export default function BuscaDoPainel({
     if (e.key === "Enter") { e.preventDefault(); escolher(visiveis[indice]); }
   }
 
-  // As linhas são numeradas na ordem em que aparecem: é isso que faz as
-  // setas andarem por grupos sem saberem que os grupos existem.
-  let contador = -1;
-  const proximaLinha = () => ++contador;
-
-  return (
-    <>
-      {/* O gatilho de secretária, na barra do topo. Abaixo de `lg` está
-          escondido (`.busca` não tem `display` até aos 1024 px) e quem
-          manda é o dock, aqui em baixo. */}
-      <button
-        ref={gatilho}
-        type="button"
-        onClick={abrir}
-        className={styles.busca}
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ A PALETE É UMA REGIÃO ANCORADA, E JÁ NÃO UM DIÁLOGO MODAL          │
+   * │                                                                   │
+   * │ Era um `SuperficieModal`: véu por cima de tudo, foco preso, scroll │
+   * │ bloqueado e, no telemóvel, uma folha centrada com o campo NO TOPO. │
+   * │ A pesquisa do site tinha deixado de o ser, e ficava a diferença    │
+   * │ absurda — a mesma pessoa, no mesmo telemóvel, a escrever no fundo  │
+   * │ do ecrã num sítio e no topo no outro.                              │
+   * │                                                                   │
+   * │ Passa a tapar a barra e a crescer a partir dela: para BAIXO no     │
+   * │ computador, para CIMA no telemóvel (onde a barra vive no fundo do  │
+   * │ ecrã). Sem véu, sem prender o foco. O contrato de fecho — clique   │
+   * │ fora, foco que sai, Escape — vem de `busca/ancoragem.ts`, o mesmo  │
+   * │ que a pesquisa do site usa.                                       │
+   * │                                                                   │
+   * │ Uma só instância, colocada na âncora que estiver no ecrã: duas     │
+   * │ davam dois campos com o mesmo `id` e dois ouvintes de setas.       │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  const palete = (variante: "secretaria" | "movel") => (
+      <div
+        ref={caixa}
+        id={idPalete}
+        role="search"
         aria-label="Pesquisar no painel"
-        aria-keyshortcuts="Meta+K Control+K"
+        onKeyDown={aoTeclarNaPaleta}
+        /**
+         * O tecto só se escreve aqui QUANDO O TECLADO ESTÁ ABERTO.
+         *
+         * Sem essa condição — e esteve sem ela — `alturaVisivel` é a janela
+         * toda mesmo sem teclado, e a palete pedia 716 px numa janela de
+         * 740: o topo saía do ecrã e levava com ele o rodapé das teclas. Sem
+         * teclado quem sabe exprimir o tecto é o CSS, que consegue subtrair
+         * a barra de navegação e o dock que estão por baixo da âncora.
+         */
+        style={
+          variante === "movel" && comTeclado
+            ? ({ "--rc-palete-movel-max": `${Math.max(220, alturaVisivel - 24)}px` } as React.CSSProperties)
+            : undefined
+        }
+        className={`flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ${
+          variante === "movel" ? styles.paleteMovel : styles.paleteSecretaria
+        }`}
       >
-        <Search size={16} className="shrink-0 text-stone-400" aria-hidden />
-        <span className={styles.buscaTexto}>{PLACEHOLDER_BUSCA}</span>
-        <kbd className={styles.buscaAtalho} aria-hidden>⌘K</kbd>
-      </button>
-
-      {/**
-       * ┌─────────────────────────────────────────────────────────────────┐
-       * │ O DOCK DO TELEMÓVEL VAI POR PORTAL, E NÃO É ZELO                 │
-       * │                                                                 │
-       * │ Este componente é montado dentro de `.topbar`, e `.topbar`       │
-       * │ declara `backdrop-filter`. Um elemento com `backdrop-filter`     │
-       * │ passa a ser o bloco de contenção de qualquer `position: fixed`   │
-       * │ que tenha dentro — portanto um dock «fixo ao fundo do ecrã»      │
-       * │ escrito aqui ficaria fixo ao fundo do CABEÇALHO, a 56 px do      │
-       * │ topo. Sem erro nenhum: apenas no sítio errado.                   │
-       * │                                                                 │
-       * │ Sai para `<body>`, onde o `fixed` volta a resolver contra o      │
-       * │ ecrã. E continua a ser o mesmo componente, com um só ouvinte de  │
-       * │ ⌘K e uma só paleta — duas instâncias abriam duas.                │
-       * └─────────────────────────────────────────────────────────────────┘
-       */}
-      {montado &&
-        createPortal(
-          <div className={styles.buscaDock}>
-            <button
-              ref={gatilhoMovel}
-              type="button"
-              onClick={abrir}
-              className={`${styles.buscaDockBotao} focus-marca`}
-              aria-label="Pesquisar no painel"
-            >
-              <Search size={16} className="shrink-0 text-stone-400" aria-hidden />
-              <span className={styles.buscaDockTexto}>{PLACEHOLDER_BUSCA}</span>
-            </button>
-          </div>,
-          document.body,
-        )}
-
-      <SuperficieModal
-        aberto={aberta}
-        aoFechar={() => setAberta(false)}
-        rotulo="Pesquisar no painel"
-        focoInicial={() => campo.current}
-        // O gatilho que está NO ECRÃ, e não o primeiro que existe: abaixo
-        // de `lg` o do topo tem `display: none`, e um elemento escondido
-        // recusa foco em silêncio — quem fechasse a paleta com Escape no
-        // telemóvel recomeçava a tabulação no `<body>`.
-        focoDeRegresso={() => (gatilho.current?.offsetParent ? gatilho.current : gatilhoMovel.current)}
-        className="fixed inset-0 z-[120] flex items-end justify-center px-3 pb-3 sm:items-start sm:pt-[12vh]"
-      >
-        <div
-          className="absolute inset-0 bg-stone-950/45 backdrop-blur-sm"
-          onClick={() => setAberta(false)}
-          aria-hidden
-        />
-
-        <div
-          onKeyDown={aoTeclarNaPaleta}
-          className="relative z-10 flex max-h-[80dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-lift"
-          style={{ marginBottom: "env(safe-area-inset-bottom)" }}
-        >
-          <div className="flex shrink-0 items-center gap-2.5 border-b border-stone-100 px-4">
+          {/* No telemóvel o campo vai para BAIXO — zona do polegar, colado ao
+              teclado — e a lista cresce por cima. Faz-se com `order-*` e não
+              trocando os elementos: a ordem do DOM é a ordem do `Tab` e a que
+              o leitor de ecrã anuncia, e tem de continuar a ser campo → lista. */}
+          <div
+            className={`flex shrink-0 items-center gap-2.5 border-stone-100 px-4 ${
+              variante === "movel" ? "order-3 border-t" : "border-b"
+            }`}
+          >
             <Search size={17} className="shrink-0 text-stone-400" aria-hidden />
             <input
               ref={campo}
@@ -380,7 +428,7 @@ export default function BuscaDoPainel({
             />
             <button
               type="button"
-              onClick={() => setAberta(false)}
+              onClick={fecharComFoco}
               className="focus-marca -mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800"
               aria-label="Fechar pesquisa"
             >
@@ -395,7 +443,12 @@ export default function BuscaDoPainel({
               : `${visiveis.length} ${visiveis.length === 1 ? "resultado" : "resultados"}.`}
           </p>
 
-          <ul id={idLista} ref={lista} role="listbox" className="min-h-0 flex-1 overflow-y-auto p-2">
+          <ul
+            id={idLista}
+            ref={lista}
+            role="listbox"
+            className={`min-h-0 flex-1 overflow-y-auto p-2 ${variante === "movel" ? "order-2" : ""}`}
+          >
             {dados === null && termo && (
               <li className="px-3 py-8 text-center text-sm text-stone-500">
                 A preparar a pesquisa…
@@ -499,13 +552,103 @@ export default function BuscaDoPainel({
             ))}
           </ul>
 
-          <footer className="hidden shrink-0 items-center gap-4 border-t border-stone-100 px-4 py-2 text-[11px] text-stone-400 sm:flex">
+          {/* O rodapé das teclas fica em CIMA no telemóvel: em baixo ficaria
+              entre o campo e o teclado, o pior sítio para texto de 11 px. E
+              deixa de ser `sm:flex` — quem navega por teclado num telemóvel
+              com teclado físico também precisa de o ler. */}
+          <footer
+            className={`flex shrink-0 items-center gap-4 border-stone-100 px-4 py-2 text-[11px] text-stone-400 ${
+              variante === "movel" ? "order-1 border-b" : "border-t"
+            }`}
+          >
             <span><kbd className="font-sans">↑</kbd> <kbd className="font-sans">↓</kbd> navegar</span>
             <span><kbd className="font-sans">↵</kbd> abrir</span>
             <span><kbd className="font-sans">esc</kbd> fechar</span>
           </footer>
         </div>
-      </SuperficieModal>
+  );
+
+  // As linhas são numeradas na ordem em que aparecem: é isso que faz as
+  // setas andarem por grupos sem saberem que os grupos existem.
+  let contador = -1;
+  const proximaLinha = () => ++contador;
+
+  return (
+    <>
+      {/* A âncora de secretária, na barra do topo. A palete abre AQUI —
+          tapa a barra e desce a partir dela, como a pesquisa do site.
+          Abaixo de `lg` o gatilho não tem `display` e quem manda é o dock. */}
+      {/**
+       * A palete OCUPA O LUGAR da barra — não se sobrepõe a ela.
+       *
+       * Esteve sobreposta e via-se logo: a palete é mais larga do que a
+       * barra (44 rem contra 26), portanto a barra fechada aparecia por
+       * baixo, a espreitar de um dos lados, com dois campos de pesquisa no
+       * mesmo sítio. É a mesma escolha do lançador do site: enquanto o
+       * painel está aberto, o campo é o dele.
+       */}
+      <div className={styles.painelAncora}>
+        {aberta && emSecretaria ? (
+          palete("secretaria")
+        ) : (
+          <button
+            ref={gatilho}
+            type="button"
+            onClick={abrir}
+            className={styles.busca}
+            aria-label="Pesquisar no painel"
+            aria-expanded={aberta}
+            aria-controls={idPalete}
+            aria-keyshortcuts="Meta+K Control+K"
+          >
+            <Search size={16} className="shrink-0 text-stone-400" aria-hidden />
+            <span className={styles.buscaTexto}>{PLACEHOLDER_BUSCA}</span>
+            <kbd className={styles.buscaAtalho} aria-hidden>⌘K</kbd>
+          </button>
+        )}
+      </div>
+
+      {/**
+       * ┌─────────────────────────────────────────────────────────────────┐
+       * │ O DOCK DO TELEMÓVEL VAI POR PORTAL, E NÃO É ZELO                 │
+       * │                                                                 │
+       * │ Este componente é montado dentro de `.topbar`, e `.topbar`       │
+       * │ declara `backdrop-filter`. Um elemento com `backdrop-filter`     │
+       * │ passa a ser o bloco de contenção de qualquer `position: fixed`   │
+       * │ que tenha dentro — portanto um dock «fixo ao fundo do ecrã»      │
+       * │ escrito aqui ficaria fixo ao fundo do CABEÇALHO, a 56 px do      │
+       * │ topo. Sem erro nenhum: apenas no sítio errado.                   │
+       * │                                                                 │
+       * │ Sai para `<body>`, onde o `fixed` volta a resolver contra o      │
+       * │ ecrã. E continua a ser o mesmo componente, com um só ouvinte de  │
+       * │ ⌘K e uma só paleta — duas instâncias abriam duas.                │
+       * └─────────────────────────────────────────────────────────────────┘
+       */}
+      {montado &&
+        createPortal(
+          <div className={styles.buscaDock} style={geometriaMovel}>
+            <div className={`${styles.painelAncora} mx-auto max-w-[40rem]`}>
+              {aberta && !emSecretaria ? (
+                palete("movel")
+              ) : (
+                <button
+                  ref={gatilhoMovel}
+                  type="button"
+                  onClick={abrir}
+                  className={`${styles.buscaDockBotao} focus-marca`}
+                  aria-label="Pesquisar no painel"
+                  aria-expanded={aberta}
+                  aria-controls={idPalete}
+                >
+                  <Search size={16} className="shrink-0 text-stone-400" aria-hidden />
+                  <span className={styles.buscaDockTexto}>{PLACEHOLDER_BUSCA}</span>
+                </button>
+              )}
+            </div>
+          </div>,
+          document.body,
+        )}
+
     </>
   );
 }
