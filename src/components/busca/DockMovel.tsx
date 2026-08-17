@@ -63,6 +63,7 @@ import { usePathname } from "next/navigation";
 import { Search } from "@/components/ui/Icons";
 import { prepararIndice } from "@/lib/busca/indice";
 import { CONSULTA_MOVEL, anunciarEstadoBusca, useAtalhoBusca, useRegistarLancador } from "./motor";
+import { useTecladoVirtual } from "./ancoragem";
 
 const ID_PAINEL = "rc-busca-painel-movel";
 const ID_CAMPO = "rc-busca-movel";
@@ -133,28 +134,7 @@ export function DockMovel() {
    * │ topo do painel fora do ecrã.                                       │
    * └───────────────────────────────────────────────────────────────────┘
    */
-  const [tecladoInset, setTecladoInset] = useState(0);
-  const [alturaVisivel, setAlturaVisivel] = useState(0);
-
-  useEffect(() => {
-    if (!aberto) {
-      setTecladoInset(0);
-      return;
-    }
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const atualizar = () => {
-      setTecladoInset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
-      setAlturaVisivel(vv.height);
-    };
-    atualizar();
-    vv.addEventListener("resize", atualizar);
-    vv.addEventListener("scroll", atualizar);
-    return () => {
-      vv.removeEventListener("resize", atualizar);
-      vv.removeEventListener("scroll", atualizar);
-    };
-  }, [aberto]);
+  const { tecladoInset, alturaVisivel } = useTecladoVirtual(aberto);
 
   const comTeclado = aberto && tecladoInset > 0;
   const geometria: React.CSSProperties & Record<"--rc-painel-movel-max", string | undefined> = {

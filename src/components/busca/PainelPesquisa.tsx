@@ -36,6 +36,7 @@ import { m, AnimatePresence } from "motion/react";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { TETO_DIALOGO, TETO_POPOVER } from "@/lib/busca/pontuar";
 import { focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
+import { useFecharAoSair } from "./ancoragem";
 import { ChipsIntencao, CorpoResultados, EstadoAcessivel, FormularioBusca, RodapeBusca } from "./partes";
 import { useControladorBusca } from "./useControladorBusca";
 
@@ -151,70 +152,24 @@ export default function PainelPesquisa({
    * │ e a regra continua a ser a certa.)                                   │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  useEffect(() => {
-    // Sem painel no ecrã não há «clicar fora»: com `caixa.current` a null,
-    // qualquer clique em qualquer sítio contaria como fora e fecharia uma
-    // pesquisa que ainda nem apareceu.
-    if (!permitido) return;
-
-    const dentroDoPainel = (alvo: Node | null) => !!alvo && !!caixa.current?.contains(alvo);
-    /**
-     * O chrome de cada variante: o cabeçalho de secretária, ou a barra de
-     * navegação do telemóvel. É o que não pode ser destruído pelo próprio
-     * gesto que o toca — ver o quadro por baixo.
-     */
-    const CHROME = movel ? 'nav[aria-label="Navegação"]' : "nav[data-compacto]";
-    const dentroDoCabecalho = (alvo: Node | null) =>
-      !!alvo && !!(alvo instanceof Element ? alvo : alvo.parentElement)?.closest(CHROME);
-
-    const onPointerDown = (e: PointerEvent) => {
-      const alvo = e.target as Node | null;
-      if (dentroDoPainel(alvo) || dentroDoCabecalho(alvo)) return;
-      aoFechar();
-    };
-
-    const onClique = (e: MouseEvent) => {
-      const alvo = e.target as Node | null;
-      if (dentroDoPainel(alvo)) return;
-      if (dentroDoCabecalho(alvo)) aoFechar();
-    };
-
-    /**
-     * ┌───────────────────────────────────────────────────────────────────┐
-     * │ O TERCEIRO CAMINHO — E ERA ESTE QUE PARTIA O CLIQUE                │
-     * │                                                                   │
-     * │ O painel tinha um `onBlur` que o fechava assim que o foco lhe      │
-     * │ saísse. Parece a regra certa e é a que quebrava a navegação,       │
-     * │ porque o foco sai no `mousedown` — antes do `pointerup`, antes do  │
-     * │ `click`. Passa a ser `focusin` no documento, com a mesma regra dos │
-     * │ outros dois caminhos: o `Tab` que sai do painel para a página      │
-     * │ fecha; o que fica no cabeçalho não destrói o alvo do gesto.        │
-     * └───────────────────────────────────────────────────────────────────┘
-     */
-    const onFoco = (e: FocusEvent) => {
-      const alvo = e.target as Node | null;
-      if (dentroDoPainel(alvo) || dentroDoCabecalho(alvo)) return;
-      aoFechar();
-    };
-
-    const onTecla = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      e.stopPropagation();
-      // Escape não indica destino: quem o carrega quer voltar ao campo.
-      aoFecharComFoco();
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("click", onClique);
-    document.addEventListener("focusin", onFoco);
-    document.addEventListener("keydown", onTecla);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("click", onClique);
-      document.removeEventListener("focusin", onFoco);
-      document.removeEventListener("keydown", onTecla);
-    };
-  }, [aoFechar, aoFecharComFoco, permitido, movel]);
+  /**
+   * O contrato de fecho vive em `ancoragem.ts`, partilhado com a pesquisa
+   * do painel de gestão — os três caminhos (clique fora, foco que sai,
+   * Escape) e a excepção do chrome estão explicados lá.
+   *
+   * `CHROME` é o que muda entre as duas variantes: o cabeçalho de
+   * secretária, ou a barra de navegação do telemóvel. É o que não pode ser
+   * destruído pelo próprio gesto que o toca — com o painel aberto e a
+   * página rolada, fechar no `pointerdown` tirava o alvo ao `click` que
+   * vinha a seguir, e carregar em «Guias» fechava a pesquisa sem navegar.
+   */
+  useFecharAoSair({
+    ativo: permitido,
+    caixa,
+    chrome: movel ? 'nav[aria-label="Navegação"]' : "nav[data-compacto]",
+    aoFechar,
+    aoFecharComFoco,
+  });
 
   if (!permitido) return null;
 

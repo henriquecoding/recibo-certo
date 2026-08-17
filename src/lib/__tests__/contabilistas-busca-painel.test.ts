@@ -150,10 +150,54 @@ describe("o que a paleta não faz", () => {
     expect(fonte).not.toMatch(/\.includes\(termo\)/);
   });
 
-  it("prende o foco e devolve-o ao campo que a abriu", () => {
-    expect(fonte).toContain("SuperficieModal");
-    expect(fonte).toContain("focoDeRegresso");
-    expect(fonte).toContain("focoInicial");
+  /**
+   * ┌───────────────────────────────────────────────────────────────────────┐
+   * │ O QUE ESTE TESTE PEDIA, E PORQUE MUDOU DE MECANISMO                    │
+   * │                                                                       │
+   * │ Pedia `SuperficieModal` + `focoInicial` + `focoDeRegresso`: a paleta   │
+   * │ era um diálogo modal e essas eram as três peças do contrato.           │
+   * │                                                                       │
+   * │ A paleta deixou de ser modal — passou a ser uma região ancorada à      │
+   * │ barra, como a pesquisa do site, sem véu e sem prender o foco. O que    │
+   * │ o teste GARANTE não mudou («o foco entra no campo e volta ao gatilho   │
+   * │ que a abriu»); mudou a forma de o conseguir, e o teste tem de seguir a │
+   * │ garantia, não a implementação antiga.                                  │
+   * │                                                                       │
+   * │ Prender o foco aqui seria agora um defeito: `aria-modal` é uma         │
+   * │ promessa de que o resto da página não existe, e ela continua a existir.│
+   * └───────────────────────────────────────────────────────────────────────┘
+   */
+  it("o foco entra no campo e volta ao gatilho que a abriu", () => {
+    // Entra: o campo é focado quando a paleta abre.
+    expect(fonte).toContain("campo.current?.focus()");
+    // Volta: e volta ao gatilho que está NO ECRÃ — abaixo de `lg` o do topo
+    // tem `display: none`, e um elemento escondido recusa foco em silêncio.
+    expect(fonte).toContain("gatilho.current?.offsetParent ? gatilho.current : gatilhoMovel.current");
+    // Escape e o ✕ fecham devolvendo o foco; clicar fora não, porque esse
+    // gesto já disse para onde a pessoa queria ir.
+    expect(fonte).toContain("fecharComFoco");
+  });
+
+  it("a paleta é uma região ancorada, e não um diálogo modal", () => {
+    // Sobre o CÓDIGO e não sobre o texto: o quadro acima do componente conta
+    // esta história e cita o que deixou de lá estar. Uma asserção de ausência
+    // sobre o ficheiro todo falharia por causa da própria explicação — e a
+    // saída óbvia (apagar a explicação) é exactamente a errada.
+    const codigo = fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    // O contrato de fecho é o mesmo da pesquisa do site, escrito uma vez.
+    expect(codigo).toContain("useFecharAoSair");
+    expect(codigo).not.toContain("SuperficieModal");
+    // Sem véu por cima da página: a página continua legível e clicável.
+    expect(codigo).not.toContain("bg-stone-950/45");
+    expect(codigo).not.toMatch(/aria-modal=/);
+  });
+
+  it("no telemóvel o campo fica em baixo, como na pesquisa do site", () => {
+    // Era uma folha centrada com o campo NO TOPO — a mesma pessoa, no mesmo
+    // telemóvel, escrevia no fundo do ecrã no site e no topo aqui.
+    expect(fonte).toContain("order-3");
+    // E a ordem do DOM não se inverte: é a do `Tab` e a do leitor de ecrã.
+    expect(fonte.indexOf("<input")).toBeLessThan(fonte.indexOf('role="listbox"'));
   });
 
   it("anuncia quantos resultados há a quem não vê a lista", () => {

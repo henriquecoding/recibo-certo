@@ -639,6 +639,76 @@
   font-size: 0.875rem;
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   A PALETE ANCORADA — a mesma ideia da pesquisa do site
+
+   Era um diálogo modal: véu por cima de tudo, foco preso, scroll
+   bloqueado, e no telemóvel uma folha centrada com o campo NO TOPO. A
+   pesquisa do site tinha deixado de o ser, e ficava a diferença
+   absurda — a mesma pessoa, no mesmo telemóvel, a escrever no fundo do
+   ecrã num sítio e no topo no outro.
+
+   Passa a ser uma região ancorada à barra, que TAPA a barra e cresce a
+   partir dela: para baixo no computador, para cima no telemóvel, porque
+   aí a barra vive no fundo do ecrã. Sem véu, sem prender o foco — a
+   página continua legível e clicável por trás, e clicar fora fecha.
+
+   A centragem é aritmética (`left: calc(50% - largura/2)`) e não
+   `translateX`: uma transformação permanente compõe-se com a de entrada
+   e o painel apareceria deslocado antes de saltar para o lugar.
+   ═══════════════════════════════════════════════════════════════════ */
+/* A âncora tem de ter EXACTAMENTE a largura da barra fechada.
+   Tinha `width: 100%` e ficava com a largura do invólucro do cabeçalho, que
+   é bem maior: a palete centrava-se na âncora, a barra ficava encostada à
+   esquerda dentro dela, e as duas apareciam desalinhadas por uma centena de
+   píxeis. A palete é MAIS LARGA do que a barra de propósito — o que tem de
+   coincidir é o eixo, não a largura. */
+.painelAncora {
+  position: relative;
+  width: 100%;
+  /* A ALTURA da barra fechada, reservada sempre.
+
+     A barra é desmontada enquanto a palete está aberta, e sem esta altura a
+     âncora colapsava para zero: a palete, que se posiciona contra ela,
+     aterrava 18 px abaixo de onde a barra estava. Um salto que só se vê no
+     instante em que se carrega — e que é exactamente o instante em que se
+     está a olhar para ali. */
+  height: 2.75rem;
+}
+
+@media (min-width: 1024px) {
+  .painelAncora {
+    max-width: 26rem;
+    height: 2.5rem;
+  }
+}
+
+.paleteSecretaria {
+  --w: min(44rem, calc(100vw - 3rem));
+
+  position: absolute;
+  top: 0;
+  left: calc(50% - var(--w) / 2);
+  z-index: 60;
+  width: var(--w);
+  /* Do topo da barra até ao fim do ecrã, menos uma margem. */
+  max-height: min(34rem, calc(100dvh - 6.5rem));
+}
+
+.paleteMovel {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  /* Sem teclado o CSS exprime o tecto exactamente; com teclado é o
+     componente que o escreve, a partir do `visualViewport`. */
+  max-height: var(
+    --rc-palete-movel-max,
+    calc(100dvh - var(--rc-painel-barra-h) - var(--rc-painel-dock-ar) - 1.25rem)
+  );
+}
+
 :global(.dark) .buscaDockBotao {
   border-color: rgba(231, 229, 228, 0.13);
   background: rgba(18, 22, 17, 0.96);

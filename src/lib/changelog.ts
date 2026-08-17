@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.71.0",
+    data: "2026-08-17",
+    titulo: "A pesquisa do painel de contabilista passa a ser a mesma do site",
+    itens: [
+      "Deixa de abrir uma janela por cima de tudo. Abre presa à barra, com a página a continuar visível e clicável por trás — e fecha ao clicar fora, como já acontecia no resto do site.",
+      "No telemóvel, o campo onde se escreve passa a estar em baixo, colado ao teclado, com os resultados a crescer por cima. Estava no topo de uma janela ao meio do ecrã: escrevia-se num sítio e lia-se noutro.",
+      "No computador, o painel de resultados abre por baixo da barra e no mesmo eixo dela, em vez de saltar para o meio do ecrã.",
+      "As teclas continuam as mesmas — setas para andar, Enter para abrir, Esc para fechar — e passam a estar escritas onde se veem também no telemóvel.",
+    ],
+  },
+  {
     version: "2.70.0",
     data: "2026-08-17",
     titulo: "O telemóvel deixa de ser a versão pequena do site",
