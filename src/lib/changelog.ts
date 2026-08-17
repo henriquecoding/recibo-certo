@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.73.0",
+    data: "2026-08-17",
+    titulo: "O painel de gestão passa a ter seis secções em vez de dez separadores",
+    itens: [
+      "O painel tinha dez destinos numa lista só. Passa a ter seis secções, e nenhuma página foi apagada, movida ou renomeada: quem tinha um endereço guardado continua a chegar lá.",
+      "As Partilhas passam a viver dentro dos Clientes. Uma partilha é o que aquele cliente te enviou — a ficha dele já mostrava os envios, e só a navegação é que dizia que eram assuntos diferentes.",
+      "Os Casos juntam-se às Tarefas em «Trabalho». São as duas metades da mesma pergunta: o que está por propor e o que está por entregar.",
+      "Os Recebimentos, a Fidelidade e a Progressão ficam em «Negócio». O patamar da progressão é a comissão que sai de cada recebimento — estavam ligados nos números e separados no menu.",
+      "No telemóvel, a barra de baixo deixa de rolar. Eram dez destinos e mais de metade vivia fora do ecrã, visível só para quem soubesse arrastar uma barra que não parecia arrastável. Agora as seis cabem, mesmo num ecrã de 320 px.",
+      "No computador, a barra lateral abre a secção onde estás e mostra o que ela tem dentro, em vez de te pedir que guardes dez categorias de cabeça.",
+      "As secções mostram um sinal quando há coisas à espera de ti lá dentro, mesmo com a secção fechada. Um pedido nas Partilhas deixa de ficar invisível até alguém lá ir.",
+      "A pesquisa continua a chegar às dez páginas diretamente, sem passar por secção nenhuma — e passa a dizer, debaixo de cada uma, o que ali se resolve. Procurar «negócio» encontra os Recebimentos, a Fidelidade e a Progressão, embora nenhuma delas se chame assim.",
+      "O quadro de tarefas passa a chamar-se «Tarefas» também no título da página, que continuava a dizer «Trabalho» — o nome que agora é o da secção inteira.",
+    ],
+  },
+  {
     version: "2.72.0",
     data: "2026-08-17",
     titulo: "Onde é a consulta deixa de ser uma frase escrita à mão",

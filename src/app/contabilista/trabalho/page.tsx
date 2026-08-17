@@ -114,7 +114,11 @@ export default function TrabalhoPage() {
   return (
     <div className="space-y-6">
       <CabecalhoPainel
-        titulo="Trabalho"
+        // «Tarefas» e não «Trabalho»: a secção passou a chamar-se Trabalho e
+        // tem dois destinos — os Casos e este quadro. Com o mesmo nome nos
+        // dois níveis, a linha de secção dizia «Casos · Tarefas» e o título
+        // por baixo respondia «Trabalho», que não é nenhum dos dois.
+        titulo="Tarefas"
         descricao={
           atrasadas > 0
             ? `${atrasadas} ${atrasadas === 1 ? "tarefa passou do prazo" : "tarefas passaram do prazo"}.`
