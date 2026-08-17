@@ -18,9 +18,19 @@ set -euo pipefail
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TESTES="$RAIZ/supabase/tests"
-# Todas as migrações da plataforma, por ordem. Uma migração nova entra aqui
-# sozinha: o glob apanha-a, e a suíte passa a exercê-la sem se alterar.
-# As migrações da plataforma: 042 a 099, pelo número no nome.
+# As migrações NUMERADAS da plataforma, por ordem: 042 a 099, pelo número no
+# nome. Uma migração numerada nova entra aqui sozinha — o glob apanha-a, e a
+# suíte passa a exercê-la sem se alterar.
+#
+# ⚠️ Isso vale só para as numeradas. Uma migração DATADA não é apanhada por
+# glob nenhum e tem de ser acrescentada à lista explícita mais abaixo. Já
+# custou caro: `20260817120000_local_verificado_da_consulta` ficou de fora e
+# ninguém viu que não sobrevivia a uma segunda aplicação — largava a
+# assinatura antiga de `confirmar_consulta` e criava a nova com
+# `CREATE FUNCTION`, por isso a segunda passagem morria com 42723 e deixava
+# a base com as duas assinaturas vivas e a chamada ambígua. Foi a
+# idempotência que este arreio prova que teria apanhado o defeito, se ele
+# estivesse dentro do alcance dela.
 #
 # Duas versões anteriores disto estavam erradas de maneiras diferentes.
 # `04[2-9]` deixava a 050 de fora — e uma migração que a suíte não aplica é
@@ -48,9 +58,16 @@ MIGRACOES=($(ls "$RAIZ"/supabase/migrations/*.sql \
 # aqui exige atualizar esses quatro ficheiros, e isso é outro trabalho —
 # um que vale a pena, e que fica por fazer de olhos abertos e não por
 # distração.
+#
+# A `local_verificado_da_consulta` entra por outro motivo que não um teste
+# que a exerça: nenhum dos ficheiros a chama. Entra pela SEGUNDA passagem —
+# é ela que prova que a migração se deixa reaplicar, e foi a falta dessa
+# prova que deixou passar o 42723. Aplica-se sobre o esquema de 042-053 sem
+# mexer no que os testes 02, 03, 04 e 12 afirmam.
 MIGRACOES+=(
   "$RAIZ/supabase/migrations/20260816150000_fronteira_de_contacto.sql"
   "$RAIZ/supabase/migrations/20260816160000_sala_de_acompanhamento.sql"
+  "$RAIZ/supabase/migrations/20260817120000_local_verificado_da_consulta.sql"
 )
 
 if [ ${#MIGRACOES[@]} -eq 0 ]; then
