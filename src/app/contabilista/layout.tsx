@@ -28,18 +28,21 @@ import {
   type DragEvent as ReactDragEvent,
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
-  type ComponentType,
   type ReactNode,
 } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import { contagensDoPainel, obterMinhaFicha } from "@/lib/contabilistas/fonte/dados";
 import { usarPainel, type Painel } from "@/components/contabilistas/usarPainel";
+import {
+  DESTINOS, SECCOES, SEM_CONTAGENS, destinoAtivo, hrefDaSeccao,
+  porResponderNaSeccao, seccaoDoCaminho,
+  type ContagensDoPainel, type SeccaoDoPainel,
+} from "@/components/contabilistas/navegacao";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
 import { contemCodigo } from "@/lib/feedback-sanitize";
 import {
-  Logo, LayoutGrid, Calendar, User, PaperClip, Gift, Settings, ArrowLeft, Warning,
-  Target, Briefcase, ShieldCheck, Eye, RotateCcw, Check, ChevronDown, ArrowRight,
-  Award, Invoice, Close,
+  Logo, ArrowLeft, Warning, ShieldCheck, Eye, RotateCcw, Check, ChevronDown,
+  ArrowRight, Close,
 } from "@/components/ui/Icons";
 import { SuperficieModal } from "@/components/overlays/SuperficieModal";
 import { percentagemDoPerfil } from "@/lib/contabilistas/perfil";
@@ -51,47 +54,6 @@ import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import styles from "./painel.module.css";
 
-interface Contagens {
-  pedidos: number;
-  partilhasPorLer: number;
-  consultasPorConfirmar: number;
-}
-
-interface Item {
-  href: string;
-  label: string;
-  curto: string;
-  Icon: ComponentType<{ size?: number; className?: string }>;
-  /** Quantas coisas esperam por resposta neste separador. */
-  porResponder?: (c: Contagens) => number;
-}
-
-// A ordem é a das referências: quem se acompanha primeiro (clientes),
-// depois o que se lhes está a fazer (casos, agenda, trabalho, partilhas),
-// e no fim o que é do próprio profissional (fidelidade, perfil).
-const NAV: Item[] = [
-  { href: "/contabilista", label: "Hoje", curto: "Hoje", Icon: LayoutGrid },
-  {
-    href: "/contabilista/clientes", label: "Clientes", curto: "Clientes", Icon: User,
-    porResponder: (c) => c.pedidos,
-  },
-  { href: "/contabilista/casos", label: "Casos", curto: "Casos", Icon: Briefcase },
-  {
-    href: "/contabilista/agenda", label: "Agenda", curto: "Agenda", Icon: Calendar,
-    porResponder: (c) => c.consultasPorConfirmar,
-  },
-  { href: "/contabilista/trabalho", label: "Trabalho", curto: "Trabalho", Icon: Target },
-  {
-    href: "/contabilista/partilhas", label: "Partilhas", curto: "Partilhas", Icon: PaperClip,
-    porResponder: (c) => c.partilhasPorLer,
-  },
-  { href: "/contabilista/fidelidade", label: "Fidelidade", curto: "Fidelidade", Icon: Gift },
-  { href: "/contabilista/pagamentos", label: "Recebimentos", curto: "Recebo", Icon: Invoice },
-  { href: "/contabilista/progressao", label: "Progressão", curto: "Progressão", Icon: Award },
-  { href: "/contabilista/perfil", label: "Perfil", curto: "Perfil", Icon: Settings },
-];
-
-const SEM_CONTAGENS: Contagens = { pedidos: 0, partilhasPorLer: 0, consultasPorConfirmar: 0 };
 const MENSAGEM_TEXTO_SEGURO = "Por segurança, não incluas código, HTML ou scripts neste campo.";
 const SELETOR_TEXTO = [
   'input:not([type])',
@@ -132,9 +94,12 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
   const pathname = usePathname();
   const painel = usarPainel();
   const [ficha, setFicha] = useState<Contabilista | null>(null);
-  const [contagens, setContagens] = useState<Contagens>(SEM_CONTAGENS);
+  const [contagens, setContagens] = useState<ContagensDoPainel>(SEM_CONTAGENS);
   const [aVerificar, setAVerificar] = useState(true);
-  const ativoMovel = useRef<HTMLAnchorElement>(null);
+
+  // Em que secção é que este ecrã vive. Decide o que a barra lateral abre
+  // e se há linha de secção no telemóvel.
+  const seccaoAberta = seccaoDoCaminho(pathname, painel.base, painel.href);
 
   // Na demonstração a identidade do contabilista vem da semente, não da
   // sessão: a loja vive em memória e ignora o id de quem pergunta. Quem
@@ -166,15 +131,12 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
     return () => { vivo = false; };
   }, [quemPergunta, podeLer, ficha?.estado, pathname]);
 
-  // A barra móvel tem nove destinos e rola horizontalmente. Quando a pessoa
-  // chega por ligação direta a um destino que está fora do primeiro ecrã,
-  // o separador ativo vem para o centro em vez de ficar escondido.
-  useEffect(() => {
-    const id = requestAnimationFrame(() => {
-      ativoMovel.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [pathname]);
+  // NOTA: aqui vivia um `scrollIntoView` que trazia o destino ativo ao
+  // centro da doca. Existia porque a doca tinha dez destinos e rolava na
+  // horizontal — metade ficava fora do ecrã, e a barra precisava de
+  // JavaScript para se explicar. Com seis secções cabem todas em 320 px e
+  // o efeito deixou de ter trabalho: um destino que já está visível não
+  // precisa de ser trazido para lado nenhum.
 
   if (!carregado || aVerificar) {
     return (
@@ -207,9 +169,10 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
   return (
     <div className={`${styles.shell} ${styles.comSidebar}`}>
       {/* ── Sidebar (≥lg) ─────────────────────────────────────────────
-          Os nove destinos numa coluna. Numa calha horizontal obrigavam
-          a comprimir ou a rolar, e o destino ativo perdia-se; aqui cabem
-          todos e o topo fica livre para as ações do ecrã. */}
+          Seis secções numa coluna, e a secção aberta mostra os destinos
+          que tem dentro. Eram dez destinos planos: numa calha horizontal
+          obrigavam a comprimir ou a rolar, e numa coluna cabiam mas
+          pediam à pessoa que guardasse dez categorias de cabeça. */}
       <aside className={styles.sidebar}>
         <Link href={painel.href("/contabilista")} className={styles.sidebarMarca} aria-label="Painel de gestão">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-sm font-bold tracking-tight text-white">
@@ -225,29 +188,16 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
 
         <nav aria-label="Painel de contabilista" className={styles.sidebarNav}>
           <ul className="space-y-0.5">
-            {NAV.map(({ href, label, Icon, porResponder }) => {
-              const destino = painel.href(href);
-              const ativo = eAtivo(destino, pathname, painel);
-              const quantos = porResponder?.(contagens) ?? 0;
-              return (
-                <li key={href}>
-                  <Link
-                    href={destino}
-                    aria-current={ativo ? "page" : undefined}
-                    className={`${styles.sidebarLink} ${ativo ? styles.sidebarLinkActive : ""}`}
-                  >
-                    <Icon size={17} aria-hidden />
-                    <span className="min-w-0 truncate">{label}</span>
-                    {quantos > 0 && (
-                      <span className={styles.sidebarBadge}>
-                        {quantos}
-                        <span className="sr-only"> por responder</span>
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
+            {SECCOES.map((seccao) => (
+              <SeccaoNaSidebar
+                key={seccao.id}
+                seccao={seccao}
+                aberta={seccao.id === seccaoAberta?.id}
+                painel={painel}
+                pathname={pathname}
+                contagens={contagens}
+              />
+            ))}
           </ul>
         </nav>
 
@@ -292,7 +242,11 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
               `hidden` para não ocupar espaço na linha do telemóvel, onde
               a identidade precisa dele. */}
           <div className="hidden shrink-0 lg:flex lg:min-w-0 lg:flex-1 lg:justify-center">
-            <BuscaDoPainel painel={painel} destinos={NAV} contabilistaId={quemPergunta} />
+            {/* A paleta indexa as DEZ folhas, e não as seis secções: uma
+                pesquisa que só chegasse ao nível de cima obrigava a passar
+                por uma secção para lá chegar, que é exatamente o trabalho
+                que ela existe para poupar. */}
+            <BuscaDoPainel painel={painel} destinos={DESTINOS} contabilistaId={quemPergunta} />
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             {/* As ações do ecrã montam-se aqui por portal — ver
@@ -312,41 +266,58 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
 
       <main className={`${styles.content} ${styles.conteudoComSidebar}`}>
         {painel.demonstracao && <FaixaDemonstracao />}
+        {/* Abaixo de `lg` não há barra lateral para abrir a secção — a
+            linha faz esse trabalho. Acima, seria a mesma escolha escrita
+            duas vezes no mesmo ecrã. */}
+        <LinhaDaSeccao
+          seccao={seccaoAberta}
+          painel={painel}
+          pathname={pathname}
+          contagens={contagens}
+        />
         <ProtecaoTextoPainel>{children}</ProtecaoTextoPainel>
       </main>
       </div>
 
-      {/* O painel tem nove destinos. Em vez de os comprimir numa grelha de
-          seis colunas, todos conservam alvo ≥44 px e a barra rola. O destino
-          ativo é centrado automaticamente pelo efeito acima. */}
+      {/* Seis secções, e por isso já não é preciso rolar: em 320 px cabem
+          todas com alvo ≥44 px. Eram dez destinos planos, e mais de metade
+          vivia fora do ecrã — visível apenas para quem soubesse arrastar
+          uma barra que não parecia arrastável. */}
       <nav
         aria-label="Painel de contabilista"
         className={styles.mobileDock}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className={styles.mobileList}>
-          {NAV.map(({ href, curto, Icon, porResponder }) => {
-            const destino = painel.href(href);
-            const ativo = eAtivo(destino, pathname, painel);
-            const quantos = porResponder?.(contagens) ?? 0;
+          {SECCOES.map((seccao) => {
+            const destino = painel.href(hrefDaSeccao(seccao));
+            const ativa = seccao.id === seccaoAberta?.id;
+            const quantos = porResponderNaSeccao(seccao, contagens);
+            const { Icon } = seccao;
             return (
-              <li key={href} className={styles.mobileItem}>
+              <li key={seccao.id} className={styles.mobileItem}>
                 <Link
-                  ref={ativo ? ativoMovel : undefined}
                   href={destino}
-                  aria-current={ativo ? "page" : undefined}
-                  className={`${styles.mobileLink} ${ativo ? styles.mobileLinkActive : ""}`}
+                  /* Uma secção com destinos lá dentro NÃO é a página atual —
+                     é a secção onde ela vive, e quem diz «page» é a linha de
+                     secção logo acima do conteúdo. Com `page` nos dois, um
+                     leitor de ecrã ouvia «Negócio, página atual» e a seguir
+                     «Fidelidade, página atual»: duas respostas diferentes à
+                     mesma pergunta. `true` é o que a ARIA tem para «o item
+                     atual deste conjunto», sem prometer mais do que isso. */
+                  aria-current={ativa ? (seccao.destinos.length === 1 ? "page" : true) : undefined}
+                  className={`${styles.mobileLink} ${ativa ? styles.mobileLinkActive : ""}`}
                 >
                   <span className="relative">
                     <Icon size={19} aria-hidden />
                     {quantos > 0 && (
                       <span
-                        className="absolute -right-1.5 -top-0.5 flex h-2 w-2 rounded-full bg-brand ring-2 ring-white dark:ring-stone-950"
+                        className={styles.pontoPorResponder}
                         aria-label={`${quantos} por responder`}
                       />
                     )}
                   </span>
-                  <span className="max-w-[4.1rem] truncate">{curto}</span>
+                  <span className="max-w-full truncate">{seccao.curto}</span>
                 </Link>
               </li>
             );
@@ -354,6 +325,139 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
         </ul>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Uma secção na coluna escura — e, quando é a aberta, o que tem dentro.
+ *
+ * Uma secção de um só destino é um link e mais nada: abri-la para revelar
+ * uma linha igual ao cabeçalho seria pedir um clique para não dizer nada.
+ *
+ * Quando tem destinos a sério, o realce forte vai para a PÁGINA e não para
+ * a secção: a secção fica em texto branco (estás aqui) e o destino aberto
+ * fica com a superfície clara (é isto que estás a ver). Realçar os dois da
+ * mesma maneira dava duas linhas a dizer «página atual» na mesma coluna.
+ */
+function SeccaoNaSidebar({
+  seccao, aberta, painel, pathname, contagens,
+}: {
+  seccao: SeccaoDoPainel;
+  aberta: boolean;
+  painel: Painel;
+  pathname: string;
+  contagens: ContagensDoPainel;
+}) {
+  const { Icon } = seccao;
+  const sozinha = seccao.destinos.length === 1;
+  const destinoDaSeccao = painel.href(hrefDaSeccao(seccao));
+  const quantos = porResponderNaSeccao(seccao, contagens);
+
+  return (
+    <li>
+      <Link
+        href={destinoDaSeccao}
+        /* «page» só quando a secção É a página. Tendo destinos lá dentro,
+           a página é um deles — e é esse que o diz, uma linha abaixo. */
+        aria-current={aberta ? (sozinha ? "page" : true) : undefined}
+        className={`${styles.sidebarLink} ${
+          aberta ? (sozinha ? styles.sidebarLinkActive : styles.sidebarLinkAberta) : ""
+        }`}
+      >
+        <Icon size={17} aria-hidden />
+        <span className="min-w-0 truncate">{seccao.label}</span>
+        {/* Na secção fechada, o distintivo soma o que está por responder
+            lá dentro — senão um pedido em «Partilhas» ficava invisível
+            enquanto a secção não fosse aberta. Na aberta cala-se: os
+            destinos por baixo dizem-no com precisão. */}
+        {quantos > 0 && !aberta && (
+          <span className={styles.sidebarBadge}>
+            {quantos}
+            <span className="sr-only"> por responder</span>
+          </span>
+        )}
+      </Link>
+
+      {aberta && !sozinha && (
+        <ul className={styles.sidebarFilhos}>
+          {seccao.destinos.map((d) => {
+            const destino = painel.href(d.href);
+            const ativo = destinoAtivo(destino, pathname, painel.base);
+            const espera = d.porResponder?.(contagens) ?? 0;
+            return (
+              <li key={d.href}>
+                <Link
+                  href={destino}
+                  aria-current={ativo ? "page" : undefined}
+                  className={`${styles.sidebarFilho} ${ativo ? styles.sidebarFilhoAtivo : ""}`}
+                >
+                  <span className="min-w-0 truncate">{d.label}</span>
+                  {espera > 0 && (
+                    <span className={styles.sidebarBadge}>
+                      {espera}
+                      <span className="sr-only"> por responder</span>
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </li>
+  );
+}
+
+/**
+ * A linha da secção, no telemóvel.
+ *
+ * São LIGAÇÕES e não separadores, e a diferença não é de estilo: cada uma
+ * leva a um endereço próprio, com histórico e com «abrir noutro
+ * separador». Um `role="tab"` prometeria um painel que muda no mesmo sítio
+ * — e não é isso que acontece.
+ *
+ * Só aparece onde tem trabalho: numa secção de um só destino não há nada
+ * para escolher, e a linha seria uma barra a repetir o nome do ecrã.
+ */
+function LinhaDaSeccao({
+  seccao, painel, pathname, contagens,
+}: {
+  seccao: SeccaoDoPainel | undefined;
+  painel: Painel;
+  pathname: string;
+  contagens: ContagensDoPainel;
+}) {
+  if (!seccao || seccao.destinos.length === 1) return null;
+
+  return (
+    <nav aria-label={`Secção ${seccao.label}`} className={`${styles.linhaSeccao} lg:hidden`}>
+      <ul className={styles.linhaSeccaoLista}>
+        {seccao.destinos.map((d) => {
+          const destino = painel.href(d.href);
+          const ativo = destinoAtivo(destino, pathname, painel.base);
+          const espera = d.porResponder?.(contagens) ?? 0;
+          const { Icon } = d;
+          return (
+            <li key={d.href}>
+              <Link
+                href={destino}
+                aria-current={ativo ? "page" : undefined}
+                className={`${styles.linhaSeccaoLink} ${ativo ? styles.linhaSeccaoLinkAtivo : ""} focus-marca`}
+              >
+                <Icon size={14} aria-hidden />
+                {d.label}
+                {espera > 0 && (
+                  <span className={styles.linhaSeccaoContagem}>
+                    {espera}
+                    <span className="sr-only"> por responder</span>
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }
 
@@ -581,10 +685,12 @@ function ContaNoTopo({ ficha, painel }: { ficha: Contabilista; painel: Painel })
   );
 }
 
-/** O separador ativo, medido contra a base onde o painel está aberto. */
-function eAtivo(destino: string, pathname: string, painel: Painel): boolean {
-  return destino === painel.base ? pathname === destino : pathname.startsWith(destino);
-}
+// NOTA: `eAtivo` vivia aqui e comparava com `startsWith` puro. Passou a
+// ser `destinoAtivo`, em `navegacao.tsx`, porque agora três superfícies
+// fazem a mesma pergunta — barra lateral, linha de secção e doca — e uma
+// regra escrita três vezes diverge à primeira afinação. A comparação
+// também deixou de ser um prefixo de texto: `/contabilista/trabalho` já
+// não pode acender por causa de um futuro `/contabilista/trabalhos`.
 
 /**
  * A faixa que diz onde a pessoa está.

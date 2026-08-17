@@ -2,6 +2,7 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { contemCodigo } from "../feedback-sanitize";
+import { DESTINOS } from "@/components/contabilistas/navegacao";
 
 const SRC = join(__dirname, "..", "..");
 const RAIZ = join(SRC, "..");
@@ -78,14 +79,35 @@ describe("texto livre do painel profissional", () => {
 });
 
 describe("redesign do painel profissional", () => {
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ O QUE ESTE TESTE GARANTE, E PORQUE MUDOU DE MECANISMO              │
+   * │                                                                   │
+   * │ Contava `href: "/contabilista` no layout e exigia exatamente dez,  │
+   * │ mais um `scrollIntoView`. As duas asserções liam a IMPLEMENTAÇÃO   │
+   * │ de então: os dez destinos escritos à mão num array do layout, e o  │
+   * │ gesto que trazia o ativo ao centro de uma doca que rolava.         │
+   * │                                                                   │
+   * │ Os destinos passaram para `navegacao.tsx`, arrumados em seis       │
+   * │ secções, e a doca deixou de rolar — portanto deixou de precisar de │
+   * │ ser centrada. O que o teste GARANTE não mudou («todos os destinos  │
+   * │ continuam lá, e nada os comprime»); mudou onde é que essa verdade  │
+   * │ está escrita, e o teste tem de seguir a garantia.                  │
+   * │                                                                   │
+   * │ A prova de que nenhum destino se perde vive agora, mais forte, em  │
+   * │ `contabilistas-painel-navegacao.test.ts`: lê as rotas do disco, e  │
+   * │ por isso apanha uma página nova sem lugar na navegação — coisa que │
+   * │ contar literais nunca conseguiu fazer.                             │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
   it("mantém todos os destinos sem os comprimir numa grelha de seis", () => {
-    // Dez desde que os Recebimentos entraram. O número está fixado de
-    // propósito — é o que apanha um destino removido por acidente — mas a
-    // regra que interessa é a que vem a seguir: nenhuma grelha fixa os
-    // comprime, e o destino ativo é trazido para o centro.
-    expect((LAYOUT.match(/href: "\/contabilista/g) ?? []).length).toBe(10);
+    // O número continua fixado de propósito: é o que apanha um destino
+    // removido por acidente.
+    expect(DESTINOS).toHaveLength(10);
     expect(LAYOUT).not.toContain("grid-cols-6");
-    expect(LAYOUT).toContain("scrollIntoView");
+    // E a doca continua a ser uma fila que se adapta, não uma grelha fixa:
+    // os lugares crescem para encher a linha em vez de serem espremidos.
+    expect(CSS).toMatch(/\.mobileItem \{[^}]*flex: 1 1/);
   });
 
   it("não regressa para dois sinos Realtime no mesmo layout", () => {
