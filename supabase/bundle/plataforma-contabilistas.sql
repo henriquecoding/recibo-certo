@@ -10032,6 +10032,9 @@ GRANT SELECT ON public.contabilista_stripe TO authenticated;
 --      uma sobrecarga ambígua ao PostgREST, que escolheria a errada
 --      exatamente nas chamadas que trazem o ponto.
 --
+--      Caem as DUAS assinaturas, e a segunda linha não é zelo a mais: é o
+--      que torna esta migração re-aplicável. Ver a nota na secção 2.
+--
 --  E uma quarta, que é a que faltava ao ecrã:
 --
 --   4. `definir_local_consulta`. Até aqui o local só se escrevia no
@@ -10079,7 +10082,20 @@ COMMENT ON COLUMN public.agendamentos.local_lng IS
 
 -- ── 2. Confirmar passa a aceitar o ponto ────────────────────────────────
 
+-- Caem as duas assinaturas, e por motivos diferentes.
+--
+-- A de dois argumentos porque é a que esta migração vem substituir. A de
+-- quatro porque `CREATE FUNCTION` não é `CREATE OR REPLACE`: se ela já
+-- existir, o comando falha com 42723 e leva a transação inteira atrás.
+--
+-- E ela já existe sempre que isto corre uma segunda vez — o que acontece,
+-- porque o `bundle/` inclui a 047, e a 047 ressuscita a de dois argumentos
+-- com CREATE OR REPLACE. Sem esta segunda linha, a segunda passagem
+-- deixava a base com as duas vivas ao mesmo tempo e qualquer chamada de
+-- dois argumentos passava a devolver 42725 («is not unique») — exatamente
+-- a ambiguidade que a decisão 3 existe para evitar.
 DROP FUNCTION IF EXISTS public.confirmar_consulta(uuid, text);
+DROP FUNCTION IF EXISTS public.confirmar_consulta(uuid, text, double precision, double precision);
 
 CREATE FUNCTION public.confirmar_consulta(
   p_agendamento uuid,
