@@ -51,7 +51,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { m, AnimatePresence } from "motion/react";
+import { m, AnimatePresence, useReducedMotion } from "motion/react";
 import {
   LogoMark, Home, BookOpen, Trophy, User, Close, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
   Briefcase,
@@ -100,6 +100,7 @@ export default function ChromeMobile() {
   const { user, abrirModal, disponivel } = useAuth();
   const [querMenu, setQuerMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const reduzMovimento = useReducedMotion();
 
   // A vaga do coordenador: o menu é modal, logo não pode coexistir com o
   // consentimento nem com a pesquisa. Ver `CoordenadorOverlays.tsx`.
@@ -212,12 +213,43 @@ export default function ChromeMobile() {
             );
 
             if (slot.tipo === "link") {
+              /**
+               * ┌───────────────────────────────────────────────────────────┐
+               * │ CARREGAR NO SEPARADOR ONDE JÁ SE ESTÁ LEVA AO PRINCÍPIO    │
+               * │                                                           │
+               * │ Uma `<Link>` para a rota em que já estamos não faz nada —  │
+               * │ o Next não navega, e por isso também não repõe o scroll.   │
+               * │ Quem estava no fim do quiz e carregava em «Quiz» à espera  │
+               * │ de voltar ao início ficava exactamente onde estava, sem um │
+               * │ sinal de que o toque tinha sequer sido registado.          │
+               * │                                                           │
+               * │ É o gesto que todas as barras de separadores têm, e é o    │
+               * │ único que faz sentido: o separador já está aceso, portanto │
+               * │ o toque não pode significar «leva-me lá» — só pode         │
+               * │ significar «leva-me ao princípio disto».                   │
+               * │                                                           │
+               * │ A rota EXACTA, e não o prefixo que acende o separador: em  │
+               * │ `/contabilistas/joao` o lugar está aceso e o toque tem de  │
+               * │ continuar a levar ao directório, que é outra página.       │
+               * └───────────────────────────────────────────────────────────┘
+               */
+              const naRotaExacta = pathname === slot.href;
               return (
                 <Link
                   key={slot.id}
                   href={slot.href}
                   aria-current={on ? "page" : undefined}
-                  onClick={() => medirNavegacao(slot.id, window.innerWidth >= 768 ? "tablet" : "movel")}
+                  onClick={(e) => {
+                    medirNavegacao(slot.id, window.innerWidth >= 768 ? "tablet" : "movel");
+                    if (!naRotaExacta) return;
+                    // `⌘/Ctrl/Shift + clique` continuam a pertencer ao browser.
+                    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                    e.preventDefault();
+                    // `behavior` explícito passa à frente do
+                    // `prefers-reduced-motion` do `globals.css` — daí decidir
+                    // aqui também, como o `BotaoTopo` já faz.
+                    window.scrollTo({ top: 0, behavior: reduzMovimento ? "auto" : "smooth" });
+                  }}
                   className={classe}
                 >
                   {conteudo}
@@ -296,22 +328,25 @@ export default function ChromeMobile() {
                 )}
               </div>
 
-              <SeccaoMenu titulo="Ferramentas">
-                {NAV_FERRAMENTAS.map((l) => (
-                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
-                ))}
-              </SeccaoMenu>
-
-              <SeccaoMenu titulo="Aprender">
-                {NAV_APRENDER.map((l) => (
-                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
-                ))}
-              </SeccaoMenu>
-
-              {/* «Contabilistas» já não vive aqui — é um dos cinco lugares da
-                  barra. Repeti-lo dentro da folha punha dois caminhos para o
-                  mesmo sítio na mesma superfície, e o de baixo é o melhor. */}
-              <SeccaoMenu titulo="Mais">
+              {/**
+               * ┌───────────────────────────────────────────────────────────┐
+               * │ «PLANOS» E «SUGESTÕES» SOBEM PARA JUNTO DAS ACÇÕES DE CONTA │
+               * │                                                           │
+               * │ Estavam no fim, numa secção chamada «Mais», depois de nove │
+               * │ ferramentas e quatro páginas de aprender. Numa folha que   │
+               * │ abre com 88 dvh de altura isso são dois ecrãs de rolagem — │
+               * │ e «Mais» é o nome que se dá ao que sobra, não ao que se    │
+               * │ procura.                                                   │
+               * │                                                           │
+               * │ São as duas coisas que respondem a «e eu, aqui?»: o que    │
+               * │ estou a pagar e como falo com alguém. Pertencem ao lado de │
+               * │ «Entrar» e «Começar grátis», que é a pergunta a que a      │
+               * │ pessoa veio a esta folha responder. As ferramentas e os    │
+               * │ guias vêm depois: quem os quer tem cinco lugares na barra  │
+               * │ e uma pesquisa de largura inteira lá fora.                 │
+               * └───────────────────────────────────────────────────────────┘
+               */}
+              <SeccaoMenu titulo="Conta e apoio">
                 <LinhaMenu item={PLANOS} ativo={ativoMenu(PLANOS.href)} />
                 <button
                   type="button"
@@ -327,12 +362,31 @@ export default function ChromeMobile() {
                   </span>
                   <ChevronRight size={14} className="flex-shrink-0 text-stone-300" />
                 </button>
-
-                <div className="flex items-center justify-between gap-3 rounded-xl px-4 py-3">
-                  <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Tema</span>
-                  <ThemeToggle />
-                </div>
               </SeccaoMenu>
+
+              {/* «Contabilistas» já não vive aqui — é um dos cinco lugares da
+                  barra. Repeti-lo dentro da folha punha dois caminhos para o
+                  mesmo sítio na mesma superfície, e o de baixo é o melhor. */}
+              <SeccaoMenu titulo="Ferramentas">
+                {NAV_FERRAMENTAS.map((l) => (
+                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
+                ))}
+              </SeccaoMenu>
+
+              <SeccaoMenu titulo="Aprender">
+                {NAV_APRENDER.map((l) => (
+                  <LinhaMenu key={l.href} item={l} ativo={ativoMenu(l.href)} />
+                ))}
+              </SeccaoMenu>
+
+              {/* O tema fica no fim, e sozinho: é uma preferência, não um
+                  destino, e desde que passou a haver um topo no telemóvel já
+                  está a um toque lá em cima. Fica aqui por ser onde estava —
+                  tirá-lo obrigaria quem o aprendeu a procurá-lo outra vez. */}
+              <div className="flex items-center justify-between gap-3 border-t border-stone-100 px-4 pt-4 dark:border-stone-800">
+                <span className="text-sm font-semibold text-stone-800 dark:text-stone-100">Tema</span>
+                <ThemeToggle />
+              </div>
             </div>
           </m.div>
         </AnimatePresence>

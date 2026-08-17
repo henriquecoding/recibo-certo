@@ -79,6 +79,20 @@ describe("chrome-movel:barra", () => {
     expect(CHROME).toContain("pathname.startsWith(`${href}/`)");
   });
 
+  it("carregar no separador onde já se está leva ao princípio da página", () => {
+    // Uma `<Link>` para a rota actual não faz nada — o Next não navega e por
+    // isso também não repõe o scroll. Quem estava no fim do quiz e carregava
+    // em «Quiz» ficava no fim, sem sinal nenhum de que tinha tocado.
+    expect(CHROME).toContain("const naRotaExacta = pathname === slot.href");
+    expect(CHROME).toContain("window.scrollTo({ top: 0");
+    // A rota EXACTA, e não o prefixo que acende o separador: em
+    // `/contabilistas/joao` o toque tem de continuar a levar ao directório.
+    expect(CHROME).not.toContain("naRotaExacta = on");
+    // E o `behavior` explícito passa à frente do `prefers-reduced-motion` do
+    // CSS, portanto a decisão tem de ser tomada aqui também.
+    expect(CHROME).toContain("reduzMovimento");
+  });
+
   it("nenhum lugar impede a barra de encolher abaixo do conteúdo", () => {
     // `min-w-0` com `flex-1` é o que reparte os cinco lugares em partes
     // iguais seja qual for o rótulo. Sem ele, «Contabilistas» — uma palavra
@@ -87,6 +101,29 @@ describe("chrome-movel:barra", () => {
     // inegociável neste projecto.
     expect(CHROME).toContain("min-w-0 flex-1");
     expect(CHROME).not.toContain("min-w-[3.25rem]");
+  });
+});
+
+describe("chrome-movel:folha-de-conta", () => {
+  /** As secções da folha, pela ordem em que são renderizadas. */
+  const seccoes = [...CHROME.matchAll(/<SeccaoMenu titulo="([^"]+)"/g)].map((m) => m[1]);
+
+  it("«Conta e apoio» vem primeiro, antes das ferramentas e dos guias", () => {
+    // Estavam no fim, numa secção chamada «Mais», depois de nove ferramentas
+    // e quatro páginas — dois ecrãs de rolagem numa folha de 88 dvh. São as
+    // duas coisas que respondem a «e eu, aqui?»: o que estou a pagar e como
+    // falo com alguém. Pertencem ao lado de «Entrar» e «Começar grátis».
+    expect(seccoes).toEqual(["Conta e apoio", "Ferramentas", "Aprender"]);
+    expect(CHROME).not.toContain('titulo="Mais"');
+  });
+
+  it("«Planos» e o feedback vivem nessa primeira secção", () => {
+    const primeira = CHROME.slice(
+      CHROME.indexOf('<SeccaoMenu titulo="Conta e apoio">'),
+      CHROME.indexOf('<SeccaoMenu titulo="Ferramentas">'),
+    );
+    expect(primeira).toContain("PLANOS");
+    expect(primeira).toContain("abrirFeedback");
   });
 });
 
