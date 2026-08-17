@@ -1,5 +1,24 @@
--- Executar depois de 20260813_planos_operacionais.sql.
--- Tudo é revertido: o teste não deixa contas, cobranças nem dados fiscais.
+-- ═══════════════════════════════════════════════════════════════════════
+--  TESTE MANUAL — planos operacionais e faturação
+--  ---------------------------------------------------------------------
+--  Vive em `manuais/` e não na raiz de `tests/` porque o arreio de RLS
+--  (`npm run rls:check`) NÃO o consegue correr, e o motivo é estrutural:
+--  o arreio monta um esquema mínimo a partir da migração 042, e isto
+--  precisa de `subscriptions`, `profiles`, `cenarios` e das tabelas
+--  `billing_*`, que vêm das migrações 001-041.
+--
+--  Durante muito tempo esteve na raiz sem prefixo numérico. O arreio corre
+--  `[0-9][0-9]-*.sql`, por isso nunca lhe tocou — e um teste que ninguém
+--  corre parece um teste que passa. Fica aqui com o nome do que é.
+--
+--  COMO CORRER
+--  -----------
+--    psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+--      -f supabase/tests/manuais/billing-planos-operacionais.sql
+--
+--  Correr depois de `20260813_planos_operacionais.sql`.
+--  Tudo é revertido: não deixa contas, cobranças nem dados fiscais.
+-- ═══════════════════════════════════════════════════════════════════════
 BEGIN;
 
 DO $$

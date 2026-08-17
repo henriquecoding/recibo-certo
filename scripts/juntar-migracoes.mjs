@@ -15,21 +15,46 @@ import { join } from "node:path";
 const DIR = "supabase/migrations";
 const SAIDA = "supabase/bundle/plataforma-contabilistas.sql";
 
-// O intervalo, dito por extenso. `Number(f.slice(0,3)) >= 42` parecia
-// equivalente e não era: uma migração chamada `20260813_...` tem `202` nos
-// três primeiros dígitos, entrava no ficheiro junto sem ser da plataforma,
-// e ia parar ao fim de tudo por ordem alfabética. A `main` tem uma dessas.
+// ── O que entra no ficheiro junto ───────────────────────────────────
+//
+// A plataforma de contabilistas começou na 042 e continuou, a partir de
+// agosto, em migrações com nome por data. O filtro antigo só apanhava as
+// numeradas — e o resultado era um ficheiro que se anunciava como «todas
+// as migrações da plataforma» e trazia doze de vinte e quatro. Quem o
+// colasse ficava com a plataforma até à 053 e sem a conversa segura, sem o
+// LinkedIn, sem o contrato público, sem a fidelidade v2, sem a progressão,
+// sem os pagamentos, sem a sala e sem a fronteira de contacto.
+//
+// Passa a apanhar as duas famílias:
+//
+//   · numeradas de 042 a 099;
+//   · datadas a partir de 20260814 — quando a plataforma passou a usar
+//     nomes por data.
+//
+// O corte em 20260814 não é arbitrário: `20260802_documentos_emitidos` e
+// `20260813_planos_operacionais` são da aplicação base (documentos e
+// faturação), não da plataforma, e dependem de tabelas das migrações
+// 001-041 que este ficheiro assume já aplicadas.
 const DESDE = 42;
 const ATE = 99;
+const DATADA_DESDE = "20260814";
 
-const ficheiros = readdirSync(DIR)
-  .filter((f) => {
-    const m = /^(\d{3})_/.exec(f);
-    if (!m || !f.endsWith(".sql")) return false;
-    const n = Number(m[1]);
+function daPlataforma(f) {
+  if (!f.endsWith(".sql")) return false;
+
+  const numerada = /^(\d{3})_/.exec(f);
+  if (numerada) {
+    const n = Number(numerada[1]);
     return n >= DESDE && n <= ATE;
-  })
-  .sort();
+  }
+
+  const datada = /^(\d{8,14})_/.exec(f);
+  return Boolean(datada) && datada[1] >= DATADA_DESDE;
+}
+
+// A ordenação por texto põe as numeradas primeiro («0» < «2») e as datadas
+// por data — que é exatamente a ordem por que têm de correr.
+const ficheiros = readdirSync(DIR).filter(daPlataforma).sort();
 
 if (ficheiros.length === 0) {
   console.error("Nenhuma migração no intervalo — o filtro está errado.");
@@ -44,9 +69,14 @@ const cabecalho = `-- ═══════════════════�
 --
 --  PARA QUE SERVE
 --  --------------
---  As migrações ${ficheiros[0].slice(0, 3)} a ${ficheiros.at(-1).slice(0, 3)} dependem umas das outras: a 046 usa tabelas que
---  a 042 cria, a 052 altera tabelas que a 048 e a 051 criam. Aplicá-las
---  fora de ordem dá exatamente o erro que dá — «relation does not exist».
+--  Estas ${ficheiros.length} migrações dependem umas das outras: a 046 usa tabelas
+--  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
+--  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
+--  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
+--  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
+--
+--  Da primeira (${ficheiros[0]})
+--  à última  (${ficheiros.at(-1)}).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.

@@ -1,0 +1,46 @@
+# ═══════════════════════════════════════════════════════════════════════
+#  Configuração da CLI da Supabase
+#  ---------------------------------------------------------------------
+#  Não existia. A consequência não era um erro — era pior: qualquer
+#  comando da CLI corria contra um projeto que ele tinha de adivinhar, e
+#  `supabase link` era preciso outra vez a cada máquina nova.
+#
+#  ⚠️ LER ANTES DE CORRER `supabase db push`
+#  -----------------------------------------
+#  O registo de migrações desta base NÃO corresponde aos nomes dos
+#  ficheiros deste repositório, e isso é histórico, não um defeito por
+#  corrigir à pressa:
+#
+#   · 52 migrações do repositório (001-053) foram aplicadas antes de haver
+#     registo, ou pelo editor de SQL. Não estão em
+#     `supabase_migrations.schema_migrations`.
+#   · 13 estão registadas com carimbos de data diferentes dos nomes dos
+#     ficheiros, por terem sido aplicadas pelo painel.
+#
+#  Um `supabase db push` hoje tentaria reaplicar tudo. As migrações são
+#  idempotentes e provavelmente aguentariam — «provavelmente» não é uma
+#  garantia que se dê a uma base de produção.
+#
+#  O CAMINHO SEGURO, e o que este projeto usa:
+#    · alterações novas → `supabase/migrations/` + aplicar pelo painel ou
+#      pela ferramenta de migração, uma a uma;
+#    · base nova de raiz → `supabase/bundle/plataforma-contabilistas.sql`.
+#
+#  `npm run supabase:check` verifica que o repositório continua a criar
+#  tudo o que existe na base. Ver `supabase/README.md`.
+# ═══════════════════════════════════════════════════════════════════════
+
+project_id = "sxdditwefdzuqeephqiy"
+
+[db]
+# Igual ao de produção (ver `list_projects`): correr local noutra major
+# encontraria erros que a produção não tem, e — pior — deixaria passar os
+# que ela tem.
+major_version = 17
+
+[db.migrations]
+schema_paths = []
+
+# O arreio de testes de RLS não usa a CLI: sobe um PostgreSQL descartável e
+# aplica as migrações à mão (`scripts/testar-rls.sh`). Fica aqui dito para
+# ninguém procurar a configuração dele neste ficheiro.

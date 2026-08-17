@@ -6,9 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  As migrações 042 a 053 dependem umas das outras: a 046 usa tabelas que
---  a 042 cria, a 052 altera tabelas que a 048 e a 051 criam. Aplicá-las
---  fora de ordem dá exatamente o erro que dá — «relation does not exist».
+--  Estas 28 migrações dependem umas das outras: a 046 usa tabelas
+--  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
+--  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
+--  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
+--  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
+--
+--  Da primeira (042_plataforma_contabilistas.sql)
+--  à última  (20260816180000_stripe_fecha_grant_anon.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -5195,3 +5200,4794 @@ BEGIN
   PERFORM cron.schedule(v_nome, '*/15 * * * *',
                         'SELECT public.disparar_avisos_email();');
 END $$;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260814181500_texto_seguro_painel_contabilista.sql               ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260814_texto_seguro_painel_contabilista.sql
+-- Defesa em profundidade para todo o texto escrito na plataforma profissional.
+--
+-- A interface já trata conteúdo como TEXTO (React escapa por omissão) e passa
+-- a rejeitar código antes de uma submissão. Isso não pode ser a fronteira de
+-- segurança: alguém pode falar diretamente com o PostgREST usando a própria
+-- sessão. A base repete a regra, tal como `site_feedback` já fazia desde a
+-- migração 018.
+--
+-- Não apaga, transforma nem reescreve dados existentes. Só recusa INSERT/UPDATE
+-- futuro quando um campo editável contém uma assinatura executável/markup.
+-- As policies RLS existentes não mudam.
+
+CREATE OR REPLACE FUNCTION public.painel_texto_tem_codigo(p_texto text)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+  SELECT COALESCE(
+    p_texto ~* '</?[A-Za-z!][^>]*>'
+    OR p_texto ~* '<[[:space:]]*script'
+    OR p_texto ~* 'javascript[[:space:]]*:'
+    OR p_texto ~* 'vbscript[[:space:]]*:'
+    OR p_texto ~* 'on[A-Za-z]+[[:space:]]*='
+    OR p_texto ~* 'data[[:space:]]*:[[:space:]]*text/html'
+    OR p_texto ~* 'srcdoc[[:space:]]*='
+    OR p_texto ~ '\{\{'
+    OR p_texto ~ '<%',
+    false
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.rejeitar_codigo_painel()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  i integer;
+  campo text;
+  valor text;
+BEGIN
+  IF TG_NARGS = 0 THEN
+    RETURN NEW;
+  END IF;
+
+  FOR i IN 0..TG_NARGS - 1 LOOP
+    campo := TG_ARGV[i];
+    valor := pg_catalog.to_jsonb(NEW) ->> campo;
+
+    IF public.painel_texto_tem_codigo(valor) THEN
+      RAISE EXCEPTION 'O campo "%" não aceita código, HTML ou scripts.', campo
+        USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Estas funções existem para triggers, não como RPC pública.
+REVOKE ALL ON FUNCTION public.painel_texto_tem_codigo(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.rejeitar_codigo_painel() FROM PUBLIC, anon, authenticated;
+
+-- Perfil profissional e candidatura.
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilistas ON public.contabilistas;
+CREATE TRIGGER trg_texto_seguro_contabilistas
+  BEFORE INSERT OR UPDATE ON public.contabilistas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'nome', 'occ', 'bio', 'concelho', 'email_contacto', 'telefone', 'website'
+  );
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_pedidos ON public.contabilista_pedidos;
+CREATE TRIGGER trg_texto_seguro_contabilista_pedidos
+  BEFORE INSERT OR UPDATE ON public.contabilista_pedidos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'nome', 'email_contacto', 'telefone', 'mensagem', 'credenciais', 'motivo_decisao'
+  );
+
+-- Relação contabilista/cliente e conversa.
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_vinculos ON public.contabilista_vinculos;
+CREATE TRIGGER trg_texto_seguro_contabilista_vinculos
+  BEFORE INSERT OR UPDATE ON public.contabilista_vinculos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'mensagem', 'nome_cliente', 'email_cliente'
+  );
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_mensagens ON public.contabilista_mensagens;
+CREATE TRIGGER trg_texto_seguro_contabilista_mensagens
+  BEFORE INSERT OR UPDATE ON public.contabilista_mensagens
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('corpo');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_anexos ON public.contabilista_anexos;
+CREATE TRIGGER trg_texto_seguro_contabilista_anexos
+  BEFORE INSERT OR UPDATE ON public.contabilista_anexos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('nome');
+
+-- Trabalho, agenda e tipos de consulta.
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_tarefas ON public.contabilista_tarefas;
+CREATE TRIGGER trg_texto_seguro_contabilista_tarefas
+  BEFORE INSERT OR UPDATE ON public.contabilista_tarefas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('titulo', 'notas');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_tarefa_passos ON public.contabilista_tarefa_passos;
+CREATE TRIGGER trg_texto_seguro_contabilista_tarefa_passos
+  BEFORE INSERT OR UPDATE ON public.contabilista_tarefa_passos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('texto');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_tipos ON public.contabilista_tipos_consulta;
+CREATE TRIGGER trg_texto_seguro_contabilista_tipos
+  BEFORE INSERT OR UPDATE ON public.contabilista_tipos_consulta
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('nome', 'descricao');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_excecoes ON public.contabilista_excecoes;
+CREATE TRIGGER trg_texto_seguro_contabilista_excecoes
+  BEFORE INSERT OR UPDATE ON public.contabilista_excecoes
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('motivo');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_agendamentos ON public.agendamentos;
+CREATE TRIGGER trg_texto_seguro_agendamentos
+  BEFORE INSERT OR UPDATE ON public.agendamentos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('assunto', 'local_ou_ligacao');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_partilhas ON public.partilhas;
+CREATE TRIGGER trg_texto_seguro_partilhas
+  BEFORE INSERT OR UPDATE ON public.partilhas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('titulo', 'nota_cliente');
+
+-- Intermediação de casos: inclui os campos que podem vir de cliente,
+-- contabilista ou administração. Estados, enums, referências internas,
+-- caminhos de storage e MIME não são texto livre e ficam de fora.
+DROP TRIGGER IF EXISTS trg_texto_seguro_casos ON public.casos;
+CREATE TRIGGER trg_texto_seguro_casos
+  BEFORE INSERT OR UPDATE ON public.casos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'nome_completo', 'nif', 'assunto', 'situacao', 'nota_triagem'
+  );
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_caso_contactos ON public.caso_contactos;
+CREATE TRIGGER trg_texto_seguro_caso_contactos
+  BEFORE INSERT OR UPDATE ON public.caso_contactos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('email', 'telefone', 'morada');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_caso_documentos ON public.caso_documentos;
+CREATE TRIGGER trg_texto_seguro_caso_documentos
+  BEFORE INSERT OR UPDATE ON public.caso_documentos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('nome');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_caso_encaminhamentos ON public.caso_encaminhamentos;
+CREATE TRIGGER trg_texto_seguro_caso_encaminhamentos
+  BEFORE INSERT OR UPDATE ON public.caso_encaminhamentos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('motivo');
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_caso_mensagens ON public.caso_mensagens;
+CREATE TRIGGER trg_texto_seguro_caso_mensagens
+  BEFORE INSERT OR UPDATE ON public.caso_mensagens
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'corpo', 'corpo_encaminhado', 'nota_revisao'
+  );
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260814183000_linkedin_contabilistas.sql                         ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- LinkedIn no perfil profissional dos contabilistas.
+--
+-- A conta é ligada por Supabase Auth (`linkedin_oidc`). A fotografia pública
+-- não pode ser escrita diretamente pelo browser: só a função de sincronização
+-- a copia de `auth.identities`, depois de confirmar que a identidade pertence
+-- ao utilizador autenticado. O URL `/in/...` é confirmado manualmente porque
+-- o OpenID Connect do LinkedIn fornece nome/foto, mas não o endereço público.
+
+ALTER TABLE public.contabilistas
+  ADD COLUMN IF NOT EXISTS linkedin_url text,
+  ADD COLUMN IF NOT EXISTS linkedin_avatar_url text,
+  ADD COLUMN IF NOT EXISTS linkedin_subject text,
+  ADD COLUMN IF NOT EXISTS linkedin_ligado_em timestamptz;
+
+ALTER TABLE public.contabilistas
+  DROP CONSTRAINT IF EXISTS contabilistas_linkedin_url_valido;
+ALTER TABLE public.contabilistas
+  ADD CONSTRAINT contabilistas_linkedin_url_valido CHECK (
+    linkedin_url IS NULL OR linkedin_url ~ '^https://([[:alnum:]-]+\.)*linkedin\.com/in/[A-Za-z0-9%._~+-]+/?$'
+  );
+
+CREATE OR REPLACE FUNCTION public.proteger_identidade_linkedin_contabilista()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF (
+    NEW.linkedin_avatar_url IS DISTINCT FROM OLD.linkedin_avatar_url OR
+    NEW.linkedin_subject IS DISTINCT FROM OLD.linkedin_subject OR
+    NEW.linkedin_ligado_em IS DISTINCT FROM OLD.linkedin_ligado_em
+  ) AND COALESCE(pg_catalog.current_setting('app.sincronizar_linkedin', true), '') <> '1' THEN
+    RAISE EXCEPTION 'Os dados verificados do LinkedIn só podem ser alterados pela sincronização da identidade.'
+      USING ERRCODE = '42501';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.proteger_identidade_linkedin_contabilista() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_proteger_identidade_linkedin_contabilista ON public.contabilistas;
+CREATE TRIGGER trg_proteger_identidade_linkedin_contabilista
+BEFORE UPDATE ON public.contabilistas
+FOR EACH ROW EXECUTE FUNCTION public.proteger_identidade_linkedin_contabilista();
+
+CREATE OR REPLACE FUNCTION public.sincronizar_linkedin_contabilista()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_user uuid := auth.uid();
+  v_identidade record;
+  v_avatar text;
+  v_subject text;
+BEGIN
+  IF v_user IS NULL THEN
+    RAISE EXCEPTION 'Sessão necessária.' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT i.identity_data
+    INTO v_identidade
+  FROM auth.identities i
+  WHERE i.user_id = v_user
+    AND i.provider = 'linkedin_oidc'
+  ORDER BY i.created_at DESC
+  LIMIT 1;
+
+  PERFORM pg_catalog.set_config('app.sincronizar_linkedin', '1', true);
+
+  IF NOT FOUND THEN
+    UPDATE public.contabilistas
+       SET linkedin_avatar_url = NULL,
+           linkedin_subject = NULL,
+           linkedin_ligado_em = NULL
+     WHERE user_id = v_user;
+
+    RETURN pg_catalog.jsonb_build_object('ligado', false);
+  END IF;
+
+  v_avatar := NULLIF(pg_catalog.btrim(COALESCE(
+    v_identidade.identity_data ->> 'picture',
+    v_identidade.identity_data ->> 'avatar_url'
+  )), '');
+  v_subject := NULLIF(pg_catalog.btrim(COALESCE(
+    v_identidade.identity_data ->> 'sub',
+    v_identidade.identity_data ->> 'provider_id'
+  )), '');
+
+  IF v_avatar IS NOT NULL AND v_avatar !~ '^https://' THEN
+    v_avatar := NULL;
+  END IF;
+
+  UPDATE public.contabilistas
+     SET linkedin_avatar_url = v_avatar,
+         linkedin_subject = v_subject,
+         linkedin_ligado_em = COALESCE(linkedin_ligado_em, pg_catalog.now())
+   WHERE user_id = v_user;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Não existe ficha de contabilista para esta conta.' USING ERRCODE = 'P0002';
+  END IF;
+
+  RETURN pg_catalog.jsonb_build_object(
+    'ligado', true,
+    'avatar_url', v_avatar,
+    'subject', v_subject
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.sincronizar_linkedin_contabilista() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sincronizar_linkedin_contabilista() TO authenticated;
+
+-- Mantém a mesma fronteira anti-HTML/script já usada pelo resto do painel.
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilistas ON public.contabilistas;
+CREATE TRIGGER trg_texto_seguro_contabilistas
+BEFORE INSERT OR UPDATE ON public.contabilistas
+FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+  'nome', 'occ', 'bio', 'concelho', 'email_contacto', 'telefone', 'website', 'linkedin_url'
+);
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260814184000_linkedin_contabilistas_rpc_hardening.sql           ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- Mantém o RPC público como SECURITY INVOKER e move a leitura privilegiada de
+-- auth.identities para o schema private, que não é exposto pelo PostgREST.
+
+CREATE SCHEMA IF NOT EXISTS private;
+REVOKE ALL ON SCHEMA private FROM PUBLIC, anon;
+
+CREATE OR REPLACE FUNCTION private.sincronizar_linkedin_contabilista_interno(p_user uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_identidade record;
+  v_avatar text;
+  v_subject text;
+BEGIN
+  IF p_user IS NULL OR auth.uid() IS NULL OR p_user IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'Sessão necessária.' USING ERRCODE = '42501';
+  END IF;
+
+  SELECT i.identity_data
+    INTO v_identidade
+  FROM auth.identities i
+  WHERE i.user_id = p_user
+    AND i.provider = 'linkedin_oidc'
+  ORDER BY i.created_at DESC
+  LIMIT 1;
+
+  PERFORM pg_catalog.set_config('app.sincronizar_linkedin', '1', true);
+
+  IF NOT FOUND THEN
+    UPDATE public.contabilistas
+       SET linkedin_avatar_url = NULL,
+           linkedin_subject = NULL,
+           linkedin_ligado_em = NULL
+     WHERE user_id = p_user;
+    RETURN pg_catalog.jsonb_build_object('ligado', false);
+  END IF;
+
+  v_avatar := NULLIF(pg_catalog.btrim(COALESCE(
+    v_identidade.identity_data ->> 'picture',
+    v_identidade.identity_data ->> 'avatar_url'
+  )), '');
+  v_subject := NULLIF(pg_catalog.btrim(COALESCE(
+    v_identidade.identity_data ->> 'sub',
+    v_identidade.identity_data ->> 'provider_id'
+  )), '');
+
+  IF v_avatar IS NOT NULL AND v_avatar !~ '^https://' THEN v_avatar := NULL; END IF;
+
+  UPDATE public.contabilistas
+     SET linkedin_avatar_url = v_avatar,
+         linkedin_subject = v_subject,
+         linkedin_ligado_em = COALESCE(linkedin_ligado_em, pg_catalog.now())
+   WHERE user_id = p_user;
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Não existe ficha de contabilista para esta conta.' USING ERRCODE = 'P0002';
+  END IF;
+
+  RETURN pg_catalog.jsonb_build_object('ligado', true, 'avatar_url', v_avatar, 'subject', v_subject);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION private.sincronizar_linkedin_contabilista_interno(uuid) FROM PUBLIC, anon;
+GRANT USAGE ON SCHEMA private TO authenticated;
+GRANT EXECUTE ON FUNCTION private.sincronizar_linkedin_contabilista_interno(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.sincronizar_linkedin_contabilista()
+RETURNS jsonb
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+  SELECT private.sincronizar_linkedin_contabilista_interno(auth.uid());
+$$;
+
+REVOKE ALL ON FUNCTION public.sincronizar_linkedin_contabilista() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.sincronizar_linkedin_contabilista() TO authenticated;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260814191500_corrigir_trigger_texto_seguro.sql                  ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- Corrige a fronteira anti-código do painel profissional.
+--
+-- `rejeitar_codigo_painel()` é uma trigger function e não é uma RPC pública.
+-- A versão anterior executava como INVOKER e chamava o helper
+-- `painel_texto_tem_codigo(text)`, cujo EXECUTE foi corretamente revogado a
+-- anon/authenticated. Num UPDATE legítimo feito pelo browser, a trigger era
+-- executada mas a chamada ao helper falhava com "permission denied".
+--
+-- A trigger passa a SECURITY DEFINER, com search_path vazio e referências
+-- totalmente qualificadas. Mantemos EXECUTE revogado aos papéis da API, pelo
+-- que não se transforma numa operação privilegiada invocável por PostgREST.
+-- RLS, triggers existentes e a regra anti-HTML/script não são removidos.
+
+CREATE OR REPLACE FUNCTION public.rejeitar_codigo_painel()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  i integer;
+  campo text;
+  valor text;
+BEGIN
+  IF TG_NARGS = 0 THEN
+    RETURN NEW;
+  END IF;
+
+  FOR i IN 0..TG_NARGS - 1 LOOP
+    campo := TG_ARGV[i];
+    valor := pg_catalog.to_jsonb(NEW) ->> campo;
+
+    IF public.painel_texto_tem_codigo(valor) THEN
+      RAISE EXCEPTION 'O campo "%" não aceita código, HTML ou scripts.', campo
+        USING ERRCODE = '22023';
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$;
+
+-- A função só é chamada por triggers já instalados. Não expor como RPC.
+REVOKE ALL ON FUNCTION public.rejeitar_codigo_painel() FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.rejeitar_codigo_painel() TO service_role;
+
+-- O helper continua privado para os papéis da API; a trigger, agora executada
+-- como o owner postgres, consegue chamá-lo sem abrir uma superfície RPC.
+REVOKE ALL ON FUNCTION public.painel_texto_tem_codigo(text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.painel_texto_tem_codigo(text) TO service_role;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260815200000_contrato_publico_contabilistas.sql                 ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+--  O CONTRATO PÚBLICO DE `contabilistas` PASSA A SER UMA VIEW
+--  ---------------------------------------------------------------------
+--  Hoje o diretório lê a TABELA, através de uma política que dá a linha
+--  inteira a `anon`:
+--
+--    CREATE POLICY contabilistas_diretorio_publico ON public.contabilistas
+--      FOR SELECT TO anon, authenticated USING (estado = 'aprovado');
+--
+--  A política está certa na intenção — o diretório é uma página indexável
+--  e tem de ser legível sem sessão. O que está errado é o alcance: ela não
+--  escolhe colunas, escolhe linhas. Duas consequências, uma de hoje e uma
+--  de amanhã:
+--
+--   · HOJE saem colunas que nenhum ecrã mostra e que ninguém decidiu
+--     publicar. `linkedin_subject` é o `sub` do OIDC do LinkedIn — um
+--     identificador de correlação de identidade. `pedido_id` liga a ficha
+--     pública à candidatura. `telefone` não é renderizado em lado nenhum
+--     e sai na mesma a quem peça a linha.
+--
+--   · AMANHÃ, qualquer coluna nova em `contabilistas` nasce pública. É o
+--     problema estrutural, e é o que interessa: a Progressão e Comissão
+--     desenhada para esta plataforma tem XP, patamar comprado e créditos.
+--     Uma dessas colunas aqui seria a comissão de todos os contabilistas
+--     à vista, sem ninguém escrever uma linha de frontend.
+--
+--  Esta migração cria o contrato explícito e NÃO fecha nada: a política
+--  antiga continua de pé, e por isso nada quebra. O corte da política é
+--  um passo separado e deliberado, depois de o frontend passar a ler a
+--  view — ver o comentário no fim.
+--
+--  O que a view inclui é o que o produto MOSTRA hoje, mais os campos que
+--  a especificação (§149) declara públicos. O que ela exclui é o que
+--  ninguém mostra: identificadores internos e o telefone, que passa a
+--  sair por função, a quem tem vínculo.
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+--  1. A view: as colunas ditas uma a uma
+-- ---------------------------------------------------------------------
+--  `security_invoker = false` é deliberado: a view corre com os
+--  privilégios do dono e continua a devolver as linhas aprovadas mesmo
+--  depois de a política pública da tabela ser retirada. É este o
+--  mecanismo que a substitui.
+--
+--  `DROP` antes de `CREATE`, e nunca `CREATE OR REPLACE`: as migrações
+--  seguintes desta série acrescentam colunas a esta view NO MEIO da
+--  lista, e o `REPLACE` só sabe acrescentar no fim. Reaplicar esta
+--  migração sobre a view já crescida recusaria com
+--  «42P16: cannot drop columns from view». Vale para as três definições
+--  desta série — ver a mesma nota em 20260815210000 e 20260815230000.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
+WITH (security_invoker = false) AS
+SELECT
+  c.user_id,
+  c.slug,
+  c.nome,
+  c.occ,
+  c.bio,
+  c.distrito,
+  c.concelho,
+  c.especialidades,
+  c.modalidades,
+  -- O email é público por decisão de produto: o editor de perfil diz, na
+  -- própria página, que é isto que aparece no diretório. Está aqui porque
+  -- foi escolhido, não por arrastamento.
+  c.email_contacto,
+  c.website,
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  c.fidelidade_ativa,
+  c.fidelidade_meta,
+  c.fidelidade_desconto_pct,
+  c.criado_em
+FROM public.contabilistas c
+WHERE c.estado = 'aprovado';
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil público. Acrescentar uma coluna aqui é uma decisão; acrescentar uma coluna a `contabilistas` deixa de ser. Não expõe telefone (ver contacto_do_contabilista), linkedin_subject, pedido_id nem estado.';
+
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
+
+-- ---------------------------------------------------------------------
+--  2. O telefone sai por função, a quem tem relação
+-- ---------------------------------------------------------------------
+--  Nenhum ecrã público mostra o telefone hoje. Deixá-lo sair na linha
+--  seria publicá-lo sem nunca o ter apresentado — o pior dos dois mundos:
+--  invisível para quem o procura e disponível para quem o recolhe em
+--  massa.
+CREATE OR REPLACE FUNCTION public.contacto_do_contabilista(p_contabilista uuid)
+RETURNS TABLE (email_contacto text, telefone text)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT c.email_contacto, c.telefone
+    FROM public.contabilistas c
+   WHERE c.user_id = p_contabilista
+     AND c.estado = 'aprovado'
+     AND (
+          c.user_id = (SELECT auth.uid())
+       OR public.vinculo_nao_terminado(p_contabilista, (SELECT auth.uid()))
+     );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contacto_do_contabilista(uuid) FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.contacto_do_contabilista(uuid) TO authenticated;
+
+COMMENT ON FUNCTION public.contacto_do_contabilista(uuid) IS
+  'Email e telefone do contabilista, só para o próprio e para quem tem vínculo vivo. O email também é público pela view; o telefone só sai por aqui.';
+
+-- ---------------------------------------------------------------------
+--  3. A guarda: impedir que a tabela volte a ser o contrato
+-- ---------------------------------------------------------------------
+--  Sem isto, a correção dura até alguém precisar de um campo novo no
+--  diretório e recriar a política aberta — que é a solução óbvia para
+--  quem não leu este ficheiro.
+CREATE OR REPLACE FUNCTION public.assert_contrato_publico_contabilistas()
+RETURNS void
+LANGUAGE plpgsql
+STABLE
+SET search_path = ''
+AS $$
+DECLARE
+  v_politicas text[];
+BEGIN
+  -- `pg_policies.roles` é name[], não texto.
+  SELECT array_agg(policyname ORDER BY policyname) INTO v_politicas
+    FROM pg_policies
+   WHERE schemaname = 'public'
+     AND tablename = 'contabilistas'
+     AND cmd IN ('SELECT', 'ALL')
+     AND ('anon'::name = ANY (roles) OR 'public'::name = ANY (roles));
+
+  IF v_politicas IS NOT NULL THEN
+    RAISE EXCEPTION
+      'contabilistas tem política de SELECT aberta a anon (%). O contrato público é a view contabilistas_publico.',
+      array_to_string(v_politicas, ', ');
+  END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION public.assert_contrato_publico_contabilistas() IS
+  'Falha enquanto existir uma política de SELECT aberta a anon em contabilistas. Hoje FALHA de propósito — a política antiga ainda está de pé. Passa a verde com a migração que a retira, depois de o frontend ler a view.';
+
+COMMIT;
+
+-- =====================================================================
+--  O PASSO SEGUINTE, QUANDO O FRONTEND JÁ LER A VIEW
+--  ---------------------------------------------------------------------
+--  Não está aqui de propósito: é a única parte que QUEBRA leituras, e
+--  quebrá-las no mesmo deploy que introduz a alternativa é pedir um
+--  diretório vazio em produção. Aplicar só depois de confirmar que
+--  `listarContabilistas` e `obterContabilistaPorSlug` já leem
+--  `contabilistas_publico`:
+--
+--    DROP POLICY IF EXISTS "contabilistas_diretorio_publico"
+--      ON public.contabilistas;
+--    REVOKE SELECT ON public.contabilistas FROM anon;
+--    SELECT public.assert_contrato_publico_contabilistas();
+--
+--  A partir daí, o próprio e a administração continuam a ler a tabela
+--  pelas políticas que já existem (`contabilistas_proprio_le`), e o
+--  público lê a view.
+-- =====================================================================
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260815210000_perfil_profissional_campos.sql                     ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+--  PERFIL PROFISSIONAL — OS CAMPOS QUE A IDENTIDADE PRECISA
+--  ---------------------------------------------------------------------
+--  O perfil deixa de ser um formulário e passa a ser a identidade
+--  profissional de quem vende o serviço (§120). Para isso faltavam-lhe
+--  seis factos que o cartão do diretório e o hero público mostram.
+--
+--  Todos os campos aqui são PÚBLICOS por desenho — vão para a view
+--  `contabilistas_publico`, que é o contrato. Nenhum deles é calculado:
+--  a §139 proíbe inventar sinais de confiança, e por isso anos de
+--  experiência e tempo de resposta são DECLARADOS, com a interface
+--  obrigada a dizê-lo.
+--
+--  A verificação da OCC é a exceção e a razão de ser desta migração ter
+--  mais do que `ALTER TABLE`: a §124 diz que um número escrito no
+--  formulário nunca pode virar um selo de «verificado». O selo passa a
+--  ter uma fonte administrativa, e mudar o número apaga-a.
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+--  1. Identidade declarada
+-- ---------------------------------------------------------------------
+ALTER TABLE public.contabilistas
+  ADD COLUMN IF NOT EXISTS titulo_profissional text
+    CHECK (titulo_profissional IS NULL OR char_length(titulo_profissional) BETWEEN 2 AND 80),
+  ADD COLUMN IF NOT EXISTS apresentacao_curta text
+    CHECK (apresentacao_curta IS NULL OR char_length(apresentacao_curta) <= 200),
+  ADD COLUMN IF NOT EXISTS idiomas text[] NOT NULL DEFAULT '{}'::text[]
+    CHECK (cardinality(idiomas) <= 8),
+  ADD COLUMN IF NOT EXISTS anos_experiencia smallint
+    CHECK (anos_experiencia IS NULL OR anos_experiencia BETWEEN 0 AND 60),
+  ADD COLUMN IF NOT EXISTS resposta_media_horas smallint
+    CHECK (resposta_media_horas IS NULL OR resposta_media_horas BETWEEN 1 AND 168);
+
+COMMENT ON COLUMN public.contabilistas.apresentacao_curta IS
+  'Uma linha para o cartão do diretório e para o hero público. NÃO substitui a bio: o cartão precisa de uma linha, o perfil de um parágrafo.';
+COMMENT ON COLUMN public.contabilistas.anos_experiencia IS
+  'DECLARADO. A §139 proíbe calcular anos de experiência a partir de dados que não os provam — a data de criação da conta não é experiência profissional.';
+COMMENT ON COLUMN public.contabilistas.resposta_media_horas IS
+  'COMPROMISSO declarado, não medição. A interface tem de dizer «responde normalmente em X» e nunca apresentá-lo como métrica verificada.';
+
+-- ---------------------------------------------------------------------
+--  2. Idiomas com vocabulário fechado
+-- ---------------------------------------------------------------------
+--  A §129 pede o mesmo princípio das especialidades: uma lista curta e
+--  deliberada, não centenas de tags livres. Sem vocabulário fechado, o
+--  diretório deixa de conseguir filtrar por idioma — «Inglês», «ingles»
+--  e «EN» seriam três coisas.
+CREATE TABLE IF NOT EXISTS public.catalogo_idiomas (
+  codigo text PRIMARY KEY CHECK (codigo ~ '^[a-z]{2}$'),
+  nome   text NOT NULL,
+  ordem  smallint NOT NULL DEFAULT 0
+);
+
+INSERT INTO public.catalogo_idiomas (codigo, nome, ordem) VALUES
+  ('pt', 'Português', 1),
+  ('en', 'Inglês',    2),
+  ('es', 'Espanhol',  3),
+  ('fr', 'Francês',   4),
+  ('de', 'Alemão',    5),
+  ('it', 'Italiano',  6),
+  ('nl', 'Neerlandês',7),
+  ('uk', 'Ucraniano', 8)
+ON CONFLICT (codigo) DO NOTHING;
+
+ALTER TABLE public.catalogo_idiomas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "catalogo_idiomas_publico" ON public.catalogo_idiomas;
+CREATE POLICY "catalogo_idiomas_publico" ON public.catalogo_idiomas
+  FOR SELECT TO anon, authenticated USING (true);
+
+GRANT SELECT ON public.catalogo_idiomas TO anon, authenticated;
+REVOKE INSERT, UPDATE, DELETE ON public.catalogo_idiomas FROM anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.idiomas_validos(p_idiomas text[])
+RETURNS boolean
+LANGUAGE sql STABLE SET search_path = ''
+AS $$
+  SELECT p_idiomas IS NULL
+      OR NOT EXISTS (
+           SELECT 1 FROM unnest(p_idiomas) AS x(c)
+            WHERE c NOT IN (SELECT codigo FROM public.catalogo_idiomas)
+         );
+$$;
+
+ALTER TABLE public.contabilistas
+  DROP CONSTRAINT IF EXISTS contabilistas_idiomas_conhecidos;
+ALTER TABLE public.contabilistas
+  ADD CONSTRAINT contabilistas_idiomas_conhecidos
+  CHECK (public.idiomas_validos(idiomas)) NOT VALID;
+-- NOT VALID não revalida as linhas antigas — todas têm '{}' hoje — mas
+-- impõe a regra em todos os writes futuros.
+
+-- ---------------------------------------------------------------------
+--  3. A verificação da OCC é um facto administrativo (§124)
+-- ---------------------------------------------------------------------
+ALTER TABLE public.contabilistas
+  ADD COLUMN IF NOT EXISTS occ_verificado_em timestamptz,
+  ADD COLUMN IF NOT EXISTS occ_verificado_por uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+
+COMMENT ON COLUMN public.contabilistas.occ_verificado_em IS
+  'Quando a administração confirmou o número junto da Ordem. Sem isto, a interface só pode escrever «informado» — nunca «verificado».';
+
+--  Duas garantias que fazem o selo significar alguma coisa:
+--
+--   1. o contabilista não escreve a verificação a si próprio;
+--   2. mudar o número apaga-a. Sem isto, verificava-se o 12345 e
+--      trocava-se depois para outro qualquer, mantendo o selo — que é
+--      exatamente a fraude que a verificação existe para impedir.
+CREATE OR REPLACE FUNCTION public.contabilistas_tranca_verificacao_occ()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin() THEN
+    IF NEW.occ_verificado_em IS DISTINCT FROM OLD.occ_verificado_em
+       OR NEW.occ_verificado_por IS DISTINCT FROM OLD.occ_verificado_por THEN
+      RAISE EXCEPTION 'A verificação do número OCC só é feita pela administração.';
+    END IF;
+  END IF;
+
+  IF NEW.occ IS DISTINCT FROM OLD.occ THEN
+    NEW.occ_verificado_em  := NULL;
+    NEW.occ_verificado_por := NULL;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contabilistas_tranca_verificacao_occ() FROM anon, authenticated, public;
+
+DROP TRIGGER IF EXISTS contabilistas_tranca_occ ON public.contabilistas;
+CREATE TRIGGER contabilistas_tranca_occ
+  BEFORE UPDATE ON public.contabilistas
+  FOR EACH ROW EXECUTE FUNCTION public.contabilistas_tranca_verificacao_occ();
+
+-- ---------------------------------------------------------------------
+--  4. O trigger anti-código passa a cobrir os campos novos
+-- ---------------------------------------------------------------------
+--  `rejeitar_codigo_painel` corre por coluna e a lista era explícita.
+--  Um campo novo não entra nela sozinho — e `titulo_profissional` vai
+--  direto para o hero público.
+--  `distrito` também não estava na lista original. Vem do mesmo SelectMenu
+--  fechado, mas a proteção é por coluna e não por widget: quem escreve na
+--  base de dados não passa necessariamente pelo formulário.
+DROP TRIGGER IF EXISTS trg_texto_seguro_contabilistas ON public.contabilistas;
+CREATE TRIGGER trg_texto_seguro_contabilistas
+  BEFORE INSERT OR UPDATE ON public.contabilistas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+    'nome', 'occ', 'bio', 'distrito', 'concelho', 'email_contacto',
+    'telefone', 'website', 'titulo_profissional', 'apresentacao_curta'
+  );
+
+-- ---------------------------------------------------------------------
+--  5. O contrato público cresce com eles — e só com eles
+-- ---------------------------------------------------------------------
+--  `DROP` antes de `CREATE`, e não `CREATE OR REPLACE`: as colunas novas
+--  (`occ_verificado`, `titulo_profissional`, `apresentacao_curta`, …)
+--  entram NO MEIO da lista que a migração anterior criou, e o `REPLACE`
+--  só sabe acrescentar colunas no fim — recusa com «cannot change name of
+--  view column "bio"». Nada depende ainda desta view, por isso o `DROP` é
+--  barato; a partir do momento em que dependa, este passo precisa de
+--  recriar também os dependentes.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
+WITH (security_invoker = false) AS
+SELECT
+  c.user_id,
+  c.slug,
+  c.nome,
+  c.occ,
+  (c.occ_verificado_em IS NOT NULL) AS occ_verificado,
+  c.titulo_profissional,
+  c.apresentacao_curta,
+  c.bio,
+  c.distrito,
+  c.concelho,
+  c.especialidades,
+  c.modalidades,
+  c.idiomas,
+  c.anos_experiencia,
+  c.resposta_media_horas,
+  c.email_contacto,
+  c.website,
+  c.linkedin_url,
+  (c.linkedin_ligado_em IS NOT NULL) AS linkedin_ligado,
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  c.fidelidade_ativa,
+  c.fidelidade_meta,
+  c.fidelidade_desconto_pct,
+  c.criado_em
+FROM public.contabilistas c
+WHERE c.estado = 'aprovado';
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil público. Acrescentar uma coluna aqui é uma decisão; acrescentar uma coluna a `contabilistas` deixa de ser. Não expõe telefone (ver contacto_do_contabilista), linkedin_subject, pedido_id nem estado.';
+
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260815220000_dashboard_modular_contabilistas.sql                ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+-- DASHBOARD MODULAR — VISTAS E LAYOUT
+--
+-- Fonte de verdade: Relatório Mestre §4–12, §47.
+--
+-- Princípios que este ficheiro impõe na base de dados e não apenas na UI:
+--
+--   * o layout guarda GEOMETRIA, nunca dados. Não há aqui uma segunda
+--     base de dados disfarçada de JSON (§5.6);
+--   * uma sessão de edição = uma escrita atómica (§5.8, §12.12);
+--   * `revision` faz compare-and-swap e impede que o portátil apague o
+--     que o telemóvel gravou há um minuto (§12.15);
+--   * o tipo de widget vem de uma allow-list em SQL. Um `type`
+--     desconhecido é recusado no servidor, não só ignorado no React
+--     (§39 «widget desconhecido não executa componente arbitrário»);
+--   * limites defensivos de tamanho, contagem e coordenadas (§12.16).
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+-- 1. Registry de módulos em SQL (espelho de src/lib/.../modulos.ts)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.dashboard_modulos (
+  type text PRIMARY KEY,
+  tag_base text NOT NULL CHECK (tag_base ~ '^[A-Z]{3}$'),
+  categoria text NOT NULL CHECK (categoria IN ('operacao','clientes','trabalho','fiscal','negocio')),
+  col_span_min smallint NOT NULL CHECK (col_span_min BETWEEN 1 AND 12),
+  col_span_max smallint NOT NULL CHECK (col_span_max BETWEEN 1 AND 12),
+  row_span_min smallint NOT NULL CHECK (row_span_min BETWEEN 1 AND 20),
+  row_span_max smallint NOT NULL CHECK (row_span_max BETWEEN 1 AND 20),
+  prioridade text NOT NULL DEFAULT 'normal' CHECK (prioridade IN ('critical','normal','deferred')),
+  -- A biblioteca do mockup anuncia o formato antes de se arrastar
+  -- («M · Lista», «XL · Kanban»). Saber o que vai acontecer ao painel
+  -- antes de o mudar é metade da confiança no modo de edição.
+  formato text NOT NULL DEFAULT 'lista'
+    CHECK (formato IN ('lista','kanban','grafico','tabela','cartao','timeline')),
+  ativo boolean NOT NULL DEFAULT true,
+  CONSTRAINT dashboard_modulos_spans CHECK (col_span_min <= col_span_max AND row_span_min <= row_span_max)
+);
+
+COMMENT ON TABLE public.dashboard_modulos IS
+  'Allow-list de widgets. A RPC de gravação valida contra esta tabela: o browser não escolhe que componente o painel monta.';
+
+INSERT INTO public.dashboard_modulos
+  (type, tag_base, categoria, col_span_min, col_span_max, row_span_min, row_span_max, prioridade, formato) VALUES
+  ('agenda_hoje',           'AGD', 'operacao', 3, 12, 2, 8,  'critical', 'timeline'),
+  ('precisam_atencao',      'ATN', 'operacao', 3, 12, 2, 8,  'critical', 'lista'),
+  ('prazos_proximos',       'PRZ', 'fiscal',   3, 12, 2, 8,  'critical', 'lista'),
+  ('partilhas_recebidas',   'PAR', 'clientes', 3, 12, 2, 8,  'normal',   'lista'),
+  ('simulacoes_recebidas',  'SIM', 'clientes', 3, 12, 2, 8,  'normal',   'lista'),
+  ('documentos_rever',      'DOC', 'trabalho', 3, 12, 2, 8,  'normal',   'lista'),
+  ('atividade_semana',      'ATV', 'operacao', 3, 12, 2, 6,  'deferred', 'grafico'),
+  ('centro_avisos',         'AVS', 'operacao', 3, 12, 2, 6,  'normal',   'lista'),
+  ('estado_trabalho',       'TRB', 'trabalho', 4, 12, 2, 12, 'normal',   'kanban'),
+  ('clientes',              'CLI', 'clientes', 3, 12, 2, 8,  'normal',   'lista'),
+  ('casos',                 'CAS', 'trabalho', 3, 12, 2, 8,  'normal',   'lista'),
+  ('fidelidade',            'FID', 'negocio',  3, 12, 2, 6,  'deferred', 'cartao'),
+  ('progressao_comissao',   'PRG', 'negocio',  3, 12, 2, 8,  'deferred', 'cartao'),
+  -- Os três que a biblioteca do mockup mostra em RECOMENDADOS e que
+  -- não existiam no registry.
+  ('casos_em_risco',        'RSK', 'trabalho', 3, 12, 2, 8,  'normal',   'lista'),
+  ('comunicacoes_recentes', 'COM', 'clientes', 3, 12, 2, 8,  'normal',   'lista'),
+  ('resumo_por_cliente',    'RES', 'clientes', 4, 12, 2, 10, 'deferred', 'tabela')
+ON CONFLICT (type) DO NOTHING;
+
+ALTER TABLE public.dashboard_modulos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS dashboard_modulos_leitura ON public.dashboard_modulos;
+CREATE POLICY dashboard_modulos_leitura ON public.dashboard_modulos
+  FOR SELECT TO authenticated USING (ativo);
+
+-- ---------------------------------------------------------------------
+-- 2. Vistas
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.contabilista_dashboard_vistas (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  nome text NOT NULL CHECK (char_length(nome) BETWEEN 1 AND 60),
+  ordem integer NOT NULL DEFAULT 0 CHECK (ordem BETWEEN 0 AND 100),
+  principal boolean NOT NULL DEFAULT false,
+  sistema boolean NOT NULL DEFAULT false,
+  layout jsonb NOT NULL DEFAULT '{"version":2,"revision":1,"grid":{"desktop":{"columns":12,"rowHeight":52,"gap":12},"tablet":{"columns":8,"rowHeight":52,"gap":12}},"items":[]}'::jsonb,
+  revision integer NOT NULL DEFAULT 1 CHECK (revision > 0),
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  atualizado_em timestamptz NOT NULL DEFAULT now(),
+  -- teto de tamanho: um layout normal tem poucos KB (§5.6)
+  CONSTRAINT dashboard_vista_layout_pequeno CHECK (pg_column_size(layout) <= 32768)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS contabilista_dashboard_uma_principal
+  ON public.contabilista_dashboard_vistas (contabilista_id) WHERE principal;
+CREATE INDEX IF NOT EXISTS contabilista_dashboard_vistas_ordem
+  ON public.contabilista_dashboard_vistas (contabilista_id, ordem);
+CREATE UNIQUE INDEX IF NOT EXISTS contabilista_dashboard_nome_unico
+  ON public.contabilista_dashboard_vistas (contabilista_id, lower(nome));
+
+COMMENT ON TABLE public.contabilista_dashboard_vistas IS
+  'Configuração de APRESENTAÇÃO do painel. Nunca contém nomes de clientes, valores fiscais, documentos ou resultados — só que módulos existem e onde estão.';
+COMMENT ON COLUMN public.contabilista_dashboard_vistas.revision IS
+  'Compare-and-swap. Guardar com uma revisão antiga devolve layout_desatualizado em vez de destruir a versão mais nova.';
+
+DROP TRIGGER IF EXISTS trg_texto_seguro_dashboard_vistas ON public.contabilista_dashboard_vistas;
+CREATE TRIGGER trg_texto_seguro_dashboard_vistas
+  BEFORE INSERT OR UPDATE ON public.contabilista_dashboard_vistas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel('nome');
+
+ALTER TABLE public.contabilista_dashboard_vistas ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS dashboard_vistas_dono_le ON public.contabilista_dashboard_vistas;
+CREATE POLICY dashboard_vistas_dono_le ON public.contabilista_dashboard_vistas
+  FOR SELECT TO authenticated
+  USING (contabilista_id = (SELECT auth.uid()) AND public.e_contabilista_aprovado((SELECT auth.uid())));
+
+DROP POLICY IF EXISTS dashboard_vistas_dono_cria ON public.contabilista_dashboard_vistas;
+CREATE POLICY dashboard_vistas_dono_cria ON public.contabilista_dashboard_vistas
+  FOR INSERT TO authenticated
+  WITH CHECK (contabilista_id = (SELECT auth.uid())
+              AND public.e_contabilista_aprovado((SELECT auth.uid()))
+              AND NOT sistema);
+
+DROP POLICY IF EXISTS dashboard_vistas_dono_apaga ON public.contabilista_dashboard_vistas;
+CREATE POLICY dashboard_vistas_dono_apaga ON public.contabilista_dashboard_vistas
+  FOR DELETE TO authenticated
+  USING (contabilista_id = (SELECT auth.uid()) AND NOT sistema);
+
+-- Repare-se: NÃO há policy de UPDATE para `authenticated`.
+-- Mudar layout, nome, ordem ou principal passa obrigatoriamente pelas
+-- RPCs abaixo, que validam geometria e fazem compare-and-swap.
+
+-- ---------------------------------------------------------------------
+-- 3. Validação geométrica no servidor (§5.9)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.dashboard_layout_invalido(p_layout jsonb)
+RETURNS text
+LANGUAGE plpgsql STABLE SET search_path TO '' AS $$
+DECLARE
+  v_item jsonb;
+  v_n integer;
+  v_cols integer;
+  v_tags text[] := '{}';
+  v_ids  text[] := '{}';
+  v_mod  record;
+  v_bp   text;
+  v_pos  jsonb;
+BEGIN
+  IF jsonb_typeof(p_layout) <> 'object' THEN RETURN 'layout_nao_e_objeto'; END IF;
+  IF coalesce((p_layout->>'version')::int, 0) <> 2 THEN RETURN 'versao_nao_suportada'; END IF;
+  IF jsonb_typeof(p_layout->'items') <> 'array' THEN RETURN 'items_nao_e_lista'; END IF;
+
+  v_n := jsonb_array_length(p_layout->'items');
+  IF v_n > 24 THEN RETURN 'demasiados_modulos'; END IF;
+
+  IF jsonb_typeof(p_layout->'grid') <> 'object' THEN RETURN 'grid_em_falta'; END IF;
+
+  FOR v_item IN SELECT * FROM jsonb_array_elements(p_layout->'items') LOOP
+    -- identidade
+    IF (v_item->>'instanceId') IS NULL OR (v_item->>'instanceId') !~
+       '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN
+      RETURN 'instanceId_invalido';
+    END IF;
+    IF (v_item->>'instanceId') = ANY (v_ids) THEN RETURN 'instanceId_repetido'; END IF;
+    v_ids := v_ids || (v_item->>'instanceId');
+
+    -- tipo tem de existir na allow-list
+    SELECT * INTO v_mod FROM public.dashboard_modulos m
+     WHERE m.type = (v_item->>'type') AND m.ativo;
+    IF NOT FOUND THEN RETURN 'tipo_desconhecido:' || coalesce(v_item->>'type','null'); END IF;
+
+    -- tag legível e única dentro da vista
+    IF (v_item->>'tag') IS NULL OR (v_item->>'tag') !~ '^[A-Z]{3}-[0-9]{2}$' THEN
+      RETURN 'tag_invalida';
+    END IF;
+    IF left(v_item->>'tag', 3) <> v_mod.tag_base THEN RETURN 'tag_nao_corresponde_ao_tipo'; END IF;
+    IF (v_item->>'tag') = ANY (v_tags) THEN RETURN 'tag_repetida'; END IF;
+    v_tags := v_tags || (v_item->>'tag');
+
+    -- config só pode conter preferências de apresentação (§5.6)
+    IF v_item ? 'config' THEN
+      IF jsonb_typeof(v_item->'config') <> 'object' THEN RETURN 'config_nao_e_objeto'; END IF;
+      IF pg_column_size(v_item->'config') > 512 THEN RETURN 'config_demasiado_grande'; END IF;
+      IF EXISTS (
+        SELECT 1 FROM jsonb_object_keys(v_item->'config') k
+         WHERE k NOT IN ('density','maxItems','showCompleted','sort','periodo','agrupar')
+      ) THEN RETURN 'config_com_chave_nao_permitida'; END IF;
+    END IF;
+
+    -- geometria por breakpoint
+    FOREACH v_bp IN ARRAY ARRAY['desktop','tablet'] LOOP
+      IF NOT (v_item ? v_bp) THEN
+        IF v_bp = 'desktop' THEN RETURN 'desktop_em_falta'; ELSE CONTINUE; END IF;
+      END IF;
+      v_pos  := v_item->v_bp;
+      v_cols := coalesce((p_layout->'grid'->v_bp->>'columns')::int, CASE v_bp WHEN 'desktop' THEN 12 ELSE 8 END);
+
+      IF coalesce((v_pos->>'col')::int, 0) < 1 THEN RETURN 'col_invalida'; END IF;
+      IF coalesce((v_pos->>'row')::int, 0) < 1 THEN RETURN 'row_invalida'; END IF;
+      IF coalesce((v_pos->>'row')::int, 0) > 60 THEN RETURN 'row_fora_do_teto'; END IF;
+      IF coalesce((v_pos->>'colSpan')::int, 0) < 1 THEN RETURN 'colSpan_invalido'; END IF;
+      IF coalesce((v_pos->>'rowSpan')::int, 0) < 1 THEN RETURN 'rowSpan_invalido'; END IF;
+
+      IF (v_pos->>'col')::int + (v_pos->>'colSpan')::int - 1 > v_cols THEN
+        RETURN 'modulo_transborda_a_grelha';
+      END IF;
+
+      -- min/max do registry, medidos na grelha desktop de 12 colunas
+      IF v_bp = 'desktop' THEN
+        IF (v_pos->>'colSpan')::int NOT BETWEEN v_mod.col_span_min AND v_mod.col_span_max THEN
+          RETURN 'colSpan_fora_do_registry:' || v_mod.type;
+        END IF;
+        IF (v_pos->>'rowSpan')::int NOT BETWEEN v_mod.row_span_min AND v_mod.row_span_max THEN
+          RETURN 'rowSpan_fora_do_registry:' || v_mod.type;
+        END IF;
+      END IF;
+    END LOOP;
+
+    IF v_item ? 'mobile' THEN
+      IF coalesce((v_item->'mobile'->>'order')::int, 0) < 0 THEN RETURN 'ordem_mobile_invalida'; END IF;
+      IF coalesce(v_item->'mobile'->>'size','M') NOT IN ('S','M','L') THEN RETURN 'tamanho_mobile_invalido'; END IF;
+    END IF;
+  END LOOP;
+
+  -- sobreposição no desktop: dois módulos não podem ocupar a mesma célula
+  IF EXISTS (
+    SELECT 1
+      FROM jsonb_array_elements(p_layout->'items') a(i)
+      JOIN jsonb_array_elements(p_layout->'items') b(j)
+        ON (a.i->>'instanceId') < (b.j->>'instanceId')
+     WHERE coalesce((a.i->>'hidden')::boolean, false) = false
+       AND coalesce((b.j->>'hidden')::boolean, false) = false
+       AND int4range((a.i->'desktop'->>'col')::int,
+                     (a.i->'desktop'->>'col')::int + (a.i->'desktop'->>'colSpan')::int)
+        && int4range((b.j->'desktop'->>'col')::int,
+                     (b.j->'desktop'->>'col')::int + (b.j->'desktop'->>'colSpan')::int)
+       AND int4range((a.i->'desktop'->>'row')::int,
+                     (a.i->'desktop'->>'row')::int + (a.i->'desktop'->>'rowSpan')::int)
+        && int4range((b.j->'desktop'->>'row')::int,
+                     (b.j->'desktop'->>'row')::int + (b.j->'desktop'->>'rowSpan')::int)
+  ) THEN
+    RETURN 'modulos_sobrepostos';
+  END IF;
+
+  RETURN NULL;   -- válido
+END; $$;
+
+COMMENT ON FUNCTION public.dashboard_layout_invalido(jsonb) IS
+  'Devolve NULL se o layout é válido, ou um código de erro. A mesma lógica existe em TypeScript para feedback imediato; esta é a que decide.';
+
+-- ---------------------------------------------------------------------
+-- 4. Gravar layout — compare-and-swap (§5.8)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.guardar_dashboard_layout(
+  p_vista uuid,
+  p_revision_esperada integer,
+  p_layout jsonb
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_erro text;
+  v_nova integer;
+  v_actual integer;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  IF pg_column_size(p_layout) > 32768 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'layout_demasiado_grande');
+  END IF;
+
+  v_erro := public.dashboard_layout_invalido(p_layout);
+  IF v_erro IS NOT NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'layout_invalido', 'detalhe', v_erro);
+  END IF;
+
+  UPDATE public.contabilista_dashboard_vistas v
+     SET layout = jsonb_set(p_layout, '{revision}', to_jsonb(v.revision + 1)),
+         revision = v.revision + 1,
+         atualizado_em = now()
+   WHERE v.id = p_vista
+     AND v.contabilista_id = v_uid
+     AND v.revision = p_revision_esperada
+  RETURNING v.revision INTO v_nova;
+
+  IF v_nova IS NULL THEN
+    SELECT v.revision INTO v_actual FROM public.contabilista_dashboard_vistas v
+     WHERE v.id = p_vista AND v.contabilista_id = v_uid;
+    IF v_actual IS NULL THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'vista_inexistente');
+    END IF;
+    RETURN jsonb_build_object('ok', false, 'motivo', 'layout_desatualizado', 'revision', v_actual);
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'revision', v_nova);
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.guardar_dashboard_layout(uuid, integer, jsonb) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.guardar_dashboard_layout(uuid, integer, jsonb) TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 5. Gerir vistas (criar / renomear / ordenar / principal)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.criar_dashboard_vista(p_nome text, p_copiar_de uuid DEFAULT NULL)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_quantas integer;
+  v_layout jsonb;
+  v_id uuid;
+  v_ordem integer;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  SELECT count(*) INTO v_quantas FROM public.contabilista_dashboard_vistas WHERE contabilista_id = v_uid;
+  IF v_quantas >= 8 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'demasiadas_vistas');
+  END IF;
+
+  IF p_copiar_de IS NOT NULL THEN
+    SELECT layout INTO v_layout FROM public.contabilista_dashboard_vistas
+     WHERE id = p_copiar_de AND contabilista_id = v_uid;
+  END IF;
+
+  SELECT coalesce(max(ordem), -1) + 1 INTO v_ordem
+    FROM public.contabilista_dashboard_vistas WHERE contabilista_id = v_uid;
+
+  INSERT INTO public.contabilista_dashboard_vistas (contabilista_id, nome, ordem, principal, layout)
+  VALUES (v_uid, p_nome, v_ordem, v_quantas = 0,
+          coalesce(v_layout, '{"version":2,"revision":1,"grid":{"desktop":{"columns":12,"rowHeight":52,"gap":12},"tablet":{"columns":8,"rowHeight":52,"gap":12}},"items":[]}'::jsonb))
+  RETURNING id INTO v_id;
+
+  RETURN jsonb_build_object('ok', true, 'id', v_id);
+EXCEPTION WHEN unique_violation THEN
+  RETURN jsonb_build_object('ok', false, 'motivo', 'nome_repetido');
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.definir_dashboard_vista_principal(p_vista uuid)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_uid uuid := auth.uid();
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.contabilista_dashboard_vistas
+                  WHERE id = p_vista AND contabilista_id = v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'vista_inexistente');
+  END IF;
+  -- limpar antes de marcar: o índice único parcial não tolera duas.
+  UPDATE public.contabilista_dashboard_vistas SET principal = false
+   WHERE contabilista_id = v_uid AND principal;
+  UPDATE public.contabilista_dashboard_vistas SET principal = true, atualizado_em = now()
+   WHERE id = p_vista AND contabilista_id = v_uid;
+  RETURN jsonb_build_object('ok', true);
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.renomear_dashboard_vista(p_vista uuid, p_nome text)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_uid uuid := auth.uid(); v_n integer;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+  UPDATE public.contabilista_dashboard_vistas SET nome = p_nome, atualizado_em = now()
+   WHERE id = p_vista AND contabilista_id = v_uid;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  IF v_n = 0 THEN RETURN jsonb_build_object('ok', false, 'motivo', 'vista_inexistente'); END IF;
+  RETURN jsonb_build_object('ok', true);
+EXCEPTION WHEN unique_violation THEN
+  RETURN jsonb_build_object('ok', false, 'motivo', 'nome_repetido');
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.criar_dashboard_vista(text, uuid) FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.definir_dashboard_vista_principal(uuid) FROM anon, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.renomear_dashboard_vista(uuid, text) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.criar_dashboard_vista(text, uuid) TO authenticated;
+GRANT  EXECUTE ON FUNCTION public.definir_dashboard_vista_principal(uuid) TO authenticated;
+GRANT  EXECUTE ON FUNCTION public.renomear_dashboard_vista(uuid, text) TO authenticated;
+
+-- Privilégios explícitos (ver nota na migração do perfil).
+REVOKE ALL ON public.contabilista_dashboard_vistas FROM anon, authenticated;
+GRANT SELECT, INSERT, DELETE ON public.contabilista_dashboard_vistas TO authenticated;
+-- Sem UPDATE de propósito: o layout muda por RPC validada.
+REVOKE ALL ON public.dashboard_modulos FROM anon, authenticated;
+GRANT SELECT ON public.dashboard_modulos TO authenticated;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260815230000_fidelidade_v2_regras_versionadas_e_preco_consulta.sql║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+-- FIDELIDADE V2 — REGRAS VERSIONADAS, PREÇO POR CONSULTA E BENEFÍCIO
+-- PENDENTE
+--
+-- Fonte de verdade: Relatório Mestre §13–29, §48.
+--
+-- Três correções de domínio, não de aparência:
+--
+--  A. O preço deixa de ser global. Hoje existe até um CHECK
+--     (`contabilistas_fidelidade_precisa_de_preco`) que PROÍBE ligar a
+--     fidelidade sem um preço universal. Esse CHECK cai. O preço real
+--     passa a viver na consulta concreta.
+--
+--  B. A regra do cartão passa a ser uma linha imutável e versionada.
+--     Alterar a configuração publica uma versão nova; os cartões em
+--     curso continuam agarrados à versão com que nasceram.
+--
+--  C. Completar um cartão deixa de abrir logo o seguinte. Hoje
+--     `carimbar_consulta` emite o cupão e insere já outro cartão com a
+--     configuração ATUAL — o que quebra a promessa duas vezes: fecha o
+--     ciclo cedo demais e aplica ao cliente uma regra que ele nunca viu.
+--     Passa a existir o estado BENEFÍCIO PENDENTE.
+--
+-- Nada de legacy é reescrito: cupões antigos mantêm a semântica de
+-- preço congelado com que foram prometidos.
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+-- 1. Regras versionadas
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.fidelidade_regras (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  versao integer NOT NULL CHECK (versao >= 1),
+  meta integer NOT NULL CHECK (meta BETWEEN 3 AND 12),
+  desconto_pct integer NOT NULL CHECK (desconto_pct BETWEEN 10 AND 50),
+  -- Só consultas efetivamente pagas carimbam. Uma primeira conversa
+  -- grátis é legítima (contabilista_tipos_consulta.preco_cents = 0),
+  -- mas não deve encher o cartão. Fica congelado na regra porque é
+  -- parte da promessa.
+  exige_pagamento boolean NOT NULL DEFAULT true,
+  validade_dias integer NOT NULL DEFAULT 365 CHECK (validade_dias BETWEEN 30 AND 1095),
+  ativa boolean NOT NULL DEFAULT true,
+  publicada_em timestamptz NOT NULL DEFAULT now(),
+  substituida_em timestamptz,
+  UNIQUE (contabilista_id, versao)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS fidelidade_regra_corrente_idx
+  ON public.fidelidade_regras (contabilista_id) WHERE substituida_em IS NULL;
+CREATE INDEX IF NOT EXISTS fidelidade_regras_contabilista_idx
+  ON public.fidelidade_regras (contabilista_id, versao DESC);
+
+COMMENT ON TABLE public.fidelidade_regras IS
+  'Uma regra publicada é imutável. Mudar a configuração fecha a versão corrente e publica outra. Nunca UPDATE meta/desconto numa versão que já pode estar ligada a um cartão.';
+
+-- Imutabilidade: só `substituida_em` e `ativa` podem mudar depois de publicada.
+CREATE OR REPLACE FUNCTION public.fidelidade_regras_imutaveis() RETURNS trigger
+LANGUAGE plpgsql SET search_path TO '' AS $$
+BEGIN
+  IF NEW.meta            IS DISTINCT FROM OLD.meta
+  OR NEW.desconto_pct    IS DISTINCT FROM OLD.desconto_pct
+  OR NEW.exige_pagamento IS DISTINCT FROM OLD.exige_pagamento
+  OR NEW.validade_dias   IS DISTINCT FROM OLD.validade_dias
+  OR NEW.versao          IS DISTINCT FROM OLD.versao
+  OR NEW.contabilista_id IS DISTINCT FROM OLD.contabilista_id
+  OR NEW.publicada_em    IS DISTINCT FROM OLD.publicada_em THEN
+    RAISE EXCEPTION 'Uma regra de fidelidade publicada não se altera. Publica uma versão nova.'
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+DROP TRIGGER IF EXISTS fidelidade_regras_imutabilidade ON public.fidelidade_regras;
+CREATE TRIGGER fidelidade_regras_imutabilidade BEFORE UPDATE ON public.fidelidade_regras
+  FOR EACH ROW EXECUTE FUNCTION public.fidelidade_regras_imutaveis();
+
+ALTER TABLE public.fidelidade_regras ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS fidelidade_regras_dono_le ON public.fidelidade_regras;
+CREATE POLICY fidelidade_regras_dono_le ON public.fidelidade_regras
+  FOR SELECT TO authenticated USING (contabilista_id = (SELECT auth.uid()));
+
+-- A policy de leitura do cliente depende de `fidelidade_cartoes.regra_id`,
+-- que só existe a partir do passo 2. É criada lá.
+--
+-- Sem policy de INSERT/UPDATE/DELETE: publicar é uma RPC.
+
+-- ---------------------------------------------------------------------
+-- 2. Cartões referenciam a regra
+-- ---------------------------------------------------------------------
+ALTER TABLE public.fidelidade_cartoes
+  ADD COLUMN IF NOT EXISTS regra_id uuid REFERENCES public.fidelidade_regras(id),
+  ADD COLUMN IF NOT EXISTS regra_versao integer;
+
+CREATE INDEX IF NOT EXISTS fidelidade_cartoes_regra_idx ON public.fidelidade_cartoes (regra_id);
+
+COMMENT ON COLUMN public.fidelidade_cartoes.meta IS
+  'Snapshot redundante da regra, mantido de propósito: se a linha da regra desaparecesse por acidente, o cartão continua a saber a promessa que fez.';
+
+DROP POLICY IF EXISTS fidelidade_regras_cliente_le ON public.fidelidade_regras;
+CREATE POLICY fidelidade_regras_cliente_le ON public.fidelidade_regras
+  FOR SELECT TO authenticated
+  USING (
+    EXISTS (SELECT 1 FROM public.fidelidade_cartoes c
+             WHERE c.regra_id = fidelidade_regras.id AND c.cliente_id = (SELECT auth.uid()))
+    OR (substituida_em IS NULL
+        AND public.vinculo_nao_terminado(contabilista_id, (SELECT auth.uid())))
+  );
+
+-- ---------------------------------------------------------------------
+-- 3. Cupões: modelo legacy vs. percentagem sobre a consulta real
+-- ---------------------------------------------------------------------
+ALTER TABLE public.fidelidade_cupoes
+  ADD COLUMN IF NOT EXISTS modelo text NOT NULL DEFAULT 'legacy_preco_congelado'
+    CHECK (modelo IN ('legacy_preco_congelado','percentagem_consulta')),
+  ADD COLUMN IF NOT EXISTS desconto_cents integer CHECK (desconto_cents IS NULL OR desconto_cents >= 0),
+  ADD COLUMN IF NOT EXISTS valor_final_cents integer CHECK (valor_final_cents IS NULL OR valor_final_cents >= 0),
+  ADD COLUMN IF NOT EXISTS regra_id uuid REFERENCES public.fidelidade_regras(id);
+
+-- Cupões novos não sabem o valor base até serem usados.
+ALTER TABLE public.fidelidade_cupoes ALTER COLUMN valor_base_cents DROP NOT NULL;
+
+ALTER TABLE public.fidelidade_cupoes DROP CONSTRAINT IF EXISTS fidelidade_cupoes_coerente;
+ALTER TABLE public.fidelidade_cupoes ADD CONSTRAINT fidelidade_cupoes_coerente CHECK (
+  (modelo = 'legacy_preco_congelado' AND valor_base_cents IS NOT NULL)
+  OR
+  (modelo = 'percentagem_consulta' AND (
+      (estado <> 'usado' AND valor_base_cents IS NULL)
+      OR
+      (estado = 'usado'  AND valor_base_cents IS NOT NULL
+                         AND desconto_cents IS NOT NULL
+                         AND valor_final_cents IS NOT NULL
+                         AND valor_final_cents = valor_base_cents - desconto_cents)
+  ))
+);
+
+-- Um só benefício pendente por par. É esta linha que torna a máquina de
+-- estados verdadeira na base de dados e não apenas na RPC.
+CREATE UNIQUE INDEX IF NOT EXISTS fidelidade_beneficio_pendente_idx
+  ON public.fidelidade_cupoes (contabilista_id, cliente_id) WHERE estado = 'disponivel';
+
+COMMENT ON INDEX public.fidelidade_beneficio_pendente_idx IS
+  'Invariante §15: nunca coexistem benefício pendente de um ciclo antigo e cartão novo a acumular carimbos.';
+
+-- ---------------------------------------------------------------------
+-- 4. Preço real na consulta (§18)
+-- ---------------------------------------------------------------------
+ALTER TABLE public.agendamentos
+  ADD COLUMN IF NOT EXISTS preco_cents integer CHECK (preco_cents IS NULL OR preco_cents >= 0),
+  ADD COLUMN IF NOT EXISTS desconto_aplicado_cents integer
+    CHECK (desconto_aplicado_cents IS NULL OR desconto_aplicado_cents >= 0),
+  ADD COLUMN IF NOT EXISTS valor_final_cents integer
+    CHECK (valor_final_cents IS NULL OR valor_final_cents >= 0),
+  ADD COLUMN IF NOT EXISTS preco_definido_em timestamptz;
+
+ALTER TABLE public.agendamentos DROP CONSTRAINT IF EXISTS agendamentos_valores_coerentes;
+ALTER TABLE public.agendamentos ADD CONSTRAINT agendamentos_valores_coerentes CHECK (
+  preco_cents IS NULL
+  OR valor_final_cents = preco_cents - coalesce(desconto_aplicado_cents, 0)
+);
+
+COMMENT ON COLUMN public.agendamentos.preco_cents IS
+  'Preço REAL desta consulta, em cêntimos, definido pelo contabilista ao concluir. É a base sobre a qual um benefício em percentagem incide. O Recibo Certo regista o valor; não processa o pagamento.';
+
+-- ---------------------------------------------------------------------
+-- 5. Cai a trava do preço global
+-- ---------------------------------------------------------------------
+ALTER TABLE public.contabilistas
+  DROP CONSTRAINT IF EXISTS contabilistas_fidelidade_precisa_de_preco;
+
+COMMENT ON COLUMN public.contabilistas.preco_consulta_cents IS
+  'DEPRECADO como fonte de verdade. Mantido por compatibilidade e como sugestão comercial. A fidelidade V2 não depende dele (§14.1).';
+
+-- As três colunas de configuração passam a ser um espelho da regra
+-- corrente. Só a RPC de publicação lhes toca.
+CREATE OR REPLACE FUNCTION public.contabilistas_tranca_colunas() RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+BEGIN
+  IF auth.uid() IS NOT NULL AND NOT public.is_admin() THEN
+    IF NEW.estado IS DISTINCT FROM OLD.estado THEN
+      RAISE EXCEPTION 'O estado da conta de contabilista só é alterado pela administração.'; END IF;
+    IF NEW.user_id IS DISTINCT FROM OLD.user_id THEN
+      RAISE EXCEPTION 'O titular de uma conta de contabilista não pode ser alterado.'; END IF;
+    IF NEW.slug IS DISTINCT FROM OLD.slug THEN
+      RAISE EXCEPTION 'O endereço público só é alterado pela administração.'; END IF;
+    IF NEW.occ_verificado_em IS DISTINCT FROM OLD.occ_verificado_em
+       OR NEW.occ_verificado_por IS DISTINCT FROM OLD.occ_verificado_por THEN
+      RAISE EXCEPTION 'A verificação do número OCC só é registada pela administração.'; END IF;
+
+    IF current_setting('rc.publicando_regra', true) IS DISTINCT FROM 'on' THEN
+      IF NEW.fidelidade_meta         IS DISTINCT FROM OLD.fidelidade_meta
+      OR NEW.fidelidade_desconto_pct IS DISTINCT FROM OLD.fidelidade_desconto_pct
+      OR NEW.fidelidade_ativa        IS DISTINCT FROM OLD.fidelidade_ativa THEN
+        RAISE EXCEPTION 'A configuração de fidelidade muda por publicação de regra (publicar_regra_fidelidade), não por UPDATE direto.'
+          USING ERRCODE = '22023';
+      END IF;
+    END IF;
+  END IF;
+  NEW.atualizado_em := now();
+  RETURN NEW;
+END; $$;
+
+-- ---------------------------------------------------------------------
+-- 6. BACKFILL — versão legacy por contabilista, cartões ligados
+-- ---------------------------------------------------------------------
+INSERT INTO public.fidelidade_regras
+  (contabilista_id, versao, meta, desconto_pct, exige_pagamento, ativa, publicada_em)
+SELECT c.user_id, 1, c.fidelidade_meta, c.fidelidade_desconto_pct,
+       false,               -- a promessa antiga não exigia pagamento; não a apertamos retroativamente
+       c.fidelidade_ativa, c.criado_em
+  FROM public.contabilistas c
+ WHERE NOT EXISTS (SELECT 1 FROM public.fidelidade_regras r WHERE r.contabilista_id = c.user_id);
+
+UPDATE public.fidelidade_cartoes ca
+   SET regra_id = r.id, regra_versao = r.versao
+  FROM public.fidelidade_regras r
+ WHERE r.contabilista_id = ca.contabilista_id
+   AND r.versao = 1
+   AND ca.regra_id IS NULL;
+
+UPDATE public.fidelidade_cupoes cu
+   SET regra_id = ca.regra_id
+  FROM public.fidelidade_cartoes ca
+ WHERE ca.id = cu.cartao_id AND cu.regra_id IS NULL;
+
+-- Cartões sem carimbos abertos antecipadamente pelo bug §14.2:
+-- fecham-se aqui. Um cartão a zero não é uma promessa em curso.
+DELETE FROM public.fidelidade_cartoes ca
+ WHERE NOT ca.completo
+   AND ca.carimbos = 0
+   AND EXISTS (SELECT 1 FROM public.fidelidade_cupoes cu
+                WHERE cu.contabilista_id = ca.contabilista_id
+                  AND cu.cliente_id = ca.cliente_id
+                  AND cu.estado = 'disponivel');
+
+-- ---------------------------------------------------------------------
+-- 7. Publicar uma regra (§28)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.impacto_nova_regra_fidelidade()
+RETURNS jsonb
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  SELECT jsonb_build_object(
+    'cartoes_em_curso', (SELECT count(*) FROM public.fidelidade_cartoes
+                          WHERE contabilista_id = auth.uid() AND NOT completo),
+    'beneficios_pendentes', (SELECT count(*) FROM public.fidelidade_cupoes
+                              WHERE contabilista_id = auth.uid() AND estado = 'disponivel'),
+    'clientes_sem_ciclo', (SELECT count(*) FROM public.contabilista_vinculos v
+                            WHERE v.contabilista_id = auth.uid() AND v.estado = 'ativo'
+                              AND NOT EXISTS (SELECT 1 FROM public.fidelidade_cartoes ca
+                                               WHERE ca.contabilista_id = v.contabilista_id
+                                                 AND ca.cliente_id = v.cliente_id AND NOT ca.completo)
+                              AND NOT EXISTS (SELECT 1 FROM public.fidelidade_cupoes cu
+                                               WHERE cu.contabilista_id = v.contabilista_id
+                                                 AND cu.cliente_id = v.cliente_id AND cu.estado = 'disponivel'))
+  );
+$$;
+
+CREATE OR REPLACE FUNCTION public.publicar_regra_fidelidade(
+  p_meta integer,
+  p_desconto_pct integer,
+  p_ativa boolean DEFAULT true,
+  p_exige_pagamento boolean DEFAULT true
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_corrente record;
+  v_versao integer;
+  v_id uuid;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  SELECT * INTO v_corrente FROM public.fidelidade_regras
+   WHERE contabilista_id = v_uid AND substituida_em IS NULL FOR UPDATE;
+
+  -- Republicar exatamente o mesmo não cria versão nova (§12.13 aplicado
+  -- ao domínio: não escrever história por um clique sem alteração).
+  IF FOUND
+     AND v_corrente.meta = p_meta
+     AND v_corrente.desconto_pct = p_desconto_pct
+     AND v_corrente.exige_pagamento = p_exige_pagamento
+     AND v_corrente.ativa = p_ativa THEN
+    RETURN jsonb_build_object('ok', true, 'inalterada', true,
+                              'regra_id', v_corrente.id, 'versao', v_corrente.versao);
+  END IF;
+
+  SELECT coalesce(max(versao), 0) + 1 INTO v_versao
+    FROM public.fidelidade_regras WHERE contabilista_id = v_uid;
+
+  IF FOUND AND v_corrente.id IS NOT NULL THEN
+    UPDATE public.fidelidade_regras SET substituida_em = now(), ativa = false
+     WHERE id = v_corrente.id;
+  END IF;
+
+  INSERT INTO public.fidelidade_regras
+    (contabilista_id, versao, meta, desconto_pct, exige_pagamento, ativa)
+  VALUES (v_uid, v_versao, p_meta, p_desconto_pct, p_exige_pagamento, p_ativa)
+  RETURNING id INTO v_id;
+
+  PERFORM set_config('rc.publicando_regra', 'on', true);
+  UPDATE public.contabilistas
+     SET fidelidade_meta = p_meta,
+         fidelidade_desconto_pct = p_desconto_pct,
+         fidelidade_ativa = p_ativa
+   WHERE user_id = v_uid;
+  PERFORM set_config('rc.publicando_regra', 'off', true);
+
+  RETURN jsonb_build_object('ok', true, 'inalterada', false, 'regra_id', v_id, 'versao', v_versao);
+END; $$;
+
+-- ---------------------------------------------------------------------
+-- 8. Hook de progressão (preenchido pela migração seguinte)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fidelidade_ciclo_concluido_hook(
+  p_contabilista uuid, p_cliente uuid, p_cartao uuid, p_meta integer
+) RETURNS void
+LANGUAGE plpgsql SET search_path TO '' AS $$
+BEGIN
+  -- No-op até a migração de Progressão e Comissão a substituir.
+  -- Existe já aqui para que a Fidelidade V2 possa ser lançada primeiro
+  -- sem depender do domínio comercial.
+  RETURN;
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.fidelidade_ciclo_concluido_hook(uuid,uuid,uuid,integer) FROM anon, authenticated, PUBLIC;
+
+CREATE OR REPLACE FUNCTION public.progressao_servico_concluido_hook(
+  p_contabilista uuid, p_cliente uuid, p_agendamento uuid, p_preco_cents integer
+) RETURNS void
+LANGUAGE plpgsql SET search_path TO '' AS $$
+BEGIN
+  -- No-op até à migração de Progressão e Comissão. Existe aqui para que
+  -- `concluir_consulta` seja escrita UMA vez: a migração seguinte troca
+  -- só o corpo deste gancho, não a RPC de negócio.
+  RETURN;
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.progressao_servico_concluido_hook(uuid,uuid,uuid,integer) FROM anon, authenticated, PUBLIC;
+
+-- ---------------------------------------------------------------------
+-- 9. Máquina de estados nova
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fidelidade_expirar_cupoes(p_contabilista uuid, p_cliente uuid)
+RETURNS integer
+LANGUAGE plpgsql SET search_path TO '' AS $$
+DECLARE v_n integer;
+BEGIN
+  UPDATE public.fidelidade_cupoes
+     SET estado = 'expirado'
+   WHERE contabilista_id = p_contabilista AND cliente_id = p_cliente
+     AND estado = 'disponivel' AND expira_em <= now();
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  RETURN v_n;
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.carimbar_consulta(p_agendamento_id uuid, p_codigo_cupao text)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_ag       record;
+  v_regra    record;
+  v_cartao   record;
+  v_carimbos integer;
+  v_cupao_id uuid;
+  v_inseridos integer;
+BEGIN
+  SELECT * INTO v_ag FROM public.agendamentos WHERE id = p_agendamento_id;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'motivo', 'agendamento_inexistente'); END IF;
+  IF v_ag.estado <> 'realizada' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'consulta_nao_realizada'); END IF;
+
+  PERFORM public.fidelidade_expirar_cupoes(v_ag.contabilista_id, v_ag.cliente_id);
+
+  -- Regra corrente do contabilista.
+  SELECT * INTO v_regra FROM public.fidelidade_regras
+   WHERE contabilista_id = v_ag.contabilista_id AND substituida_em IS NULL;
+  IF NOT FOUND OR NOT v_regra.ativa THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'fidelidade_inativa'); END IF;
+
+  -- Cartão em curso?
+  SELECT * INTO v_cartao FROM public.fidelidade_cartoes
+   WHERE contabilista_id = v_ag.contabilista_id AND cliente_id = v_ag.cliente_id
+     AND NOT completo FOR UPDATE;
+
+  IF NOT FOUND THEN
+    -- REGRA NOVA (§15): sem cartão aberto, mas com benefício por usar,
+    -- o ciclo seguinte ainda não nasce.
+    IF EXISTS (SELECT 1 FROM public.fidelidade_cupoes
+                WHERE contabilista_id = v_ag.contabilista_id
+                  AND cliente_id = v_ag.cliente_id AND estado = 'disponivel') THEN
+      RETURN jsonb_build_object('ok', true, 'carimbado', false,
+                                'motivo', 'beneficio_pendente', 'completou', false);
+    END IF;
+
+    -- Consulta grátis não abre ciclo quando a regra exige pagamento.
+    IF v_regra.exige_pagamento AND coalesce(v_ag.preco_cents, 0) <= 0 THEN
+      RETURN jsonb_build_object('ok', true, 'carimbado', false,
+                                'motivo', 'consulta_nao_elegivel', 'completou', false);
+    END IF;
+
+    INSERT INTO public.fidelidade_cartoes
+      (contabilista_id, cliente_id, carimbos, meta, desconto_pct, preco_base_cents,
+       regra_id, regra_versao)
+    VALUES (v_ag.contabilista_id, v_ag.cliente_id, 0,
+            v_regra.meta, v_regra.desconto_pct, 0, v_regra.id, v_regra.versao)
+    ON CONFLICT DO NOTHING
+    RETURNING * INTO v_cartao;
+
+    IF v_cartao.id IS NULL THEN
+      SELECT * INTO v_cartao FROM public.fidelidade_cartoes
+       WHERE contabilista_id = v_ag.contabilista_id AND cliente_id = v_ag.cliente_id
+         AND NOT completo FOR UPDATE;
+      IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'cartao_indisponivel'); END IF;
+    END IF;
+  ELSE
+    -- Cartão em curso: a elegibilidade segue a regra CONGELADA nele.
+    SELECT * INTO v_regra FROM public.fidelidade_regras WHERE id = v_cartao.regra_id;
+    IF v_regra.id IS NOT NULL AND v_regra.exige_pagamento
+       AND coalesce(v_ag.preco_cents, 0) <= 0 THEN
+      RETURN jsonb_build_object('ok', true, 'carimbado', false,
+                                'motivo', 'consulta_nao_elegivel',
+                                'cartao_id', v_cartao.id,
+                                'carimbos', v_cartao.carimbos, 'meta', v_cartao.meta,
+                                'completou', false);
+    END IF;
+  END IF;
+
+  INSERT INTO public.fidelidade_carimbos (cartao_id, agendamento_id)
+  VALUES (v_cartao.id, p_agendamento_id) ON CONFLICT (agendamento_id) DO NOTHING;
+  GET DIAGNOSTICS v_inseridos = ROW_COUNT;
+
+  IF v_inseridos = 0 THEN
+    RETURN jsonb_build_object('ok', true, 'repetido', true, 'carimbado', false,
+      'cartao_id', v_cartao.id, 'carimbos', v_cartao.carimbos,
+      'meta', v_cartao.meta, 'completou', false);
+  END IF;
+
+  v_carimbos := v_cartao.carimbos + 1;
+
+  IF v_carimbos < v_cartao.meta THEN
+    UPDATE public.fidelidade_cartoes SET carimbos = v_carimbos WHERE id = v_cartao.id;
+    RETURN jsonb_build_object('ok', true, 'repetido', false, 'carimbado', true,
+      'cartao_id', v_cartao.id, 'carimbos', v_carimbos,
+      'meta', v_cartao.meta, 'completou', false);
+  END IF;
+
+  -- Cartão completo: fecha, emite benefício e PÁRA. O ciclo seguinte só
+  -- nasce depois de o benefício ser usado.
+  UPDATE public.fidelidade_cartoes
+     SET carimbos = v_cartao.meta, completo = true, completo_em = now()
+   WHERE id = v_cartao.id;
+
+  INSERT INTO public.fidelidade_cupoes
+    (codigo, contabilista_id, cliente_id, cartao_id, percentagem,
+     valor_base_cents, modelo, regra_id, expira_em)
+  VALUES (p_codigo_cupao, v_ag.contabilista_id, v_ag.cliente_id, v_cartao.id,
+          v_cartao.desconto_pct, NULL, 'percentagem_consulta', v_cartao.regra_id,
+          now() + make_interval(days => coalesce(
+            (SELECT validade_dias FROM public.fidelidade_regras WHERE id = v_cartao.regra_id), 365)))
+  RETURNING id INTO v_cupao_id;
+
+  PERFORM public.fidelidade_ciclo_concluido_hook(
+    v_ag.contabilista_id, v_ag.cliente_id, v_cartao.id, v_cartao.meta);
+
+  RETURN jsonb_build_object('ok', true, 'repetido', false, 'carimbado', true,
+    'cartao_id', v_cartao.id, 'carimbos', v_cartao.meta, 'meta', v_cartao.meta,
+    'completou', true, 'cupao_id', v_cupao_id, 'codigo', p_codigo_cupao,
+    'percentagem', v_cartao.desconto_pct, 'modelo', 'percentagem_consulta');
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.carimbar_consulta(uuid, text) FROM anon, authenticated, PUBLIC;
+
+-- ---------------------------------------------------------------------
+-- 10. concluir_consulta com preço e resgate (§20)
+-- ---------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.concluir_consulta(uuid, boolean);
+
+CREATE OR REPLACE FUNCTION public.concluir_consulta(
+  p_agendamento uuid,
+  p_compareceu boolean DEFAULT true,
+  p_preco_cents integer DEFAULT NULL,
+  p_cupao uuid DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_ag record;
+  v_cupao record;
+  v_desconto integer := 0;
+  v_final integer;
+  v_fidelidade jsonb := NULL;
+  v_vinculo uuid;
+  v_beneficio jsonb := NULL;
+BEGIN
+  IF v_uid IS NULL OR NOT public.contabilista_ativo(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  SELECT * INTO v_ag FROM public.agendamentos a
+   WHERE a.id = p_agendamento AND a.contabilista_id = v_uid
+     AND a.estado IN ('pedido','confirmado') AND a.inicio <= now()
+   FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_concluivel');
+  END IF;
+
+  -- Não compareceu: fecha e termina. Sem preço, sem carimbo.
+  IF NOT p_compareceu THEN
+    UPDATE public.agendamentos SET estado = 'nao_compareceu', atualizado_em = now()
+     WHERE id = p_agendamento;
+    RETURN jsonb_build_object('ok', true, 'estado', 'nao_compareceu', 'fidelidade', NULL);
+  END IF;
+
+  IF p_preco_cents IS NULL OR p_preco_cents < 0 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'preco_obrigatorio');
+  END IF;
+
+  -- Resgate do benefício, se houver.
+  IF p_cupao IS NOT NULL THEN
+    SELECT * INTO v_cupao FROM public.fidelidade_cupoes
+     WHERE id = p_cupao AND contabilista_id = v_uid AND cliente_id = v_ag.cliente_id
+     FOR UPDATE;
+    IF NOT FOUND THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'cupao_invalido'); END IF;
+    IF v_cupao.estado <> 'disponivel' THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'cupao_indisponivel'); END IF;
+    IF v_cupao.expira_em <= now() THEN
+      UPDATE public.fidelidade_cupoes SET estado = 'expirado' WHERE id = v_cupao.id;
+      RETURN jsonb_build_object('ok', false, 'motivo', 'cupao_expirado'); END IF;
+
+    -- Legacy: a promessa foi sobre um valor congelado. Não se reescreve.
+    IF v_cupao.modelo = 'legacy_preco_congelado' THEN
+      v_desconto := round(v_cupao.valor_base_cents::numeric * v_cupao.percentagem / 100.0);
+      v_desconto := least(v_desconto, p_preco_cents);
+    ELSE
+      v_desconto := round(p_preco_cents::numeric * v_cupao.percentagem / 100.0);
+    END IF;
+  END IF;
+
+  v_final := p_preco_cents - v_desconto;
+
+  UPDATE public.agendamentos SET
+      estado = 'realizada',
+      preco_cents = p_preco_cents,
+      desconto_aplicado_cents = v_desconto,
+      valor_final_cents = v_final,
+      preco_definido_em = now(),
+      cupao_id = p_cupao,
+      atualizado_em = now()
+   WHERE id = p_agendamento;
+
+  -- Um serviço concluído é um facto; a Progressão decide o que vale.
+  -- Acontece com ou sem resgate de benefício.
+  PERFORM public.progressao_servico_concluido_hook(
+    v_uid, v_ag.cliente_id, p_agendamento, p_preco_cents);
+
+  IF p_cupao IS NOT NULL THEN
+    UPDATE public.fidelidade_cupoes SET
+        estado = 'usado', usado_em = now(), usado_agendamento_id = p_agendamento,
+        valor_base_cents = coalesce(valor_base_cents, p_preco_cents),
+        desconto_cents = v_desconto,
+        valor_final_cents = v_final
+     WHERE id = p_cupao;
+
+    v_beneficio := jsonb_build_object(
+      'usado', true, 'codigo', v_cupao.codigo, 'percentagem', v_cupao.percentagem,
+      'base_cents', p_preco_cents, 'desconto_cents', v_desconto, 'final_cents', v_final);
+
+    -- §20: a consulta de resgate encerra o ciclo anterior e NÃO carimba
+    -- o ciclo seguinte. O próximo cartão nasce na consulta a seguir.
+    RETURN jsonb_build_object('ok', true, 'estado', 'realizada',
+      'preco_cents', p_preco_cents, 'valor_final_cents', v_final,
+      'beneficio', v_beneficio, 'fidelidade', NULL);
+  END IF;
+
+  v_fidelidade := public.carimbar_consulta(p_agendamento, public.gerar_codigo_cupao());
+
+  IF coalesce((v_fidelidade->>'completou')::boolean, false) THEN
+    SELECT v.id INTO v_vinculo FROM public.contabilista_vinculos v
+     WHERE v.contabilista_id = v_uid AND v.cliente_id = v_ag.cliente_id
+       AND v.estado <> 'terminado';
+    IF v_vinculo IS NOT NULL THEN
+      PERFORM public.avisar_parte(v_vinculo, v_uid, 'cupao_ganho',
+        'Completaste o cartão de fidelidade',
+        'Tens um desconto à espera para usar na próxima consulta.', '/dashboard/contabilista');
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'estado', 'realizada',
+    'preco_cents', p_preco_cents, 'valor_final_cents', v_final,
+    'beneficio', NULL, 'fidelidade', v_fidelidade);
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.concluir_consulta(uuid, boolean, integer, uuid) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.concluir_consulta(uuid, boolean, integer, uuid) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.publicar_regra_fidelidade(integer,integer,boolean,boolean) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.publicar_regra_fidelidade(integer,integer,boolean,boolean) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.impacto_nova_regra_fidelidade() FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.impacto_nova_regra_fidelidade() TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.fidelidade_expirar_cupoes(uuid,uuid) FROM anon, authenticated, PUBLIC;
+
+-- Privilégios explícitos: as regras são lidas, nunca escritas pelo cliente.
+REVOKE ALL ON public.fidelidade_regras FROM anon, authenticated;
+GRANT SELECT ON public.fidelidade_regras TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 11. A view pública passa a ler a regra corrente, não as colunas espelho
+-- ---------------------------------------------------------------------
+--  Só as TRÊS colunas de fidelidade mudam de origem: passam a vir da
+--  regra corrente em vez das colunas espelho de `contabilistas`. Todo o
+--  resto do contrato fica exatamente como a migração do perfil o deixou
+--  — em particular `email_contacto`, `preco_consulta_cents` e
+--  `duracao_consulta_min`, que o cartão do diretório e a ficha pública
+--  mostram. O preço deixou de ser a fonte de verdade da fidelidade
+--  (§14.1), mas continua a ser a SUGESTÃO comercial que a ficha publica
+--  e que o diálogo de concluir consulta pré-enche.
+--
+--  `DROP` antes de `CREATE`, pela mesma razão da migração do perfil: a
+--  lista de colunas muda de forma e `CREATE OR REPLACE VIEW` só sabe
+--  acrescentar no fim.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
+WITH (security_invoker = false) AS
+SELECT
+  c.user_id,
+  c.slug,
+  c.nome,
+  c.occ,
+  (c.occ_verificado_em IS NOT NULL) AS occ_verificado,
+  c.titulo_profissional,
+  c.apresentacao_curta,
+  c.bio,
+  c.distrito,
+  c.concelho,
+  c.especialidades,
+  c.modalidades,
+  c.idiomas,
+  c.anos_experiencia,
+  c.resposta_media_horas,
+  c.email_contacto,
+  c.website,
+  c.linkedin_url,
+  c.linkedin_avatar_url,
+  (c.linkedin_ligado_em IS NOT NULL) AS linkedin_ligado,
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  coalesce(r.ativa, false)                                  AS fidelidade_ativa,
+  CASE WHEN coalesce(r.ativa, false) THEN r.meta         END AS fidelidade_meta,
+  CASE WHEN coalesce(r.ativa, false) THEN r.desconto_pct END AS fidelidade_desconto_pct,
+  c.criado_em
+FROM public.contabilistas c
+LEFT JOIN public.fidelidade_regras r
+       ON r.contabilista_id = c.user_id AND r.substituida_em IS NULL
+WHERE c.estado = 'aprovado';
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil público. Acrescentar uma coluna aqui é uma decisão; acrescentar uma coluna a `contabilistas` deixa de ser. Não expõe telefone (ver contacto_do_contabilista), linkedin_subject, pedido_id nem estado. A fidelidade vem da regra corrente, não das colunas espelho.';
+
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260815233000_progressao_comissao_contabilistas.sql              ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+-- PROGRESSÃO E COMISSÃO
+--
+-- Fonte de verdade: Relatório Mestre §52–119 e §164 (valores oficiais).
+-- A Referência C governa hierarquia visual, não números.
+--
+-- Regra-mãe: cada patamar REDUZ a comissão do Recibo Certo. O próximo
+-- patamar conquista-se por mérito (XP de atividade verificável) OU
+-- antecipa-se com um pagamento único. As duas dimensões são
+-- independentes e nunca se contaminam:
+--
+--     efetivo = max(conquistado, comprado)
+--
+-- Comprar não cria XP. Ganhar XP não cria compra.
+--
+-- Desenho defensivo desta migração:
+--
+--   * NADA de progressão vive em `public.contabilistas`. Essa tabela é
+--     lida por `anon` (policy contabilistas_diretorio_publico) e uma
+--     coluna `xp` ou `comissao_bps` lá dentro seria pública no dia em
+--     que fosse criada. §138 proíbe mostrar isto ao cliente — aqui
+--     a proibição é estrutural, não uma convenção de código.
+--
+--   * `authenticated` NÃO tem INSERT/UPDATE/DELETE em nenhum ledger nem
+--     no estado materializado. Só SELECT da própria linha. Tudo o que
+--     mexe em saldos é SECURITY DEFINER e recebe FACTOS
+--     (`este agendamento foi concluído`), nunca deltas
+--     (`soma-me 100 XP`).
+--
+--   * Feature flags são lidas no servidor. Uma flag só no cliente não
+--     protege um write.
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+-- 0. Flags de capacidade (§95)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.progressao_flags (
+  chave text PRIMARY KEY,
+  ativa boolean NOT NULL DEFAULT false,
+  nota text
+);
+
+INSERT INTO public.progressao_flags (chave, ativa, nota) VALUES
+  ('accountant_progression_read', false, 'Mostrar a área de Progressão em leitura.'),
+  ('accountant_progression_earn_xp', false, 'Registar XP a sério. Antes disto o registo é shadow.'),
+  ('accountant_progression_shadow', true,  'Regista eventos com xp_delta real mas marcados shadow=true; não movem patamar.'),
+  ('accountant_loyalty_credits', false,    'Emitir e gastar Créditos de Fidelidade.'),
+  ('accountant_tier_purchase', false,      'Permitir desbloqueio pago do próximo patamar.'),
+  ('accountant_commission_ledger', false,  'Fase B — ledger real de comissão por serviço.'),
+  ('accountant_connect_payments', false,   'Fase C — só depois de gate jurídico/fiscal/PSP.')
+ON CONFLICT (chave) DO NOTHING;
+
+ALTER TABLE public.progressao_flags ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS progressao_flags_leitura ON public.progressao_flags;
+CREATE POLICY progressao_flags_leitura ON public.progressao_flags
+  FOR SELECT TO authenticated USING (true);
+
+CREATE OR REPLACE FUNCTION public.progressao_flag(p_chave text) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  SELECT coalesce((SELECT ativa FROM public.progressao_flags WHERE chave = p_chave), false);
+$$;
+
+-- ---------------------------------------------------------------------
+-- 1. Catálogo versionado de patamares (§55, valores oficiais §164)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.comissao_patamares (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  versao_catalogo integer NOT NULL CHECK (versao_catalogo >= 1),
+  ordem smallint NOT NULL CHECK (ordem BETWEEN 1 AND 20),
+  slug text NOT NULL CHECK (slug ~ '^[a-z][a-z0-9-]*$'),
+  titulo text NOT NULL,
+  comissao_bps integer NOT NULL CHECK (comissao_bps BETWEEN 0 AND 10000),
+  xp_minimo integer NOT NULL CHECK (xp_minimo >= 0),
+  -- Segundo eixo, proposto pelo mockup da Progressão («1 / 3 clientes»).
+  -- Fica a 0 na versão 1 do catálogo: comportamento idêntico ao que a
+  -- especificação define. Quando os valores por patamar forem decididos,
+  -- é um UPDATE a esta tabela e mais nada.
+  --
+  -- Vale a pena: com progressão só por XP, 2300 XP são alcançáveis com um
+  -- único cliente muito ativo. Exigir clientes distintos é um travão
+  -- anti-farming estrutural, melhor do que as heurísticas de velocidade
+  -- da §84.3 — porque não precisa de detetar nada.
+  clientes_minimo smallint NOT NULL DEFAULT 0 CHECK (clientes_minimo >= 0),
+  preco_desbloqueio_cents integer CHECK (preco_desbloqueio_cents IS NULL OR preco_desbloqueio_cents >= 0),
+  ativo boolean NOT NULL DEFAULT true,
+  valido_desde timestamptz NOT NULL DEFAULT now(),
+  valido_ate timestamptz,
+  UNIQUE (versao_catalogo, ordem),
+  UNIQUE (versao_catalogo, slug)
+);
+
+COMMENT ON TABLE public.comissao_patamares IS
+  'Fonte única de comissão, XP e preço. Recalibrar = inserir versao_catalogo nova. Uma compra já feita guarda a versão com que foi feita e continua explicável.';
+COMMENT ON COLUMN public.comissao_patamares.comissao_bps IS
+  'Basis points. 10% = 1000. Dinheiro e percentagens financeiras nunca em float.';
+
+INSERT INTO public.comissao_patamares
+  (versao_catalogo, ordem, slug, titulo, comissao_bps, xp_minimo, preco_desbloqueio_cents) VALUES
+  (1, 1, 'base',         'Base',         1000,    0, NULL),
+  (1, 2, 'ativo',        'Ativo',         900,  200, 1499),
+  (1, 3, 'crescimento',  'Crescimento',   800,  500, 2499),
+  (1, 4, 'consolidado',  'Consolidado',   700,  900, 3999),
+  (1, 5, 'referencia',   'Referência',    600, 1500, 6499),
+  (1, 6, 'parceiro',     'Parceiro',      500, 2300, 9999)
+ON CONFLICT (versao_catalogo, ordem) DO NOTHING;
+
+-- Invariantes do catálogo: a comissão desce, o XP sobe, o preço sobe.
+-- Sem isto, uma recalibração distraída podia publicar um patamar que
+-- aumenta a comissão — exatamente a copy que §164 proíbe.
+CREATE OR REPLACE FUNCTION public.assert_catalogo_patamares_coerente(p_versao integer)
+RETURNS void LANGUAGE plpgsql STABLE SET search_path TO '' AS $$
+DECLARE
+  r record;
+  v_primeiro boolean := true;
+  v_bps integer; v_xp integer; v_preco integer;
+BEGIN
+  FOR r IN SELECT * FROM public.comissao_patamares
+            WHERE versao_catalogo = p_versao ORDER BY ordem LOOP
+    IF NOT v_primeiro THEN
+      IF r.comissao_bps >= v_bps THEN
+        RAISE EXCEPTION 'Patamar % não reduz a comissão (% >= %).', r.slug, r.comissao_bps, v_bps;
+      END IF;
+      IF r.xp_minimo <= v_xp THEN
+        RAISE EXCEPTION 'Patamar % não exige mais XP do que o anterior.', r.slug;
+      END IF;
+      IF coalesce(r.preco_desbloqueio_cents, 0) < coalesce(v_preco, 0) THEN
+        RAISE EXCEPTION 'Patamar % é mais barato do que o anterior.', r.slug;
+      END IF;
+    END IF;
+    v_primeiro := false;
+    v_bps := r.comissao_bps; v_xp := r.xp_minimo; v_preco := r.preco_desbloqueio_cents;
+  END LOOP;
+END; $$;
+
+SELECT public.assert_catalogo_patamares_coerente(1);
+
+CREATE OR REPLACE FUNCTION public.catalogo_versao_corrente() RETURNS integer
+LANGUAGE sql STABLE SET search_path TO '' AS $$
+  SELECT max(versao_catalogo) FROM public.comissao_patamares
+   WHERE ativo AND valido_desde <= now() AND (valido_ate IS NULL OR valido_ate > now());
+$$;
+
+ALTER TABLE public.comissao_patamares ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS comissao_patamares_leitura ON public.comissao_patamares;
+CREATE POLICY comissao_patamares_leitura ON public.comissao_patamares
+  FOR SELECT TO authenticated USING (ativo);
+-- Deliberadamente NÃO exposto a `anon`: a grelha de comissões é uma
+-- relação entre a plataforma e o profissional (§138).
+
+-- ---------------------------------------------------------------------
+-- 2. Estado materializado
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.contabilista_progressao (
+  contabilista_id uuid PRIMARY KEY REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  xp integer NOT NULL DEFAULT 0 CHECK (xp >= 0),
+  creditos_disponiveis integer NOT NULL DEFAULT 0 CHECK (creditos_disponiveis >= 0),
+  creditos_reservados integer NOT NULL DEFAULT 0 CHECK (creditos_reservados >= 0),
+  -- Clientes distintos com pelo menos um serviço PAGO concluído. Derivado
+  -- dos eventos `new_client_first_service`, que já são idempotentes por par
+  -- contabilista–cliente. Nunca retrocede: um cliente que sai continua a
+  -- contar, senão o patamar recuava e a §112 proíbe-o.
+  clientes_elegiveis integer NOT NULL DEFAULT 0 CHECK (clientes_elegiveis >= 0),
+  highest_earned_tier smallint NOT NULL DEFAULT 1 CHECK (highest_earned_tier >= 1),
+  highest_purchased_tier smallint NOT NULL DEFAULT 1 CHECK (highest_purchased_tier >= 1),
+  revision bigint NOT NULL DEFAULT 1,
+  atualizado_em timestamptz NOT NULL DEFAULT now()
+);
+
+COMMENT ON TABLE public.contabilista_progressao IS
+  'Cache de leitura. A verdade está nos ledgers. `authenticated` só faz SELECT da própria linha; escrever é exclusivo das RPCs SECURITY DEFINER.';
+
+CREATE OR REPLACE FUNCTION public.patamar_efetivo(p_conquistado smallint, p_comprado smallint)
+RETURNS smallint LANGUAGE sql IMMUTABLE SET search_path TO '' AS $$
+  SELECT greatest(p_conquistado, p_comprado);
+$$;
+
+ALTER TABLE public.contabilista_progressao ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS progressao_self ON public.contabilista_progressao;
+CREATE POLICY progressao_self ON public.contabilista_progressao
+  FOR SELECT TO authenticated USING (contabilista_id = (SELECT auth.uid()));
+
+-- ---------------------------------------------------------------------
+-- 3. Ledger de XP (§58)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.progressao_eventos (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  tipo text NOT NULL CHECK (tipo IN (
+    'service_completed', 'new_client_first_service', 'loyalty_cycle_completed',
+    'admin_adjustment', 'reversal')),
+  chave_idempotencia text NOT NULL,
+  xp_delta integer NOT NULL,
+  shadow boolean NOT NULL DEFAULT false,
+  entidade_tipo text CHECK (entidade_tipo IS NULL OR entidade_tipo IN ('agendamento','vinculo','cartao')),
+  entidade_id uuid,
+  reversal_of uuid REFERENCES public.progressao_eventos(id),
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (contabilista_id, chave_idempotencia),
+  CONSTRAINT progressao_eventos_metadata_pequena CHECK (pg_column_size(metadata) <= 512)
+);
+
+CREATE INDEX IF NOT EXISTS progressao_eventos_contabilista_idx
+  ON public.progressao_eventos (contabilista_id, criado_em DESC);
+
+COMMENT ON COLUMN public.progressao_eventos.shadow IS
+  'Shadow XP (§96): o evento é registado com o valor real mas não move patamar. Serve para calibrar thresholds antes de os cristalizar.';
+COMMENT ON COLUMN public.progressao_eventos.metadata IS
+  'Só informação operacional. Nunca nomes, NIF, documentos, simulações ou conteúdo de partilhas (§58, §97).';
+
+-- A observabilidade não pode passar a ser um canal de dados fiscais.
+CREATE OR REPLACE FUNCTION public.progressao_metadata_sem_pii() RETURNS trigger
+LANGUAGE plpgsql SET search_path TO '' AS $$
+DECLARE v_permitidas constant text[] := ARRAY['catalogVersion','reason','meta','origem','regraVersao'];
+BEGIN
+  IF EXISTS (SELECT 1 FROM jsonb_object_keys(NEW.metadata) k WHERE k <> ALL (v_permitidas)) THEN
+    RAISE EXCEPTION 'metadata de progressão só aceita %.', array_to_string(v_permitidas, ', ')
+      USING ERRCODE = '22023';
+  END IF;
+  RETURN NEW;
+END; $$;
+
+DROP TRIGGER IF EXISTS trg_progressao_metadata ON public.progressao_eventos;
+CREATE TRIGGER trg_progressao_metadata BEFORE INSERT OR UPDATE ON public.progressao_eventos
+  FOR EACH ROW EXECUTE FUNCTION public.progressao_metadata_sem_pii();
+
+ALTER TABLE public.progressao_eventos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS progressao_eventos_self ON public.progressao_eventos;
+CREATE POLICY progressao_eventos_self ON public.progressao_eventos
+  FOR SELECT TO authenticated USING (contabilista_id = (SELECT auth.uid()));
+
+-- ---------------------------------------------------------------------
+-- 4. Ledger de créditos (§66, §67)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.creditos_fidelidade_ledger (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  cartao_id uuid REFERENCES public.fidelidade_cartoes(id) ON DELETE SET NULL,
+  compra_id uuid,
+  tipo text NOT NULL CHECK (tipo IN ('earned','held','released','spent','reversal','admin_adjustment')),
+  delta integer NOT NULL,
+  reversal_of uuid REFERENCES public.creditos_fidelidade_ledger(id),
+  chave_idempotencia text NOT NULL,
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (contabilista_id, chave_idempotencia)
+);
+
+CREATE INDEX IF NOT EXISTS creditos_ledger_contabilista_idx
+  ON public.creditos_fidelidade_ledger (contabilista_id, criado_em DESC);
+
+ALTER TABLE public.creditos_fidelidade_ledger ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS creditos_ledger_self ON public.creditos_fidelidade_ledger;
+CREATE POLICY creditos_ledger_self ON public.creditos_fidelidade_ledger
+  FOR SELECT TO authenticated USING (contabilista_id = (SELECT auth.uid()));
+
+-- ---------------------------------------------------------------------
+-- 5. Compras (§71)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.progressao_compras (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  target_tier_order smallint NOT NULL CHECK (target_tier_order >= 2),
+  catalog_version integer NOT NULL,
+  base_price_cents integer NOT NULL CHECK (base_price_cents >= 0),
+  loyalty_credits integer NOT NULL DEFAULT 0 CHECK (loyalty_credits >= 0),
+  loyalty_discount_pct integer NOT NULL DEFAULT 0 CHECK (loyalty_discount_pct BETWEEN 0 AND 100),
+  final_price_cents integer NOT NULL CHECK (final_price_cents >= 0),
+  currency text NOT NULL DEFAULT 'eur' CHECK (currency = 'eur'),
+  estado text NOT NULL CHECK (estado IN (
+    'draft','checkout_created','paid','applied','expired','cancelled',
+    'needs_refund','refunded','failed')),
+  stripe_checkout_session_id text,
+  stripe_payment_intent_id text,
+  idempotency_key text NOT NULL UNIQUE,
+  expira_em timestamptz NOT NULL DEFAULT (now() + interval '2 hours'),
+  criado_em timestamptz NOT NULL DEFAULT now(),
+  pago_em timestamptz,
+  aplicado_em timestamptz
+);
+
+CREATE INDEX IF NOT EXISTS progressao_compras_contabilista_idx
+  ON public.progressao_compras (contabilista_id, criado_em DESC);
+-- Uma intenção viva de cada vez: evita duas abas a reservar créditos.
+CREATE UNIQUE INDEX IF NOT EXISTS progressao_compra_viva_idx
+  ON public.progressao_compras (contabilista_id)
+  WHERE estado IN ('draft','checkout_created');
+
+COMMENT ON TABLE public.progressao_compras IS
+  'Snapshot comercial da compra: catálogo, preço base, créditos e desconto usados, preço final. Se o catálogo mudar depois, a compra histórica continua explicável.';
+
+ALTER TABLE public.progressao_compras ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS progressao_compras_self ON public.progressao_compras;
+CREATE POLICY progressao_compras_self ON public.progressao_compras
+  FOR SELECT TO authenticated USING (contabilista_id = (SELECT auth.uid()));
+
+-- ---------------------------------------------------------------------
+-- 6. Preço e desconto — cálculo do lado do servidor (§63, §64)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.desconto_por_creditos(p_creditos integer)
+RETURNS integer LANGUAGE sql IMMUTABLE SET search_path TO '' AS $$
+  -- Marcos, não escada acumulável. 10 créditos = 20%, nunca 5+15+20.
+  SELECT CASE
+    WHEN p_creditos >= 10 THEN 20
+    WHEN p_creditos >= 5  THEN 15
+    WHEN p_creditos >= 1  THEN 5
+    ELSE 0
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.creditos_do_marco(p_creditos integer)
+RETURNS integer LANGUAGE sql IMMUTABLE SET search_path TO '' AS $$
+  -- Quantos créditos são efetivamente consumidos por essa escolha.
+  SELECT CASE
+    WHEN p_creditos >= 10 THEN 10
+    WHEN p_creditos >= 5  THEN 5
+    WHEN p_creditos >= 1  THEN 1
+    ELSE 0
+  END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.preco_com_desconto(p_base_cents integer, p_pct integer)
+RETURNS integer LANGUAGE sql IMMUTABLE SET search_path TO '' AS $$
+  SELECT round(p_base_cents::numeric * (100 - p_pct) / 100.0)::integer;
+$$;
+
+-- ---------------------------------------------------------------------
+-- 7. Recalcular estado a partir dos ledgers
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.recalcular_progressao(p_contabilista uuid)
+RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_xp integer;
+  v_earned smallint;
+  v_disp integer;
+  v_res integer;
+  v_clientes integer;
+BEGIN
+  SELECT coalesce(sum(xp_delta) FILTER (WHERE NOT shadow), 0) INTO v_xp
+    FROM public.progressao_eventos WHERE contabilista_id = p_contabilista;
+  v_xp := greatest(v_xp, 0);
+
+  SELECT count(DISTINCT entidade_id) INTO v_clientes
+    FROM public.progressao_eventos
+   WHERE contabilista_id = p_contabilista
+     AND tipo = 'new_client_first_service' AND NOT shadow;
+
+  -- Um patamar exige XP E clientes. Com clientes_minimo = 0 (versão 1 do
+  -- catálogo) a segunda condição é sempre verdadeira e o comportamento é
+  -- exatamente o especificado.
+  SELECT coalesce(max(ordem), 1) INTO v_earned
+    FROM public.comissao_patamares
+   WHERE versao_catalogo = public.catalogo_versao_corrente()
+     AND ativo AND xp_minimo <= v_xp AND clientes_minimo <= v_clientes;
+
+  -- Contabilidade dos créditos, em duas contas que NÃO se sobrepõem:
+  --
+  --   disponíveis = ganhos + devolvidos + ajustes − reservados
+  --   reservados  = reservados − devolvidos − gastos
+  --
+  -- `spent` NÃO volta a descontar de `disponíveis`: esses créditos já
+  -- saíram de lá no momento do `held`. Descontá-los outra vez faria o
+  -- saldo cair a dobrar em cada compra concluída.
+  SELECT coalesce(sum(delta) FILTER (WHERE tipo IN ('earned','released','reversal','admin_adjustment')), 0)
+       - coalesce(sum(delta) FILTER (WHERE tipo = 'held'), 0),
+         coalesce(sum(delta) FILTER (WHERE tipo = 'held'), 0)
+       - coalesce(sum(delta) FILTER (WHERE tipo IN ('released','spent')), 0)
+    INTO v_disp, v_res
+    FROM public.creditos_fidelidade_ledger WHERE contabilista_id = p_contabilista;
+
+  INSERT INTO public.contabilista_progressao AS p (contabilista_id, xp, highest_earned_tier,
+                                                   creditos_disponiveis, creditos_reservados,
+                                                   clientes_elegiveis)
+  VALUES (p_contabilista, v_xp, v_earned, greatest(coalesce(v_disp,0),0), greatest(coalesce(v_res,0),0),
+          coalesce(v_clientes,0))
+  ON CONFLICT (contabilista_id) DO UPDATE SET
+    xp = EXCLUDED.xp,
+    clientes_elegiveis = greatest(p.clientes_elegiveis, EXCLUDED.clientes_elegiveis),
+    -- §60/§112: um patamar conquistado não recua por reversão antiga.
+    highest_earned_tier = greatest(p.highest_earned_tier, EXCLUDED.highest_earned_tier),
+    creditos_disponiveis = EXCLUDED.creditos_disponiveis,
+    creditos_reservados = EXCLUDED.creditos_reservados,
+    revision = p.revision + 1,
+    atualizado_em = now();
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.recalcular_progressao(uuid) FROM anon, authenticated, PUBLIC;
+
+-- ---------------------------------------------------------------------
+-- 8. Registar eventos — recebem FACTOS, derivam a recompensa (§86)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.progressao_registar(
+  p_contabilista uuid, p_tipo text, p_chave text, p_xp integer,
+  p_entidade_tipo text, p_entidade_id uuid, p_metadata jsonb DEFAULT '{}'::jsonb
+) RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_n integer; v_shadow boolean;
+BEGIN
+  IF NOT public.progressao_flag('accountant_progression_earn_xp')
+     AND NOT public.progressao_flag('accountant_progression_shadow') THEN
+    RETURN false;
+  END IF;
+  v_shadow := NOT public.progressao_flag('accountant_progression_earn_xp');
+
+  INSERT INTO public.progressao_eventos
+    (contabilista_id, tipo, chave_idempotencia, xp_delta, shadow, entidade_tipo, entidade_id, metadata)
+  VALUES (p_contabilista, p_tipo, p_chave, p_xp, v_shadow, p_entidade_tipo, p_entidade_id, p_metadata)
+  ON CONFLICT (contabilista_id, chave_idempotencia) DO NOTHING;
+
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  IF v_n = 0 THEN RETURN false; END IF;   -- já tinha sido registado
+  RETURN true;
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.progressao_registar(uuid,text,text,integer,text,uuid,jsonb)
+  FROM anon, authenticated, PUBLIC;
+
+-- +10 XP por serviço elegível, +25 na primeira vez com aquele cliente.
+CREATE OR REPLACE FUNCTION public.progressao_servico_concluido_hook(
+  p_contabilista uuid, p_cliente uuid, p_agendamento uuid, p_preco_cents integer
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_vinculo uuid; v_mudou boolean := false; v_cat integer;
+BEGIN
+  -- Um serviço a zero euros não é atividade económica elegível (§57).
+  IF coalesce(p_preco_cents, 0) <= 0 THEN RETURN; END IF;
+
+  v_cat := public.catalogo_versao_corrente();
+
+  IF public.progressao_registar(p_contabilista, 'service_completed',
+        'service_completed:' || p_agendamento::text, 10, 'agendamento', p_agendamento,
+        jsonb_build_object('catalogVersion', v_cat, 'reason', 'service_completed')) THEN
+    v_mudou := true;
+  END IF;
+
+  SELECT v.id INTO v_vinculo FROM public.contabilista_vinculos v
+   WHERE v.contabilista_id = p_contabilista AND v.cliente_id = p_cliente
+     AND v.estado <> 'terminado';
+
+  IF v_vinculo IS NOT NULL THEN
+    -- §84.2: uma vez por PAR contabilista–cliente, não por vínculo
+    -- recriado. A chave usa o par, não o id do vínculo.
+    IF public.progressao_registar(p_contabilista, 'new_client_first_service',
+          'new_client_first_service:' || p_cliente::text, 25, 'vinculo', v_vinculo,
+          jsonb_build_object('catalogVersion', v_cat, 'reason', 'new_client_first_service')) THEN
+      v_mudou := true;
+    END IF;
+  END IF;
+
+  IF v_mudou THEN PERFORM public.recalcular_progressao(p_contabilista); END IF;
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.progressao_servico_concluido_hook(uuid,uuid,uuid,integer)
+  FROM anon, authenticated, PUBLIC;
+
+-- Cartão de fidelidade concluído: +100 XP e +1 crédito, mas só se a meta
+-- do ciclo for >= 5 (§62 — impede configurar meta 3 para fabricar moeda).
+CREATE OR REPLACE FUNCTION public.fidelidade_ciclo_concluido_hook(
+  p_contabilista uuid, p_cliente uuid, p_cartao uuid, p_meta integer
+) RETURNS void
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_mudou boolean := false; v_cat integer;
+BEGIN
+  IF coalesce(p_meta, 0) < 5 THEN RETURN; END IF;
+
+  v_cat := public.catalogo_versao_corrente();
+
+  IF public.progressao_registar(p_contabilista, 'loyalty_cycle_completed',
+        'loyalty_cycle_completed:' || p_cartao::text, 100, 'cartao', p_cartao,
+        jsonb_build_object('catalogVersion', v_cat, 'reason', 'loyalty_cycle_completed',
+                           'meta', p_meta)) THEN
+    v_mudou := true;
+  END IF;
+
+  IF public.progressao_flag('accountant_loyalty_credits') THEN
+    INSERT INTO public.creditos_fidelidade_ledger
+      (contabilista_id, cartao_id, tipo, delta, chave_idempotencia)
+    VALUES (p_contabilista, p_cartao, 'earned', 1, 'loyalty_cycle_completed:' || p_cartao::text)
+    ON CONFLICT (contabilista_id, chave_idempotencia) DO NOTHING;
+    v_mudou := true;
+  END IF;
+
+  IF v_mudou THEN PERFORM public.recalcular_progressao(p_contabilista); END IF;
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.fidelidade_ciclo_concluido_hook(uuid,uuid,uuid,integer)
+  FROM anon, authenticated, PUBLIC;
+
+-- ---------------------------------------------------------------------
+-- 9. Estado para a UI
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.progressao_estado()
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_p record; v_cat integer;
+  v_efetivo smallint; v_atual record; v_proximo record;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+  IF NOT public.progressao_flag('accountant_progression_read') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'indisponivel');
+  END IF;
+
+  v_cat := public.catalogo_versao_corrente();
+
+  -- Um contabilista aprovado que ainda não tem linha lê o estado zero,
+  -- sem escrever nada num caminho que é STABLE.
+  SELECT coalesce(p.xp, 0)                          AS xp,
+         coalesce(p.creditos_disponiveis, 0)        AS creditos_disponiveis,
+         coalesce(p.creditos_reservados, 0)         AS creditos_reservados,
+         coalesce(p.clientes_elegiveis, 0)          AS clientes_elegiveis,
+         coalesce(p.highest_earned_tier, 1::smallint)    AS highest_earned_tier,
+         coalesce(p.highest_purchased_tier, 1::smallint) AS highest_purchased_tier
+    INTO v_p
+    FROM (SELECT 1) AS z
+    LEFT JOIN public.contabilista_progressao p ON p.contabilista_id = v_uid;
+
+  v_efetivo := public.patamar_efetivo(v_p.highest_earned_tier, v_p.highest_purchased_tier);
+
+  SELECT * INTO v_atual   FROM public.comissao_patamares
+   WHERE versao_catalogo = v_cat AND ordem = v_efetivo;
+  SELECT * INTO v_proximo FROM public.comissao_patamares
+   WHERE versao_catalogo = v_cat AND ordem = v_efetivo + 1;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'catalogVersion', v_cat,
+    'xp', v_p.xp,
+    'clientesElegiveis', v_p.clientes_elegiveis,
+    'creditosDisponiveis', v_p.creditos_disponiveis,
+    'creditosReservados', v_p.creditos_reservados,
+    'patamarConquistado', v_p.highest_earned_tier,
+    'patamarComprado', v_p.highest_purchased_tier,
+    'patamarEfetivo', v_efetivo,
+    'atual', CASE WHEN v_atual.id IS NULL THEN NULL ELSE jsonb_build_object(
+      'ordem', v_atual.ordem, 'slug', v_atual.slug, 'titulo', v_atual.titulo,
+      'comissaoBps', v_atual.comissao_bps) END,
+    'proximo', CASE WHEN v_proximo.id IS NULL THEN NULL ELSE jsonb_build_object(
+      'ordem', v_proximo.ordem, 'slug', v_proximo.slug, 'titulo', v_proximo.titulo,
+      'comissaoBps', v_proximo.comissao_bps, 'xpMinimo', v_proximo.xp_minimo,
+      'xpEmFalta', greatest(v_proximo.xp_minimo - v_p.xp, 0),
+      'clientesMinimo', v_proximo.clientes_minimo,
+      'clientesEmFalta', greatest(v_proximo.clientes_minimo - v_p.clientes_elegiveis, 0),
+      'precoBaseCents', v_proximo.preco_desbloqueio_cents,
+      'descontoPct', public.desconto_por_creditos(v_p.creditos_disponiveis),
+      'precoComDescontoCents', public.preco_com_desconto(
+          v_proximo.preco_desbloqueio_cents,
+          public.desconto_por_creditos(v_p.creditos_disponiveis))) END,
+    'compraDisponivel', public.progressao_flag('accountant_tier_purchase')
+  );
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.progressao_estado() FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.progressao_estado() TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 10. Intenção de compra — o browser não escolhe preço nem alvo (§72)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.criar_intencao_desbloqueio(
+  p_creditos_a_usar integer DEFAULT 0,
+  p_idempotency_key text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_p record; v_cat integer; v_efetivo smallint;
+  v_alvo record; v_creditos integer; v_pct integer; v_final integer;
+  v_id uuid; v_key text;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao'); END IF;
+  IF NOT public.progressao_flag('accountant_tier_purchase') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'compra_indisponivel'); END IF;
+
+  SELECT * INTO v_p FROM public.contabilista_progressao
+   WHERE contabilista_id = v_uid FOR UPDATE;
+  IF NOT FOUND THEN
+    INSERT INTO public.contabilista_progressao (contabilista_id) VALUES (v_uid)
+    ON CONFLICT DO NOTHING;
+    SELECT * INTO v_p FROM public.contabilista_progressao
+     WHERE contabilista_id = v_uid FOR UPDATE;
+  END IF;
+
+  -- Libertar intenções mortas antes de decidir.
+  PERFORM public.expirar_intencoes_desbloqueio(v_uid);
+
+  v_cat := public.catalogo_versao_corrente();
+  v_efetivo := public.patamar_efetivo(v_p.highest_earned_tier, v_p.highest_purchased_tier);
+
+  -- §68: só o PRÓXIMO patamar.
+  SELECT * INTO v_alvo FROM public.comissao_patamares
+   WHERE versao_catalogo = v_cat AND ordem = v_efetivo + 1 AND ativo;
+  IF NOT FOUND OR v_alvo.preco_desbloqueio_cents IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_patamar_seguinte'); END IF;
+
+  v_creditos := public.creditos_do_marco(
+    least(greatest(coalesce(p_creditos_a_usar, 0), 0), v_p.creditos_disponiveis));
+  v_pct   := public.desconto_por_creditos(v_creditos);
+  v_final := public.preco_com_desconto(v_alvo.preco_desbloqueio_cents, v_pct);
+  v_key   := coalesce(p_idempotency_key, gen_random_uuid()::text);
+
+  INSERT INTO public.progressao_compras
+    (contabilista_id, target_tier_order, catalog_version, base_price_cents,
+     loyalty_credits, loyalty_discount_pct, final_price_cents, estado, idempotency_key)
+  VALUES (v_uid, v_alvo.ordem, v_cat, v_alvo.preco_desbloqueio_cents,
+          v_creditos, v_pct, v_final, 'draft', v_key)
+  RETURNING id INTO v_id;
+
+  IF v_creditos > 0 THEN
+    INSERT INTO public.creditos_fidelidade_ledger
+      (contabilista_id, compra_id, tipo, delta, chave_idempotencia)
+    VALUES (v_uid, v_id, 'held', v_creditos, 'held:' || v_id::text);
+  END IF;
+
+  PERFORM public.recalcular_progressao(v_uid);
+
+  RETURN jsonb_build_object('ok', true, 'compraId', v_id,
+    'targetTier', v_alvo.ordem, 'targetSlug', v_alvo.slug,
+    'baseCents', v_alvo.preco_desbloqueio_cents,
+    'creditos', v_creditos, 'descontoPct', v_pct, 'finalCents', v_final,
+    'idempotencyKey', v_key);
+EXCEPTION WHEN unique_violation THEN
+  RETURN jsonb_build_object('ok', false, 'motivo', 'compra_em_curso');
+END; $$;
+
+CREATE OR REPLACE FUNCTION public.expirar_intencoes_desbloqueio(p_contabilista uuid DEFAULT NULL)
+RETURNS integer
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE r record; v_n integer := 0;
+BEGIN
+  FOR r IN SELECT * FROM public.progressao_compras
+            WHERE estado IN ('draft','checkout_created') AND expira_em <= now()
+              AND (p_contabilista IS NULL OR contabilista_id = p_contabilista)
+            FOR UPDATE LOOP
+    UPDATE public.progressao_compras SET estado = 'expired' WHERE id = r.id;
+    IF r.loyalty_credits > 0 THEN
+      INSERT INTO public.creditos_fidelidade_ledger
+        (contabilista_id, compra_id, tipo, delta, chave_idempotencia)
+      VALUES (r.contabilista_id, r.id, 'released', r.loyalty_credits, 'released:' || r.id::text)
+      ON CONFLICT (contabilista_id, chave_idempotencia) DO NOTHING;
+    END IF;
+    PERFORM public.recalcular_progressao(r.contabilista_id);
+    v_n := v_n + 1;
+  END LOOP;
+  RETURN v_n;
+END; $$;
+
+-- ---------------------------------------------------------------------
+-- 11. Aplicar a compra — só o servidor, só uma vez (§73)
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.aplicar_compra_patamar(
+  p_compra uuid,
+  p_stripe_payment_intent text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_c record; v_p record; v_efetivo smallint;
+BEGIN
+  SELECT * INTO v_c FROM public.progressao_compras WHERE id = p_compra FOR UPDATE;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'motivo', 'compra_inexistente'); END IF;
+
+  -- Webhook repetido: mesmo resultado, sem efeitos novos.
+  IF v_c.estado = 'applied' THEN
+    RETURN jsonb_build_object('ok', true, 'repetido', true, 'compraId', v_c.id); END IF;
+  IF v_c.estado IN ('refunded','cancelled','expired','failed') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'compra_encerrada', 'estado', v_c.estado); END IF;
+
+  SELECT * INTO v_p FROM public.contabilista_progressao
+   WHERE contabilista_id = v_c.contabilista_id FOR UPDATE;
+  IF NOT FOUND THEN
+    INSERT INTO public.contabilista_progressao (contabilista_id)
+    VALUES (v_c.contabilista_id) ON CONFLICT DO NOTHING;
+    SELECT * INTO v_p FROM public.contabilista_progressao
+     WHERE contabilista_id = v_c.contabilista_id FOR UPDATE;
+  END IF;
+
+  v_efetivo := public.patamar_efetivo(v_p.highest_earned_tier, v_p.highest_purchased_tier);
+
+  -- §70: o XP alcançou o patamar durante o checkout. A compra ficou sem
+  -- objeto. NUNCA transferir o pagamento para o patamar seguinte.
+  IF v_efetivo >= v_c.target_tier_order THEN
+    UPDATE public.progressao_compras
+       SET estado = 'needs_refund', pago_em = coalesce(pago_em, now()),
+           stripe_payment_intent_id = coalesce(p_stripe_payment_intent, stripe_payment_intent_id)
+     WHERE id = v_c.id;
+    IF v_c.loyalty_credits > 0 THEN
+      INSERT INTO public.creditos_fidelidade_ledger
+        (contabilista_id, compra_id, tipo, delta, chave_idempotencia)
+      VALUES (v_c.contabilista_id, v_c.id, 'released', v_c.loyalty_credits, 'released:' || v_c.id::text)
+      ON CONFLICT (contabilista_id, chave_idempotencia) DO NOTHING;
+    END IF;
+    PERFORM public.recalcular_progressao(v_c.contabilista_id);
+    RETURN jsonb_build_object('ok', false, 'motivo', 'patamar_ja_conquistado',
+                              'estado', 'needs_refund', 'compraId', v_c.id);
+  END IF;
+
+  UPDATE public.contabilista_progressao
+     SET highest_purchased_tier = greatest(highest_purchased_tier, v_c.target_tier_order),
+         revision = revision + 1, atualizado_em = now()
+   WHERE contabilista_id = v_c.contabilista_id;
+  -- Repare-se: `xp` não é tocado. Comprar não cria mérito (§69).
+
+  IF v_c.loyalty_credits > 0 THEN
+    INSERT INTO public.creditos_fidelidade_ledger
+      (contabilista_id, compra_id, tipo, delta, chave_idempotencia)
+    VALUES (v_c.contabilista_id, v_c.id, 'spent', v_c.loyalty_credits, 'spent:' || v_c.id::text)
+    ON CONFLICT (contabilista_id, chave_idempotencia) DO NOTHING;
+  END IF;
+
+  UPDATE public.progressao_compras
+     SET estado = 'applied', pago_em = coalesce(pago_em, now()), aplicado_em = now(),
+         stripe_payment_intent_id = coalesce(p_stripe_payment_intent, stripe_payment_intent_id)
+   WHERE id = v_c.id;
+
+  PERFORM public.recalcular_progressao(v_c.contabilista_id);
+  PERFORM public.avisar_utilizador(v_c.contabilista_id, 'patamar_desbloqueado',
+    'Patamar desbloqueado', 'A tua comissão foi atualizada.', '/contabilista/progressao');
+
+  RETURN jsonb_build_object('ok', true, 'repetido', false, 'compraId', v_c.id,
+                            'patamar', v_c.target_tier_order);
+END; $$;
+
+-- Estas duas nunca são chamáveis pelo browser: são de webhook/servidor.
+REVOKE EXECUTE ON FUNCTION public.aplicar_compra_patamar(uuid, text) FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.expirar_intencoes_desbloqueio(uuid) FROM anon, authenticated, PUBLIC;
+REVOKE EXECUTE ON FUNCTION public.criar_intencao_desbloqueio(integer, text) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.criar_intencao_desbloqueio(integer, text) TO authenticated;
+REVOKE EXECUTE ON FUNCTION public.progressao_flag(text) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.progressao_flag(text) TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 12. Reversão (§85) — lançamento compensatório, nunca DELETE
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.reverter_evento_progressao(p_evento uuid, p_motivo text)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE v_e record;
+BEGIN
+  SELECT * INTO v_e FROM public.progressao_eventos WHERE id = p_evento;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'motivo', 'evento_inexistente'); END IF;
+  IF EXISTS (SELECT 1 FROM public.progressao_eventos WHERE reversal_of = p_evento) THEN
+    RETURN jsonb_build_object('ok', true, 'repetido', true); END IF;
+
+  INSERT INTO public.progressao_eventos
+    (contabilista_id, tipo, chave_idempotencia, xp_delta, shadow,
+     entidade_tipo, entidade_id, reversal_of, metadata)
+  VALUES (v_e.contabilista_id, 'reversal', 'reversal:' || p_evento::text, -v_e.xp_delta,
+          v_e.shadow, v_e.entidade_tipo, v_e.entidade_id, p_evento,
+          jsonb_build_object('reason', left(coalesce(p_motivo, 'reversal'), 60)));
+
+  PERFORM public.recalcular_progressao(v_e.contabilista_id);
+  RETURN jsonb_build_object('ok', true, 'repetido', false);
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.reverter_evento_progressao(uuid, text) FROM anon, authenticated, PUBLIC;
+
+-- ---------------------------------------------------------------------
+-- 12b. Privilégios explícitos.
+--
+--   Nenhuma destas tabelas é legível por `anon` — nem sequer o catálogo
+--   de comissões (§138: a grelha 10→5 é assunto entre a plataforma e o
+--   profissional). E `authenticated` só LÊ: escrever é das RPCs.
+-- ---------------------------------------------------------------------
+REVOKE ALL ON public.progressao_flags            FROM anon, authenticated;
+REVOKE ALL ON public.comissao_patamares          FROM anon, authenticated;
+REVOKE ALL ON public.contabilista_progressao     FROM anon, authenticated;
+REVOKE ALL ON public.progressao_eventos          FROM anon, authenticated;
+REVOKE ALL ON public.creditos_fidelidade_ledger  FROM anon, authenticated;
+REVOKE ALL ON public.progressao_compras          FROM anon, authenticated;
+
+GRANT SELECT ON public.progressao_flags           TO authenticated;
+GRANT SELECT ON public.comissao_patamares         TO authenticated;
+GRANT SELECT ON public.contabilista_progressao    TO authenticated;
+GRANT SELECT ON public.progressao_eventos         TO authenticated;
+GRANT SELECT ON public.creditos_fidelidade_ledger TO authenticated;
+GRANT SELECT ON public.progressao_compras         TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 13. Semear a linha de progressão dos contabilistas já aprovados
+--     (§106: começa em 0. Sem XP fictício.)
+-- ---------------------------------------------------------------------
+INSERT INTO public.contabilista_progressao (contabilista_id)
+SELECT user_id FROM public.contabilistas WHERE estado = 'aprovado'
+ON CONFLICT (contabilista_id) DO NOTHING;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816090000_contrato_da_proposta.sql                           ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- =====================================================================
+--  O CONTRATO DA PROPOSTA — LER O DOCUMENTO, E NÃO SÓ O RESUMO
+--  ---------------------------------------------------------------------
+--  A 051 já impede decidir uma proposta sem duas marcas: chegou ao fim do
+--  TEXTO (`lida_ate_ao_fim_em`) e confirmou que leu (`confirmacao_em`).
+--  Faltava a parte que interessa quando há contrato: o texto da proposta
+--  é um resumo, e o que se aceita é o documento anexo.
+--
+--  Sem esta migração, alguém podia rolar seis linhas de resumo, marcar a
+--  caixa e aceitar um contrato de doze páginas que nunca abriu. A caixa
+--  dizia «li e compreendi» e era falsa por construção.
+--
+--  O que se acrescenta:
+--
+--   · `contrato_lido_em` — instante em que o cliente chegou ao fim do
+--     documento anexo marcado como contrato;
+--   · `marcar_contrato_lido()` — a única forma de o escrever;
+--   · a mesma condição dentro de `confirmar_leitura_da_proposta` e de
+--     `decidir_proposta`, para a garantia não viver na interface.
+--
+--  O QUE ISTO PROVA, E O QUE NÃO PROVA
+--  -----------------------------------
+--  Nenhum sistema sabe se uma pessoa leu. O que estas colunas registam é
+--  que o fluxo de leitura foi percorrido até ao fim — a última página do
+--  documento esteve no ecrã, ou foi alcançada por teclado. É o mesmo grau
+--  de prova que `lida_ate_ao_fim_em` já tinha, e é honesto chamar-lhe o
+--  que é: uma marca de percurso, não uma declaração de compreensão. O que
+--  o produto NÃO pode fazer é dizer que a pessoa leu quando nem sequer
+--  abriu — e é isso que aqui deixa de ser possível.
+--
+--  Propostas SEM contrato anexo continuam exatamente como estavam: a
+--  condição só se aplica quando existe um anexo com `e_contrato = true`.
+-- =====================================================================
+
+BEGIN;
+
+-- ---------------------------------------------------------------------
+--  1. A coluna
+-- ---------------------------------------------------------------------
+ALTER TABLE public.propostas
+  ADD COLUMN IF NOT EXISTS contrato_lido_em timestamptz;
+
+COMMENT ON COLUMN public.propostas.contrato_lido_em IS
+  'Quando o cliente chegou ao fim do documento anexo marcado como contrato. Nulo enquanto não chegar. Só `marcar_contrato_lido()` o escreve; ninguém o escreve por UPDATE direto, porque a política de escrita do cliente não inclui esta tabela.';
+
+-- ---------------------------------------------------------------------
+--  2. Esta proposta traz contrato?
+-- ---------------------------------------------------------------------
+--  Uma função e não um `EXISTS` repetido em três sítios: repetido, era o
+--  tipo de condição que se corrige em dois e se esquece no terceiro.
+CREATE OR REPLACE FUNCTION public.proposta_tem_contrato(p_proposta uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.proposta_anexos a
+     WHERE a.proposta_id = p_proposta AND a.e_contrato IS TRUE
+  );
+$$;
+
+COMMENT ON FUNCTION public.proposta_tem_contrato(uuid) IS
+  'True quando a proposta tem anexo marcado como contrato. É o que decide se a leitura do documento é exigida — uma proposta sem contrato não passa a ter um requisito que não pode cumprir.';
+
+-- ---------------------------------------------------------------------
+--  3. Marcar o contrato como lido até ao fim
+-- ---------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.marcar_contrato_lido(p_proposta uuid)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE v_id uuid;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_autenticado');
+  END IF;
+
+  IF NOT public.proposta_tem_contrato(p_proposta) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_contrato');
+  END IF;
+
+  -- `coalesce` mantém o PRIMEIRO instante: reabrir o documento não
+  -- reescreve a hora em que a pessoa lá chegou pela primeira vez.
+  UPDATE public.propostas p
+     SET contrato_lido_em = coalesce(p.contrato_lido_em, now())
+   WHERE p.id = p_proposta
+     AND public.dono_do_caso(p.caso_id, auth.uid())
+     AND p.estado IN ('enviada', 'lida')
+  RETURNING p.id INTO v_id;
+
+  IF v_id IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_decidivel');
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+COMMENT ON FUNCTION public.marcar_contrato_lido(uuid) IS
+  'Regista que o cliente chegou ao fim do contrato anexo. Chamada pelo leitor de documentos quando a última página é alcançada — a rolar ou por teclado.';
+
+-- ---------------------------------------------------------------------
+--  4. Confirmar leitura passa a exigir o contrato
+-- ---------------------------------------------------------------------
+--  A caixa «li e compreendi» é uma declaração. Deixá-la marcar antes de o
+--  documento ter sido aberto é pedir a alguém que declare o que não pode
+--  saber.
+CREATE OR REPLACE FUNCTION public.confirmar_leitura_da_proposta(p_proposta uuid)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE v_id uuid;
+BEGIN
+  IF auth.uid() IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_autenticado');
+  END IF;
+
+  UPDATE public.propostas p
+     SET confirmacao_em = coalesce(p.confirmacao_em, now())
+   WHERE p.id = p_proposta
+     AND public.dono_do_caso(p.caso_id, auth.uid())
+     AND p.lida_ate_ao_fim_em IS NOT NULL
+     AND (NOT public.proposta_tem_contrato(p.id) OR p.contrato_lido_em IS NOT NULL)
+     AND p.estado IN ('enviada', 'lida')
+  RETURNING p.id INTO v_id;
+
+  IF v_id IS NULL THEN
+    IF EXISTS (SELECT 1 FROM public.propostas p
+                WHERE p.id = p_proposta
+                  AND public.dono_do_caso(p.caso_id, auth.uid())
+                  AND p.contrato_lido_em IS NULL
+                  AND public.proposta_tem_contrato(p.id)) THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'contrato_por_ler');
+    END IF;
+    RETURN jsonb_build_object('ok', false, 'motivo', 'ainda_nao_leste_ate_ao_fim');
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+-- ---------------------------------------------------------------------
+--  5. Decidir passa a exigir o contrato
+-- ---------------------------------------------------------------------
+--  A função é a da 051 com UMA condição a mais e UM motivo a mais. O
+--  resto do corpo é igual — incluindo o vínculo que nasce ao aceitar, que
+--  continua a ser consequência da decisão e não porta de entrada.
+CREATE OR REPLACE FUNCTION public.decidir_proposta(
+  p_proposta uuid,
+  p_decisao  text,
+  p_motivo   text DEFAULT NULL,
+  p_valor_pedido integer DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = ''
+AS $$
+DECLARE
+  u uuid := auth.uid();
+  v_id uuid; v_caso uuid; v_cc uuid; v_novo text; v_vinculo uuid;
+BEGIN
+  IF p_decisao NOT IN ('aceitar', 'recusar', 'pedir_desconto') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'decisao_invalida');
+  END IF;
+  IF p_decisao = 'pedir_desconto'
+     AND (p_valor_pedido IS NULL OR p_valor_pedido < 0) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'falta_o_valor');
+  END IF;
+
+  v_novo := CASE p_decisao WHEN 'aceitar' THEN 'aceite'
+                           WHEN 'recusar' THEN 'recusada'
+                           ELSE 'desconto_pedido' END;
+
+  UPDATE public.propostas p
+     SET estado = v_novo,
+         decidida_em = now(),
+         motivo = nullif(btrim(coalesce(p_motivo, '')), '')
+   WHERE p.id = p_proposta
+     AND public.dono_do_caso(p.caso_id, u)
+     AND p.estado IN ('enviada', 'lida')
+     -- ⚠️ A regra, aqui. Sem estas linhas, a interface era a única coisa
+     -- entre alguém e aceitar um contrato que não leu.
+     AND p.lida_ate_ao_fim_em IS NOT NULL
+     AND p.confirmacao_em IS NOT NULL
+     -- ⚠️ E quando há documento, o documento também conta: o texto da
+     -- proposta é o resumo; o contrato é o que fica a valer.
+     AND (NOT public.proposta_tem_contrato(p.id) OR p.contrato_lido_em IS NOT NULL)
+     AND (p.validade_ate IS NULL OR p.validade_ate >= current_date)
+  RETURNING p.id, p.caso_id, p.contabilista_id INTO v_id, v_caso, v_cc;
+
+  IF v_id IS NULL THEN
+    IF EXISTS (SELECT 1 FROM public.propostas p WHERE p.id = p_proposta
+                AND public.dono_do_caso(p.caso_id, u)
+                AND p.contrato_lido_em IS NULL
+                AND public.proposta_tem_contrato(p.id)) THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'contrato_por_ler');
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.propostas p WHERE p.id = p_proposta
+                AND public.dono_do_caso(p.caso_id, u)
+                AND (p.lida_ate_ao_fim_em IS NULL OR p.confirmacao_em IS NULL)) THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'ainda_nao_leste_e_confirmaste');
+    END IF;
+    IF EXISTS (SELECT 1 FROM public.propostas p WHERE p.id = p_proposta
+                AND public.dono_do_caso(p.caso_id, u)
+                AND p.validade_ate < current_date) THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'proposta_expirada');
+    END IF;
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_decidivel');
+  END IF;
+
+  IF p_decisao = 'aceitar' THEN
+    UPDATE public.propostas SET estado = 'substituida'
+     WHERE caso_id = v_caso AND id <> v_id AND estado IN ('enviada', 'lida');
+
+    UPDATE public.casos SET estado = 'aceite' WHERE id = v_caso;
+
+    INSERT INTO public.contabilista_vinculos
+      (contabilista_id, cliente_id, origem, estado)
+    VALUES (v_cc, u, 'cliente', 'ativo')
+    ON CONFLICT DO NOTHING
+    RETURNING id INTO v_vinculo;
+
+    PERFORM public.avisar_utilizador(v_cc, 'vinculo_aceite',
+      'A tua proposta foi aceite',
+      'Já podes marcar consultas e falar diretamente.', '/contabilista/clientes');
+  ELSIF p_decisao = 'pedir_desconto' THEN
+    PERFORM public.avisar_utilizador(v_cc, 'mensagem',
+      'Foi pedido um desconto',
+      'Vê o pedido e envia uma proposta nova, se quiseres.', '/contabilista/casos');
+  ELSE
+    PERFORM public.avisar_utilizador(v_cc, 'mensagem',
+      'Uma proposta tua foi recusada', NULL, '/contabilista/casos');
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'estado', v_novo);
+END;
+$$;
+
+COMMENT ON FUNCTION public.decidir_proposta(uuid, text, text, integer) IS
+  'Recusa enquanto `lida_ate_ao_fim_em`, `confirmacao_em` — ou, havendo contrato anexo, `contrato_lido_em` — forem nulos. O botão desativado na interface é conveniência; a garantia é esta.';
+
+-- ---------------------------------------------------------------------
+--  6. Permissões: as mesmas das irmãs
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE f text;
+BEGIN
+  FOREACH f IN ARRAY ARRAY[
+    'public.marcar_contrato_lido(uuid)',
+    'public.proposta_tem_contrato(uuid)',
+    'public.confirmar_leitura_da_proposta(uuid)',
+    'public.decidir_proposta(uuid, text, text, integer)'
+  ] LOOP
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM anon, public', f);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated, service_role', f);
+  END LOOP;
+END $$;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816120000_correcoes_painel_contabilista.sql                  ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  Correções do painel de contabilistas
+--  ---------------------------------------------------------------------
+--  Duas frentes, ambas de correção — nada de funcionalidade nova aqui.
+--
+--  1. `guardar_disponibilidade` passa a ser TRANSACIONAL.
+--     O cliente fazia DELETE e depois INSERT em duas idas à base. Se o
+--     INSERT falhasse, a semana-tipo do contabilista já tinha desaparecido
+--     e ele ficava sem horários publicados — ninguém conseguia marcar
+--     consulta com ele. Era o único fluxo de escrita do painel que ainda
+--     não passava por RPC; todos os outros já aprenderam esta lição.
+--
+--  2. `resumo_clientes_do_contabilista` agrega no SERVIDOR.
+--     A página de clientes lia até 300 agendamentos e 200 partilhas e
+--     derivava os totais em JavaScript. Pior: `listarAgendamentos` ordena
+--     por `inicio` ASCENDENTE, por isso o `limit(300)` guardava as
+--     consultas MAIS ANTIGAS — acima desse número, «última consulta» e
+--     «próxima consulta» passavam a estar simplesmente errados, sem aviso
+--     nenhum, e são exatamente as colunas por que a tabela ordena.
+--
+--  A fronteira da migração 038 continua intacta: nada aqui lê `recibos`,
+--  `cenarios`, `recibos_vencimento` ou `preferencias_fiscais`. Só se conta
+--  o que passou por esta plataforma.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- ---------------------------------------------------------------------
+-- 1. Semana-tipo numa transação
+-- ---------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.guardar_disponibilidade(p_regras jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid    uuid := auth.uid();
+  v_regra  jsonb;
+  v_inicio time;
+  v_fim    time;
+  v_dur    integer;
+  v_int    integer;
+  v_dia    integer;
+  v_n      integer := 0;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  IF jsonb_typeof(p_regras) <> 'array' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'formato_invalido');
+  END IF;
+
+  IF jsonb_array_length(p_regras) > 60 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'periodos_a_mais');
+  END IF;
+
+  -- Validar TUDO antes de apagar seja o que for. É esta ordem que torna a
+  -- função segura: um período mal escrito no fim da lista não pode deixar
+  -- o contabilista sem os que estavam bem escritos no princípio.
+  FOR v_regra IN SELECT * FROM jsonb_array_elements(p_regras) LOOP
+    v_dia := (v_regra ->> 'diaSemana')::integer;
+    IF v_dia IS NULL OR v_dia < 0 OR v_dia > 6 THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'dia_invalido');
+    END IF;
+
+    BEGIN
+      v_inicio := (v_regra ->> 'inicio')::time;
+      v_fim    := (v_regra ->> 'fim')::time;
+    EXCEPTION WHEN others THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'hora_invalida');
+    END;
+
+    v_dur := COALESCE((v_regra ->> 'duracaoMin')::integer, 0);
+    v_int := COALESCE((v_regra ->> 'intervaloMin')::integer, 0);
+
+    IF v_fim <= v_inicio THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'fim_antes_do_inicio');
+    END IF;
+    IF v_dur <= 0 OR v_dur > 480 THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'duracao_invalida');
+    END IF;
+    IF v_int < 0 OR v_int > 240 THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'intervalo_invalido');
+    END IF;
+    IF EXTRACT(EPOCH FROM (v_fim - v_inicio)) / 60 < v_dur THEN
+      RETURN jsonb_build_object('ok', false, 'motivo', 'periodo_mais_curto_que_a_consulta');
+    END IF;
+  END LOOP;
+
+  -- Uma transação: o DELETE e o INSERT vivem ou morrem juntos.
+  DELETE FROM public.contabilista_disponibilidade WHERE contabilista_id = v_uid;
+
+  INSERT INTO public.contabilista_disponibilidade
+    (contabilista_id, dia_semana, hora_inicio, hora_fim, duracao_min, intervalo_min)
+  SELECT
+    v_uid,
+    (r ->> 'diaSemana')::integer,
+    (r ->> 'inicio')::time,
+    (r ->> 'fim')::time,
+    (r ->> 'duracaoMin')::integer,
+    COALESCE((r ->> 'intervaloMin')::integer, 0)
+  FROM jsonb_array_elements(p_regras) AS r;
+
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  RETURN jsonb_build_object('ok', true, 'periodos', v_n);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.guardar_disponibilidade(jsonb) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.guardar_disponibilidade(jsonb) TO authenticated;
+
+COMMENT ON FUNCTION public.guardar_disponibilidade(jsonb) IS
+  'Substitui a semana-tipo do contabilista autenticado numa só transação. '
+  'Valida tudo antes de apagar: um período inválido não deixa a agenda vazia.';
+
+-- ---------------------------------------------------------------------
+-- 2. Resumo por cliente, agregado no servidor
+-- ---------------------------------------------------------------------
+--
+-- Uma linha por vínculo, com os números já contados. Substitui três
+-- leituras grandes e truncadas por uma leitura exata.
+--
+-- As regras de derivação são as mesmas que `src/lib/contabilistas/resumo.ts`
+-- já aplicava, e continuam lá para a demonstração e para os testes:
+--   · «última»  = a consulta REALIZADA mais recente (uma cancelada não
+--     conta como contacto — dizer «última consulta em março» quando essa
+--     consulta foi desmarcada era uma afirmação falsa sobre a relação);
+--   · «próxima» = a mais próxima por acontecer (pedido ou confirmado)
+--     ainda no futuro;
+--   · partilhas revogadas não contam: o cliente retirou-as.
+
+-- ⚠️ DROP antes do CREATE, e não `CREATE OR REPLACE` sozinho.
+--
+-- Uma migração posterior — a da fronteira de contacto — reescreve esta
+-- função SEM a coluna `email_cliente`. Ao reaplicar o conjunto todo, este
+-- `CREATE OR REPLACE` tentava devolver uma assinatura diferente da que
+-- existe e falhava com «cannot change return type of existing function».
+-- O DROP torna cada migração idempotente por si, e a ordem dentro de uma
+-- passagem continua a decidir o estado final — que é o desta função sem o
+-- contacto do cliente.
+DROP FUNCTION IF EXISTS public.resumo_clientes_do_contabilista();
+
+CREATE FUNCTION public.resumo_clientes_do_contabilista()
+RETURNS TABLE (
+  vinculo_id            uuid,
+  cliente_id            uuid,
+  estado                text,
+  origem                text,
+  criado_em             timestamptz,
+  nome_cliente          text,
+  email_cliente         text,
+  mensagem              text,
+  consultas_realizadas  integer,
+  ultima                timestamptz,
+  proxima               timestamptz,
+  partilhas             integer,
+  partilhas_por_ler     integer,
+  cartao_carimbos       integer,
+  cartao_meta           integer,
+  cartao_desconto_pct   integer,
+  cartao_preco_base     integer
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  WITH quem AS (
+    SELECT auth.uid() AS uid
+  ),
+  vinculos AS (
+    SELECT v.*
+      FROM public.contabilista_vinculos v, quem
+     WHERE v.contabilista_id = quem.uid
+       AND quem.uid IS NOT NULL
+       AND public.e_contabilista_aprovado(quem.uid)
+  ),
+  ags AS (
+    SELECT
+      a.cliente_id,
+      COUNT(*) FILTER (WHERE a.estado = 'realizada')::integer AS realizadas,
+      MAX(a.inicio) FILTER (WHERE a.estado = 'realizada')     AS ultima,
+      MIN(a.inicio) FILTER (
+        WHERE a.estado IN ('pedido', 'confirmado') AND a.inicio >= now()
+      )                                                        AS proxima
+      FROM public.agendamentos a, quem
+     WHERE a.contabilista_id = quem.uid
+     GROUP BY a.cliente_id
+  ),
+  pts AS (
+    SELECT
+      p.cliente_id,
+      COUNT(*)::integer                                          AS total,
+      COUNT(*) FILTER (WHERE p.estado = 'enviada')::integer      AS por_ler
+      FROM public.partilhas p, quem
+     WHERE p.contabilista_id = quem.uid
+       AND p.estado <> 'revogada'
+     GROUP BY p.cliente_id
+  ),
+  cartoes AS (
+    SELECT c.cliente_id, c.carimbos, c.meta, c.desconto_pct, c.preco_base_cents
+      FROM public.fidelidade_cartoes c, quem
+     WHERE c.contabilista_id = quem.uid
+       AND c.completo = false
+  )
+  SELECT
+    v.id, v.cliente_id, v.estado::text, v.origem::text, v.criado_em,
+    v.nome_cliente, v.email_cliente, v.mensagem,
+    COALESCE(ags.realizadas, 0),
+    ags.ultima,
+    ags.proxima,
+    COALESCE(pts.total, 0),
+    COALESCE(pts.por_ler, 0),
+    cartoes.carimbos, cartoes.meta, cartoes.desconto_pct, cartoes.preco_base_cents
+    FROM vinculos v
+    LEFT JOIN ags     ON ags.cliente_id     = v.cliente_id
+    LEFT JOIN pts     ON pts.cliente_id     = v.cliente_id
+    LEFT JOIN cartoes ON cartoes.cliente_id = v.cliente_id
+   ORDER BY v.criado_em DESC;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.resumo_clientes_do_contabilista() FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.resumo_clientes_do_contabilista() TO authenticated;
+
+COMMENT ON FUNCTION public.resumo_clientes_do_contabilista() IS
+  'Uma linha por cliente do contabilista autenticado, com consultas, envios '
+  'e cartão já agregados. Substitui a derivação em JavaScript sobre listas '
+  'truncadas por limite. Não lê tabelas fiscais (migração 038).';
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816140000_pagamentos_stripe_connect.sql                      ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- ═══════════════════════════════════════════════════════════════════════
+--  PAGAMENTOS — Stripe Connect, com cobranças DIRETAS
+--  ---------------------------------------------------------------------
+--  O QUE MUDA NO MODELO, e porque é que a diferença importa.
+--
+--  Até aqui, `progressao/fronteiras.ts` dizia: «A taxa é faturada a ti pelo
+--  Recibo Certo. O cliente paga-te diretamente — a plataforma não retém nem
+--  processa esse pagamento.» O raciocínio por trás está escrito lá e
+--  continua a valer: *retirar uma percentagem do dinheiro de um cliente
+--  antes de o entregar a outro é outra atividade.*
+--
+--  A decisão de produto passou a ser que o cliente paga o contabilista
+--  ATRAVÉS do Recibo Certo. A forma escolhida é a que preserva o essencial
+--  daquele raciocínio: **direct charges**.
+--
+--    · a cobrança nasce NA CONTA DO CONTABILISTA (cabeçalho `Stripe-Account`);
+--    · o contabilista é o comerciante de registo — é o nome dele no extrato
+--      do cliente, e é dele o recibo;
+--    · o dinheiro NUNCA entra no saldo do Recibo Certo. Vai direto para o
+--      saldo dele;
+--    · a comissão sai como `application_fee_amount`, que a Stripe encaminha
+--      para a plataforma. Não é a plataforma a reter e depois entregar.
+--
+--  A alternativa (destination charges) punha o dinheiro no saldo da
+--  plataforma primeiro. Era isso, e só isso, que a fronteira antiga proibia.
+--
+--  ── O QUE ESTA MIGRAÇÃO NÃO FAZ, de propósito
+--
+--  A compra de patamares pelo contabilista JÁ ESTÁ CONSTRUÍDA na migração
+--  `20260815233000`: `progressao_compras`, `criar_intencao_desbloqueio`,
+--  `aplicar_compra_patamar`, o ledger de créditos com held/released/spent,
+--  e o caso §70 — o XP alcançar o patamar a meio do checkout, que marca
+--  `needs_refund` e nunca transfere o pagamento para o patamar seguinte.
+--
+--  Aqui só se acrescenta o que faltava para a ligar à Stripe (guardar o id
+--  da sessão) e se abre a bandeira. Reescrever aquilo seria criar um
+--  segundo sistema de compras a competir com o primeiro.
+--
+--  ── AS INVARIANTES DE DINHEIRO, todas do lado do servidor
+--
+--   1. O VALOR NUNCA VEM DO CLIENTE. O browser manda um id de agendamento;
+--      o preço sai daqui. Um preço que viaja pelo browser é um preço que se
+--      edita no browser.
+--   2. A COMISSÃO É LIDA NO INSTANTE DA COBRANÇA, do patamar efetivo, e
+--      guardada com o pagamento. Subir de patamar depois não muda o que já
+--      foi cobrado.
+--   3. O BENEFÍCIO DE FIDELIDADE é reservado na preparação e só GASTO
+--      quando o pagamento liquida. Um checkout abandonado não queima um cupão.
+--   4. IDEMPOTÊNCIA por `stripe_checkout_session_id` e
+--      `stripe_payment_intent_id`, ambos UNIQUE — o webhook repete-se por
+--      desenho.
+-- ═══════════════════════════════════════════════════════════════════════
+
+-- ---------------------------------------------------------------------
+-- 1. A conta Connect do contabilista
+-- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.contabilista_stripe (
+  contabilista_id    uuid PRIMARY KEY REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  stripe_account_id  text NOT NULL UNIQUE,
+  -- Os três sinais que decidem se se pode cobrar. Vêm do webhook
+  -- `account.updated`, nunca de uma leitura do browser.
+  charges_enabled    boolean NOT NULL DEFAULT false,
+  payouts_enabled    boolean NOT NULL DEFAULT false,
+  details_submitted  boolean NOT NULL DEFAULT false,
+  -- O que a Stripe ainda pede, mostrado ao contabilista tal e qual.
+  requisitos         jsonb   NOT NULL DEFAULT '[]'::jsonb,
+  pais               text    NOT NULL DEFAULT 'PT',
+  moeda              text    NOT NULL DEFAULT 'eur',
+  criado_em          timestamptz NOT NULL DEFAULT now(),
+  atualizado_em      timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.contabilista_stripe ENABLE ROW LEVEL SECURITY;
+
+-- Só o próprio lê o seu estado. NENHUMA política de escrita: a conta é
+-- criada e atualizada pelo servidor com a chave de serviço. É a lição da
+-- migração 024 — validar quem pede não chega, é preciso validar o que é
+-- escrito.
+DROP POLICY IF EXISTS "stripe_proprio_le" ON public.contabilista_stripe;
+CREATE POLICY "stripe_proprio_le" ON public.contabilista_stripe
+  FOR SELECT TO authenticated
+  USING (contabilista_id = auth.uid());
+
+COMMENT ON TABLE public.contabilista_stripe IS
+  'Conta Stripe Connect de cada contabilista. Cobranças diretas: ele é o '
+  'comerciante e o dinheiro nunca passa pelo saldo da plataforma. Escrita '
+  'exclusiva do servidor.';
+
+-- ---------------------------------------------------------------------
+-- 2. Política de pagamento por tipo de consulta
+-- ---------------------------------------------------------------------
+--
+--  `no_pedido`      — paga-se ao marcar. É o que faz sentido para quem não
+--                     quer perseguir pagamentos.
+--  `depois`         — marca-se sem pagar; ao concluir com o preço real, o
+--                     contabilista emite o pedido e o cliente paga da área
+--                     dele. É a omissão, porque é o que já acontecia.
+--  `sem_pagamento`  — não se cobra por aqui. Uma primeira conversa
+--                     gratuita, ou um acerto feito fora da plataforma.
+
+ALTER TABLE public.contabilista_tipos_consulta
+  ADD COLUMN IF NOT EXISTS pagamento text NOT NULL DEFAULT 'depois';
+
+DO $$ BEGIN
+  ALTER TABLE public.contabilista_tipos_consulta
+    ADD CONSTRAINT tipos_consulta_pagamento_valido
+    CHECK (pagamento IN ('no_pedido', 'depois', 'sem_pagamento'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+COMMENT ON COLUMN public.contabilista_tipos_consulta.pagamento IS
+  'Quando se paga: no_pedido (pré-pago), depois (ao concluir) ou '
+  'sem_pagamento (não se cobra pela plataforma).';
+
+-- ---------------------------------------------------------------------
+-- 3. Os pagamentos de consultas (cliente → contabilista)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.pagamentos (
+  id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  contabilista_id             uuid NOT NULL REFERENCES public.contabilistas(user_id) ON DELETE CASCADE,
+  cliente_id                  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  agendamento_id              uuid REFERENCES public.agendamentos(id) ON DELETE SET NULL,
+  tipo_consulta_id            uuid REFERENCES public.contabilista_tipos_consulta(id) ON DELETE SET NULL,
+
+  momento                     text NOT NULL DEFAULT 'no_pedido',
+  estado                      text NOT NULL DEFAULT 'pendente',
+
+  -- Dinheiro sempre em cêntimos. Nunca float.
+  bruto_cents                 integer NOT NULL CHECK (bruto_cents >= 0),
+  desconto_cents              integer NOT NULL DEFAULT 0 CHECK (desconto_cents >= 0),
+  liquido_cents               integer NOT NULL CHECK (liquido_cents >= 0),
+  comissao_cents              integer NOT NULL DEFAULT 0 CHECK (comissao_cents >= 0),
+  -- O patamar no INSTANTE da cobrança. Guarda-se em vez de se recalcular:
+  -- subir de patamar amanhã não muda o que foi cobrado ontem.
+  comissao_bps                integer NOT NULL DEFAULT 0,
+  moeda                       text NOT NULL DEFAULT 'eur',
+
+  cupao_id                    uuid REFERENCES public.fidelidade_cupoes(id) ON DELETE SET NULL,
+
+  stripe_account_id           text NOT NULL,
+  stripe_checkout_session_id  text UNIQUE,
+  stripe_payment_intent_id    text UNIQUE,
+  erro                        text,
+
+  descricao                   text,
+  criado_em                   timestamptz NOT NULL DEFAULT now(),
+  pago_em                     timestamptz,
+  expira_em                   timestamptz NOT NULL DEFAULT now() + interval '7 days',
+
+  CONSTRAINT pagamentos_estado_valido
+    CHECK (estado IN ('pendente', 'pago', 'falhado', 'reembolsado', 'cancelado', 'expirado')),
+  CONSTRAINT pagamentos_momento_valido
+    CHECK (momento IN ('no_pedido', 'depois')),
+  CONSTRAINT pagamentos_liquido_coerente
+    CHECK (liquido_cents = bruto_cents - desconto_cents)
+);
+
+CREATE INDEX IF NOT EXISTS pagamentos_contabilista_idx
+  ON public.pagamentos (contabilista_id, estado, criado_em DESC);
+CREATE INDEX IF NOT EXISTS pagamentos_cliente_idx
+  ON public.pagamentos (cliente_id, estado, criado_em DESC);
+
+-- Um agendamento não pode ter dois pagamentos vivos ao mesmo tempo. Sem
+-- isto, dois separadores abertos geravam duas sessões e a consulta podia
+-- ser paga duas vezes.
+CREATE UNIQUE INDEX IF NOT EXISTS pagamentos_um_vivo_por_agendamento
+  ON public.pagamentos (agendamento_id)
+  WHERE agendamento_id IS NOT NULL AND estado IN ('pendente', 'pago');
+
+ALTER TABLE public.pagamentos ENABLE ROW LEVEL SECURITY;
+
+-- As duas partes leem. Ninguém escreve pelo cliente — nem o valor, nem o
+-- estado, nem a comissão. Tudo passa por RPC de servidor ou pelo webhook.
+DROP POLICY IF EXISTS "pagamentos_partes_leem" ON public.pagamentos;
+CREATE POLICY "pagamentos_partes_leem" ON public.pagamentos
+  FOR SELECT TO authenticated
+  USING (cliente_id = auth.uid() OR contabilista_id = auth.uid());
+
+COMMENT ON TABLE public.pagamentos IS
+  'Cobranças de consultas. Direct charges: nascem na conta Stripe do '
+  'contabilista e o dinheiro nunca entra no saldo da plataforma. A comissão '
+  'sai como application_fee. Escrita só por RPC de servidor e webhook.';
+
+-- ---------------------------------------------------------------------
+-- 4. A comissão em vigor de um contabilista
+-- ---------------------------------------------------------------------
+--
+-- Reutiliza `patamar_efetivo` e `catalogo_versao_corrente` da migração
+-- `20260815233000` — o catálogo é versionado, e ler `ordem` sem filtrar
+-- pela versão devolveria o patamar de uma recalibração antiga.
+
+CREATE OR REPLACE FUNCTION public.comissao_bps_do_contabilista(p_contabilista uuid)
+RETURNS integer
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_p       record;
+  v_efetivo smallint;
+  v_bps     integer;
+BEGIN
+  SELECT * INTO v_p FROM public.contabilista_progressao
+   WHERE contabilista_id = p_contabilista;
+
+  v_efetivo := public.patamar_efetivo(
+    COALESCE(v_p.highest_earned_tier, 1::smallint),
+    COALESCE(v_p.highest_purchased_tier, 1::smallint));
+
+  SELECT comissao_bps INTO v_bps FROM public.comissao_patamares
+   WHERE versao_catalogo = public.catalogo_versao_corrente()
+     AND ordem = v_efetivo AND ativo;
+
+  -- Sem linha, o patamar Base. É a comissão mais ALTA — falhar para o lado
+  -- que não prejudica a plataforma seria falhar a favor de quem não pagou.
+  RETURN COALESCE(v_bps, 1000);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.comissao_bps_do_contabilista(uuid) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.comissao_bps_do_contabilista(uuid) TO authenticated, service_role;
+
+-- ---------------------------------------------------------------------
+-- 5. Preparar um pagamento de consulta
+-- ---------------------------------------------------------------------
+--
+-- Chamada pelo SERVIDOR depois de validar a sessão. Devolve tudo o que a
+-- rota precisa para criar o Checkout — incluindo o valor, que nasce aqui.
+
+CREATE OR REPLACE FUNCTION public.preparar_pagamento_consulta(
+  p_cliente     uuid,
+  p_agendamento uuid,
+  p_cupao       uuid DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_ag       record;
+  v_tipo     record;
+  v_conta    record;
+  v_bruto    integer;
+  v_desconto integer := 0;
+  v_liquido  integer;
+  v_bps      integer;
+  v_comissao integer;
+  v_cupao    record;
+  v_id       uuid;
+  v_momento  text;
+  v_cupao_a_reservar uuid := NULL;
+BEGIN
+  SELECT * INTO v_ag FROM public.agendamentos WHERE id = p_agendamento;
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'agendamento_inexistente');
+  END IF;
+  IF v_ag.cliente_id <> p_cliente THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nao_e_teu');
+  END IF;
+  IF v_ag.estado IN ('cancelado_cliente', 'cancelado_contabilista') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'consulta_cancelada');
+  END IF;
+
+  -- Já pago: não se cobra duas vezes.
+  IF EXISTS (SELECT 1 FROM public.pagamentos
+              WHERE agendamento_id = p_agendamento AND estado = 'pago') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'ja_pago');
+  END IF;
+
+  -- A conta Connect tem de existir e conseguir cobrar. Sem isto o Checkout
+  -- falhava na Stripe com uma mensagem que ninguém entende.
+  SELECT * INTO v_conta FROM public.contabilista_stripe
+   WHERE contabilista_id = v_ag.contabilista_id;
+  IF NOT FOUND OR NOT v_conta.charges_enabled THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'contabilista_sem_pagamentos');
+  END IF;
+
+  SELECT * INTO v_tipo FROM public.contabilista_tipos_consulta
+   WHERE id = v_ag.tipo_consulta_id;
+
+  IF v_tipo.id IS NOT NULL AND v_tipo.pagamento = 'sem_pagamento' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'tipo_nao_cobra');
+  END IF;
+
+  -- ── O preço. Dois caminhos, e a ordem importa.
+  --
+  -- Se a consulta JÁ FOI CONCLUÍDA, `concluir_consulta` (Fidelidade V2) já
+  -- fixou `preco_cents`, já aplicou o benefício e já GASTOU o cupão. O que
+  -- há a cobrar é `valor_final_cents`, e aplicar outro desconto aqui era
+  -- descontar duas vezes sobre o mesmo cartão.
+  IF v_ag.valor_final_cents IS NOT NULL THEN
+    v_momento  := 'depois';
+    v_bruto    := v_ag.preco_cents;
+    v_desconto := COALESCE(v_ag.desconto_aplicado_cents, 0);
+    v_liquido  := v_ag.valor_final_cents;
+
+  -- Caso contrário é um pré-pagamento: o preço vem do catálogo e o
+  -- benefício, se a pessoa o aplicar, é reservado agora e gasto na
+  -- liquidação.
+  ELSE
+    v_momento := COALESCE(v_tipo.pagamento, 'depois');
+    v_bruto   := COALESCE(v_tipo.preco_cents, 0);
+
+    IF p_cupao IS NOT NULL THEN
+      SELECT * INTO v_cupao FROM public.fidelidade_cupoes
+       WHERE id = p_cupao
+         AND cliente_id = p_cliente
+         AND contabilista_id = v_ag.contabilista_id
+         AND estado = 'disponivel';
+      IF NOT FOUND THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'cupao_invalido');
+      END IF;
+      IF v_cupao.expira_em < now() THEN
+        RETURN jsonb_build_object('ok', false, 'motivo', 'cupao_expirado');
+      END IF;
+      v_desconto := ROUND(v_bruto * v_cupao.percentagem / 100.0);
+      v_cupao_a_reservar := p_cupao;
+    END IF;
+
+    v_liquido := GREATEST(v_bruto - v_desconto, 0);
+  END IF;
+
+  IF v_bruto <= 0 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_valor_a_cobrar');
+  END IF;
+  IF v_liquido <= 0 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'nada_a_cobrar');
+  END IF;
+
+  -- ── A comissão. Lida agora, guardada com o pagamento.
+  v_bps := public.comissao_bps_do_contabilista(v_ag.contabilista_id);
+  v_comissao := ROUND(v_liquido * v_bps / 10000.0);
+
+  -- Reaproveita o lugar de um pendente sem sessão em vez de chocar com o
+  -- índice único: quem carregou duas vezes não merece um erro.
+  DELETE FROM public.pagamentos
+   WHERE agendamento_id = p_agendamento
+     AND estado = 'pendente'
+     AND stripe_checkout_session_id IS NULL;
+
+  INSERT INTO public.pagamentos (
+    contabilista_id, cliente_id, agendamento_id, tipo_consulta_id,
+    momento, bruto_cents, desconto_cents, liquido_cents,
+    comissao_cents, comissao_bps, cupao_id, stripe_account_id, descricao
+  ) VALUES (
+    v_ag.contabilista_id, p_cliente, p_agendamento, v_ag.tipo_consulta_id,
+    v_momento, v_bruto, v_desconto, v_liquido,
+    v_comissao, v_bps, v_cupao_a_reservar, v_conta.stripe_account_id,
+    COALESCE(v_tipo.nome, 'Consulta')
+  )
+  RETURNING id INTO v_id;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'pagamentoId', v_id,
+    'stripeAccountId', v_conta.stripe_account_id,
+    'brutoCents', v_bruto,
+    'descontoCents', v_desconto,
+    'liquidoCents', v_liquido,
+    'comissaoCents', v_comissao,
+    'comissaoBps', v_bps,
+    'descricao', COALESCE(v_tipo.nome, 'Consulta')
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.preparar_pagamento_consulta(uuid, uuid, uuid)
+  FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.preparar_pagamento_consulta(uuid, uuid, uuid) TO service_role;
+
+COMMENT ON FUNCTION public.preparar_pagamento_consulta(uuid, uuid, uuid) IS
+  'Calcula valor e comissão de uma consulta e abre um pagamento pendente. '
+  'Só o servidor a chama: é aqui que o preço nasce, e um preço que passasse '
+  'pelo browser era um preço editável no browser.';
+
+-- ---------------------------------------------------------------------
+-- 6. Registar a sessão de Checkout
+-- ---------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.marcar_checkout_pagamento(
+  p_pagamento uuid,
+  p_sessao    text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+BEGIN
+  UPDATE public.pagamentos
+     SET stripe_checkout_session_id = p_sessao
+   WHERE id = p_pagamento AND estado = 'pendente';
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'pagamento_nao_pendente');
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.marcar_checkout_pagamento(uuid, text)
+  FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.marcar_checkout_pagamento(uuid, text) TO service_role;
+
+-- O equivalente para a compra de patamar, que vive em `progressao_compras`.
+CREATE OR REPLACE FUNCTION public.marcar_checkout_desbloqueio(
+  p_compra uuid,
+  p_sessao text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+BEGIN
+  UPDATE public.progressao_compras
+     SET estado = 'checkout_created', stripe_checkout_session_id = p_sessao
+   WHERE id = p_compra AND estado = 'draft';
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'compra_nao_esta_em_rascunho');
+  END IF;
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.marcar_checkout_desbloqueio(uuid, text)
+  FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.marcar_checkout_desbloqueio(uuid, text) TO service_role;
+
+-- Encontrar a compra pela sessão — é tudo o que o webhook tem em mão.
+CREATE OR REPLACE FUNCTION public.compra_por_sessao(p_sessao text)
+RETURNS uuid
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  SELECT id FROM public.progressao_compras WHERE stripe_checkout_session_id = p_sessao;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.compra_por_sessao(text) FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.compra_por_sessao(text) TO service_role;
+
+-- ---------------------------------------------------------------------
+-- 7. Liquidar um pagamento de consulta (webhook)
+-- ---------------------------------------------------------------------
+
+CREATE OR REPLACE FUNCTION public.liquidar_pagamento(
+  p_sessao         text,
+  p_payment_intent text
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_pag record;
+BEGIN
+  SELECT * INTO v_pag FROM public.pagamentos
+   WHERE stripe_checkout_session_id = p_sessao
+   FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'pagamento_desconhecido');
+  END IF;
+
+  -- Idempotência: o webhook repete-se por desenho.
+  IF v_pag.estado = 'pago' THEN
+    RETURN jsonb_build_object('ok', true, 'repetido', true);
+  END IF;
+
+  UPDATE public.pagamentos
+     SET estado = 'pago',
+         pago_em = now(),
+         stripe_payment_intent_id = COALESCE(p_payment_intent, stripe_payment_intent_id)
+   WHERE id = v_pag.id;
+
+  -- O benefício só se gasta AGORA — e só no pré-pagamento. Numa consulta
+  -- já concluída, `concluir_consulta` gastou-o na altura, e `cupao_id`
+  -- ficou nulo de propósito.
+  IF v_pag.cupao_id IS NOT NULL THEN
+    UPDATE public.fidelidade_cupoes
+       SET estado = 'usado', usado_em = now(),
+           usado_agendamento_id = COALESCE(usado_agendamento_id, v_pag.agendamento_id),
+           valor_base_cents = COALESCE(valor_base_cents, v_pag.bruto_cents)
+     WHERE id = v_pag.cupao_id AND estado = 'disponivel';
+  END IF;
+
+  -- Uma consulta pré-paga fica confirmada: o cliente pagou, e deixá-la
+  -- «por confirmar» obrigava a uma segunda ação para nada.
+  IF v_pag.agendamento_id IS NOT NULL AND v_pag.momento = 'no_pedido' THEN
+    UPDATE public.agendamentos
+       SET estado = 'confirmado'
+     WHERE id = v_pag.agendamento_id AND estado = 'pedido';
+  END IF;
+
+  PERFORM public.avisar_utilizador(
+    v_pag.contabilista_id, 'pagamento_recebido', 'Pagamento recebido',
+    'Um cliente pagou uma consulta.', '/contabilista/clientes');
+
+  RETURN jsonb_build_object('ok', true, 'pagamentoId', v_pag.id);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.liquidar_pagamento(text, text)
+  FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.liquidar_pagamento(text, text) TO service_role;
+
+-- Marcar como falhado/expirado sem perder o registo.
+CREATE OR REPLACE FUNCTION public.encerrar_pagamento(
+  p_sessao text,
+  p_estado text,
+  p_erro   text DEFAULT NULL
+) RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+BEGIN
+  IF p_estado NOT IN ('falhado', 'expirado', 'cancelado') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'estado_invalido');
+  END IF;
+  UPDATE public.pagamentos
+     SET estado = p_estado, erro = LEFT(COALESCE(p_erro, ''), 500)
+   WHERE stripe_checkout_session_id = p_sessao AND estado = 'pendente';
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.encerrar_pagamento(text, text, text)
+  FROM anon, PUBLIC, authenticated;
+GRANT  EXECUTE ON FUNCTION public.encerrar_pagamento(text, text, text) TO service_role;
+
+-- ---------------------------------------------------------------------
+-- 8. O que o cliente e o contabilista precisam de saber
+-- ---------------------------------------------------------------------
+--
+-- Consultas concluídas com preço fixado e ainda por pagar. É isto que
+-- alimenta o «tens uma consulta por pagar» na área do cliente e o «à espera
+-- de pagamento» no painel.
+
+CREATE OR REPLACE FUNCTION public.consultas_por_pagar(p_cliente uuid DEFAULT NULL)
+RETURNS TABLE (
+  agendamento_id   uuid,
+  contabilista_id  uuid,
+  cliente_id       uuid,
+  inicio           timestamptz,
+  valor_cents      integer,
+  descricao        text,
+  pagamento_id     uuid,
+  pagamento_estado text
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  SELECT
+    a.id, a.contabilista_id, a.cliente_id, a.inicio,
+    a.valor_final_cents,
+    COALESCE(t.nome, 'Consulta'),
+    p.id, p.estado
+    FROM public.agendamentos a
+    LEFT JOIN public.contabilista_tipos_consulta t ON t.id = a.tipo_consulta_id
+    LEFT JOIN public.pagamentos p
+           ON p.agendamento_id = a.id AND p.estado IN ('pendente', 'pago')
+   WHERE a.estado = 'realizada'
+     AND a.valor_final_cents IS NOT NULL
+     AND a.valor_final_cents > 0
+     AND (p.id IS NULL OR p.estado = 'pendente')
+     AND COALESCE(t.pagamento, 'depois') <> 'sem_pagamento'
+     AND (
+       (p_cliente IS NOT NULL AND a.cliente_id = p_cliente AND a.cliente_id = auth.uid())
+       OR (p_cliente IS NULL AND a.contabilista_id = auth.uid())
+     )
+   ORDER BY a.inicio DESC
+   LIMIT 100;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.consultas_por_pagar(uuid) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.consultas_por_pagar(uuid) TO authenticated;
+
+-- ---------------------------------------------------------------------
+-- 9. Abrir o desbloqueio pago
+-- ---------------------------------------------------------------------
+--
+-- A máquina já existe (migração `20260815233000`). O que faltava era a
+-- bandeira: `criar_intencao_desbloqueio` recusa com `compra_indisponivel`
+-- enquanto estiver desligada, e era isso que `COPY_DESBLOQUEIO_INDISPONIVEL`
+-- explicava ao contabilista.
+
+UPDATE public.progressao_flags
+   SET ativa = true
+ WHERE chave = 'accountant_tier_purchase';
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816150000_fronteira_de_contacto.sql                          ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260816150000_fronteira_de_contacto.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  A FRONTEIRA DE CONTACTO
+--  ---------------------------------------------------------------------
+--  A migração 043 deu ao cliente a hipótese de dar um email ao contabilista
+--  «só se quiseres que ele te possa escrever». Era uma boa intenção com uma
+--  consequência que só se vê passado um ano: o canal de acompanhamento
+--  passa a ter uma porta lateral, e quem sai por ela leva a relação inteira
+--  — sem histórico, sem partilhas revogáveis, sem prova de nada.
+--
+--  Isto não é uma questão de retenção artificial. É que TUDO o que a
+--  plataforma promete ao cliente — a partilha que se revoga, o ficheiro que
+--  deixa de abrir quando o acompanhamento termina, o registo do que foi
+--  pedido e quando — vale exatamente zero no instante em que a conversa
+--  migra para o WhatsApp. A promessa de privacidade e a promessa de canal
+--  são a mesma promessa.
+--
+--  Três decisões, por ordem de dureza:
+--
+--   1. `email_cliente` DESAPARECE. Não é revogado por policy, não é
+--      escondido pela interface, não fica «lá mas sem grant»: a coluna é
+--      removida da tabela. Uma coluna que existe é uma coluna que uma RPC
+--      futura devolve por distração — e a promessa passa a depender de
+--      ninguém se distrair. Ver §4.3 do relatório: por arquitetura, não
+--      por promessa.
+--
+--   2. A RPC de resumo deixa de a declarar. Como a assinatura muda, é
+--      DROP e não CREATE OR REPLACE — o PostgreSQL recusa-se, e bem, a
+--      trocar o tipo de retorno de uma função existente.
+--
+--   3. O texto passa a ser examinado. Um email escrito à mão numa mensagem
+--      é o mesmo buraco por outro caminho, e a interface não pode ser a
+--      fronteira: quem quiser contorná-la fala com o PostgREST. A regra
+--      vive aqui, e a interface repete-a antes de submeter só para dar
+--      resposta imediata.
+--
+--  O QUE ISTO NÃO PROMETE
+--  ----------------------
+--  Um PDF ou uma imagem podem conter um email ou um número, e nada aqui os
+--  lê. Enquanto não houver leitura de anexos, a plataforma não pode
+--  afirmar — e a interface não afirma — que o contacto é impossível de
+--  passar. Diz o que faz: protege o canal escrito.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+
+-- ── 1. A coluna sai da tabela ───────────────────────────────────────
+--
+-- O gatilho da 046 e o grant por coluna da 047 nomeiam `email_cliente`.
+-- Ambos têm de deixar de o nomear ANTES de a coluna cair: um `DROP COLUMN`
+-- leva o grant com ele, mas a função em PL/pgSQL só falha quando corre, e
+-- falharia na primeira pessoa a terminar um acompanhamento.
+
+CREATE OR REPLACE FUNCTION public.vinculos_tranca_cliente()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  -- Terminar leva o nome com ele. A autorização para o ter acabou nesse
+  -- instante, e guardá-lo «só por histórico» seria ficar com um dado
+  -- pessoal para além do consentimento que o trouxe.
+  IF NEW.estado = 'terminado' AND OLD.estado <> 'terminado' THEN
+    NEW.nome_cliente := NULL;
+  END IF;
+
+  IF auth.uid() IS NOT NULL THEN
+    IF NEW.id IS DISTINCT FROM OLD.id
+       OR NEW.contabilista_id IS DISTINCT FROM OLD.contabilista_id
+       OR NEW.cliente_id IS DISTINCT FROM OLD.cliente_id
+       OR NEW.origem IS DISTINCT FROM OLD.origem
+       OR NEW.criado_em IS DISTINCT FROM OLD.criado_em THEN
+      RAISE EXCEPTION 'As partes de um vínculo não se alteram.';
+    END IF;
+
+    IF OLD.estado = 'terminado' AND NEW.estado <> 'terminado' THEN
+      RAISE EXCEPTION 'Um acompanhamento terminado não se reabre; pede-se de novo.';
+    END IF;
+
+    IF auth.uid() = NEW.cliente_id AND auth.uid() <> NEW.contabilista_id THEN
+      IF NEW.estado IS DISTINCT FROM OLD.estado AND NEW.estado <> 'terminado' THEN
+        RAISE EXCEPTION 'O cliente só pode terminar o acompanhamento.';
+      END IF;
+      IF NEW.mensagem IS DISTINCT FROM OLD.mensagem THEN
+        RAISE EXCEPTION 'O recado do pedido não se altera.';
+      END IF;
+    END IF;
+
+    IF auth.uid() = NEW.contabilista_id THEN
+      IF NEW.nome_cliente IS DISTINCT FROM OLD.nome_cliente THEN
+        IF NOT (NEW.estado = 'terminado' AND NEW.nome_cliente IS NULL) THEN
+          RAISE EXCEPTION 'O nome é dado pelo cliente.';
+        END IF;
+      END IF;
+    END IF;
+  END IF;
+
+  NEW.atualizado_em := now();
+  RETURN NEW;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.vinculos_tranca_cliente() FROM anon, authenticated, public;
+
+-- O gatilho de texto seguro da 20260814 nomeia a coluna nos argumentos.
+--
+-- Nomear uma coluna que já não existe não rebentava nada — `to_jsonb(NEW)
+-- ->> 'email_cliente'` devolve NULL e a verificação passa ao lado. Mas
+-- deixar lá o nome era deixar uma pista falsa para quem lesse a seguir, e
+-- as pistas falsas em SQL de segurança pagam-se caras.
+--
+-- A condição existe porque `rejeitar_codigo_painel` nasce numa migração com
+-- nome por data, fora do intervalo que a suíte de RLS aplica. Sem ela, esta
+-- migração não corre no arreio de testes — e uma migração que os testes não
+-- conseguem aplicar é uma migração que ninguém verifica.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_catalog.pg_proc
+     WHERE proname = 'rejeitar_codigo_painel'
+       AND pronamespace = 'public'::regnamespace
+  ) THEN
+    DROP TRIGGER IF EXISTS trg_texto_seguro_contabilista_vinculos
+      ON public.contabilista_vinculos;
+    CREATE TRIGGER trg_texto_seguro_contabilista_vinculos
+      BEFORE INSERT OR UPDATE ON public.contabilista_vinculos
+      FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+        'mensagem', 'nome_cliente'
+      );
+  END IF;
+END $$;
+
+-- A RPC de resumo declara a coluna no tipo de retorno.
+DROP FUNCTION IF EXISTS public.resumo_clientes_do_contabilista();
+
+-- E agora a coluna pode cair. O grant por coluna cai com ela.
+ALTER TABLE public.contabilista_vinculos DROP COLUMN IF EXISTS email_cliente;
+
+-- O que sobra do grant da 047: o nome, e só o nome.
+GRANT UPDATE (nome_cliente) ON public.contabilista_vinculos TO authenticated;
+
+COMMENT ON TABLE public.contabilista_vinculos IS
+  'A relação entre um cliente e um contabilista. Não guarda, e não pode voltar '
+  'a guardar, nenhum canal de contacto do cliente: o acompanhamento acontece '
+  'dentro da plataforma, onde é revogável e fica registado.';
+
+
+-- ── 2. A RPC de resumo, sem a coluna ────────────────────────────────
+
+CREATE FUNCTION public.resumo_clientes_do_contabilista()
+RETURNS TABLE (
+  vinculo_id            uuid,
+  cliente_id            uuid,
+  estado                text,
+  origem                text,
+  criado_em             timestamptz,
+  nome_cliente          text,
+  mensagem              text,
+  consultas_realizadas  integer,
+  ultima                timestamptz,
+  proxima               timestamptz,
+  partilhas             integer,
+  partilhas_por_ler     integer,
+  cartao_carimbos       integer,
+  cartao_meta           integer,
+  cartao_desconto_pct   integer,
+  cartao_preco_base     integer
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+  WITH quem AS (
+    SELECT auth.uid() AS uid
+  ),
+  vinculos AS (
+    SELECT v.*
+      FROM public.contabilista_vinculos v, quem
+     WHERE v.contabilista_id = quem.uid
+       AND quem.uid IS NOT NULL
+       AND public.e_contabilista_aprovado(quem.uid)
+  ),
+  ags AS (
+    SELECT
+      a.cliente_id,
+      COUNT(*) FILTER (WHERE a.estado = 'realizada')::integer AS realizadas,
+      MAX(a.inicio) FILTER (WHERE a.estado = 'realizada')     AS ultima,
+      MIN(a.inicio) FILTER (
+        WHERE a.estado IN ('pedido', 'confirmado') AND a.inicio >= now()
+      )                                                        AS proxima
+      FROM public.agendamentos a, quem
+     WHERE a.contabilista_id = quem.uid
+     GROUP BY a.cliente_id
+  ),
+  pts AS (
+    SELECT
+      p.cliente_id,
+      COUNT(*)::integer                                          AS total,
+      COUNT(*) FILTER (WHERE p.estado = 'enviada')::integer      AS por_ler
+      FROM public.partilhas p, quem
+     WHERE p.contabilista_id = quem.uid
+       AND p.estado <> 'revogada'
+     GROUP BY p.cliente_id
+  ),
+  cartoes AS (
+    SELECT c.cliente_id, c.carimbos, c.meta, c.desconto_pct, c.preco_base_cents
+      FROM public.fidelidade_cartoes c, quem
+     WHERE c.contabilista_id = quem.uid
+       AND c.completo = false
+  )
+  SELECT
+    v.id, v.cliente_id, v.estado::text, v.origem::text, v.criado_em,
+    v.nome_cliente, v.mensagem,
+    COALESCE(ags.realizadas, 0),
+    ags.ultima,
+    ags.proxima,
+    COALESCE(pts.total, 0),
+    COALESCE(pts.por_ler, 0),
+    cartoes.carimbos, cartoes.meta, cartoes.desconto_pct, cartoes.preco_base_cents
+    FROM vinculos v
+    LEFT JOIN ags     ON ags.cliente_id     = v.cliente_id
+    LEFT JOIN pts     ON pts.cliente_id     = v.cliente_id
+    LEFT JOIN cartoes ON cartoes.cliente_id = v.cliente_id
+   ORDER BY v.criado_em DESC;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.resumo_clientes_do_contabilista() FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.resumo_clientes_do_contabilista() TO authenticated;
+
+COMMENT ON FUNCTION public.resumo_clientes_do_contabilista() IS
+  'Uma linha por cliente do contabilista autenticado. Não devolve nenhum canal '
+  'de contacto — ver migração da fronteira de contacto — e não lê tabelas fiscais (migração 038).';
+
+
+-- ── 3. O texto também é uma porta ───────────────────────────────────
+--
+-- O equilíbrio desta função é todo entre dois erros. Deixar passar um
+-- número é perder a relação; recusar um NIF é estragar uma conversa
+-- legítima e ensinar as pessoas a desconfiar da caixa de texto. O segundo
+-- erro é pior, porque acontece a quem não estava a fazer nada de errado.
+--
+-- Daí a regra central: NÚMEROS SOZINHOS NÃO CHEGAM. Um NIF, um IBAN, uma
+-- referência de pagamento e um telemóvel são todos dígitos; o que distingue
+-- um contacto é a FORMA de contacto — o indicativo, os separadores, ou a
+-- palavra que o apresenta. Um `912345678` cru só é recusado quando nada no
+-- texto o apresenta como outra coisa.
+
+CREATE OR REPLACE FUNCTION public.texto_parece_contacto_externo(p_texto text)
+RETURNS boolean
+LANGUAGE plpgsql
+IMMUTABLE
+PARALLEL SAFE
+SET search_path = ''
+AS $$
+DECLARE
+  s        text;
+  m        text[];
+  bruto    text;
+  digitos  text;
+  com_sep  boolean := false;
+  cru      boolean := false;
+BEGIN
+  -- Minúsculas e espaços normalizados. Os separadores FICAM: são eles que
+  -- distinguem «912 345 678» de um número de documento.
+  s := pg_catalog.lower(
+         pg_catalog.regexp_replace(COALESCE(p_texto, ''), '[[:space:]]+', ' ', 'g'));
+
+  -- Os dígitos que já têm dono declarado saem de cena antes da análise. É
+  -- assim que um NIF deixa de se parecer com um telemóvel sem que a deteção
+  -- de telemóveis tenha de ficar mais fraca.
+  s := pg_catalog.regexp_replace(
+         s,
+         '(nif|nipc|n\.?i\.?f|contribuinte|iban|nib|refer[êe]ncia|ref\.?|entidade|multibanco|mb ?way|fatura|factura|recibo|documento|processo|ap[óo]lice|matr[íi]cula)[^0-9]{0,24}[0-9 .-]{6,34}',
+         ' ',
+         'g');
+
+  -- ── Email, por extenso ou disfarçado ──────────────────────────────
+  IF s ~ '[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}'
+     OR s ~ '[a-z0-9._%+-]+ ?[([{] ?(at|arroba) ?[)\]}] ?[a-z0-9-]+\.[a-z]{2,}'
+     OR s ~ '[a-z0-9._%+-]+ ?[([{] ?(at|arroba) ?[)\]}] ?[a-z0-9.-]+ ?[([{] ?(dot|ponto) ?[)\]}] ?[a-z]{2,}'
+     OR s ~ '[a-z0-9._%+-]+ (at|arroba) [a-z0-9.-]+ ?\.? ?[a-z]{2,}'
+     OR s ~ 'mailto ?:' THEN
+    RETURN true;
+  END IF;
+
+  -- ── Indicativo de país ────────────────────────────────────────────
+  IF s ~ '(\+ ?351|00 ?351)[ .-]?[0-9]' OR s ~ 'tel ?: ?[+0-9]' THEN
+    RETURN true;
+  END IF;
+
+  -- ── Números portugueses de nove dígitos ───────────────────────────
+  --
+  -- Enumerar agrupamentos («912 345 678», «91 234 5678», «912-345-678»…)
+  -- falha sempre num que ninguém se lembrou. Procura-se uma corrida de
+  -- nove dígitos com separadores opcionais e normaliza-se. As âncoras
+  -- impedem que um número de doze dígitos dê um telemóvel por recorte.
+  FOR m IN
+    SELECT r FROM pg_catalog.regexp_matches(
+      s, '(?<![0-9])([0-9](?:[ .-]?[0-9]){8})(?![0-9])', 'g') AS r
+  LOOP
+    bruto   := m[1];
+    digitos := pg_catalog.regexp_replace(bruto, '[ .-]', '', 'g');
+    IF pg_catalog.length(digitos) = 9 AND digitos ~ '^(9[1236]|2[1-9])' THEN
+      IF pg_catalog.length(bruto) > 9 THEN com_sep := true; ELSE cru := true; END IF;
+    END IF;
+  END LOOP;
+
+  -- Com separadores dispensa contexto: é a forma de ditar um número a
+  -- alguém. Cru precisa de uma palavra que o apresente como contacto —
+  -- sem ela, nove dígitos são só nove dígitos.
+  IF com_sep THEN RETURN true; END IF;
+  IF cru AND s ~ '(telem[oó]vel|telefone|contacto|contato|whats|wpp|liga|ligar|chama|telefona|sms|n[uú]mero|call)' THEN
+    RETURN true;
+  END IF;
+
+  -- ── Canais com nome próprio ───────────────────────────────────────
+  IF s ~ '\m(whats ?app|whatsap|wpp|telegram|signal|viber|messenger|skype|imessage|facetime)\M'
+     OR s ~ '(wa\.me|api\.whatsapp|t\.me/|m\.me/|join\.skype)'
+     OR s ~ '(instagram\.com/|facebook\.com/|linkedin\.com/in/|tiktok\.com/@)' THEN
+    RETURN true;
+  END IF;
+
+  -- ── Convites a sair, sem número à vista ───────────────────────────
+  IF s ~ '\m(o|meu) (meu )?(email|e-mail|mail|telem[oó]vel|telefone|contacto|n[uú]mero) (é|e|:) '
+     OR s ~ '(manda|envia|escreve|passa|d[áa]|liga)[- ](me )?(um |o |para o |para )?(email|e-mail|mail|whats|sms|telem[oó]vel|telefone)'
+     OR s ~ 'fora (da|desta) plataforma'
+     OR s ~ '(falamos|continuamos|combinamos) (por|no|pelo) (whats|email|e-mail|telefone|telem[oó]vel)' THEN
+    RETURN true;
+  END IF;
+
+  RETURN false;
+END;
+$$;
+
+COMMENT ON FUNCTION public.texto_parece_contacto_externo(text) IS
+  'Verdadeiro quando o texto oferece um canal de contacto fora da plataforma. '
+  'Números com dono declarado (NIF, IBAN, referência, fatura) são retirados '
+  'antes da análise — um NIF nunca é lido como telemóvel.';
+
+REVOKE ALL ON FUNCTION public.texto_parece_contacto_externo(text) FROM PUBLIC, anon;
+-- O cliente da aplicação não precisa de a chamar: a versão em TypeScript
+-- dá a resposta imediata. Fica disponível para quem quiser confirmar a
+-- regra a partir da própria sessão, e não revela nada ao devolvê-la.
+GRANT EXECUTE ON FUNCTION public.texto_parece_contacto_externo(text) TO authenticated;
+
+
+CREATE OR REPLACE FUNCTION public.rejeitar_contacto_externo()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+DECLARE
+  i     integer;
+  valor text;
+BEGIN
+  FOR i IN 0..GREATEST(TG_NARGS - 1, 0) LOOP
+    EXIT WHEN TG_NARGS = 0;
+    valor := pg_catalog.to_jsonb(NEW) ->> TG_ARGV[i];
+    IF public.texto_parece_contacto_externo(valor) THEN
+      RAISE EXCEPTION
+        'Para proteger o acompanhamento, os contactos pessoais não se partilham aqui.'
+        USING ERRCODE = '22023', HINT = 'contacto_externo';
+    END IF;
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.rejeitar_contacto_externo() FROM PUBLIC, anon, authenticated;
+
+DROP TRIGGER IF EXISTS trg_sem_contacto_externo_mensagens ON public.contabilista_mensagens;
+CREATE TRIGGER trg_sem_contacto_externo_mensagens
+  BEFORE INSERT OR UPDATE ON public.contabilista_mensagens
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_contacto_externo('corpo');
+
+-- O recado que abre a relação segue a mesma regra: era o primeiro sítio
+-- por onde um número passava, e passava antes de haver conversa nenhuma.
+DROP TRIGGER IF EXISTS trg_sem_contacto_externo_vinculos ON public.contabilista_vinculos;
+CREATE TRIGGER trg_sem_contacto_externo_vinculos
+  BEFORE INSERT OR UPDATE ON public.contabilista_vinculos
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_contacto_externo('mensagem', 'nome_cliente');
+
+-- E a nota que acompanha uma partilha.
+DROP TRIGGER IF EXISTS trg_sem_contacto_externo_partilhas ON public.partilhas;
+CREATE TRIGGER trg_sem_contacto_externo_partilhas
+  BEFORE INSERT OR UPDATE ON public.partilhas
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_contacto_externo('nota');
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816160000_sala_de_acompanhamento.sql                         ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260816160000_sala_de_acompanhamento.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  A SALA DE ACOMPANHAMENTO
+--  ---------------------------------------------------------------------
+--  Duas peças, e a segunda só faz sentido por causa da primeira.
+--
+--  1. `pedido_cliente` — o pedido deixa de ser uma frase no chat.
+--
+--     «Podes enviar o comprovativo de retenções?» é, hoje, texto solto. Não
+--     tem estado, não tem prazo, não sabe quando foi satisfeito, e some-se
+--     assim que mais três mensagens passarem por cima. As duas pessoas
+--     ficam a fazer o mesmo trabalho por fora: uma tenta lembrar-se do que
+--     falta, a outra tenta lembrar-se do que já mandou.
+--
+--     O que falta não é um chat melhor — é reconhecer que ali havia uma
+--     COISA, e dar-lhe existência. Um pedido tem tipo, prazo, estado e uma
+--     resposta ligada. É isso que torna possível haver um «próximo passo»
+--     que não é uma opinião da interface.
+--
+--  2. `listar_timeline_vinculo` — uma linha do tempo, não seis separadores.
+--
+--     Mensagens, pedidos, partilhas, consultas, fidelidade e pagamentos
+--     são hoje seis ecrãs. São a mesma relação vista por seis buracos, e
+--     ninguém consegue responder a «como vai isto?» sem abrir os seis e
+--     cruzá-los de cabeça.
+--
+--     De caminho corrige um defeito antigo: a conversa era lida com
+--     `ORDER BY criado_em ASC LIMIT 500`. Numa relação com mais de 500
+--     mensagens, isso mostra as MAIS ANTIGAS — a caixa abria em 2026 e a
+--     pessoa tinha de rolar uma vida inteira para ver o que chegou hoje.
+--     A paginação passa a ser por cursor, do mais recente para trás.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+
+-- ── 1. A tabela ─────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.pedido_cliente (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  vinculo_id  uuid NOT NULL REFERENCES public.contabilista_vinculos(id) ON DELETE CASCADE,
+  -- Quem pediu. Hoje é sempre o contabilista; a coluna existe para que o
+  -- dia em que o cliente também puder pedir não seja uma migração de dados.
+  criado_por  uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  tipo        text NOT NULL CHECK (tipo IN (
+                'documento', 'resposta', 'confirmacao', 'escolha',
+                'pagamento', 'agendamento', 'dados')),
+  titulo      text NOT NULL CHECK (char_length(titulo) BETWEEN 3 AND 120),
+  descricao   text CHECK (descricao IS NULL OR char_length(descricao) <= 1000),
+
+  -- Uma data, não um instante. «Até 21 de agosto» é o que se diz a uma
+  -- pessoa; «até 21/08 às 23:59:59Z» é o que se diz a uma máquina, e
+  -- guardá-lo assim só criava confusão de fuso à volta da meia-noite.
+  prazo       date,
+  obrigatorio boolean NOT NULL DEFAULT true,
+
+  estado      text NOT NULL DEFAULT 'aberto' CHECK (estado IN (
+                'aberto', 'respondido', 'em_analise', 'concluido', 'cancelado')),
+
+  resposta_texto     text CHECK (resposta_texto IS NULL OR char_length(resposta_texto) <= 2000),
+  -- Um ficheiro em resposta viaja como mensagem, e a mensagem fica ligada
+  -- aqui. Reaproveita o canal de anexos já endurecido (048/050) em vez de
+  -- abrir um segundo, que teria de ser endurecido outra vez.
+  resposta_mensagem_id uuid REFERENCES public.contabilista_mensagens(id) ON DELETE SET NULL,
+
+  respondido_em timestamptz,
+  concluido_em  timestamptz,
+  criado_em     timestamptz NOT NULL DEFAULT now(),
+  atualizado_em timestamptz NOT NULL DEFAULT now(),
+
+  -- As datas não podem contar uma história impossível.
+  CONSTRAINT pedido_respondido_tem_data CHECK (
+    (estado IN ('aberto', 'cancelado')) OR respondido_em IS NOT NULL
+      OR estado = 'concluido'),
+  CONSTRAINT pedido_concluido_tem_data CHECK (
+    (estado <> 'concluido') OR concluido_em IS NOT NULL)
+);
+
+COMMENT ON TABLE public.pedido_cliente IS
+  'Uma coisa concreta que falta fazer numa relação: um documento, uma '
+  'resposta, uma confirmação. Existe para que o que é pedido não dependa de '
+  'alguém se lembrar de uma frase que passou no chat.';
+
+CREATE INDEX IF NOT EXISTS pedido_cliente_vinculo_idx
+  ON public.pedido_cliente (vinculo_id, criado_em DESC);
+-- O índice que a sala usa a cada abertura: o que está por fazer, primeiro.
+CREATE INDEX IF NOT EXISTS pedido_cliente_abertos_idx
+  ON public.pedido_cliente (vinculo_id, prazo NULLS LAST)
+  WHERE estado IN ('aberto', 'respondido', 'em_analise');
+
+ALTER TABLE public.pedido_cliente ENABLE ROW LEVEL SECURITY;
+
+
+-- ── 2. Quem lê, e quem escreve ──────────────────────────────────────
+--
+-- Ler é das duas partes. Escrever não é de ninguém por REST: todas as
+-- transições passam por funções, porque cada uma delas tem uma precondição
+-- que uma política não consegue exprimir (o estado de onde se vem) e um
+-- aviso que tem de nascer na mesma transação.
+
+DROP POLICY IF EXISTS "pedidos_partes_leem" ON public.pedido_cliente;
+CREATE POLICY "pedidos_partes_leem" ON public.pedido_cliente
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.contabilista_vinculos v
+     WHERE v.id = pedido_cliente.vinculo_id
+       AND (SELECT auth.uid()) IN (v.contabilista_id, v.cliente_id)
+  ));
+
+REVOKE INSERT, UPDATE, DELETE ON public.pedido_cliente FROM anon, authenticated;
+GRANT SELECT ON public.pedido_cliente TO authenticated;
+
+-- Texto seguro e fronteira de contacto, como em todo o texto que uma
+-- pessoa escreve nesta plataforma.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_catalog.pg_proc
+              WHERE proname = 'rejeitar_codigo_painel'
+                AND pronamespace = 'public'::regnamespace) THEN
+    DROP TRIGGER IF EXISTS trg_texto_seguro_pedido_cliente ON public.pedido_cliente;
+    CREATE TRIGGER trg_texto_seguro_pedido_cliente
+      BEFORE INSERT OR UPDATE ON public.pedido_cliente
+      FOR EACH ROW EXECUTE FUNCTION public.rejeitar_codigo_painel(
+        'titulo', 'descricao', 'resposta_texto');
+  END IF;
+END $$;
+
+DROP TRIGGER IF EXISTS trg_sem_contacto_externo_pedido ON public.pedido_cliente;
+CREATE TRIGGER trg_sem_contacto_externo_pedido
+  BEFORE INSERT OR UPDATE ON public.pedido_cliente
+  FOR EACH ROW EXECUTE FUNCTION public.rejeitar_contacto_externo(
+    'titulo', 'descricao', 'resposta_texto');
+
+
+-- ── 3. As transições ────────────────────────────────────────────────
+
+CREATE OR REPLACE FUNCTION public.criar_pedido_cliente(
+  p_vinculo     uuid,
+  p_tipo        text,
+  p_titulo      text,
+  p_descricao   text DEFAULT NULL,
+  p_prazo       date DEFAULT NULL,
+  p_obrigatorio boolean DEFAULT true
+)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_v   public.contabilista_vinculos%ROWTYPE;
+  v_id  uuid;
+BEGIN
+  SELECT * INTO v_v FROM public.contabilista_vinculos WHERE id = p_vinculo;
+  IF NOT FOUND OR v_uid IS NULL OR v_v.contabilista_id <> v_uid THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+  IF v_v.estado <> 'ativo' THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'relacao_inativa');
+  END IF;
+
+  -- O CHECK da coluna também recusa isto, mas recusa-o levantando uma
+  -- exceção — e quem chama fica com uma mensagem do PostgreSQL em vez de
+  -- um motivo que a interface saiba traduzir. A validação repete-se aqui
+  -- para que a recusa tenha nome.
+  IF p_tipo IS NULL OR p_tipo NOT IN (
+       'documento', 'resposta', 'confirmacao', 'escolha',
+       'pagamento', 'agendamento', 'dados') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'tipo_desconhecido');
+  END IF;
+
+  IF char_length(btrim(coalesce(p_titulo, ''))) < 3 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'titulo_curto');
+  END IF;
+
+  -- Um prazo no passado não é um prazo, é um erro de escrita.
+  IF p_prazo IS NOT NULL AND p_prazo < (now() AT TIME ZONE 'Europe/Lisbon')::date THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'prazo_no_passado');
+  END IF;
+
+  -- Um teto por relação. Sem ele, uma lista de pendências deixa de ser uma
+  -- lista de pendências e passa a ser ruído — e o «próximo passo» perde o
+  -- sentido quando há trinta primeiros passos.
+  IF (SELECT count(*) FROM public.pedido_cliente
+       WHERE vinculo_id = p_vinculo
+         AND estado IN ('aberto', 'respondido', 'em_analise')) >= 20 THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'pedidos_a_mais');
+  END IF;
+
+  INSERT INTO public.pedido_cliente
+      (vinculo_id, criado_por, tipo, titulo, descricao, prazo, obrigatorio)
+  VALUES (p_vinculo, v_uid, p_tipo, btrim(p_titulo),
+          nullif(btrim(coalesce(p_descricao, '')), ''), p_prazo, coalesce(p_obrigatorio, true))
+  RETURNING id INTO v_id;
+
+  PERFORM public.avisar_utilizador(
+    v_v.cliente_id, 'pedido_criado',
+    'Novo pedido do teu contabilista',
+    btrim(p_titulo),
+    '/dashboard/contabilista');
+
+  RETURN jsonb_build_object('ok', true, 'id', v_id);
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.responder_pedido_cliente(
+  p_pedido   uuid,
+  p_texto    text DEFAULT NULL,
+  p_mensagem uuid DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_p   public.pedido_cliente%ROWTYPE;
+  v_v   public.contabilista_vinculos%ROWTYPE;
+BEGIN
+  SELECT * INTO v_p FROM public.pedido_cliente WHERE id = p_pedido;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao'); END IF;
+
+  SELECT * INTO v_v FROM public.contabilista_vinculos WHERE id = v_p.vinculo_id;
+  IF v_uid IS NULL OR v_v.cliente_id <> v_uid THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  -- Responder a um pedido já concluído ou cancelado não é responder: é
+  -- reabrir uma coisa que a outra pessoa deu por fechada.
+  IF v_p.estado NOT IN ('aberto', 'respondido', 'em_analise') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'pedido_fechado');
+  END IF;
+
+  IF nullif(btrim(coalesce(p_texto, '')), '') IS NULL AND p_mensagem IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'resposta_vazia');
+  END IF;
+
+  -- A mensagem indicada tem de ser desta relação e de quem responde. Sem
+  -- esta verificação, um id de mensagem qualquer ficava colado a um pedido.
+  IF p_mensagem IS NOT NULL AND NOT EXISTS (
+       SELECT 1 FROM public.contabilista_mensagens m
+        WHERE m.id = p_mensagem AND m.vinculo_id = v_p.vinculo_id AND m.autor_id = v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'mensagem_invalida');
+  END IF;
+
+  UPDATE public.pedido_cliente
+     SET estado               = 'respondido',
+         resposta_texto       = coalesce(nullif(btrim(coalesce(p_texto, '')), ''), resposta_texto),
+         resposta_mensagem_id = coalesce(p_mensagem, resposta_mensagem_id),
+         respondido_em        = coalesce(respondido_em, now()),
+         atualizado_em        = now()
+   WHERE id = p_pedido;
+
+  PERFORM public.avisar_utilizador(
+    v_v.contabilista_id, 'pedido_respondido',
+    public.tratamento_do_cliente(v_p.vinculo_id) || ' respondeu',
+    v_p.titulo,
+    '/contabilista/clientes/' || v_p.vinculo_id::text);
+
+  RETURN jsonb_build_object('ok', true);
+END;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.decidir_pedido_cliente(
+  p_pedido  uuid,
+  p_decisao text
+)
+RETURNS jsonb
+LANGUAGE plpgsql SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_p   public.pedido_cliente%ROWTYPE;
+  v_v   public.contabilista_vinculos%ROWTYPE;
+  v_novo text;
+BEGIN
+  SELECT * INTO v_p FROM public.pedido_cliente WHERE id = p_pedido;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao'); END IF;
+
+  SELECT * INTO v_v FROM public.contabilista_vinculos WHERE id = v_p.vinculo_id;
+  IF v_uid IS NULL OR v_v.contabilista_id <> v_uid THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+
+  v_novo := CASE p_decisao
+              WHEN 'concluir' THEN 'concluido'
+              WHEN 'analisar' THEN 'em_analise'
+              WHEN 'reabrir'  THEN 'aberto'
+              WHEN 'cancelar' THEN 'cancelado'
+            END;
+  IF v_novo IS NULL THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'decisao_desconhecida');
+  END IF;
+
+  -- A precondição vive no WHERE, e não numa leitura anterior: dois cliques
+  -- ao mesmo tempo e o segundo não encontra linha, em vez de escrever por
+  -- cima do primeiro.
+  UPDATE public.pedido_cliente
+     SET estado        = v_novo,
+         concluido_em  = CASE WHEN v_novo = 'concluido' THEN now() ELSE NULL END,
+         atualizado_em = now()
+   WHERE id = p_pedido
+     AND estado <> v_novo
+     AND (v_novo <> 'concluido' OR estado IN ('aberto', 'respondido', 'em_analise'));
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'transicao_nao_permitida');
+  END IF;
+
+  IF v_novo = 'concluido' THEN
+    PERFORM public.avisar_utilizador(
+      v_v.cliente_id, 'pedido_concluido',
+      'Pedido tratado',
+      v_p.titulo,
+      '/dashboard/contabilista');
+  END IF;
+
+  RETURN jsonb_build_object('ok', true, 'estado', v_novo);
+END;
+$$;
+
+
+-- Os avisos novos precisam de caber na restrição da migração 044.
+ALTER TABLE public.notificacoes DROP CONSTRAINT IF EXISTS notificacoes_tipo_check;
+ALTER TABLE public.notificacoes ADD CONSTRAINT notificacoes_tipo_check CHECK (tipo IN (
+  'vinculo_pedido', 'vinculo_aceite', 'mensagem',
+  'consulta_pedida', 'consulta_confirmada', 'consulta_cancelada',
+  'partilha_recebida', 'cupao_ganho', 'candidatura_decidida',
+  'pedido_criado', 'pedido_respondido', 'pedido_concluido'));
+
+DO $$
+DECLARE f text;
+BEGIN
+  FOREACH f IN ARRAY ARRAY[
+    'public.criar_pedido_cliente(uuid, text, text, text, date, boolean)',
+    'public.responder_pedido_cliente(uuid, text, uuid)',
+    'public.decidir_pedido_cliente(uuid, text)'
+  ] LOOP
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM anon, public', f);
+    EXECUTE format('GRANT  EXECUTE ON FUNCTION %s TO authenticated', f);
+  END LOOP;
+END $$;
+
+
+-- ── 4. A linha do tempo ─────────────────────────────────────────────
+--
+-- Uma função e não seis leituras. A alternativa — o browser lê seis
+-- tabelas, junta-as e ordena — obriga a trazer tudo para poder mostrar as
+-- últimas trinta, que é exatamente o defeito que isto vem corrigir.
+--
+-- É PL/pgSQL com SQL montado em texto por uma razão concreta: `pagamentos`
+-- nasce numa migração com nome por data, e pode não existir na base onde
+-- isto corre. Uma referência estática a uma tabela ausente rebenta na
+-- CRIAÇÃO da função; montada em texto, só é lida quando existe.
+
+CREATE OR REPLACE FUNCTION public.listar_timeline_vinculo(
+  p_vinculo uuid,
+  p_ate     timestamptz DEFAULT NULL,
+  p_limite  integer     DEFAULT 30
+)
+RETURNS TABLE (
+  tipo          text,
+  referencia_id uuid,
+  quando        timestamptz,
+  autor_id      uuid,
+  titulo        text,
+  corpo         text,
+  estado        text,
+  meta          jsonb
+)
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_v   public.contabilista_vinculos%ROWTYPE;
+  v_sql text;
+  v_lim integer := least(greatest(coalesce(p_limite, 30), 1), 100);
+BEGIN
+  SELECT * INTO v_v FROM public.contabilista_vinculos WHERE id = p_vinculo;
+  -- SECURITY DEFINER passa por cima da RLS, por isso a autorização tem de
+  -- ser feita aqui à mão. É a única linha desta função que não pode falhar.
+  IF NOT FOUND OR v_uid IS NULL OR v_uid NOT IN (v_v.contabilista_id, v_v.cliente_id) THEN
+    RETURN;
+  END IF;
+
+  v_sql := $q$
+    SELECT 'mensagem'::text, m.id, m.criado_em, m.autor_id,
+           NULL::text, m.corpo, NULL::text,
+           jsonb_build_object(
+             'anexos', (SELECT count(*) FROM public.contabilista_anexos a
+                         WHERE a.mensagem_id = m.id),
+             'lida', m.lida_em IS NOT NULL)
+      FROM public.contabilista_mensagens m
+     WHERE m.vinculo_id = $1
+
+    UNION ALL
+    SELECT 'pedido', p.id, p.criado_em, p.criado_por,
+           p.titulo, p.descricao, p.estado,
+           jsonb_build_object('tipoPedido', p.tipo, 'prazo', p.prazo,
+                              'obrigatorio', p.obrigatorio,
+                              'respondidoEm', p.respondido_em)
+      FROM public.pedido_cliente p
+     WHERE p.vinculo_id = $1
+
+    UNION ALL
+    SELECT 'partilha', s.id, s.criado_em, $3,
+           s.titulo, s.nota_cliente, s.estado,
+           jsonb_build_object('tipoPartilha', s.tipo)
+      FROM public.partilhas s
+     WHERE s.contabilista_id = $2 AND s.cliente_id = $3
+
+    UNION ALL
+    SELECT 'consulta', g.id, g.criado_em, NULL::uuid,
+           coalesce(g.assunto, 'Consulta'), NULL::text, g.estado,
+           jsonb_build_object('inicio', g.inicio, 'fim', g.fim,
+                              'modalidade', g.modalidade,
+                              'localOuLigacao', g.local_ou_ligacao)
+      FROM public.agendamentos g
+     WHERE g.contabilista_id = $2 AND g.cliente_id = $3
+
+    UNION ALL
+    SELECT 'fidelidade', c.id, c.criado_em, NULL::uuid,
+           'Cupão de desconto', c.codigo, c.estado,
+           jsonb_build_object('percentagem', c.percentagem,
+                              'valorBaseCents', c.valor_base_cents,
+                              'expiraEm', c.expira_em)
+      FROM public.fidelidade_cupoes c
+     WHERE c.contabilista_id = $2 AND c.cliente_id = $3
+
+    UNION ALL
+    SELECT 'vinculo', v.id, v.criado_em, NULL::uuid,
+           'Início do acompanhamento', v.mensagem, v.estado,
+           jsonb_build_object('origem', v.origem)
+      FROM public.contabilista_vinculos v
+     WHERE v.id = $1
+  $q$;
+
+  IF to_regclass('public.pagamentos') IS NOT NULL THEN
+    v_sql := v_sql || $q$
+      UNION ALL
+      SELECT 'pagamento', g.id, g.criado_em, NULL::uuid,
+             coalesce(g.descricao, 'Pagamento'), NULL::text, g.estado,
+             jsonb_build_object('liquidoCents', g.liquido_cents,
+                                'descontoCents', g.desconto_cents,
+                                'pagoEm', g.pago_em)
+        FROM public.pagamentos g
+       WHERE g.contabilista_id = $2 AND g.cliente_id = $3
+    $q$;
+  END IF;
+
+  RETURN QUERY EXECUTE
+    'SELECT * FROM (' || v_sql || ') AS e(tipo, referencia_id, quando, autor_id,'
+    || ' titulo, corpo, estado, meta)'
+    || ' WHERE ($4::timestamptz IS NULL OR e.quando < $4)'
+    || ' ORDER BY e.quando DESC LIMIT ' || v_lim
+    USING p_vinculo, v_v.contabilista_id, v_v.cliente_id, p_ate;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.listar_timeline_vinculo(uuid, timestamptz, integer)
+  FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.listar_timeline_vinculo(uuid, timestamptz, integer)
+  TO authenticated;
+
+COMMENT ON FUNCTION public.listar_timeline_vinculo(uuid, timestamptz, integer) IS
+  'A relação inteira numa lista ordenada, do mais recente para trás, com '
+  'cursor em `quando`. Autoriza à mão porque é SECURITY DEFINER: só devolve '
+  'linhas a quem é parte do vínculo.';
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816170000_recebimentos_no_contrato_publico.sql               ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260816170000_recebimentos_no_contrato_publico.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  «ESTE CONTABILISTA ACEITA PAGAMENTO AQUI?»
+--  ---------------------------------------------------------------------
+--  A pergunta é do cliente, e até agora não tinha resposta em lado nenhum.
+--  Marcava-se a consulta, aparecia — ou não — um botão de pagar, e o
+--  cliente descobria pelo silêncio.
+--
+--  O sinal existe: `contabilista_stripe.charges_enabled`. O que não existia
+--  era maneira de o publicar sem publicar o resto. A tabela tem uma única
+--  política — «só o próprio lê» — e está certa assim: o id da conta Stripe,
+--  os requisitos por cumprir e o estado da verificação são dados de negócio
+--  de outra pessoa. Que a Stripe pediu um documento a alguém não é
+--  informação do cliente, e é das que fazem perder um cliente por uma razão
+--  que não é dele.
+--
+--  A SOLUÇÃO É UMA COLUNA, NÃO UMA POLÍTICA NOVA
+--  ---------------------------------------------
+--  A view `contabilistas_publico` já é `security_invoker = false`: corre com
+--  os privilégios de quem a criou e por isso consegue ler a tabela sem que
+--  o cliente ganhe acesso a ela. Acrescenta-se UM booleano derivado, e mais
+--  nada atravessa.
+--
+--  A regra de ouro do contrato público (migração 20260815200000) mantém-se:
+--  acrescentar uma coluna aqui é uma DECISÃO, e esta está tomada — sai o
+--  facto de que se pode pagar, não sai o porquê de não se poder.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+
+-- ── 1. O contrato público, com mais um facto ────────────────────────
+--
+-- `CREATE OR REPLACE VIEW` não aceita acrescentar colunas no meio nem
+-- mudar tipos, e a coluna nova entra no fim — mas as políticas e os grants
+-- que dependem da view perdem-se com um DROP. Recria-se por inteiro e
+-- devolve-se o grant a seguir, na mesma transação implícita da migração.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+
+CREATE VIEW public.contabilistas_publico
+WITH (security_invoker = false) AS
+SELECT
+  c.user_id,
+  c.slug,
+  c.nome,
+  c.occ,
+  (c.occ_verificado_em IS NOT NULL) AS occ_verificado,
+  c.titulo_profissional,
+  c.apresentacao_curta,
+  c.bio,
+  c.distrito,
+  c.concelho,
+  c.especialidades,
+  c.modalidades,
+  c.idiomas,
+  c.anos_experiencia,
+  c.resposta_media_horas,
+  -- O email é público por decisão de produto: o editor de perfil diz, na
+  -- própria página, que é isto que aparece no diretório. Está aqui porque
+  -- foi escolhido, não por arrastamento.
+  c.email_contacto,
+  c.website,
+  c.linkedin_url,
+  c.linkedin_avatar_url,
+  (c.linkedin_ligado_em IS NOT NULL) AS linkedin_ligado,
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  coalesce(r.ativa, false)                                   AS fidelidade_ativa,
+  CASE WHEN coalesce(r.ativa, false) THEN r.meta         END AS fidelidade_meta,
+  CASE WHEN coalesce(r.ativa, false) THEN r.desconto_pct END AS fidelidade_desconto_pct,
+  -- ⚠️ O ÚNICO facto que sai da conta Stripe.
+  --
+  -- Não sai `stripe_account_id`, não saem os requisitos, não sai se está
+  -- em análise ou restrita, e não sai sequer se a conta existe. Um cliente
+  -- que veja «false» não consegue distinguir «nunca ligou» de «tem um
+  -- documento por enviar» — e é isso que se pretende.
+  --
+  -- `charges_enabled` e não `payouts_enabled`: a pergunta do cliente é se
+  -- CONSEGUE PAGAR. Que o dinheiro ainda não tenha saído para o IBAN do
+  -- contabilista é problema entre ele e a Stripe, e não muda nada para
+  -- quem paga.
+  COALESCE(s.charges_enabled, false) AS recebe_pagamentos,
+  c.criado_em
+FROM public.contabilistas c
+LEFT JOIN public.fidelidade_regras r
+       ON r.contabilista_id = c.user_id AND r.substituida_em IS NULL
+LEFT JOIN public.contabilista_stripe s
+       ON s.contabilista_id = c.user_id
+WHERE c.estado = 'aprovado';
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil público. Acrescentar uma '
+  'coluna aqui é uma decisão; acrescentar uma coluna a `contabilistas` '
+  'deixa de ser. Não expõe telefone (ver contacto_do_contabilista), '
+  'linkedin_subject, pedido_id nem estado. De `contabilista_stripe` só sai '
+  '`recebe_pagamentos` — nunca o id da conta nem os requisitos.';
+
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
+
+
+-- ── 2. O mesmo facto, para quem já é cliente ────────────────────────
+--
+-- O cliente com vínculo precisa de saber isto na sala, e ler a view do
+-- diretório para uma pergunta sobre a SUA relação é ler a tabela pública
+-- inteira. Uma função com um id devolve uma linha e um booleano.
+--
+-- SECURITY DEFINER com autorização escrita à mão: só responde a quem tem
+-- vínculo, e a resposta é sempre o mesmo booleano que o diretório já
+-- publica — não há aqui nada que não estivesse disponível.
+CREATE OR REPLACE FUNCTION public.contabilista_recebe_pagamentos(p_contabilista uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT COALESCE(
+    (SELECT s.charges_enabled
+       FROM public.contabilista_stripe s
+      WHERE s.contabilista_id = p_contabilista
+        AND EXISTS (
+          SELECT 1 FROM public.contabilistas c
+           WHERE c.user_id = p_contabilista AND c.estado = 'aprovado')),
+    false);
+$$;
+
+COMMENT ON FUNCTION public.contabilista_recebe_pagamentos(uuid) IS
+  'Se um contabilista aprovado consegue receber pagamentos pela plataforma. '
+  'Devolve o mesmo booleano que `contabilistas_publico.recebe_pagamentos` e '
+  'nada mais — nem o id da conta, nem os requisitos, nem o estado.';
+
+REVOKE EXECUTE ON FUNCTION public.contabilista_recebe_pagamentos(uuid) FROM PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.contabilista_recebe_pagamentos(uuid) TO anon, authenticated;
+
+
+-- ── 3. A tabela continua fechada ────────────────────────────────────
+--
+-- Isto não muda nada — é uma reafirmação executável. Se alguém abrir a
+-- tabela por engano numa migração futura, o teste de RLS que acompanha
+-- esta migração cai, e cai a dizer porquê.
+DROP POLICY IF EXISTS "stripe_proprio_le" ON public.contabilista_stripe;
+CREATE POLICY "stripe_proprio_le" ON public.contabilista_stripe
+  FOR SELECT TO authenticated
+  USING (contabilista_id = (SELECT auth.uid()));
+
+REVOKE INSERT, UPDATE, DELETE ON public.contabilista_stripe FROM anon, authenticated;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260816180000_stripe_fecha_grant_anon.sql                        ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260816180000_stripe_fecha_grant_anon.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  O GRANT QUE NÃO DEVIA LÁ ESTAR
+--  ---------------------------------------------------------------------
+--  Encontrado a olhar para a base a sério, e não para o SQL: `anon` tinha
+--  SELECT em `contabilista_stripe`.
+--
+--  NÃO HAVIA FUGA, e vale a pena dizer porquê antes de dizer o resto. A
+--  RLS está ligada nessa tabela e a única política é `TO authenticated`;
+--  um anónimo com privilégio de SELECT e sem política que o cubra lê zero
+--  linhas. Quem fosse ao PostgREST buscar `contabilista_stripe` recebia
+--  uma lista vazia, e não o id da conta Stripe de ninguém.
+--
+--  Mas um GRANT que só é inofensivo porque uma política o cobre é uma
+--  armadilha à espera. Basta alguém, daqui a seis meses, acrescentar uma
+--  política mais larga — para um painel de administração, por exemplo —
+--  sem reparar que o grant ao anónimo já lá estava. A proteção passa a
+--  depender de duas coisas ao mesmo tempo, e a segunda não está escrita em
+--  lado nenhum.
+--
+--  O sinal público não precisa disto para nada: sai por
+--  `contabilistas_publico`, que corre com `security_invoker = false` e por
+--  isso lê a tabela com os privilégios de quem criou a view.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+REVOKE ALL ON public.contabilista_stripe FROM anon;
+
+-- O contabilista continua a ler a SUA linha — é o que alimenta o cartão
+-- de recebimentos no perfil. Quem decide o que ele vê é a política, não
+-- este grant.
+GRANT SELECT ON public.contabilista_stripe TO authenticated;
