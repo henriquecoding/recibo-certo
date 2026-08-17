@@ -11,6 +11,7 @@ import {
 } from "@/lib/supabase/admin";
 import { BASE_DEMONSTRACAO } from "@/lib/contabilistas/demonstracao/rotas";
 import { Megaphone, ArrowRight, Plus, BellAlert, Briefcase, Eye, EyeOff, ShieldCheck } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 const TIPO_COR: Record<string, string> = {
   parceiro: "bg-emerald-500",
@@ -49,13 +50,7 @@ export default function AdminHome() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-8">
-        <p className="eyebrow mb-1 text-brand">Administração</p>
-        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">
-          Visão geral
-        </h1>
-        <p className="mt-1 text-sm text-stone-500">Estado do site e atalhos rápidos.</p>
-      </header>
+      <CabecalhoAdmin titulo="Visão geral" descricao="Estado do site e atalhos rápidos." />
 
       {/* Estatísticas */}
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

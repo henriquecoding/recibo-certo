@@ -18,6 +18,7 @@ import {
   Globe,
   Briefcase,
 } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 const ESTADO_META: Record<
   EstadoProposta,
@@ -191,17 +192,14 @@ export default function AdminPropostas() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <header className="mb-6">
-        <p className="eyebrow mb-1 text-brand">Administração</p>
-        <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">
-          Propostas de investidores
-        </h1>
-        <p className="mt-1 text-sm text-stone-500">
-          {carregado
+      <CabecalhoAdmin
+        titulo="Propostas de investidores"
+        descricao={
+          carregado
             ? `${lista.length} proposta${lista.length !== 1 ? "s" : ""} · ${contagem.pendente} por rever`
-            : "A carregar…"}
-        </p>
-      </header>
+            : "A carregar…"
+        }
+      />
 
       {/* Filtros */}
       <div className="mb-5 flex flex-wrap gap-2">

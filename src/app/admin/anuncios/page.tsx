@@ -14,6 +14,7 @@ import {
   Plus, Pencil, Trash, Megaphone, GoogleAds, ImageIcon, ShieldCheck,
   GripVertical, Eye, EyeOff, Warning, ChevronUp, ChevronDown, Filter,
 } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 const TIPO_META: Record<TipoAnuncio, { label: string; cor: string }> = {
   parceiro: { label: "Parceiro", cor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
@@ -95,27 +96,19 @@ export default function AnunciosPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-stone-400">
-            Administração
-          </p>
-          <h1 className="font-display text-2xl font-bold text-stone-900 dark:text-stone-50">
-            Anúncios
-          </h1>
-          <p className="mt-1 text-sm text-stone-500">
-            {anuncios.length} {anuncios.length === 1 ? "anúncio configurado" : "anúncios configurados"}
-          </p>
-        </div>
-        <Link
-          href="/admin/anuncios/novo"
-          className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark"
-        >
-          <Plus size={14} />
-          Novo anúncio
-        </Link>
-      </div>
+      <CabecalhoAdmin
+        titulo="Anúncios"
+        descricao={`${anuncios.length} ${anuncios.length === 1 ? "anúncio configurado" : "anúncios configurados"}`}
+        acao={
+          <Link
+            href="/admin/anuncios/novo"
+            className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark"
+          >
+            <Plus size={14} />
+            Novo anúncio
+          </Link>
+        }
+      />
 
       {/* Filtros por tipo */}
       <div className="mb-5 flex items-center gap-1.5 overflow-x-auto pb-1">

@@ -20,6 +20,7 @@ import {
 } from "@/lib/supabase/quiz-reportes";
 import { META_CATEGORIA_QUIZ, type QuizCategoria } from "@/lib/quiz-fiscal";
 import { Trash, Flag, Check, Close, Zap, Lightbulb, Warning, Info, Heart, User, Mail } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 // ── Metadados de apresentação ────────────────────────────────────────────────
 
@@ -79,15 +80,14 @@ export default function AdminCentralReportes() {
 
   return (
     <div className="mx-auto max-w-4xl">
-      <header className="mb-6">
-        <p className="eyebrow mb-1 text-brand">Administração</p>
-        <h1 className="font-display text-3xl font-semibold text-stone-800">Central de reportes</h1>
-        <p className="mt-1 text-sm text-stone-500">
-          {carregado
+      <CabecalhoAdmin
+        titulo="Central de reportes"
+        descricao={
+          carregado
             ? `${feedback.length + quiz.length} mensagens · ${novosFb + novosQuiz} por rever`
-            : "A carregar…"}
-        </p>
-      </header>
+            : "A carregar…"
+        }
+      />
 
       {/* Abas */}
       <div className="mb-5 inline-flex rounded-2xl border border-stone-200 bg-white p-1">

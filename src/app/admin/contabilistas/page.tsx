@@ -23,6 +23,7 @@ import { BASE_DEMONSTRACAO } from "@/lib/contabilistas/demonstracao/rotas";
 import {
   Check, Close, Eye, Lock, Mail, PaperClip, Warning, ChevronDown, ChevronUp, ShieldCheck,
 } from "@/components/ui/Icons";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 interface PedidoRow {
   id: string; user_id: string; nome: string; email_contacto: string;
@@ -103,13 +104,10 @@ export default function AdminContabilistasPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-3xl text-ink">Contabilistas</h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500">
-          Só a administração aprova quem entra no painel de gestão. Aprovar cria a conta;
-          recusar e suspender exigem motivo, e ficam registados na auditoria.
-        </p>
-      </header>
+      <CabecalhoAdmin
+        titulo="Contabilistas"
+        descricao="Só a administração aprova quem entra no painel de gestão. Aprovar cria a conta; recusar e suspender exigem motivo, e ficam registados na auditoria."
+      />
 
       {/* Ver o painel do outro lado sem ser preciso a conta de ninguém.
           A fronteira da migração 038 mantém-se de pé: isto não abre o painel

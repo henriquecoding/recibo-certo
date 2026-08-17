@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.75.0",
+    data: "2026-08-17",
+    titulo: "O painel de administração deixa de esconder metade de si no telemóvel",
+    itens: [
+      "A barra de baixo do painel de administração tinha seis lugares e dez destinos. Partia para duas linhas, ficava mais alta do que o espaço que as páginas lhe reservavam, e o fim de cada página desaparecia por trás dela — não desalinhado, inalcançável.",
+      "Passa a ter seis secções: Visão geral, Medição, Triagem, Pessoas, Site e Fiscal. Nenhuma página foi apagada, movida ou renomeada — quem tinha um endereço guardado continua a chegar lá.",
+      "A Triagem junta o que tem gente à espera de resposta do outro lado: casos por encaminhar, candidaturas de contabilistas e reportes por rever. As Pessoas juntam quem já cá está, quem espera para entrar e quem nos procurou.",
+      "Nos telemóveis com barra de gestos, a última linha de destinos deixa de ficar por baixo do indicador.",
+      "Dois destinos partilhavam o mesmo desenho com outros dois — o mesmo ícone para «Propostas» e «Triagem de casos», e outro repetido entre «Contabilistas» e «Auditoria fiscal». A 18 pixels, o desenho é a única forma de os distinguir. Agora cada um tem o seu.",
+      "No computador, a barra lateral agrupa os destinos por assunto e mostra-os todos, e o topo passa a dizer em que página se está.",
+      "As dez páginas passam a abrir da mesma maneira. Havia três tamanhos de título, dois pesos e três cores — diferenças que não queriam dizer nada, era a ordem por que as páginas foram escritas.",
+      "As duas barras de navegação passam a ter nome para quem usa leitor de ecrã. Anunciavam-se as duas como «navegação», sem forma de saber qual era qual.",
+    ],
+  },
+  {
     version: "2.74.0",
     data: "2026-08-17",
     titulo: "O painel do contabilista deixa de sair espremido no tablet",

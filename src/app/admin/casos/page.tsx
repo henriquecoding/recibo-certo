@@ -28,6 +28,7 @@ import {
 } from "@/lib/contabilistas/casos";
 import { listarContabilistas } from "@/lib/contabilistas/dados";
 import type { Contabilista } from "@/lib/contabilistas/tipos";
+import CabecalhoAdmin from "@/components/admin/CabecalhoAdmin";
 
 type Separador = "rever" | "encaminhar";
 
@@ -59,16 +60,10 @@ export default function TriagemDeCasos() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="eyebrow">Administração</p>
-        <h1 className="mt-1 font-display text-3xl leading-tight text-ink sm:text-4xl">
-          Triagem de casos
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500">
-          Nada segue de um lado para o outro sem passar por aqui. É isso que permite prometer
-          que os contactos não saem — e obriga a que alguém leia.
-        </p>
-      </header>
+      <CabecalhoAdmin
+        titulo="Triagem de casos"
+        descricao="Nada segue de um lado para o outro sem passar por aqui. É isso que permite prometer que os contactos não saem — e obriga a que alguém leia."
+      />
 
       <div
         role="tablist"
