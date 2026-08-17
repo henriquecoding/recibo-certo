@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.70.0",
+    data: "2026-08-17",
+    titulo: "O telemóvel deixa de ser a versão pequena do site",
+    itens: [
+      "A pesquisa passa a estar sempre à vista, numa barra de largura inteira mesmo por cima da navegação. Estava escondida atrás de uma lupa de 20 px, ao lado de «Guias» e «Quiz» — no meio das páginas a que ela própria dá acesso.",
+      "E passa a ser a mesma pesquisa do computador: abre ancorada à barra e cresce para cima, com os mesmos atalhos e o mesmo rodapé. Era um ecrã à parte, com a página tapada por trás — duas pesquisas com o mesmo nome e dois feitios diferentes.",
+      "Carregar no separador onde já estás leva ao princípio da página. Antes não fazia nada: quem estava no fim do quiz e carregava em «Quiz» ficava exactamente onde estava.",
+      "«Planos» e «Sugestões e reportes» sobem para logo abaixo de «Entrar» e «Começar grátis». Estavam no fim do menu, depois de nove ferramentas e quatro páginas de guias — dois ecrãs de rolagem até ao que se procurava.",
+      "«Contabilistas» ganha um lugar fixo na barra de baixo, à direita do «Quiz». É a única coisa aqui que acaba com uma pessoa do outro lado, e estava enterrada dentro do menu «Conta», onde se procuram definições e não um profissional certificado.",
+      "A barra de baixo fica: Início · Guias · Quiz · Contabilistas · Conta. Os lugares que já lá estavam não mudaram de sítio — quem já lhes acertava sem olhar continua a acertar.",
+      "Passa a haver um topo no telemóvel, com a marca, o tema e o botão de começar. Antes não havia nenhum: o nome do produto não aparecia em lado nenhum, mudar para o modo escuro eram dois toques, e a ação principal estava dentro de um menu. Rola com a página, para não roubar altura a quem está a ler.",
+      "No painel de contabilista, a pesquisa passa a ter uma barra por cima da navegação, em vez de uma lupa espremida no topo. É a mesma pesquisa de sempre — muda o sítio, que passa a ser onde o polegar chega.",
+      "E passa a haver como sair do painel de contabilista no telemóvel. A saída vivia no fundo da barra lateral, que não existe em ecrãs pequenos: quem entrasse ficava sem caminho de volta que não fosse o botão «voltar» do browser.",
+      "Corrigido: fechar a pesquisa com o teclado deixava de devolver o foco a quem a tinha aberto, e a navegação recomeçava no topo da página.",
+      "Corrigido: em telemóveis com indicador no fundo do ecrã, os últimos píxeis de cada página ficavam por baixo da barra de navegação.",
+    ],
+  },
+  {
     version: "2.69.0",
     data: "2026-08-16",
     titulo: "Recebimentos: a ligação à Stripe passa a ser um sistema, e não um link",

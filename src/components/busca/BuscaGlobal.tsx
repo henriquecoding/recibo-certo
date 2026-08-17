@@ -10,7 +10,7 @@ import {
   CONSULTA_MOVEL,
   anunciarEstadoBusca,
   focarPrimeiroResultado,
-  haLancadorDeSecretaria,
+  haLancadorAncorado,
   useAtalhoBusca,
   useVoltarAoCampo,
 } from "./motor";
@@ -61,12 +61,25 @@ export default function BuscaOverlay() {
     anunciarEstadoBusca(aberto);
   }, [aberto]);
 
-  // Ver o quadro em `motor.ts`: em ecrã largo o lançador ancorado é que
-  // abre — a não ser que não exista nenhum (é o caso do painel, que tem
-  // barra lateral própria), e aí é este diálogo que responde.
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ ESTE DIÁLOGO DEIXOU DE SER «A PESQUISA DO TELEMÓVEL»                 │
+   * │                                                                     │
+   * │ Respondia por LARGURA (`CONSULTA_MOVEL`), e era o certo enquanto o   │
+   * │ telemóvel não tinha barra própria. Agora tem — `busca/DockMovel`,    │
+   * │ com painel ancorado que abre para cima — e responder por largura     │
+   * │ punha os dois a abrir ao mesmo gesto, com dois campos a disputar o   │
+   * │ foco. A vaga do coordenador escondia um deles; não é o mesmo que     │
+   * │ não existir.                                                        │
+   * │                                                                     │
+   * │ Passa a responder só por AUSÊNCIA de barra, seja qual for a          │
+   * │ largura. É o que sobra para os sítios que têm um botão de pesquisa   │
+   * │ e nenhuma barra por baixo dele: o /dashboard, o /admin e a barra     │
+   * │ lateral da própria página `/pesquisar`.                              │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
   useAtalhoBusca({
-    ativaQuando: CONSULTA_MOVEL,
-    tambemQuando: () => !haLancadorDeSecretaria(),
+    tambemQuando: () => !haLancadorAncorado(),
     aberto,
     abrir,
     fechar,
@@ -77,18 +90,18 @@ export default function BuscaOverlay() {
   }, [pathname]);
 
   /**
-   * Redimensionar para secretária fecha — mas só quando há para onde ir.
+   * Se aparecer uma barra ancorada, este diálogo sai — mas só se aparecer.
    *
    * O contrato de interação diz «fecha com foco seguro ou migra uma única
-   * vez, sem dois campos». Fechar aqui é a metade simples; a outra metade é
-   * não fechar no painel, onde este diálogo É a única superfície que existe
-   * e fechá-lo deixaria a pessoa sem pesquisa nenhuma.
+   * vez, sem dois campos». Onde não há barra nenhuma (o painel, o
+   * /dashboard) este diálogo É a única pesquisa que existe, e fechá-lo ao
+   * redimensionar deixaria a pessoa sem nada.
    */
   useEffect(() => {
     if (!aberto) return;
     const mq = window.matchMedia(CONSULTA_MOVEL);
     const aoMudar = () => {
-      if (!mq.matches && haLancadorDeSecretaria()) setQuerAbrir(false);
+      if (haLancadorAncorado()) setQuerAbrir(false);
     };
     mq.addEventListener("change", aoMudar);
     return () => mq.removeEventListener("change", aoMudar);

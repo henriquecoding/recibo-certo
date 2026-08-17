@@ -38,9 +38,9 @@ import { prepararIndice } from "@/lib/busca/indice";
 import {
   CONSULTA_SECRETARIA,
   anunciarEstadoBusca,
-  registarLancadorSecretaria,
   useAtalhoBusca,
   useAtalhoDoSistema,
+  useRegistarLancador,
 } from "./motor";
 
 const ID_PAINEL = "rc-busca-painel";
@@ -92,10 +92,10 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
 
   useAtalhoBusca({ ativaQuando: CONSULTA_SECRETARIA, aberto, abrir, fechar: fecharComFoco });
 
-  // Anuncia-se como lançador ancorado. É isto que diz ao diálogo global
-  // para não responder em ecrã largo — e que, na sua ausência (o painel),
-  // o deixa responder. Ver o quadro em `motor.ts`.
-  useEffect(() => registarLancadorSecretaria(), []);
+  // Anuncia-se como barra ancorada — e só enquanto está no ecrã. Abaixo de
+  // `lg` este cabeçalho é `hidden`: continua montado e não se vê, e quem
+  // manda aí é o dock do telemóvel. Ver o quadro em `motor.ts`.
+  useRegistarLancador(CONSULTA_SECRETARIA);
 
   // Mudar de página fecha — um painel que sobrevive à navegação fica a tapar
   // a página onde a pessoa acabou de aterrar.
