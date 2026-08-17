@@ -16,9 +16,9 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.73.0",
+    version: "2.74.0",
     data: "2026-08-17",
-    titulo: "O painel do contabilista deixa de sair torto no tablet",
+    titulo: "O painel do contabilista deixa de sair espremido no tablet",
     itens: [
       "Entre o telemóvel e o computador — um iPad ao alto, um ecrã dividido, uma janela estreita — o painel usava as coordenadas do computador numa grelha que já tinha menos colunas. Na vista «Meu dia», «Prazos próximos» e «Documentos por rever» ficavam com 42 pixels de largura: duas tiras verticais onde deviam estar duas listas. Passa a haver uma disposição própria para essa largura, calculada a partir da do computador, sem cartões espremidos e sem dois em cima um do outro.",
       "Quem estiver a personalizar o painel nessa largura continua a ver a grelha do computador, porque é essa que está a editar — o cartão vai para onde o dedo o larga, e não para uma coluna ao lado.",
@@ -28,6 +28,22 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Um módulo que falhe a desenhar-se deixa de levar o painel inteiro com ele: fica com o erro dentro da sua própria moldura e os outros continuam a funcionar.",
       "Cada cartão do painel ganha um menu para o atualizar sozinho, sem recarregar a página, e para abrir o ecrã completo por trás dele.",
       "Desfazer volta a andar um passo de cada vez.",
+    ],
+  },
+  {
+    version: "2.73.0",
+    data: "2026-08-17",
+    titulo: "O painel de gestão passa a ter seis secções em vez de dez separadores",
+    itens: [
+      "O painel tinha dez destinos numa lista só. Passa a ter seis secções, e nenhuma página foi apagada, movida ou renomeada: quem tinha um endereço guardado continua a chegar lá.",
+      "As Partilhas passam a viver dentro dos Clientes. Uma partilha é o que aquele cliente te enviou — a ficha dele já mostrava os envios, e só a navegação é que dizia que eram assuntos diferentes.",
+      "Os Casos juntam-se às Tarefas em «Trabalho». São as duas metades da mesma pergunta: o que está por propor e o que está por entregar.",
+      "Os Recebimentos, a Fidelidade e a Progressão ficam em «Negócio». O patamar da progressão é a comissão que sai de cada recebimento — estavam ligados nos números e separados no menu.",
+      "No telemóvel, a barra de baixo deixa de rolar. Eram dez destinos e mais de metade vivia fora do ecrã, visível só para quem soubesse arrastar uma barra que não parecia arrastável. Agora as seis cabem, mesmo num ecrã de 320 px.",
+      "No computador, a barra lateral abre a secção onde estás e mostra o que ela tem dentro, em vez de te pedir que guardes dez categorias de cabeça.",
+      "As secções mostram um sinal quando há coisas à espera de ti lá dentro, mesmo com a secção fechada. Um pedido nas Partilhas deixa de ficar invisível até alguém lá ir.",
+      "A pesquisa continua a chegar às dez páginas diretamente, sem passar por secção nenhuma — e passa a dizer, debaixo de cada uma, o que ali se resolve. Procurar «negócio» encontra os Recebimentos, a Fidelidade e a Progressão, embora nenhuma delas se chame assim.",
+      "O quadro de tarefas passa a chamar-se «Tarefas» também no título da página, que continuava a dizer «Trabalho» — o nome que agora é o da secção inteira.",
     ],
   },
   {

@@ -359,9 +359,16 @@
 
 .mobileList::-webkit-scrollbar { display: none; }
 
+/* Seis secções têm de caber sem rolar, e a conta é esta: 320 px de ecrã
+   menos 0,9 rem de padding e cinco intervalos de 0,18 rem deixam ~19 rem
+   para seis lugares. A 3 rem de base sobram, e o `flex-grow` reparte o
+   resto — num ecrã de 390 px cada lugar fica com ~3,7 rem.
+
+   O `overflow-x` fica: não é para se usar, é para não partir num
+   dispositivo mais estreito do que qualquer um que exista hoje. */
 .mobileItem {
-  min-width: 4.25rem;
-  flex: 1 0 4.25rem;
+  min-width: 3rem;
+  flex: 1 1 3rem;
   scroll-snap-align: center;
 }
 
@@ -394,6 +401,138 @@
   color: #6ee7b7;
 }
 
+/* O ponto que diz «há coisas por responder aqui dentro». O anel é da cor
+   da doca e não `bg-white`: escrito em Tailwind precisava de um
+   `dark:ring-stone-950` por cima de um neutro que a camada `.dark` já
+   remapeia — a infração exata que `contabilistas-painel-coerencia`
+   apanha. Aqui a cor é a da superfície, nos dois temas. */
+.pontoPorResponder {
+  position: absolute;
+  top: -0.1rem;
+  right: -0.35rem;
+  display: block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: #1d9e75;
+  box-shadow: 0 0 0 2px rgba(255, 255, 252, 0.91);
+}
+
+:global(.dark) .pontoPorResponder {
+  background: #3dcd9d;
+  box-shadow: 0 0 0 2px rgba(14, 18, 13, 0.93);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   A LINHA DA SECÇÃO (<lg)
+   ------------------------------------------------------------------
+   Onde a secção tem mais do que um destino, é aqui que se troca entre
+   eles no telemóvel. No computador este trabalho é da barra lateral,
+   que abre a secção — e por isso a linha é `lg:hidden`: duas
+   superfícies para a mesma escolha no mesmo ecrã ensinam a ignorar as
+   duas.
+
+   NÃO é um `[role="tablist"]`, e não é uma distração: cada destino é
+   um endereço com histórico próprio. E o aspeto tem de ser DIFERENTE
+   do controlo segmentado que as páginas usam lá dentro (Agenda,
+   Fidelidade), senão ficam duas barras iguais empilhadas a fazer
+   coisas de níveis diferentes. Esta é discreta e sublinhada; a de
+   dentro é preenchida.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.linhaSeccao {
+  margin: -0.25rem -1rem 1rem;
+  border-bottom: 1px solid rgba(120, 113, 108, 0.14);
+  padding: 0 0.35rem;
+}
+
+:global(.dark) .linhaSeccao {
+  border-bottom-color: rgba(231, 229, 228, 0.09);
+}
+
+.linhaSeccaoLista {
+  display: flex;
+  gap: 0.15rem;
+  overflow-x: auto;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: none;
+}
+
+.linhaSeccaoLista::-webkit-scrollbar { display: none; }
+
+.linhaSeccaoLink {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.6rem;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 0.75rem 0.75rem 0 0;
+  padding: 0 0.65rem;
+  color: #78716c;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.linhaSeccaoLink:hover {
+  background: rgba(255, 255, 255, 0.6);
+  color: #292524;
+}
+
+.linhaSeccaoLinkAtivo,
+.linhaSeccaoLinkAtivo:hover {
+  color: #0e6740;
+}
+
+/* O sublinhado assenta EM CIMA da borda da barra, e por isso é `-1px`:
+   a um pixel de distância lê-se como dois traços em vez de um
+   separador ativo. */
+.linhaSeccaoLinkAtivo::after {
+  position: absolute;
+  right: 0.4rem;
+  bottom: -1px;
+  left: 0.4rem;
+  height: 2px;
+  border-radius: 99px;
+  background: #1d9e75;
+  content: "";
+}
+
+.linhaSeccaoContagem {
+  display: inline-flex;
+  min-width: 1.15rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(29, 158, 117, 0.13);
+  padding: 0 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #0e6740;
+}
+
+:global(.dark) .linhaSeccaoLink { color: #a8a29e; }
+
+:global(.dark) .linhaSeccaoLink:hover {
+  background: rgba(255, 255, 255, 0.045);
+  color: #f5f5f4;
+}
+
+:global(.dark) .linhaSeccaoLinkAtivo,
+:global(.dark) .linhaSeccaoLinkAtivo:hover { color: #6ee7b7; }
+
+:global(.dark) .linhaSeccaoContagem {
+  background: rgba(29, 158, 117, 0.2);
+  color: #7ee2be;
+}
+
+@media (min-width: 640px) {
+  .linhaSeccao { margin-inline: 0; padding-inline: 0; }
+}
+
 @media (min-width: 1024px) {
   .mobileDock { display: none; }
 }
@@ -401,6 +540,8 @@
 @media (prefers-reduced-motion: reduce) {
   .navLink,
   .mobileLink,
+  .linhaSeccaoLink,
+  .sidebarFilho,
   .content :global([role="grid"] [role="gridcell"]) {
     transition: none !important;
     transform: none !important;
@@ -491,6 +632,16 @@
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
+/* A secção ABERTA que tem destinos lá dentro.
+   Fica branca, mas sem a superfície clara: essa pertence ao destino que
+   está mesmo a ser visto, uma linha abaixo. Se as duas a tivessem, a
+   coluna dizia «página atual» duas vezes seguidas. */
+.sidebarLinkAberta,
+.sidebarLinkAberta:hover {
+  background: transparent;
+  color: #ffffff;
+}
+
 .sidebarBadge {
   margin-left: auto;
   display: inline-flex;
@@ -504,6 +655,41 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #0a4a39;
+}
+
+/* ── Os destinos de dentro de uma secção ─────────────────────────────
+   A calha à esquerda é o que os prende visualmente ao cabeçalho: sem
+   ela, quatro linhas indentadas leem-se como destinos de topo com uma
+   margem estranha. */
+.sidebarFilhos {
+  margin: 0.15rem 0 0.35rem 1.4rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  padding-left: 0.4rem;
+}
+
+.sidebarFilho {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.3rem;
+  border-radius: 0.7rem;
+  padding: 0 0.6rem;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  color: rgba(232, 245, 240, 0.62);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.sidebarFilho:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.sidebarFilhoAtivo,
+.sidebarFilhoAtivo:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 .sidebarRodape {

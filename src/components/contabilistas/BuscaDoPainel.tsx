@@ -45,6 +45,7 @@ import { useFecharAoSair, useTecladoVirtual } from "@/components/busca/ancoragem
 import { CONSULTA_SECRETARIA, useMediaQuery } from "@/components/busca/motor";
 import { Realce } from "@/components/busca/partes";
 import type { Painel } from "@/components/contabilistas/usarPainel";
+import { SECCOES, type DestinoDoPainel } from "@/components/contabilistas/navegacao";
 import {
   Briefcase, Calendar, Close, PaperClip, Search, Target, User,
 } from "@/components/ui/Icons";
@@ -52,11 +53,18 @@ import styles from "@/app/contabilista/painel.module.css";
 
 export const PLACEHOLDER_BUSCA = "Pesquisar clientes, casos, documentos…";
 
-interface Destino {
-  href: string;
-  label: string;
-  Icon: ComponentType<{ size?: number; className?: string }>;
-}
+/**
+ * A que secção pertence cada destino.
+ *
+ * Serve para o nome da secção entrar como ALIAS do destino: quem escreve
+ * «negócio» encontra Recebimentos, Fidelidade e Progressão, e quem escreve
+ * «trabalho» encontra também os Casos. Sem isto, agrupar a navegação
+ * tornava as secções inpesquisáveis — o nome novo existiria no ecrã e em
+ * lado nenhum na pesquisa.
+ */
+const SECCAO_DO_DESTINO = new Map<string, string>(
+  SECCOES.flatMap((s) => s.destinos.map((d) => [d.href, s.label] as const)),
+);
 
 const ICONE_DO_TIPO = {
   navegacao: Search,
@@ -77,7 +85,7 @@ export default function BuscaDoPainel({
   contabilistaId,
 }: {
   painel: Painel;
-  destinos: Destino[];
+  destinos: readonly DestinoDoPainel[];
   /** Vazio na demonstração: a loja em memória ignora quem pergunta. */
   contabilistaId: string;
 }) {
@@ -296,8 +304,14 @@ export default function BuscaDoPainel({
       id: `ir-${d.href}`,
       tipo: "navegacao" as const,
       titulo: d.label,
-      aliases: [],
-      descricao: "",
+      // O nome da secção onde o destino vive. É o que faz «negócio»
+      // encontrar as três páginas que lá estão dentro, sem que nenhuma
+      // delas se chame assim.
+      aliases: [SECCAO_DO_DESTINO.get(d.href) ?? ""].filter(Boolean),
+      // A linha por baixo do nome. Um resultado «Fidelidade» sozinho
+      // obriga a abrir para saber se era aquilo; com a linha, a decisão
+      // faz-se na lista.
+      descricao: d.descricao,
       href: painel.href(d.href),
       // A ordem do menu é a ordem do produto; serve de desempate.
       prioridade: Math.max(0, 30 - i),

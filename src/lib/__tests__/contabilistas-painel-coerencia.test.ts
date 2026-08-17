@@ -27,6 +27,18 @@ function fontesEm(diretorio: string): { caminho: string; texto: string }[] {
 const FONTES = PAINEL.flatMap(fontesEm);
 const relativo = (c: string) => c.slice(SRC.length + 1);
 
+/**
+ * A fonte sem os comentários — o mesmo utensílio de `chrome-movel.test.ts`.
+ *
+ * Os ficheiros deste projeto explicam-se em quadros, e os quadros CITAM o
+ * que não está lá: «um `role="tab"` prometeria um painel que muda no mesmo
+ * sítio — e não é isso que acontece». Uma asserção sobre o texto todo
+ * dispara com a explicação de porque é que a coisa está ausente, e a saída
+ * óbvia — apagar a explicação — é exatamente a errada.
+ */
+const semComentarios = (fonte: string) =>
+  fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
 describe("modo escuro — uma palete, não duas", () => {
   /**
    * O dark mode deste projeto é uma CAMADA DE OVERRIDE `.dark` em
@@ -85,7 +97,13 @@ describe("separadores — o padrão ARIA completo ou botões honestos", () => {
     // irmão em cada separador e por isso monta os seus à mão.
     const infratores: string[] = [];
 
-    for (const { caminho, texto } of FONTES) {
+    for (const { caminho, texto: comQuadros } of FONTES) {
+      // Sobre o CÓDIGO, e não sobre o texto: um `role="tab"` citado num
+      // comentário para explicar que ali NÃO se usa separadores não é um
+      // separador. E um `aria-controls` mencionado numa explicação também
+      // não cumpre coisa nenhuma — por isso as três verificações leem a
+      // mesma fonte já sem quadros.
+      const texto = semComentarios(comQuadros);
       if (!/role="tab"/.test(texto)) continue;
       const c = relativo(caminho);
       if (!/aria-controls/.test(texto)) infratores.push(`${c}: sem aria-controls`);
