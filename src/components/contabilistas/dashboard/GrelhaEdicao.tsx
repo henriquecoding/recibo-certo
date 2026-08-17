@@ -37,6 +37,7 @@ import type {
 } from "@/lib/contabilistas/dashboard/tipos";
 import MolduraModulo, { type AcaoDoMenu } from "./MolduraModulo";
 import CorpoDoModulo from "./widgets";
+import { estiloDaCelula } from "./celula";
 import type { Broker } from "./broker";
 import { usarEcraEstreito } from "./usarEcraEstreito";
 import styles from "./painel-modular.module.css";
@@ -231,9 +232,9 @@ export default function GrelhaEdicao({
     <>
       <div
         ref={caixa}
-        className={`${styles.grelha} ${grelhaVisivel ? styles.grelhaVisivel : ""} ${
-          aReceber ? styles.grelhaAReceber : ""
-        }`}
+        className={`${styles.grelha} ${styles.grelhaEdicao} ${
+          grelhaVisivel ? styles.grelhaVisivel : ""
+        } ${aReceber ? styles.grelhaAReceber : ""}`}
         onPointerMove={arrasto ? mover : undefined}
         onPointerUp={arrasto ? largar : undefined}
         onPointerCancel={arrasto ? largar : undefined}
@@ -302,11 +303,7 @@ export default function GrelhaEdicao({
             <div
               key={item.instanceId}
               className={styles.celula}
-              style={{
-                gridColumn: `${geo.col} / span ${geo.colSpan}`,
-                gridRow: `${geo.row} / span ${geo.rowSpan}`,
-                order: item.mobile?.order ?? 0,
-              }}
+              style={estiloDaCelula(item, geo)}
             >
               <MolduraModulo
                 type={item.type}

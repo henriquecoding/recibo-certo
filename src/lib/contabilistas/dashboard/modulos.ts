@@ -37,6 +37,16 @@ export type DominioDados =
   | "avisos"
   | "trabalho"
   | "clientes"
+  /**
+   * Uma linha por cliente, JÁ AGREGADA pelo servidor
+   * (`resumo_clientes_do_contabilista`).
+   *
+   * Existe separado de `clientes` porque as contagens não se derivam de
+   * uma lista de vínculos sem voltar a ler agenda e partilhas — e derivá-las
+   * no cliente foi exatamente como «Consultas» passou a significar duas
+   * coisas diferentes em dois ecrãs do mesmo painel.
+   */
+  | "resumo_clientes"
   | "casos"
   | "fidelidade"
   | "progressao"
@@ -197,7 +207,10 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     type: "resumo_por_cliente", tagBase: "RES", titulo: "Resumo por cliente",
     descricao: "Uma linha por cliente: consultas, tarefas abertas e última atividade.",
     categoria: "clientes", tom: "lilas", prioridade: "deferred", formato: "tabela",
-    dominios: ["clientes", "trabalho", "agenda"], tamanhos: ["M", "L", "XL"], tamanhoPadrao: "L",
+    // As contagens vêm agregadas do servidor. Recompô-las aqui a partir de
+    // `clientes` + `agenda` dava um número diferente do da página de
+    // clientes para a mesma palavra — e sobre listas truncadas.
+    dominios: ["resumo_clientes", "trabalho"], tamanhos: ["M", "L", "XL"], tamanhoPadrao: "L",
     colSpan: { min: 4, max: 12 }, rowSpan: { min: 2, max: 10 },
     posicaoPadrao: { colSpan: 8, rowSpan: 4 }, lazy: true, rota: "/contabilista/clientes",
   }),

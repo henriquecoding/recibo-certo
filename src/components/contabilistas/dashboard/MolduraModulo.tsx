@@ -32,6 +32,7 @@ import {
   Award, BellAlert, Briefcase, Calendar, Clock, Gift, GripVertical, LayoutGrid,
   Mail, PaperClip, Invoice, User, Warning, BookOpen, CheckTrend, Target,
 } from "@/components/ui/Icons";
+import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import MenuFlutuante from "./MenuFlutuante";
 import styles from "./painel-modular.module.css";
 
@@ -130,8 +131,24 @@ export default function MolduraModulo({
 
       {/* `min-h-0` é o que permite o corpo rolar dentro da altura do
           módulo em vez de a empurrar. Sem isso, um Kanban com muitos
-          cartões estica o cartão para fora da célula da grelha. */}
-      <div className={styles.moduloCorpo}>{children}</div>
+          cartões estica o cartão para fora da célula da grelha.
+
+          A fronteira de erro é POR MÓDULO, e a granularidade é o ponto. O
+          broker apanha falhas assíncronas e transforma-as num `CorpoErro`
+          dentro do frame, mas uma exceção de RENDER — um vínculo sem
+          `clienteId`, uma divisão por zero num gráfico — subia até ao
+          `ErrorBoundary` da página, que envolve a workspace inteira. Um
+          módulo defeituoso apagava os outros quinze.
+
+          Aqui o cabeçalho, o ícone e o título sobrevivem, e só o corpo cai. */}
+      <div className={styles.moduloCorpo}>
+        <ErrorBoundary
+          etiqueta={`o módulo ${def.titulo}`}
+          fallback={<CorpoErro texto="Este módulo não conseguiu desenhar-se." />}
+        >
+          {children}
+        </ErrorBoundary>
+      </div>
 
       {edicao && onRedimensionar && (
         <button

@@ -18,10 +18,12 @@
  */
 
 import { useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { MODULOS } from "@/lib/contabilistas/dashboard/modulos";
 import type { WorkspaceLayoutV2, WorkspaceWidgetInstance } from "@/lib/contabilistas/dashboard/tipos";
-import MolduraModulo, { CorpoACarregar, CorpoErro } from "./MolduraModulo";
+import MolduraModulo, { CorpoACarregar, CorpoErro, type AcaoDoMenu } from "./MolduraModulo";
 import CorpoDoModulo from "./widgets";
+import { estiloDaCelula } from "./celula";
 import type { Broker } from "./broker";
 import styles from "./painel-modular.module.css";
 
@@ -53,6 +55,7 @@ function Celula({
   const def = MODULOS[item.type];
   const caixa = useRef<HTMLDivElement>(null);
   const pedido = useRef(false);
+  const router = useRouter();
 
   // Módulos críticos pedem o domínio de imediato; os outros esperam por
   // ficar perto do viewport. `hidden` nunca chega aqui — a grelha
@@ -91,17 +94,36 @@ function Celula({
   const erro = estados.find((e) => e.estado === "erro");
   const aCarregar = estados.some((e) => e.estado === "a-carregar");
 
+  // O menu `•••` do modo normal. `MolduraModulo` sempre o documentou (§9.1)
+  // e a grelha nunca lhe passou ações, por isso ele nunca existia. As duas
+  // que fazem sentido aqui são as que não mexem no painel: reler os dados
+  // deste cartão, e abrir a superfície completa por trás dele.
+  const acoes: AcaoDoMenu[] = [
+    {
+      rotulo: "Atualizar este módulo",
+      onSelect: () => {
+        pedido.current = true;
+        void broker.revalidar(def.dominios);
+      },
+    },
+    ...(def.rota
+      ? [{ rotulo: `Abrir ${def.titulo.toLowerCase()}`, onSelect: () => router.push(href(def.rota!)) }]
+      : []),
+  ];
+
   return (
     <div
       ref={caixa}
       className={`${styles.celula} ${classeMovel(item)}`}
-      style={{
-        gridColumn: `${item.desktop.col} / span ${item.desktop.colSpan}`,
-        gridRow: `${item.desktop.row} / span ${item.desktop.rowSpan}`,
-        order: item.mobile?.order ?? 0,
-      }}
+      style={estiloDaCelula(item)}
     >
-      <MolduraModulo type={item.type} tag={item.tag} placement={item.desktop} edicao={false}>
+      <MolduraModulo
+        type={item.type}
+        tag={item.tag}
+        placement={item.desktop}
+        edicao={false}
+        acoes={acoes}
+      >
         {erro && erro.estado === "erro" ? (
           <CorpoErro
             texto={erro.mensagem}

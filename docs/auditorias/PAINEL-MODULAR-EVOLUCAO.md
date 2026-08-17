@@ -114,16 +114,36 @@ Entre os 640px e os 1023px — iPad em retrato, ecrã dividido, janela estreita 
 portátil — a grelha tem 8 colunas explícitas e os módulos continuam a pedir
 coordenadas de 12. Um módulo em `col: 9, colSpan: 4` pede `grid-column: 9 / span 4`
 numa grelha de 8 faixas: o CSS Grid cria faixas **implícitas** (9 a 12),
-dimensionadas por `grid-auto-columns`, que por omissão é `auto`. O resultado é
-que as 8 faixas `1fr` encolhem para dar lugar a faixas dimensionadas por
-conteúdo, e a linha inteira sai torta.
+dimensionadas por `grid-auto-columns`, que por omissão é `auto`.
 
-A vista «Meu dia» por omissão tem três módulos nessa zona (`PRZ-01` em `col 9`,
-`DOC-01` em `col 9`, `AVS-01` em `col 7` com `span 6`). Não é um caso de canto: é
-a vista que abre por omissão.
+Medido num browser, com o CSS compilado e a vista «Meu dia» real, a 820px:
 
-**É a falha de maior impacto do subsistema**, e a mais barata de corrigir —
-o dado já existe, só não é lido.
+```
+faixas criadas pelo CSS Grid: 12   (explícitas: 8)
+larguras: AGD 365  ATN 365  PRZ  42  PAR 365  SIM 365  DOC  42  ATV 553  AVS 231
+```
+
+Nada transborda — as faixas `1fr` encolhem para dar lugar às implícitas. O que
+acontece é pior do que transbordar: **«Prazos próximos» e «Documentos por rever»
+ficam com 42 pixels de largura**. São dois cartões de lista reduzidos a uma tira
+vertical, na vista que abre por omissão.
+
+Depois de aplicar a colocação de tablet, à mesma largura:
+
+```
+faixas: 8
+larguras: AGD 291  ATN 291  PRZ 291  PAR 291  SIM 291  DOC 291  ATV 392  AVS 392
+```
+
+**É a falha de maior impacto do subsistema**, e o dado já existia — só não era
+lido.
+
+Há uma segunda camada por baixo desta, e é a razão de a correção não ser uma
+linha de CSS: **`derivarTablet` também não está certa**. Escala módulo a módulo,
+e três módulos de 4 colunas que cabem lado a lado em doze passam a 3 cada e
+somam 9 — não cabem em oito. Na «Meu dia», `ATN-01` e `PRZ-01` saíam ambos a
+ocupar a coluna 6. Como nada aplicava nem validava o tablet, a sobreposição
+nunca se via.
 
 ### F2 · «Resumo por cliente» conta uma coisa e a página de clientes conta outra
 

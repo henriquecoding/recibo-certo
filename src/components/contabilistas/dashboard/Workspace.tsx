@@ -29,9 +29,12 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  MAX_MODULOS_POR_VISTA, compactarVertical, mudou, primeiroEncaixe, proximaTag,
-  validarLayout,
+  MAX_MODULOS_POR_VISTA, MAX_VISTAS, compactarVertical, mudou, primeiroEncaixe,
+  proximaTag, validarLayout,
 } from "@/lib/contabilistas/dashboard/layout";
+import {
+  MENSAGEM_DA_GRAVACAO, mensagemDaGravacao, mensagemDaVista,
+} from "@/lib/contabilistas/dashboard/mensagens";
 import { erroQueImpedeGravar } from "@/lib/contabilistas/dashboard/validacao";
 import { MODULOS } from "@/lib/contabilistas/dashboard/modulos";
 import { VISTAS_POR_OMISSAO, layoutDaOmissao } from "@/lib/contabilistas/dashboard/omissao";
@@ -44,6 +47,7 @@ import { useConfirmar } from "@/components/ui/Confirmar";
 import Button from "@/components/ui/Button";
 import AcoesDoPainel, { TituloDoPainel } from "@/components/contabilistas/AcoesDoPainel";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
+import { usarRascunhoSujo } from "@/components/contabilistas/usarRascunhoSujo";
 import { Check, LayoutGrid, Plus, RotateCcw, Settings } from "@/components/ui/Icons";
 import { Broker } from "./broker";
 import GrelhaVista from "./GrelhaVista";
@@ -98,21 +102,55 @@ export default function Workspace({
   const ativa = vistas?.find((v) => v.id === ativaId) ?? null;
   const layout = edicao && draft ? draft : ativa?.layout ?? null;
 
+  /**
+   * A guarda do rascunho por gravar.
+   *
+   * A workspace era o único ecrã com rascunho sem guarda nenhuma, e é o que
+   * tem o rascunho mais caro de reconstruir: entrar em edição, arrumar doze
+   * módulos e carregar em «Clientes» na barra lateral — que está sempre a um
+   * clique, com nove destinos — descartava tudo sem uma pergunta.
+   *
+   * A condição é a mesma que decide se «Concluir edição» chega a gravar:
+   * assinatura canónica, não JSON cru. Mexer num módulo e pô-lo de volta no
+   * sítio não é uma alteração, e não deve fazer o painel perguntar nada.
+   */
+  const sujo = edicao && draft !== null && ativa !== null && mudou(ativa.layout, draft);
+  usarRascunhoSujo({
+    sujo,
+    descricao: "Está a personalizar o painel e ainda não concluiu a edição.",
+  });
+
   /* ------------------------------ edição ------------------------------ */
 
-  const registar = useCallback((novo: WorkspaceLayoutV2) => {
-    setHistorico((h) => [...h, novo].slice(-LIMITE_DESFAZER));
-  }, []);
+  /**
+   * A única porta por onde o rascunho muda.
+   *
+   * A transformação corre FORA do updater de `setDraft`, e é essa a
+   * correção: um updater tem de ser puro, e todas estas operações
+   * empilhavam o estado anterior de dentro de um. Em StrictMode o React
+   * invoca o updater duas vezes para expor exatamente este problema — a
+   * pilha de Desfazer ganhava a mesma entrada duas vezes, e «Desfazer»
+   * passava a precisar de dois cliques para andar um passo.
+   *
+   * Ler `draft` do closure é seguro aqui: todas as chamadas vêm de um
+   * gesto da pessoa, e entre dois gestos há sempre um render.
+   */
+  const transformar = useCallback(
+    (fn: (d: WorkspaceLayoutV2) => WorkspaceLayoutV2 | null) => {
+      if (!draft) return;
+      const novo = fn(draft);
+      if (!novo || novo === draft) return;
+      setHistorico((h) => [...h, draft].slice(-LIMITE_DESFAZER));
+      setDraft(novo);
+    },
+    [draft],
+  );
 
   const aplicar = useCallback(
     (items: WorkspaceWidgetInstance[]) => {
-      setDraft((d) => {
-        if (!d) return d;
-        registar(d);
-        return { ...d, items };
-      });
+      transformar((d) => ({ ...d, items }));
     },
-    [registar],
+    [transformar],
   );
 
   function abrirEdicao() {
@@ -124,12 +162,11 @@ export default function Workspace({
   }
 
   function desfazer() {
-    setHistorico((h) => {
-      if (h.length === 0) return h;
-      const anterior = h[h.length - 1];
-      setDraft(anterior);
-      return h.slice(0, -1);
-    });
+    // Pela mesma razão: `setDraft` não pode viver dentro do updater de
+    // `setHistorico`.
+    if (historico.length === 0) return;
+    setDraft(historico[historico.length - 1]);
+    setHistorico((h) => h.slice(0, -1));
   }
 
   async function reporPadrao() {
@@ -151,22 +188,25 @@ export default function Workspace({
           items: [],
         }).layout;
 
-    setDraft((d) => {
-      if (d) registar(d);
-      return { ...base, revision: ativa.layout.revision };
-    });
+    transformar(() => ({ ...base, revision: ativa.layout.revision }));
   }
 
   function acrescentar(type: WidgetType) {
-    setDraft((d) => {
-      if (!d) return d;
-      if (d.items.length >= MAX_MODULOS_POR_VISTA) {
-        avisos.erro("Esta vista já tem o número máximo de módulos.", {
-          detalhe: `O limite é ${MAX_MODULOS_POR_VISTA}. Remova um antes de acrescentar outro.`,
-        });
-        return d;
-      }
-      const def = MODULOS[type];
+    // O limite verifica-se antes, não dentro: avisar de dentro de um
+    // updater é um efeito secundário, e em StrictMode aparecia a dobrar.
+    if (draft && draft.items.length >= MAX_MODULOS_POR_VISTA) {
+      avisos.erro("Esta vista já tem o número máximo de módulos.", {
+        detalhe: `O limite é ${MAX_MODULOS_POR_VISTA}. Remova um antes de acrescentar outro.`,
+      });
+      return;
+    }
+
+    const def = MODULOS[type];
+    // Pede já o domínio: o módulo acabou de aparecer e um cartão vazio
+    // durante três segundos parece uma avaria.
+    void broker.pedirVarios(def.dominios);
+
+    transformar((d) => {
       const ocupados = d.items.filter((i) => !i.hidden).map((i) => i.desktop);
       const desktop = primeiroEncaixe(
         def.posicaoPadrao.colSpan, def.posicaoPadrao.rowSpan, ocupados, d.grid.desktop.columns,
@@ -178,33 +218,23 @@ export default function Workspace({
         configVersion: 1,
         desktop,
       };
-      registar(d);
-      // Pede já o domínio: o módulo acabou de aparecer e um cartão vazio
-      // durante três segundos parece uma avaria.
-      void broker.pedirVarios(def.dominios);
       return validarLayout({ ...d, items: [...d.items, novo] }).layout;
     });
   }
 
   function remover(instanceId: string) {
-    setDraft((d) => {
-      if (!d) return d;
-      registar(d);
-      return {
-        ...d,
-        items: compactarVertical(d.items.filter((i) => i.instanceId !== instanceId)),
-      };
-    });
+    transformar((d) => ({
+      ...d,
+      items: compactarVertical(d.items.filter((i) => i.instanceId !== instanceId)),
+    }));
   }
 
   function compactar() {
-    setDraft((d) => (d ? (registar(d), { ...d, items: compactarVertical(d.items) }) : d));
+    transformar((d) => ({ ...d, items: compactarVertical(d.items) }));
   }
 
   function alinharEsquerda() {
-    setDraft((d) => {
-      if (!d) return d;
-      registar(d);
+    transformar((d) => {
       const items = [...d.items]
         .sort((a, b) => a.desktop.row - b.desktop.row || a.desktop.col - b.desktop.col)
         .map((i) => ({ ...i, desktop: { ...i.desktop, col: 1 } }));
@@ -214,9 +244,7 @@ export default function Workspace({
 
   /** Arrumação determinística: críticos em cima, diferidos em baixo. */
   function arrumar() {
-    setDraft((d) => {
-      if (!d) return d;
-      registar(d);
+    transformar((d) => {
       const peso = { critical: 0, normal: 1, deferred: 2 } as const;
       const ordenados = [...d.items].sort(
         (a, b) =>
@@ -302,7 +330,7 @@ export default function Workspace({
     }
 
     avisos.erro("Não foi possível guardar o painel.", {
-      detalhe: r.detalhe ?? MENSAGEM_DA_FALHA[r.motivo ?? "rede"],
+      detalhe: mensagemDaGravacao(r.motivo, MENSAGEM_DA_GRAVACAO.rede),
     });
   }
 
@@ -569,10 +597,25 @@ export default function Workspace({
   }
 
   async function criarVistaNova() {
+    // O limite é verificado aqui e no servidor. Aqui porque explicar antes
+    // de tentar é melhor do que uma ida à rede para trazer uma recusa; no
+    // servidor porque é lá que o limite é uma garantia e não um aviso.
+    if ((vistas?.length ?? 0) >= MAX_VISTAS) {
+      avisos.erro("Já tem o número máximo de vistas.", {
+        detalhe: `O limite é ${MAX_VISTAS}. Apague uma antes de criar outra.`,
+      });
+      return;
+    }
+
     const { criarVista } = await import("@/lib/contabilistas/fonte/dashboard");
     const nome = `Vista ${(vistas?.length ?? 0) + 1}`;
     const r = await criarVista(nome, ativaId ?? undefined);
-    if (r.erro) { avisos.erro("Não foi possível criar a vista.", { detalhe: r.erro }); return; }
+    if (r.erro) {
+      avisos.erro("Não foi possível criar a vista.", {
+        detalhe: mensagemDaVista(r.erro, "Tente outra vez."),
+      });
+      return;
+    }
     const frescas = await listarVistas(contabilistaId);
     setVistas(frescas);
     if (r.id) setAtivaId(r.id);
@@ -580,10 +623,3 @@ export default function Workspace({
   }
 }
 
-const MENSAGEM_DA_FALHA: Record<string, string> = {
-  sem_permissao: "A sessão perdeu a autorização. Entre outra vez.",
-  layout_demasiado_grande: "O painel tem módulos demais para guardar de uma vez.",
-  layout_invalido: "Há um módulo em posição impossível. Use «Arrumar módulos».",
-  vista_inexistente: "Esta vista já não existe.",
-  rede: "Falha de rede. O que mudou continua aqui — tente outra vez.",
-};

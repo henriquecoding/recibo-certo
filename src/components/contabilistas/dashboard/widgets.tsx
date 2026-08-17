@@ -834,17 +834,33 @@ function ComunicacoesRecentes({ densidade, broker, href }: PropsDoWidget) {
   );
 }
 
+/**
+ * O resumo por cliente.
+ *
+ * As contagens vêm agregadas do servidor (`resumo_clientes_do_contabilista`),
+ * as mesmas que a página de clientes mostra. Antes eram recompostas aqui a
+ * partir de `clientes` + `agenda`, e `agenda` é «de hoje em diante, de
+ * qualquer estado»: a coluna «Consultas» contava a agenda futura — canceladas
+ * incluídas — enquanto a página contava as realizadas. A mesma palavra, dois
+ * números, e nenhuma forma de a pessoa saber qual acreditar.
+ *
+ * As tarefas continuam a vir de `trabalho`, porque «tarefas abertas» é
+ * mesmo uma contagem de estado e não entra na agregação do resumo.
+ */
 function ResumoPorCliente({ densidade, broker, href }: PropsDoWidget) {
-  const clientes = ler(broker, "clientes");
+  const resumo = ler(broker, "resumo_clientes");
   const tarefas = ler(broker, "trabalho");
-  const agenda = ler(broker, "agenda");
-  if (!clientes) return null;
+  if (!resumo) return null;
 
-  const lista = clientes
-    .filter((v) => v.estado === "ativo")
+  const lista = resumo
+    .filter((r) => r.vinculo.estado === "ativo")
     .slice(0, quantos(densidade, { compact: 3, normal: 5, expanded: 8, full: 12 }));
 
   if (lista.length === 0) return <CorpoVazio texto="Sem clientes ativos." />;
+
+  // A última consulta só entra quando há largura para ela: o tamanho muda a
+  // profundidade, não a escala (§8).
+  const comUltima = densidade === "expanded" || densidade === "full";
 
   return (
     <div className="overflow-x-auto">
@@ -853,20 +869,29 @@ function ResumoPorCliente({ densidade, broker, href }: PropsDoWidget) {
           <tr className="text-[0.5625rem] font-bold uppercase tracking-wide text-stone-400">
             <th scope="col" className="py-1 pr-2">Cliente</th>
             <th scope="col" className="py-1 pr-2 text-right">Tarefas</th>
-            <th scope="col" className="py-1 text-right">Consultas</th>
+            <th scope="col" className="py-1 text-right">Realizadas</th>
+            {comUltima && <th scope="col" className="py-1 pl-2 text-right">Última</th>}
           </tr>
         </thead>
         <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-          {lista.map((v) => {
-            const nTarefas = (tarefas ?? []).filter((t: Tarefa) => t.vinculoId === v.id && t.estado !== "entregue").length;
-            const nConsultas = (agenda ?? []).filter((a: Agendamento) => a.clienteId === v.clienteId).length;
+          {lista.map((r) => {
+            const nTarefas = (tarefas ?? []).filter(
+              (t: Tarefa) => t.vinculoId === r.vinculo.id && t.estado !== "entregue",
+            ).length;
             return (
-              <tr key={v.id}>
+              <tr key={r.vinculo.id}>
                 <td className="max-w-[10rem] truncate py-1.5 pr-2 text-xs font-medium text-stone-700">
-                  {tratamentoDoCliente(v)}
+                  {tratamentoDoCliente(r.vinculo)}
                 </td>
                 <td className="py-1.5 pr-2 text-right text-xs tabular-nums text-stone-500">{nTarefas}</td>
-                <td className="py-1.5 text-right text-xs tabular-nums text-stone-500">{nConsultas}</td>
+                <td className="py-1.5 text-right text-xs tabular-nums text-stone-500">
+                  {r.consultasRealizadas}
+                </td>
+                {comUltima && (
+                  <td className="py-1.5 pl-2 text-right text-[0.6875rem] tabular-nums text-stone-400">
+                    {r.ultima ? quando(r.ultima) : "—"}
+                  </td>
+                )}
               </tr>
             );
           })}

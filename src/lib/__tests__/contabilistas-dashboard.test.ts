@@ -13,9 +13,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  GRID_DESKTOP, assinaturaCanonica, colide, compactarVertical, derivarMobile,
-  derivarTablet, migrarV1, mudou, primeiroEncaixe, proximaTag, resolverColisoes,
-  validarLayout,
+  GRID_DESKTOP, assinaturaCanonica, colide, compactarVertical, derivarLayoutTablet,
+  derivarMobile, derivarTablet, migrarV1, mudou, primeiroEncaixe, proximaTag,
+  resolverColisoes, validarLayout,
 } from "../contabilistas/dashboard/layout";
 import { MODULOS, densidadeDe, dominiosNecessarios } from "../contabilistas/dashboard/modulos";
 import type { WorkspaceLayoutV2, WorkspaceWidgetInstance } from "../contabilistas/dashboard/tipos";
@@ -58,6 +58,16 @@ describe("dashboard — registry", () => {
 
   it("simulações recebidas só lê partilhas", () => {
     expect(MODULOS.simulacoes_recebidas.dominios).toEqual(["partilhas"]);
+  });
+
+  // Regressão: a coluna «Consultas» do widget contava a agenda futura —
+  // canceladas incluídas — enquanto a página de clientes contava as
+  // realizadas. A agregação é do servidor, e é de lá que tem de vir.
+  it("o resumo por cliente lê o agregado do servidor, não a agenda", () => {
+    const def = MODULOS.resumo_por_cliente;
+    expect(def.dominios).toContain("resumo_clientes");
+    expect(def.dominios).not.toContain("agenda");
+    expect(def.dominios).not.toContain("clientes");
   });
 
   it("min/max de span são coerentes", () => {
@@ -136,6 +146,63 @@ describe("dashboard — geometria", () => {
       { col: 1, row: 1, colSpan: 8, rowSpan: 4 });
     expect(derivarTablet({ col: 9, row: 1, colSpan: 4, rowSpan: 4 })).toEqual(
       { col: 6, row: 1, colSpan: 3, rowSpan: 4 });
+  });
+
+  // ── Regressão: o painel saía torto em tablet ─────────────────────────
+  //
+  // Escalar módulo a módulo não dá um painel válido. Três módulos de 4
+  // colunas cabem lado a lado em doze; em oito passam a 3 cada, somam 9, e
+  // não cabem. Na vista «Meu dia», ATN-01 e PRZ-01 saíam ambos a ocupar a
+  // coluna 6 — e como nada aplicava nem validava o tablet, ninguém dava por
+  // isso até um iPad em retrato o mostrar.
+  it("a derivação por módulo sobrepõe-se — é o que motiva a de conjunto", () => {
+    const atn = derivarTablet({ col: 5, row: 1, colSpan: 4, rowSpan: 4 });
+    const prz = derivarTablet({ col: 9, row: 1, colSpan: 4, rowSpan: 4 });
+    expect(atn).toEqual({ col: 4, row: 1, colSpan: 3, rowSpan: 4 });
+    expect(prz).toEqual({ col: 6, row: 1, colSpan: 3, rowSpan: 4 });
+    expect(colide(atn, [prz])).toBe(true);
+  });
+
+  it("derivarLayoutTablet não deixa dois módulos na mesma célula", () => {
+    const tablet = derivarLayoutTablet([
+      widget(1, "agenda_hoje", "AGD-01", 1, 1, 4, 5),
+      widget(2, "precisam_atencao", "ATN-01", 5, 1, 4, 4),
+      widget(3, "prazos_proximos", "PRZ-01", 9, 1, 4, 4),
+    ]);
+
+    const colocados = [...tablet.values()];
+    expect(colocados).toHaveLength(3);
+    for (const [i, p] of colocados.entries()) {
+      expect(colide(p, colocados.slice(i + 1))).toBe(false);
+      // Nada pode transbordar as oito colunas do tablet.
+      expect(p.col + p.colSpan - 1).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it("o tablet sai de validarLayout, e sai limpo, mesmo do que estava gravado", () => {
+    // Um layout com colocações de tablet sobrepostas já gravadas — o que
+    // a derivação antiga produzia. A leitura tem de as corrigir sozinha.
+    const sujo = layoutCom([
+      widget(1, "precisam_atencao", "ATN-01", 5, 1, 4, 4),
+      widget(2, "prazos_proximos", "PRZ-01", 9, 1, 4, 4),
+    ]);
+    sujo.items[0].tablet = { col: 4, row: 1, colSpan: 3, rowSpan: 4 };
+    sujo.items[1].tablet = { col: 6, row: 1, colSpan: 3, rowSpan: 4 };
+
+    const tablets = validarLayout(sujo).layout.items.map((i) => i.tablet!);
+    expect(tablets.every(Boolean)).toBe(true);
+    expect(colide(tablets[0], [tablets[1]])).toBe(false);
+  });
+
+  it("um módulo oculto não disputa espaço no tablet", () => {
+    const oculto = widget(1, "clientes", "CLI-01", 1, 1, 4, 4);
+    oculto.hidden = true;
+    const tablet = derivarLayoutTablet([
+      oculto,
+      widget(2, "agenda_hoje", "AGD-01", 5, 1, 4, 4),
+    ]);
+    // O visível fica na primeira coluna: o oculto não ocupou nada.
+    expect(tablet.get(uuid(2))).toEqual({ col: 1, row: 1, colSpan: 3, rowSpan: 4 });
   });
 
   it("mobile é uma lista ordenada por leitura, não uma matriz", () => {

@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from "react";
 import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar } from "@/components/ui/Confirmar";
 import type { WorkspaceView } from "@/lib/contabilistas/dashboard/tipos";
+import { mensagemDaVista } from "@/lib/contabilistas/dashboard/mensagens";
 import { Check, Close, Pencil, Star, Trash } from "@/components/ui/Icons";
 import MenuFlutuante from "./MenuFlutuante";
 import styles from "./workspace.module.css";
@@ -65,7 +66,13 @@ export default function GerirVista({
     const { erro } = await renomearVista(vista.id, limpo);
     setOcupado(false);
     setARenomear(false);
-    if (erro) { setNome(vista.nome); avisos.erro("Não foi possível mudar o nome.", { detalhe: erro }); return; }
+    if (erro) {
+      setNome(vista.nome);
+      avisos.erro("Não foi possível mudar o nome.", {
+        detalhe: mensagemDaVista(erro, "Tente outra vez."),
+      });
+      return;
+    }
     aoMudar();
   }
 
@@ -74,7 +81,12 @@ export default function GerirVista({
     const { definirVistaPrincipal } = await import("@/lib/contabilistas/fonte/dashboard");
     const { erro } = await definirVistaPrincipal(vista.id);
     setOcupado(false);
-    if (erro) { avisos.erro("Não foi possível definir a vista principal.", { detalhe: erro }); return; }
+    if (erro) {
+      avisos.erro("Não foi possível definir a vista principal.", {
+        detalhe: mensagemDaVista(erro, "Tente outra vez."),
+      });
+      return;
+    }
     avisos.sucesso(`«${vista.nome}» passa a abrir primeiro.`);
     aoMudar();
   }
@@ -98,7 +110,15 @@ export default function GerirVista({
     const { apagarVista } = await import("@/lib/contabilistas/fonte/dashboard");
     const { erro } = await apagarVista(vista.id);
     setOcupado(false);
-    if (erro) { avisos.erro("Não foi possível apagar a vista.", { detalhe: erro }); return; }
+    // `apagarVista` é um `delete` direto, não uma RPC: `erro` é o texto cru
+    // do Postgres. Nunca sai daqui — vai para a consola, não para o ecrã.
+    if (erro) {
+      if (typeof console !== "undefined") console.error("[apagarVista]", erro);
+      avisos.erro("Não foi possível apagar a vista.", {
+        detalhe: mensagemDaVista(erro, "Tente outra vez."),
+      });
+      return;
+    }
     avisos.sucesso(`Vista «${vista.nome}» apagada.`);
     aoMudar({ apagada: vista.id });
   }
