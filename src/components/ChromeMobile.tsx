@@ -3,9 +3,11 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  O CHROME INFERIOR — telemóvel e tablet (< lg)
 //  ---------------------------------------------------------------------
-//  É o ÚNICO cabeçalho abaixo de `lg`: o `Nav.tsx` é só de secretária. Por
-//  isso tudo o que existe no cabeçalho normal tem de estar alcançável
-//  daqui. Não aparece no /dashboard nem no /admin (que têm chrome próprio).
+//  Duas superfícies empilhadas no fundo do ecrã: o dock de pesquisa
+//  (`busca/DockMovel.tsx`) e, colada ao fundo, esta barra de navegação. A
+//  marca, o tema e a acção vivem no `ChromeMobileTopo`, em fluxo no topo
+//  da página. Nada disto aparece no /dashboard nem no /admin, que têm
+//  chrome próprio.
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ CINCO ÍCONES SEM RÓTULO, E UM DELES MUDAVA DE SIGNIFICADO (P1-05)    │
@@ -17,16 +19,31 @@
 //  │ diferentes. O feedback aparecia duas vezes (aqui e dentro do menu) e │
 //  │ o tema ocupava um dos cinco lugares mais valiosos do produto.        │
 //  │                                                                     │
-//  │ Passa a haver cinco DESTINOS estáveis, com rótulo visível:            │
+//  │ Passa a haver cinco DESTINOS estáveis, com rótulo visível. Cada um   │
+//  │ significa sempre a mesma coisa; o tema e o feedback vivem fora daqui.│
+//  └─────────────────────────────────────────────────────────────────────┘
+//
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ «PESQUISAR» SAI DOS CINCO LUGARES E «CONTABILISTAS» ENTRA            │
 //  │                                                                     │
-//  │      Início · Pesquisar · Guias · Quiz · Conta                       │
+//  │      antes:  Início · Pesquisar · Guias · Quiz · Conta               │
+//  │      agora:  Início · Guias · Quiz · Contabilistas · Conta           │
 //  │                                                                     │
-//  │ Cada um significa sempre a mesma coisa. O tema e o feedback vivem    │
-//  │ dentro de «Conta», que é onde se procuram acções de conta e suporte. │
+//  │ Duas correcções ao mesmo erro de nível. A pesquisa não é um destino  │
+//  │ — é como se chega a todos os outros — e estava a ocupar um lugar ao  │
+//  │ lado de duas das páginas a que dá acesso; passa a ter largura        │
+//  │ inteira acima desta barra, que é a dignidade que já tem no           │
+//  │ computador (ver o quadro em `busca/DockMovel.tsx`).                  │
 //  │                                                                     │
-//  │ A barra de pesquisa separada que existia por cima desaparece: a      │
-//  │ pesquisa é agora um dos cinco lugares, sempre no mesmo sítio, em vez │
-//  │ de uma segunda superfície com uma pastilha de âmbito por baixo.      │
+//  │ «Contabilistas» era o contrário: um destino a sério — o único do     │
+//  │ produto que acaba com uma PESSOA do outro lado — e a única entrada   │
+//  │ da barra de secretária sem par nenhum no telemóvel. Estava dentro    │
+//  │ da folha de «Conta», que é onde se procuram acções de conta, não     │
+//  │ um profissional certificado.                                        │
+//  │                                                                     │
+//  │ O lugar novo entra à DIREITA de «Quiz» e não noutro sítio qualquer:  │
+//  │ os quatro que já existiam não mudam de posição, e quem já sabia onde │
+//  │ estava «Guias» continua a acertar-lhe com o polegar.                 │
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -36,30 +53,21 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
 import {
-  LogoMark, Home, Search, BookOpen, Trophy, User, Close, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
+  LogoMark, Home, BookOpen, Trophy, User, Close, LayoutGrid, ArrowRight, Coin, Megaphone, ChevronRight,
   Briefcase,
 } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { useAuth } from "@/lib/supabase/auth";
 import { NAV_FERRAMENTAS, NAV_APRENDER, type NavItem } from "@/components/nav-config";
 import { abrirFeedback } from "@/components/feedback/abrir";
-import { EVENTO_BUSCA_ABRIR, useBuscaAberta } from "@/components/busca/motor";
+import { DockMovel } from "@/components/busca/DockMovel";
 import { SuperficieModal } from "@/components/overlays/SuperficieModal";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { medirNavegacao } from "@/lib/busca/medicao";
+import { useQuizAJogar } from "@/hooks/useQuizAJogar";
 
 const PLANOS: NavItem = {
   href: "/precos", label: "Planos", desc: "Subscrições e benefícios", Icon: Coin,
-};
-
-// Está na barra do desktop ao lado de «Planos»; no telemóvel os cinco lugares
-// do fundo são fixos, por isso entra no menu — mas na mesma secção, para o
-// menu continuar a ter exactamente o que a barra tem.
-const CONTABILISTAS: NavItem = {
-  href: "/contabilistas",
-  label: "Contabilistas",
-  desc: "Ligar-te, marcar consulta e enviar simulações",
-  Icon: Briefcase,
 };
 
 type Slot =
@@ -70,12 +78,20 @@ type Slot =
  * Os cinco lugares. A ordem é fixa e o significado nunca muda com o estado
  * da sessão: mudar o destino de um lugar por baixo do dedo de quem já
  * aprendeu onde ele está é a forma mais rápida de desfazer essa memória.
+ *
+ * O rótulo de `/contabilistas` é «Contabilistas» em todo o produto e aqui
+ * também — o nome não muda de superfície. Medido no browser a 360 px, em
+ * DM Sans 10px/600 com `tracking-tight`: cada lugar tem 64,8 px úteis e a
+ * palavra ocupa 60,6. Cabe, com 4 px de folga, e é o rótulo mais comprido
+ * que cabe. Se um dia deixar de caber, encurta-se o RÓTULO deste lugar —
+ * nunca o tamanho de letra dos cinco, que os deixaria a parecer níveis
+ * diferentes de navegação.
  */
 const SLOTS: Slot[] = [
   { tipo: "link", id: "inicio", label: "Início", href: "/", Icon: Home },
-  { tipo: "acao", id: "pesquisar", label: "Pesquisar", Icon: Search },
   { tipo: "link", id: "guias", label: "Guias", href: "/guias", Icon: BookOpen },
   { tipo: "link", id: "quiz", label: "Quiz", href: "/quiz-fiscal", Icon: Trophy },
+  { tipo: "link", id: "contabilistas", label: "Contabilistas", href: "/contabilistas", Icon: Briefcase },
   { tipo: "acao", id: "conta", label: "Conta", Icon: User },
 ];
 
@@ -84,7 +100,6 @@ export default function ChromeMobile() {
   const { user, abrirModal, disponivel } = useAuth();
   const [querMenu, setQuerMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState("");
-  const buscaAberta = useBuscaAberta();
 
   // A vaga do coordenador: o menu é modal, logo não pode coexistir com o
   // consentimento nem com a pesquisa. Ver `CoordenadorOverlays.tsx`.
@@ -102,29 +117,36 @@ export default function ChromeMobile() {
     return () => { ativo = false; };
   }, [user]);
 
-  const [quizPlaying, setQuizPlaying] = useState(false);
-  useEffect(() => {
-    if (!pathname.startsWith("/quiz-fiscal")) { setQuizPlaying(false); return; }
-    const obs = new MutationObserver(() => {
-      setQuizPlaying(document.body.classList.contains("quiz-playing"));
-    });
-    setQuizPlaying(document.body.classList.contains("quiz-playing"));
-    obs.observe(document.body, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, [pathname]);
+  // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
+  // lê exactamente a mesma coisa. Ver `hooks/useQuizAJogar.ts`.
+  const quizAJogar = useQuizAJogar(pathname.startsWith("/quiz-fiscal"));
 
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || quizPlaying) return null;
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || quizAJogar) return null;
 
-  const ativo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  /**
+   * A rota exacta ou um SEGMENTO abaixo dela — e não um `startsWith` cru.
+   *
+   * Com o prefixo à letra, `/contabilista` (o painel de gestão, no
+   * singular) e `/contabilistas` (o directório) partilham o começo, e um
+   * `startsWith` bastava para acender o lugar errado à primeira rota nova
+   * que caísse dentro do nome de outra. É a mesma regra que o cabeçalho de
+   * secretária já aplica em `navAtivo`.
+   */
+  const ativo = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
   const ativoMenu = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0].split("#")[0]) && href !== "/#calculadora";
 
   return (
     <>
-      {/* Espaço para o conteúdo não ficar tapado pelo chrome inferior. A
-          altura acompanha a barra: cinco alvos de 44 px com rótulo, mais a
-          área segura do dispositivo. */}
-      <div className="h-[76px] lg:hidden" aria-hidden />
+      {/* Espaço para o conteúdo não ficar tapado pelo chrome inferior — a
+          pilha toda (barra + dock) e a área segura do dispositivo. O número
+          vive em `globals.css` porque o dock e o botão «voltar ao topo»
+          leem o mesmo; escrito à mão nos três, divergia. */}
+      <div className="h-[var(--rc-chrome-movel)] lg:hidden" aria-hidden />
+
+      {/* O dock de pesquisa, imediatamente acima da barra. */}
+      <DockMovel />
 
       {/**
        * ┌───────────────────────────────────────────────────────────────┐
@@ -140,17 +162,38 @@ export default function ChromeMobile() {
        * │ de quem segura o tablet, e o conteúdo respira por baixo.       │
        * └───────────────────────────────────────────────────────────────┘
        */}
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-4">
+      {/* `md:pb-[max(1rem,…)]` e não `md:pb-4`: é este afastamento que o token
+          `--rc-barra-h` descreve a partir de `md`, e um 16 px fixo aqui
+          tornava o token uma aproximação num tablet com indicador no fundo. */}
+      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
         <nav
           aria-label="Navegação"
-          className="mx-auto flex items-stretch justify-between gap-1 border-t border-stone-100 bg-cream/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 md:max-w-[40rem] md:rounded-2xl md:border md:px-2 md:pb-1.5 md:shadow-float"
+          className="mx-auto flex items-stretch justify-between gap-0.5 border-t border-stone-100 bg-cream/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 md:max-w-[40rem] md:gap-1 md:rounded-2xl md:border md:px-2 md:pb-1.5 md:shadow-float"
         >
           {SLOTS.map((slot) => {
             const on = slot.tipo === "link" ? ativo(slot.href) : slot.id === "conta" ? menu : false;
-            const classe = `focus-marca flex min-h-[44px] min-w-[3.25rem] flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1 no-underline transition-colors ${
+            /**
+             * `min-w-0` e não um mínimo em `rem` — e é o que impede o
+             * overflow horizontal por CONSTRUÇÃO.
+             *
+             * Um item de flex não encolhe abaixo do seu conteúdo mínimo por
+             * omissão, e «Contabilistas» é uma palavra sem espaços: sem
+             * isto, a palavra mais comprida decidia a largura dos cinco
+             * lugares e a barra passava a ser mais larga do que o ecrã. Com
+             * `flex-1` (base zero) e `min-w-0`, os cinco lugares ficam
+             * exactamente iguais seja qual for o rótulo, e o pior caso
+             * possível é um rótulo com reticências — nunca uma página a
+             * rolar para o lado.
+             */
+            const classe = `focus-marca flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 no-underline transition-colors ${
               on
                 ? "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand"
-                : "text-stone-500 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
+                : // `stone-600` e não `stone-500`: medido sobre o fundo desta
+                  // barra (`cream`), o 500 dá 4,42:1 e o rótulo tem 10 px —
+                  // texto pequeno, portanto a régua da WCAG AA é 4,5:1 e
+                  // falhava por pouco. O 600 dá 6,9:1. No escuro já passava
+                  // (7,8:1), por isso o `dark:` fica como está.
+                  "text-stone-600 hover:bg-stone-100 dark:text-stone-400 dark:hover:bg-stone-800"
             }`;
             const conteudo = (
               <>
@@ -162,7 +205,9 @@ export default function ChromeMobile() {
                 {/* O rótulo é o que torna o lugar aprendível. Um ícone
                     isolado obriga a adivinhar; cinco obrigam a adivinhar
                     cinco vezes. */}
-                <span className="text-[10px] font-semibold leading-none">{slot.label}</span>
+                <span className="w-full truncate text-center text-[10px] font-semibold leading-none tracking-tight">
+                  {slot.label}
+                </span>
               </>
             );
 
@@ -180,18 +225,15 @@ export default function ChromeMobile() {
               );
             }
 
-            const ePesquisa = slot.id === "pesquisar";
+            // Sobra um único lugar que não é uma ligação: «Conta», que abre
+            // a folha. A pesquisa era o outro e mudou de superfície.
             return (
               <button
                 key={slot.id}
                 type="button"
-                data-busca-gatilho={ePesquisa ? "movel" : undefined}
-                aria-haspopup={ePesquisa ? "dialog" : "dialog"}
-                aria-expanded={ePesquisa ? buscaAberta : menu}
-                onClick={() => {
-                  if (ePesquisa) window.dispatchEvent(new Event(EVENTO_BUSCA_ABRIR));
-                  else setQuerMenu(true);
-                }}
+                aria-haspopup="dialog"
+                aria-expanded={menu}
+                onClick={() => setQuerMenu(true)}
                 className={classe}
               >
                 {conteudo}
@@ -266,8 +308,10 @@ export default function ChromeMobile() {
                 ))}
               </SeccaoMenu>
 
+              {/* «Contabilistas» já não vive aqui — é um dos cinco lugares da
+                  barra. Repeti-lo dentro da folha punha dois caminhos para o
+                  mesmo sítio na mesma superfície, e o de baixo é o melhor. */}
               <SeccaoMenu titulo="Mais">
-                <LinhaMenu item={CONTABILISTAS} ativo={ativoMenu(CONTABILISTAS.href)} />
                 <LinhaMenu item={PLANOS} ativo={ativoMenu(PLANOS.href)} />
                 <button
                   type="button"

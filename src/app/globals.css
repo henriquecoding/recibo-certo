@@ -33,6 +33,42 @@
   --rc-header-alto: 136px;
   --rc-dock-h: 48px;
   --rc-dock-larga: 44rem;
+
+  /* ══════════════════════════════════════════════════════════════════
+     GEOMETRIA DO CHROME INFERIOR DO TELEMÓVEL (< lg)
+
+     Abaixo de `lg` o cabeçalho vive em BAIXO e são duas superfícies
+     empilhadas: o dock de pesquisa e, colada ao fundo, a barra de
+     navegação. Três coisas leem esta altura — o espaçador em fluxo do
+     `ChromeMobile`, o `bottom` do dock e o do botão «voltar ao topo» —
+     e até aqui cada uma trazia o seu número escrito à mão. Já tinham
+     divergido: o botão «voltar ao topo» continuava a subir 124 px por
+     causa de um dock que entretanto fora removido, e o espaçador
+     reservava 76 px sem contar com a área segura — num iPhone a barra
+     ocupa 84 px e os últimos 8 px de página ficavam por baixo dela.
+
+     · --rc-barra-h    a barra de navegação, INCLUINDO a área segura do
+       dispositivo. A conta é a do próprio elemento: 44 px de alvo mais
+       6 px acima, mais o maior entre 6 px e o indicador do telemóvel.
+     · --rc-chrome-movel   a pilha toda (barra + ar + dock + ar). É o
+       que qualquer coisa fixa tem de subir para não ficar por baixo do
+       chrome, e o que o espaçador reserva no fim do documento.
+     ══════════════════════════════════════════════════════════════════ */
+  --rc-dock-movel-h: 48px;
+  --rc-dock-movel-ar: 8px;
+  --rc-barra-h: calc(50px + max(6px, env(safe-area-inset-bottom, 0px)));
+  --rc-chrome-movel: calc(
+    var(--rc-barra-h) + var(--rc-dock-movel-ar) + var(--rc-dock-movel-h) + var(--rc-dock-movel-ar)
+  );
+}
+
+/* No tablet a barra deixa de ser de extremo a extremo e passa a flutuar
+   (ver o quadro em `ChromeMobile.tsx`): 56 px de barra mais o afastamento
+   do fundo, que absorve a área segura em vez de a somar. */
+@media (min-width: 768px) {
+  :root {
+    --rc-barra-h: calc(56px + max(1rem, env(safe-area-inset-bottom, 0px)));
+  }
 }
 
 /* ════════════════════════════════════════════════════════════════════

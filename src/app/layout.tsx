@@ -10,6 +10,7 @@ import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
 import { AvisosProvider } from "@/components/ui/Avisos";
 import { ConfirmacaoProvider } from "@/components/ui/Confirmar";
 import ChromeMobile from "@/components/ChromeMobile";
+import ChromeMobileTopo from "@/components/ChromeMobileTopo";
 import BotaoTopo from "@/components/ui/BotaoTopo";
 import FeedbackModal from "@/components/feedback/FeedbackModal";
 import Medicao from "@/components/Medicao";
@@ -172,6 +173,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         com os outros — ver `ui/Confirmar.tsx`. */}
                     <AvisosProvider>
                       <ConfirmacaoProvider>
+                        {/* O topo do telemóvel vem ANTES do conteúdo porque
+                            vive em fluxo, e não fixo — ver o quadro em
+                            `ChromeMobileTopo.tsx`. É também a razão de não
+                            estar ao lado do `ChromeMobile`, que é o último
+                            elemento do corpo. */}
+                        <ChromeMobileTopo />
                         {children}
                         <ChromeMobile />
                         {/* Voltar ao topo — global em todo o site público;

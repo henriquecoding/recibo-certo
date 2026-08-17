@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.70.0",
+    data: "2026-08-17",
+    titulo: "O telemóvel deixa de ser a versão pequena do site",
+    itens: [
+      "A pesquisa passa a estar sempre à vista, numa barra de largura inteira mesmo por cima da navegação. Estava escondida atrás de uma lupa de 20 px, ao lado de «Guias» e «Quiz» — no meio das páginas a que ela própria dá acesso.",
+      "«Contabilistas» ganha um lugar fixo na barra de baixo, à direita do «Quiz». É a única coisa aqui que acaba com uma pessoa do outro lado, e estava enterrada dentro do menu «Conta», onde se procuram definições e não um profissional certificado.",
+      "A barra de baixo fica: Início · Guias · Quiz · Contabilistas · Conta. Os lugares que já lá estavam não mudaram de sítio — quem já lhes acertava sem olhar continua a acertar.",
+      "Passa a haver um topo no telemóvel, com a marca, o tema e o botão de começar. Antes não havia nenhum: o nome do produto não aparecia em lado nenhum, mudar para o modo escuro eram dois toques, e a ação principal estava dentro de um menu. Rola com a página, para não roubar altura a quem está a ler.",
+      "Corrigido: fechar a pesquisa com o teclado deixava de devolver o foco a quem a tinha aberto, e a navegação recomeçava no topo da página.",
+      "Corrigido: em telemóveis com indicador no fundo do ecrã, os últimos píxeis de cada página ficavam por baixo da barra de navegação.",
+    ],
+  },
+  {
     version: "2.69.0",
     data: "2026-08-16",
     titulo: "Recebimentos: a ligação à Stripe passa a ser um sistema, e não um link",

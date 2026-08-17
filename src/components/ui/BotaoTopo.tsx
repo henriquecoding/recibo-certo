@@ -10,9 +10,15 @@
 // que já exclui o `ChromeMobile` destas rotas.
 //
 // ── Porque não colide com nada ─────────────────────────────────────────────
-// No telemóvel o cabeçalho vive EM BAIXO (`ChromeMobile`: barra de pesquisa +
-// navegação, ~124px + safe area). O botão sobe acima disso; a partir de `lg:`,
-// onde esse chrome desaparece, volta ao canto inferior direito normal.
+// No telemóvel o cabeçalho vive EM BAIXO (`ChromeMobile`: dock de pesquisa +
+// navegação). O botão sobe acima disso lendo `--rc-chrome-movel`, que é a
+// altura real dessa pilha e vive em `globals.css`; a partir de `lg:`, onde
+// esse chrome desaparece, volta ao canto inferior direito normal.
+//
+// Estes 124 px estiveram aqui escritos à mão e chegaram a estar ERRADOS por
+// isso: o dock foi removido durante um tempo, o chrome passou a ~76 px e este
+// número ficou a subir o botão 48 px a mais do que era preciso, sem partir
+// nada e sem ninguém dar por isso. É a razão de a altura ser agora um token.
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
@@ -74,7 +80,7 @@ export default function BotaoTopo() {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={reduz ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.9 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="group fixed right-3 bottom-[calc(124px_+_env(safe-area-inset-bottom)_+_0.5rem)] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-200/80 bg-white/90 text-stone-500 shadow-lift backdrop-blur-md transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-700 dark:text-stone-400 dark:hover:text-brand lg:right-6 lg:bottom-6 lg:h-12 lg:w-12"
+          className="group fixed right-3 bottom-[calc(var(--rc-chrome-movel)_+_0.5rem)] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-200/80 bg-white/90 text-stone-500 shadow-lift backdrop-blur-md transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-700 dark:text-stone-400 dark:hover:text-brand lg:right-6 lg:bottom-6 lg:h-12 lg:w-12"
         >
           <ChevronUp size={20} className="transition-transform group-hover:-translate-y-0.5" />
         </m.button>

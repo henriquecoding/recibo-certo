@@ -16,8 +16,13 @@ import QuizGuiado from "./QuizGuiado";
 import Resultado from "./Resultado";
 import type { QuizFiscalConfig } from "@/hooks/useQuizFiscal";
 import type { RegistrarSessaoResult } from "@/lib/store/quiz-progresso";
+import { CLASSE_QUIZ_A_JOGAR } from "@/hooks/useQuizAJogar";
 
-const BODY_PLAYING_CLASS = "quiz-playing";
+// O nome da classe vive com quem a lê (`hooks/useQuizAJogar.ts`): é um
+// contrato entre este componente e o chrome do telemóvel, e escrito à mão
+// dos dois lados bastava renomear aqui para o chrome deixar de sair do
+// caminho — sem erro nenhum, só um quiz com a barra por cima.
+const BODY_PLAYING_CLASS = CLASSE_QUIZ_A_JOGAR;
 
 export default function QuizFiscalApp() {
   const quiz = useQuizFiscal();
