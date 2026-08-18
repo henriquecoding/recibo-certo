@@ -232,6 +232,19 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // O motor de tempo produz a comparação mais útil que esta ferramenta tem
+  // — «a conta rápida daria X €/hora; com férias, horas não faturáveis e
+  // impostos, o número real é Y» — e ela estava a ser calculada e deitada
+  // fora: `ResultadoPreco` não expõe o tempo, e ninguém lia `tempo.notas`.
+  for (const [i, nota] of (e.tempo?.notas ?? []).entries()) {
+    avisos.push({
+      id: `tempo-nota-${i}`,
+      severidade: "info",
+      titulo: "A conta por hora não é o que parece",
+      texto: nota,
+    });
+  }
+
   if (e.contexto.vendedor.tipo === "ti" && !e.contexto.vendedor.faturacaoAnualPrevista) {
     avisos.push({
       id: "sem-faturacao-anual",

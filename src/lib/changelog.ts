@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.80.0",
+    data: "2026-08-18",
+    titulo: "Margem e markup explicados a sério — e dois enganos de conta corrigidos",
+    itens: [
+      "A explicação de margem e markup estava a ensinar uma coisa e a ferramenta a fazer outra. A página dizia que 50% de markup sobre 10 € dá 15 €; a calculadora sugeria mais. Quem lia as duas concluía, com razão, que uma delas estava errada.",
+      "As duas medem a mesma coisa — o que te fica — e o que muda é o denominador: a margem divide pelo preço, o markup divide pelo custo. Passa a haver uma barra que mostra os mesmos cinco euros lidos das duas maneiras, e uma explicação de porque é que o preço aqui é mais alto do que o da conta de manual: naquele exemplo os cinco euros eram todos teus, e com recibos verdes não são.",
+      "E, no sítio onde escolhes entre margem e markup, a escolha passa a traduzir-se sozinha com os teus números: quanto te fica por venda, que percentagem do custo é, e que percentagem do preço é.",
+      "Corrigido um engano que mandava cobrar a mais: quem pedia «quero ganhar 800 € por mês» recebia um preço que rendia 1 219 €. Os impostos estavam a ser contados duas vezes — o cálculo já os descontava, e voltavam a ser repostos por cima. O mesmo acontecia em «quantas vendas preciso», que pedia 79 vendas onde 52 chegavam.",
+      "A conta que compara o valor/hora ingénuo com o real — «dividir o ordenado pelas horas do mês daria 15 €/h; com férias, horas não faturáveis e impostos, são 42 €/h» — estava a ser calculada e deitada fora. Passa a aparecer.",
+    ],
+  },
+  {
     version: "2.79.0",
     data: "2026-08-18",
     titulo: "A calculadora de preços deixa de prender quem lá entra",

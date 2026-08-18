@@ -13,7 +13,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useState } from "react";
-import type { ContextoPreco, DefinicaoCenarioInicial } from "@/lib/pricing";
+import type { ContextoPreco, DefinicaoCenarioInicial, ResultadoPreco } from "@/lib/pricing";
 import { CANAIS_COMISSAO, METODOS_PAGAMENTO } from "@/lib/pricing";
 import { Bloco, CampoEuros, CampoNumero, CampoPercentagem, Segmentado, Seletor } from "./atomos";
 import { fmt } from "@/lib/format";
@@ -24,10 +24,13 @@ export default function CamposPreco({
   contexto,
   definicao,
   atualizar,
+  resultado,
 }: {
   contexto: ContextoPreco;
   definicao: DefinicaoCenarioInicial;
   atualizar: Atualizar;
+  /** Só para traduzir a escolha margem/markup em euros reais. */
+  resultado?: ResultadoPreco | null;
 }) {
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
   const alternar = (id: string) => setAbertos((a) => ({ ...a, [id]: !a[id] }));
@@ -161,10 +164,10 @@ export default function CamposPreco({
             <div className="sm:col-span-2">
               <Segmentado
                 rotulo="Como queres definir o teu ganho"
-                ajuda="Margem mede-se sobre o preço de venda. Markup mede-se sobre o custo. Um markup de 50% dá uma margem de 33% — não são a mesma coisa."
+                ajuda="As duas medem o mesmo: o que te fica. O que muda é o denominador — a margem divide pelo PREÇO, o markup divide pelo CUSTO. Por isso o markup é sempre o número maior: 50% de markup são 33,3% de margem. Aqui as duas contam o que te fica depois dos impostos, não o que acrescentas à etiqueta."
                 opcoes={[
-                  { valor: "margem", rotulo: "Margem", sub: "% do preço" },
-                  { valor: "markup", rotulo: "Markup", sub: "% sobre o custo" },
+                  { valor: "margem", rotulo: "Margem", sub: "÷ pelo preço" },
+                  { valor: "markup", rotulo: "Markup", sub: "÷ pelo custo" },
                 ]}
                 valor={contexto.objetivo.modo === "markup" ? "markup" : "margem"}
                 aoMudar={(v) =>
@@ -188,6 +191,7 @@ export default function CamposPreco({
                   max={contexto.objetivo.modo === "markup" ? 900 : 95}
                 />
               </div>
+              <TraducaoMargemMarkup resultado={resultado} />
             </div>
           ) : null}
 
@@ -783,5 +787,36 @@ function ListaCustos({
         </button>
       </div>
     </div>
+  );
+}
+
+
+/**
+ * A mesma escolha, dita nas duas unidades e em euros.
+ *
+ * Margem e markup são a confusão mais cara da precificação, e a ajuda em
+ * texto não chegava: quem lê «50%» não sabe se é do preço ou do custo até
+ * ver o número. Aqui a escolha traduz-se sozinha, com os valores da própria
+ * pessoa — e diz que o que se mede é o que FICA depois dos impostos, que é
+ * o que separa esta ferramenta da conta de manual.
+ */
+function TraducaoMargemMarkup({ resultado }: { resultado?: ResultadoPreco | null }) {
+  if (!resultado?.ok) return null;
+
+  const fica = resultado.margem.lucroUnidade;
+  const base = resultado.custo.direto + resultado.custo.variavelFixoPorUnidade + resultado.custo.fixosPorUnidade;
+  if (fica <= 0 || base <= 0) return null;
+
+  const pctTexto = (n: number) => `${(n * 100).toFixed(1).replace(".", ",")}%`;
+
+  return (
+    <p className="mt-2.5 rounded-xl bg-stone-50 px-3 py-2.5 text-xs leading-relaxed text-stone-600 dark:bg-stone-800/40 dark:text-stone-400">
+      A este preço ficam-te <strong className="font-semibold text-stone-800 dark:text-stone-100">{fmt(fica)}</strong> por
+      venda, já depois de impostos. São{" "}
+      <strong className="font-semibold text-stone-800 dark:text-stone-100">{pctTexto(resultado.margem.markup)}</strong>{" "}
+      do teu custo ({fmt(base)}) — o markup — e{" "}
+      <strong className="font-semibold text-stone-800 dark:text-stone-100">{pctTexto(resultado.margem.margem)}</strong>{" "}
+      do preço sem IVA — a margem. O mesmo euro, dois denominadores.
+    </p>
   );
 }

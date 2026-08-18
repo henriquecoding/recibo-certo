@@ -184,7 +184,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           atravessar antes. ─────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
         <div className="order-2 space-y-4 lg:order-1">
-          <CamposPreco contexto={contexto} definicao={definicao} atualizar={atualizar} />
+          <CamposPreco contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
           <MemoriaCalculo linhas={resultado.explicacao} />
         </div>
 
