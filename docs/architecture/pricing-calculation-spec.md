@@ -38,44 +38,83 @@ cria uma dependência circular: o preço depende da comissão, que depende do pr
 Resolvê-la por iteração funciona mas esconde o modelo. Resolve-se em forma
 fechada.
 
-### 1.1 Preço a partir de margem pretendida
+### 1.1 Duas bases de incidência, não uma
+
+Antes das equações, a distinção de que tudo depende. Há dois tipos de
+percentagem a sair de uma venda, e confundi-los erra o preço:
+
+| Símbolo | Incide sobre | Exemplos |
+|---|---|---|
+| `v` | a **faturação** | afiliado, Segurança Social do TI, IRS do regime **simplificado** |
+| `τ` | o **lucro** | IRS da contabilidade **organizada** (Art. 28.º CIRS) |
+
+`v` cobra-se sobre cada euro faturado, ganhe-se ou perca-se dinheiro. `τ` só
+existe se houver lucro, e **os custos abatem-lhe**. Somar `τ` a `v` cobra
+imposto sobre o custo: a 24% e com 10 € de custo, são 2,40 € por unidade de
+imposto que não existe — e um preço recomendado acima do necessário.
+
+`v` e `τ` nunca estão ambos preenchidos com IRS: é o mesmo imposto, medido na
+base em que a lei o faz incidir.
+
+### 1.2 Preço a partir de margem pretendida
 
 Lucro por unidade:
 
 ```
-L₁ = P − Cd − Cv€ − v·P − g·PVP
-   = P − Cd − Cv€ − v·P − g·P·(1+t)
+L₁ = P − Cd − Cv€ − v·P − g·PVP − τ·(P − Cd − Cv€ − g·PVP)
+   = P − Cd − Cv€ − v·P − g·P·(1+t) − τ·(P − Cd − Cv€ − g·P·(1+t))
 ```
 
-Impondo `L₁ = m·P`:
+Escrevendo `D = 1 − v − g(1+t) − τ·(1 − g(1+t))` («o que sobra de cada euro»),
+e impondo `L₁ = m·P`:
 
 ```
-P·(1 − v − g(1+t) − m) = Cd + Cv€
+P·(D − m) = (Cd + Cv€)·(1 − τ)
 
-           Cd + Cv€
-P = ─────────────────────────
-     1 − v − g(1+t) − m
+           (Cd + Cv€)·(1 − τ)
+P = ──────────────────────────
+                D − m
 ```
+
+O fator `(1 − τ)` no numerador é o **escudo fiscal**: cada euro de custo poupa
+`τ` de imposto, porque é despesa dedutível. O `τ·(1 − g(1+t))` no denominador
+diz que o imposto só morde o que sobra depois das comissões — que também são
+despesa dedutível.
+
+**Nem todo o custo é dedutível.** Num serviço, o «custo direto» é o custo do
+**tempo do próprio** — e o trabalho de quem passa o recibo não é despesa da
+atividade, é o rendimento que se está a apurar. Escrevendo `Cd` para a parte
+dedutível (materiais, variáveis, fixos, taxas), a forma geral é:
+
+```
+base = (Cd_total + f) − τ·(Cd + f)          com Cd = C  ⇒  (C + f)(1 − τ)
+```
+
+É a mesma fronteira que `despesasAnuais` respeita ao alimentar o motor de IRS:
+o que lá não entra como despesa também não recebe escudo aqui.
+
+**Com `τ = 0` (regime simplificado, sociedades, particulares) tudo isto colapsa
+exatamente nas equações originais**, ao cêntimo. Há um teste que o exige.
 
 **Denominador ≤ 0 ⇒ o preço é impossível.** Não existe preço que satisfaça essa
 margem com essas comissões. A engine devolve `impossivel` com a razão, em vez de
 devolver um número negativo ou infinito. Este é o caso que quase todas as
 ferramentas do mercado devolvem como `NaN`.
 
-### 1.2 Preço a partir de markup
+### 1.3 Preço a partir de markup
 
 Markup aplica-se à **base de custo que não depende do preço** (`Cd + Cv€`), e o
 preço é depois «bruteado» para que o lucro pretendido sobreviva às comissões:
 
 ```
-       (Cd + Cv€)·(1 + k)
-P = ──────────────────────
-      1 − v − g(1+t)
+       (Cd + Cv€)·(1 + k − τ)
+P = ──────────────────────────
+                D
 ```
 
-Se `v = g = 0`, colapsa em `P = (Cd + Cv€)(1+k)`, como manda a definição.
+Se `v = g = τ = 0`, colapsa em `P = (Cd + Cv€)(1+k)`, como manda a definição.
 
-### 1.3 Conversão entre margem e markup
+### 1.4 Conversão entre margem e markup
 
 Sem comissões:
 
@@ -119,6 +158,23 @@ qual a taxa de compra.
 Regime da margem (DL 199/96): o IVA incide sobre `P − Cd`, não sobre `P`.
 Suportado como modo de IVA `margem`; a UI avisa que exige enquadramento próprio.
 
+### 2.4 O regime é derivado, não perguntado
+
+A engine não acredita na resposta do `select`: chama `situacaoIVA()`
+(`fiscal-iva.ts`) com a faturação **declarada** e lê o regime efetivo. Isso
+traz-lhe as três zonas do Art. 53.º/58.º, a isenção sem limiar do Art. 9.º, o
+ato isolado e a periodicidade do Art. 41.º.
+
+Duas fronteiras:
+
+1. **A escolha do utilizador governa a matemática**, e só é corrigida no caso em
+   que a lei não deixa margem — faturação declarada acima de 18 750 € destrói a
+   isenção de imediato (Art. 58.º n.º 2 b). Nunca em silêncio: há um aviso.
+2. **Uma faturação projetada por nós** (`preço × unidades × 12`) **nunca corrige
+   regime nenhum.** É estimativa nossa, não facto do utilizador. Serve para
+   avisar — «a este preço passas o limiar em setembro» — e o aviso vive em
+   `avisos.ts`, depois de haver um preço resolvido.
+
 ---
 
 ## 3. O motor fiscal do vendedor (o diferencial português)
@@ -140,21 +196,44 @@ não imposto sobre o lucro.
 Consequência que a UI tem de dizer em voz alta: *comprar melhor não reduz a tua
 Segurança Social.*
 
-### 3.2 IRS no regime simplificado — os custos não abatem
+### 3.2 IRS — a base muda com o regime de contabilidade
+
+**Regime simplificado (Art. 31.º CIRS):**
 
 ```
 rendimentoTributável = P_anual × coeficiente(atividade)
 ```
 
 O coeficiente (0,75 / 0,35 / 0,95…) **presume** as despesas. Quem gasta mais não
-paga menos IRS. Logo, para efeitos de preço, o IRS é também função da faturação,
-não do lucro — e o IRS marginal calcula-se como derivada discreta:
+paga menos IRS. Logo, para efeitos de preço, o IRS é função da **faturação** e
+entra em `v`.
+
+**Contabilidade organizada (Art. 28.º CIRS):**
+
+```
+rendimentoTributável = receita − despesas documentadas
+```
+
+Aqui os custos **abatem mesmo**, e o IRS é função do **lucro**: entra em `τ`, com
+o escudo fiscal do §1.2. Dizer «os teus custos não reduzem o IRS» a quem está
+neste regime é factualmente falso, e por isso toda a copy que o afirma é
+condicional em `vendedor.regimeContabilidade`.
+
+Em ambos os casos a taxa marginal é uma derivada discreta (ΔP = 1 000 €, porque
+o IRS tem degraus e um delta de 1 € devolve números verdadeiros e inúteis):
 
 ```
 IRS_marginal(ΔP) = [IRS(faturação + ΔP) − IRS(faturação)] / ΔP
 ```
 
-Calculado com `simularIRSAnual()` já existente. **Não se reimplementa IRS aqui.**
+Calculada com **`simularDeclaracaoIRS()`**, não com o núcleo `simularIRSAnual()`.
+A razão é o englobamento: quem tem salário e passa recibos verdes ao lado
+enfrenta uma marginal muito mais alta, porque a categoria B empilha sobre a A.
+O salário entra em `salarios` (que sabe aplicar a dedução específica do
+Art. 25.º) e **nunca** em `outrosRendimentos`, que espera um valor já líquido —
+há um teste (`verificacao-irs.test.ts`) que reprova quem o faça.
+
+**Não se reimplementa IRS aqui.**
 
 ### 3.3 Retenção na fonte não é custo
 

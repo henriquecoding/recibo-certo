@@ -92,6 +92,28 @@ Cada item diz o que está errado agora, o que fazer, onde, e como verificar.
 Os três primeiros mudam **números que a pessoa vê**; os restantes alargam o
 âmbito.
 
+> **Estado a 2026-08-18 (v2.78.0): R1, R3 e R4 estão FEITOS.** As três secções
+> abaixo ficam como registo do que estava errado e do que se decidiu — não como
+> trabalho por fazer. O que mudou:
+>
+> - **R1** — `situacaoIVAPreco()` é agora um adaptador sobre `situacaoIVA()`.
+>   Regra de arbitragem: a escolha do utilizador governa a matemática e só é
+>   corrigida na perda imediata do Art. 58.º n.º 2 b), provada por faturação
+>   **declarada**; uma projeção nossa avisa mas nunca corrige. Novo aviso
+>   `limiar-art53-a-este-preco` («a este preço passas o limiar em setembro»),
+>   `isencao-ja-perdida` e `iva-declaracao-mensal`.
+> - **R3** — `regimeContabilidade` existe, e a copy que dizia «os custos não
+>   reduzem o IRS» é condicional em três sítios (campo, FAQ, memória de
+>   cálculo). **Obrigou a generalizar o solver**: em organizada o IRS incide
+>   sobre o lucro, e metê-lo em `v` cobrava imposto sobre o custo (≈ +32% de
+>   preço no caso-tipo). O solver ganhou `fracaoSobreLucro` (τ) com escudo
+>   fiscal — ver §1.2 e §3.2 da spec, que foram reescritas. **Com τ = 0 tudo
+>   colapsa nas equações originais, e há um teste que o exige.**
+> - **R4** — `fracoesFiscais()` usa `simularDeclaracaoIRS` com `salarios`.
+>   `outrosRendimentos` continua a não ser tocado.
+>
+> **Ainda por fazer: R2, R5, R6, R7, R8, R9.**
+
 ### R1 · Ligar `situacaoIVA()` — o maior desperdício atual
 
 **O que está errado.** `motores/iva.ts` pergunta o regime de IVA num `select`

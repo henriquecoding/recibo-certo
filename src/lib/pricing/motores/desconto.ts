@@ -19,7 +19,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ModeloDesconto, ResultadoDesconto } from "../tipos";
-import { custosVariaveisAoPreco, lucroAoPreco, type EntradaSolver } from "./preco";
+import { custosVariaveisAoPreco, lucroAoPreco, pisoAbsoluto, type EntradaSolver } from "./preco";
 import { dividir, fracao, num, unidades } from "../numeros";
 
 export interface EntradaDesconto {
@@ -49,11 +49,12 @@ export function calcularDesconto(e: EntradaDesconto): ResultadoDesconto {
   // ── Desconto máximo: onde a contribuição chega a zero ──────────────
   // Resolver `lucroAoPreco(P) = 0` dá o piso; o desconto máximo é a
   // distância percentual entre o preço atual e esse piso.
-  const disponivel = 1 - fracao(e.solver.fracaoLiquido, 0, 5) - fracao(e.solver.fracaoBruto, 0, 5) * (1 + t);
-  const precoPiso =
-    disponivel > 1e-9
-      ? dividir(num(e.solver.custosEuros) + num(e.solver.fixosTransacao), disponivel)
-      : Number.POSITIVE_INFINITY;
+  // Usa-se `pisoAbsoluto`, que é o mesmo solver, em vez de repetir aqui a
+  // equação: a cópia inline ignorava τ e dava um piso errado a quem está em
+  // contabilidade organizada — e um «desconto máximo» maior do que o real.
+  const piso = pisoAbsoluto(e.solver);
+  const disponivel = piso.fracaoDisponivel;
+  const precoPiso = piso.ok ? piso.precoLiquido : Number.POSITIVE_INFINITY;
 
   const descontoMaximo =
     Number.isFinite(precoPiso) && e.precoLiquido > 0

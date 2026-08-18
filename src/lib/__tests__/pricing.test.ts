@@ -955,3 +955,242 @@ describe("avisos legais portugueses", () => {
     expect(aviso?.severidade).toBe("atencao");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  OS MOTORES FISCAIS DO REPOSITÓRIO, LIGADOS
+//
+//  Antes destes testes a engine perguntava o regime de IVA e acreditava na
+//  resposta, calculava o IRS como se a categoria B fosse o único rendimento,
+//  e afirmava a toda a gente que os custos não reduzem o IRS. Cada bloco
+//  abaixo prende uma dessas correções.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R1 · o regime de IVA é DERIVADO, não perguntado", () => {
+  const ctxIsento = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "isento_art53",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+      };
+      patch(c);
+    });
+
+  it("abaixo do limiar a isenção declarada mantém-se", () => {
+    const r = precificar(ctxIsento((c) => void (c.vendedor.faturacaoAnualPrevista = 12000)));
+    expect(r.taxaIVA).toBe(0);
+    expect(r.pvp).toBe(r.precoLiquido);
+  });
+
+  it("acima de 18 750 € a isenção declarada é corrigida (Art. 58.º n.º 2 b)", () => {
+    const r = precificar(ctxIsento((c) => void (c.vendedor.faturacaoAnualPrevista = 40000)));
+    expect(r.taxaIVA).toBe(IVA_NORMAL);
+    // E nunca em silêncio.
+    expect(r.avisos.some((a) => a.id === "isencao-ja-perdida")).toBe(true);
+  });
+
+  it("entre 15 000 e 18 750 a isenção ainda vale hoje — perde-se em janeiro", () => {
+    const r = precificar(ctxIsento((c) => void (c.vendedor.faturacaoAnualPrevista = 17000)));
+    expect(r.taxaIVA).toBe(0);
+    expect(r.avisos.some((a) => a.id === "isencao-ja-perdida")).toBe(false);
+  });
+
+  it("a isenção do Art. 9.º NUNCA é contrariada por um limiar", () => {
+    const r = precificar(
+      ctxIsento((c) => {
+        c.vendedor.regimeIVA = "isento_art9";
+        c.vendedor.faturacaoAnualPrevista = 200000;
+      }),
+    );
+    expect(r.taxaIVA).toBe(0);
+    expect(r.avisos.some((a) => a.id === "isencao-ja-perdida")).toBe(false);
+  });
+
+  it("«não sei» com faturação declarada passa a derivar-se do limiar", () => {
+    const abaixo = precificar(
+      ctxIsento((c) => {
+        c.vendedor.regimeIVA = "nao_sei";
+        c.vendedor.faturacaoAnualPrevista = 9000;
+      }),
+    );
+    const acima = precificar(
+      ctxIsento((c) => {
+        c.vendedor.regimeIVA = "nao_sei";
+        c.vendedor.faturacaoAnualPrevista = 60000;
+      }),
+    );
+    expect(abaixo.taxaIVA).toBe(0);
+    expect(acima.taxaIVA).toBe(IVA_NORMAL);
+  });
+
+  it("«não sei» SEM faturação continua a assumir o regime normal", () => {
+    // Sem prova nenhuma, assumir isenção recomendaria um preço mais baixo a
+    // quem afinal tem de entregar IVA. O pressuposto conservador mantém-se.
+    const r = precificar(
+      ctxIsento((c) => {
+        c.vendedor.regimeIVA = "nao_sei";
+        c.vendedor.faturacaoAnualPrevista = undefined;
+      }),
+    );
+    expect(r.taxaIVA).toBe(IVA_NORMAL);
+  });
+
+  it("uma PROJEÇÃO nossa avisa, mas nunca muda o regime", () => {
+    // 12 000 € declarados: isento. O cenário projeta muito mais do que isso,
+    // e mesmo assim a taxa continua a zero — a projeção não é um facto.
+    const r = precificar(
+      ctxIsento((c) => {
+        c.vendedor.faturacaoAnualPrevista = 12000;
+        c.volume.unidadesMes = 100;
+      }),
+    );
+    expect(r.taxaIVA).toBe(0);
+    const aviso = r.avisos.find((a) => a.id === "limiar-art53-a-este-preco");
+    expect(aviso).toBeDefined();
+    expect(aviso!.titulo).toMatch(/passas o limiar da isenção em \w+/);
+  });
+
+  it("o duplo efeito da isenção sobrevive à derivação (invariante 7)", () => {
+    const isento = precificar(
+      ctxIsento((c) => {
+        c.vendedor.faturacaoAnualPrevista = 12000;
+        c.custos.direto = { valor: 100, incluiIVA: true, escalao: "normal" };
+      }),
+    );
+    const normal = precificar(
+      ctxIsento((c) => {
+        c.vendedor.regimeIVA = "normal";
+        c.vendedor.faturacaoAnualPrevista = 12000;
+        c.custos.direto = { valor: 100, incluiIVA: true, escalao: "normal" };
+      }),
+    );
+    expect(isento.custo.direto).toBeGreaterThan(normal.custo.direto);
+  });
+});
+
+describe("R3 · contabilidade organizada — os custos abatem mesmo", () => {
+  const ctxOrg = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 30000,
+      };
+      c.canal = { canal: "venda_direta", cliente: "consumidor" };
+      patch(c);
+    });
+
+  it("o IRS deixa de ser fração da faturação e passa a incidir no lucro", () => {
+    const simp = precificar(ctxOrg());
+    const org = precificar(ctxOrg((c) => void (c.vendedor.regimeContabilidade = "organizada")));
+    expect(simp.fiscal.irsBase).toBe("faturacao");
+    expect(org.fiscal.irsBase).toBe("lucro");
+  });
+
+  it("o escudo fiscal dos custos baixa o preço necessário para a mesma margem", () => {
+    // Contraintuitivo e correto: em organizada o custo abate ao imposto, logo
+    // é preciso MENOS preço para sobrar a mesma margem depois de impostos.
+    const simp = precificar(ctxOrg());
+    const org = precificar(ctxOrg((c) => void (c.vendedor.regimeContabilidade = "organizada")));
+    expect(org.precoLiquido).toBeLessThan(simp.precoLiquido);
+  });
+
+  it("e a margem pedida é mesmo entregue, conta a conta", () => {
+    const org = precificar(ctxOrg((c) => void (c.vendedor.regimeContabilidade = "organizada")));
+    const p = org.precoLiquido;
+    const custo = org.custo.direto;
+    const ss = p * org.fiscal.ssFracao;
+    const irs = Math.max(0, p - custo) * org.fiscal.irsFracao;
+    const sobra = p - custo - ss - irs;
+    // 40% do preço líquido, a menos de arredondamento.
+    expect(proximo(sobra / p, 0.4, 0.005)).toBe(true);
+  });
+
+  it("o tempo do próprio NÃO é despesa dedutível", () => {
+    // Num serviço o «custo direto» é o custo do tempo. Escudá-lo com τ
+    // inventaria uma despesa que a AT não aceita — o trabalho de quem passa
+    // o recibo é o rendimento que se está a apurar, não um custo dele.
+    const base: EntradaSolver = {
+      custosEuros: 40,
+      fixosTransacao: 0,
+      fracaoLiquido: 0.1498,
+      fracaoBruto: 0,
+      taxaIVA: IVA_NORMAL,
+      fracaoSobreLucro: 0.24,
+    };
+    const tudoDedutivel = precoPorMargem(base, 0.3);
+    const tempoNaoDedutivel = precoPorMargem({ ...base, custosDedutiveis: 0 }, 0.3);
+    expect(tempoNaoDedutivel.precoLiquido).toBeGreaterThan(tudoDedutivel.precoLiquido);
+    // E omitir o campo é o mesmo que declarar tudo dedutível.
+    expect(precoPorMargem({ ...base, custosDedutiveis: 40 }, 0.3).precoLiquido).toBe(
+      tudoDedutivel.precoLiquido,
+    );
+  });
+
+  it("τ = 0 devolve exatamente as equações de sempre", () => {
+    // O regime simplificado não pode ter mudado um cêntimo com a introdução
+    // do termo sobre o lucro.
+    const base: EntradaSolver = {
+      custosEuros: 10,
+      fixosTransacao: 0.35,
+      fracaoLiquido: 0.2,
+      fracaoBruto: 0.15,
+      taxaIVA: IVA_NORMAL,
+    };
+    const semTau = precoPorMargem(base, 0.3);
+    const tauZero = precoPorMargem({ ...base, fracaoSobreLucro: 0 }, 0.3);
+    expect(tauZero.precoLiquido).toBe(semTau.precoLiquido);
+    expect(fracaoDisponivel({ ...base, fracaoSobreLucro: 0 })).toBe(fracaoDisponivel(base));
+  });
+});
+
+describe("R4 · o IRS marginal conta com o emprego", () => {
+  const ctxAcumula = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 30000,
+      };
+      c.canal = { canal: "venda_direta", cliente: "consumidor" };
+      patch(c);
+    });
+
+  it("um salário de 30 000 € sobe a fração marginal de IRS", () => {
+    const so = precificar(ctxAcumula());
+    const com = precificar(ctxAcumula((c) => void (c.vendedor.salarioBrutoAnual = 30000)));
+    expect(com.fiscal.irsFracao).toBeGreaterThan(so.fiscal.irsFracao);
+  });
+
+  it("e por isso empurra o preço para cima", () => {
+    const so = precificar(ctxAcumula());
+    const com = precificar(ctxAcumula((c) => void (c.vendedor.salarioBrutoAnual = 30000)));
+    expect(com.precoLiquido).toBeGreaterThan(so.precoLiquido);
+  });
+
+  it("salário zero é indistinguível de não acumular", () => {
+    const semCampo = precificar(ctxAcumula());
+    const comZero = precificar(ctxAcumula((c) => void (c.vendedor.salarioBrutoAnual = 0)));
+    expect(comZero.fiscal.irsFracao).toBe(semCampo.fiscal.irsFracao);
+  });
+
+  it("a retenção continua a não reduzir a margem, acumule-se ou não", () => {
+    const b2c = precificar(ctxAcumula((c) => void (c.vendedor.salarioBrutoAnual = 30000)));
+    const b2b = precificar(
+      ctxAcumula((c) => {
+        c.vendedor.salarioBrutoAnual = 30000;
+        c.canal = { canal: "venda_direta", cliente: "empresa_pt" };
+      }),
+    );
+    expect(proximo(b2b.margem.margem, b2c.margem.margem, 0.001)).toBe(true);
+    expect(b2b.fiscal.retencaoFracao).toBeGreaterThan(0);
+  });
+});

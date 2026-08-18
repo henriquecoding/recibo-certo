@@ -14,12 +14,18 @@
 //    ou perca-se dinheiro nessa venda.
 //    Consequência de produto: comprar melhor NÃO reduz a Segurança Social.
 //
-//  ② No regime simplificado, os custos NÃO reduzem o IRS.
+//  ② No regime SIMPLIFICADO, os custos NÃO reduzem o IRS.
 //    O rendimento tributável é faturação × coeficiente (Art. 31.º CIRS). O
 //    coeficiente já PRESUME as despesas. Quem negoceia melhor com o
 //    fornecedor não paga menos imposto — fica só com mais margem.
 //    Isto inverte a intuição de quem aprendeu precificação em conteúdo
 //    brasileiro, onde as despesas abatem.
+//
+//    ⚠️ E é FALSO na contabilidade ORGANIZADA, onde o rendimento tributável
+//    é receita − despesas e os custos abatem mesmo. A frase é condicional,
+//    e o campo que a condiciona é `vendedor.regimeContabilidade`. Enquanto
+//    ele não existiu, esta afirmação era feita a toda a gente — o único
+//    sítio onde a ferramenta podia estar factualmente errada.
 //
 //  Daqui sai uma fração `v` que entra na equação do preço em `preco.ts` ao
 //  lado das comissões — porque é da mesma natureza: uma percentagem que
@@ -31,10 +37,10 @@
 //    negócio por causa de um erro de contabilidade mental.
 //
 //  Nada de IRS ou de Segurança Social é reimplementado aqui: chama-se
-//  `contribuicoesSS()` e `simularIRSAnual()` de `fiscal.ts`.
+//  `contribuicoesSS()` e `simularDeclaracaoIRS()` de `fiscal.ts`.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { contribuicoesSS, simularIRSAnual, retencaoNaFonte } from "../../fiscal";
+import { contribuicoesSS, simularDeclaracaoIRS, retencaoNaFonte } from "../../fiscal";
 import { BASE_SS_POR_TIPO, RETENCAO, SS_COEFICIENTE, SS_TAXA } from "../../fiscal-data";
 import type { DetalheFiscalVendedor, PerfilVendedor, TipoCliente } from "../tipos";
 import { dividir, fracao, naoNegativo } from "../numeros";
@@ -55,6 +61,18 @@ export interface EntradaFiscalVendedor {
   cliente: TipoCliente;
   /** Preço líquido unitário, para converter frações em euros. */
   precoLiquido: number;
+  /**
+   * As MESMAS despesas anuais que o solver usou. Tem de ser o mesmo número:
+   * se o detalhe mostrado ao utilizador fosse calculado com outras despesas,
+   * a taxa de IRS no ecrã não seria a que formou o preço.
+   */
+  despesasAnuais?: number;
+  /**
+   * Custo dedutível por unidade, para converter a taxa marginal de IRS em
+   * euros quando ela incide sobre o LUCRO (contabilidade organizada). No
+   * regime simplificado é ignorado: lá o imposto incide sobre a faturação.
+   */
+  custoDedutivelPorUnidade?: number;
 }
 
 const VAZIO: DetalheFiscalVendedor = {
@@ -62,6 +80,7 @@ const VAZIO: DetalheFiscalVendedor = {
   ssFracao: 0,
   ssPorUnidade: 0,
   irsFracao: 0,
+  irsBase: "faturacao",
   irsPorUnidade: 0,
   retencaoFracao: 0,
   retencaoPorUnidade: 0,
@@ -69,15 +88,35 @@ const VAZIO: DetalheFiscalVendedor = {
   notas: [],
 };
 
+export interface OpcoesFracoesFiscais {
+  /**
+   * Despesas anuais documentadas do próprio negócio, derivadas do modelo de
+   * custos. Só têm efeito no regime de contabilidade ORGANIZADA — no
+   * simplificado o coeficiente do Art. 31.º já as presume, e somá-las
+   * outra vez seria deduzi-las duas vezes.
+   */
+  despesasAnuais?: number;
+}
+
 /**
  * Frações fiscais marginais do vendedor: quanto de cada euro faturado sai
  * em Segurança Social e em IRS. Independente do preço — por isso pode ser
  * calculada ANTES de resolver a equação do preço, que é precisamente o que
  * `preco.ts` precisa.
  */
-export function fracoesFiscais(vendedor: PerfilVendedor): {
+export function fracoesFiscais(
+  vendedor: PerfilVendedor,
+  opcoes: OpcoesFracoesFiscais = {},
+): {
   ssFracao: number;
+  /** IRS que incide sobre a FATURAÇÃO (regime simplificado). */
   irsFracao: number;
+  /**
+   * IRS que incide sobre o LUCRO (contabilidade organizada). Exatamente um
+   * destes dois é diferente de zero — nunca ambos, porque são o mesmo
+   * imposto medido em bases diferentes. Somá-los contaria o IRS duas vezes.
+   */
+  irsSobreLucro: number;
   notas: string[];
 } {
   const notas: string[] = [];
@@ -88,7 +127,7 @@ export function fracoesFiscais(vendedor: PerfilVendedor): {
         "Numa sociedade, o IRC incide sobre o lucro — não sobre a faturação. Por isso não entra no preço unitário: entra depois, na conversão do lucro operacional em lucro líquido.",
       );
     }
-    return { ssFracao: 0, irsFracao: 0, notas };
+    return { ssFracao: 0, irsFracao: 0, irsSobreLucro: 0, notas };
   }
 
   const atividade = vendedor.atividade ?? "art151";
@@ -132,31 +171,72 @@ export function fracoesFiscais(vendedor: PerfilVendedor): {
     );
   }
 
-  // ── IRS marginal: derivada discreta de `simularIRSAnual` ────────────
+  // ── IRS marginal: derivada discreta da DECLARAÇÃO ───────────────────
+  //
+  //  Porquê `simularDeclaracaoIRS` e não o núcleo `simularIRSAnual`:
+  //  o IRS é progressivo sobre o ENGLOBAMENTO. Quem tem salário e passa
+  //  recibos verdes ao lado — provavelmente o perfil mais comum — enfrenta
+  //  uma taxa marginal muito mais alta, porque a categoria B empilha em
+  //  cima da categoria A. Calcular como se a categoria B fosse o único
+  //  rendimento subestimava o imposto de toda essa gente.
+  //
+  //  O salário entra como `salarios`, para o motor lhe aplicar a dedução
+  //  específica do Art. 25.º. NUNCA como `outrosRendimentos` — esse campo
+  //  espera um valor já líquido, e alimentá-lo com um bruto é o erro que
+  //  já custou entre 940 € e 2 050 € de IRS a mais em três ecrãs.
+  const regimeContabilidade = vendedor.regimeContabilidade ?? "simplificado";
+  const organizada = regimeContabilidade === "organizada";
+  const despesasJustificadas = organizada ? naoNegativo(opcoes.despesasAnuais) : 0;
+  const salarioBruto = naoNegativo(vendedor.salarioBrutoAnual);
+
   let irsFracao = 0;
   if (faturacaoBase > 0) {
-    const base = simularIRSAnual({
-      brutoAnual: faturacaoBase,
-      tipo: atividade,
-      anoAtividade: vendedor.anoAtividade ?? 3,
-    });
-    const mais = simularIRSAnual({
-      brutoAnual: faturacaoBase + DELTA_MARGINAL,
-      tipo: atividade,
-      anoAtividade: vendedor.anoAtividade ?? 3,
-    });
-    irsFracao = fracao(dividir(mais.irsEstimado - base.irsEstimado, DELTA_MARGINAL), 0, 0.6);
+    const irsCom = (bruto: number) =>
+      simularDeclaracaoIRS({
+        salarios: salarioBruto > 0 ? { bruto: salarioBruto } : undefined,
+        independente: {
+          brutoAnual: bruto,
+          tipo: atividade,
+          anoAtividade: vendedor.anoAtividade ?? 3,
+          regimeContabilidade,
+          despesasJustificadas,
+        },
+      }).irsTotal;
+
+    irsFracao = fracao(
+      dividir(irsCom(faturacaoBase + DELTA_MARGINAL) - irsCom(faturacaoBase), DELTA_MARGINAL),
+      0,
+      0.6,
+    );
 
     notas.push(
-      "No regime simplificado o IRS incide sobre um coeficiente da faturação — as tuas despesas reais não o reduzem. É por isso que uma compra mais barata te dá margem, mas não te dá menos imposto.",
+      organizada
+        ? "Estás em contabilidade organizada: o IRS incide sobre a receita MENOS as despesas documentadas. Ao contrário do regime simplificado, aqui reduzir custos reduz mesmo o imposto — mas obriga a ter tudo documentado."
+        : "No regime simplificado o IRS incide sobre um coeficiente da faturação — as tuas despesas reais não o reduzem. É por isso que uma compra mais barata te dá margem, mas não te dá menos imposto.",
     );
+
+    if (salarioBruto > 0) {
+      notas.push(
+        `Como já tens ${Math.round(salarioBruto).toLocaleString("pt-PT")} € de salário, cada euro que faturas entra POR CIMA dele no englobamento — e por isso leva uma taxa mais alta do que levaria se os recibos verdes fossem o teu único rendimento.`,
+      );
+    }
   } else {
     notas.push(
       "Sem faturação anual prevista não dá para estimar o IRS marginal: o mesmo euro custa 13% a quem fatura 12 000 € e 43,5% a quem fatura 60 000 €. Preenche a faturação anual para veres o número real.",
     );
   }
 
-  return { ssFracao, irsFracao, notas };
+  // A MESMA taxa marginal, encaminhada para a base em que o imposto
+  // realmente incide. No simplificado o tributável é faturação × coeficiente
+  // (Art. 31.º) — logo é fração da faturação. Na organizada é
+  // receita − despesas (Art. 28.º) — logo é fração do lucro, e o solver
+  // aplica-lhe o escudo fiscal dos custos.
+  return {
+    ssFracao,
+    irsFracao: organizada ? 0 : irsFracao,
+    irsSobreLucro: organizada ? irsFracao : 0,
+    notas,
+  };
 }
 
 /**
@@ -180,19 +260,30 @@ export function fracaoRetencao(vendedor: PerfilVendedor, cliente: TipoCliente): 
 }
 
 export function fiscalidadeVendedor(entrada: EntradaFiscalVendedor): DetalheFiscalVendedor {
-  const { vendedor, cliente, precoLiquido } = entrada;
+  const { vendedor, cliente, precoLiquido, despesasAnuais } = entrada;
 
   if (vendedor.tipo !== "ti") {
-    const { notas } = fracoesFiscais(vendedor);
+    const { notas } = fracoesFiscais(vendedor, { despesasAnuais });
     return { ...VAZIO, notas };
   }
 
-  const { ssFracao, irsFracao, notas } = fracoesFiscais(vendedor);
+  const { ssFracao, irsFracao, irsSobreLucro, notas } = fracoesFiscais(vendedor, {
+    despesasAnuais,
+  });
   const retFracao = fracaoRetencao(vendedor, cliente);
   const p = naoNegativo(precoLiquido);
 
   const ssPorUnidade = p * ssFracao;
-  const irsPorUnidade = p * irsFracao;
+
+  // Em contabilidade organizada o IRS incide sobre o LUCRO, e por isso os
+  // euros por unidade medem-se sobre o que sobra depois do custo dedutível —
+  // não sobre o preço inteiro. A `irsFracao` mostrada continua a ser a taxa
+  // marginal verdadeira; o que muda é a base sobre a qual se aplica, e é por
+  // isso que `irsBase` existe: sem ela, a interface mostraria «24% de IRS»
+  // ao lado de um valor em euros que não é 24% do preço.
+  const organizada = irsSobreLucro > 0;
+  const lucroTributavel = Math.max(0, p - naoNegativo(entrada.custoDedutivelPorUnidade));
+  const irsPorUnidade = organizada ? lucroTributavel * irsSobreLucro : p * irsFracao;
   const retencaoPorUnidade = p * retFracao;
 
   if (retFracao > 0) {
@@ -205,7 +296,8 @@ export function fiscalidadeVendedor(entrada: EntradaFiscalVendedor): DetalheFisc
     aplicavel: true,
     ssFracao,
     ssPorUnidade,
-    irsFracao,
+    irsFracao: organizada ? irsSobreLucro : irsFracao,
+    irsBase: organizada ? "lucro" : "faturacao",
     irsPorUnidade,
     retencaoFracao: retFracao,
     retencaoPorUnidade,

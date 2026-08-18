@@ -97,6 +97,37 @@ export interface PerfilVendedor {
   /** Isenções de Segurança Social (1.º ano, acumulação com emprego). */
   isencaoSSPrimeiroAno?: boolean;
   acumulaEmprego?: boolean;
+  /**
+   * Regime de determinação do rendimento (Art. 28.º CIRS). Muda uma
+   * afirmação inteira da ferramenta:
+   *
+   *   · simplificado — o coeficiente do Art. 31.º PRESUME as despesas, e
+   *     por isso os custos reais NÃO reduzem o IRS;
+   *   · organizada  — o rendimento tributável é receita − despesas, e por
+   *     isso os custos reduzem o IRS.
+   *
+   * Enquanto o campo não existiu, a ferramenta dizia a primeira frase a
+   * toda a gente — o único sítio onde podia estar factualmente errada, e
+   * não apenas incompleta. Omissão = simplificado, que é o regime da
+   * esmagadora maioria de quem passa recibos verdes.
+   */
+  regimeContabilidade?: "simplificado" | "organizada";
+  /**
+   * Salário anual BRUTO de categoria A, para quem acumula emprego com
+   * recibos verdes — provavelmente o perfil mais comum.
+   *
+   * O IRS é progressivo sobre o ENGLOBAMENTO das duas categorias: o mesmo
+   * euro faturado custa muito mais a quem já tem 30 000 € de salário do
+   * que a quem só tem a categoria B. Sem isto, o IRS marginal era
+   * calculado como se os recibos verdes fossem o único rendimento.
+   *
+   * ⚠️ Este valor vai para `simularDeclaracaoIRS({ salarios })`, que sabe
+   * aplicar a dedução específica do Art. 25.º. NUNCA para
+   * `outrosRendimentos` do núcleo, que espera um valor já líquido — o
+   * comentário nesse campo explica porquê, e `verificacao-irs.test.ts`
+   * reprova quem o faça.
+   */
+  salarioBrutoAnual?: number;
 }
 
 // ─── 3. O que se vende ─────────────────────────────────────────────────
@@ -416,8 +447,18 @@ export interface DetalheFiscalVendedor {
   /** Fração do líquido que sai em Segurança Social. */
   ssFracao: number;
   ssPorUnidade: number;
-  /** Fração do líquido que sai em IRS marginal. */
+  /** Taxa marginal de IRS. A BASE sobre que incide vem em `irsBase`. */
   irsFracao: number;
+  /**
+   * Sobre o que incide o IRS:
+   *   · `faturacao` — regime simplificado, o coeficiente do Art. 31.º já
+   *     presume as despesas, e a taxa aplica-se ao preço líquido inteiro;
+   *   · `lucro`     — contabilidade organizada (Art. 28.º), a taxa aplica-se
+   *     ao que sobra depois dos custos dedutíveis.
+   * Mostrar a percentagem sem esta distinção faz «24%» aparecer ao lado de
+   * um valor em euros que não é 24% do preço.
+   */
+  irsBase: "faturacao" | "lucro";
   irsPorUnidade: number;
   /** Retenção na fonte: caixa, não custo. */
   retencaoFracao: number;

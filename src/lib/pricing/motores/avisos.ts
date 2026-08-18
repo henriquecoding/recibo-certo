@@ -30,13 +30,28 @@ import type { ResultadoComissoes } from "./comissoes";
 import type { ResultadoCustos } from "./custos";
 import type { SaidaSolver } from "./preco";
 import type { SaidaMargem } from "./margem";
-import type { SituacaoIVAPreco } from "./iva";
+import { taxaDe, type SituacaoIVAPreco } from "./iva";
 import type { ResultadoTempo } from "./tempo";
 import { capacidadeMensal } from "./tempo";
 import { num } from "../numeros";
 
 const eur = (n: number) => `${num(n).toFixed(2).replace(".", ",")} €`;
 const pctTexto = (n: number) => `${(num(n) * 100).toFixed(1).replace(".", ",")}%`;
+
+const MESES = [
+  "janeiro",
+  "fevereiro",
+  "março",
+  "abril",
+  "maio",
+  "junho",
+  "julho",
+  "agosto",
+  "setembro",
+  "outubro",
+  "novembro",
+  "dezembro",
+] as const;
 
 export interface EntradaAvisos {
   contexto: ContextoPreco;
@@ -147,6 +162,73 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
       fonte: "Art. 53.º CIVA",
       fonteUrl:
         "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
+    });
+  }
+
+  // ── O limiar do Art. 53.º visto A PARTIR DO PREÇO ──────────────────
+  //  A pergunta que uma calculadora de preços pode responder e um
+  //  simulador de IRS não: a este preço e a este volume, QUANDO é que
+  //  deixo de estar isento?
+  //
+  //  A projeção é nossa, não é um facto do utilizador — por isso avisa e
+  //  nunca corrige o regime (ver o cabeçalho de `iva.ts`). O mês sai de
+  //  uma faturação constante ao longo do ano: é o pressuposto mais simples
+  //  que se pode declarar, e está declarado no texto.
+  if (
+    e.saida.ok &&
+    !e.situacaoIVA.liquida &&
+    e.situacaoIVA.zona !== "isento_natureza" &&
+    e.unidadesMes > 0
+  ) {
+    const faturacaoMes = e.saida.precoLiquido * e.unidadesMes;
+    const projetada = faturacaoMes * 12;
+    const limiar = e.situacaoIVA.limiar;
+
+    if (projetada > limiar && faturacaoMes > 0) {
+      // Em que mês a faturação acumulada cruza o limiar.
+      const mes = Math.min(12, Math.ceil(limiar / faturacaoMes));
+      const acimaDoImediato = projetada > e.situacaoIVA.limiarImediato;
+      avisos.push({
+        id: "limiar-art53-a-este-preco",
+        severidade: acimaDoImediato ? "atencao" : "info",
+        titulo: `A este preço, passas o limiar da isenção em ${MESES[mes - 1]}`,
+        texto:
+          `Com ${eur(e.saida.precoLiquido)} por unidade e ${e.unidadesMes} unidades por mês, ` +
+          `faturas cerca de ${eur(projetada)} por ano — acima dos ${eur(limiar)} do Art. 53.º. ` +
+          (acimaDoImediato
+            ? `E como isso ultrapassa os ${eur(e.situacaoIVA.limiarImediato)} (o limiar excedido em mais de 25%), a isenção cai de imediato, não em janeiro: ` +
+              `a partir daí ou o teu PVP sobe ${pctTexto(taxaDe(e.contexto.vendedor.regiao, e.situacaoIVA.escalaoVenda))} ou a margem desce.`
+            : `A isenção só se perde a 1 de janeiro seguinte — mas a partir daí ou o teu PVP sobe ` +
+              `${pctTexto(taxaDe(e.contexto.vendedor.regiao, e.situacaoIVA.escalaoVenda))} ou a margem desce. ` +
+              `Vale a pena decidir isso agora, e não em janeiro.`) +
+          " A conta assume que vendes o mesmo todos os meses; se a tua atividade for sazonal, o mês muda.",
+        fonte: acimaDoImediato ? "Art. 58.º n.º 2 b) CIVA" : "Art. 58.º n.º 2 a) CIVA",
+        fonteUrl:
+          "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-58-o-do-civa.aspx",
+      });
+    }
+  }
+
+  // A derivação contrariou a resposta do utilizador. Nunca em silêncio.
+  if (e.situacaoIVA.corrigidaPeloLimiar) {
+    avisos.push({
+      id: "isencao-ja-perdida",
+      severidade: "atencao",
+      titulo: "Disseste que estás isento, mas já não podes estar",
+      texto: `${e.situacaoIVA.oQueAcontece} ${e.situacaoIVA.oQueTensDeFazer} O preço aqui já está calculado com IVA — recomendar-te um preço sem ele seria recomendar-te um preço que não cobre o que vais ter de entregar.`,
+      fonte: e.situacaoIVA.baseLegal[0],
+    });
+  }
+
+  // Art. 41.º: a periodicidade não muda o preço, mas muda a tesouraria —
+  // e o motor fiscal já a sabe, por isso não custa nada dizê-la.
+  if (e.situacaoIVA.periodicidade === "mensal") {
+    avisos.push({
+      id: "iva-declaracao-mensal",
+      severidade: "info",
+      titulo: "A tua declaração de IVA é mensal",
+      texto: `${e.situacaoIVA.quandoAcontece} Isso muda a tesouraria: o IVA que cobras fica menos tempo na tua conta do que ficaria no regime trimestral.`,
+      fonte: "Art. 41.º n.º 1 CIVA",
     });
   }
 

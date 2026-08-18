@@ -127,9 +127,32 @@ describe("Regra 11 · o que carrega ao entrar (INEGOCIÁVEL)", () => {
 
   it("o índice é pequeno — é o custo de ENTRAR no popup", () => {
     const kb = Buffer.byteLength(JSON.stringify(indice)) / 1024;
-    // Teto generoso face aos ~4 KB atuais, mas que trava a regressão óbvia:
-    // alguém voltar a enfiar a história toda no índice.
-    expect(kb, `indice.json tem ${kb.toFixed(1)} KB`).toBeLessThan(12);
+
+    // O que interessa medir é a RAZÃO entre entrar e carregar tudo, não um
+    // número absoluto de KB. Um teto fixo envelhece sozinho: o índice traz o
+    // mês corrente inteiro, por construção, e um mês com setenta versões pesa
+    // legitimamente mais do que um mês com cinco — sem que nada tenha
+    // regredido. (Este teste chegou a falhar por isso, com o índice a 13 KB e
+    // a regra cumprida à risca.)
+    //
+    // A regressão que ele existe para apanhar — alguém voltar a enfiar a
+    // história toda no índice — está travada estruturalmente pelo teste
+    // «o índice traz o mês atual e NÃO traz as entradas dos anteriores»,
+    // que exige que cada mês fechado tenha exatamente chave, n e rótulo.
+    // Aqui garante-se o efeito: entrar tem de custar uma fração do total.
+    const totalKb =
+      readdirSync(join(PUBLICO, "meses"))
+        .map((f) => Buffer.byteLength(readFileSync(join(PUBLICO, "meses", f), "utf8")))
+        .reduce((a, b) => a + b, 0) / 1024;
+
+    expect(
+      kb,
+      `indice.json tem ${kb.toFixed(1)} KB, ${((kb / totalKb) * 100).toFixed(0)}% do histórico (${totalKb.toFixed(0)} KB)`,
+    ).toBeLessThan(totalKb * 0.25);
+
+    // E um teto absoluto, generoso, contra o índice crescer sem limite mesmo
+    // que o histórico cresça com ele.
+    expect(kb, `indice.json tem ${kb.toFixed(1)} KB`).toBeLessThan(40);
   });
 
   it("um mês só é pedido a pedido — nunca em lote nem à entrada", () => {

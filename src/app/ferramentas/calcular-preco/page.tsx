@@ -62,7 +62,7 @@ const FAQ = [
   },
   {
     q: "Os meus custos reduzem o IRS que pago?",
-    a: "No regime simplificado, não. O rendimento tributável é a faturação multiplicada por um coeficiente (Art. 31.º do CIRS), e esse coeficiente já presume as despesas. Comprar melhor aumenta a tua margem, mas não reduz o imposto — é o contrário do que a maioria do conteúdo brasileiro sobre precificação ensina.",
+    a: "Depende do regime, e a diferença é grande. No regime simplificado, não: o rendimento tributável é a faturação multiplicada por um coeficiente (Art. 31.º do CIRS), e esse coeficiente já presume as despesas — comprar melhor aumenta a tua margem, mas não reduz o imposto. Em contabilidade organizada, sim: o tributável é a receita menos as despesas documentadas (Art. 28.º), e cada euro de custo abate mesmo ao imposto. A calculadora pergunta-te qual é o teu regime e faz a conta certa para cada um.",
   },
   {
     q: "Como calculo quanto cobrar por hora?",
@@ -202,7 +202,8 @@ function Contexto() {
             },
             {
               titulo: "No simplificado, os custos não abatem",
-              texto: "O coeficiente do Art. 31.º já presume as despesas. Comprar melhor dá-te margem, não te dá menos IRS.",
+              texto:
+                "O coeficiente do Art. 31.º já presume as despesas: comprar melhor dá-te margem, não te dá menos IRS. Na contabilidade organizada é ao contrário — o imposto incide sobre receita menos despesas, e a ferramenta calcula-o assim se disseres que é o teu caso.",
             },
             {
               titulo: "A retenção não é um custo",

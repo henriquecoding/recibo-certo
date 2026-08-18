@@ -28,7 +28,7 @@ import type { ResultadoCustos } from "./custos";
 import type { ResultadoComissoes } from "./comissoes";
 import type { SituacaoIVAPreco } from "./iva";
 import type { ResultadoTempo } from "./tempo";
-import { cent } from "../numeros";
+import { cent, num } from "../numeros";
 
 const URL_CIVA_18 =
   "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva18.aspx";
@@ -186,14 +186,28 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
   }
 
   if (e.fiscal.aplicavel && e.fiscal.irsPorUnidade > 0) {
+    // A frase sobre os custos é condicional: é verdadeira no simplificado
+    // (o coeficiente do Art. 31.º presume as despesas) e FALSA na
+    // contabilidade organizada, onde o tributável é receita − despesas.
+    const organizada = e.contexto.vendedor.regimeContabilidade === "organizada";
+    const acumula = num(e.contexto.vendedor.salarioBrutoAnual) > 0;
     linhas.push({
       rotulo: "IRS (taxa marginal)",
       valor: -cent(e.fiscal.irsPorUnidade),
       percentagem: e.fiscal.irsFracao,
       confianca: "oficial",
-      fonte: "Arts. 31.º e 68.º CIRS — coeficiente do regime simplificado e escalões",
+      fonte: organizada
+        ? "Arts. 28.º e 68.º CIRS — contabilidade organizada e escalões"
+        : "Arts. 31.º e 68.º CIRS — coeficiente do regime simplificado e escalões",
       fonteUrl: URL_CIRS_31,
-      nota: "Calculado como imposto adicional sobre a tua faturação anual prevista. No regime simplificado, os teus custos não o reduzem.",
+      nota:
+        `Calculado como imposto adicional sobre a tua faturação anual prevista${
+          acumula ? ", já somada ao teu salário no englobamento" : ""
+        }. ${
+          organizada
+            ? "Em contabilidade organizada os teus custos reduzem-no — o imposto incide sobre receita menos despesas documentadas."
+            : "No regime simplificado, os teus custos não o reduzem."
+        }`,
     });
   }
 

@@ -278,9 +278,28 @@ export default function CamposPreco({
                   <CampoEuros
                     id="faturacao-anual"
                     rotulo="Faturação anual que prevês"
-                    ajuda="Sem isto o IRS fica de fora do cálculo: o mesmo euro custa 13% a quem fatura 12 000 € e 43,5% a quem fatura 60 000 €."
+                    ajuda="Sem isto o IRS fica de fora do cálculo: o mesmo euro custa 13% a quem fatura 12 000 € e 43,5% a quem fatura 60 000 €. Também é daqui que sai o teu regime de IVA."
                     valor={contexto.vendedor.faturacaoAnualPrevista ?? 0}
                     aoMudar={(v) => atualizar((c) => void (c.vendedor.faturacaoAnualPrevista = v))}
+                    max={500_000}
+                  />
+                  <Seletor
+                    id="regime-contabilidade"
+                    rotulo="Como determinas o rendimento"
+                    ajuda="No simplificado o coeficiente do Art. 31.º já presume as despesas, e por isso os teus custos não reduzem o IRS. Na contabilidade organizada reduzem — o imposto incide sobre receita menos despesas."
+                    opcoes={[
+                      { valor: "simplificado", rotulo: "Regime simplificado" },
+                      { valor: "organizada", rotulo: "Contabilidade organizada" },
+                    ]}
+                    valor={contexto.vendedor.regimeContabilidade ?? "simplificado"}
+                    aoMudar={(v) => atualizar((c) => void (c.vendedor.regimeContabilidade = v))}
+                  />
+                  <CampoEuros
+                    id="salario-bruto-anual"
+                    rotulo="Salário anual bruto, se acumulas"
+                    ajuda="Se além dos recibos verdes tens um emprego, o IRS soma os dois: cada euro que faturas entra por cima do salário e leva uma taxa mais alta. Deixa a zero se não acumulas."
+                    valor={contexto.vendedor.salarioBrutoAnual ?? 0}
+                    aoMudar={(v) => atualizar((c) => void (c.vendedor.salarioBrutoAnual = v))}
                     max={500_000}
                   />
                   <label className="flex items-start gap-2.5 text-sm text-stone-600 dark:text-stone-400 sm:col-span-2">

@@ -55,11 +55,19 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const q = Math.max(0, num(contexto.volume?.unidadesMes));
 
   // ── 1. IVA ─────────────────────────────────────────────────────────
-  const iva = situacaoIVAPreco(
-    contexto.vendedor.regimeIVA,
-    contexto.vendedor.regiao,
-    contexto.produto.escalaoVenda,
-  );
+  // O regime não é a resposta do `select`: é o que `situacaoIVA()` deriva da
+  // faturação DECLARADA. Só a faturação declarada entra aqui — a projeção do
+  // cenário (preço × unidades × 12) não corrige regime nenhum, porque é uma
+  // estimativa nossa. Ela vive em `avisos.ts`, onde já há um preço resolvido
+  // e onde o seu lugar é avisar, não mudar o número.
+  const iva = situacaoIVAPreco({
+    regime: contexto.vendedor.regimeIVA,
+    regiao: contexto.vendedor.regiao,
+    escalaoVenda: contexto.produto.escalaoVenda,
+    faturacaoAnual: contexto.vendedor.faturacaoAnualPrevista,
+    tipoVendedor: contexto.vendedor.tipo,
+    primeiroAno: (contexto.vendedor.anoAtividade ?? 3) === 1,
+  });
 
   // ── 2. Custos ──────────────────────────────────────────────────────
   const custos = calcularCustos({
@@ -80,13 +88,32 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const fixosPorUnidade = q > 0 ? dividir(fixosMensaisTotais, q) : 0;
 
   // ── 4. Fiscalidade do vendedor (entra ANTES do solver) ─────────────
-  const { ssFracao, irsFracao } = fracoesFiscais(contexto.vendedor);
+  //
+  //  As despesas anuais do próprio negócio, tal como o modelo de custos as
+  //  conhece: o que varia com cada venda ao volume esperado, mais os fixos
+  //  do ano. Só têm efeito em contabilidade ORGANIZADA — no simplificado o
+  //  coeficiente do Art. 31.º já as presume, e `fracoesFiscais` ignora-as.
+  //
+  //  Não incluem o custo do tempo: o trabalho do próprio não é uma despesa
+  //  dedutível de categoria B, é o rendimento que se está a apurar.
+  const despesasAnuais = (custos.diretoAjustado + custos.variaveisFixos + custos.devolucoes) * q * 12 + fixosMensaisTotais * 12;
+
+  const { ssFracao, irsFracao, irsSobreLucro } = fracoesFiscais(contexto.vendedor, {
+    despesasAnuais,
+  });
 
   // ── 5. Tempo (serviços) ────────────────────────────────────────────
+  //  O custo do tempo é brutado para repor os impostos que saem de cada euro
+  //  faturado. Em contabilidade organizada o IRS não sai de cada euro
+  //  faturado — sai do lucro — e por isso não entra aqui: entraria a dobrar,
+  //  porque o solver já lhe aplica τ.
+  //  Exatamente um de `irsFracao`/`irsSobreLucro` é diferente de zero: em
+  //  qualquer dos regimes é o IRS que vai comer este rendimento, e o valor/
+  //  hora tem de o repor para a pessoa ficar mesmo com o que pediu.
   const tempo = calcularTempo({
     tempo: contexto.tempo,
     custosFixosAnuais: fixosMensaisTotais * 12,
-    fracaoFiscal: ssFracao + irsFracao,
+    fracaoFiscal: ssFracao + irsFracao + irsSobreLucro,
   });
 
   // Num serviço, o custo do tempo É o custo direto.
@@ -95,6 +122,11 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
       ? tempo.custoTempoPorUnidade
       : custos.diretoAjustado;
 
+  // ...mas NÃO é despesa dedutível: o trabalho do próprio é o rendimento
+  // que se está a apurar, não um custo da atividade. A mesma linha que
+  // `despesasAnuais` acima já respeita.
+  const custoDiretoDedutivel = custos.diretoAjustado;
+
   // ── 6. Montar a equação ────────────────────────────────────────────
   const solver: EntradaSolver = {
     custosEuros: custoDiretoFinal + custos.variaveisFixos,
@@ -102,6 +134,11 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     fracaoLiquido: comissoes.sobreLiquido + ssFracao + irsFracao,
     fracaoBruto: comissoes.sobreBruto,
     taxaIVA: iva.taxaVenda,
+    // Só a contabilidade organizada põe aqui alguma coisa. No simplificado o
+    // IRS já vive em `fracaoLiquido`, porque lá incide mesmo sobre a
+    // faturação. Os dois nunca são preenchidos ao mesmo tempo.
+    fracaoSobreLucro: irsSobreLucro,
+    custosDedutiveis: custoDiretoDedutivel + custos.variaveisFixos,
   };
 
   // Ao resolver para uma margem/markup, os custos fixos por unidade têm de
@@ -110,6 +147,9 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const solverComFixos: EntradaSolver = {
     ...solver,
     custosEuros: solver.custosEuros + fixosPorUnidade,
+    // A renda, o software e a contabilidade são despesa dedutível como
+    // qualquer outra — ao contrário do tempo do próprio.
+    custosDedutiveis: (solver.custosDedutiveis ?? 0) + fixosPorUnidade,
   };
 
   // ── 7. Resolver o preço ────────────────────────────────────────────
@@ -208,6 +248,10 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     vendedor: contexto.vendedor,
     cliente: contexto.canal.cliente,
     precoLiquido,
+    // O mesmo número que entrou no solver — senão a taxa de IRS mostrada não
+    // seria a taxa que formou o preço.
+    despesasAnuais,
+    custoDedutivelPorUnidade: (solverComFixos.custosDedutiveis ?? 0) + comissoes.fixos,
   });
 
   // ── 13. Tesouraria ─────────────────────────────────────────────────
