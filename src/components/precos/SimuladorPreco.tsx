@@ -68,6 +68,9 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     if (lido?.cenario) {
       setCenario(lido.cenario);
       setContexto(lido);
+      // O que vem do cofre é trabalho já feito por esta pessoa, não um
+      // exemplo nosso.
+      setTocado(true);
     }
   }, [cenario]);
 
@@ -135,7 +138,21 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     });
   }, [cenario]);
 
+  // ── A pessoa já personalizou alguma coisa? ─────────────────────────
+  //  Sem isto, a ferramenta anunciava «QUANTO DEVES COBRAR 1,09 €» a quem
+  //  acabara de escolher «um produto digital» e mais nada. O número saía
+  //  inteiro dos valores por omissão do cenário — custo 0 €, margem 70%,
+  //  volume 20 — e era apresentado como recomendação.
+  //
+  //  É o oposto do que este projeto promete («um vazio honesto vale mais do
+  //  que um número plausível»): não é uma estimativa com pouca informação, é
+  //  um número que a pessoa nunca introduziu, com a autoridade de um
+  //  conselho. Enquanto ninguém tocar em nada, o resultado assume-se como
+  //  exemplo — e diz-lo.
+  const [tocado, setTocado] = useState(false);
+
   const atualizar = (patch: (c: ContextoPreco) => void) => {
+    setTocado(true);
     setContexto((atual) => {
       if (!atual) return atual;
       const copia = structuredClone(atual);
@@ -182,25 +199,39 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           quanto dá e experimentar outra coisa. A memória de cálculo desce
           para debaixo dos campos — é para conferir depois, não para
           atravessar antes. ─────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-        <div className="order-2 space-y-4 lg:order-1">
-          <CamposPreco contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
-          <MemoriaCalculo linhas={resultado.explicacao} />
-        </div>
+      {/* PRIMEIRO PERSONALIZA-SE, DEPOIS VÊ-SE O NÚMERO.
+          O resultado já esteve à frente de tudo, e isso punha uma
+          recomendação por cima de campos que ninguém tinha preenchido. Agora
+          a ordem é a da conversa: dizes o essencial, aparece o preço com o
+          cursor para o afinar, e só quem quiser mais precisão desce aos
+          blocos avançados. */}
+      <CamposPreco
+        contexto={contexto}
+        definicao={definicao}
+        atualizar={atualizar}
+        resultado={resultado}
+        parte="essencial"
+      />
 
-        {/* Sem `sticky`, de propósito. O cartão de resultado tem ~830 px de
-            altura; com o slider por baixo, a coluna passa dos 1 200 px e não
-            cabe em portátil nenhum. Uma coluna pegajosa mais alta do que a
-            janela fica presa com o fundo cortado — e a alternativa (dar-lhe
-            scroll próprio) transforma metade do ecrã num painel que rouba a
-            roda do rato. Aqui a coluna corre com a página: o preço e o
-            cursor estão no topo dela, que é o que se pediu, e nada fica
-            fora de alcance. */}
-        <div className="order-1 space-y-4 lg:order-2">
-          <ResultadoPreco resultado={resultado} temFiscalidade={temFiscalidade} />
-          {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} /> : null}
-        </div>
+      {/* Sem `sticky`, de propósito. O cartão de resultado tem ~830 px de
+          altura; com o cursor por baixo, a coluna passa dos 1 200 px e não
+          cabe em portátil nenhum. Uma coluna pegajosa mais alta do que a
+          janela fica presa com o fundo cortado — e dar-lhe scroll próprio
+          transformava metade do ecrã num painel que rouba a roda do rato. */}
+      <div className="space-y-4">
+        <ResultadoPreco resultado={resultado} temFiscalidade={temFiscalidade} exemplo={!tocado} />
+        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} /> : null}
       </div>
+
+      <CamposPreco
+        contexto={contexto}
+        definicao={definicao}
+        atualizar={atualizar}
+        resultado={resultado}
+        parte="avancado"
+      />
+
+      <MemoriaCalculo linhas={resultado.explicacao} />
 
       <Avisos avisos={resultado.avisos} />
 

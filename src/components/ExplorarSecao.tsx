@@ -320,7 +320,9 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm font-semibold">Quiz Fiscal</span>
-                  <span className="block text-xs text-white/80">
+                  {/* /95 e não /80: sobre o verde da marca, o branco a 80% dá 3,82:1 e
+                      falha AA. A 95% dá 4,71:1 e a de-ênfase mantém-se. */}
+                  <span className="block text-xs text-white/95">
                     {TOTAL_PERGUNTAS_META.toLocaleString("pt-PT")} perguntas com base legal
                   </span>
                 </span>

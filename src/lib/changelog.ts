@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.81.0",
+    data: "2026-08-18",
+    titulo: "A calculadora pergunta antes de responder — e o site inteiro passa a ser legível",
+    itens: [
+      "A calculadora de preços mostrava o resultado antes de te perguntar seja o que for. Escolhias «um produto digital» e ela anunciava «QUANTO DEVES COBRAR: 1,09 €» — um número feito de um custo de 0 €, uma margem de 70% e um volume de 20 vendas que ninguém escolheu. Era um palpite nosso com ar de conselho.",
+      "Agora a ordem é a da conversa: primeiro dizes o essencial, depois aparece o preço com o cursor para o afinar, e só quem quiser mais precisão desce aos blocos avançados. E enquanto não tocares em nada, o número assume-se como o que é — «um exemplo, por enquanto» — em vez de se apresentar como recomendação.",
+      "A atividade passa a escolher-se na mesma lista do simulador de recibos verdes, com dezenas de atividades em vez de quatro categorias. Várias têm coeficiente, retenção ou base de Segurança Social próprios, e antes eram ignorados: a mesma pessoa obtinha números diferentes para o mesmo caso consoante a ferramenta que abrisse.",
+      "O contraste do texto passou a cumprir a norma de acessibilidade em todo o site. Eram 825 pontos a falhar, medidos em cinco páginas e nos dois temas; agora são zero. O verde da marca escureceu o mínimo necessário — falhava nas duas direções ao mesmo tempo, no texto branco sobre verde e no texto verde sobre branco — e o cinzento mais claro, que dava 2,5:1, deixou de ser usado em texto. Quem tinha dificuldade em ler as legendas, os rótulos e o rodapé deixa de ter.",
+    ],
+  },
+  {
     version: "2.80.0",
     data: "2026-08-18",
     titulo: "Margem e markup explicados a sério — e dois enganos de conta corrigidos",

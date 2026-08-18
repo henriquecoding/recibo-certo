@@ -81,7 +81,7 @@ function Chip({
       }`}
     >
       {children}{" "}
-      <span className={ativo ? "text-white/70" : vazio ? "text-stone-300 dark:text-stone-700" : "text-stone-400"}>
+      <span className={ativo ? "text-white/95" : vazio ? "text-stone-300 dark:text-stone-700" : "text-stone-400"}>
         · {contagem}
       </span>
     </button>

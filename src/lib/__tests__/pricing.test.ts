@@ -15,7 +15,15 @@ import {
   type ContextoPreco,
   type EntradaSolver,
 } from "@/lib/pricing";
-import { IVA_TAXAS, SS_TAXA, SS_COEFICIENTE } from "@/lib/fiscal-data";
+import {
+  IVA_TAXAS,
+  SS_TAXA,
+  SS_COEFICIENTE,
+  ATIVIDADES,
+  BASE_SS_POR_TIPO,
+  RETENCAO,
+  efeitoFiscal,
+} from "@/lib/fiscal-data";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  MATRIZ DE TESTE DA PRICING ENGINE
@@ -1284,5 +1292,77 @@ describe("a faixa não mostra o mesmo número duas vezes", () => {
       const pvps = r.faixa.ancoras.map((a) => a.pvp.toFixed(2));
       expect(new Set(pvps).size, JSON.stringify(pvps)).toBe(pvps.length);
     }
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  R2 · A ATIVIDADE É A MESMA EM TODA A APLICAÇÃO
+//  ---------------------------------------------------------------------
+//  A engine de preço lia `RETENCAO[tipo]` e `BASE_SS_POR_TIPO[tipo]`, que
+//  ignoram os overrides por atividade que `efeitoFiscal()` resolve. A mesma
+//  pessoa escolhia a atividade num `select` de quatro tipos aqui e no
+//  catálogo completo no simulador de recibos verdes — e obtinha números
+//  diferentes para o mesmo caso.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R2 · a atividade concreta manda sobre o tipo", () => {
+  const comAtividade = (label: string) =>
+    precificar(
+      ctxSimples((c) => {
+        const a = ATIVIDADES.find((x) => x.label === label)!;
+        c.vendedor = {
+          tipo: "ti",
+          regimeIVA: "normal",
+          regiao: "continente",
+          atividade: a.tipo,
+          atividadeLabel: a.label,
+          anoAtividade: 3,
+          faturacaoAnualPrevista: 30000,
+        };
+        c.canal = { canal: "venda_direta", cliente: "empresa_pt" };
+      }),
+    );
+
+  it("a base de Segurança Social vem de `efeitoFiscal`, não do mapa por tipo", () => {
+    for (const a of ATIVIDADES) {
+      const esperado = efeitoFiscal(a).baseSS ?? BASE_SS_POR_TIPO[a.tipo];
+      const r = comAtividade(a.label);
+      const fracaoEsperada = SS_COEFICIENTE[esperado].value * SS_TAXA.value;
+      // A fração marginal pode ficar em zero por teto; o que se exige é que
+      // NUNCA use a base do tipo quando a atividade declara outra.
+      if (efeitoFiscal(a).baseSS && efeitoFiscal(a).baseSS !== BASE_SS_POR_TIPO[a.tipo]) {
+        expect(proximo(r.fiscal.ssFracao, fracaoEsperada, 0.03), a.label).toBe(true);
+      }
+    }
+  });
+
+  it("a retenção na fonte usa a taxa da atividade quando ela tem uma própria", () => {
+    const comOverride = ATIVIDADES.filter(
+      (a) => a.retencao !== undefined && a.retencao !== RETENCAO[a.tipo].value,
+    );
+    // Se o catálogo deixar de ter overrides, o teste deixa de provar algo —
+    // e é melhor saber disso do que passar em vazio.
+    expect(comOverride.length, "o catálogo deixou de ter retenções próprias").toBeGreaterThan(0);
+    for (const a of comOverride) {
+      const r = comAtividade(a.label);
+      expect(proximo(r.fiscal.retencaoFracao, a.retencao!, 0.001), a.label).toBe(true);
+    }
+  });
+
+  it("sem atividade escolhida, cai no tipo — como antes", () => {
+    const semLabel = precificar(
+      ctxSimples((c) => {
+        c.vendedor = {
+          tipo: "ti",
+          regimeIVA: "normal",
+          regiao: "continente",
+          atividade: "art151",
+          anoAtividade: 3,
+          faturacaoAnualPrevista: 30000,
+        };
+        c.canal = { canal: "venda_direta", cliente: "empresa_pt" };
+      }),
+    );
+    expect(proximo(semLabel.fiscal.retencaoFracao, RETENCAO.art151.value, 0.001)).toBe(true);
   });
 });

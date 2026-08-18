@@ -85,6 +85,20 @@ export interface PerfilVendedor {
   regiao: Regiao;
   /** Só para `tipo: "ti"` — decide coeficiente de IRS e base de SS. */
   atividade?: TipoAtividade;
+  /**
+   * A atividade CONCRETA do catálogo `ATIVIDADES`, guardada pelo `label` —
+   * a mesma chave que `recibos-contrato.ts` e os guardiões fiscais já usam.
+   *
+   * Porque não chega o `tipo`: o catálogo tem dezenas de atividades e várias
+   * trazem regras próprias (`coef`, `retencao`, `baseSS`, `regra15`) que
+   * `efeitoFiscal()` resolve. Ler só os mapas por tipo ignorava esses
+   * overrides — e fazia a mesma pessoa escolher a atividade de uma maneira
+   * no simulador de recibos verdes e de outra aqui, com números diferentes
+   * para o mesmo caso.
+   *
+   * Continua opcional: sem ela, cai-se no `tipo`, como antes.
+   */
+  atividadeLabel?: string;
   /** Só para `tipo: "ti"` — 1.º/2.º ano reduzem o coeficiente. */
   anoAtividade?: number;
   /**

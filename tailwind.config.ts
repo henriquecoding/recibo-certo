@@ -7,7 +7,19 @@ const config: Config = {
     extend: {
       colors: {
         brand: {
-          DEFAULT: "#1D9E75",
+          // Escurecido de #1D9E75 para #177E5E em 2026-08.
+          //
+          // O anterior dava 3,39:1 contra branco — e o contraste é simétrico,
+          // por isso falhava AA nas DUAS direções ao mesmo tempo: texto branco
+          // sobre o verde (botões, distintivos, CTAs) e texto verde sobre
+          // branco (logótipo, «eyebrows», links). Eram 825 nós a falhar em
+          // cinco páginas.
+          //
+          // #177E5E dá 5,00:1 contra branco e 4,54:1 contra o `cream` do
+          // fundo, o que passa AA para texto normal nos dois casos. É o
+          // escurecimento MÍNIMO que lá chega com folga — 20% — escolhido
+          // assim de propósito para mexer o menos possível na identidade.
+          DEFAULT: "#177E5E",
           dark: "#0F6E56",
           deep: "#0A4A39",
           light: "#E1F5EE",
