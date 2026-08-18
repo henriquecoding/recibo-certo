@@ -16,6 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.78.0",
+    data: "2026-08-18",
+    titulo: "Uma ferramenta nova para decidir quanto cobrar — feita para as regras portuguesas, não traduzida do Brasil",
+    itens: [
+      "Quem pesquisa em português como calcular um preço de venda encontra quase sempre conteúdo brasileiro: a matemática está certa, o enquadramento é de outro país. Passa a haver uma ferramenta que faz a conta com as regras daqui, em «Calcular o preço de venda».",
+      "Começa por perguntar o que estás a vender — um produto para revender, um bolo por encomenda, uma hora de consultoria — e só depois pergunta números. As perguntas mudam com a resposta, e o resultado aparece desde o primeiro segundo: não há botão de calcular, há um número que reage.",
+      "Estar isento de IVA pelo Art. 53.º não é só não cobrar IVA. Também não deduzes o IVA que pagas nas compras, e por isso o teu custo real é o valor com IVA. É o erro mais caro que uma calculadora de preços pode cometer, porque é silencioso — o número parece plausível. Aqui os dois efeitos entram ao mesmo tempo.",
+      "Para quem passa recibos verdes, a Segurança Social entra como aquilo que é: um custo sobre a faturação, não um imposto sobre o lucro. Cerca de 15 cêntimos de cada euro de serviços prestados, ganhes ou percas dinheiro nessa venda. E o IRS do regime simplificado incide sobre um coeficiente da faturação, o que significa uma coisa que contraria a intuição de toda a gente: comprar mais barato dá-te margem, mas não te dá menos imposto.",
+      "A retenção na fonte aparece à parte e nunca reduz a margem — é IRS adiantado, não um custo. Confundir os dois faz quem fatura a empresas achar que tem de cobrar mais 23%.",
+      "As comissões de marketplace e as taxas de pagamento incidem sobre o valor total da encomenda, com IVA. Uma comissão de 15% custa, na prática, 18,45% do que te fica. A ferramenta resolve a conta em vez de a aproximar, e quando a margem que pedes é impossível a qualquer preço, di-lo — em vez de devolver um número sem sentido.",
+      "Em vez de um preço com dois decimais, dá uma faixa: o piso abaixo do qual perdes dinheiro em cada venda, o mínimo que cobre as contas fixas, o recomendado e o confortável. Cada um explica de onde vem. Há um cursor para experimentar outro preço com a margem, o lucro e o ponto de equilíbrio a mexer ao mesmo tempo, e botões para ver o que acontece se deres desconto, pagares os portes ou venderes por marketplace.",
+      "Diz também o que a lei obriga a fazer depois de o preço estar decidido: ao consumidor mostra-se o preço com impostos incluídos, e anunciar uma redução obriga a indicar o preço mais baixo praticado nos 30 dias anteriores.",
+      "Ao verificar as contas apareceu uma coisa que vale a pena dizer em voz alta: entre cerca de 12 000 € e 16 000 € de faturação anual, a taxa de IRS sobre o euro seguinte passa dos 40% — mais alta do que a de quem fatura 70 000 €. É o mínimo de existência a extinguir-se, e quem está nessa faixa fica agora a saber.",
+      "O regime de IVA deixa de ser o que respondes num menu: passa a ser deduzido da tua faturação, pelo mesmo motor que serve o simulador de recibos verdes. Quem diz estar isento mas declara 40 000 € é calculado com IVA, e a ferramenta explica porquê — acima de 18 750 € a isenção cai na hora. A isenção pela natureza da atividade, essa, nunca é contrariada: não tem limiar.",
+      "E a pergunta que só uma calculadora de preços pode responder: a este preço e a este volume, em que mês passas o limiar? A projeção é nossa, não tua — por isso avisa, e nunca te muda o regime nas costas.",
+      "Quem tem contabilidade organizada deixa de ouvir uma coisa falsa: aí os custos reduzem mesmo o IRS. A corrigir isto apanhámos um erro nosso — tratar um imposto sobre o lucro como percentagem da faturação cobrava imposto sobre o próprio custo e inflacionava o preço em cerca de um terço. O regime simplificado não mudou um cêntimo.",
+      "Se acumulas recibos verdes com um emprego, o IRS passa a contar com o salário: cada euro faturado entra por cima dele e leva a taxa do topo. No caso-tipo, 33,7% em vez de 19,4% — antes, o preço sugerido a quem acumula ficava abaixo do necessário.",
+      "O cálculo é grátis, corre no teu browser e não pede conta nem email. O que escreves fica guardado no cofre local deste aparelho, como os restantes simuladores.",
+    ],
+  },
+  {
     version: "2.77.0",
     data: "2026-08-18",
     titulo: "O selo «verificado» passa a ter prazo, e o perfil do contabilista deixa de ser um formulário",

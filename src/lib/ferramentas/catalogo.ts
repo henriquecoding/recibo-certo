@@ -525,6 +525,47 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     searchPriority: 70,
     searchGroup: "Ferramentas",
   },
+
+  // ── Decidir quanto cobrar ──────────────────────────────────────────
+  {
+    id: "calcular-preco",
+    slug: "calcular-preco",
+    canonicalHref: "/ferramentas/calcular-preco",
+    title: "Calcular o preço de venda",
+    h1: "Calculadora de preço de venda 2026 — quanto cobrar sem perder dinheiro.",
+    shortOutcome:
+      "O preço que cobre custos, comissões e impostos — e o que te fica mesmo de cada venda.",
+    description:
+      "Um motor de formação de preço feito para Portugal: custo, margem, markup, comissões de canal, IVA por região, Segurança Social e IRS de trabalhador independente, ponto de equilíbrio e simulação de cenários. Descobre o teu caso e constrói o preço contigo, em vez de te obrigar a saber que variáveis introduzir.",
+    kind: "simulator",
+    profiles: ["independente", "empresa"],
+    intents: ["calcular", "comparar"],
+    topics: ["preco", "margem", "iva", "custos", "comercio"],
+    aliases: [
+      "calcular preço de venda", "calculadora de preços", "quanto cobrar", "quanto devo cobrar",
+      "margem de lucro", "markup", "preço com iva", "pvp", "preço de venda ao público",
+      "quanto cobrar por hora", "preço por hora", "ponto de equilíbrio", "break even",
+      "precificação", "comissão marketplace", "preço de custo", "margem de contribuição",
+      "quanto tenho de faturar", "preço de serviço", "preço de produto",
+    ],
+    icon: "Coin",
+    layout: "wide",
+    estimatedMinutes: 4,
+    requiredInputs: ["Quanto te custa o que vendes", "Quanto esperas vender por mês"],
+    access: ACESSO_PADRAO,
+    privacy: "local-only",
+    fiscalYear: 2026,
+    reviewedAt: REVISTO,
+    featuredRank: 5,
+    highlight: "Novo motor de preço",
+    status: "novo",
+    cta: "Calcular o meu preço",
+    relatedToolIds: ["recibos-verdes", "regime-simplificado", "seguranca-social", "simulador-empresa"],
+    relatedGuideSlugs: ["iva-recibos-verdes", "regime-simplificado", "despesas-dedutiveis"],
+    surfaces: ["hub", "homepage", "search", "sitemap"],
+    searchPriority: 92,
+    searchGroup: "Ferramentas",
+  },
 ];
 
 /**
@@ -562,6 +603,16 @@ export const PERCURSOS: ToolPathway[] = [
     steps: [
       { toolId: "recibo-vencimento", note: "Simula o valor que devias receber." },
       { toolId: "auditoria-recibo", note: "Compara com o recibo real, linha a linha." },
+    ],
+  },
+  {
+    id: "definir-o-preco",
+    title: "Definir o preço do que vendes",
+    outcome: "Sabes quanto cobrar, quanto te fica e quantas vendas precisas.",
+    steps: [
+      { toolId: "calcular-preco", note: "O preço que cobre custos, comissões e impostos." },
+      { toolId: "regime-simplificado", note: "Confirma o coeficiente que se aplica ao que faturas." },
+      { toolId: "recibos-verdes", note: "Vê o líquido de cada recibo a esse preço." },
     ],
   },
   {

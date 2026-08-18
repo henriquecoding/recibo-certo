@@ -287,13 +287,91 @@ body {
 }
 
 /* Inputs */
+
+/* ┌────────────────────────────────────────────────────────────────────┐
+   │ SLIDERS QUE SE VEEM                                                │
+   │                                                                    │
+   │ Isto era só `appearance: none` e `background: transparent`, sem     │
+   │ track nem thumb definidos a seguir. Resultado: TODOS os sliders da  │
+   │ aplicação eram invisíveis — o do regime simplificado, o do IRS      │
+   │ Jovem, os das heranças. `accent-brand` não os salvava, porque       │
+   │ `accent-color` só pinta o controlo NATIVO, e o nativo tinha sido    │
+   │ desligado uma linha acima.                                          │
+   │                                                                    │
+   │ Passa a haver track e thumb desenhados com os tokens da marca, nos  │
+   │ dois motores (WebKit e Gecko), com foco visível e alvo de toque de  │
+   │ 20 px — acima do mínimo para arrastar com o dedo.                   │
+   └────────────────────────────────────────────────────────────────────┘ */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
+  cursor: pointer;
 }
+
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rc-slider-track, #e7e5e4);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--rc-slider-track, #e7e5e4);
+}
+
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  margin-top: -7px;
+  border-radius: 999px;
+  background: #1d9e75;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 3px rgb(26 26 23 / 0.25);
+  transition: transform 0.15s ease;
+}
+input[type="range"]::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 999px;
+  background: #1d9e75;
+  border: 3px solid #ffffff;
+  box-shadow: 0 1px 3px rgb(26 26 23 / 0.25);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.12);
+}
+input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.12);
+}
+
+input[type="range"]:focus-visible::-webkit-slider-thumb {
+  outline: 2px solid #0f6e56;
+  outline-offset: 2px;
+}
+input[type="range"]:focus-visible::-moz-range-thumb {
+  outline: 2px solid #0f6e56;
+  outline-offset: 2px;
+}
+
+.dark input[type="range"] {
+  --rc-slider-track: #3a3a35;
+}
+.dark input[type="range"]::-webkit-slider-thumb {
+  border-color: #1c1f1a;
+}
+.dark input[type="range"]::-moz-range-thumb {
+  border-color: #1c1f1a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  input[type="range"]::-webkit-slider-thumb,
+  input[type="range"]::-moz-range-thumb {
+    transition: none;
+  }
 }
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

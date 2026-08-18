@@ -15,6 +15,7 @@
 import {
   Calculator, Receipt, Search, Building, User, Scale, ShieldCheck,
   MapPin, Gauge, Swap, ShoppingBag, Sparkle, Wallet, BookOpen, Trophy,
+  Clock, Briefcase, Globe, Target, Gift, Laptop, ChartProjection, Lightbulb, Coin,
 } from "@/components/ui/Icons";
 
 export type IconeFerramenta = React.ComponentType<{ size?: number; className?: string }>;
@@ -22,6 +23,9 @@ export type IconeFerramenta = React.ComponentType<{ size?: number; className?: s
 export const ICONES_FERRAMENTAS: Record<string, IconeFerramenta> = {
   Calculator, Receipt, Search, Building, User, Scale, ShieldCheck,
   MapPin, Gauge, Swap, ShoppingBag, Sparkle, Wallet, BookOpen, Trophy,
+  // Acrescentados para os cenários do simulador de preço. O mapa cresce
+  // por adição — nunca se substitui uma chave já usada pelo catálogo.
+  Clock, Briefcase, Globe, Target, Gift, Laptop, ChartProjection, Lightbulb, Coin,
 };
 
 /** As chaves que o catálogo pode usar — o teste valida contra esta lista. */
