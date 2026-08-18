@@ -24,6 +24,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { eurosDeCents } from "@/lib/contabilistas/fidelidade";
+import { COPY_PRECO_MINIMO, precoDeConsultaValido } from "@/lib/contabilistas/preco-consulta";
 import type { CupaoLido } from "@/lib/contabilistas/fonte/dados";
 import Button from "@/components/ui/Button";
 import { Gift, Info, Warning } from "@/components/ui/Icons";
@@ -65,7 +66,10 @@ export default function ConcluirConsulta({
     return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : Number.NaN;
   }, [texto]);
 
-  const valido = Number.isFinite(precoCents);
+  // Grátis ou pelo menos 10 €: entre os dois, a taxa fixa da Stripe excede a
+  // comissão. A base recusa pelo CHECK; aqui a pessoa lê a razão antes de
+  // carregar no botão, em vez de receber o erro cru depois.
+  const valido = Number.isFinite(precoCents) && precoDeConsultaValido(precoCents);
   const escolhido = beneficios.find((b) => b.id === cupaoId) ?? null;
   const descontoCents = escolhido && valido
     ? Math.round((precoCents * escolhido.percentagem) / 100)
@@ -123,7 +127,12 @@ export default function ConcluirConsulta({
               )}{" "}
               É sobre este valor que o desconto incide.
             </p>
-            {!valido && texto.trim() !== "" && (
+            {Number.isFinite(precoCents) && !precoDeConsultaValido(precoCents) && (
+              <p role="alert" className="mt-1.5 text-xs leading-relaxed text-alert-text">
+                {COPY_PRECO_MINIMO}
+              </p>
+            )}
+            {!Number.isFinite(precoCents) && texto.trim() !== "" && (
               <p role="alert" className="mt-1.5 text-xs font-semibold text-clay-text">
                 Escreve um valor válido, por exemplo 65,00.
               </p>
