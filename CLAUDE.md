@@ -9,6 +9,8 @@
 > - `verificacao-e-qualidade` — como verificar antes de concluir
 > - `crescimento-recibocerto` — clusters de decisão, medição, routing comercial
 >   e autoridade (LER antes de criar páginas, ferramentas, guias ou CTAs)
+> - `pricing-engine-recibocerto` — engine de formação de preço (LER antes de
+>   tocar em custos, margem, markup, comissões ou na faixa de preço)
 >
 > Nota: o `CLAUDE.md` da pasta-pai (Desktop, "Refúgio Animal") **NÃO** pertence a
 > este projeto — ignora-o.
@@ -77,6 +79,9 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/lib/fiscal.ts` — motor: `calcular` (tesouraria/recibo), `simularIRSAnual` (anual), `compararRegimes`.
 - `src/lib/insights.ts` — insights proativos + `saudeFiscal`.
 - `src/lib/store/recibos.ts` — repositório (localStorage; trocar por Supabase no futuro).
+- `src/lib/pricing/` — ★ engine de formação de preço: tipos, regras de mercado
+  (`regras.ts`, com proveniência e data), motores puros em `motores/` e o
+  orquestrador `motor.ts`. NÃO duplica `fiscal-data.ts` — lê de lá.
 - `src/lib/analytics/` — ★ camada de medição: dicionário de eventos, identidade e
   atribuição, barreira de PII, DVM (North Star) e definições do painel semanal.
 - `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.

@@ -112,7 +112,7 @@ export default function ToolShell({ tool, children, contexto, subtitulo }: ToolS
                         </span>
                         {ferramenta.id === tool.id ? (
                           <span className="font-semibold text-stone-700 dark:text-stone-200">
-                            {ferramenta.title} <span className="text-brand">(estás aqui)</span>
+                            {ferramenta.title} <span className="text-brand-dark dark:text-brand-mint">(estás aqui)</span>
                           </span>
                         ) : (
                           <Link

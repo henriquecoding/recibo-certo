@@ -41,6 +41,7 @@ export const DOMINIOS = {
   "ponte-vencimento": "recibocerto:cenario-vencimento:v2",
   "ponte-empresa": "recibocerto:export-empresa:v1",
   "ponte-recibos": "recibocerto:export-recibos-verdes:v1",
+  preco: "recibocerto:preco:v1",
 } as const;
 
 /**

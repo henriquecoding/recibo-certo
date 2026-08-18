@@ -1,0 +1,300 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import ToolShell from "@/components/ferramentas/ToolShell";
+import { porId } from "@/lib/ferramentas";
+import SimuladorPrecoLazy from "./lazy";
+import { generateFAQSchema } from "@/lib/seo";
+import { fmt } from "@/lib/format";
+import { IVA_TAXAS, IVA_ISENCAO_LIMITE, SS_TAXA, SS_COEFICIENTE } from "@/lib/fiscal-data";
+import { REDUCAO_PRECO_30_DIAS, LIVRE_RESOLUCAO, PRECO_AO_CONSUMIDOR, REVISAO_PRICING } from "@/lib/pricing";
+import { ArrowRight, ExternalLink } from "@/components/ui/Icons";
+
+const TOOL = porId("calcular-preco")!;
+
+export const metadata: Metadata = {
+  // Sem «| ReciboCerto»: o `template` do layout raiz já o acrescenta, e
+  // escrevê-lo aqui produzia «… | ReciboCerto | ReciboCerto» no separador.
+  title: "Calculadora de preço de venda 2026 — quanto cobrar",
+  description:
+    "Calcula o preço de venda do teu produto ou serviço em Portugal: custo, margem, markup, comissões, IVA por região, Segurança Social e IRS. Com ponto de equilíbrio e simulação de cenários.",
+  keywords: [
+    "calcular preço de venda",
+    "calculadora de preços",
+    "quanto cobrar",
+    "margem de lucro",
+    "markup",
+    "preço com IVA",
+    "PVP",
+    "ponto de equilíbrio",
+    "quanto cobrar por hora",
+  ],
+  alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
+  openGraph: {
+    title: "Calculadora de preço de venda 2026 | ReciboCerto",  // openGraph não passa pelo template
+    description:
+      "Descobre o teu cenário e constrói o preço connosco: custos, comissões, IVA, Segurança Social e o que te fica mesmo de cada venda.",
+    url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
+    siteName: "ReciboCerto",
+    locale: "pt_PT",
+    type: "article",
+  },
+};
+
+// ── FAQ derivada da pesquisa de intenção, não inventada para encher ────
+// Cada pergunta veio do mapa em docs/research/pricing-search-intent.md e
+// responde a uma dúvida que aparece repetidamente em pesquisa portuguesa.
+const FAQ = [
+  {
+    q: "Como se calcula o preço de venda de um produto?",
+    a: "Parte-se do custo de uma unidade, somam-se os custos que só existem quando vendes (embalagem, portes, comissões, taxas de pagamento) e a parte das contas fixas que cabe a cada venda. Depois aplica-se a margem pretendida sobre o preço sem IVA, e só no fim se acrescenta o IVA para chegar ao preço que o cliente vê.",
+  },
+  {
+    q: "Qual é a diferença entre margem e markup?",
+    a: "Markup é quanto acrescentas ao custo; margem é a fatia do preço de venda que é lucro. Um markup de 50% sobre um custo de 10 € dá um preço de 15 € e uma margem de 33,3%. Uma margem de 50% sobre o mesmo custo dá 20 €. São cinco euros de diferença no mesmo produto — por isso não se podem usar como sinónimos.",
+  },
+  {
+    q: "Se estou isento de IVA pelo Art. 53.º, o preço fica mais barato?",
+    a: "Nem sempre. É verdade que não acrescentas IVA ao preço, mas também não deduzes o IVA que pagas nas compras (Art. 53.º n.º 3 do CIVA). O teu custo real passa a ser o valor com IVA, e isso pode comer boa parte da vantagem. A calculadora trata os dois efeitos ao mesmo tempo.",
+  },
+  {
+    q: "A Segurança Social entra no preço de um trabalhador independente?",
+    a: `Sim, e entra como custo variável sobre a faturação, não como imposto sobre o lucro. A base de incidência é ${(SS_COEFICIENTE.servicos.value * 100).toFixed(0)}% do que faturas em serviços (${(SS_COEFICIENTE.bens.value * 100).toFixed(0)}% na venda de bens), a que se aplica a taxa de ${(SS_TAXA.value * 100).toFixed(1).replace(".", ",")}%. Ou seja, cerca de 15 cêntimos de cada euro de serviços prestados — independentemente de essa venda ter dado lucro.`,
+  },
+  {
+    q: "Os meus custos reduzem o IRS que pago?",
+    a: "No regime simplificado, não. O rendimento tributável é a faturação multiplicada por um coeficiente (Art. 31.º do CIRS), e esse coeficiente já presume as despesas. Comprar melhor aumenta a tua margem, mas não reduz o imposto — é o contrário do que a maioria do conteúdo brasileiro sobre precificação ensina.",
+  },
+  {
+    q: "Como calculo quanto cobrar por hora?",
+    a: "Não é o rendimento pretendido a dividir por 160. Tira do ano as férias, os feriados e as semanas sem clientes; depois tira a percentagem de horas que não são faturáveis (propostas, administração, deslocações, formação). O que sobra são as horas produtivas reais — normalmente entre metade e três quartos do tempo de trabalho. Só então se divide, e ainda se repõe o que sai em Segurança Social e IRS.",
+  },
+  {
+    q: "A comissão de um marketplace incide sobre o preço com ou sem IVA?",
+    a: "Habitualmente sobre o valor total da encomenda, com IVA incluído. Por isso uma comissão de 15% custa-te, na prática, 18,45% do valor sem IVA — e é essa a percentagem que te sai da margem. A calculadora separa as duas bases para não confundir uma com a outra.",
+  },
+  {
+    q: "Posso anunciar qualquer desconto?",
+    a: `Podes fazer o desconto que quiseres, mas o preço de referência que anuncias tem regras: é o preço mais baixo que praticaste nos ${REDUCAO_PRECO_30_DIAS.value.dias} dias consecutivos anteriores, incluindo promoções nesse período. Saldos têm ainda um limite de ${REDUCAO_PRECO_30_DIAS.value.diasMaximoSaldosAno} dias por ano e comunicação prévia à ASAE.`,
+  },
+  {
+    q: "O preço que mostro ao cliente tem de incluir IVA?",
+    a: "Sim. O preço indicado ao consumidor é o preço total, com todos os impostos e encargos incluídos, escrito de forma visível e inequívoca. O preço sem IVA serve para a tua gestão — não para a montra nem para a página de produto.",
+  },
+  {
+    q: "Como sei quantas unidades tenho de vender para não perder dinheiro?",
+    a: "Divide os custos fixos mensais pela margem de contribuição de cada venda (o preço sem IVA menos tudo o que varia com a venda). O resultado é o ponto de equilíbrio. Se a margem de contribuição for zero ou negativa, não existe ponto de equilíbrio nenhum: vender mais só aumenta o prejuízo.",
+  },
+];
+
+export default async function CalcularPrecoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ c?: string }>;
+}) {
+  const { c } = await searchParams;
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFAQSchema(FAQ)) }}
+      />
+      <ToolShell
+        tool={TOOL}
+        subtitulo="Diz-nos o que estás a vender e construímos o preço contigo — com os custos que costumam ficar de fora, as regras de IVA da tua região e o que a Segurança Social e o IRS levam de cada euro faturado."
+        contexto={<Contexto />}
+      >
+        <SimuladorPrecoLazy cenarioInicial={c ?? null} />
+      </ToolShell>
+    </>
+  );
+}
+
+function Contexto() {
+  const t = IVA_TAXAS.continente.value;
+
+  return (
+    <div className="space-y-8">
+      {/* ── Como funciona ─────────────────────────────────────────── */}
+      <section className="rounded-4xl border border-stone-100 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/50 sm:p-6">
+        <h2 className="font-display mb-3 text-xl font-semibold text-stone-800 dark:text-stone-100">
+          Como esta ferramenta chega ao preço
+        </h2>
+        <ol className="space-y-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          {[
+            ["O que estás a vender", "Um produto para revender, um bolo por encomenda e uma hora de consultoria são problemas diferentes. A primeira pergunta é essa, e é ela que decide todas as outras."],
+            ["Quanto te custa mesmo", "Não é só o custo de compra: é a embalagem, os portes, o desperdício, as devoluções e o teu tempo. E é o custo com ou sem IVA, consoante o consigas deduzir."],
+            ["O que sai de cada venda", "Comissão do canal e taxa de pagamento incidem sobre o valor total, com IVA. Um afiliado costuma incidir sobre o valor sem IVA. São bases diferentes e a conta trata-as como tal."],
+            ["O que o Estado leva", "Se és trabalhador independente, a Segurança Social incide sobre a faturação e o IRS sobre um coeficiente dela. Nenhum dos dois depende do teu lucro — e isso muda o preço mínimo."],
+            ["O preço sustentável", "Não um número, uma faixa: o piso abaixo do qual perdes dinheiro, o mínimo que cobre as contas fixas, o recomendado e o confortável."],
+            ["Como o apresentas", "O preço ao consumidor inclui os impostos. Se fizeres desconto, o preço de referência tem regras. A ferramenta diz quais."],
+          ].map(([titulo, texto], i) => (
+            <li key={titulo} className="flex gap-3">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-brand text-[11px] font-bold text-white"
+              >
+                {i + 1}
+              </span>
+              <span>
+                <strong className="text-stone-700 dark:text-stone-300">{titulo}.</strong> {texto}
+              </span>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* ── Margem vs markup, explicado onde é preciso ───────────── */}
+      <section>
+        <h2 className="font-display mb-3 text-xl font-semibold text-stone-800 dark:text-stone-100">
+          Margem e markup não são a mesma coisa
+        </h2>
+        <p className="mb-4 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          É a confusão mais cara da precificação, e custa dinheiro nos dois sentidos: quem quer margem e aplica markup
+          cobra a menos; quem quer markup e aplica margem cobra a mais e perde vendas.
+        </p>
+        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Margem e markup lado a lado">
+          <table className="w-full min-w-[420px] border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-stone-200 text-left dark:border-stone-700">
+                <th scope="col" className="py-2 pr-4 font-semibold text-stone-600 dark:text-stone-400">Custo</th>
+                <th scope="col" className="py-2 pr-4 font-semibold text-stone-600 dark:text-stone-400">O que pedes</th>
+                <th scope="col" className="py-2 pr-4 font-semibold text-stone-600 dark:text-stone-400">Preço sem IVA</th>
+                <th scope="col" className="py-2 font-semibold text-stone-600 dark:text-stone-400">O outro fica</th>
+              </tr>
+            </thead>
+            <tbody className="text-stone-700 dark:text-stone-300">
+              <tr className="border-b border-stone-100 dark:border-stone-800">
+                <td className="py-2.5 pr-4 tabular-nums">{fmt(10)}</td>
+                <td className="py-2.5 pr-4">Markup de 50%</td>
+                <td className="py-2.5 pr-4 font-semibold tabular-nums">{fmt(15)}</td>
+                <td className="py-2.5 tabular-nums text-stone-600 dark:text-stone-400">margem de 33,3%</td>
+              </tr>
+              <tr>
+                <td className="py-2.5 pr-4 tabular-nums">{fmt(10)}</td>
+                <td className="py-2.5 pr-4">Margem de 50%</td>
+                <td className="py-2.5 pr-4 font-semibold tabular-nums">{fmt(20)}</td>
+                <td className="py-2.5 tabular-nums text-stone-600 dark:text-stone-400">markup de 100%</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── O que muda em Portugal ───────────────────────────────── */}
+      <section>
+        <h2 className="font-display mb-3 text-xl font-semibold text-stone-800 dark:text-stone-100">
+          O que muda por seres em Portugal
+        </h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[
+            {
+              titulo: "O IVA depende da região",
+              texto: `Taxa normal de ${(t.normal * 100).toFixed(0)}% no Continente, 22% na Madeira e 16% nos Açores. O preço sem IVA é o mesmo; o que o cliente paga não é.`,
+            },
+            {
+              titulo: "A isenção do Art. 53.º corta nos dois sentidos",
+              texto: `Abaixo de ${fmt(IVA_ISENCAO_LIMITE.value)} de faturação anual não liquidas IVA — mas também não o deduzes nas compras, e o teu custo sobe.`,
+            },
+            {
+              titulo: "A Segurança Social é custo de faturação",
+              texto: "Incide sobre 70% do que faturas em serviços, ganhes ou percas dinheiro nessa venda. Tratá-la como imposto sobre o lucro subestima o preço mínimo.",
+            },
+            {
+              titulo: "No simplificado, os custos não abatem",
+              texto: "O coeficiente do Art. 31.º já presume as despesas. Comprar melhor dá-te margem, não te dá menos IRS.",
+            },
+            {
+              titulo: "A retenção não é um custo",
+              texto: "Quando faturas a uma empresa portuguesa, ela retém IRS na fonte. Isso mexe na tua tesouraria, não na tua margem — e não justifica cobrar mais.",
+            },
+            {
+              titulo: "O preço tem regras de apresentação",
+              texto: `Ao consumidor mostra-se o preço total com impostos incluídos, e um desconto anunciado obriga a indicar o preço mais baixo dos últimos ${REDUCAO_PRECO_30_DIAS.value.dias} dias.`,
+            },
+          ].map((b) => (
+            <div
+              key={b.titulo}
+              className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900"
+            >
+              <h3 className="mb-1.5 text-sm font-semibold text-stone-800 dark:text-stone-100">{b.titulo}</h3>
+              <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-400">{b.texto}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ──────────────────────────────────────────────────── */}
+      <section>
+        <h2 className="font-display mb-4 text-xl font-semibold text-stone-800 dark:text-stone-100">
+          Perguntas frequentes
+        </h2>
+        <div className="space-y-3">
+          {FAQ.map((f) => (
+            <details
+              key={f.q}
+              className="group rounded-4xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900"
+            >
+              <summary className="cursor-pointer list-none text-sm font-semibold text-stone-800 marker:hidden dark:text-stone-100">
+                <span className="flex items-start justify-between gap-3">
+                  {f.q}
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden="true"
+                    className="mt-0.5 flex-shrink-0 text-stone-400 transition-transform group-open:rotate-180"
+                  >
+                    <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </span>
+              </summary>
+              <p className="mt-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-400">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Fontes ───────────────────────────────────────────────── */}
+      <section className="rounded-4xl border border-stone-100 bg-stone-50 p-5 dark:border-stone-800 dark:bg-stone-900/50">
+        <h2 className="mb-3 text-sm font-semibold text-stone-700 dark:text-stone-200">Fontes</h2>
+        <ul className="space-y-1.5 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
+          {[
+            { r: "Taxas de IVA e isenção do Art. 53.º", f: "Portal das Finanças — CIVA", u: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx" },
+            { r: "Coeficientes do regime simplificado", f: "Art. 31.º CIRS", u: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx" },
+            { r: "Segurança Social do trabalhador independente", f: "Código Contributivo, arts. 162.º e 168.º", u: "https://www.seg-social.pt" },
+            { r: PRECO_AO_CONSUMIDOR.descricao.slice(0, 60) + "…", f: PRECO_AO_CONSUMIDOR.fonte, u: PRECO_AO_CONSUMIDOR.fonteUrl },
+            { r: "Regras dos saldos e das reduções de preço", f: REDUCAO_PRECO_30_DIAS.fonte, u: REDUCAO_PRECO_30_DIAS.fonteUrl },
+            { r: "Direito de livre resolução e devoluções", f: LIVRE_RESOLUCAO.fonte, u: LIVRE_RESOLUCAO.fonteUrl },
+          ].map((s) => (
+            <li key={s.u}>
+              <span className="text-stone-600 dark:text-stone-300">{s.r}</span> —{" "}
+              <a
+                href={s.u}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 underline-offset-2 hover:text-brand hover:underline"
+              >
+                {s.f}
+                <ExternalLink size={10} />
+              </a>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[11px] text-stone-600 dark:text-stone-400">
+          Preçários de canais e meios de pagamento verificados a{" "}
+          {new Date(REVISAO_PRICING).toLocaleDateString("pt-PT")}. São pressupostos editáveis: confirma sempre no
+          contrato do teu canal.
+        </p>
+        <Link
+          href="/metodologia"
+          className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+        >
+          Como verificamos os dados fiscais
+          <ArrowRight size={12} />
+        </Link>
+      </section>
+    </div>
+  );
+}
