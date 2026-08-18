@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.75.0",
+  "version": "2.76.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -57,6 +57,7 @@
     "versao:check": "node scripts/check-versao.mjs",
     "versao:fix": "node scripts/check-versao.mjs --fix",
     "stripe:check": "node scripts/check-stripe-config.mjs",
+    "contrato:check": "node scripts/check-contrato-publico.mjs",
     "supabase:check": "node scripts/check-supabase.mjs"
   },
   "dependencies": {
