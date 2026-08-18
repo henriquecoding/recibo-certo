@@ -42,7 +42,7 @@
 
 import type { ComponentType } from "react";
 import {
-  BellAlert, Briefcase, CheckTrend, Coin, Flag, LayoutGrid, Megaphone,
+  Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, LayoutGrid, Megaphone,
   Shield, ShieldCheck, Target, User,
 } from "@/components/ui/Icons";
 
@@ -140,6 +140,12 @@ export const SECCOES_ADMIN: readonly SeccaoAdmin[] = [
         label: "Contabilistas",
         Icon: Shield,
         descricao: "Candidaturas a conta de contabilista: aprovar, recusar ou suspender.",
+      },
+      {
+        href: "/admin/verificacao",
+        label: "Verificação na Ordem",
+        Icon: Award,
+        descricao: "Confirmar números de inscrição no registo público da OCC, e renovar os que estão a caducar.",
       },
       {
         href: "/admin/reportes",

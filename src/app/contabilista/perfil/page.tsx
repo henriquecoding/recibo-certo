@@ -52,6 +52,22 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { Check, ExternalLink, Eye, Info, Linkedin, Lock, Plus, Trash, User, Warning } from "@/components/ui/Icons";
 import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
 import { usarRascunhoSujo } from "@/components/contabilistas/usarRascunhoSujo";
+import PainelVerificacao from "@/components/contabilistas/PainelVerificacao";
+import EditorBlocos from "@/components/contabilistas/EditorBlocos";
+import EditorAreas from "@/components/contabilistas/EditorAreas";
+import EditorCobertura from "@/components/contabilistas/EditorCobertura";
+import {
+  escreverBlocos, lerBlocos, type Bloco,
+} from "@/lib/contabilistas/personalizacao/blocos";
+import {
+  COBERTURA_VAZIA, escreverCobertura, lerCobertura, validarCobertura,
+  type Cobertura,
+} from "@/lib/contabilistas/personalizacao/cobertura";
+import {
+  areasEfetivas, lerTermos, type TermoProprio,
+} from "@/lib/contabilistas/personalizacao/taxonomia";
+import { avaliarCampos } from "@/lib/contabilistas/personalizacao/guardiao";
+import { pedirVerificacaoOcc, registoDeVerificacao } from "@/lib/contabilistas/fonte/verificacao";
 
 interface Formulario {
   nome: string; occ: string; bio: string; distrito: string; concelho: string;
@@ -59,6 +75,8 @@ interface Formulario {
   especialidades: string[]; modalidades: string[];
   titulo: string; apresentacaoCurta: string; idiomas: string[];
   anosExperiencia: string; respostaHoras: string;
+  /** O perfil composto — ver `personalizacao/`. */
+  blocos: Bloco[]; termos: TermoProprio[]; cobertura: Cobertura;
 }
 
 const OPCOES_PAGAMENTO: readonly OpcaoSelectMenu[] = PAGAMENTOS.map((p) => ({
@@ -77,6 +95,7 @@ const VAZIO: Formulario = {
   especialidades: [], modalidades: ["presencial", "online"],
   titulo: "", apresentacaoCurta: "", idiomas: [],
   anosExperiencia: "", respostaHoras: "",
+  blocos: [], termos: [], cobertura: { ...COBERTURA_VAZIA },
 };
 
 export default function PerfilPage() {
@@ -114,6 +133,13 @@ export default function PerfilPage() {
       idiomas: ficha.idiomas,
       anosExperiencia: ficha.anosExperiencia?.toString() ?? "",
       respostaHoras: ficha.respostaMediaHoras?.toString() ?? "",
+      blocos: lerBlocos(ficha.perfilBlocos),
+      termos: lerTermos(ficha.perfilTermos),
+      // A cobertura antiga é o distrito e o concelho que já lá estavam.
+      // Ninguém tem de reintroduzir o que já tinha escrito.
+      cobertura: ficha.cobertura
+        ? lerCobertura(ficha.cobertura)
+        : { ...COBERTURA_VAZIA, distrito: ficha.distrito, concelho: ficha.concelho },
     });
     setPorGuardar(false);
   }, [ficha]);
@@ -134,7 +160,6 @@ export default function PerfilPage() {
       bio: f.bio,
       distrito: f.distrito || null,
       concelho: f.concelho.trim() || null,
-      especialidades: f.especialidades,
       modalidades: f.modalidades as FichaDePerfil["modalidades"],
       emailContacto: f.email.trim() || null,
       telefone: f.telefone.trim() || null,
@@ -145,6 +170,13 @@ export default function PerfilPage() {
       idiomas: f.idiomas,
       anosExperiencia: numeroOuNulo(f.anosExperiencia),
       respostaMediaHoras: numeroOuNulo(f.respostaHoras),
+      perfilBlocos: f.blocos,
+      perfilTermos: f.termos,
+      cobertura: escreverCobertura(f.cobertura),
+      // O diretório indexa as áreas EFECTIVAS: as marcadas mais as que os
+      // termos próprios implicam. A pré-visualização tem de mostrar o
+      // mesmo, senão promete um filtro em que a pessoa não vai aparecer.
+      especialidades: areasEfetivas(f.especialidades, f.termos),
       // Mudar o número OCC apaga a verificação — a base de dados faz isso
       // por trigger, e a pré-visualização tem de o mostrar antes de guardar.
       occVerificado: ficha.occVerificado && f.occ.trim() === (ficha.occ ?? ""),
@@ -206,6 +238,9 @@ export default function PerfilPage() {
     identidade: Boolean(f.nome.trim() && f.titulo.trim() && (f.apresentacaoCurta.trim() || f.bio.trim())),
     especializacoes: f.especialidades.length > 0,
     atendimento: f.modalidades.length > 0 && f.idiomas.length > 0,
+    // A página está «feita» quando tem pelo menos um bloco publicável —
+    // não quando tem blocos. Um bloco a meio não dá contexto a ninguém.
+    pagina: escreverBlocos(f.blocos).length > 0,
     consultas: (tipos ?? []).some((t) => t.ativo),
     contacto: Boolean(f.email.trim()),
     disponibilidade: (horarios ?? []).length > 0,
@@ -219,6 +254,24 @@ export default function PerfilPage() {
     }));
   }
 
+  /**
+   * Pedir verificação.
+   *
+   * Sobre o número GRAVADO, e não sobre o rascunho — daí o painel exigir
+   * que se guarde primeiro. Pedir a confirmação de um número que ainda não
+   * está na base de dados poria a administração a consultar um número e a
+   * carimbar outro.
+   */
+  async function pedirVerificacao() {
+    if (!ficha) return;
+    const { erro: e } = await pedirVerificacaoOcc(ficha.userId);
+    if (e) { avisos.erro("Não foi possível enviar o pedido.", { detalhe: e }); return; }
+    recarregar();
+    avisos.sucesso("Pedido de verificação enviado.", {
+      detalhe: "A administração confirma o número no registo público da Ordem.",
+    });
+  }
+
   async function guardar() {
     if (!ficha) return;
     setErro(null);
@@ -230,9 +283,12 @@ export default function PerfilPage() {
       nome: f.nome.trim(),
       occ: f.occ.trim() || null,
       bio: f.bio.trim(),
-      distrito: f.distrito || null,
-      concelho: f.concelho.trim() || null,
-      especialidades: f.especialidades,
+      // O distrito e o concelho continuam a ser colunas próprias — são o
+      // que o diretório filtra hoje — e passam a sair da cobertura, para
+      // não haver dois sítios a dizer onde a pessoa está.
+      distrito: f.cobertura.distrito || null,
+      concelho: f.cobertura.concelho?.trim() || null,
+      especialidades: areasEfetivas(f.especialidades, f.termos),
       modalidades: f.modalidades,
       email_contacto: f.email.trim() || null,
       telefone: f.telefone.trim() || null,
@@ -243,6 +299,9 @@ export default function PerfilPage() {
       idiomas: f.idiomas,
       anos_experiencia: numeroOuNulo(f.anosExperiencia),
       resposta_media_horas: numeroOuNulo(f.respostaHoras),
+      perfil_blocos: escreverBlocos(f.blocos),
+      perfil_termos: f.termos.map((t) => ({ texto: t.texto, area: t.area })),
+      cobertura: escreverCobertura(f.cobertura),
     });
     setAGuardar(false);
     // Em erro o rascunho fica onde está: perder o que se escreveu por causa
@@ -451,12 +510,11 @@ export default function PerfilPage() {
                   onChange={(v) => mudar({ occ: v })}
                 />
                 {/* A §124 fecha esta porta: um número escrito aqui é
-                    «informado». «Verificado» exige a administração. */}
+                    «informado». O que se pode fazer para deixar de o ser
+                    está no painel de verificação, mais abaixo. */}
                 <p className="mt-1.5 flex items-start gap-1.5 text-xs leading-relaxed text-stone-400">
                   <Lock size={12} className="mt-0.5 shrink-0" aria-hidden />
-                  {rascunho.occVerificado
-                    ? "Verificado pela administração. Mudar o número retira a verificação."
-                    : "Aparece como «informado». A verificação é feita pela administração."}
+                  Mudar o número retira a verificação — passa a valer o número novo.
                 </p>
               </div>
             </div>
@@ -516,34 +574,13 @@ export default function PerfilPage() {
             </label>
           </Bloco>
 
-          <Bloco numero={2} titulo="Especializações" completo={blocoFeito.especializacoes}>
-            <p className="text-sm leading-relaxed text-stone-500">
-              São estas as áreas por que os clientes filtram no diretório.
-            </p>
-            <fieldset className="mt-3">
-              <legend className="sr-only">Áreas de trabalho</legend>
-              <div className="flex flex-wrap gap-2">
-                {ESPECIALIDADES.map((e) => {
-                  const ativo = f.especialidades.includes(e);
-                  return (
-                    <button
-                      key={e}
-                      type="button"
-                      aria-pressed={ativo}
-                      onClick={() => alternar("especialidades", e)}
-                      className={`inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-medium transition-colors ${
-                        ativo
-                          ? "bg-brand text-white"
-                          : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:hover:bg-stone-700"
-                      }`}
-                    >
-                      {e}
-                      {ativo && <Check size={13} aria-hidden />}
-                    </button>
-                  );
-                })}
-              </div>
-            </fieldset>
+          <Bloco numero={2} titulo="Áreas e termos próprios" completo={blocoFeito.especializacoes}>
+            <EditorAreas
+              areas={f.especialidades}
+              termos={f.termos}
+              aoMudarAreas={(areas) => mudar({ especialidades: areas })}
+              aoMudarTermos={(termos) => mudar({ termos })}
+            />
           </Bloco>
 
           <Bloco numero={3} titulo="Atendimento e território" completo={blocoFeito.atendimento}>
@@ -571,21 +608,15 @@ export default function PerfilPage() {
               </div>
             </fieldset>
 
-            {/* Desligar «presencial» não apaga o distrito nem o concelho —
-                deixa é de os exigir. Reativar restaura o que estava (§130). */}
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label htmlFor="distrito-perfil" className="block">
-                <span className="text-sm font-semibold text-stone-700">Distrito</span>
-                <SelectMenu
-                  id="distrito-perfil"
-                  value={f.distrito}
-                  options={OPCOES_DISTRITO}
-                  onChange={(value) => mudar({ distrito: value })}
-                  ariaLabel="Distrito do perfil profissional"
-                  className="mt-2"
-                />
-              </label>
-              <Texto rotulo="Concelho" id="concelho" valor={f.concelho} onChange={(v) => mudar({ concelho: v })} />
+            {/* Desligar «presencial» não apaga o território — deixa é de o
+                exigir. Reativar restaura o que estava (§130). O motor de
+                cobertura vê as modalidades exactamente por isso. */}
+            <div className="mt-4">
+              <EditorCobertura
+                cobertura={f.cobertura}
+                modalidades={f.modalidades}
+                aoMudar={(cobertura) => mudar({ cobertura })}
+              />
             </div>
 
             <fieldset className="mt-4">
@@ -648,7 +679,14 @@ export default function PerfilPage() {
             </div>
           </Bloco>
 
-          <Bloco numero={4} titulo="Consultas e honorário" completo={blocoFeito.consultas}>
+          <Bloco numero={4} titulo="A tua página" completo={blocoFeito.pagina}>
+            <EditorBlocos
+              blocos={f.blocos}
+              aoMudar={(blocos) => mudar({ blocos })}
+            />
+          </Bloco>
+
+          <Bloco numero={5} titulo="Consultas e honorário" completo={blocoFeito.consultas}>
             <p className="text-sm leading-relaxed text-stone-500">
               O que ofereces e por que valor. Aparece no teu perfil público
               como referência — o valor de cada consulta continua a ser
@@ -769,7 +807,17 @@ export default function PerfilPage() {
             )}
           </Bloco>
 
-          <Bloco numero={5} titulo="Confiança e contacto" completo={blocoFeito.contacto}>
+          <Bloco numero={6} titulo="Confiança e contacto" completo={blocoFeito.contacto}>
+            {ficha && (
+              <div className="mb-4">
+                <PainelVerificacao
+                  numero={f.occ}
+                  registo={registoDeVerificacao(ficha)}
+                  porGuardar={porGuardar}
+                  aoPedir={pedirVerificacao}
+                />
+              </div>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <Texto rotulo="Email de contacto" id="email" tipo="email" valor={f.email} onChange={(v) => mudar({ email: v })} />
               <Texto rotulo="Telefone" id="tel" tipo="tel" valor={f.telefone} onChange={(v) => mudar({ telefone: v })} />
@@ -803,7 +851,7 @@ export default function PerfilPage() {
               mais vezes, e sete secções abaixo estava fora de vista. A §132
               continua satisfeita — é uma decisão visível, com estado. */}
 
-          <Bloco numero={6} titulo="Disponibilidade" completo={blocoFeito.disponibilidade}>
+          <Bloco numero={7} titulo="Disponibilidade" completo={blocoFeito.disponibilidade}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <p className="max-w-md text-sm leading-relaxed text-stone-500">
                 Os horários que os clientes veem no teu perfil. Editam-se na

@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.77.0",
+    data: "2026-08-18",
+    titulo: "O selo «verificado» passa a ter prazo, e o perfil do contabilista deixa de ser um formulário",
+    itens: [
+      "«OCC verificada» queria dizer «alguém confirmou isto uma vez» — não dizia quem, nem como, nem se ainda era verdade. E uma inscrição na Ordem pode ser suspensa a qualquer momento.",
+      "O selo passa a ter prazo, a dizer como foi confirmado e em que dia. Quando o prazo acaba, sai do perfil público e o contabilista é avisado catorze dias antes, com o botão de renovar ao lado — fica «por reconfirmar», e não «por verificar» como quem nunca o foi.",
+      "Do lado da administração acabou o botão que carimba: para confirmar é preciso ir ao registo público da Ordem e escrever o que lá está. O sistema compara com a ficha — aceita o nome civil mais completo, recusa um homónimo com um apelido a mais, e não confirma nada se a inscrição não estiver activa.",
+      "O registo da Ordem está protegido contra consulta automática, e isso respeita-se. A confirmação sem intermediários chama-se SCAP, o sistema do Estado a que a Ordem aderiu em 2021: está escrita e testada, e fica desligada até haver protocolo com a AMA. Nada finge estar ligado.",
+      "O perfil deixa de ser o mesmo formulário para toda a gente. Compõe-se por blocos à escolha — como trabalho, o que trato, com quem trabalho melhor, como corre a primeira consulta, perguntas frequentes — pela ordem que cada um quiser.",
+      "As áreas continuam a ser as dez por que os clientes filtram, mas deixam de ser tudo. Quem trabalha com nómadas digitais escreve-o com as suas palavras, e o termo entra sozinho no filtro certo. O território ganha quatro modos, e «todo o país» só é aceite a quem atende online.",
+      "Abrir o perfil a texto livre vem com a resposta ao lado: um guardião que recusa publicar «o melhor de Lisboa», «garanto o reembolso» ou «certificado pelas Finanças». Explica porquê e sugere o que dizer. «Garanto que respondo no próprio dia» passa; o reembolso não, porque quem o decide é a Autoridade Tributária.",
+      "Não há blocos para testemunhos nem para percentagens de satisfação: um testemunho escrito pelo próprio não prova nada, e uma métrica que ninguém mediu é um número inventado.",
+    ],
+  },
+  {
     version: "2.76.0",
     data: "2026-08-18",
     titulo: "O diretório de contabilistas volta a abrir, e o Plus vitalício deixa de poder ser pago sem ser entregue",
