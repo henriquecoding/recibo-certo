@@ -41,7 +41,15 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { contribuicoesSS, simularDeclaracaoIRS, retencaoNaFonte } from "../../fiscal";
-import { ATIVIDADES, BASE_SS_POR_TIPO, RETENCAO, SS_COEFICIENTE, SS_TAXA, efeitoFiscal } from "../../fiscal-data";
+import {
+  ATIVIDADES,
+  BASE_SS_POR_TIPO,
+  DISPENSA_RETENCAO_LIMITE,
+  RETENCAO,
+  SS_COEFICIENTE,
+  SS_TAXA,
+  efeitoFiscal,
+} from "../../fiscal-data";
 import type { Atividade } from "../../fiscal-data";
 import type { DetalheFiscalVendedor, PerfilVendedor, TipoCliente } from "../tipos";
 import { dividir, fracao, naoNegativo } from "../numeros";
@@ -285,9 +293,15 @@ export function fracaoRetencao(vendedor: PerfilVendedor, cliente: TipoCliente): 
   // `RETENCAO[tipo]` não conhece.
   const taxa = regrasDe(vendedor).retencao;
 
-  // `retencaoNaFonte` conhece a dispensa do Art. 101.º-B e o IRS Jovem.
-  // Chamamo-la com 100 € para extrair a taxa efetiva sem duplicar regras.
-  const sobre100 = retencaoNaFonte(100, taxa);
+  // `retencaoNaFonte` conhece a dispensa do Art. 101.º-B e o IRS Jovem —
+  // e durante algum tempo foi chamada sem lhe passar nenhum dos dois, o que
+  // dava retenção a quem estava dispensado e a base cheia a quem tem
+  // isenção de IRS Jovem. Chamamo-la com 100 € para extrair a taxa efetiva
+  // sem duplicar regras.
+  const sobre100 = retencaoNaFonte(100, taxa, {
+    dispensa: vendedor.dispensaRetencao,
+    irsJovemAno: vendedor.irsJovemAno,
+  });
   return fracao(dividir(sobre100, 100), 0, 0.5);
 }
 
@@ -321,6 +335,18 @@ export function fiscalidadeVendedor(entrada: EntradaFiscalVendedor): DetalheFisc
   if (retFracao > 0) {
     notas.push(
       `O teu cliente empresa retém ${(retFracao * 100).toFixed(1).replace(".", ",")}% na fonte. Isso não é um custo — é IRS adiantado. Afeta a tua tesouraria, não a tua margem.`,
+    );
+    // A dispensa existe e quase ninguém a conhece. Só se sugere a quem a
+    // pode mesmo pedir: o limiar é sobre a faturação PREVISTA do ano.
+    const faturacao = naoNegativo(vendedor.faturacaoAnualPrevista);
+    if (!vendedor.dispensaRetencao && faturacao > 0 && faturacao < DISPENSA_RETENCAO_LIMITE.value) {
+      notas.push(
+        `Com menos de ${DISPENSA_RETENCAO_LIMITE.value.toLocaleString("pt-PT")} € de faturação anual prevista podes DISPENSAR a retenção (Art. 101.º-B, n.º 1, al. a) CIRS): escreves a menção na fatura-recibo e recebes o valor inteiro, acertando tudo no IRS. Não muda o imposto — muda quando o pagas.`,
+      );
+    }
+  } else if (vendedor.dispensaRetencao && cliente === "empresa_pt") {
+    notas.push(
+      "Dispensaste a retenção na fonte: recebes o valor inteiro de cada fatura. O IRS não desaparece — vem todo de uma vez no acerto anual, e convém ter isso reservado.",
     );
   }
 

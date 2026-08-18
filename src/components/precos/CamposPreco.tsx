@@ -348,6 +348,39 @@ export default function CamposPreco({
                     aoMudar={(v) => atualizar((c) => void (c.vendedor.salarioBrutoAnual = v))}
                     max={500_000}
                   />
+                  <Seletor
+                    id="irs-jovem"
+                    rotulo="IRS Jovem"
+                    ajuda="Art. 12.º-B do CIRS. A isenção reduz a base sujeita a retenção na fonte — e por isso muda o que recebes em cada fatura, não o que ganhas no fim."
+                    opcoes={[
+                      { valor: "0", rotulo: "Não se aplica" },
+                      ...Array.from({ length: 10 }, (_, i) => ({
+                        valor: String(i + 1),
+                        rotulo: `${i + 1}.º ano de rendimentos`,
+                      })),
+                    ]}
+                    valor={String(contexto.vendedor.irsJovemAno ?? 0)}
+                    aoMudar={(v) =>
+                      atualizar((c) => void (c.vendedor.irsJovemAno = Number(v) > 0 ? Number(v) : undefined))
+                    }
+                  />
+                  <label className="flex items-start gap-2.5 text-sm text-stone-600 dark:text-stone-400 sm:col-span-2">
+                    <input
+                      type="checkbox"
+                      checked={!!contexto.vendedor.dispensaRetencao}
+                      onChange={(e) =>
+                        atualizar((c) => void (c.vendedor.dispensaRetencao = e.target.checked))
+                      }
+                      className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand"
+                    />
+                    <span>
+                      Dispensei a retenção na fonte
+                      <span className="mt-0.5 block text-xs text-stone-600 dark:text-stone-400">
+                        Podes fazê-lo se previres faturar menos de 15 000 € no ano (Art. 101.º-B do CIRS). Recebes o
+                        valor inteiro de cada fatura e acertas tudo no IRS — muda quando pagas, não quanto pagas.
+                      </span>
+                    </span>
+                  </label>
                   <label className="flex items-start gap-2.5 text-sm text-stone-600 dark:text-stone-400 sm:col-span-2">
                     <input
                       type="checkbox"

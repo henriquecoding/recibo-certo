@@ -18,6 +18,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { EscalaoIVA, Regiao, TipoAtividade, BaseSS } from "../fiscal-data";
+import type { ConversaoSociedade } from "./motores/sociedade";
+import type { Tesouraria } from "./motores/tesouraria";
 
 export type { EscalaoIVA, Regiao, TipoAtividade, BaseSS };
 
@@ -39,6 +41,7 @@ export type CenarioInicial =
   | "loja_online"
   | "marketplace"
   | "objetivo"
+  | "ato_isolado"
   | "nao_sei";
 
 export const CENARIOS_INICIAIS = [
@@ -52,6 +55,7 @@ export const CENARIOS_INICIAIS = [
   "loja_online",
   "marketplace",
   "objetivo",
+  "ato_isolado",
   "nao_sei",
 ] as const;
 
@@ -142,6 +146,21 @@ export interface PerfilVendedor {
    * reprova quem o faça.
    */
   salarioBrutoAnual?: number;
+  /**
+   * Dispensa de retenção na fonte (Art. 101.º-B, n.º 1, al. a) CIRS): quem
+   * prevê faturar menos do que `DISPENSA_RETENCAO_LIMITE` no ano pode
+   * dispensá-la, escrevendo a menção na fatura-recibo.
+   *
+   * Muda a TESOURARIA, nunca a margem — a retenção é IRS adiantado, e o
+   * invariante que o garante continua a ser testado.
+   */
+  dispensaRetencao?: boolean;
+  /**
+   * Ano de rendimentos para o IRS Jovem (Art. 12.º-B CIRS), 1 a 10. A
+   * isenção reduz a base sujeita a retenção, e `retencaoNaFonte` já a sabe
+   * aplicar — só nunca lhe tinha chegado.
+   */
+  irsJovemAno?: number;
 }
 
 // ─── 3. O que se vende ─────────────────────────────────────────────────
@@ -527,10 +546,21 @@ export interface ResultadoPreco {
   faixa: FaixaPreco;
   fiscal: DetalheFiscalVendedor;
   caixa: DetalheCaixa;
+  /**
+   * Quanto sai e QUANDO, cruzando o preço com o calendário de obrigações.
+   * `null` sem volume declarado — sem ele a projeção seria inventada.
+   */
+  tesouraria?: Tesouraria | null;
 
   /** A memória de cálculo: como se chegou aqui. */
   explicacao: LinhaExplicacao[];
   avisos: Aviso[];
+
+  /**
+   * Só para sociedades: do lucro operacional ao que chega ao dono.
+   * `null` quando não se aplica ou quando não há volume para projetar.
+   */
+  sociedade?: ConversaoSociedade | null;
 
   /** Preenchido quando há desconto configurado. */
   desconto?: ResultadoDesconto;

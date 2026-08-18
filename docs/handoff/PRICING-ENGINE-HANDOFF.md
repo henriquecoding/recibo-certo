@@ -112,7 +112,27 @@ Os três primeiros mudam **números que a pessoa vê**; os restantes alargam o
 > - **R4** — `fracoesFiscais()` usa `simularDeclaracaoIRS` com `salarios`.
 >   `outrosRendimentos` continua a não ser tocado.
 >
-> **Ainda por fazer: R2, R5, R6, R7, R8, R9.**
+> - **R2** — a atividade concreta manda sobre o `tipo`: `atividadeDoPerfil()` +
+>   `regrasDe()` resolvem o pacote por `efeitoFiscal()` e passam
+>   `coefOverride` / `aplicaRegra15Override` ao motor de IRS.
+> - **R5** — `dispensaRetencao` e `irsJovemAno` chegam a `retencaoNaFonte()`.
+>   Muda a tesouraria, nunca a margem — e o teste do B2B/B2C prova-o.
+> - **R6** — `motores/sociedade.ts` converte o lucro operacional no que chega
+>   ao dono, via `simularEmpresaOpcoes`. Camada POR CIMA do resultado, nunca
+>   dentro do solver. O lucro retido aparece sempre ao lado do líquido
+>   pessoal: riqueza total = líquido pessoal + lucro retido.
+> - **R7** — `motores/tesouraria.ts` cruza o preço com `prazosAplicaveis()`.
+>   Duas regras que os testes protegem: **declarar não é pagar** (a quantia
+>   vai só na linha do pagamento, senão a reserva duplica) e **a Segurança
+>   Social declara-se por trimestre mas paga-se todos os meses**.
+> - **R8** — cenário `ato_isolado` + `atoIsolado` em `situacaoIVAPreco` e o
+>   aviso `ato-isolado-leva-iva` (Art. 53.º n.º 6 a).
+> - **R9** — **verificado, parcialmente resolvido.** Ver a secção R9 abaixo:
+>   a pergunta em aberto passou a resposta com fonte, ficou o aviso
+>   `irs-regiao-autonoma`, e o que falta é uma decisão de produto.
+>
+> **Ainda por fazer: a parte de motor do R9** (taxas regionais de IRS a sério),
+> que depende de uma decisão descrita na secção respetiva.
 
 ### R1 · Ligar `situacaoIVA()` — o maior desperdício atual
 
@@ -266,13 +286,71 @@ cenário inicial correspondente em `perguntas.ts` e a ligação à ferramenta
 
 ---
 
-### R9 · Regiões autónomas e IRS — a verificar antes de afirmar
+### R9 · Regiões autónomas e IRS — verificado; falta uma decisão
 
 O motor aplica IVA regional (Continente / Madeira / Açores) mas IRS nacional.
-Há reduções regionais de taxa de IRS nas regiões autónomas. **Não implementar
-sem confirmar em fonte oficial** se e como se aplicam à Categoria B, e sem
-passar pelo protocolo da skill `fiscalidade-pt-2026`. Fica registado como
-pergunta em aberto, não como defeito conhecido.
+A pergunta era se as reduções regionais de IRS se aplicam à categoria B.
+
+**Resposta (verificada em 2026-08-18, protocolo da skill `fiscalidade-pt-2026`):
+sim, aplicam-se.**
+
+- A **Lei Orgânica n.º 2/2013** (Lei das Finanças das Regiões Autónomas),
+  Título VI, permite às assembleias legislativas regionais baixar as taxas
+  nacionais de IRS até ao limite de **30%**.
+- A redução é do **sujeito passivo residente** na região — não da fonte do
+  rendimento, e independente do local onde a atividade é exercida. Incide
+  sobre as taxas gerais do **Art. 68.º CIRS**, que se aplicam à matéria
+  coletável **englobada**. Logo abrange a categoria B.
+- Em **2026 as duas regiões aplicam o diferencial máximo em todos os nove
+  escalões**. Madeira: Decreto Legislativo Regional n.º 8/2025/M (o
+  diferencial de 30%, que ia até ao 6.º escalão, foi alargado ao 9.º).
+  Açores: mesma estrutura, com tabelas de retenção próprias já publicadas
+  (Despacho n.º 1179/2026).
+- As tabelas publicadas para 2026 (Agenda da OCC) são, escalão a escalão,
+  **exatamente 70% da taxa nacional**, com os mesmos limites de escalão:
+
+  | Coletável (€) | Continente | Madeira e Açores |
+  |---|---|---|
+  | até 8 342 | 12,50% | 8,75% |
+  | 8 342 – 12 587 | 15,70% | 10,99% |
+  | 12 587 – 17 838 | 21,20% | 14,84% |
+  | 17 838 – 23 089 | 24,10% | 16,87% |
+  | 23 089 – 29 397 | 31,10% | 21,77% |
+  | 29 397 – 43 090 | 34,90% | 24,43% |
+  | 43 090 – 46 566 | 43,10% | 30,17% |
+  | 46 566 – 86 634 | 44,60% | 31,22% |
+  | > 86 634 | 48,00% | 33,60% |
+
+**O que já foi feito.** O aviso `irs-regiao-autonoma` diz a quem reside nas
+regiões autónomas que o IRS deste cálculo é o nacional e que o preço proposto
+é, por isso, **conservador** — cobre mais imposto do que a pessoa vai pagar.
+Uma inexatidão declarada é honesta; a mesma inexatidão em silêncio não é.
+
+**O que falta, e porque não foi feito.** Aplicar as taxas regionais a sério
+significa passar a região a `irsProgressivo()`, e esse é o motor de IRS de
+**toda** a aplicação: calculadora, simulador, comparador, guias, `payout-mor`,
+`fiscal-dependente`, `fiscal-empresa` e a auditoria. Muda o imposto mostrado
+em todo o lado para uma parte dos utilizadores — é «mudança grande» na aceção
+da regra 7 do `CLAUDE.md` e precisa de validação antes de ser implementada.
+
+Há ainda uma **decisão de produto por tomar, e ela é a parte difícil**:
+`vendedor.regiao` significa hoje *região para efeitos de IVA*. O que decide a
+redução de IRS é a **residência fiscal**. Coincidem quase sempre, mas não são
+a mesma pergunta, e aplicar uma redução de imposto a partir de um campo que
+significa outra coisa seria assumir em silêncio um facto que determina o
+imposto de alguém — exatamente o que a regra 1 existe para impedir. Antes de
+mexer no motor é preciso decidir se o perfil passa a ter um campo próprio de
+residência fiscal, ou se se assume a coincidência **e se diz que se assume**.
+
+**Plano, quando houver decisão.**
+1. `REDUCAO_IRS_REGIOES_AUTONOMAS` em `fiscal-data.ts` como `Sourced<number>`
+   (0,30), com base legal e fonte. Não transcrever as 18 taxas à mão: derivar
+   e **assertar** contra a tabela publicada, para que qualquer desvio futuro,
+   nosso ou do legislador, parta o build em vez de passar despercebido.
+2. `irsProgressivo(coletavel, regiao = "continente")` — o valor por omissão
+   mantém todos os chamadores atuais com o comportamento de hoje.
+3. Propagar a região a partir do perfil fiscal, uma superfície de cada vez.
+4. Retirar o aviso `irs-regiao-autonoma` quando deixar de ser verdade.
 
 ---
 
