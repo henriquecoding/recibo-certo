@@ -818,7 +818,11 @@ describe("objetivo invertido", () => {
     expect(proximo(verificacao.margem.lucroMensal, 2000, 2)).toBe(true);
   });
 
-  it("para um TI, «ganhar 2 000 €» exige gerar mais do que 2 000 € de lucro", () => {
+  it("para um TI, «ganhar 2 000 €» exige FATURAR muito mais do que 2 000 €", () => {
+    // A afirmação certa é sobre a faturação, não sobre o lucro. O lucro que
+    // o solver resolve JÁ é líquido de Segurança Social e IRS — este teste
+    // chegou a exigir o contrário, e era essa exigência que mantinha a dupla
+    // contagem viva (pedir 800 € rendia 1 219 €).
     const ctx = ctxSimples((c) => {
       c.vendedor = {
         tipo: "ti",
@@ -830,9 +834,55 @@ describe("objetivo invertido", () => {
       };
       c.volume = { unidadesMes: 100 };
     });
-    const liquido = precoParaGanhar(ctx, 2000, true);
-    const operacional = precoParaGanhar(ctx, 2000, false);
-    expect(liquido.pvpNecessario!).toBeGreaterThan(operacional.pvpNecessario!);
+    const r = precoParaGanhar(ctx, 2000, true);
+    expect(r.ok).toBe(true);
+    expect(r.faturacaoMensalNecessaria!).toBeGreaterThan(2000 * 1.5);
+  });
+
+  it("«quero ganhar X» entrega X — não mais, para um TI", () => {
+    // O defeito que este teste prende custava um preço 23% acima do
+    // necessário a quem passa recibos verdes.
+    const ctx = ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 30000,
+      };
+      c.volume = { unidadesMes: 100 };
+    });
+    for (const alvo of [800, 2000]) {
+      const r = precoParaGanhar(ctx, alvo, true);
+      expect(r.ok).toBe(true);
+      const verificacao = precificar({
+        ...ctx,
+        objetivo: { modo: "preco_fixo", valor: r.pvpNecessario!, valorEhPVP: true },
+      });
+      expect(proximo(verificacao.margem.lucroMensal, alvo, 2), `alvo ${alvo}`).toBe(true);
+    }
+  });
+
+  it("«consigo cobrar X» pede as vendas que chegam, não mais", () => {
+    const ctx = ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 30000,
+      };
+      c.volume = { unidadesMes: 100 };
+    });
+    const r = unidadesParaGanhar(ctx, 48, 800, true);
+    expect(r.ok).toBe(true);
+    const aoPreco = precificar({ ...ctx, objetivo: { modo: "preco_fixo", valor: 48, valorEhPVP: true } });
+    const necessarias = 800 / aoPreco.margem.lucroUnidade;
+    // Arredonda para cima, nunca mais do que uma venda acima do exacto.
+    expect(r.unidadesNecessarias!).toBeGreaterThanOrEqual(Math.floor(necessarias));
+    expect(r.unidadesNecessarias!).toBeLessThanOrEqual(Math.ceil(necessarias));
   });
 
   it("«consigo cobrar X — quantas vendas?» devolve um inteiro coerente", () => {
@@ -1192,5 +1242,47 @@ describe("R4 · o IRS marginal conta com o emprego", () => {
     );
     expect(proximo(b2b.margem.margem, b2c.margem.margem, 0.001)).toBe(true);
     expect(b2b.fiscal.retencaoFracao).toBeGreaterThan(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DEFEITOS DE INTERFACE APANHADOS EM USO REAL
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("a faixa não mostra o mesmo número duas vezes", () => {
+  it("sem custos fixos, o piso e o mínimo sustentável colapsam num só", () => {
+    // Eram duas âncoras com o mesmo valor ao cêntimo e explicações que se
+    // contradizem à leitura — «nem os custos ficam cobertos» por cima de
+    // «cobre tudo». Quem lê conclui que uma delas está errada.
+    const r = precificar(
+      ctxSimples((c) => {
+        c.custos.fixos = [];
+      }),
+    );
+    const piso = r.faixa.ancoras.find((a) => a.chave === "piso");
+    const minimo = r.faixa.ancoras.find((a) => a.chave === "minimo");
+    expect(piso).toBeDefined();
+    expect(minimo).toBeUndefined();
+    expect(piso!.explicacao).toMatch(/não declaraste custos fixos/i);
+  });
+
+  it("com custos fixos, as duas âncoras existem e são diferentes", () => {
+    const r = precificar(
+      ctxSimples((c) => {
+        c.custos.fixos = [{ id: "renda", rotulo: "Renda", mensal: 800 }];
+      }),
+    );
+    const piso = r.faixa.ancoras.find((a) => a.chave === "piso")!;
+    const minimo = r.faixa.ancoras.find((a) => a.chave === "minimo")!;
+    expect(minimo).toBeDefined();
+    expect(minimo.precoLiquido).toBeGreaterThan(piso.precoLiquido);
+  });
+
+  it("as âncoras nunca repetem o mesmo PVP", () => {
+    for (const fixos of [[], [{ id: "r", rotulo: "Renda", mensal: 300 }]]) {
+      const r = precificar(ctxSimples((c) => void (c.custos.fixos = fixos)));
+      const pvps = r.faixa.ancoras.map((a) => a.pvp.toFixed(2));
+      expect(new Set(pvps).size, JSON.stringify(pvps)).toBe(pvps.length);
+    }
   });
 });

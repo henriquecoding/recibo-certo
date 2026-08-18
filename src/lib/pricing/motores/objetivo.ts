@@ -9,12 +9,22 @@
 //    «Consigo vender 100 por mês. Dá para viver disto?»
 //
 //  Todas se resolvem com a mesma equação do `preco.ts`, lida ao contrário.
-//  E há um detalhe português que muda o número: para um trabalhador
-//  independente, «ganhar 2 000 €» significa 2 000 € DEPOIS de Segurança
-//  Social e IRS — que incidem sobre a faturação. Repor esse valor não é
-//  somar; é dividir por (1 − fração fiscal).
 //
-//  Ignorá-lo faz a ferramenta prometer 2 000 € e entregar 1 500 €.
+//  ── O «lucro» do solver JÁ É LÍQUIDO DE IMPOSTOS ──────────────────────
+//
+//  Este ficheiro repunha aqui a Segurança Social e o IRS, dividindo o alvo
+//  por (1 − fração fiscal). A intenção era certa — «ganhar 2 000 €»
+//  significa 2 000 € na mão — mas a conta era feita duas vezes: as mesmas
+//  frações já entram no solver como `v`, e portanto `lucroAoPreco()`
+//  devolve o que sobra DEPOIS delas.
+//
+//  Medido: pedir 800 €/mês produzia um preço que rendia 1 219 €/mês —
+//  52% acima do pedido. A ferramenta mandava cobrar 41,59 € onde 33,74 €
+//  bastavam, e um preço 23% acima do necessário perde negócio.
+//
+//  Por isso o alvo entra agora tal como vem. Para um trabalhador
+//  independente o resultado é o que fica na mão; para uma sociedade é o
+//  lucro operacional, porque aí não há SS nem IRS no `v`.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ContextoPreco, LinhaExplicacao, ResultadoObjetivo } from "../tipos";
@@ -48,9 +58,7 @@ export function precoParaGanhar(
 
   // Uma corrida em vazio dá as frações fiscais e os custos ao contexto atual.
   const sonda = precificar(contexto);
-  const fracaoFiscal = sonda.fiscal.aplicavel
-    ? fracao(sonda.fiscal.ssFracao + sonda.fiscal.irsFracao, 0, 0.9)
-    : 0;
+  const temFiscalidade = sonda.fiscal.aplicavel;
 
   explicacao.push({
     rotulo: "O que queres receber por mês",
@@ -58,25 +66,23 @@ export function precoParaGanhar(
     confianca: "estimativa",
   });
 
-  // Se o alvo é líquido pessoal, o negócio tem de gerar mais do que isso.
-  // O lucro operacional está sujeito às mesmas frações que a faturação
-  // marginal, por isso repõe-se por divisão, não por soma.
-  const lucroOperacionalNecessario =
-    liquidoPessoal && fracaoFiscal > 0 ? dividir(alvo, 1 - fracaoFiscal, alvo) : alvo;
+  // O alvo entra TAL COMO VEM. Ver o cabeçalho: repor aqui a Segurança
+  // Social e o IRS contava-os duas vezes, porque já estão dentro do solver.
+  const lucroAlvo = alvo;
 
-  if (liquidoPessoal && fracaoFiscal > 0) {
+  if (temFiscalidade) {
     explicacao.push({
-      rotulo: "Reposição de Segurança Social e IRS",
-      valor: cent(lucroOperacionalNecessario - alvo),
-      percentagem: fracaoFiscal,
+      rotulo: "Segurança Social e IRS",
+      valor: 0,
+      percentagem: fracao(sonda.fiscal.ssFracao + sonda.fiscal.irsFracao, 0, 0.9),
       confianca: "oficial",
-      nota: "Para te sobrarem os primeiros, o negócio tem de gerar estes. Não é somar a percentagem — é dividir por (1 − percentagem).",
+      nota: "Já vêm descontados no preço calculado: o lucro que a ferramenta resolve é o que te fica na mão, não o que o negócio fatura antes de impostos.",
     });
   }
 
   const novoContexto: ContextoPreco = {
     ...contexto,
-    objetivo: { ...contexto.objetivo, modo: "lucro_mensal", valor: lucroOperacionalNecessario },
+    objetivo: { ...contexto.objetivo, modo: "lucro_mensal", valor: lucroAlvo },
   };
 
   const r = precificar(novoContexto);
@@ -86,8 +92,8 @@ export function precoParaGanhar(
   }
 
   explicacao.push({
-    rotulo: `Lucro necessário por venda (÷ ${q} vendas)`,
-    valor: cent(dividir(lucroOperacionalNecessario, q)),
+    rotulo: `Necessário por venda (÷ ${q} vendas)`,
+    valor: cent(dividir(lucroAlvo, q)),
     confianca: "estimativa",
   });
   explicacao.push({ rotulo: "Preço sem IVA", valor: r.precoLiquido, confianca: "estimativa" });
@@ -126,11 +132,10 @@ export function unidadesParaGanhar(
   };
   const r = precificar(contextoAoPreco);
 
-  const fracaoFiscal = r.fiscal.aplicavel
-    ? fracao(r.fiscal.ssFracao + r.fiscal.irsFracao, 0, 0.9)
-    : 0;
-  const lucroNecessario =
-    liquidoPessoal && fracaoFiscal > 0 ? dividir(alvo, 1 - fracaoFiscal, alvo) : alvo;
+  // Idem: a contribuição por venda que `precificar` devolve já é líquida de
+  // Segurança Social e IRS. Dividir o alvo por (1 − fração) mandava fazer
+  // 79 vendas onde 52 chegavam.
+  const lucroNecessario = alvo;
 
   const contribuicao = r.margem.contribuicaoUnidade;
   const fixos = r.custo.fixosPorUnidade * Math.max(1, num(contexto.volume.unidadesMes));
@@ -151,12 +156,13 @@ export function unidadesParaGanhar(
     confianca: "estimativa",
   });
   explicacao.push({ rotulo: "Custos fixos por mês", valor: -cent(fixos), confianca: "estimativa" });
-  if (lucroNecessario > alvo) {
+  if (r.fiscal.aplicavel) {
     explicacao.push({
-      rotulo: "Lucro necessário (já com impostos repostos)",
-      valor: cent(lucroNecessario),
-      percentagem: fracaoFiscal,
+      rotulo: "Segurança Social e IRS",
+      valor: 0,
+      percentagem: fracao(r.fiscal.ssFracao + r.fiscal.irsFracao, 0, 0.9),
       confianca: "oficial",
+      nota: "Já descontados na margem de contribuição acima — as vendas contadas aqui são as que te deixam o valor pedido na mão.",
     });
   }
 

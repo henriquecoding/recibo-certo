@@ -7,7 +7,7 @@ import { generateFAQSchema } from "@/lib/seo";
 import { fmt } from "@/lib/format";
 import { IVA_TAXAS, IVA_ISENCAO_LIMITE, SS_TAXA, SS_COEFICIENTE } from "@/lib/fiscal-data";
 import { REDUCAO_PRECO_30_DIAS, LIVRE_RESOLUCAO, PRECO_AO_CONSUMIDOR, REVISAO_PRICING } from "@/lib/pricing";
-import { ArrowRight, ExternalLink } from "@/components/ui/Icons";
+import { ArrowRight, ExternalLink, Info } from "@/components/ui/Icons";
 
 const TOOL = porId("calcular-preco")!;
 
@@ -50,7 +50,7 @@ const FAQ = [
   },
   {
     q: "Qual é a diferença entre margem e markup?",
-    a: "Markup é quanto acrescentas ao custo; margem é a fatia do preço de venda que é lucro. Um markup de 50% sobre um custo de 10 € dá um preço de 15 € e uma margem de 33,3%. Uma margem de 50% sobre o mesmo custo dá 20 €. São cinco euros de diferença no mesmo produto — por isso não se podem usar como sinónimos.",
+    a: "As duas medem a mesma coisa — o que te fica — mas dividem por números diferentes. Num preço de 15 € com 10 € de custo, ficam-te 5 €: esses 5 € são 50% do custo (markup) e 33,3% do preço (margem). O markup é sempre o número maior, porque o custo é sempre menor do que o preço; por isso um markup de 100% é uma margem de 50%, e não «o dobro do lucro». Nesta calculadora as duas medem o que te fica DEPOIS da Segurança Social e do IRS, e não o que acrescentaste à etiqueta — é por isso que o preço sugerido a um trabalhador independente é mais alto do que o da conta de manual.",
   },
   {
     q: "Se estou isento de IVA pelo Art. 53.º, o preço fica mais barato?",
@@ -144,17 +144,105 @@ function Contexto() {
         </ol>
       </section>
 
-      {/* ── Margem vs markup, explicado onde é preciso ───────────── */}
+      {/* ── Margem vs markup ──────────────────────────────────────
+          Reescrito porque a versão anterior ensinava a definição de manual
+          («markup de 50% sobre 10 € dá 15 €») enquanto a ferramenta usa
+          outra: aqui o markup mede O QUE FICAS a dividir pelo custo, não o
+          que acrescentas ao preço. Para um trabalhador independente os dois
+          dão números muito diferentes, porque a Segurança Social e o IRS
+          saem pelo meio — e quem lia a tabela e depois via o preço da
+          ferramenta concluía, com razão, que uma das duas estava errada.
+
+          A explicação passa a ser: o mesmo euro, dois denominadores. E
+          depois, a razão portuguesa para o preço subir. ─────────────── */}
       <section>
         <h2 className="font-display mb-3 text-xl font-semibold text-stone-800 dark:text-stone-100">
-          Margem e markup não são a mesma coisa
+          Margem e markup: o mesmo euro, dois denominadores
         </h2>
-        <p className="mb-4 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-          É a confusão mais cara da precificação, e custa dinheiro nos dois sentidos: quem quer margem e aplica markup
-          cobra a menos; quem quer markup e aplica margem cobra a mais e perde vendas.
+        <p className="mb-5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          É a confusão mais cara da precificação. Não são duas formas de cobrar — são duas formas de{" "}
+          <strong className="font-semibold text-stone-800 dark:text-stone-100">medir a mesma coisa</strong>: o que te
+          fica. O que muda é por quanto se divide.
         </p>
-        <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="Margem e markup lado a lado">
+
+        {/* Uma barra: custo + o que te fica = preço. */}
+        <div className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
+          <div className="mb-2 flex items-baseline justify-between gap-3">
+            <span className="eyebrow text-stone-500 dark:text-stone-400">Um exemplo simples</span>
+            <span className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+              preço {fmt(15)}
+            </span>
+          </div>
+
+          <div
+            className="flex h-11 w-full overflow-hidden rounded-xl"
+            role="img"
+            aria-label="Um preço de 15 euros é feito de 10 euros de custo mais 5 euros que te ficam"
+          >
+            <div
+              className="flex items-center justify-center bg-stone-200 text-xs font-semibold text-stone-700 dark:bg-stone-700 dark:text-stone-200"
+              style={{ width: "66.67%" }}
+            >
+              {fmt(10)}
+            </div>
+            <div
+              className="flex items-center justify-center bg-brand text-xs font-semibold text-white"
+              style={{ width: "33.33%" }}
+            >
+              {fmt(5)}
+            </div>
+          </div>
+          <div className="mt-1.5 flex w-full text-[11px] font-medium text-stone-500 dark:text-stone-400">
+            <span style={{ width: "66.67%" }}>custo</span>
+            <span style={{ width: "33.33%" }}>o que te fica</span>
+          </div>
+
+          <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3.5 dark:border-stone-800 dark:bg-stone-800/40">
+              <dt className="text-sm font-semibold text-stone-800 dark:text-stone-100">Markup: 50%</dt>
+              <dd className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+                Os mesmos {fmt(5)} a dividir pelo <strong className="font-semibold">custo</strong> ({fmt(10)}).
+                Responde a «quanto acrescentei ao que me custou?».
+              </dd>
+            </div>
+            <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3.5 dark:border-stone-800 dark:bg-stone-800/40">
+              <dt className="text-sm font-semibold text-stone-800 dark:text-stone-100">Margem: 33,3%</dt>
+              <dd className="mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+                Os mesmos {fmt(5)} a dividir pelo <strong className="font-semibold">preço</strong> ({fmt(15)}).
+                Responde a «que fatia da venda é minha?».
+              </dd>
+            </div>
+          </dl>
+
+          <p className="mt-3 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+            O markup é sempre o número maior dos dois, porque o custo é sempre menor do que o preço. Por isso um markup
+            de 100% não é «o dobro do lucro» — é uma margem de 50%.
+          </p>
+        </div>
+
+        {/* A parte portuguesa, que é a que faz os números não baterem. */}
+        <div className="mt-4 rounded-4xl border border-alert-border bg-alert-bg p-4 sm:p-5">
+          <h3 className="mb-1.5 flex items-center gap-2 text-sm font-semibold text-alert-text">
+            <Info size={15} className="flex-shrink-0" />
+            Porque é que o preço que esta ferramenta sugere é mais alto
+          </h3>
+          <p className="text-sm leading-relaxed text-alert-text">
+            Naquele exemplo, os {fmt(5)} eram todos teus. Se passas recibos verdes, não são: a Segurança Social incide
+            sobre a faturação e o IRS vem a seguir. Para te ficarem {fmt(5)} na mão, o preço tem de ser mais alto do que
+            os {fmt(15)} da conta de manual.
+          </p>
+          <p className="mt-2 text-sm leading-relaxed text-alert-text">
+            É por isso que aqui <strong className="font-semibold">margem e markup medem o que te fica depois dos
+            impostos</strong>, e não o que acrescentaste à etiqueta. Pedes 50% de markup, a ferramenta garante-te{" "}
+            {fmt(5)} por venda — e diz-te que preço é preciso para isso.
+          </p>
+        </div>
+
+        <div className="mt-4 overflow-x-auto" tabIndex={0} role="region" aria-label="Margem e markup lado a lado">
           <table className="w-full min-w-[420px] border-collapse text-sm">
+            <caption className="mb-2 text-left text-xs text-stone-500 dark:text-stone-400">
+              Sem impostos pelo meio, para a conversão ficar à vista:
+            </caption>
             <thead>
               <tr className="border-b border-stone-200 text-left dark:border-stone-700">
                 <th scope="col" className="py-2 pr-4 font-semibold text-stone-600 dark:text-stone-400">Custo</th>

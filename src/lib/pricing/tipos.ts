@@ -463,7 +463,15 @@ export interface DetalheFiscalVendedor {
   /** Retenção na fonte: caixa, não custo. */
   retencaoFracao: number;
   retencaoPorUnidade: number;
-  /** O que fica para a pessoa, por unidade, depois de tudo. */
+  /**
+   * Faturação da unidade MENOS os impostos pessoais (SS e IRS). Não desconta
+   * o custo do produto.
+   *
+   * ⚠️ NÃO é «o que te fica por venda» — para isso é `margem.lucroUnidade`,
+   * que desconta tudo. Num produto de 10 € de custo vendido a 39 €, este
+   * campo dá 25,61 € e o que sobra mesmo são 15,61 €. O comentário anterior
+   * dizia «depois de tudo» e a diferença era exactamente o custo.
+   */
   liquidoPessoalPorUnidade: number;
   notas: string[];
 }

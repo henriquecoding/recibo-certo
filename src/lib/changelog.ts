@@ -16,6 +16,30 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.80.0",
+    data: "2026-08-18",
+    titulo: "Margem e markup explicados a sério — e dois enganos de conta corrigidos",
+    itens: [
+      "A explicação de margem e markup estava a ensinar uma coisa e a ferramenta a fazer outra. A página dizia que 50% de markup sobre 10 € dá 15 €; a calculadora sugeria mais. Quem lia as duas concluía, com razão, que uma delas estava errada.",
+      "As duas medem a mesma coisa — o que te fica — e o que muda é o denominador: a margem divide pelo preço, o markup divide pelo custo. Passa a haver uma barra que mostra os mesmos cinco euros lidos das duas maneiras, e uma explicação de porque é que o preço aqui é mais alto do que o da conta de manual: naquele exemplo os cinco euros eram todos teus, e com recibos verdes não são.",
+      "E, no sítio onde escolhes entre margem e markup, a escolha passa a traduzir-se sozinha com os teus números: quanto te fica por venda, que percentagem do custo é, e que percentagem do preço é.",
+      "Corrigido um engano que mandava cobrar a mais: quem pedia «quero ganhar 800 € por mês» recebia um preço que rendia 1 219 €. Os impostos estavam a ser contados duas vezes — o cálculo já os descontava, e voltavam a ser repostos por cima. O mesmo acontecia em «quantas vendas preciso», que pedia 79 vendas onde 52 chegavam.",
+      "A conta que compara o valor/hora ingénuo com o real — «dividir o ordenado pelas horas do mês daria 15 €/h; com férias, horas não faturáveis e impostos, são 42 €/h» — estava a ser calculada e deitada fora. Passa a aparecer.",
+    ],
+  },
+  {
+    version: "2.79.0",
+    data: "2026-08-18",
+    titulo: "A calculadora de preços deixa de prender quem lá entra",
+    itens: [
+      "O botão «Mudar» não fazia nada. Carregavas, e ficava tudo igual — porque o ecrã voltava a ler o cenário guardado no mesmo instante em que o largava, e repunha-o. Quem escolhia o tipo de venda errado não tinha como sair sem apagar os dados do browser. Está corrigido, e sair de um cenário passa a esquecê-lo mesmo.",
+      "O «voltar» do telemóvel saía da ferramenta em vez de recuar um passo. O cenário passa a ficar no endereço, por isso o botão e o gesto de voltar fazem o que se espera — e podes guardar ou partilhar o link já com o teu caso escolhido.",
+      "O cursor para experimentar outro preço estava depois de todos os campos: no telemóvel nascia quatro ecrãs abaixo do número que serve para afinar. Passa a estar logo por baixo do preço, que é onde se lhe quer mexer. A memória de cálculo desceu para junto dos campos — é para conferir depois, não para atravessar antes.",
+      "O mesmo preço aparecia com dois valores sem IVA diferentes na mesma página, a um cêntimo um do outro. Era o cursor a refazer a conta a partir de um número já arredondado. Agora, parado no valor recomendado, mostra o resultado tal e qual.",
+      "Quando não há contas fixas declaradas, o «piso absoluto» e o «mínimo sustentável» são o mesmo número. Apareciam os dois, com explicações que se contradizem à leitura. Passa a aparecer uma linha só, a dizer porquê. E o «equilíbrio: 0» — que se lia como erro — passa a dizer que não há custos fixos a cobrir.",
+    ],
+  },
+  {
     version: "2.78.0",
     data: "2026-08-18",
     titulo: "Uma ferramenta nova para decidir quanto cobrar — feita para as regras portuguesas, não traduzida do Brasil",
