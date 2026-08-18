@@ -24,6 +24,11 @@ import { estadoOcc } from "@/lib/contabilistas/diretorio";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import { comoOClienteVe } from "@/lib/contabilistas/stripe/estado";
 import Button from "@/components/ui/Button";
+import BlocosDoPerfil from "@/components/contabilistas/BlocosDoPerfil";
+import { lerTermos } from "@/lib/contabilistas/personalizacao/taxonomia";
+import {
+  descreverCobertura, lerCobertura,
+} from "@/lib/contabilistas/personalizacao/cobertura";
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import LinkedInPublico from "@/components/contabilistas/LinkedInPublico";
@@ -176,6 +181,11 @@ export default function PerfilPublico({ slug }: { slug: string }) {
   const podeMarcar = podeAgendar(estadoVinculo as never);
   const podePedir = podePedirVinculo(estadoVinculo as never) && cc.aceitaNovosClientes;
   const exemplo = valorComDesconto(cc.precoConsultaCents, cc.fidelidadeDescontoPct);
+  // Os termos e a cobertura passam pelos motores antes de serem lidos: é
+  // lá que uma entrada estragada é descartada em silêncio, em vez de
+  // deixar a página de alguém em branco.
+  const termos = lerTermos(cc.perfilTermos);
+  const cobertura = cc.cobertura ? lerCobertura(cc.cobertura) : null;
 
   return (
     <main className="min-h-[100dvh] bg-cream">
@@ -190,10 +200,21 @@ export default function PerfilPublico({ slug }: { slug: string }) {
               <LinkedInPublico contabilistaId={cc.userId} nome={cc.nome} />
               <div className="min-w-0">
                 <h1 className="font-display text-3xl leading-tight text-ink sm:text-4xl">{cc.nome}</h1>
-                {(cc.concelho || cc.distrito) && (
-                  <p className="mt-2 flex items-center gap-1.5 text-sm text-stone-500">
-                    <MapPin size={15} aria-hidden />
-                    {[cc.concelho, cc.distrito].filter(Boolean).join(", ")}
+                {/* O território, dito pelo motor de cobertura — que sabe a
+                    diferença entre um escritório, uma zona e o país inteiro.
+                    Sem cobertura definida, cai no concelho e no distrito
+                    que sempre lá estiveram. */}
+                {(cobertura || cc.concelho || cc.distrito) && (
+                  <p className="mt-2 flex items-start gap-1.5 text-sm text-stone-500">
+                    <MapPin size={15} className="mt-0.5 shrink-0" aria-hidden />
+                    <span>
+                      {cobertura
+                        ? descreverCobertura(cobertura, cc.modalidades)
+                        : [cc.concelho, cc.distrito].filter(Boolean).join(", ")}
+                      {cobertura?.nota && (
+                        <span className="block text-xs text-stone-400">{cobertura.nota}</span>
+                      )}
+                    </span>
                   </p>
                 )}
               </div>
@@ -207,19 +228,49 @@ export default function PerfilPublico({ slug }: { slug: string }) {
           {/* A mesma frase que o cartão do diretório mostra, vinda da mesma
               função: um perfil que diz «verificada» onde a lista dizia
               «informada» seriam duas verdades sobre a mesma inscrição (§50). */}
-          <p className="mt-3 flex items-center gap-1.5 text-sm text-stone-500">
-            <ShieldCheck size={15} className="text-brand" aria-hidden />
-            {estadoOcc(cc).etiqueta}
-          </p>
+          {/* O selo, e o que ele quer dizer. «Verificada» sozinha não
+              responde à pergunta seguinte — verificada por quem, e há
+              quanto tempo? Um selo que não sabe responder a isso é um
+              autocolante. A frase vem de `estadoOcc`, a mesma que o cartão
+              do diretório usa (§50). */}
+          {(() => {
+            const occ = estadoOcc(cc);
+            return (
+              <div className="mt-3">
+                <p className="flex items-center gap-1.5 text-sm text-stone-500">
+                  <ShieldCheck
+                    size={15}
+                    className={occ.tom === "verificada" ? "text-brand" : "text-stone-400"}
+                    aria-hidden
+                  />
+                  {occ.etiqueta}
+                </p>
+                {occ.detalhe && (
+                  <p className="mt-1 pl-[21px] text-xs text-stone-400">{occ.detalhe}</p>
+                )}
+              </div>
+            );
+          })()}
 
           {cc.bio && (
             <p className="mt-4 whitespace-pre-line text-base leading-relaxed text-stone-700">{cc.bio}</p>
           )}
 
-          {cc.especialidades.length > 0 && (
+          {(cc.especialidades.length > 0 || termos.length > 0) && (
             <ul className="mt-4 flex flex-wrap gap-1.5">
               {cc.especialidades.map((e) => (
                 <li key={e} className="rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-600">{e}</li>
+              ))}
+              {/* Os termos próprios, com o desenho trocado: são as palavras
+                  da pessoa, e não uma das áreas do diretório. Parecerem
+                  iguais faria passar por catálogo o que é texto livre. */}
+              {termos.map((t, i) => (
+                <li
+                  key={`${t.texto}-${i}`}
+                  className="rounded-lg border border-stone-200 px-2.5 py-1 text-xs font-medium text-stone-500"
+                >
+                  {t.texto}
+                </li>
               ))}
             </ul>
           )}
@@ -281,6 +332,10 @@ export default function PerfilPublico({ slug }: { slug: string }) {
             )}
           </dl>
         </header>
+
+        {/* A página que o contabilista compôs. Vem a seguir ao cabeçalho e
+            antes da ação — é o que faz alguém decidir se quer marcar. */}
+        <BlocosDoPerfil bruto={cc.perfilBlocos} />
 
         {cc.fidelidadeAtiva && cc.precoConsultaCents > 0 && (
           <section className="mt-5 flex items-start gap-3 rounded-4xl border border-brand/20 bg-brand-light/50 p-5">

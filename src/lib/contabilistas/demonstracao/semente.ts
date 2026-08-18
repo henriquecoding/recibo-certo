@@ -191,6 +191,33 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     // mais comum, que é o de quem escreveu o número e ainda não o viu
     // confirmado pela administração.
     occVerificado: false,
+    occMetodo: null,
+    occVerificadoEm: null,
+    occValidoAte: null,
+    // A demonstração mostra o perfil composto a funcionar: um bloco de
+    // texto e um termo próprio que cai numa área do eixo sem o dizer.
+    perfilBlocos: [
+      {
+        id: "demo-como-trabalho",
+        tipo: "texto",
+        titulo: "Como trabalho",
+        itens: [{
+          principal:
+            "Começo sempre por perceber o ano inteiro antes de falar de números. " +
+            "Depois digo o que reservar e quando, e volto a falar contigo em cada prazo.",
+          secundario: null,
+        }],
+      },
+    ],
+    perfilTermos: [{ texto: "Freelancers de design e software", area: "Recibos verdes" }],
+    cobertura: {
+      modo: "concelhos",
+      distrito: "Porto",
+      concelho: "Matosinhos",
+      concelhos: ["Matosinhos", "Porto", "Vila Nova de Gaia"],
+      distritos: [],
+      nota: null,
+    },
     linkedinLigado: false,
     estado: "aprovado",
     aceitaNovosClientes: true,

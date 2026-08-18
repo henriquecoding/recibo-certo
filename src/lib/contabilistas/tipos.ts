@@ -35,6 +35,16 @@ export const ESTADOS_OCUPAM_AGENDA: readonly EstadoAgendamento[] = ["pedido", "c
 
 export type Modalidade = "presencial" | "online";
 
+/**
+ * Como é que a inscrição na Ordem foi confirmada.
+ *
+ * Reexportado do motor de verificação para o tipo público não depender da
+ * pasta inteira — a definição vive em `verificacao/motor.ts`, e é lá que
+ * está escrito o que cada método prova e quanto tempo dura.
+ */
+import type { MetodoVerificacao } from "./verificacao/motor";
+export type { MetodoVerificacao };
+
 /** Estado de uma partilha de dados simulados. */
 export type EstadoPartilha = "enviada" | "vista" | "revogada";
 
@@ -95,8 +105,30 @@ export interface Contabilista {
    * Um número no formulário é «informado». «Verificado» exige que alguém
    * o tenha confirmado junto da Ordem — e mudar o número apaga o selo,
    * por trigger.
+   *
+   * ⚠️ Isto é «verificado AGORA», e não «foi verificado alguma vez». A
+   * view calcula-o com a validade: uma inscrição pode ser suspensa, a
+   * Ordem publica esses movimentos por trimestre, e um carimbo eterno
+   * acabaria por afirmar uma coisa falsa sem ninguém dar por ela.
    */
   occVerificado: boolean;
+  /** Como foi confirmado. `null` quando não há selo válido. */
+  occMetodo: MetodoVerificacao | null;
+  /** Quando foi confirmado. `null` quando não há selo válido. */
+  occVerificadoEm: string | null;
+  /** Até quando vale. `null` quando não há selo válido. */
+  occValidoAte: string | null;
+  /**
+   * O perfil composto — ver `personalizacao/`.
+   *
+   * São dados públicos por desenho: é a página da pessoa. Ficam como
+   * `unknown` neste tipo de propósito, porque quem os interpreta são os
+   * motores (`lerBlocos`, `lerCobertura`), que sabem tolerar uma entrada
+   * estragada em vez de deixar o perfil inteiro em branco.
+   */
+  perfilBlocos: unknown;
+  perfilTermos: unknown;
+  cobertura: unknown;
   linkedinLigado: boolean;
   estado: EstadoContabilista;
   aceitaNovosClientes: boolean;

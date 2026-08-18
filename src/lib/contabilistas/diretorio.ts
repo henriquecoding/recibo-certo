@@ -365,7 +365,22 @@ export interface EstadoOcc {
   curto: string;
   /** `verificada` é o único que pode usar o verde da marca. */
   tom: "verificada" | "informada" | "aprovado";
+  /**
+   * Como e quando foi confirmado. `null` quando não há nada a dizer.
+   *
+   * Existe porque «verificada» sem mais nada não responde à pergunta que
+   * a seguir se faz — verificada por quem, e há quanto tempo? Um selo que
+   * não sabe responder a isso é um autocolante.
+   */
+  detalhe: string | null;
 }
+
+/** Como cada método se diz a um cliente, em duas palavras. */
+const COMO_FOI: Record<string, string> = {
+  scap: "confirmada junto da Ordem",
+  registo_publico: "confirmada no registo público da Ordem",
+  documento: "confirmada por documento",
+};
 
 /**
  * O que se pode dizer sobre a inscrição na Ordem.
@@ -376,18 +391,48 @@ export interface EstadoOcc {
  * está a pedir emprestada. Sem número não se finge certificação nenhuma:
  * diz-se o que é verdade, que a conta foi aprovada na plataforma (§41).
  */
-export function estadoOcc(c: { occ: string | null; occVerificado: boolean }): EstadoOcc {
+export function estadoOcc(c: {
+  occ: string | null;
+  occVerificado: boolean;
+  /** Opcionais: quem tiver a informação diz mais, quem não tiver diz o mesmo de antes. */
+  occMetodo?: string | null;
+  occVerificadoEm?: string | null;
+}): EstadoOcc {
   if (c.occ && c.occVerificado) {
-    return { etiqueta: `OCC n.º ${c.occ} · Verificada`, curto: "OCC verificada", tom: "verificada" };
+    return {
+      etiqueta: `OCC n.º ${c.occ} · Verificada`,
+      curto: "OCC verificada",
+      tom: "verificada",
+      detalhe: detalheDaVerificacao(c.occMetodo ?? null, c.occVerificadoEm ?? null),
+    };
   }
   if (c.occ) {
-    return { etiqueta: `OCC n.º ${c.occ} · Informada`, curto: "OCC informada", tom: "informada" };
+    return {
+      etiqueta: `OCC n.º ${c.occ} · Informada`,
+      curto: "OCC informada",
+      tom: "informada",
+      // Dito uma vez, sem rodeios: o número está lá porque a pessoa o
+      // escreveu, e mais ninguém confirmou nada.
+      detalhe: "Número indicado pelo próprio, ainda por confirmar.",
+    };
   }
   return {
     etiqueta: "Perfil profissional aprovado",
     curto: "Perfil aprovado",
     tom: "aprovado",
+    detalhe: null,
   };
+}
+
+function detalheDaVerificacao(metodo: string | null, quando: string | null): string | null {
+  const como = metodo ? COMO_FOI[metodo] : null;
+  if (!como) return null;
+  if (!quando) return `Inscrição ${como}.`;
+
+  const data = new Date(quando);
+  if (Number.isNaN(data.getTime())) return `Inscrição ${como}.`;
+  const legivel = data.toLocaleDateString("pt-PT", { day: "2-digit", month: "long", year: "numeric" });
+  return `Inscrição ${como} a ${legivel}.`;
 }
 
 /** «Concelho, Distrito», ou o que existir. `null` quando não há nada. */

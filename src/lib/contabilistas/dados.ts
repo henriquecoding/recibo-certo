@@ -23,6 +23,26 @@ import { CONSENTIMENTO_VERSAO, sanitizarConteudoPartilha, tituloPorOmissao } fro
 
 type Linha = Record<string, unknown>;
 
+/**
+ * O selo, para as duas origens possíveis de uma linha.
+ *
+ * A view `contabilistas_publico` já traz `occ_verificado` calculado, e
+ * nesse caso é essa a resposta. A tabela traz as colunas em bruto — e
+ * repetir aqui a mesma conta é o que impede o painel do próprio de dizer
+ * «verificado» sobre um selo que o perfil público já deixou de mostrar.
+ */
+function seloValido(l: Linha): boolean {
+  if (typeof l.occ_verificado === "boolean") return l.occ_verificado;
+
+  const ate = l.occ_verificado_ate as string | null | undefined;
+  const confirmado = l.occ_numero_confirmado as string | null | undefined;
+  if (!ate || !confirmado) return false;
+  if (new Date(ate).getTime() <= Date.now()) return false;
+
+  const daFicha = String(l.occ ?? "").replace(/\D+/g, "").replace(/^0+/, "");
+  return Boolean(daFicha) && daFicha === confirmado;
+}
+
 function paraContabilista(l: Linha): Contabilista {
   return {
     userId: l.user_id as string,
@@ -42,9 +62,17 @@ function paraContabilista(l: Linha): Contabilista {
     idiomas: (l.idiomas as string[]) ?? [],
     anosExperiencia: (l.anos_experiencia as number | null) ?? null,
     respostaMediaHoras: (l.resposta_media_horas as number | null) ?? null,
-    // A view calcula-o; a tabela guarda o instante. As duas leituras dão
-    // a mesma resposta à única pergunta que a interface faz.
-    occVerificado: Boolean(l.occ_verificado ?? l.occ_verificado_em),
+    // A VIEW já calculou o selo com a validade. A tabela não — quem lê a
+    // ficha própria tem as colunas em bruto e a conta é feita aqui, com a
+    // mesma regra: há selo enquanto a validade não passou E o número
+    // verificado for ainda o da ficha.
+    occVerificado: seloValido(l),
+    occMetodo: (l.occ_verificado_metodo as Contabilista["occMetodo"]) ?? null,
+    occVerificadoEm: (l.occ_verificado_em as string | null) ?? null,
+    occValidoAte: (l.occ_verificado_ate as string | null) ?? null,
+    perfilBlocos: l.perfil_blocos ?? [],
+    perfilTermos: l.perfil_termos ?? [],
+    cobertura: l.cobertura ?? null,
     linkedinLigado: Boolean(l.linkedin_ligado ?? l.linkedin_ligado_em),
     estado: l.estado as Contabilista["estado"],
     aceitaNovosClientes: Boolean(l.aceita_novos_clientes),
@@ -71,7 +99,15 @@ const CAMPOS_DA_FICHA =
   "preco_consulta_cents, duracao_consulta_min, fidelidade_meta, fidelidade_desconto_pct, " +
   "fidelidade_ativa, criado_em, " +
   "titulo_profissional, apresentacao_curta, idiomas, anos_experiencia, " +
-  "resposta_media_horas, occ_verificado_em, linkedin_ligado_em";
+  "resposta_media_horas, linkedin_ligado_em, " +
+  // A verificação, com tudo o que ela precisa de dizer: método, prazo e
+  // o número que foi realmente confirmado. Sem o número confirmado o
+  // painel não consegue distinguir «verificado» de «verificado outro
+  // número», que é a única diferença que interessa.
+  "occ_verificado_em, occ_verificado_metodo, occ_verificado_ate, " +
+  "occ_numero_confirmado, occ_pedido_em, occ_recusa_motivo, occ_recusado_em, " +
+  // O perfil composto.
+  "perfil_blocos, perfil_termos, cobertura";
 
 /**
  * O contrato público é uma VIEW, não a tabela.
@@ -157,6 +193,8 @@ export async function atualizarFicha(
     titulo_profissional: string | null; apresentacao_curta: string | null;
     idiomas: string[]; anos_experiencia: number | null;
     resposta_media_horas: number | null;
+    perfil_blocos: unknown[]; perfil_termos: unknown[];
+    cobertura: Record<string, unknown> | null;
   }>
 ): Promise<{ erro?: string }> {
   const { error } = await getSupabase()
