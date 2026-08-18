@@ -32,7 +32,7 @@ import {
   type ContextoPreco,
 } from "@/lib/pricing";
 import { registar } from "@/lib/analytics/cliente";
-import { gravarContextoPreco, lerContextoPreco } from "@/lib/store/preco";
+import { gravarContextoPreco, lerContextoPreco, limparContextoPreco } from "@/lib/store/preco";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { ArrowLeft, ArrowRight } from "@/components/ui/Icons";
 import CamposPreco from "./CamposPreco";
@@ -45,13 +45,24 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   const [cenario, setCenario] = useState<CenarioInicial | null>(() => cenarioDeQuery(cenarioInicial));
   const [contexto, setContexto] = useState<ContextoPreco | null>(null);
   const iniciado = useRef(false);
+  const retomou = useRef(false);
 
   // ── Retomar o que ficou por acabar ─────────────────────────────────
   // No cofre local, nunca no servidor: `privacy: "local-only"` no catálogo
   // não é uma etiqueta, é uma promessa que o código tem de cumprir. E é o
   // cofre, não uma chave global — a estrutura de custos de alguém não pode
   // ficar à vista de quem usar o browser a seguir.
+  //
+  // ⚠️ RETOMA-SE UMA VEZ, À ENTRADA — e nunca mais.
+  // Isto já esteve preso a `[cenario]` sem guarda, e o efeito era este: ao
+  // carregar em «Mudar», o cenário passava a `null`, o efeito voltava a
+  // correr, lia do cofre o contexto que acabara de ser gravado e repunha
+  // tudo no mesmo sítio. Para quem lá estava, o botão simplesmente não
+  // fazia nada. Retomar é uma decisão de ENTRADA, não uma reação a ficar
+  // sem cenário: quem sai de um cenário está a sair dele de propósito.
   useEffect(() => {
+    if (retomou.current) return;
+    retomou.current = true;
     if (cenario) return;
     const lido = lerContextoPreco<ContextoPreco>(1);
     if (lido?.cenario) {
@@ -59,6 +70,49 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
       setContexto(lido);
     }
   }, [cenario]);
+
+  // ── O cenário vive na URL ──────────────────────────────────────────
+  // Sem isto, escolher um cenário não mexia no histórico — e o «voltar» do
+  // telemóvel (botão ou gesto) SAÍA da ferramenta em vez de recuar um
+  // passo. A página já aceita `?c=`; passa a escrevê-lo também.
+  const irPara = (destino: CenarioInicial | null, empurrar: boolean) => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (destino) url.searchParams.set("c", destino);
+    else url.searchParams.delete("c");
+    const alvo = `${url.pathname}${url.search}${url.hash}`;
+    if (empurrar) window.history.pushState({ c: destino }, "", alvo);
+    else window.history.replaceState({ c: destino }, "", alvo);
+  };
+
+  // O «voltar» do browser passa a recuar dentro da ferramenta.
+  useEffect(() => {
+    const aoVoltar = () => {
+      const daUrl = cenarioDeQuery(new URLSearchParams(window.location.search).get("c"));
+      setCenario(daUrl);
+      if (!daUrl) setContexto(null);
+    };
+    window.addEventListener("popstate", aoVoltar);
+    return () => window.removeEventListener("popstate", aoVoltar);
+  }, []);
+
+  /** Escolher um cenário: avança um passo no histórico. */
+  const escolherCenario = (c: CenarioInicial) => {
+    setCenario(c);
+    irPara(c, true);
+  };
+
+  /**
+   * Voltar ao seletor. Limpa o cofre de propósito: quem carrega em «Mudar»
+   * está a abandonar aquele cenário, e reabrir a página não lho pode
+   * ressuscitar por baixo.
+   */
+  const voltarAoSeletor = () => {
+    setCenario(null);
+    setContexto(null);
+    limparContextoPreco();
+    irPara(null, true);
+  };
 
   useEffect(() => {
     if (!cenario) return;
@@ -94,7 +148,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
   // ── Passo 1: escolher o cenário ────────────────────────────────────
   if (!cenario || !contexto || !resultado) {
-    return <SeletorCenario aoEscolher={setCenario} />;
+    return <SeletorCenario aoEscolher={escolherCenario} />;
   }
 
   const definicao = cenarioPorChave(cenario);
@@ -110,10 +164,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
         </p>
         <button
           type="button"
-          onClick={() => {
-            setCenario(null);
-            setContexto(null);
-          }}
+          onClick={voltarAoSeletor}
           className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-dark underline-offset-2 dark:text-brand-mint hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
         >
           <ArrowLeft size={13} />
@@ -121,26 +172,39 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
         </button>
       </div>
 
-      {/* ── Resultado primeiro, em mobile ─────────────────────────── */}
+      {/* ── O preço, e a maneira de lhe mexer, ficam juntos e em cima ──
+          O slider já esteve depois de TODOS os campos: em mobile nascia a
+          3 415 px do topo, quatro ecrãs abaixo do número que ele serve
+          para afinar. Quem queria experimentar outro preço tinha de passar
+          por onze secções de formulário para lá chegar.
+
+          Passa a viver ao lado do resultado, porque é o mesmo gesto: ver
+          quanto dá e experimentar outra coisa. A memória de cálculo desce
+          para debaixo dos campos — é para conferir depois, não para
+          atravessar antes. ─────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
         <div className="order-2 space-y-4 lg:order-1">
           <CamposPreco contexto={contexto} definicao={definicao} atualizar={atualizar} />
+          <MemoriaCalculo linhas={resultado.explicacao} />
         </div>
 
-        <div className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-6">
+        {/* Sem `sticky`, de propósito. O cartão de resultado tem ~830 px de
+            altura; com o slider por baixo, a coluna passa dos 1 200 px e não
+            cabe em portátil nenhum. Uma coluna pegajosa mais alta do que a
+            janela fica presa com o fundo cortado — e a alternativa (dar-lhe
+            scroll próprio) transforma metade do ecrã num painel que rouba a
+            roda do rato. Aqui a coluna corre com a página: o preço e o
+            cursor estão no topo dela, que é o que se pediu, e nada fica
+            fora de alcance. */}
+        <div className="order-1 space-y-4 lg:order-2">
           <ResultadoPreco resultado={resultado} temFiscalidade={temFiscalidade} />
-          <MemoriaCalculo linhas={resultado.explicacao} />
+          {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} /> : null}
         </div>
       </div>
 
-      {resultado.ok ? (
-        <>
-          <SliderPreco contexto={contexto} resultado={resultado} />
-          <Cenarios contexto={contexto} />
-        </>
-      ) : null}
-
       <Avisos avisos={resultado.avisos} />
+
+      {resultado.ok ? <Cenarios contexto={contexto} /> : null}
 
       <p className="px-1 pt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
         Estimativa com base no que introduziste. Não substitui a análise de um contabilista certificado, e a decisão de

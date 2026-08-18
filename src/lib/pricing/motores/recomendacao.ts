@@ -49,8 +49,24 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       ? dividir(lucroAoPreco(e.solver, precoLiquido) - num(e.fixosPorUnidade), precoLiquido)
       : 0;
 
-  // ── Piso: margem de contribuição zero ──────────────────────────────
+  // ── Piso e mínimo sustentável ──────────────────────────────────────
+  //  O piso é a margem de contribuição zero; o mínimo sustentável é o
+  //  mesmo com a quota de custos fixos por dentro.
+  //
+  //  SEM custos fixos declarados, os dois são o MESMO número, ao cêntimo.
+  //  Mostrá-los como duas âncoras punha o mesmo valor duas vezes no ecrã,
+  //  com explicações que se contradizem à leitura — «nem os custos ficam
+  //  cobertos» logo por cima de «cobre tudo» — e a primeira reação de quem
+  //  lê é que uma delas está errada. Quando coincidem, há uma linha só.
   const piso = precoPorMargem(e.solver, 0);
+  const solverComFixos: EntradaSolver = {
+    ...e.solver,
+    custosEuros: num(e.solver.custosEuros) + num(e.fixosPorUnidade),
+  };
+  const minimo = precoPorMargem(solverComFixos, 0);
+  const coincidem =
+    piso.ok && minimo.ok && Math.abs(minimo.precoLiquido - piso.precoLiquido) < 0.005;
+
   if (piso.ok) {
     ancoras.push({
       chave: "piso",
@@ -58,19 +74,13 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       precoLiquido: piso.precoLiquido,
       pvp: pvpDe(piso.precoLiquido, t),
       margem: margemEm(piso.precoLiquido),
-      explicacao:
-        "Abaixo deste valor cada venda tira-te dinheiro: nem os custos que só existem quando vendes ficam cobertos.",
+      explicacao: coincidem
+        ? "Abaixo deste valor cada venda tira-te dinheiro. Como não declaraste custos fixos, este é também o mínimo sustentável — não há contas de estrutura à espera de serem cobertas."
+        : "Abaixo deste valor cada venda tira-te dinheiro: nem os custos que só existem quando vendes ficam cobertos.",
     });
   }
 
-  // ── Mínimo sustentável: lucro zero, fixos incluídos ────────────────
-  // Trata a quota de fixos como mais um custo em euros por unidade.
-  const solverComFixos: EntradaSolver = {
-    ...e.solver,
-    custosEuros: num(e.solver.custosEuros) + num(e.fixosPorUnidade),
-  };
-  const minimo = precoPorMargem(solverComFixos, 0);
-  if (minimo.ok) {
+  if (minimo.ok && !coincidem) {
     ancoras.push({
       chave: "minimo",
       rotulo: "Mínimo sustentável",

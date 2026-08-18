@@ -39,13 +39,21 @@ export function SliderPreco({
   const [preco, setPreco] = useState<number | null>(null);
   const precoAtual = preco ?? resultado.pvp;
 
+  // Parado no recomendado, mostra-se O RESULTADO — não uma re-derivação
+  // dele. Voltar a resolver a partir do PVP já arredondado reintroduz o
+  // arredondamento (`liquidoDe(415,92)` dá 338,15 onde o solver tinha
+  // 338,14), e a mesma página exibia dois preços sem IVA diferentes para o
+  // mesmo preço. O invariante manda arredondar líquido, IVA e PVP EM
+  // CONJUNTO; recalcular a partir de um deles parte-o.
   const simulado = useMemo(
     () =>
-      precificar({
-        ...contexto,
-        objetivo: { ...contexto.objetivo, modo: "preco_fixo", valor: precoAtual, valorEhPVP: true },
-      }),
-    [contexto, precoAtual],
+      preco === null
+        ? resultado
+        : precificar({
+            ...contexto,
+            objetivo: { ...contexto.objetivo, modo: "preco_fixo", valor: preco, valorEhPVP: true },
+          }),
+    [contexto, preco, resultado],
   );
 
   const abaixoDoPiso = piso > 0 && precoAtual < piso;
@@ -101,20 +109,34 @@ export function SliderPreco({
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Celula rotulo="Margem" valor={pct(simulado.margem.margem)} alerta={simulado.margem.margem < 0} />
+        <Celula
+          rotulo="Margem"
+          valor={pct(simulado.margem.margem)}
+          nota="do preço sem IVA"
+          alerta={simulado.margem.margem < 0}
+        />
         <Celula
           rotulo="Fica por venda"
           valor={fmt(simulado.margem.lucroUnidade)}
+          nota="depois de tudo"
           alerta={simulado.margem.lucroUnidade < 0}
         />
         <Celula
           rotulo="Por mês"
           valor={fmt(simulado.margem.lucroMensal)}
+          nota="ao volume esperado"
           alerta={simulado.margem.lucroMensal < 0}
         />
         <Celula
           rotulo="Equilíbrio"
           valor={simulado.breakEven.possivel ? `${simulado.breakEven.unidades}` : "—"}
+          nota={
+            simulado.breakEven.possivel
+              ? simulado.breakEven.unidades === 0
+                ? "sem custos fixos"
+                : "vendas por mês"
+              : "não existe"
+          }
           alerta={!simulado.breakEven.possivel}
         />
       </div>
@@ -235,7 +257,17 @@ export function Cenarios({ contexto }: { contexto: ContextoPreco }) {
   );
 }
 
-function Celula({ rotulo, valor, alerta }: { rotulo: string; valor: string; alerta?: boolean }) {
+function Celula({
+  rotulo,
+  valor,
+  nota,
+  alerta,
+}: {
+  rotulo: string;
+  valor: string;
+  nota?: string;
+  alerta?: boolean;
+}) {
   return (
     <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-800/40">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">{rotulo}</p>
@@ -246,6 +278,9 @@ function Celula({ rotulo, valor, alerta }: { rotulo: string; valor: string; aler
       >
         {valor}
       </p>
+      {nota ? (
+        <p className="mt-0.5 text-[11px] leading-tight text-stone-500 dark:text-stone-400">{nota}</p>
+      ) : null}
     </div>
   );
 }

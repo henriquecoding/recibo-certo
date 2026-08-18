@@ -1194,3 +1194,45 @@ describe("R4 · o IRS marginal conta com o emprego", () => {
     expect(b2b.fiscal.retencaoFracao).toBeGreaterThan(0);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  DEFEITOS DE INTERFACE APANHADOS EM USO REAL
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("a faixa não mostra o mesmo número duas vezes", () => {
+  it("sem custos fixos, o piso e o mínimo sustentável colapsam num só", () => {
+    // Eram duas âncoras com o mesmo valor ao cêntimo e explicações que se
+    // contradizem à leitura — «nem os custos ficam cobertos» por cima de
+    // «cobre tudo». Quem lê conclui que uma delas está errada.
+    const r = precificar(
+      ctxSimples((c) => {
+        c.custos.fixos = [];
+      }),
+    );
+    const piso = r.faixa.ancoras.find((a) => a.chave === "piso");
+    const minimo = r.faixa.ancoras.find((a) => a.chave === "minimo");
+    expect(piso).toBeDefined();
+    expect(minimo).toBeUndefined();
+    expect(piso!.explicacao).toMatch(/não declaraste custos fixos/i);
+  });
+
+  it("com custos fixos, as duas âncoras existem e são diferentes", () => {
+    const r = precificar(
+      ctxSimples((c) => {
+        c.custos.fixos = [{ id: "renda", rotulo: "Renda", mensal: 800 }];
+      }),
+    );
+    const piso = r.faixa.ancoras.find((a) => a.chave === "piso")!;
+    const minimo = r.faixa.ancoras.find((a) => a.chave === "minimo")!;
+    expect(minimo).toBeDefined();
+    expect(minimo.precoLiquido).toBeGreaterThan(piso.precoLiquido);
+  });
+
+  it("as âncoras nunca repetem o mesmo PVP", () => {
+    for (const fixos of [[], [{ id: "r", rotulo: "Renda", mensal: 300 }]]) {
+      const r = precificar(ctxSimples((c) => void (c.custos.fixos = fixos)));
+      const pvps = r.faixa.ancoras.map((a) => a.pvp.toFixed(2));
+      expect(new Set(pvps).size, JSON.stringify(pvps)).toBe(pvps.length);
+    }
+  });
+});
