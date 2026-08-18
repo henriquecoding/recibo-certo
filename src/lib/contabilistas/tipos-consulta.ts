@@ -18,6 +18,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { getSupabase } from "@/lib/supabase/client";
+import { COPY_PRECO_MINIMO, precoDeConsultaValido } from "./preco-consulta";
 
 type Linha = Record<string, unknown>;
 
@@ -71,6 +72,14 @@ export const PAGAMENTOS: ReadonlyArray<{
 export const DURACOES = [15, 30, 45, 60, 90, 120, 180, 240] as const;
 export const TIPOS_MAX = 8;
 
+// O piso da consulta paga vive em `preco-consulta.ts`, que é puro: o painel
+// do contabilista precisa dele e não pode alcançar, por essa via, um módulo
+// que fale com o Supabase. Reexporta-se aqui por conveniência de quem já
+// importa este ficheiro.
+export {
+  COPY_PRECO_MINIMO, PRECO_MINIMO_CONSULTA_CENTS, precoDeConsultaValido,
+} from "./preco-consulta";
+
 function paraTipo(l: Linha): TipoConsulta {
   return {
     id: l.id as string,
@@ -116,6 +125,7 @@ export async function criarTipoConsulta(t: NovoTipoConsulta): Promise<{ erro?: s
   if (nome.length < 2) return { erro: "Dá um nome ao tipo de consulta." };
   if (t.duracaoMin < 15 || t.duracaoMin > 240) return { erro: "A duração vai de 15 a 240 minutos." };
   if (t.precoCents < 0) return { erro: "O valor não pode ser negativo." };
+  if (!precoDeConsultaValido(Math.round(t.precoCents))) return { erro: COPY_PRECO_MINIMO };
 
   const { data, error } = await getSupabase()
     .from("contabilista_tipos_consulta")
@@ -142,6 +152,12 @@ export async function atualizarTipoConsulta(
     preco_cents: number; pagamento: MomentoDePagamento; ativo: boolean; ordem: number;
   }>
 ): Promise<{ erro?: string }> {
+  // O mesmo piso da criação. Sem isto, quem criasse a 20 € e editasse para
+  // 3 € recebia a mensagem crua do Postgres em vez de uma frase.
+  if (campos.preco_cents !== undefined && !precoDeConsultaValido(Math.round(campos.preco_cents))) {
+    return { erro: COPY_PRECO_MINIMO };
+  }
+
   const { error } = await getSupabase()
     .from("contabilista_tipos_consulta").update(campos).eq("id", id);
   return error ? { erro: error.message } : {};
