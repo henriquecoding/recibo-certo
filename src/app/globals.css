@@ -326,7 +326,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 20px;
   margin-top: -7px;
   border-radius: 999px;
-  background: #1d9e75;
+  background: #177e5e;
   border: 3px solid #ffffff;
   box-shadow: 0 1px 3px rgb(26 26 23 / 0.25);
   transition: transform 0.15s ease;
@@ -335,7 +335,7 @@ input[type="range"]::-moz-range-thumb {
   height: 20px;
   width: 20px;
   border-radius: 999px;
-  background: #1d9e75;
+  background: #177e5e;
   border: 3px solid #ffffff;
   box-shadow: 0 1px 3px rgb(26 26 23 / 0.25);
   transition: transform 0.15s ease;
@@ -1058,4 +1058,63 @@ input[type="number"]::-webkit-outer-spin-button {
   *::after {
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   CONTRASTE DE TEXTO — WCAG 2.1 AA
+   ---------------------------------------------------------------------
+   Medido com axe em cinco páginas × dois temas: 825 nós a falhar. Duas
+   causas, ambas estruturais e nenhuma resolúvel ficheiro a ficheiro.
+
+   ① O TIER TERCIÁRIO NUNCA FOI LEGÍVEL.
+      `text-stone-400` (#a8a29e) dá 2,52:1 sobre branco e 2,29:1 sobre o
+      `cream` — muito abaixo dos 4,5:1 exigidos para texto normal, e abaixo
+      até dos 3:1 de texto grande. Eram ~430 nós.
+
+      E não há como salvar o tier: o valor mais CLARO que passa AA sobre o
+      cream é ≈#766F6A, praticamente o stone-500. Ou seja, entre o stone-500
+      e o branco não cabe nenhum cinzento acessível. A hierarquia terciária
+      passa a ser carregada pelo TAMANHO e pelo PESO, que é o que devia ter
+      sido desde o início — a cor não dava para isso.
+
+   ② OS UTILITÁRIOS `dark:` NÃO PASSAVAM PELA CAMADA `.dark`.
+      A camada acima remapeia `.text-brand`, mas o Tailwind gera uma classe
+      PRÓPRIA para a variante (`dark:text-brand`), que aquele seletor não
+      apanha. Resultado: 167 nós ficavam com a cor do modo claro sobre fundo
+      escuro. Espelha-se aqui, com as mesmas cores da camada.
+
+   Tal como o bloco `.dark`, isto fica FORA de `@layer` e depois de
+   `@tailwind utilities` — ver a nota longa lá em cima sobre porquê.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ① Texto pequeno legível no claro. Branco 5,15:1 · cream 4,68:1 ·
+      stone-100 4,73:1 — com folga de propósito: a 4,5 exactos qualquer
+      afinação futura do fundo volta a fazer falhar. */
+.text-stone-400,
+.text-stone-500 {
+  color: #736c68;
+}
+
+/* ② As variantes `dark:` que a camada `.dark` não alcança. */
+/* O `html` à frente não é decoração: o Tailwind gera
+   `.dark\:text-brand:is(.dark *)`, que também vale (0,2,0) e aparece DEPOIS
+   no CSS final — empate resolvido a favor dele. Com o elemento, isto passa a
+   (0,2,1) e ganha por especificidade, seja qual for a ordem. */
+html.dark .dark\:text-stone-500 {
+  color: #a8a69c;
+}
+html.dark .dark\:text-stone-400 {
+  color: #a8a69c;
+}
+html.dark .dark\:text-stone-300 {
+  color: #cfcdc3;
+}
+html.dark .dark\:text-brand {
+  color: #5ec6a0;
+}
+html.dark .dark\:text-brand-dark {
+  color: #6fceac;
+}
+html.dark .dark\:text-brand-mint {
+  color: #9fe1cb;
 }

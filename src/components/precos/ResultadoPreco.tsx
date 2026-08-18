@@ -34,9 +34,17 @@ const CORES_ANCORA: Record<string, string> = {
 export default function ResultadoPreco({
   resultado,
   temFiscalidade,
+  exemplo = false,
 }: {
   resultado: Resultado;
   temFiscalidade: boolean;
+  /**
+   * `true` enquanto a pessoa ainda não personalizou nada. O número existe —
+   * o motor calcula sempre — mas sai dos valores por omissão do cenário, e
+   * apresentá-lo como «quanto deves cobrar» é dar autoridade de conselho a
+   * algo que ninguém introduziu. Nesse estado o cartão diz o que é.
+   */
+  exemplo?: boolean;
 }) {
   if (!resultado.ok) {
     return (
@@ -82,8 +90,24 @@ export default function ResultadoPreco({
       className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-7"
     >
       {/* ── O número ─────────────────────────────────────────────── */}
-      <p className="eyebrow mb-2 text-brand-dark dark:text-brand-mint">Quanto deves cobrar</p>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <p
+        className={`eyebrow mb-2 ${
+          exemplo ? "text-stone-600 dark:text-stone-400" : "text-brand-dark dark:text-brand-mint"
+        }`}
+      >
+        {exemplo ? "Um exemplo, por enquanto" : "Quanto deves cobrar"}
+      </p>
+      {exemplo ? (
+        <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          Ainda não nos disseste nada sobre o teu caso, por isso este número sai dos valores de partida deste cenário —
+          não do teu negócio.{" "}
+          <strong className="font-semibold text-stone-800 dark:text-stone-100">
+            Preenche o essencial aí em cima
+          </strong>{" "}
+          e ele passa a ser teu.
+        </p>
+      ) : null}
+      <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${exemplo ? "opacity-60" : ""}`}>
         <span className="font-display text-4xl font-semibold tabular-nums text-ink dark:text-stone-50 sm:text-5xl">
           {fmt(resultado.pvp)}
         </span>

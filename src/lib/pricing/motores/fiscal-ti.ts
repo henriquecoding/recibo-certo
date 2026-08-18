@@ -41,7 +41,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { contribuicoesSS, simularDeclaracaoIRS, retencaoNaFonte } from "../../fiscal";
-import { BASE_SS_POR_TIPO, RETENCAO, SS_COEFICIENTE, SS_TAXA } from "../../fiscal-data";
+import { ATIVIDADES, BASE_SS_POR_TIPO, RETENCAO, SS_COEFICIENTE, SS_TAXA, efeitoFiscal } from "../../fiscal-data";
+import type { Atividade } from "../../fiscal-data";
 import type { DetalheFiscalVendedor, PerfilVendedor, TipoCliente } from "../tipos";
 import { dividir, fracao, naoNegativo } from "../numeros";
 
@@ -55,6 +56,31 @@ import { dividir, fracao, naoNegativo } from "../numeros";
  * preço real e produz uma taxa marginal estável.
  */
 const DELTA_MARGINAL = 1000;
+
+/**
+ * A atividade concreta do catálogo, quando o perfil a tem. É por aqui que
+ * `efeitoFiscal()` entra — e com ele os overrides por atividade que os mapas
+ * por tipo não conhecem.
+ */
+export function atividadeDoPerfil(vendedor: PerfilVendedor): Atividade | null {
+  if (!vendedor.atividadeLabel) return null;
+  return ATIVIDADES.find((a) => a.label === vendedor.atividadeLabel) ?? null;
+}
+
+/** Regras fiscais efetivas: da atividade concreta, ou dos mapas por tipo. */
+function regrasDe(vendedor: PerfilVendedor) {
+  const atv = atividadeDoPerfil(vendedor);
+  const tipo = atv?.tipo ?? vendedor.atividade ?? "art151";
+  const ef = atv ? efeitoFiscal(atv) : null;
+  return {
+    atv,
+    tipo,
+    baseSS: ef?.baseSS ?? BASE_SS_POR_TIPO[tipo],
+    retencao: ef?.retencao ?? RETENCAO[tipo].value,
+    coef: ef?.coef,
+    regra15: ef?.regra15,
+  };
+}
 
 export interface EntradaFiscalVendedor {
   vendedor: PerfilVendedor;
@@ -130,8 +156,9 @@ export function fracoesFiscais(
     return { ssFracao: 0, irsFracao: 0, irsSobreLucro: 0, notas };
   }
 
-  const atividade = vendedor.atividade ?? "art151";
-  const baseSS = BASE_SS_POR_TIPO[atividade];
+  const regras = regrasDe(vendedor);
+  const atividade = regras.tipo;
+  const baseSS = regras.baseSS;
   const faturacaoBase = naoNegativo(vendedor.faturacaoAnualPrevista);
 
   // ── Segurança Social: derivada discreta, para respeitar o teto ──────
@@ -197,6 +224,10 @@ export function fracoesFiscais(
         independente: {
           brutoAnual: bruto,
           tipo: atividade,
+          // Os overrides da atividade concreta, quando existem: há
+          // atividades com coeficiente e regra dos 15% próprios.
+          coefOverride: regras.coef,
+          aplicaRegra15Override: regras.regra15,
           anoAtividade: vendedor.anoAtividade ?? 3,
           regimeContabilidade,
           despesasJustificadas,
@@ -250,8 +281,9 @@ export function fracaoRetencao(vendedor: PerfilVendedor, cliente: TipoCliente): 
   if (vendedor.tipo !== "ti") return 0;
   if (cliente !== "empresa_pt") return 0;
 
-  const atividade = vendedor.atividade ?? "art151";
-  const taxa = RETENCAO[atividade].value;
+  // A taxa da atividade concreta, quando a há — várias têm taxa própria que
+  // `RETENCAO[tipo]` não conhece.
+  const taxa = regrasDe(vendedor).retencao;
 
   // `retencaoNaFonte` conhece a dispensa do Art. 101.º-B e o IRS Jovem.
   // Chamamo-la com 100 € para extrair a taxa efetiva sem duplicar regras.

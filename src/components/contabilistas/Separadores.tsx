@@ -104,7 +104,7 @@ export default function Separadores<T extends string>({
           >
             {s.rotulo}
             {typeof s.contagem === "number" && (
-              <span className={`tabular-nums ${eAtivo ? "text-white/70" : "text-stone-400"}`}>
+              <span className={`tabular-nums ${eAtivo ? "text-white/95" : "text-stone-400"}`}>
                 {s.contagem}
               </span>
             )}

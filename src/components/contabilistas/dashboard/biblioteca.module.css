@@ -106,7 +106,7 @@
 .chipAtivo,
 .chipAtivo:hover {
   border-color: transparent;
-  background: #1d9e75;
+  background: #177e5e; /* AA com texto branco: 5,00:1 */
   color: #ffffff;
 }
 
@@ -195,7 +195,7 @@
   color: #0e6740;
 }
 
-.entradaMais:hover { border-color: transparent; background: #1d9e75; color: #ffffff; }
+.entradaMais:hover { border-color: transparent; background: #177e5e; color: #ffffff; }
 
 :global(.dark) .entradaMais { border-color: rgba(231, 229, 228, 0.12); color: #6ee7b7; }
 :global(.dark) .entradaMais:hover { background: #0f6e56; color: #ffffff; }

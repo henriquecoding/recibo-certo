@@ -90,6 +90,33 @@ describe("② o «voltar» do telemóvel recua dentro da ferramenta", () => {
   });
 });
 
+describe("④ personaliza-se ANTES de ver o número", () => {
+  it("o essencial vem antes do resultado, e o avançado depois", () => {
+    const iEssencial = SIMULADOR.indexOf('parte="essencial"');
+    const iResultado = SIMULADOR.indexOf("<ResultadoPreco");
+    const iAvancado = SIMULADOR.indexOf('parte="avancado"');
+    expect(iEssencial, "os campos essenciais desapareceram").toBeGreaterThan(-1);
+    expect(iAvancado, "os campos avançados desapareceram").toBeGreaterThan(-1);
+    expect(
+      iEssencial < iResultado && iResultado < iAvancado,
+      "a ordem tem de ser essencial → resultado → avançado. O resultado já esteve " +
+        "à frente de tudo, e anunciava «quanto deves cobrar» sobre campos que " +
+        "ninguém tinha preenchido",
+    ).toBe(true);
+  });
+
+  it("o resultado sabe distinguir um exemplo de uma recomendação", () => {
+    // Sem isto, escolher «um produto digital» e mais nada anunciava
+    // «QUANTO DEVES COBRAR 1,09 €» — um número saído de um custo por omissão
+    // de 0 €, uma margem de 70% e um volume de 20 que ninguém escolheu.
+    expect(SIMULADOR).toMatch(/exemplo=\{!tocado\}/);
+    expect(
+      /setTocado\(true\)/.test(SIMULADOR),
+      "nada marca o contexto como personalizado — o aviso de exemplo nunca sai",
+    ).toBe(true);
+  });
+});
+
 describe("③ o preço fica onde se lhe mexe", () => {
   it("o slider é IRMÃO do resultado, dentro da mesma coluna", () => {
     // Proximidade em caracteres não chega — no código partido o slider

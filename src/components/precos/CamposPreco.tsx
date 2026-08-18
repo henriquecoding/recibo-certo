@@ -16,6 +16,8 @@ import { useState } from "react";
 import type { ContextoPreco, DefinicaoCenarioInicial, ResultadoPreco } from "@/lib/pricing";
 import { CANAIS_COMISSAO, METODOS_PAGAMENTO } from "@/lib/pricing";
 import { Bloco, CampoEuros, CampoNumero, CampoPercentagem, Segmentado, Seletor } from "./atomos";
+import ActivityCombobox from "@/components/ui/ActivityCombobox";
+import { ATIVIDADES } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
 
 type Atualizar = (patch: (c: ContextoPreco) => void) => void;
@@ -25,12 +27,25 @@ export default function CamposPreco({
   definicao,
   atualizar,
   resultado,
+  parte = "tudo",
 }: {
   contexto: ContextoPreco;
   definicao: DefinicaoCenarioInicial;
   atualizar: Atualizar;
   /** Só para traduzir a escolha margem/markup em euros reais. */
   resultado?: ResultadoPreco | null;
+  /**
+   * Qual metade desenhar. Existe para o RESULTADO poder ficar ENTRE as duas:
+   * primeiro personaliza-se o essencial, depois vê-se o número, e só quem
+   * quiser afinar mais desce aos blocos avançados.
+   *
+   * Antes o resultado vinha antes de tudo, e o efeito era este: escolhias
+   * «um produto digital» e a ferramenta anunciava «QUANTO DEVES COBRAR
+   * 1,09 €» sem que tivesses dito o que quer que fosse — o número saía de um
+   * custo por omissão de 0 €, uma margem por omissão de 70% e um volume por
+   * omissão de 20. Um número inventado apresentado como recomendação.
+   */
+  parte?: "essencial" | "avancado" | "tudo";
 }) {
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
   const alternar = (id: string) => setAbertos((a) => ({ ...a, [id]: !a[id] }));
@@ -38,9 +53,18 @@ export default function CamposPreco({
   const rapidos = new Set(definicao.rapido);
   const avancados = new Set(definicao.avancado);
 
+  // O catálogo guarda-se pelo `label` (é a chave que o resto do projeto já
+  // usa); aqui resolve-se de volta para o objeto que o combobox espera.
+  const atividadeEscolhida =
+    ATIVIDADES.find((a) => a.label === contexto.vendedor.atividadeLabel) ?? null;
+
+  const mostrarEssencial = parte === "essencial" || parte === "tudo";
+  const mostrarAvancado = parte === "avancado" || parte === "tudo";
+
   return (
     <div className="space-y-4">
       {/* ── Modo rápido ───────────────────────────────────────────── */}
+      {mostrarEssencial ? (
       <div className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
         <p className="eyebrow mb-4 text-stone-500 dark:text-stone-400">O essencial</p>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -225,11 +249,14 @@ export default function CamposPreco({
         </div>
 
         <p className="mt-4 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-          Já dá um resultado. Abre os blocos abaixo para o tornar mais preciso — cada um que preencheres muda o número.
+          Assim que preencheres isto, o preço aparece já a seguir. Os blocos mais abaixo tornam-no mais preciso — cada um
+          que preencheres muda o número.
         </p>
       </div>
+      ) : null}
 
       {/* ── Modo preciso ──────────────────────────────────────────── */}
+      {mostrarAvancado ? (
       <div className="space-y-3">
         {avancados.has("fiscalidade") ? (
           <Bloco
@@ -266,19 +293,34 @@ export default function CamposPreco({
 
               {contexto.vendedor.tipo === "ti" ? (
                 <>
-                  <Seletor
-                    id="atividade"
-                    rotulo="Natureza da atividade"
-                    ajuda="Decide o coeficiente do regime simplificado e a base da Segurança Social: 70% nos serviços, 20% na venda de bens."
-                    opcoes={[
-                      { valor: "art151", rotulo: "Serviços da lista do Art. 151.º" },
-                      { valor: "outros", rotulo: "Outras prestações de serviços" },
-                      { valor: "vendas", rotulo: "Venda de bens / alojamento" },
-                      { valor: "diretosAutor", rotulo: "Propriedade intelectual" },
-                    ]}
-                    valor={contexto.vendedor.atividade ?? "art151"}
-                    aoMudar={(v) => atualizar((c) => void (c.vendedor.atividade = v))}
-                  />
+                  {/* O MESMO seletor do simulador de recibos verdes.
+                      Era um `select` com quatro tipos canónicos, e o
+                      catálogo tem dezenas de atividades — várias com
+                      coeficiente, retenção ou base de Segurança Social
+                      próprios. A mesma pessoa escolhia a atividade de uma
+                      maneira ali e de outra aqui, e obtinha números
+                      diferentes para o mesmo caso. */}
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="atividade-preco"
+                      className="mb-1.5 block text-sm font-medium text-stone-700 dark:text-stone-300"
+                    >
+                      A tua atividade
+                    </label>
+                    <ActivityCombobox
+                      value={atividadeEscolhida}
+                      onChange={(a) =>
+                        atualizar((c) => {
+                          c.vendedor.atividadeLabel = a.label;
+                          c.vendedor.atividade = a.tipo;
+                        })
+                      }
+                    />
+                    <p className="mt-1.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                      Decide o coeficiente do regime simplificado, a retenção na fonte e a base da Segurança Social —
+                      70% nos serviços, 20% na venda de bens. É a mesma lista do simulador de recibos verdes.
+                    </p>
+                  </div>
                   <CampoEuros
                     id="faturacao-anual"
                     rotulo="Faturação anual que prevês"
@@ -688,6 +730,7 @@ export default function CamposPreco({
           />
         </Bloco>
       </div>
+      ) : null}
     </div>
   );
 }
