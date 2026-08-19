@@ -11861,6 +11861,25 @@ CREATE TABLE IF NOT EXISTS public.desbloqueio_propostas (
      sem a ler é pior do que não a pedir. */
   justificacao    text NOT NULL CHECK (char_length(justificacao) BETWEEN 40 AND 2000),
 
+  /* ⚠️ `expirada` e `usada` estão no domínio e NUNCA são escritos hoje.
+     Não é esquecimento — é que nenhum dos dois precisa de ser um estado
+     para produzir o efeito certo:
+
+      · A caducidade é lida no instante da pergunta. `preco_negociado_cents`
+        exige `valida_ate > now()`, por isso uma proposta velha deixa de
+        valer sem que ninguém a tenha de marcar. Um processo periódico a
+        escrever `expirada` só acrescentava uma forma de o estado e a
+        realidade discordarem entre execuções.
+
+      · A reutilização já é impossível pela forma. Uma proposta é para UM
+        patamar, e `criar_intencao_desbloqueio` só deixa comprar o
+        SEGUINTE ao efetivo — comprado o patamar 4, o alvo passa a ser o 5
+        e a proposta do 4 deixa de casar. Marcar `usada` era arrumação,
+        não uma guarda.
+
+     Ficam declarados porque a interface já sabe lê-los (ver
+     `estadoDaPropostaLegivel`), e porque o dia em que passarem a ser
+     escritos não deve exigir mexer no CHECK de uma tabela com dados. */
   estado          text NOT NULL DEFAULT 'enviada'
                     CHECK (estado IN ('enviada', 'aceite', 'contraproposta',
                                       'recusada', 'expirada', 'usada')),
