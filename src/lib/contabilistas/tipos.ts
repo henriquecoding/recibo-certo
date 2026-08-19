@@ -60,7 +60,18 @@ export type TipoPartilha =
   | "simulador_empresa"
   | "simulador_herancas"
   | "cenario_guardado"
-  | "resumo_anual";
+  | "resumo_anual"
+  /**
+   * Projeto de negócio do estúdio de viabilidade: ofertas, faturação
+   * projetada, custos e forma pretendida.
+   *
+   * A lista branca deste tipo é a mais RESTRITA de todas, e é deliberado:
+   * um `ContextoNegocio` contém custos de fornecedor, margens por oferta e
+   * a estrutura de preços inteira — segredo comercial de quem o escreveu,
+   * não anexo de um pedido. O que segue é o que torna o pedido
+   * respondível, e nada mais.
+   */
+  | "plano_negocio";
 
 export type EstadoCupao = "disponivel" | "usado" | "expirado";
 

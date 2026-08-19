@@ -64,6 +64,7 @@ export {
 } from "./adapters/comparar";
 export {
   ambitoClientes,
+  conteudoPartilhaNegocio,
   formaJuridicaDe,
   paraDiagnosticoContabilista,
   resumoParaContabilista,

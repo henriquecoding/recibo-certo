@@ -43,7 +43,7 @@ import {
 import { chaveAtiva } from "./cofre";
 import { destinoDosDados, aindaSemDestino } from "./persistencia";
 
-export type TipoCenario = "recibos" | "vencimento" | "empresa" | "irs" | "herancas";
+export type TipoCenario = "recibos" | "vencimento" | "empresa" | "irs" | "herancas" | "negocio";
 
 /**
  * Fonte ÚNICA dos tipos de cenário. A página de gestão renderiza a partir
@@ -58,6 +58,7 @@ export const META_TIPO_CENARIO: Record<TipoCenario, { label: string; sub: string
   empresa: { label: "Abrir empresa", sub: "Sociedade / unipessoal", rota: "/dashboard/empresa", icone: "Building" },
   irs: { label: "Simulador de IRS", sub: "Declaração anual", rota: "/dashboard/simulador", icone: "Calculator" },
   herancas: { label: "Heranças e sucessões", sub: "Partilha e Imposto do Selo", rota: "/dashboard/herancas", icone: "Scale" },
+  negocio: { label: "Projeto de negócio", sub: "Ofertas, custos e viabilidade", rota: "/dashboard/negocio", icone: "ChartProjection" },
 };
 
 export const TIPOS_CENARIO = Object.keys(META_TIPO_CENARIO) as TipoCenario[];

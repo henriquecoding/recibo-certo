@@ -46,6 +46,11 @@ export const DOMINIOS = {
   // de trabalho de propósito: um é o que está a ser feito agora, a outra é
   // o que já ficou decidido — e recomeçar um não pode apagar a outra.
   "precos-guardados": "recibocerto:precos-guardados:v1",
+  // O rascunho do estúdio de negócio. É o dado mais sensível que este
+  // produto guarda no browser — custos de fornecedor, margens, volumes e
+  // a estrutura de custos inteira — e por isso nunca sai daqui sem uma
+  // ação explícita de «Guardar este projeto». Ver `store/negocio.ts`.
+  negocio: "recibocerto:negocio:v1",
 } as const;
 
 /**

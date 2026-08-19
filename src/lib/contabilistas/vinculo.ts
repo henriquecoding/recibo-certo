@@ -111,6 +111,17 @@ export const CAMPOS_PARTILHA: Record<TipoPartilha, readonly string[]> = {
   resumo_anual: [
     "ano", "totalFaturado", "totalRetido", "totalSs", "porTrimestre", "notas",
   ],
+  // A mais restrita da tabela. Repare-se no que NÃO está aqui: custos por
+  // oferta, margens, markup, preços unitários, volumes por oferta e a
+  // estrutura de custos detalhada. Nada disso é preciso para responder a
+  // «ajuda-me a validar esta estrutura», e tudo isso é segredo comercial.
+  // `nomesOfertas` são rótulos escolhidos pela própria pessoa e são o que
+  // torna o pedido inteligível — «duas ofertas» não diz nada.
+  plano_negocio: [
+    "ano", "situacao", "formaPretendida", "nomesOfertas", "numeroOfertas",
+    "faturacaoProjetada", "custosOperacionais", "resultadoOperacional",
+    "clientes", "trabalhadores", "pontoEquilibrio", "confianca", "regiao", "notas",
+  ],
 };
 
 export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
@@ -122,6 +133,7 @@ export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
   simulador_herancas: "Heranças e sucessões",
   cenario_guardado: "Cenário guardado",
   resumo_anual: "Resumo anual",
+  plano_negocio: "Projeto de negócio",
 };
 
 export interface ConteudoSanitizado {

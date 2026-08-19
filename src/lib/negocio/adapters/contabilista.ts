@@ -122,6 +122,42 @@ export function resumoParaContabilista(
   return campos;
 }
 
+/**
+ * O conteúdo da partilha, na forma que a lista branca de
+ * `plano_negocio` autoriza.
+ *
+ * As chaves são EXATAMENTE as de `CAMPOS_PARTILHA.plano_negocio`. Uma
+ * chave a mais é silenciosamente removida por `sanitizarConteudoPartilha`
+ * — o que é o comportamento certo, mas significa que o campo nunca
+ * chegaria e ninguém daria por isso. Por isso o teste compara as duas
+ * listas.
+ */
+export function conteudoPartilhaNegocio(
+  negocio: ResultadoNegocio,
+  contexto: ContextoNegocio,
+  nota?: string,
+): Record<string, unknown> {
+  const conteudo: Record<string, unknown> = {
+    ano: new Date().getFullYear(),
+    situacao: ROTULO_MATURIDADE[contexto.maturidade],
+    formaPretendida: ROTULO_ENQUADRAMENTO[contexto.fiscal.enquadramento],
+    nomesOfertas: negocio.ofertas.map((o) => o.oferta.nome),
+    numeroOfertas: negocio.ofertas.length,
+    faturacaoProjetada: negocio.receitaSemIVAAno,
+    custosOperacionais: negocio.custosOperacionaisAno,
+    resultadoOperacional: negocio.resultadoOperacionalAno,
+    clientes: ambitoClientes(contexto),
+    trabalhadores: contexto.estrutura?.trabalhadores?.length ?? 0,
+    confianca: ROTULO_CONFIANCA[negocio.confianca],
+  };
+
+  if (negocio.breakEven.possivel) conteudo.pontoEquilibrio = negocio.breakEven.vendasMes;
+  if (contexto.fiscal.regiao) conteudo.regiao = ROTULO_REGIAO[contexto.fiscal.regiao] ?? contexto.fiscal.regiao;
+  if (nota?.trim()) conteudo.notas = nota.trim();
+
+  return conteudo;
+}
+
 const ROTULO_MATURIDADE: Record<string, string> = {
   ideia: "Tem uma ideia, ainda não vende",
   ja_vendo: "Já vende",
