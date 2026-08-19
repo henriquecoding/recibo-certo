@@ -68,13 +68,53 @@ Nenhum campo se chama «preço». «Preço» é a pergunta, não a resposta.
 Resolve em **forma fechada**, não por iteração:
 
 ```
-margem:  P = (C + f) / (1 − v − g(1+t) − m)
-markup:  P = (C + f)(1 + k) / (1 − v − g(1+t))
+D = 1 − v − g(1+t) − τ(1 − g(1+t))          ← fração disponível
+
+margem:  P = (C + f − τ·Ded) / (D − m)
+markup:  P = ((C + f)·k + (C + f − τ·Ded)) / D
 ```
 
 O denominador ser ≤ 0 **não é um preço muito alto: é a inexistência de preço**.
 Devolve-se `impossivel` com o motivo e o teto real da margem. Nunca `NaN`,
 nunca negativo, nunca `Infinity`. Há um invariante a exigi-lo.
+
+### As duas bases de imposto NÃO se somam
+
+| | incide sobre | exemplos |
+|---|---|---|
+| `v` | a **faturação** | Segurança Social, IRS do regime simplificado |
+| `τ` | o **lucro** | IRS da contabilidade organizada |
+
+Somá-las é o erro que custou ≈ **+32%** de preço no caso-tipo: pôr o imposto
+sobre o lucro em `v` cobra imposto sobre o **custo**, que não é lucro nenhum.
+Daí o `− τ·Ded` no numerador — o escudo fiscal dos custos dedutíveis. **Com
+τ = 0 tudo colapsa nas equações originais, e há um teste que o exige.** Se
+acrescentares uma terceira base, provas primeiro que ela é uma das duas.
+
+## O que NUNCA entra no solver — as camadas por cima
+
+Nem tudo o que é imposto é fração do preço. Duas coisas vivem **depois** de o
+preço estar resolvido, e tentar metê-las lá dentro repete o erro do τ:
+
+- **`motores/sociedade.ts`** — o IRC incide sobre o lucro, tem escalões,
+  derrama e tributações autónomas, e ainda há a segunda camada de tirar o
+  dinheiro da empresa. Lê o preço já resolvido, projeta o ano, chama
+  `simularEmpresaOpcoes`. **Regra de apresentação:** o lucro retido aparece
+  sempre ao lado do líquido pessoal e `riqueza total = líquido pessoal +
+  lucro retido`. Mostrar só o que passou para a conta pessoal faz uma
+  sociedade parecer sempre pior do que é.
+- **`motores/tesouraria.ts`** — o preço diz quanto sai; `prazos.ts` diz
+  quando. Duas regras que os testes protegem:
+  - **Declarar não é pagar.** A declaração periódica de IVA entrega-se até
+    dia 20 e o imposto paga-se até dia 25: são obrigações distintas. A
+    quantia vai **só** na linha do pagamento — pô-la nas duas duplica a
+    reserva que a pessoa faz.
+  - **A Segurança Social declara-se por trimestre (Art. 151.º) mas paga-se
+    todos os meses (Art. 43.º).** Multiplicar o pagamento por três triplica
+    a conta.
+
+  O IRS fica fora, e diz-se porquê: depende do ano inteiro e da liquidação da
+  AT, não deste preço. Um vazio explicado vale mais do que um número plausível.
 
 ## Armadilhas que já custaram um número errado
 
@@ -110,6 +150,13 @@ nunca negativo, nunca `Infinity`. Há um invariante a exigi-lo.
   por venda quantificada.
 - **Nunca inventar preço de mercado.** Sem fonte fiável, o módulo diz «não temos
   dados suficientes». Um vazio honesto vale mais do que um número plausível.
+- **Uma inexatidão conhecida declara-se.** O motor de IRS é nacional e as
+  regiões autónomas têm taxas 30% mais baixas (Art. 68.º via Lei Orgânica
+  2/2013), o que torna o preço proposto **conservador** para quem lá reside.
+  Enquanto for assim, o aviso `irs-regiao-autonoma` di-lo. A mesma inexatidão
+  em silêncio não seria honesta. Ver `PRICING-ENGINE-HANDOFF.md` §R9 antes de
+  mexer: falta uma decisão de produto, porque `vendedor.regiao` significa hoje
+  *região para efeitos de IVA* e não *residência fiscal*.
 - **Nunca chamar IA a uma sequência de contas.** «O preço subiu porque
   acrescentaste 15% de comissão» é melhor do que «a IA recomenda 27,90 €».
 - **O cálculo é grátis, sem conta e sem email.** `access.core: "free"`,
