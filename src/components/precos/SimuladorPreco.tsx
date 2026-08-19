@@ -21,16 +21,19 @@
 //    transforma o preenchimento de um formulário numa conversa.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import {
+  aberturaDe,
   avaliarPreenchimento,
   cenarioDeQuery,
   cenarioPorChave,
   precificar,
+  resumoDe,
   type CenarioInicial,
   type ContextoPreco,
+  type SeccaoPreco,
 } from "@/lib/pricing";
 import { gravarContextoPreco, lerEnvelopePreco, limparContextoPreco } from "@/lib/store/preco";
 import { iconeDe } from "@/components/ferramentas/icon-map";
@@ -49,6 +52,7 @@ import DescontoResultado from "./DescontoResultado";
 import Decidir from "./Decidir";
 import ConclusaoPreco from "./ConclusaoPreco";
 import ObjetivoInvertido from "./ObjetivoInvertido";
+import SeccaoRevelavel from "./SeccaoRevelavel";
 import { useMedicaoPreco } from "./medicao";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
@@ -71,6 +75,21 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   //  `lib/pricing/preenchimento.ts`.
   const [respondidos, setRespondidos] = useState<Set<string>>(() => new Set());
   const retomou = useRef(false);
+
+  // ── O que a pessoa abriu ou fechou À MÃO ──────────────────────────
+  //  As camadas de revelação (`lib/pricing/nivel.ts`) decidem o que abre
+  //  sozinho conforme o que já foi respondido. Isto guarda as exceções —
+  //  e as exceções ganham sempre.
+  //
+  //  ⚠️ SEM ISTO, A REVELAÇÃO PROGRESSIVA É UMA ARMADILHA. O nível sobe
+  //  quando se responde a um campo; se a abertura viesse só do nível,
+  //  responder a mais uma pergunta reabria por baixo tudo o que a pessoa
+  //  tinha acabado de fechar, e fechava o que ela tinha aberto para
+  //  consultar. Um formulário que desfaz o que acabámos de fazer é pior
+  //  do que um formulário comprido.
+  const [escolhas, setEscolhas] = useState<Partial<Record<SeccaoPreco, boolean>>>({});
+  const alternar = (seccao: SeccaoPreco, aberta: boolean) =>
+    setEscolhas((a) => ({ ...a, [seccao]: !aberta }));
 
   // ── Retomar o que ficou por acabar ─────────────────────────────────
   // No cofre local, nunca no servidor: `privacy: "local-only"` no catálogo
@@ -141,6 +160,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     setCenario(null);
     setContexto(null);
     setRespondidos(new Set());
+    setEscolhas({});
     limparContextoPreco();
     reiniciar();
     irPara(null, true);
@@ -158,6 +178,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     if (!cenario) return;
     setContexto(cenarioPorChave(cenario).contexto());
     setRespondidos(new Set());
+    setEscolhas({});
     reiniciar();
   };
 
@@ -240,6 +261,27 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   const definicao = cenarioPorChave(cenario);
   const temFiscalidade = resultado.fiscal.aplicavel;
   const estadoPreenchimento = preenchimento?.estado ?? "exemplo";
+
+  /**
+   * Uma secção, aberta ou recolhida conforme a camada de revelação.
+   *
+   * O título é o mesmo por que a pessoa vai reconhecer o cartão lá
+   * dentro, e o resumo sai de números reais do resultado — ver
+   * `lib/pricing/resumos.ts` para porque é que isso não é opcional.
+   */
+  const revelavel = (seccao: SeccaoPreco, titulo: string, conteudo: ReactNode) => {
+    const aberta = aberturaDe(seccao, estadoPreenchimento, escolhas);
+    return (
+      <SeccaoRevelavel
+        titulo={titulo}
+        resumo={resumoDe(seccao, resultado)}
+        aberta={aberta}
+        aoAlternar={() => alternar(seccao, aberta)}
+      >
+        {conteudo}
+      </SeccaoRevelavel>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -332,29 +374,66 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
               abaixo do preço a que se refere. ────────────────────────── */}
           <Avisos avisos={resultado.avisos} apenas={GRAVES} rotulo="Avisos importantes" />
 
-          {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
+          {/* ── A PARTIR DAQUI, A PROFUNDIDADE É A PEDIDO ─────────────
+              Nenhuma destas secções desapareceu: mudou QUANDO aparecem
+              abertas. Com um número que ainda é um exemplo, analisar «o
+              que entra na conta» com quatro casas decimais é analisar uma
+              ficção — por isso no nível 1 estão recolhidas, cada uma com
+              um resumo vivo que diz o que lá está sem ser preciso abrir.
+              Ver `lib/pricing/nivel.ts`. ──────────────────────────────── */}
+          {resultado.ok
+            ? revelavel(
+                "slider",
+                "Experimentar outro preço",
+                <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} />,
+              )
+            : null}
 
           {/* O «Nível 4» que o `pricing-ux-flow.md` descreve desde o
               primeiro dia e que nunca existiu: `motores/objetivo.ts` tem
               215 linhas exportadas e testadas que nenhuma interface
               chamava. São as duas perguntas que as pessoas fazem mesmo. */}
-          {resultado.ok ? (
-            <ObjetivoInvertido contexto={contexto} resultado={resultado} aoAdotarPreco={adotarPreco} />
-          ) : null}
+          {resultado.ok
+            ? revelavel(
+                "objetivo_invertido",
+                "Quanto preciso de vender",
+                <ObjetivoInvertido contexto={contexto} resultado={resultado} aoAdotarPreco={adotarPreco} />,
+              )
+            : null}
 
           {/* Secções irmãs, e não mais oito coisas dentro do cartão de
               resultado. Cada uma aparece só quando tem o que dizer. */}
-          {resultado.desconto ? <DescontoResultado desconto={resultado.desconto} /> : null}
-          {resultado.ok ? <Caixa resultado={resultado} /> : null}
-          {resultado.tesouraria ? <Tesouraria t={resultado.tesouraria} /> : null}
-          {resultado.sociedade ? <Sociedade s={resultado.sociedade} /> : null}
+          {resultado.desconto
+            ? revelavel("desconto", "O efeito do desconto", <DescontoResultado desconto={resultado.desconto} />)
+            : null}
+          {resultado.ok
+            ? revelavel("caixa", "Do que o cliente paga ao que fica contigo", <Caixa resultado={resultado} />)
+            : null}
+          {resultado.tesouraria
+            ? revelavel("tesouraria", "Quando sai o dinheiro", <Tesouraria t={resultado.tesouraria} />)
+            : null}
+          {resultado.sociedade
+            ? revelavel("sociedade", "O que chega ao dono", <Sociedade s={resultado.sociedade} />)
+            : null}
         </div>
 
         <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-2">
           <Afinar contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
-          <MemoriaCalculo linhas={resultado.explicacao} />
-          <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
-          {resultado.ok ? <Cenarios contexto={contexto} estado={estadoPreenchimento} /> : null}
+
+          {/* A memória e as notas NUNCA abrem sozinhas, em nível nenhum:
+              são prova a pedido. Quem as quer, pede-as — e quem não as
+              quer não paga cinco ecrãs por elas. */}
+          {revelavel("memoria", "Como se chegou a este número", <MemoriaCalculo linhas={resultado.explicacao} />)}
+          {resultado.avisos.some((a) => a.severidade === "info")
+            ? revelavel(
+                "notas",
+                "Notas",
+                <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />,
+              )
+            : null}
+          {resultado.ok
+            ? revelavel("cenarios", "E se mudasses uma coisa", <Cenarios contexto={contexto} estado={estadoPreenchimento} />)
+            : null}
 
           {/* ── DECIDIR ────────────────────────────────────────────────
               A zona que faltava. A ferramenta acabava num parágrafo de
@@ -364,21 +443,25 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
               ações locais lá dentro. As camadas 2, 3, 5 e 6 — como
               chegámos aqui, o que fazer, fontes e LIMITES, e o próximo
               passo — não existiam em lado nenhum desta ferramenta. */}
-          {resultado.ok ? (
-            <ConclusaoPreco
-              contexto={contexto}
-              resultado={resultado}
-              estado={estadoPreenchimento}
-              faltam={preenchimento?.faltam.length ?? 0}
-            >
-              <Decidir
-                contexto={contexto}
-                resultado={resultado}
-                respondidos={respondidos}
-                aoGuardar={(n) => atualizar("nome-produto", (c) => void (c.produto.nome = n))}
-              />
-            </ConclusaoPreco>
-          ) : null}
+          {resultado.ok
+            ? revelavel(
+                "conclusao",
+                "Fontes, limites e próximo passo",
+                <ConclusaoPreco
+                  contexto={contexto}
+                  resultado={resultado}
+                  estado={estadoPreenchimento}
+                  faltam={preenchimento?.faltam.length ?? 0}
+                >
+                  <Decidir
+                    contexto={contexto}
+                    resultado={resultado}
+                    respondidos={respondidos}
+                    aoGuardar={(n) => atualizar("nome-produto", (c) => void (c.produto.nome = n))}
+                  />
+                </ConclusaoPreco>,
+              )
+            : null}
         </div>
       </div>
 

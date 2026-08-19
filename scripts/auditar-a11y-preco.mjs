@@ -65,9 +65,31 @@ const ESTADOS = [
     nome: "memória de cálculo aberta",
     url: "/ferramentas/calcular-preco?c=servico",
     preparar: async (p) => {
-      const b = p.locator("button", { hasText: "Ver cálculo" }).first();
-      if (await b.count()) await b.click().catch(() => {});
-      await p.waitForTimeout(300);
+      // Dois cliques desde as camadas de revelação: primeiro revela-se a
+      // secção, depois abre-se a memória lá dentro. A memória nunca abre
+      // sozinha em nível nenhum — ver `lib/pricing/nivel.ts`.
+      for (const t of ["Como se chegou a este número", "Ver cálculo"]) {
+        const b = p.locator("button", { hasText: t }).first();
+        if (await b.count()) await b.click().catch(() => {});
+        await p.waitForTimeout(250);
+      }
+    },
+  },
+  {
+    // Estado novo: TUDO revelado. É o pior caso de densidade e de
+    // acessibilidade, e sem ele a auditoria só via a ferramenta arrumada.
+    nome: "tudo revelado",
+    url: "/ferramentas/calcular-preco?c=marketplace",
+    preparar: async (p) => {
+      // `timeout` curto e explícito: o `.click()` do Playwright espera 30 s
+      // por omissão, e um alvo que nunca fica estável multiplicava isso por
+      // doze cliques e quatro vistas. A auditoria deixava de terminar.
+      for (let i = 0; i < 12; i++) {
+        const b = p.locator('button[aria-expanded="false"]').first();
+        if (!(await b.count())) break;
+        await b.click({ timeout: 1500 }).catch(() => {});
+        await p.waitForTimeout(100);
+      }
     },
   },
 ];

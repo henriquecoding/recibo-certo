@@ -309,7 +309,16 @@ describe("⑬ o resultado deixou de ser um cartão monolítico", () => {
     // rentabilidade e as unidades extra para compensar — e nada disso
     // chegava ao ecrã. O bloco de desconto era um formulário que aceitava
     // um número e não respondia nada.
-    expect(SIMULADOR).toMatch(/resultado\.desconto \? <DescontoResultado/);
+    //
+    // A asserção olha para a INTENÇÃO — o desconto é renderizado e é
+    // `resultado.desconto` que o comanda — e não para a forma exata do
+    // JSX. A forma mudou quando as secções passaram a atravessar as
+    // camadas de revelação (`lib/pricing/nivel.ts`): o cartão continua a
+    // aparecer, agora dentro de um `SeccaoRevelavel`. Fixar a forma
+    // literal fazia este teste falhar por uma mudança que não mexe no que
+    // ele existe para proteger.
+    expect(SIMULADOR).toMatch(/resultado\.desconto\s*$|resultado\.desconto\s*\?/m);
+    expect(SIMULADOR).toMatch(/<DescontoResultado\s+desconto=\{resultado\.desconto\}/);
     const DESCONTO = readFileSync(join(SRC, "components", "precos", "DescontoResultado.tsx"), "utf8");
     expect(DESCONTO).toMatch(/descontoMaximo/);
     expect(DESCONTO).toMatch(/unidadesExtraParaCompensar/);

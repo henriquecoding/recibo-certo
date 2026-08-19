@@ -31,11 +31,13 @@ import {
   blocoDestacado,
   cenarioPorChave,
   ordenarBlocos,
+  particionarBlocos,
   type BlocoAvancado,
   type ContextoPreco,
   type DefinicaoCenarioInicial,
   type ResultadoPreco,
 } from "@/lib/pricing";
+import { Plus } from "@/components/ui/Icons";
 import { Bloco, CampoEuros, CampoPercentagem } from "./atomos";
 import Fiscal from "./blocos/Fiscal";
 import Tempo from "./blocos/Tempo";
@@ -58,6 +60,18 @@ export default function Afinar({
   const [abertos, setAbertos] = useState<Record<string, boolean>>({});
   const alternar = (id: string) => setAbertos((a) => ({ ...a, [id]: !a[id] }));
 
+  // ── Os blocos que a pessoa mandou aparecer ────────────────────────
+  //  Ver `particionarBlocos`: à entrada só se desenham os que já têm
+  //  dados dela e os que o motor aponta como em falta. Os outros ficam
+  //  como fichas, a um clique.
+  const [promovidos, setPromovidos] = useState<Set<BlocoAvancado>>(() => new Set());
+  const promover = (b: BlocoAvancado) => {
+    setPromovidos((a) => new Set(a).add(b));
+    // Promover e abrir é o mesmo gesto: quem carregou em «Embalagem»
+    // quer escrever o custo da embalagem, não ver mais um acordeão.
+    setAbertos((a) => ({ ...a, [b]: true }));
+  };
+
   const rapidos = new Set(definicao.rapido);
 
   // `comissoes` e `pagamento` partilhavam um bloco; continuam a
@@ -68,6 +82,7 @@ export default function Afinar({
   );
 
   const ordem = ordenarBlocos(declarados, contexto, resultado.avisos);
+  const { visiveis, disponiveis } = particionarBlocos(ordem, contexto, resultado.avisos, promovidos);
 
   const corpos: Partial<Record<BlocoAvancado, ReactNode>> = {
     fiscalidade: <Fiscal contexto={contexto} atualizar={atualizar} />,
@@ -97,7 +112,7 @@ export default function Afinar({
         </p>
       </div>
 
-      {ordem.map((chave) => {
+      {visiveis.map((chave) => {
         const meta = BLOCOS[chave];
         const corpo = corpos[chave];
         if (!meta || !corpo) return null;
@@ -126,6 +141,45 @@ export default function Afinar({
           </Bloco>
         );
       })}
+
+      {/* ── TENS OUTROS CUSTOS? ──────────────────────────────────────
+          Os blocos que este cenário conhece mas que ainda não dizem
+          respeito a esta pessoa. Eram doze acordeões fechados à entrada,
+          todos iguais; agora são uma linha de fichas, e cada uma diz o
+          que muda no preço.
+
+          Nada foi removido — `visiveis` + `disponiveis` é sempre o total,
+          e há um teste que o garante. O que mudou foi o custo de os
+          ignorar. ──────────────────────────────────────────────────── */}
+      {disponiveis.length > 0 ? (
+        <div className="rounded-2xl border border-dashed border-stone-200 px-4 py-3.5 dark:border-stone-700">
+          <p className="text-xs font-semibold text-stone-600 dark:text-stone-300">Tens outros custos?</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+            Só o que te diz respeito. Cada um muda o preço de maneira diferente.
+          </p>
+          <ul className="mt-2.5 flex flex-wrap gap-1.5">
+            {disponiveis.map((chave) => {
+              const meta = BLOCOS[chave];
+              if (!meta || !corpos[chave]) return null;
+              return (
+                <li key={chave}>
+                  <button
+                    type="button"
+                    onClick={() => promover(chave)}
+                    // `title` com o que muda: quem passa o rato sabe se
+                    // vale a pena antes de acrescentar mais uma linha.
+                    title={`${meta.descricao} — ${meta.oQueMuda}`}
+                    className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 transition-colors hover:border-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:border-brand dark:hover:text-brand-mint"
+                  >
+                    <Plus size={13} className="flex-shrink-0" aria-hidden />
+                    {meta.titulo}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       {/* ── A faixa, e o preço que já tinhas em mente ────────────────
           Fica sempre no fim e fora da lista ordenada: não é um custo, é
