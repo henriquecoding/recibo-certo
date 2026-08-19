@@ -36,6 +36,15 @@ export const PATAMARES: readonly Patamar[] = Object.freeze([
   { ordem: 6, slug: "parceiro",    titulo: "Parceiro",    comissaoBps: 500,  xpMinimo: 2300, clientesMinimo: 0, precoDesbloqueioCents: 9999 },
 ]);
 
+/**
+ * A comissão de fundador, em basis points.
+ *
+ * Vive aqui, e não em `fundadores.ts`, porque `vistaProgressao` precisa
+ * dela: `fundadores.ts` importa deste ficheiro, e importar de volta
+ * fechava um ciclo. Lá é reexportada, e um teste compara-a com o SQL.
+ */
+export const COMISSAO_FUNDADOR_BPS = 500;
+
 export const XP_POR_EVENTO = Object.freeze({
   servicoElegivel: 10,
   primeiroServicoDeNovoCliente: 25,
@@ -162,6 +171,14 @@ export interface EstadoProgressao {
   creditosReservados: number;
   patamarConquistado: number;
   patamarComprado: number;
+  /**
+   * Um dos primeiros dez, com a conta ativa.
+   *
+   * Vive aqui e não só no cartão do programa porque MUDA O NÚMERO que o
+   * herói da progressão mostra. Sem isto, o mesmo ecrã dizia «10%» em
+   * cima e «5% de comissão» no cartão logo a seguir.
+   */
+  eFundador: boolean;
 }
 
 export interface VistaProgressao {
@@ -173,6 +190,16 @@ export interface VistaProgressao {
   clientesEmFalta: number;
   /** 0..1 dentro do intervalo entre o patamar atual e o seguinte. */
   progressoNoIntervalo: number;
+  /**
+   * A comissão que vai mesmo à fatura, em basis points.
+   *
+   * Diferente de `atual.comissaoBps` sempre que o benefício de fundador
+   * estiver a valer. Espelha `comissao_bps_do_contabilista`, que é a
+   * função que o pagamento chama — e é por isso que os dois números
+   * existem em vez de um: `atual` continua a servir para desenhar a
+   * jornada, este é o que se cobra.
+   */
+  comissaoEfetivaBps: number;
   noTopo: boolean;
   simulacaoMelhorDesconto: Simulacao | null;
 }
@@ -182,10 +209,15 @@ export function vistaProgressao(estado: EstadoProgressao): VistaProgressao {
   const atual = patamarPorOrdem(efetivo) ?? PATAMARES[0]!;
   const proximo = proximoPatamar(efetivo) ?? null;
 
+  const comissaoEfetivaBps = estado.eFundador
+    ? Math.min(atual.comissaoBps, COMISSAO_FUNDADOR_BPS)
+    : atual.comissaoBps;
+
   if (!proximo) {
     return {
       atual, proximo: null, efetivo, xp: estado.xp, xpEmFalta: 0, clientesEmFalta: 0,
       progressoNoIntervalo: 1, noTopo: true, simulacaoMelhorDesconto: null,
+      comissaoEfetivaBps,
     };
   }
 
@@ -198,6 +230,7 @@ export function vistaProgressao(estado: EstadoProgressao): VistaProgressao {
     xpEmFalta: Math.max(proximo.xpMinimo - estado.xp, 0),
     clientesEmFalta: Math.max(proximo.clientesMinimo - estado.clientesElegiveis, 0),
     progressoNoIntervalo: progresso,
+    comissaoEfetivaBps,
     noTopo: false,
     simulacaoMelhorDesconto: simularDesbloqueio(
       proximo, estado.creditosDisponiveis, estado.creditosDisponiveis),

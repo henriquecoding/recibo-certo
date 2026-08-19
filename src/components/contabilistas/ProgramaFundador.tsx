@@ -89,6 +89,35 @@ export function CartaoDeFundador({
   );
 }
 
+/**
+ * O cartão quando se sabe que é fundador mas não se conseguiu ler o
+ * número. Acontece se a leitura da linha falhar — e é melhor do que
+ * mostrar um «n.º 0» ou esconder um benefício que existe.
+ */
+function CartaoDeFundadorSemNumero() {
+  return (
+    <section className="rounded-4xl border border-brand/30 bg-brand-light/50 p-5 shadow-card sm:p-6">
+      <div className="flex items-start gap-3">
+        <span
+          aria-hidden
+          className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-brand text-white"
+        >
+          <Award size={20} />
+        </span>
+        <div className="min-w-0">
+          <p className="eyebrow">Programa fundador</p>
+          <h2 className="mt-1 font-display text-2xl leading-tight text-ink">
+            Tens {COMISSAO_FUNDADOR_TEXTO} de comissão
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-stone-700">
+            És um dos primeiros. Vale enquanto a tua conta de contabilista estiver ativa.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── O contador, para quem ainda não é ─────────────────────────────── */
 
 export function ContadorDeFundadores({ lugares }: { lugares: LugaresFundadores }) {
@@ -389,10 +418,20 @@ function PropostaEmCurso({ proposta }: { proposta: PropostaDesbloqueio }) {
  * que um deles ficava desatualizado.
  */
 export default function ProgramaFundador({
+  eFundador,
   precoCatalogoCents,
   patamarAlvo,
   aoMudar,
 }: {
+  /**
+   * Vem do mesmo estado que desenha o herói.
+   *
+   * É a AUTORIDADE sobre qual dos dois blocos se mostra. A leitura própria
+   * deste componente serve para o número e a data do lugar — se ela
+   * falhar, um fundador continua a não ver uma proposta de negociação que
+   * não lhe serve de nada.
+   */
+  eFundador: boolean;
   /** Nulo quando não há patamar seguinte para desbloquear. */
   precoCatalogoCents: number | null;
   patamarAlvo: number | null;
@@ -415,8 +454,12 @@ export default function ProgramaFundador({
     return <div className="h-32 animate-pulse rounded-4xl bg-stone-100" />;
   }
 
-  if (lugar) {
-    return <CartaoDeFundador numero={lugar.numero} atribuidoEm={lugar.atribuidoEm} />;
+  if (eFundador) {
+    // Sem o número — a leitura falhou — mostra-se o cartão na mesma, sem
+    // inventar um. O benefício é verdade; o número é um pormenor.
+    return lugar
+      ? <CartaoDeFundador numero={lugar.numero} atribuidoEm={lugar.atribuidoEm} />
+      : <CartaoDeFundadorSemNumero />;
   }
 
   return (

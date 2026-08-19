@@ -145,6 +145,80 @@ for f in $(ls "$TESTES"/[0-9][0-9]-*.sql | grep -v "/0[01]-"); do
   fi
 done
 
+# ═══════════════════════════════════════════════════════════════════════
+#  SEGUNDA ETAPA — o esquema COMPLETO, noutra base
+#  ---------------------------------------------------------------------
+#  A etapa acima corre contra 042-053 mais três datadas, e a lista é
+#  explícita por uma boa razão: as migrações da progressão e dos
+#  pagamentos mudam comportamento que os testes 02, 03, 04 e 12 afirmam.
+#  Metê-las lá obrigava a reescrever esses quatro ficheiros.
+#
+#  Mas havia um custo escondido nisso: as migrações que ficavam de fora
+#  não eram aplicadas por ninguém, e uma delas trazia um defeito que só o
+#  esquema completo revela — o benefício de fundador não chegava a
+#  `comissao_bps_do_contabilista`, e um fundador pagava 10% com 5%
+#  escritos em todo o ecrã.
+#
+#  Daí esta etapa: OUTRA base, com TUDO aplicado, e os testes que só
+#  fazem sentido aí. Não toca no que está acima — e prova, de caminho,
+#  que todas as migrações da plataforma se deixam aplicar duas vezes.
+COMPLETO="$RAIZ/supabase/tests/completo"
+
+# O mesmo corte que `scripts/juntar-migracoes.mjs` usa, e pela mesma razão:
+# é em 20260814 que a plataforma de contabilistas passou a usar nomes por
+# data. O que vem antes com data é da aplicação base.
+DATADA_DESDE=20260814
+
+if [ -d "$COMPLETO" ]; then
+  echo ""
+  echo "══ esquema completo ══"
+
+  # As numeradas da plataforma, mais TODAS as datadas a partir de
+  # `$DATADA_DESDE`. O corte não é arbitrário e é o mesmo que a lista
+  # explícita acima usa: `20260802_documentos_emitidos` e
+  # `20260813_planos_operacionais` são da aplicação base, dependem de
+  # tabelas das migrações 001-041 que este arreio não tem, e entrar aqui
+  # só produzia um erro que não é sobre a plataforma.
+  #
+  # A comparação é NUMÉRICA, não de texto: foi uma comparação de texto
+  # que deixou passar a `20260813` da primeira vez.
+  TODAS=($(ls "$RAIZ"/supabase/migrations/*.sql | sort -t/ -k9 | awk -v desde="$DATADA_DESDE" '
+    { n = $0; sub(/.*\//, "", n)
+      if (n ~ /^0(4[2-9]|[5-9][0-9])_/) { print; next }
+      if (match(n, /^[0-9]+/)) {
+        d = substr(n, RSTART, RLENGTH) + 0
+        if (length(substr(n, RSTART, RLENGTH)) >= 8 && d >= desde + 0) print
+      }
+    }'))
+
+  P -q -c "DROP DATABASE IF EXISTS rc_completo;" -c "CREATE DATABASE rc_completo;" >/dev/null
+  P -q -d rc_completo -f "$TESTES/00-arreio-supabase.sql" >/dev/null
+
+  for passagem in "1.ª" "2.ª (idempotência)"; do
+    for m in "${TODAS[@]}"; do
+      if ! P -q -d rc_completo -f "$m" >/dev/null 2>>"$BASE/completo.err"; then
+        echo "FALHOU a aplicar $(basename "$m") — passagem $passagem" >&2
+        tail -3 "$BASE/completo.err" >&2
+        falhou=1
+      fi
+    done
+  done
+  echo "· ${#TODAS[@]} migrações aplicadas duas vezes"
+
+  for f in $(ls "$COMPLETO"/*.sql 2>/dev/null | sort); do
+    echo ""
+    echo "── $(basename "$f")"
+    set +e
+    P -d rc_completo -f "$f" 2>&1 | grep -E "^──|ok  ·|FALHA|ERROR" | sed 's/^psql.*NOTICE: *//'
+    estado=${PIPESTATUS[0]}
+    set -e
+    if [ "$estado" != "0" ]; then
+      echo "FALHOU: $(basename "$f")" >&2
+      falhou=1
+    fi
+  done
+fi
+
 if [ "$falhou" = "0" ]; then
   echo ""
   echo "RLS: todas as garantias verificadas."

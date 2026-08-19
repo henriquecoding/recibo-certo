@@ -138,7 +138,7 @@ describe("progressão — vista", () => {
   it("mostra quanto falta dentro do intervalo, não do total", () => {
     const v = vistaProgressao({
       xp: 350, clientesElegiveis: 5, creditosDisponiveis: 0, creditosReservados: 0,
-      patamarConquistado: 2, patamarComprado: 1,
+      patamarConquistado: 2, patamarComprado: 1, eFundador: false,
     });
     expect(v.atual.ordem).toBe(2);
     expect(v.proximo!.ordem).toBe(3);
@@ -149,7 +149,7 @@ describe("progressão — vista", () => {
   it("no topo deixa de falar de XP em falta", () => {
     const v = vistaProgressao({
       xp: 5000, clientesElegiveis: 20, creditosDisponiveis: 3, creditosReservados: 0,
-      patamarConquistado: 6, patamarComprado: 1,
+      patamarConquistado: 6, patamarComprado: 1, eFundador: false,
     });
     expect(v.noTopo).toBe(true);
     expect(v.proximo).toBeNull();
@@ -159,7 +159,7 @@ describe("progressão — vista", () => {
   it("quem comprou continua a ver o próximo patamar por mérito", () => {
     const v = vistaProgressao({
       xp: 610, clientesElegiveis: 8, creditosDisponiveis: 0, creditosReservados: 0,
-      patamarConquistado: 3, patamarComprado: 4,
+      patamarConquistado: 3, patamarComprado: 4, eFundador: false,
     });
     expect(v.efetivo).toBe(4);
     expect(v.proximo!.ordem).toBe(5);

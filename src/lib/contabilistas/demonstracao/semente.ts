@@ -1033,6 +1033,10 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     creditosReservados: 0,
     patamarConquistado: 3,
     patamarComprado: 1,
+    // A demonstração NÃO é fundadora: o cartão de fundador é um estado
+    // que poucas pessoas terão, e mostrá-lo por omissão faria o painel de
+    // exemplo prometer um benefício a quem o está a experimentar.
+    eFundador: false,
   };
 
   // Os tipos e os valores são os do ledger oficial: +10 por serviço, +25

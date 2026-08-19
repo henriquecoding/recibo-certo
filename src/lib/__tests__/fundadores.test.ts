@@ -51,6 +51,54 @@ describe("fundadores: o SQL e o TypeScript dizem o mesmo", () => {
   });
 });
 
+describe("fundadores: ⚠️ o benefício chega mesmo à fatura", () => {
+  // ESTE É O TESTE QUE FALTAVA, e a razão de faltar é instrutiva: tinha
+  // sido construído o programa inteiro — tabela, lugares, cartão no ecrã,
+  // página a prometer 5% — e o número que a Stripe cobra vinha de outro
+  // sítio, que não sabia que o programa existia. Um fundador via 5% em
+  // todo o lado e pagava 10%, e a diferença só aparecia no extrato.
+  //
+  // A regra que estes testes fixam: quem decide o `application_fee` é
+  // `comissao_bps_do_contabilista`, e ela TEM de passar pelo benefício.
+  const PAGAMENTOS = readFileSync(
+    join(process.cwd(), "supabase/migrations/20260816140000_pagamentos_stripe_connect.sql"),
+    "utf8",
+  );
+
+  it("a função que a Stripe usa passa pelo benefício", () => {
+    // O `RETURN` da versão nova, na migração dos fundadores.
+    expect(SQL).toContain(
+      "RETURN public.comissao_efetiva_bps(p_contabilista, COALESCE(v_bps, 1000));");
+  });
+
+  it("é mesmo essa a função que o pagamento chama", () => {
+    // Se um dia o cálculo do `application_fee` passar a ler outra coisa,
+    // este teste falha — e é isso que se quer.
+    expect(PAGAMENTOS).toContain(
+      "v_bps := public.comissao_bps_do_contabilista(v_ag.contabilista_id);");
+    expect(PAGAMENTOS).toContain("v_comissao := ROUND(v_liquido * v_bps / 10000.0);");
+  });
+
+  it("a substituição é da MESMA assinatura — senão eram duas funções", () => {
+    // `CREATE OR REPLACE` com outra assinatura cria uma sobrecarga em vez
+    // de substituir, e o pagamento continuava a chamar a antiga.
+    const assinatura = "public.comissao_bps_do_contabilista(p_contabilista uuid)\nRETURNS integer";
+    expect(PAGAMENTOS).toContain(assinatura);
+    expect(SQL).toContain(assinatura);
+  });
+
+  it("o benefício aplica-se DEPOIS do caminho de falha", () => {
+    // Sem linha de progressão, a função devolve o patamar Base (10%). Um
+    // fundador nessa situação continua a pagar 5%.
+    const i = SQL.indexOf("RETURN public.comissao_efetiva_bps(p_contabilista, COALESCE(v_bps, 1000));");
+    expect(i).toBeGreaterThan(0);
+  });
+
+  it("o ecrã lê o mesmo número que a fatura, e não uma segunda conta", () => {
+    expect(SQL).toContain("'comissaoEfetivaBps', public.comissao_bps_do_contabilista(v_uid)");
+  });
+});
+
 describe("fundadores: a comissão efetiva", () => {
   it("um fundador no patamar base paga 5%, e não 10%", () => {
     expect(comissaoEfetivaBps(1000, true)).toBe(500);

@@ -17,13 +17,19 @@
 //  fica com o dele. A mesma regra está no SQL, e pela mesma razão.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { PATAMARES, formatarComissao } from "./catalogo";
+import { COMISSAO_FUNDADOR_BPS, PATAMARES, formatarComissao } from "./catalogo";
 
 /** Quantos lugares existem. Espelha `lugares_fundadores_total()`. */
 export const LUGARES_FUNDADORES = 10;
 
-/** A comissão de fundador, em basis points. 5% = 500. */
-export const COMISSAO_FUNDADOR_BPS = 500;
+/**
+ * A comissão de fundador, em basis points. 5% = 500.
+ *
+ * Declarada em `catalogo.ts` — que `vistaProgressao` também precisa de ler
+ * — e reexportada aqui, que é onde toda a gente a vai procurar. Um segundo
+ * `500` escrito neste ficheiro seria dois números a divergir em silêncio.
+ */
+export { COMISSAO_FUNDADOR_BPS };
 
 export interface LugaresFundadores {
   total: number;

@@ -1049,20 +1049,34 @@ export const ESTADO_PROGRESSAO_INICIAL: EstadoProgressao = {
   creditosReservados: 0,
   patamarConquistado: 1,
   patamarComprado: 1,
+  eFundador: false,
 };
 
 export async function obterProgressao(contabilistaId: string): Promise<EstadoProgressao> {
-  const { data } = await getSupabase()
-    .from("contabilista_progressao")
-    .select("xp, clientes_elegiveis, creditos_disponiveis, creditos_reservados, highest_earned_tier, highest_purchased_tier")
-    .eq("contabilista_id", contabilistaId)
-    .maybeSingle();
+  // As duas leituras em paralelo. O lugar de fundador não vive na mesma
+  // tabela de propósito — é a chave de um benefício, e não um contador —
+  // mas MUDA o número que o ecrã mostra, e por isso vem junto.
+  const sb = getSupabase();
+  const [progressao, fundador] = await Promise.all([
+    sb.from("contabilista_progressao")
+      .select("xp, clientes_elegiveis, creditos_disponiveis, creditos_reservados, highest_earned_tier, highest_purchased_tier")
+      .eq("contabilista_id", contabilistaId)
+      .maybeSingle(),
+    sb.from("contabilista_fundadores")
+      .select("numero")
+      .eq("contabilista_id", contabilistaId)
+      .is("libertado_em", null)
+      .maybeSingle(),
+  ]);
+
+  const eFundador = Boolean(fundador.data);
 
   // Sem linha é um estado legítimo: quem ainda não gerou XP não tem
   // registo. Devolver o inicial evita um ecrã vazio onde a resposta certa
-  // é «estás no patamar Base».
-  if (!data) return { ...ESTADO_PROGRESSAO_INICIAL };
-  const r = data as unknown as Linha;
+  // é «estás no patamar Base» — mas o benefício de fundador conta na
+  // mesma, porque não depende de ter havido trabalho nenhum.
+  if (!progressao.data) return { ...ESTADO_PROGRESSAO_INICIAL, eFundador };
+  const r = progressao.data as unknown as Linha;
   return {
     xp: (r.xp as number) ?? 0,
     clientesElegiveis: (r.clientes_elegiveis as number) ?? 0,
@@ -1070,6 +1084,7 @@ export async function obterProgressao(contabilistaId: string): Promise<EstadoPro
     creditosReservados: (r.creditos_reservados as number) ?? 0,
     patamarConquistado: (r.highest_earned_tier as number) ?? 1,
     patamarComprado: (r.highest_purchased_tier as number) ?? 1,
+    eFundador,
   };
 }
 

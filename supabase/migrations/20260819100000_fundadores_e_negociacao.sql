@@ -254,6 +254,143 @@ GRANT EXECUTE ON FUNCTION public.comissao_efetiva_bps(uuid, integer)
   TO authenticated, service_role;
 
 
+-- ── 6b. ⚠️ LIGAR O BENEFÍCIO AO SÍTIO ONDE O DINHEIRO É COBRADO ─────
+--
+-- Sem esta secção, tudo o que está acima é decoração.
+--
+-- `comissao_efetiva_bps` existir não faz com que alguém pague menos: quem
+-- decide o que é mesmo cobrado é `comissao_bps_do_contabilista`, e é ela
+-- que `preparar_pagamento_de_consulta` chama para calcular o
+-- `application_fee`. Um fundador com o benefício atribuído, o cartão no
+-- ecrã e a página a prometer 5% continuaria a ser cobrado a 10% — e a
+-- discrepância só apareceria no extrato da Stripe, semanas depois.
+--
+-- `CREATE OR REPLACE` sobre a função da `20260816140000`. O corpo é o
+-- mesmo até à última linha; o que muda é o `RETURN` passar pelo benefício.
+CREATE OR REPLACE FUNCTION public.comissao_bps_do_contabilista(p_contabilista uuid)
+RETURNS integer
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_p       record;
+  v_efetivo smallint;
+  v_bps     integer;
+BEGIN
+  SELECT * INTO v_p FROM public.contabilista_progressao
+   WHERE contabilista_id = p_contabilista;
+
+  v_efetivo := public.patamar_efetivo(
+    COALESCE(v_p.highest_earned_tier, 1::smallint),
+    COALESCE(v_p.highest_purchased_tier, 1::smallint));
+
+  SELECT comissao_bps INTO v_bps FROM public.comissao_patamares
+   WHERE versao_catalogo = public.catalogo_versao_corrente()
+     AND ordem = v_efetivo AND ativo;
+
+  -- Sem linha, o patamar Base. É a comissão mais ALTA — falhar para o lado
+  -- que não prejudica a plataforma seria falhar a favor de quem não pagou.
+  --
+  -- E o benefício de fundador aplica-se DEPOIS desse `coalesce`, de
+  -- propósito: mesmo no caminho de falha, quem tem 5% garantidos paga 5%.
+  RETURN public.comissao_efetiva_bps(p_contabilista, COALESCE(v_bps, 1000));
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.comissao_bps_do_contabilista(uuid) FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.comissao_bps_do_contabilista(uuid)
+  TO authenticated, service_role;
+
+
+-- ── 6c. E o ecrã tem de dizer o mesmo que a fatura ──────────────────
+--
+-- `progressao_estado()` devolvia a comissão DO PATAMAR. Com o benefício
+-- ligado, um fundador via «10%» no herói da progressão e «5% de comissão»
+-- no cartão de fundador, no mesmo ecrã, ao mesmo tempo. Duas verdades
+-- sobre dinheiro na mesma página é pior do que uma errada: quem lê deixa
+-- de saber em qual acreditar.
+--
+-- Passa a devolver os dois números com nomes diferentes — o do patamar,
+-- que continua a servir para mostrar a jornada, e o EFETIVO, que é o que
+-- vai à fatura — mais a bandeira que explica a diferença.
+CREATE OR REPLACE FUNCTION public.progressao_estado()
+RETURNS jsonb
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path TO '' AS $$
+DECLARE
+  v_uid uuid := auth.uid();
+  v_p record; v_cat integer;
+  v_efetivo smallint; v_atual record; v_proximo record;
+  v_fundador boolean; v_fund record;
+BEGIN
+  IF v_uid IS NULL OR NOT public.e_contabilista_aprovado(v_uid) THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'sem_permissao');
+  END IF;
+  IF NOT public.progressao_flag('accountant_progression_read') THEN
+    RETURN jsonb_build_object('ok', false, 'motivo', 'indisponivel');
+  END IF;
+
+  v_cat := public.catalogo_versao_corrente();
+
+  SELECT coalesce(p.xp, 0)                          AS xp,
+         coalesce(p.creditos_disponiveis, 0)        AS creditos_disponiveis,
+         coalesce(p.creditos_reservados, 0)         AS creditos_reservados,
+         coalesce(p.clientes_elegiveis, 0)          AS clientes_elegiveis,
+         coalesce(p.highest_earned_tier, 1::smallint)    AS highest_earned_tier,
+         coalesce(p.highest_purchased_tier, 1::smallint) AS highest_purchased_tier
+    INTO v_p
+    FROM (SELECT 1) AS z
+    LEFT JOIN public.contabilista_progressao p ON p.contabilista_id = v_uid;
+
+  v_efetivo := public.patamar_efetivo(v_p.highest_earned_tier, v_p.highest_purchased_tier);
+
+  SELECT * INTO v_atual   FROM public.comissao_patamares
+   WHERE versao_catalogo = v_cat AND ordem = v_efetivo;
+  SELECT * INTO v_proximo FROM public.comissao_patamares
+   WHERE versao_catalogo = v_cat AND ordem = v_efetivo + 1;
+
+  v_fundador := public.e_fundador_ativo(v_uid);
+  SELECT * INTO v_fund FROM public.contabilista_fundadores
+   WHERE contabilista_id = v_uid AND libertado_em IS NULL;
+
+  RETURN jsonb_build_object(
+    'ok', true,
+    'catalogVersion', v_cat,
+    'xp', v_p.xp,
+    'clientesElegiveis', v_p.clientes_elegiveis,
+    'creditosDisponiveis', v_p.creditos_disponiveis,
+    'creditosReservados', v_p.creditos_reservados,
+    'patamarConquistado', v_p.highest_earned_tier,
+    'patamarComprado', v_p.highest_purchased_tier,
+    'patamarEfetivo', v_efetivo,
+    -- ⚠️ O que vai à fatura. Vem da MESMA função que o pagamento chama —
+    -- não de uma segunda conta que se pode enganar sozinha.
+    'comissaoEfetivaBps', public.comissao_bps_do_contabilista(v_uid),
+    'eFundador', v_fundador,
+    'numeroDeFundador', CASE WHEN v_fundador THEN v_fund.numero ELSE NULL END,
+    'atual', CASE WHEN v_atual.id IS NULL THEN NULL ELSE jsonb_build_object(
+      'ordem', v_atual.ordem, 'slug', v_atual.slug, 'titulo', v_atual.titulo,
+      'comissaoBps', v_atual.comissao_bps) END,
+    'proximo', CASE WHEN v_proximo.id IS NULL THEN NULL ELSE jsonb_build_object(
+      'ordem', v_proximo.ordem, 'slug', v_proximo.slug, 'titulo', v_proximo.titulo,
+      'comissaoBps', v_proximo.comissao_bps, 'xpMinimo', v_proximo.xp_minimo,
+      'xpEmFalta', greatest(v_proximo.xp_minimo - v_p.xp, 0),
+      'clientesMinimo', v_proximo.clientes_minimo,
+      'clientesEmFalta', greatest(v_proximo.clientes_minimo - v_p.clientes_elegiveis, 0),
+      'precoBaseCents', v_proximo.preco_desbloqueio_cents,
+      'descontoPct', public.desconto_por_creditos(v_p.creditos_disponiveis),
+      'precoComDescontoCents', public.preco_com_desconto(
+          v_proximo.preco_desbloqueio_cents,
+          public.desconto_por_creditos(v_p.creditos_disponiveis))) END,
+    'compraDisponivel', public.progressao_flag('accountant_tier_purchase'),
+    -- O preço já negociado para o patamar seguinte, se houver um aceite e
+    -- dentro do prazo. Nulo quer dizer «usa o de tabela».
+    'precoNegociadoCents', CASE WHEN v_proximo.id IS NULL THEN NULL
+      ELSE public.preco_negociado_cents(v_uid, v_proximo.ordem) END
+  );
+END; $$;
+
+REVOKE EXECUTE ON FUNCTION public.progressao_estado() FROM anon, PUBLIC;
+GRANT  EXECUTE ON FUNCTION public.progressao_estado() TO authenticated;
+
+
 -- ── 7. A proposta de valor ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.desbloqueio_propostas (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),

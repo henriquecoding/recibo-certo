@@ -133,6 +133,7 @@ export default function ProgressaoPage() {
           terceira via. Pô-lo depois deixava a pessoa a ler duas opções
           como se fossem todas. */}
       <ProgramaFundador
+        eFundador={estado.eFundador}
         precoCatalogoCents={v.proximo?.precoDesbloqueioCents ?? null}
         patamarAlvo={v.proximo?.ordem ?? null}
         aoMudar={() => setTique((t) => t + 1)}
@@ -164,10 +165,15 @@ function Hero({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
           A tua progressão profissional
         </p>
 
+        {/* ⚠️ O NÚMERO GRANDE É O QUE VAI À FATURA, e não o do patamar.
+            São diferentes sempre que o benefício de fundador estiver a
+            valer, e mostrar aqui o do patamar punha «10%» em cima e «5%»
+            no cartão de fundador, no mesmo ecrã. Duas verdades sobre
+            dinheiro na mesma página é pior do que uma errada. */}
         <div className="mt-3 flex flex-wrap items-end gap-x-5 gap-y-3">
           <p className="flex items-baseline gap-1">
             <span className="font-display text-5xl leading-none text-white tabular-nums sm:text-6xl">
-              {formatarComissao(v.atual.comissaoBps).replace("%", "")}
+              {formatarComissao(v.comissaoEfetivaBps).replace("%", "")}
             </span>
             <span className="font-display text-2xl leading-none text-white/85">%</span>
           </p>
@@ -181,8 +187,22 @@ function Hero({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
                   <Lock size={11} aria-hidden /> Desbloqueado
                 </span>
               )}
+              {estado.eFundador && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[0.6875rem] font-semibold text-white/90">
+                  <Award size={11} aria-hidden /> Fundador
+                </span>
+              )}
             </p>
-            <p className="mt-0.5 text-sm text-white/65">de comissão atual</p>
+            <p className="mt-0.5 text-sm text-white/65">
+              de comissão atual
+              {estado.eFundador && v.comissaoEfetivaBps < v.atual.comissaoBps && (
+                <>
+                  {" "}— o patamar {v.efetivo} daria{" "}
+                  {formatarComissao(v.atual.comissaoBps)}, e o programa fundador
+                  baixa-o
+                </>
+              )}
+            </p>
           </div>
         </div>
 
@@ -191,7 +211,7 @@ function Hero({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao }) {
             <p className="flex items-start gap-2.5 text-sm leading-relaxed text-white/85">
               <Trophy size={16} className="mt-0.5 shrink-0 text-brand-mint" aria-hidden />
               <span>
-                Estás no patamar mais alto. {formatarComissao(v.atual.comissaoBps)} é a
+                Estás no patamar mais alto. {formatarComissao(v.comissaoEfetivaBps)} é a
                 comissão mais baixa que existe — não há mais degraus a subir.
               </span>
             </p>
@@ -281,11 +301,15 @@ function DuasRotas({ v, estado }: { v: VistaProgressao; estado: EstadoProgressao
 
   return (
     <section>
+      {/* Eram duas. Com a negociação — que vive no bloco acima, e só
+          aparece a quem não é fundador — passaram a ser três, e um título
+          a contá-las mal é a primeira coisa que alguém nota. */}
       <h2 className="font-display text-xl text-ink">
-        Duas formas de subir para {formatarComissao(proximo.comissaoBps)}
+        Como subir para {formatarComissao(proximo.comissaoBps)}
       </h2>
       <p className="mt-1 text-sm text-stone-500">
-        As duas chegam ao mesmo patamar. A primeira é a que a plataforma quer premiar.
+        Estas duas chegam ao mesmo patamar, e a primeira é a que a plataforma quer
+        premiar. Se nenhuma servir, podes propor outro valor mais acima nesta página.
       </p>
 
       <div className="mt-4 grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1fr]">
