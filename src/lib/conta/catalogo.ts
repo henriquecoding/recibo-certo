@@ -214,6 +214,24 @@ export const CONJUNTOS: Conjunto[] = [
     retido: "As compras de patamar ficam retidas pelo prazo legal de conservação de documentos de faturação. Deixam de estar ligadas ao teu perfil, mas o registo do pagamento não é apagável a pedido.",
   },
   {
+    id: "fundador", grupo: "profissional", soSe: "contabilista",
+    titulo: "Lugar de fundador",
+    descricao:
+      "Se és um dos primeiros dez contabilistas, o registo desse lugar. Apagá-lo liberta o lugar para outra pessoa — e a comissão volta a ser a do teu patamar.",
+    tabelas: [
+      { nome: "contabilista_fundadores", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
+    id: "propostas-desbloqueio", grupo: "profissional", soSe: "contabilista",
+    titulo: "Propostas de valor que enviaste",
+    descricao:
+      "Os valores que propuseste para subir de patamar e as justificações que escreveste, com as decisões que receberam.",
+    tabelas: [
+      { nome: "desbloqueio_propostas", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
     id: "recebimentos", grupo: "profissional", soSe: "contabilista",
     titulo: "Recebimentos e conta Stripe",
     descricao:

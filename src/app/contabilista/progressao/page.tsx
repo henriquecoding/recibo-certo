@@ -58,6 +58,7 @@ import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import { abrirDesbloqueio } from "@/lib/contabilistas/fonte/pagamentos";
 import { Award, Check, Gift, Info, Lock, Star, Target, Trophy, Warning } from "@/components/ui/Icons";
+import ProgramaFundador from "@/components/contabilistas/ProgramaFundador";
 import styles from "../painel.module.css";
 
 export default function ProgressaoPage() {
@@ -126,6 +127,17 @@ export default function ProgressaoPage() {
       />
 
       <Hero v={v} estado={estado} />
+
+      {/* Antes das duas rotas de propósito: o programa fundador MUDA o
+          número que o herói acabou de mostrar, e a negociação é uma
+          terceira via. Pô-lo depois deixava a pessoa a ler duas opções
+          como se fossem todas. */}
+      <ProgramaFundador
+        precoCatalogoCents={v.proximo?.precoDesbloqueioCents ?? null}
+        patamarAlvo={v.proximo?.ordem ?? null}
+        aoMudar={() => setTique((t) => t + 1)}
+      />
+
       <BaseDaComissao />
       <DuasRotas v={v} estado={estado} />
       <Jornada v={v} />

@@ -1,14 +1,56 @@
-# Da ligação direta à intermediação — estratégia completa
+# Da ligação direta à intermediação, e de volta — o histórico completo
 
-> Estado: **implementado**. Migrações `051` e `052`, domínio em
-> `src/lib/contabilistas/casos.ts`, e cinco ecrãs: `/dashboard/casos`
-> (+ `novo`, + detalhe), `/contabilista/casos`, `/admin/casos`.
-> Inclui anexos nos três sítios, revisão dos documentos antes de seguirem,
-> expiração automática das propostas e tempo real na conversa mediada.
-> Substitui o modelo de vínculo direto da PR #102 **sem apagar o que lá está**:
-> quase tudo se reaproveita, mas a relação passa a ser mediada.
-> Ler com `docs/auditorias/pr102/HANDOFF-CLAUDE.md` e o relatório mestre de
-> privacidade e segurança.
+> ## ⚠️ ESTADO: **REVERTIDO.** Ler o aviso antes do resto.
+>
+> Este documento descreve o modelo de intermediação que vigorou entre as
+> migrações `051`/`052` e a migração `20260818210000_fim_da_mediacao`.
+> **Já não é o que o produto faz.** Fica porque explica decisões que ainda
+> estão no esquema — a separação de `casos` e `caso_contactos`, o ciclo de
+> vida do caso, a leitura confirmada da proposta — e porque a razão da
+> reversão só se percebe lendo o que se tinha construído.
+>
+> ### O que caiu, e porquê
+>
+> A frase que este documento assume com todas as letras, no §2:
+>
+> > O custo é honesto e tem de ser dito ao cliente: **a plataforma lê o que
+> > é escrito.**
+>
+> Era honesta, e era o problema. Obrigava uma pessoa da administração a ler
+> conversa confidencial que não lhe foi dirigida — de dívidas, divórcios,
+> heranças e dinheiro que não chegou — como trabalho de rotina. Nenhuma
+> salvaguarda vale isso.
+>
+> ### O que passou a valer
+>
+> | | Modelo de intermediação (este documento) | Modelo atual |
+> |---|---|---|
+> | Escolha | O cliente descreve; a administração encaminha | O cliente **escolhe** a quem envia, no diretório |
+> | Conversa | Mediada: cada mensagem submetida, revista, aprovada | **Direta.** Nasce entregue |
+> | Quem lê | A administração lê tudo | **Ninguém.** Zero linhas para um `select` de administrador |
+> | Exceção | — | Uma mensagem **denunciada** por quem está no caso |
+> | Contactos | Nunca chegam ao contabilista | Do cliente para dar, num interruptor revogável |
+> | Documentos | Libertados pela triagem | Entregues ao anexar; retiráveis por quem os anexou |
+>
+> ### O que se manteve, e vale a pena não voltar a discutir
+>
+> - `caso_contactos` continua **numa tabela separada** de `casos`. A
+>   separação nunca foi o problema — é ela que faz com que um `select`
+>   distraído não devolva um telefone. O que mudou foi passar a existir um
+>   caminho **declarado**, que o cliente abre e fecha.
+> - A proposta continua a exigir **leitura confirmada** antes de ser
+>   decidida, e a exigência vive na RPC.
+> - O **teto de três** contabilistas por caso continua no gatilho.
+> - O ciclo de vida do caso e a expiração de propostas ficam como estavam.
+>
+> A migração `20260818210000` tem o raciocínio completo no cabeçalho, e os
+> testes adversariais em `supabase/tests/12-intermediacao.sql` provam as
+> garantias novas — incluindo que `rever_mensagem` e `encaminhar_caso`
+> deixaram de existir.
+
+---
+
+## O documento original
 
 ## 1. O que muda, numa frase
 

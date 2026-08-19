@@ -26,6 +26,9 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Deixaste também de ser escolhido por nós. Descreves o caso e escolhes tu a quem o queres enviar, até três contabilistas, a partir do diretório. A triagem manual era a mesma leitura de conversa alheia, um passo antes.",
       "E a parede que recusava emails e telemóveis a meio de uma frase desapareceu. Podes partilhar os teus contactos com quem trata do teu caso — é um interruptor no caso, que ligas e desligas quando quiseres, com efeito imediato.",
       "As consultas passam a poder ir para o teu calendário — o do Google, o do iPhone e do Mac, o Outlook — e a atualizar-se sozinhas quando alguma muda de hora ou é cancelada. Não pedimos acesso ao teu calendário: publicamos o nosso, num endereço só teu que podes trocar ou desligar. E há a opção de ele dizer apenas «ocupado», sem nomes nem assuntos, para quem partilha o calendário com outras pessoas.",
+      "Para contabilistas: os primeiros dez a serem aprovados ficam com 5% de comissão — a mais baixa da tabela — de imediato e enquanto a conta estiver ativa. Sem faturação mínima e sem prazo. É o reconhecimento de quem entra numa plataforma sem histórico e sem provas dadas, e o limite de dez é imposto pela base de dados, não por uma promessa.",
+      "Esgotados esses dez, quem vier a seguir pode propor um valor próprio para subir de patamar e explicar porque é que faz sentido no caso dele. A proposta vai direta ao administrador, que aceita, contrapõe ou recusa — com uma razão escrita nos três casos. É além dos créditos de fidelidade, não em vez deles, e um valor acordado compra a percentagem e mais nada.",
+      "A página de candidatura de contabilistas deixou de ser um formulário com três linhas por cima. Passa a explicar como um cliente chega até ti, o que custa (com a tabela de patamares real), o que o painel te dá, e — com o mesmo detalhe — o que a plataforma não vê.",
     ],
   },
   {

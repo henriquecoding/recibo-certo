@@ -42,8 +42,8 @@
 
 import type { ComponentType } from "react";
 import {
-  Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, LayoutGrid, Megaphone,
-  Shield, ShieldCheck, Target, User,
+  Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, Handshake, LayoutGrid,
+  Megaphone, Shield, ShieldCheck, Target, User,
 } from "@/components/ui/Icons";
 
 export const BASE_ADMIN = "/admin";
@@ -143,6 +143,12 @@ export const SECCOES_ADMIN: readonly SeccaoAdmin[] = [
         label: "Contabilistas",
         Icon: Shield,
         descricao: "Candidaturas a conta de contabilista: aprovar, recusar ou suspender.",
+      },
+      {
+        href: "/admin/propostas-desbloqueio",
+        label: "Propostas de desbloqueio",
+        Icon: Handshake,
+        descricao: "Contabilistas que propõem outro valor para subir de patamar, e porquê.",
       },
       {
         href: "/admin/verificacao",
