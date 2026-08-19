@@ -6,11 +6,10 @@
 //  Três coisas, por esta ordem: em que pé está, o que já foi proposto, e
 //  o que foi dito.
 //
-//  A conversa aqui NÃO se parece com um chat, e é de propósito. Um chat
-//  promete que se escreve e chega; isto é uma caixa de correio com
-//  revisão pelo meio. As mensagens têm estado à vista — «à espera de
-//  revisão», «devolvida» — porque esconder isso seria deixar a pessoa a
-//  achar que o outro lado a ignorou.
+//  A conversa É um chat, e passou a poder chamar-se isso. Era uma caixa
+//  de correio com revisão pelo meio, e as mensagens andavam com o estado à
+//  vista porque podiam ficar pelo caminho. Deixou de haver caminho onde
+//  ficar: escreve-se e chega.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useCallback, useEffect, useState } from "react";
@@ -20,12 +19,13 @@ import { useAuth } from "@/lib/supabase/auth";
 import { useAvisos } from "@/components/ui/Avisos";
 import Button from "@/components/ui/Button";
 import LeitorDeProposta from "@/components/casos/LeitorDeProposta";
-import {
-  ArrowLeft, Clock, Check, Warning, Lock, Spinner, ShieldCheck,
-} from "@/components/ui/Icons";
+import { ArrowLeft, Warning } from "@/components/ui/Icons";
 import Ficheiros from "@/components/casos/Ficheiros";
+import ConversaDoCaso from "@/components/casos/ConversaDoCaso";
+import EscolherContabilistas from "@/components/casos/EscolherContabilistas";
+import { PartilhaDeContactos } from "@/components/casos/Contactos";
 import {
-  obterCaso, listarMensagensDoCaso, listarPropostas, submeterMensagem,
+  obterCaso, listarMensagensDoCaso, listarPropostas, enviarMensagemDoCaso,
   listarDocumentosDoCaso, escutarCaso,
   estadoDoCasoLegivel, AREAS, URGENCIAS, euros,
   type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
@@ -41,7 +41,6 @@ export default function DetalheDoCaso() {
   const [propostas, setPropostas] = useState<Proposta[]>([]);
   const [documentos, setDocumentos] = useState<DocumentoDoCaso[]>([]);
   const [aCarregar, setACarregar] = useState(true);
-  const [texto, setTexto] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
 
   const carregar = useCallback(async () => {
@@ -64,16 +63,12 @@ export default function DetalheDoCaso() {
     return escutarCaso(id, () => { void carregar(); });
   }, [carregado, user, id, carregar]);
 
-  async function enviar() {
-    if (!user || !texto.trim()) return;
+  async function enviar(texto: string) {
+    if (!user) return;
     setAEnviar(true);
-    const { erro } = await submeterMensagem(id, user.id, "cliente", texto);
+    const { erro } = await enviarMensagemDoCaso(id, user.id, "cliente", texto);
     setAEnviar(false);
     if (erro) { avisos.erro(erro); return; }
-    setTexto("");
-    avisos.sucesso("Mensagem submetida.", {
-      detalhe: "Vamos lê-la antes de a encaminhar. Avisamos-te se precisar de um ajuste.",
-    });
     void carregar();
   }
 
@@ -146,11 +141,19 @@ export default function DetalheDoCaso() {
         )}
       </section>
 
+      {caso.estado !== "fechado" && caso.estado !== "recusado" && caso.estado !== "aceite" && (
+        <EscolherContabilistas
+          casoId={caso.id}
+          area={caso.area}
+          aoMudar={() => void carregar()}
+        />
+      )}
+
       <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-6">
         <h2 className="font-display text-lg text-ink">Documentos</h2>
         <p className="mt-1 text-sm leading-relaxed text-stone-500">
-          Faturas, declarações, o que ajudar a perceber a situação. Lemos cada um antes de
-          seguir — pode ter os teus contactos lá dentro.
+          Faturas, declarações, o que ajudar a perceber a situação. Seguem para quem
+          estiver a tratar do teu caso, e para mais ninguém.
         </p>
         <div className="mt-3">
           <Ficheiros
@@ -205,102 +208,24 @@ export default function DetalheDoCaso() {
         </section>
       )}
 
-      {/* A conversa. Não se parece com um chat porque não é um. */}
-      <section className="rounded-4xl border border-stone-200 bg-white shadow-card">
-        <header className="border-b border-stone-100 px-5 py-4 sm:px-6">
-          <h2 className="font-display text-xl text-ink">Mensagens</h2>
-          <p className="mt-1 flex items-start gap-2 text-xs leading-relaxed text-stone-500">
-            <ShieldCheck size={13} className="mt-0.5 shrink-0" aria-hidden />
-            Tudo o que escreveres passa por nós antes de seguir. Não é um canal privado — é o que
-            impede que os teus contactos cheguem ao outro lado sem tu quereres.
-          </p>
-        </header>
+      <ConversaDoCaso
+        mensagens={mensagens}
+        meuPapel="cliente"
+        nomeDoOutro="O contabilista"
+        podeEscrever={caso.estado !== "fechado" && caso.estado !== "recusado"}
+        aEnviar={aEnviar}
+        aoEnviar={enviar}
+        aoMudar={() => void carregar()}
+      />
 
-        <ul className="divide-y divide-stone-100">
-          {mensagens.length === 0 && (
-            <li className="px-5 py-6 text-center text-sm text-stone-400 sm:px-6">
-              Ainda não há mensagens neste caso.
-            </li>
-          )}
-          {mensagens.map((m) => {
-            const minha = m.autorPapel === "cliente";
-            return (
-              <li key={m.id} className="px-5 py-4 sm:px-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-stone-700">
-                    {minha ? "Tu" : "O contabilista"}
-                  </span>
-                  <span className="text-[11px] tabular-nums text-stone-400">
-                    {new Date(m.criadoEm).toLocaleDateString("pt-PT", {
-                      day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-                    })}
-                  </span>
-                  {minha && <EstadoDaMensagem estado={m.estado} />}
-                </div>
+      {/* Depois da conversa: só faz sentido decidir sobre os contactos
+          depois de se perceber com quem se está a falar. */}
+      <PartilhaDeContactos
+        casoId={caso.id}
+        ligado={caso.partilhaContactos}
+        aoMudar={() => void carregar()}
+      />
 
-                <p className="mt-1.5 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
-                  {m.corpoEncaminhado ?? m.corpo}
-                </p>
-
-                {/* Se foi redigida, dizemo-lo. Encaminhar uma versão
-                    diferente sem avisar seria pôr palavras na boca de alguém. */}
-                {minha && m.corpoEncaminhado && (
-                  <p className="mt-2 rounded-2xl bg-stone-50 px-3 py-2 text-[11px] leading-relaxed text-stone-500">
-                    Encaminhámos esta mensagem com um ajuste, para não levar contactos consigo.
-                    O que escreveste fica guardado tal como o escreveste.
-                  </p>
-                )}
-
-                {m.notaRevisao && (
-                  <p className="mt-2 flex items-start gap-2 rounded-2xl bg-alert-bg px-3 py-2 text-[11px] leading-relaxed text-alert-text">
-                    <Warning size={12} className="mt-0.5 shrink-0" aria-hidden /> {m.notaRevisao}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-
-        {caso.estado !== "fechado" && caso.estado !== "recusado" && (
-          <div className="border-t border-stone-100 p-5 sm:p-6">
-            <label htmlFor="nova-mensagem" className="block text-sm font-semibold text-stone-700">
-              Escrever
-            </label>
-            <textarea
-              id="nova-mensagem"
-              rows={4}
-              value={texto}
-              onChange={(e) => setTexto(e.target.value.slice(0, 4000))}
-              placeholder="Uma pergunta, um esclarecimento, o que faltar dizer."
-              className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25"
-            />
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-              <p className="flex items-center gap-1.5 text-[11px] text-stone-400">
-                <Lock size={12} aria-hidden /> Não escrevas aqui o teu contacto — não segue.
-              </p>
-              <Button onClick={() => void enviar()} disabled={!texto.trim() || aEnviar}>
-                {aEnviar ? <><Spinner size={14} /> A submeter…</> : "Submeter para revisão"}
-              </Button>
-            </div>
-          </div>
-        )}
-      </section>
     </div>
-  );
-}
-
-/** O estado da mensagem, dito a quem a escreveu. */
-function EstadoDaMensagem({ estado }: { estado: MensagemDoCaso["estado"] }) {
-  const mapa = {
-    submetida: { texto: "À espera de revisão", Icon: Clock, cor: "bg-stone-100 text-stone-500" },
-    aprovada: { texto: "Encaminhada", Icon: Check, cor: "bg-brand-light text-brand-dark" },
-    devolvida: { texto: "Devolvida", Icon: Warning, cor: "bg-alert-bg text-alert-text" },
-    recusada: { texto: "Não encaminhada", Icon: Warning, cor: "bg-alert-bg text-alert-text" },
-  }[estado];
-
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-[10px] font-semibold ${mapa.cor}`}>
-      <mapa.Icon size={10} aria-hidden /> {mapa.texto}
-    </span>
   );
 }

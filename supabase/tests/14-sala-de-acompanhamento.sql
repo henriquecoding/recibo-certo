@@ -51,13 +51,17 @@ SELECT t.rpc_recusa($$SELECT public.criar_pedido_cliente(
     'aaaa0000-0000-0000-0000-00000000000a', 'documento', 'ab')$$,
   'titulo_curto', 'um título que não diz nada');
 
--- A fronteira de contacto vale aqui como em todo o texto escrito. Recusa
--- por exceção do gatilho, e não por motivo devolvido: é a base a dizer que
--- não, e é assim que tem de ser — a RPC não é a única porta da tabela.
-SELECT t.recusa($$SELECT public.criar_pedido_cliente(
+-- ⚠️ AQUI MUDOU. A fronteira de contacto recusava este pedido, porque um
+-- telemóvel escrito num campo de texto era uma fuga a tapar. Caiu com a
+-- `fim_da_mediacao`: era uma parede a meio de uma frase, a quem não estava
+-- a fazer nada, e a mantê-la de pé obrigava a plataforma a ler tudo.
+--
+-- O teste inverte-se em vez de desaparecer: se um dia alguém repuser o
+-- gatilho sem o decidir, isto falha e diz porquê.
+SELECT t.rpc_ok($$SELECT public.criar_pedido_cliente(
     'aaaa0000-0000-0000-0000-00000000000a', 'resposta',
     'Liga-me quando puderes', 'O meu numero e 912 345 678.')$$,
-  'um pedido que oferece um telemóvel');
+  'um pedido com um telemóvel já não é recusado');
 
 \echo ''
 \echo '── 61. Ninguém escreve na tabela por fora ──────────────────────'
@@ -154,10 +158,13 @@ SELECT t.conta($$SELECT count(*) FROM public.pedido_cliente
 SET ROLE authenticated;
 
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+-- Dois, e não um: o pedido com o telemóvel deixou de ser recusado pela
+-- fronteira de contacto, e por isso passou a existir. Contar um seria
+-- contar o mundo antes da `fim_da_mediacao`.
 SELECT t.conta($$SELECT count(*) FROM public.listar_timeline_vinculo(
     'aaaa0000-0000-0000-0000-00000000000a')
-   WHERE tipo='pedido'$$, 1,
-  'o contabilista vê o pedido na linha do tempo');
+   WHERE tipo='pedido'$$, 2,
+  'o contabilista vê os pedidos na linha do tempo');
 
 SELECT t.entrar('77777777-7777-7777-7777-777777777777');
 SELECT t.conta($$SELECT count(*) FROM public.listar_timeline_vinculo(

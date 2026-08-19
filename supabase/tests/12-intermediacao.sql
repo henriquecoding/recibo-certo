@@ -59,30 +59,31 @@ SELECT t.rpc_recusa($$SELECT public.submeter_caso(
   'dados_invalidos', 'submeter com um NIF que não são nove dígitos');
 
 \echo ''
-\echo '── 62. A administração encaminha, com teto ─────────────────────'
-SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
-SELECT t.rpc_recusa($$SELECT public.encaminhar_caso(
-  current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
-  'so_a_administracao', 'o cliente encaminha o seu próprio caso');
+\echo '── 62. Quem entrega o caso é quem o descreveu ──────────────────'
 
+-- ⚠️ A INVERSÃO. Era a administração a decidir para onde ia o caso, o que
+-- obrigava alguém a ler a situação inteira — escrita para outra pessoa.
+-- Passa a ser o dono do caso a escolher, e é o dono que a RPC exige.
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.rpc_recusa($$SELECT public.encaminhar_caso(
+SELECT t.rpc_recusa($$SELECT public.enviar_caso_a_contabilista(
   current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
-  'so_a_administracao', 'um contabilista encaminha um caso para si próprio');
+  'nao_e_teu', 'um contabilista entrega a si próprio um caso alheio');
 
 SELECT t.entrar('44444444-4444-4444-4444-444444444444');
-SELECT t.rpc_ok($$SELECT public.encaminhar_caso(
+SELECT t.rpc_recusa($$SELECT public.enviar_caso_a_contabilista(
   current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
-  'a administração encaminha');
-SELECT t.rpc_recusa($$SELECT public.encaminhar_caso(
-  current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
-  'ja_encaminhado', 'encaminhar duas vezes para o mesmo');
-SELECT t.rpc_recusa($$SELECT public.encaminhar_caso(
-  current_setting('t.caso')::uuid, '7b7b7b7b-0000-0000-0000-00000000007b')$$,
-  'contabilista_nao_aprovado', 'encaminhar para quem ainda não foi aprovado');
+  'nao_e_teu', 'a administração decide por quem descreveu o caso');
 
-SELECT t.conta($$SELECT count(*) FROM public.admin_auditoria
-  WHERE acao='caso_encaminhado'$$, 1, 'o encaminhamento ficou no registo');
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.enviar_caso_a_contabilista(
+  current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
+  'o cliente escolhe e entrega');
+SELECT t.rpc_recusa($$SELECT public.enviar_caso_a_contabilista(
+  current_setting('t.caso')::uuid, '11111111-1111-1111-1111-111111111111')$$,
+  'ja_encaminhado', 'entregar duas vezes ao mesmo');
+SELECT t.rpc_recusa($$SELECT public.enviar_caso_a_contabilista(
+  current_setting('t.caso')::uuid, '7b7b7b7b-0000-0000-0000-00000000007b')$$,
+  'contabilista_nao_aprovado', 'entregar a quem ainda não foi aprovado');
 
 \echo ''
 \echo '── 63. ⚠️ O contabilista sabe QUEM é, e não POR ONDE falar ──────'
@@ -96,17 +97,47 @@ SELECT t.conta($$SELECT count(*) FROM public.casos
   WHERE nome_completo = 'Sofia Marques Pereira' AND nif = '123456789'$$, 1,
   'sabe com quem está a falar — nome e NIF');
 
--- ⚠️ A GARANTIA. O que ele não pode ter é por onde falar com a pessoa
--- fora daqui. Não há USING nenhum a excluí-lo desta tabela: não há
--- política em que ele caiba, e por isso não há linha nenhuma para ler.
-SELECT t.conta($$SELECT count(*) FROM public.caso_contactos$$, 0,
-  'não lê o email, o telefone nem a morada de ninguém');
-SELECT t.conta($$SELECT count(*) FROM public.caso_contactos
-  WHERE caso_id = current_setting('t.caso')::uuid$$, 0,
-  'nem sabendo o id exato do caso que lhe foi encaminhado');
+-- ⚠️ AQUI MUDOU A GARANTIA, e é a mudança que a `fim_da_mediacao` fez de
+-- propósito. Antes: o contabilista NUNCA alcançava os contactos, e a
+-- prova era não haver política em que ele coubesse. Agora: alcança-os
+-- enquanto — e só enquanto — o cliente os partilhar.
+--
+-- O que NÃO mudou, e continua provado logo a seguir: quem decide é o
+-- cliente, o efeito é imediato, e o contabilista não consegue religar a
+-- partilha nem escrever um contacto para depois o ler.
+SELECT t.conta($$SELECT count(*) FROM public.caso_contactos$$, 1,
+  'com a partilha ligada, alcança os contactos do caso que lhe foi entregue');
+
 SELECT t.recusa($$INSERT INTO public.caso_contactos (caso_id, email)
   VALUES (current_setting('t.caso')::uuid,'x@y.pt')$$,
   'escrever um contacto para depois o ler');
+SELECT t.recusa($$UPDATE public.caso_contactos SET email = 'eu@exemplo.pt'$$,
+  'reescrever o email de outra pessoa');
+
+-- Desligada, deixa de os alcançar — e não por um filtro na aplicação.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, false)$$, 'o cliente desliga a partilha');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_contactos$$, 0,
+  'desligada, não lê o email, o telefone nem a morada de ninguém');
+SELECT t.conta($$SELECT count(*) FROM public.caso_contactos
+  WHERE caso_id = current_setting('t.caso')::uuid$$, 0,
+  'nem sabendo o id exato do caso que lhe foi entregue');
+
+-- E não a religa por ele: a partilha é do dono do caso.
+SELECT t.rpc_recusa($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, true)$$,
+  'caso_nao_encontrado', 'o contabilista religa a partilha do cliente');
+
+-- Reposta pelo cliente, para o resto do ficheiro continuar do estado
+-- normal: um teste que deixa o mundo diferente de como o encontrou
+-- estraga os que vêm a seguir.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, true)$$, 'o cliente volta a ligar');
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
 
 -- E o email da conta também não: `auth.users` não lhe é legível, e o
 -- caso nunca o traz consigo.
@@ -127,68 +158,122 @@ SELECT t.permite($$INSERT INTO public.caso_mensagens
   (caso_id, autor_id, autor_papel, corpo)
   VALUES (current_setting('t.caso')::uuid,'7a7a7a7a-0000-0000-0000-00000000007a',
           'cliente','O meu telemóvel é 912345678, liga-me.')$$,
-  'o cliente submete uma mensagem');
+  'o cliente escreve — e um telemóvel já não é motivo de recusa');
 
--- ⚠️ Nasce SUBMETIDA. Tentar nascer aprovada é o caminho mais curto para
--- contornar a mediação inteira.
+-- ⚠️ Nasce ENTREGUE, e não há outro estado por onde entrar. Os estados da
+-- mediação continuam no CHECK porque as linhas antigas existem, mas
+-- nenhuma linha NOVA lá chega: a política só aceita `entregue`.
 SELECT t.recusa($$INSERT INTO public.caso_mensagens
   (caso_id, autor_id, autor_papel, corpo, estado)
   VALUES (current_setting('t.caso')::uuid,'7a7a7a7a-0000-0000-0000-00000000007a',
-          'cliente','Aprovada por mim próprio.','aprovada')$$,
-  'submeter uma mensagem já aprovada');
+          'cliente','A fingir que ainda há fila.','submetida')$$,
+  'escrever uma mensagem no estado da mediação que acabou');
 SELECT t.recusa($$INSERT INTO public.caso_mensagens
   (caso_id, autor_id, autor_papel, corpo, revisto_por)
   VALUES (current_setting('t.caso')::uuid,'7a7a7a7a-0000-0000-0000-00000000007a',
           'cliente','Revista por mim próprio.','44444444-4444-4444-4444-444444444444')$$,
-  'submeter uma mensagem já revista');
-SELECT t.recusa($$UPDATE public.caso_mensagens SET estado='aprovada'$$,
-  'aprovar a própria mensagem depois de a submeter');
+  'escrever uma mensagem já marcada como revista');
 
--- O contabilista ainda não lê nada: a mensagem existe, mas não para ele.
+-- Denunciar-se a si próprio seria a forma de entregar à administração o
+-- que ela não pode ler. A RPC recusa pelo autor.
+SELECT t.recusa($$INSERT INTO public.caso_mensagens
+  (caso_id, autor_id, autor_papel, corpo, denunciada_em)
+  VALUES (current_setting('t.caso')::uuid,'7a7a7a7a-0000-0000-0000-00000000007a',
+          'cliente','Já denunciada à nascença.', now())$$,
+  'escrever uma mensagem já denunciada');
+
+-- O que foi escrito não se reescreve, nem por quem o escreveu.
+SELECT t.recusa($$UPDATE public.caso_mensagens SET corpo='outra coisa'$$,
+  'reescrever o que foi enviado');
+
+\echo ''
+\echo '── 65. O outro lado lê logo, e a administração não lê nada ─────'
+
+-- Sem revisão pelo meio: o contabilista a quem o caso foi encaminhado lê
+-- a mensagem no instante em que ela existe.
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 0,
-  'antes da revisão, o outro lado não lê nada');
+SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 1,
+  'o contabilista lê sem esperar por aprovação nenhuma');
 
 SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
 SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 1,
   'quem escreveu vê sempre o que escreveu');
 
-\echo ''
-\echo '── 65. Aprovar, devolver, recusar — e nunca reescrever ─────────'
-SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.rpc_recusa($$SELECT public.rever_mensagem(
-  (SELECT id FROM public.caso_mensagens LIMIT 1), 'aprovar')$$,
-  'so_a_administracao', 'o contabilista aprova a mensagem que quer ler');
-
+-- ⚠️ O CORAÇÃO DESTA MIGRAÇÃO. A administração não alcança o corpo de uma
+-- conversa. Não é um ecrã que deixou de existir: é zero linhas.
 SELECT t.entrar('44444444-4444-4444-4444-444444444444');
-SELECT t.rpc_recusa($$SELECT public.rever_mensagem(
-  (SELECT id FROM public.caso_mensagens LIMIT 1), 'devolver')$$,
-  'falta_a_razao', 'devolver sem dizer o que corrigir');
+SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 0,
+  'a administração não lê uma conversa que ninguém lhe entregou');
+SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens_denunciadas$$, 0,
+  'e a vista das denúncias também está vazia');
 
--- Redigir é permitido; apagar o original não. O que o outro lado lê fica
--- em `corpo_encaminhado`, e o que foi dito fica em `corpo`.
-SELECT t.rpc_ok($$SELECT public.rever_mensagem(
-  (SELECT id FROM public.caso_mensagens LIMIT 1), 'aprovar', NULL,
-  'O cliente pede contacto para tratar do assunto.')$$,
-  'a administração aprova, redigindo');
-
+-- A revisão foi-se. Não ficou desligada: deixou de EXISTIR.
+--
+-- Pergunta-se ao catálogo, e não com `t.recusa`: essa não apanha
+-- `undefined_function` de propósito — se apanhasse, um teste com um typo
+-- no nome da função passava sozinho e não provava nada. Contar as linhas
+-- de `pg_proc` diz exatamente o que se quer dizer.
 RESET ROLE; SELECT t.sair();
-SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens
-  WHERE corpo LIKE '%912345678%' AND corpo_encaminhado NOT LIKE '%912345678%'$$, 1,
-  'o original fica intacto, e o que segue já não traz o telemóvel');
-SELECT t.recusa($$UPDATE public.caso_mensagens SET corpo='outra coisa'$$,
-  'reescrever o que foi submetido');
-
+SELECT t.conta($$SELECT count(*) FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'rever_mensagem'$$, 0,
+  'a revisão de mensagens não existe — não ficou desligada');
+SELECT t.conta($$SELECT count(*) FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'encaminhar_caso'$$, 0,
+  'a triagem manual não existe');
+SELECT t.conta($$SELECT count(*) FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'texto_parece_contacto_externo'$$, 0,
+  'a fronteira de contacto não existe');
 SET ROLE authenticated;
+
+\echo ''
+\echo '── 65b. A denúncia — a única porta, e abre-se por dentro ───────'
+
+-- Quem escreveu não denuncia o que escreveu.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_recusa($$SELECT public.denunciar_mensagem(
+  (SELECT id FROM public.caso_mensagens LIMIT 1), 'quero que leiam isto')$$,
+  'nao_denuncias_o_que_escreveste', 'denunciar a própria mensagem');
+
+-- Quem recebeu, sim.
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 1,
-  'depois de aprovada, o contabilista lê');
--- Rever duas vezes não é possível: a precondição está no WHERE, e a
--- segunda revisão não encontra linha nenhuma para mudar.
+SELECT t.rpc_ok($$SELECT public.denunciar_mensagem(
+  (SELECT id FROM public.caso_mensagens LIMIT 1),
+  'Está a pedir-me uma coisa que não posso fazer.')$$,
+  'o contabilista entrega uma mensagem à administração');
+
+-- E aí — e só aí — a administração alcança AQUELA linha.
 SELECT t.entrar('44444444-4444-4444-4444-444444444444');
-SELECT t.rpc_recusa($$SELECT public.rever_mensagem(
-  (SELECT id FROM public.caso_mensagens LIMIT 1), 'recusar', 'mudei de ideias')$$,
-  'ja_revista', 'rever uma segunda vez o que já foi encaminhado');
+SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens$$, 1,
+  'depois de denunciada, a administração lê essa mensagem');
+SELECT t.conta($$SELECT count(*) FROM public.caso_mensagens_denunciadas$$, 1,
+  'e a vista mostra-a, com o motivo');
+
+\echo ''
+\echo '── 65c. Os contactos, enquanto o cliente os partilhar ──────────'
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_contactos$$, 1,
+  'com a partilha ligada, o contabilista alcança os contactos');
+
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, false)$$, 'o cliente desliga a partilha');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_contactos$$, 0,
+  'desligada, deixa de os alcançar no mesmo instante');
+
+-- Ligar a partilha de um caso alheio não é possível.
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.rpc_recusa($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, true)$$,
+  'caso_nao_encontrado', 'o contabilista religa a partilha do cliente');
+
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.definir_partilha_de_contactos(
+  current_setting('t.caso')::uuid, true)$$, 'o cliente volta a ligar');
 
 \echo ''
 \echo '── 66. A proposta ──────────────────────────────────────────────'
@@ -359,45 +444,70 @@ SELECT t.rpc_ok($$SELECT public.fechar_vaga(
   current_setting('t.vaga_caso')::uuid, 'IRS 2025.pdf', 90000)$$,
   'o servidor fecha a vaga e regista o documento');
 RESET ROLE;
+-- ⚠️ AQUI MUDOU, e é a reparação de uma avaria e não uma preferência.
+--
+-- `libertado_em` nascia nulo, e o único caminho para o preencher era
+-- `libertar_documento`, que só a administração podia chamar. Removida a
+-- triagem, um documento anexado ficava invisível ao contabilista PARA
+-- SEMPRE — sem erro, com o cliente convencido de que tinha enviado a
+-- fatura. Anexar um documento a um caso É entregá-lo a quem trata dele.
 SELECT t.conta($$SELECT count(*) FROM public.caso_documentos
-  WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' AND libertado_em IS NULL$$, 1,
-  'o documento nasce por libertar');
+  WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' AND libertado_em IS NOT NULL$$, 1,
+  'o documento nasce ENTREGUE, e não à espera de ninguém');
 SELECT set_config('t.caminho_doc',
   (SELECT caminho FROM public.caso_documentos LIMIT 1), false);
 SELECT set_config('t.doc_id',
   (SELECT id::text FROM public.caso_documentos LIMIT 1), false);
 
 \echo ''
-\echo '── 71. O contabilista só vê o que foi libertado ────────────────'
+\echo '── 71. Entregue ao anexar, e retirável por quem o anexou ───────'
 SET ROLE authenticated;
-SELECT t.entrar('44444444-4444-4444-4444-444444444444');
-SELECT t.rpc_ok($$SELECT public.encaminhar_caso(
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.enviar_caso_a_contabilista(
   'cafe0000-0000-0000-0000-00000000cafe','11111111-1111-1111-1111-111111111111')$$,
-  'a administração encaminha o caso novo');
-
-SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 0,
-  'antes de libertado, o contabilista não vê o documento');
--- Mesmo com o caminho exato: sem estar libertado, não segue.
-SELECT t.rpc_recusa($$SELECT public.anexo_legivel(
-  current_setting('t.caminho_doc'))$$,
-  'sem_acesso', 'nem com o caminho exato o consegue descarregar');
-SELECT t.rpc_recusa($$SELECT public.libertar_documento(
-  current_setting('t.doc_id')::uuid, true)$$,
-  'so_a_administracao', 'nem se liberta a si próprio o documento');
-
-RESET ROLE; SELECT t.sair();
-SET ROLE authenticated;
-SELECT t.entrar('44444444-4444-4444-4444-444444444444');
-SELECT t.rpc_ok($$SELECT public.libertar_documento(
-  current_setting('t.doc_id')::uuid, true)$$,
-  'a administração liberta o documento');
+  'o cliente entrega o caso novo');
 
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
 SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 1,
-  'depois de libertado, o contabilista vê');
+  'o contabilista vê o documento sem esperar por aprovação nenhuma');
 SELECT t.rpc_ok($$SELECT public.anexo_legivel(
   current_setting('t.caminho_doc'))$$, 'e consegue descarregá-lo');
+
+-- E não é ele quem decide o que fica visível: retirar é do dono do caso.
+SELECT t.rpc_recusa($$SELECT public.retirar_documento_do_caso(
+  current_setting('t.doc_id')::uuid, true)$$,
+  'nao_e_teu', 'o contabilista retira um documento que não é dele');
+
+-- A triagem dos documentos foi-se com a das mensagens.
+RESET ROLE; SELECT t.sair();
+SELECT t.conta($$SELECT count(*) FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public' AND p.proname = 'libertar_documento'$$, 0,
+  'a libertação pela administração não existe');
+SET ROLE authenticated;
+
+-- O cliente retira, e o efeito é imediato do outro lado.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.retirar_documento_do_caso(
+  current_setting('t.doc_id')::uuid, true)$$, 'o cliente retira o documento');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 0,
+  'retirado, o contabilista deixa de o ver');
+SELECT t.rpc_recusa($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_doc'))$$,
+  'sem_acesso', 'nem com o caminho exato o consegue descarregar');
+
+-- Reposto, para o resto do ficheiro continuar do estado normal.
+SELECT t.entrar('7a7a7a7a-0000-0000-0000-00000000007a');
+SELECT t.rpc_ok($$SELECT public.retirar_documento_do_caso(
+  current_setting('t.doc_id')::uuid, false)$$, 'e volta a entregá-lo');
+
+SELECT t.entrar('11111111-1111-1111-1111-111111111111');
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 1,
+  'reposto, volta a vê-lo');
+SELECT t.rpc_ok($$SELECT public.anexo_legivel(
+  current_setting('t.caminho_doc'))$$, 'e volta a conseguir descarregá-lo');
 
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
 SELECT t.rpc_recusa($$SELECT public.anexo_legivel(

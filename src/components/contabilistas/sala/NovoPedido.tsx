@@ -18,9 +18,8 @@ import { useState } from "react";
 import {
   ROTULO_PEDIDO, type TipoPedido,
 } from "@/lib/contabilistas/sala/tipos";
-import { detetarContactoExterno, explicarContactoExterno } from "@/lib/contabilistas/contacto-externo";
 import Button from "@/components/ui/Button";
-import { Plus, Warning } from "@/components/ui/Icons";
+import { Plus } from "@/components/ui/Icons";
 
 const TIPOS: TipoPedido[] = ["documento", "resposta", "confirmacao", "dados", "agendamento"];
 
@@ -58,8 +57,7 @@ export default function NovoPedido({
   const [descricao, setDescricao] = useState("");
   const [dias, setDias] = useState<number | null>(7);
 
-  const fuga = detetarContactoExterno(`${titulo} ${descricao}`);
-  const valido = titulo.trim().length >= 3 && !fuga.encontrado;
+  const valido = titulo.trim().length >= 3;
 
   function limpar() {
     setTitulo(""); setDescricao(""); setTipo("documento"); setDias(7); setAberto(false);
@@ -157,16 +155,6 @@ export default function NovoPedido({
           ))}
         </div>
       </fieldset>
-
-      {fuga.encontrado && (
-        <p
-          role="status"
-          className="flex items-start gap-2 rounded-xl bg-alert-bg px-3.5 py-2.5 text-sm leading-relaxed text-alert-text"
-        >
-          <Warning size={15} className="mt-0.5 shrink-0" aria-hidden />
-          {explicarContactoExterno(fuga.motivos)}
-        </p>
-      )}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" disabled={!valido || ocupado}>

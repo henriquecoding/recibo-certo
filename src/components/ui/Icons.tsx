@@ -481,6 +481,61 @@ export function Smartphone({ size = 18, className }: IconProps) {
   );
 }
 
+export function Phone({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M6.5 3h3l1.5 4-2 1.4a12 12 0 0 0 5.6 5.6L16 12l4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 3 6.2 2 2 0 0 1 5 4h1.5z"
+        stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/** Calendário com uma seta de sincronização. Para os calendários externos. */
+export function CalendarSync({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M4 7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V19a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"
+        stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"
+      />
+      <path d="M4 10h16M8 3.5V6M16 3.5V6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path
+        d="M9.5 15.5a2.5 2.5 0 0 1 4.3-1.7M14.5 16.5a2.5 2.5 0 0 1-4.3 1.7"
+        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"
+      />
+      <path d="M13.4 12.2v1.7h-1.7M10.6 19.8v-1.7h1.7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/** Descarregar um ficheiro. Distinto de `Export`, que é «sair para fora». */
+export function Download({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M12 3.5v11M7.5 10.5 12 15l4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 17.5v1.5a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-1.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Um aperto de mão: o acordo que se negoceia. */
+export function Handshake({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path
+        d="M2.5 9.5 6 7l3.2 1.6 2.8-1 2.8 1L18 7l3.5 2.5-2.5 5-2-1.2"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      />
+      <path
+        d="M5 14.3 7 15.5l1.6 1.7 1.9 1.4 1.6-1 1.7 1 1.8-1.3-6.4-4.7-2.2 1a1.6 1.6 0 0 1-2-2.3"
+        stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function Eye({ size = 18, className }: IconProps) {
   return (
     <svg {...svgProps(size, className)}>

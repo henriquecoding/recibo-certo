@@ -391,13 +391,34 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
     expect((await loja.usarCupao(disponivel!.codigo)).erro).toBe("Este cupão já foi usado.");
   });
 
-  it("uma mensagem do contabilista num caso nasce por rever", async () => {
+  it("uma mensagem do contabilista num caso nasce entregue", async () => {
     const [caso] = await loja.listarCasos();
-    await loja.submeterMensagem(caso.id, "eu", "contabilista", "Pode enviar-me o documento?");
+    await loja.enviarMensagemDoCaso(caso.id, "eu", "contabilista", "Pode enviar-me o documento?");
     const mensagens = await loja.listarMensagensDoCaso(caso.id);
     const minha = mensagens[mensagens.length - 1];
-    expect(minha.estado).toBe("submetida");
+    expect(minha.estado).toBe("entregue");
     expect(minha.corpoEncaminhado).toBeNull();
+    expect(minha.denunciadaEm).toBeNull();
+  });
+
+  it("nenhuma mensagem da semente fica à espera de uma revisão que já não existe", async () => {
+    const casos = await loja.listarCasos();
+    for (const caso of casos) {
+      for (const m of await loja.listarMensagensDoCaso(caso.id)) {
+        expect(m.estado).toBe("entregue");
+      }
+    }
+  });
+
+  it("a partilha de contactos liga e desliga, e é ela que abre os contactos", async () => {
+    const [caso] = await loja.listarCasos();
+    expect(await loja.obterContactos(caso.id)).not.toBeNull();
+
+    expect((await loja.definirPartilhaDeContactos(caso.id, false)).erro).toBeUndefined();
+    expect(await loja.obterContactos(caso.id)).toBeNull();
+
+    expect((await loja.definirPartilhaDeContactos(caso.id, true)).erro).toBeUndefined();
+    expect(await loja.obterContactos(caso.id)).not.toBeNull();
   });
 
   it("uma proposta sem valor não segue", async () => {

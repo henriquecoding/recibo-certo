@@ -21,11 +21,13 @@ import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Briefcase, Lock, User, Spinner, Check, Clock, PaperClip, ShieldCheck, Warning,
+  Briefcase, Flag, User, Spinner, Check, Clock, PaperClip, ShieldCheck, Warning,
 } from "@/components/ui/Icons";
 import Ficheiros from "@/components/casos/Ficheiros";
+import { ContactosDoCliente } from "@/components/casos/Contactos";
 import {
-  listarCasos, listarMensagensDoCaso, listarPropostas, submeterMensagem,
+  listarCasos, listarMensagensDoCaso, listarPropostas, enviarMensagemDoCaso,
+  mensagemVisivel,
   enviarProposta, enviarFicheiro, listarDocumentosDoCaso, listarAnexosDaProposta,
   AREAS, URGENCIAS, euros,
   type Caso, type MensagemDoCaso, type Proposta, type DocumentoDoCaso,
@@ -102,14 +104,13 @@ export default function CasosDoContabilista() {
         descricao="Pedidos que nos chegaram e que te foram encaminhados. Respondes com uma proposta."
       />
 
-      {/* Porque é que não há um telefone nesta página. Dito uma vez, no
-          sítio certo, em vez de nunca. */}
+      {/* O que mudou, dito a quem trabalhava com a regra antiga. */}
       <p className="flex items-start gap-2.5 rounded-2xl bg-brand-light px-4 py-3 text-xs leading-relaxed text-brand-dark">
         <ShieldCheck size={15} className="mt-0.5 shrink-0" aria-hidden />
         <span>
-          Recebes o nome e o NIF, que é o que precisas para trabalhar. Os contactos ficam
-          connosco — a conversa passa por aqui e por revisão nossa. Quando a proposta for aceite,
-          abre-se a conversa direta e a agenda.
+          Falas diretamente com a pessoa: ninguém do Recibo Certo lê estas conversas, e
+          nada espera por aprovação. Os contactos aparecem-te quando ela os partilhar —
+          é uma decisão dela, e pode voltar atrás.
         </span>
       </p>
 
@@ -187,10 +188,9 @@ export default function CasosDoContabilista() {
                       {c.situacao}
                     </p>
 
-                    <p className="mt-3 flex items-center gap-1.5 text-[11px] text-stone-400">
-                      <Lock size={12} aria-hidden />
-                      Sem contactos: falas por aqui, e o que escreveres passa por revisão.
-                    </p>
+                    <div className="mt-4">
+                      <ContactosDoCliente casoId={c.id} />
+                    </div>
 
                     {documentos.length > 0 && (
                       <div className="mt-5">
@@ -198,7 +198,7 @@ export default function CasosDoContabilista() {
                           Documentos
                         </h3>
                         <p className="mt-1 text-[11px] text-stone-400">
-                          Só o que já foi lido pela administração chega aqui.
+                          Enviados por quem descreveu o caso.
                         </p>
                         <div className="mt-2">
                           <Ficheiros
@@ -218,7 +218,9 @@ export default function CasosDoContabilista() {
                           Mensagens
                         </h3>
                         <ul className="mt-2 space-y-3">
-                          {mensagens.map((m) => (
+                          {mensagens
+                            .filter((m) => mensagemVisivel(m.estado) || m.autorPapel === "contabilista")
+                            .map((m) => (
                             <li key={m.id} className="rounded-2xl bg-cream/50 px-4 py-3">
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className="text-xs font-semibold text-stone-700">
@@ -229,23 +231,23 @@ export default function CasosDoContabilista() {
                                     day: "numeric", month: "short",
                                   })}
                                 </span>
-                                {m.autorPapel === "contabilista" && m.estado === "submetida" && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg bg-stone-100 px-1.5 py-0.5 text-[10px] font-semibold text-stone-500">
-                                    <Clock size={10} aria-hidden /> À espera de revisão
-                                  </span>
-                                )}
-                                {m.autorPapel === "contabilista" && m.estado === "aprovada" && (
-                                  <span className="inline-flex items-center gap-1 rounded-lg bg-brand-light px-1.5 py-0.5 text-[10px] font-semibold text-brand-dark">
-                                    <Check size={10} aria-hidden /> Encaminhada
+                                {m.denunciadaEm && (
+                                  <span className="inline-flex items-center gap-1 rounded-lg bg-alert-bg px-1.5 py-0.5 text-[10px] font-semibold text-alert-text">
+                                    <Flag size={10} aria-hidden /> Entregue à administração
                                   </span>
                                 )}
                               </div>
                               <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-stone-700">
                                 {m.corpoEncaminhado ?? m.corpo}
                               </p>
-                              {m.notaRevisao && (
+                              {/* As que ficaram para trás na revisão que já não
+                                  existe. Sem isto, ele fica à espera de resposta
+                                  a uma pergunta que nunca chegou. */}
+                              {m.autorPapel === "contabilista"
+                                && (m.estado === "devolvida" || m.estado === "recusada") && (
                                 <p className="mt-2 rounded-xl bg-alert-bg px-3 py-2 text-[11px] leading-relaxed text-alert-text">
-                                  {m.notaRevisao}
+                                  Esta ficou parada na revisão que existia antes e nunca chegou.
+                                  Se ainda fizer sentido, escreve-a de novo — agora vai direta.
                                 </p>
                               )}
                             </li>
@@ -298,13 +300,11 @@ function ResponderAoCaso({
 
   async function escrever() {
     setOcupado(true);
-    const { erro } = await submeterMensagem(caso.id, contabilistaId, "contabilista", texto);
+    const { erro } = await enviarMensagemDoCaso(caso.id, contabilistaId, "contabilista", texto);
     setOcupado(false);
     if (erro) { avisos.erro(erro); return; }
     setTexto(""); setModo("nada");
-    avisos.sucesso("Mensagem submetida.", {
-      detalhe: "Vai ser lida antes de seguir para o cliente.",
-    });
+    avisos.sucesso("Enviada.");
     aoMudar();
   }
 
@@ -396,8 +396,7 @@ function ResponderAoCaso({
             A tua pergunta
           </label>
           <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
-            Passa por revisão antes de seguir. Não peças contactos — não são encaminhados, e a
-            mensagem volta para trás.
+            Vai direta à pessoa. Ninguém a lê pelo caminho.
           </p>
           <textarea
             id={`msg-${caso.id}`}
@@ -408,7 +407,7 @@ function ResponderAoCaso({
           />
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button onClick={() => void escrever()} disabled={!texto.trim() || ocupado} className="w-full sm:w-auto">
-              {ocupado ? <><Spinner size={14} /> A submeter…</> : "Submeter para revisão"}
+              {ocupado ? <><Spinner size={14} /> A enviar…</> : "Enviar"}
             </Button>
             <Button variant="ghost" onClick={() => setModo("nada")} className="w-full sm:w-auto">
               Cancelar

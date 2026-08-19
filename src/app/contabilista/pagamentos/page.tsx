@@ -53,6 +53,7 @@ export default function PagamentosPage() {
   const [conta, setConta] = useState<EstadoRecebimentos | null>(null);
   const [pagamentos, setPagamentos] = useState<Pagamento[]>([]);
   const [comissaoBps, setComissaoBps] = useState<number | null>(null);
+  const [eFundador, setEFundador] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
@@ -65,9 +66,15 @@ export default function PagamentosPage() {
       ]);
       setConta(c);
       setPagamentos(p);
-      // A comissão vem do catálogo, nunca de uma tabela escrita à mão aqui:
-      // `PATAMARES` é espelhado do SQL e há teste que compara os dois.
-      if (prog) setComissaoBps(vistaProgressao(prog).atual.comissaoBps);
+      // ⚠️ A EFETIVA, não a do patamar. Esta é a página do dinheiro: dizer
+      // aqui a percentagem do patamar a um fundador — que paga menos —
+      // seria anunciar uma retenção diferente da que a Stripe faz. O
+      // `comissaoEfetivaBps` espelha `comissao_bps_do_contabilista`, que é
+      // a função que calcula o `application_fee`.
+      if (prog) {
+        setComissaoBps(vistaProgressao(prog).comissaoEfetivaBps);
+        setEFundador(prog.eFundador);
+      }
       setErro(null);
     } catch (e) {
       setErro((e as Error).message);
@@ -133,7 +140,9 @@ export default function PagamentosPage() {
             "O cliente paga-te a ti. A cobrança nasce na tua conta Stripe e é o teu nome que aparece no extrato dele.",
             "O dinheiro nunca passa pela conta do Recibo Certo. Vai direto para o teu saldo.",
             comissaoBps !== null
-              ? `A nossa comissão é ${formatarComissao(comissaoBps)} e é retida no momento do pagamento. Desce à medida que subes de patamar.`
+              ? eFundador
+                ? `A nossa comissão é ${formatarComissao(comissaoBps)} e é retida no momento do pagamento. É a do programa fundador — não sobe.`
+                : `A nossa comissão é ${formatarComissao(comissaoBps)} e é retida no momento do pagamento. Desce à medida que subes de patamar.`
               : "A nossa comissão depende do teu patamar e é retida no momento do pagamento.",
             "Os pagamentos saem do teu saldo Stripe para o teu IBAN segundo o calendário que definires no painel da Stripe.",
           ].map((t) => (

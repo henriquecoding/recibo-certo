@@ -17,38 +17,63 @@ const LEITOR = "src/components/casos/LeitorDeProposta.tsx";
 const FORMULARIO = "src/app/dashboard/casos/novo/page.tsx";
 const TRIAGEM = "src/app/admin/casos/page.tsx";
 const DETALHE = "src/app/dashboard/casos/[id]/page.tsx";
+const CONVERSA = "src/components/casos/ConversaDoCaso.tsx";
+const CONTACTOS = "src/components/casos/Contactos.tsx";
 
-describe("RC-CASO-UI-001 · o painel do contabilista não pede contactos", () => {
-  // A garantia mora na base de dados, e um `select` aqui não traria nada.
-  // Mas um ecrã que TENTA mostrar um telefone é um ecrã escrito por quem
-  // não percebeu o modelo — e o próximo a mexer-lhe percebe ainda menos.
-  it("não lê a tabela dos contactos", () => {
-    const fonte = ler(PAINEL_CC);
-    // Sem os comentários: o cabeçalho do ficheiro explica por que razão
-    // não há contactos aqui, e procurar o nome encontrava a explicação.
-    const codigo = semComentarios(fonte);
-    expect(codigo).not.toContain("obterContactos");
-    expect(codigo).not.toContain("caso_contactos");
-  });
-
-  it("mostra o nome e o NIF, que são o que ele precisa", () => {
+describe("RC-CASO-UI-001 · o contabilista fala com a pessoa, e a plataforma sai do meio", () => {
+  // Estes testes eram o contrário: provavam que o painel NÃO alcançava os
+  // contactos e que a conversa passava por revisão. Continuam a existir
+  // porque a promessa continua a ser estrutural — o que mudou foi qual é.
+  it("mostra o nome e o NIF, que são o que ele precisa para trabalhar", () => {
     const fonte = ler(PAINEL_CC);
     expect(fonte).toContain("nomeCompleto");
     expect(fonte).toContain("c.nif");
   });
 
-  it("diz porque é que não há contactos, em vez de os omitir em silêncio", () => {
+  it("os contactos aparecem quando o cliente os partilha, e dizem-no", () => {
     const fonte = ler(PAINEL_CC);
-    expect(fonte).toMatch(/contactos ficam[\s\S]{0,40}connosco/i);
+    expect(fonte).toContain("ContactosDoCliente");
+
+    const contactos = ler(CONTACTOS);
+    // Sem partilha, o componente não finge que não há ninguém: explica.
+    expect(contactos).toMatch(/não está a partilhar os contactos/i);
+    // E diz de quem foi a decisão, para não parecer um dado que a
+    // plataforma vendeu.
+    expect(contactos).toMatch(/foi esta pessoa que decidiu partilhar/i);
   });
 
-  it("só a triagem mostra contactos, e a pedido", () => {
+  it("o cliente liga e desliga a partilha, com o efeito dito", () => {
+    const contactos = ler(CONTACTOS);
+    expect(contactos).toContain("definirPartilhaDeContactos");
+    expect(contactos).toContain('role="switch"');
+    expect(contactos).toContain("aria-checked");
+  });
+
+  it("⚠️ a administração não tem por onde ler uma conversa", () => {
+    // O ecrã da administração não pode nomear a tabela das mensagens nem
+    // qualquer forma de as listar. A garantia real está na política da
+    // migração `20260818210000` — isto apanha o ecrã que a tentasse
+    // contornar antes de alguém o escrever por distração.
+    const codigo = semComentarios(ler(TRIAGEM));
+    expect(codigo).not.toContain("listarMensagensDoCaso");
+    expect(codigo).not.toContain("caso_mensagens");
+    expect(codigo).not.toContain("reverMensagem");
+    expect(codigo).not.toContain("filaDeRevisao");
+    // A situação escrita pela pessoa também não se abre aqui.
+    expect(codigo).not.toContain("c.situacao");
+  });
+
+  it("a única coisa que a administração lê é o que lhe foi entregue", () => {
     const fonte = ler(TRIAGEM);
-    expect(fonte).toContain("obterContactos");
-    // Não carregados com a página: um hábito de os ter sempre à vista é o
-    // que transforma uma captura de ecrã num problema.
-    expect(fonte).toContain("Mostrar contactos");
-    expect(fonte).not.toMatch(/useEffect\([^)]*obterContactos/);
+    expect(fonte).toContain("filaDeDenuncias");
+    expect(fonte).toMatch(/só esta mensagem/i);
+  });
+
+  it("denunciar diz, antes de acontecer, o que vai passar a ser lido", () => {
+    const conversa = ler(CONVERSA);
+    expect(conversa).toContain("denunciarMensagem");
+    expect(conversa.replace(/\s+/g, " "))
+      .toMatch(/esta mensagem<\/strong> — e só esta — passa a poder ser\s*lida/i);
   });
 });
 
@@ -144,36 +169,49 @@ describe("RC-CASO-UI-006 · o contrato lê-se antes de se decidir", () => {
   });
 });
 
-describe("RC-CASO-UI-003 · o que segue e o que não segue é dito antes", () => {
+describe("RC-CASO-UI-003 · o que acontece aos dados é dito antes", () => {
   it("o formulário avisa antes do primeiro campo, e não no fim", () => {
     const fonte = ler(FORMULARIO);
-    const aviso = fonte.indexOf("Não recebe o teu");
+    const aviso = fonte.indexOf("ninguém do Recibo Certo a lê");
     const primeiroCampo = fonte.indexOf("setArea(a.id)");
     expect(aviso).toBeGreaterThan(0);
     expect(aviso, "o aviso tem de vir antes dos campos").toBeLessThan(primeiroCampo);
   });
 
-  it("os contactos estão visualmente separados do resto", () => {
+  it("os contactos estão visualmente separados, e dizem que se podem desligar", () => {
     const fonte = ler(FORMULARIO);
-    expect(fonte).toContain("Fica connosco");
-    expect(fonte).toContain("O contabilista nunca chega a isto");
+    expect(fonte).toContain("Como te contactam");
+    expect(fonte.replace(/\s+/g, " ")).toMatch(/podes desligar essa partilha/i);
   });
 
-  it("a conversa não se chama chat, e diz que é lida", () => {
-    const fonte = ler(DETALHE);
-    expect(fonte.toLowerCase()).not.toContain(">chat<");
-    expect(fonte).toContain("passa por nós antes de seguir");
-    expect(fonte).toContain("Submeter para revisão");
+  it("a conversa deixou de prometer revisão — porque deixou de a haver", () => {
+    const detalhe = semComentarios(ler(DETALHE));
+    const conversa = semComentarios(ler(CONVERSA));
+    for (const [nome, fonte] of [["detalhe", detalhe], ["conversa", conversa]] as const) {
+      expect(fonte, `${nome} ainda promete revisão`).not.toContain("passa por nós antes de seguir");
+      expect(fonte, `${nome} ainda submete`).not.toContain("Submeter para revisão");
+      expect(fonte, `${nome} ainda redige`).not.toContain("Encaminhámos esta mensagem com um ajuste");
+    }
   });
 
-  it("uma mensagem redigida é dita a quem a escreveu", () => {
-    const fonte = ler(DETALHE);
-    expect(fonte).toContain("Encaminhámos esta mensagem com um ajuste");
+  it("a conversa diz de quem é, sem exagerar no que promete", () => {
+    const conversa = ler(CONVERSA).replace(/\s+/g, " ");
+    expect(conversa).toMatch(/Esta conversa é entre vocês os dois/i);
+    // A ressalva importa: sem ela, «ninguém lê» seria falso no instante em
+    // que alguém denuncia uma mensagem.
+    expect(conversa).toMatch(/só\s*chega até nós uma mensagem que um de vocês nos entregue/i);
+  });
+
+  it("uma mensagem parada na revisão antiga não fica em silêncio", () => {
+    // Quem a escreveu tem de saber que nunca chegou — senão fica à espera
+    // de resposta a uma pergunta que o outro lado não leu.
+    const conversa = ler(CONVERSA).replace(/\s+/g, " ");
+    expect(conversa).toMatch(/ficou parada na revisão que existia antes/i);
   });
 });
 
 describe("RC-CASO-UI-004 · mobile-first e sem emojis", () => {
-  const ecrans = [PAINEL_CC, LEITOR, FORMULARIO, TRIAGEM, DETALHE,
+  const ecrans = [PAINEL_CC, LEITOR, FORMULARIO, TRIAGEM, DETALHE, CONVERSA, CONTACTOS,
                   "src/app/dashboard/casos/page.tsx"];
 
   it("nenhum emoji — só ícones SVG", () => {
@@ -198,15 +236,21 @@ describe("RC-CASO-UI-004 · mobile-first e sem emojis", () => {
     }
   });
 
+  // A TRIAGEM sai desta lista, e não por descuido: deixou de ter botões
+  // de ação. Aprovar, devolver, recusar e encaminhar desapareceram com a
+  // mediação, e o que lá ficou são separadores e listas. Um teste que
+  // exigisse `w-full sm:w-auto` num ecrã sem botões obrigava a inventar
+  // um só para o calar. O que continua a valer para ele — empilhar,
+  // não estourar a largura — é verificado pelas grelhas e pelo `flex-wrap`.
   it("os botões de ação ocupam a largura toda no telemóvel", () => {
-    for (const f of [LEITOR, PAINEL_CC, TRIAGEM]) {
+    for (const f of [LEITOR, PAINEL_CC]) {
       const fonte = ler(f);
       expect(fonte, `${f} sem botões de largura total`).toContain("w-full sm:w-auto");
     }
   });
 
   it("as filas de botões empilham antes de alinhar", () => {
-    for (const f of [LEITOR, PAINEL_CC, TRIAGEM, FORMULARIO]) {
+    for (const f of [LEITOR, PAINEL_CC, FORMULARIO]) {
       const fonte = ler(f);
       // A ordem das classes varia; o que não pode variar é a base ser
       // empilhada e o `sm:` ser quem alinha.
@@ -240,21 +284,33 @@ describe("RC-CASO-UI-005 · anexos, revisão e tempo real", () => {
     expect(ler(FICHEIROS)).toContain("URL.revokeObjectURL");
   });
 
-  it("o que ainda não seguiu diz-se, em vez de parecer entregue", () => {
+  it("o que foi retirado diz-se, em vez de parecer entregue", () => {
     const fonte = ler(FICHEIROS);
-    expect(fonte).toContain("Por rever");
+    expect(fonte).toContain("Entregue");
+    expect(fonte).toContain("Retirado");
     // O texto do JSX quebra por onde a linha acaba: comparar com o
     // espaçamento colapsado, senão o teste falha por causa de uma mudança
     // de linha que não muda nada.
-    expect(fonte.replace(/\s+/g, " ")).toMatch(/pode ter os teus contactos lá dentro/i);
+    expect(fonte.replace(/\s+/g, " ")).toMatch(/deixaram de estar ao alcance/i);
   });
 
-  it("a triagem obriga a olhar antes de libertar", () => {
-    const fonte = ler(TRIAGEM);
-    expect(fonte).toContain("libertarDocumento");
-    expect(fonte.replace(/\s+/g, " ")).toMatch(/Abre cada um antes de o libertar/);
-    // E dá para voltar atrás: libertar por engano tem de ter desfazer.
-    expect(fonte).toContain("Libertado — retirar");
+  it("⚠️ um documento anexado não fica preso à espera de ninguém", () => {
+    // A avaria que esta migração teve de reparar: `libertado_em` nascia
+    // nulo e só a triagem o preenchia. Sem triagem, o documento ficava
+    // invisível para sempre — sem erro, com o cliente convencido de que
+    // tinha enviado a fatura.
+    const migracao = ler("supabase/migrations/20260818210000_fim_da_mediacao.sql");
+    expect(migracao).toMatch(/tipo_mime, libertado_em\)/);
+    expect(migracao).toMatch(/SET libertado_em = coalesce\(libertado_em, now\(\)\)/);
+    // E a triagem que o prendia deixou de existir.
+    expect(migracao).toContain("DROP FUNCTION IF EXISTS public.libertar_documento");
+  });
+
+  it("quem anexou pode retirar, e é só ele", () => {
+    const migracao = ler("supabase/migrations/20260818210000_fim_da_mediacao.sql");
+    expect(migracao).toContain("public.retirar_documento_do_caso");
+    expect(migracao).toMatch(/NOT public\.dono_do_caso\(v_caso, u\)/);
+    expect(ler("src/lib/contabilistas/casos.ts")).toContain("retirarDocumentoDoCaso");
   });
 
   it("o contabilista não liberta nem anexa documentos ao caso", () => {

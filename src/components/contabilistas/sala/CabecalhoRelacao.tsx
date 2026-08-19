@@ -14,10 +14,10 @@
 //  confirmado junto da Ordem. Escrever «certificada» sobre um número
 //  informado seria a plataforma a garantir uma coisa que não confirmou.
 //
-//  O selo «Tudo protegido na plataforma» não é decoração de confiança: é
-//  a afirmação que o produto tem de conseguir sustentar, e sustenta —
-//  desde a migração da fronteira de contacto não há coluna, RPC nem ecrã por onde um contacto
-//  do cliente chegue ao contabilista.
+//  O selo de proteção diz o que é verdade hoje, e não o que era verdade
+//  antes: o vínculo continua a não guardar contacto nenhum, mas o canal
+//  deixou de ser fechado. Os contactos existem no caso, e chegam cá se — e
+//  enquanto — o cliente os partilhar. Ver `20260818210000_fim_da_mediacao`.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { Contabilista } from "@/lib/contabilistas/tipos";
@@ -69,7 +69,7 @@ export default function CabecalhoRelacao({
 
         <p className="inline-flex items-center gap-1.5 rounded-lg bg-brand-light px-2.5 py-1 text-xs font-semibold text-brand-dark">
           <ShieldCheck size={13} aria-hidden />
-          Tudo protegido na plataforma
+          Conversa só entre vocês
         </p>
       </div>
 

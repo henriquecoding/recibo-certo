@@ -24,7 +24,7 @@
 //  A lista plana punha lado a lado coisas que se fazem em ritmos
 //  diferentes, e por isso nenhuma ordem ajudava:
 //
-//    · Filas com gente à espera do outro lado — casos por encaminhar,
+//    · Filas com gente à espera do outro lado — casos sem contabilista,
 //      candidaturas por decidir, reportes por responder. Abrem-se todos os
 //      dias, e o custo de as ignorar é uma pessoa sem resposta.
 //    · Quem está no produto — contas, lista de espera, propostas. Consulta-
@@ -42,8 +42,8 @@
 
 import type { ComponentType } from "react";
 import {
-  Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, LayoutGrid, Megaphone,
-  Shield, ShieldCheck, Target, User,
+  Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, Handshake, LayoutGrid,
+  Megaphone, Shield, ShieldCheck, Target, User,
 } from "@/components/ui/Icons";
 
 export const BASE_ADMIN = "/admin";
@@ -131,15 +131,24 @@ export const SECCOES_ADMIN: readonly SeccaoAdmin[] = [
     destinos: [
       {
         href: "/admin/casos",
-        label: "Triagem de casos",
+        label: "Casos",
         Icon: Briefcase,
-        descricao: "Mensagens por rever e casos por encaminhar a um contabilista.",
+        // Deixou de ser uma fila de trabalho. As conversas não passam por
+        // aqui — o que este ecrã mostra é o que alguém de dentro de um caso
+        // nos entregou, e os casos que ainda não têm contabilista nenhum.
+        descricao: "Mensagens que nos foram entregues, e casos à espera de alguém.",
       },
       {
         href: "/admin/contabilistas",
         label: "Contabilistas",
         Icon: Shield,
         descricao: "Candidaturas a conta de contabilista: aprovar, recusar ou suspender.",
+      },
+      {
+        href: "/admin/propostas-desbloqueio",
+        label: "Propostas de desbloqueio",
+        Icon: Handshake,
+        descricao: "Contabilistas que propõem outro valor para subir de patamar, e porquê.",
       },
       {
         href: "/admin/verificacao",

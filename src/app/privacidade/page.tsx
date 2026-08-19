@@ -488,6 +488,38 @@ export default function PrivacidadePage() {
 
         <p>
           <strong className="text-stone-700 dark:text-stone-200">
+            E não passa por nós.
+          </strong>{" "}
+          Até agosto de 2026, cada mensagem trocada a propósito de um caso era lida pela
+          nossa administração antes de seguir para o outro lado. Deixou de ser: as
+          mensagens são entregues no instante em que as escreves, e a administração não
+          tem por onde as ler — não é uma política interna, é a regra de acesso da base de
+          dados, e uma consulta de administrador sobre essa tabela não devolve nada.
+        </p>
+
+        <p>
+          A única exceção existe porque tem de existir, e abre-se por dentro:{" "}
+          <strong className="text-stone-700 dark:text-stone-200">
+            se tu ou o contabilista denunciarem uma mensagem
+          </strong>
+          , essa mensagem — e apenas essa — passa a poder ser lida por nós, para podermos
+          analisar o que foi reportado. O resto da conversa continua fora do alcance de
+          qualquer pessoa que não sejam os dois.
+        </p>
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">
+            Os teus contactos são teus para dar.
+          </strong>{" "}
+          Quando descreves um caso, o email e o telefone que deixas ficam visíveis para o
+          contabilista que escolheres, para que ele possa falar contigo também por fora.
+          É um interruptor no caso, que desligas quando quiseres — e no instante em que o
+          desligas, ele deixa de os alcançar. Antes desta data, esses contactos nunca
+          chegavam ao contabilista; a mudança é deliberada, e a decisão passou a ser tua.
+        </p>
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">
             O contabilista não vê os teus dados fiscais.
           </strong>{" "}
           Ligares-te a alguém não lhe dá acesso aos teus recibos, cenários ou simulações

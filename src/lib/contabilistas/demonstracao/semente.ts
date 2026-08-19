@@ -698,6 +698,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       orcamentoCents: 25000,
       estado: "encaminhado",
       notaTriagem: null,
+      partilhaContactos: true,
       criadoEm: horasAtras(agora, 26),
       submetidoEm: horasAtras(agora, 26),
     },
@@ -716,6 +717,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       orcamentoCents: null,
       estado: "com_proposta",
       notaTriagem: null,
+      partilhaContactos: true,
       criadoEm: instante(agora, -8, 11),
       submetidoEm: instante(agora, -8, 11),
     },
@@ -728,9 +730,10 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       autorId: CONTABILISTA,
       autorPapel: "contabilista",
       corpo: "Já entregou o IRS deste ano ou ainda está a tempo de mudar alguma coisa?",
-      corpoEncaminhado: "Já entregou o IRS deste ano ou ainda está a tempo de mudar alguma coisa?",
-      estado: "aprovada",
+      corpoEncaminhado: null,
+      estado: "entregue",
       notaRevisao: null,
+      denunciadaEm: null,
       criadoEm: instante(agora, -7, 9),
     },
     {
@@ -740,8 +743,9 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       autorPapel: "cliente",
       corpo: "Entreguei em maio. Este ano ainda não fiz nada.",
       corpoEncaminhado: null,
-      estado: "aprovada",
+      estado: "entregue",
       notaRevisao: null,
+      denunciadaEm: null,
       criadoEm: instante(agora, -7, 14),
     },
     {
@@ -751,8 +755,9 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       autorPapel: "contabilista",
       corpo: "Consegue enviar-me a nota de liquidação? Preciso de ver a data limite que lá vem.",
       corpoEncaminhado: null,
-      estado: "submetida",
+      estado: "entregue",
       notaRevisao: null,
+      denunciadaEm: null,
       criadoEm: horasAtras(agora, 4),
     },
   ];
@@ -1028,6 +1033,10 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
     creditosReservados: 0,
     patamarConquistado: 3,
     patamarComprado: 1,
+    // A demonstração NÃO é fundadora: o cartão de fundador é um estado
+    // que poucas pessoas terão, e mostrá-lo por omissão faria o painel de
+    // exemplo prometer um benefício a quem o está a experimentar.
+    eFundador: false,
   };
 
   // Os tipos e os valores são os do ledger oficial: +10 por serviço, +25

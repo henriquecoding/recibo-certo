@@ -162,6 +162,15 @@ export const CONJUNTOS: Conjunto[] = [
     tabelas: [{ nome: "agendamentos", posse: { por: "coluna", coluna: "cliente_id" } }],
   },
   {
+    // Vale para os dois lados — quem marca consultas e quem as recebe —, e
+    // por isso não leva `soSe`. Uma linha desta tabela É a chave de leitura
+    // de uma agenda: apagá-la fecha o feed no instante em que sai daqui.
+    id: "calendario", grupo: "contabilista",
+    titulo: "Endereços de calendário",
+    descricao: "Os endereços que criaste para o Google, o Apple ou o Outlook lerem a tua agenda. Apagá-los faz esses calendários deixarem de receber as consultas.",
+    tabelas: [{ nome: "calendario_assinaturas", posse: { por: "coluna", coluna: "user_id" } }],
+  },
+  {
     id: "fidelidade", grupo: "contabilista", soSe: "cliente-de-contabilista",
     titulo: "Cartão de fidelidade",
     descricao: "Os carimbos e os cupões que ganhaste com este contabilista. Um cupão apagado não volta.",
@@ -203,6 +212,24 @@ export const CONJUNTOS: Conjunto[] = [
     // conta não pode apagar a prova de um pagamento recebido — e dizê-lo é
     // parte de ser honesto sobre o que não se apaga a pedido.
     retido: "As compras de patamar ficam retidas pelo prazo legal de conservação de documentos de faturação. Deixam de estar ligadas ao teu perfil, mas o registo do pagamento não é apagável a pedido.",
+  },
+  {
+    id: "fundador", grupo: "profissional", soSe: "contabilista",
+    titulo: "Lugar de fundador",
+    descricao:
+      "Se és um dos primeiros dez contabilistas, o registo desse lugar. Apagá-lo liberta o lugar para outra pessoa — e a comissão volta a ser a do teu patamar.",
+    tabelas: [
+      { nome: "contabilista_fundadores", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
+    id: "propostas-desbloqueio", grupo: "profissional", soSe: "contabilista",
+    titulo: "Propostas de valor que enviaste",
+    descricao:
+      "Os valores que propuseste para subir de patamar e as justificações que escreveste, com as decisões que receberam.",
+    tabelas: [
+      { nome: "desbloqueio_propostas", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
   },
   {
     id: "recebimentos", grupo: "profissional", soSe: "contabilista",

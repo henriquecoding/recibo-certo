@@ -35,6 +35,7 @@ import type { Agendamento, Contabilista, Partilha, Vinculo } from "@/lib/contabi
 import { diaLocal, horaLocal, rotularDia } from "@/lib/contabilistas/agenda";
 import CartaoFidelidade from "@/components/contabilistas/CartaoFidelidade";
 import Sala from "@/components/contabilistas/sala/Sala";
+import SincronizarCalendario from "@/components/calendario/SincronizarCalendario";
 import CabecalhoRelacao from "@/components/contabilistas/sala/CabecalhoRelacao";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import {
@@ -301,6 +302,8 @@ export default function MeuContabilistaPage() {
           onCancelar={cancelar}
         />
       )}
+
+      {ativo && <SincronizarCalendario papel="cliente" />}
 
       {ativo && (realizadas > 0 || enviosAtivos > 0 || cartao) && (
         <Numeros

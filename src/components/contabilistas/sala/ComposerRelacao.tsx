@@ -12,11 +12,9 @@
 //  048 e 050). Reimplementar isto aqui era duplicar a parte mais delicada
 //  do produto para ganhar um cabeçalho diferente.
 //
-//  O aviso de contacto aparece enquanto se escreve. É a diferença entre
-//  uma explicação e uma parede: a fronteira a sério está no gatilho da
-//  migração da fronteira de contacto e não vai a lado nenhum, mas ser recusado depois de
-//  carregar em enviar não ensina nada a quem só estava a fazer o que se
-//  faz em todo o lado.
+//  Havia aqui um aviso a recusar emails e telemóveis enquanto se escrevia.
+//  Saiu com a fronteira de contacto (`20260818210000_fim_da_mediacao`):
+//  era uma parede a meio de uma frase, a quem não estava a fazer nada.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useRef, useState } from "react";
@@ -24,12 +22,9 @@ import {
   ANEXO_MAX_BYTES, ANEXOS_MAX, enviarMensagem, MENSAGEM_MAX,
   tamanhoLegivel, TIPOS_ANEXO_ACEITES,
 } from "@/lib/contabilistas/fonte/conversa";
-import {
-  detetarContactoExterno, eRecusaDeContacto, explicarContactoExterno,
-} from "@/lib/contabilistas/contacto-externo";
 import { useAvisos } from "@/components/ui/Avisos";
 import Button from "@/components/ui/Button";
-import { PaperClip, Plus, Trash, Warning } from "@/components/ui/Icons";
+import { Plus, Trash } from "@/components/ui/Icons";
 
 export default function ComposerRelacao({
   vinculoId,
@@ -49,8 +44,7 @@ export default function ComposerRelacao({
   const [aEnviar, setAEnviar] = useState(false);
   const campo = useRef<HTMLInputElement>(null);
 
-  const fuga = detetarContactoExterno(texto);
-  const podeEnviar = Boolean(texto.trim()) && !aEnviar && !fuga.encontrado;
+  const podeEnviar = Boolean(texto.trim()) && !aEnviar;
 
   function escolher(lista: FileList | null) {
     if (!lista) return;
@@ -76,11 +70,7 @@ export default function ComposerRelacao({
     setAEnviar(false);
 
     if (r.erro) {
-      avisos.erro(
-        eRecusaDeContacto({ message: r.erro })
-          ? "Os contactos pessoais não se partilham aqui."
-          : r.erro,
-      );
+      avisos.erro(r.erro);
       return;
     }
 
@@ -116,17 +106,6 @@ export default function ComposerRelacao({
         </ul>
       )}
 
-      {fuga.encontrado && (
-        <p
-          id="aviso-contacto-sala"
-          role="status"
-          className="mx-1 mb-2 flex items-start gap-2 rounded-xl bg-alert-bg px-3 py-2 text-sm leading-relaxed text-alert-text"
-        >
-          <Warning size={14} className="mt-0.5 shrink-0" aria-hidden />
-          {explicarContactoExterno(fuga.motivos)}
-        </p>
-      )}
-
       <div className="flex items-center gap-2">
         <label className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700">
           <Plus size={18} aria-hidden />
@@ -151,13 +130,7 @@ export default function ComposerRelacao({
           value={texto}
           onChange={(e) => setTexto(e.target.value.slice(0, MENSAGEM_MAX))}
           placeholder={`Escreve a ${nomeDoOutro} ou junta um ficheiro…`}
-          aria-invalid={fuga.encontrado}
-          aria-describedby={fuga.encontrado ? "aviso-contacto-sala" : undefined}
-          className={`min-h-[2.75rem] min-w-0 flex-1 rounded-xl border bg-white px-3.5 py-2 text-sm text-stone-800 focus:outline-none focus:ring-2 ${
-            fuga.encontrado
-              ? "border-alert-border focus:border-alert-border focus:ring-alert-border/40"
-              : "border-transparent focus:border-brand focus:ring-brand/30"
-          }`}
+          className="min-h-[2.75rem] min-w-0 flex-1 rounded-xl border border-transparent bg-white px-3.5 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
         />
 
         <Button type="submit" disabled={!podeEnviar} className="shrink-0">

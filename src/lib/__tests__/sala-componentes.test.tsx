@@ -264,14 +264,17 @@ function contabilista(over: Partial<Contabilista> = {}): Contabilista {
 }
 
 describe("CabecalhoRelacao — o lado do cliente", () => {
-  it("mostra quem é, o estado e o selo de proteção", () => {
+  it("mostra quem é, o estado e o selo da conversa", () => {
     const html = renderToStaticMarkup(
       <CabecalhoRelacao cc={contabilista()} estadoVinculo="ativo" podeMarcar aoMarcar={() => {}} />,
     );
     expect(html).toContain("O meu contabilista");
     expect(html).toContain("Inês Duarte");
     expect(html).toContain("Acompanhamento ativo");
-    expect(html).toContain("Tudo protegido na plataforma");
+    // O selo mudou com a fronteira de contacto: prometia que nada saía da
+    // plataforma, e isso deixou de ser verdade. O que continua a ser é que
+    // a conversa não tem terceiros a lê-la.
+    expect(html).toContain("Conversa só entre vocês");
     expect(html).toContain("Marcar consulta");
   });
 

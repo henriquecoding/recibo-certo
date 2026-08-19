@@ -695,13 +695,13 @@ export async function listarPropostas(casoId: string): Promise<Proposta[]> {
 }
 
 /**
- * Uma mensagem do contabilista nasce `submetida`, nunca aprovada.
+ * Uma mensagem nasce ENTREGUE.
  *
- * É a regra que faz a intermediação existir: o que ele escreve passa por
- * revisão antes de chegar ao cliente. Na demonstração fica igual — parada à
- * espera de revisão, com o rótulo que o painel real mostra.
+ * Nascia `submetida`, à espera de uma revisão que a plataforma deixou de
+ * fazer. A demonstração acompanha: mostrar aqui uma fila que já não existe
+ * ensinaria o produto errado a quem o está a experimentar.
  */
-export async function submeterMensagem(
+export async function enviarMensagemDoCaso(
   casoId: string, autorId: string, papel: "cliente" | "contabilista", corpo: string
 ): Promise<{ erro?: string }> {
   const texto = corpo.trim().slice(0, 4000);
@@ -714,11 +714,66 @@ export async function submeterMensagem(
     autorPapel: papel,
     corpo: texto,
     corpoEncaminhado: null,
-    estado: "submetida",
+    estado: "entregue",
     notaRevisao: null,
+    denunciadaEm: null,
     criadoEm: agora(),
   });
   return {};
+}
+
+/**
+ * Na demonstração o caso já nasce entregue ao contabilista da semente, e
+ * é esse que a lista mostra. Não há um diretório a que ir buscar outros.
+ */
+export async function listarEncaminhamentos(casoId: string): Promise<{
+  contabilistaId: string;
+  estado: "convidado" | "aceite" | "recusado" | "retirado";
+  encaminhadoEm: string;
+}[]> {
+  const caso = bd().casos.find((c) => c.id === casoId);
+  if (!caso || caso.estado === "submetido") return [];
+  return [{ contabilistaId: "demo", estado: "convidado", encaminhadoEm: caso.criadoEm }];
+}
+
+/** Na demonstração não há segundo lado a receber — mas o estado muda. */
+export async function enviarCasoAContabilista(
+  casoId: string, _contabilistaId: string,
+): Promise<{ erro?: string }> {
+  const caso = bd().casos.find((c) => c.id === casoId);
+  if (!caso) return { erro: "Esse caso já não existe." };
+  caso.estado = "encaminhado";
+  return {};
+}
+
+export async function definirPartilhaDeContactos(
+  casoId: string, partilhar: boolean,
+): Promise<{ erro?: string }> {
+  const caso = bd().casos.find((c) => c.id === casoId);
+  if (!caso) return { erro: "Esse caso já não existe." };
+  caso.partilhaContactos = partilhar;
+  return {};
+}
+
+/**
+ * Denunciar não faz nada na demonstração, e diz que não faz.
+ *
+ * Fingir que seguiu seria pior do que recusar: quem está a experimentar
+ * ficava a achar que tinha pedido ajuda a alguém.
+ */
+export async function denunciarMensagem(
+  _mensagemId: string, _motivo: string,
+): Promise<{ erro?: string }> {
+  return { erro: "Na demonstração não há administração do outro lado para receber a denúncia." };
+}
+
+/** Os contactos do caso de exemplo. Inventados, como o resto da loja. */
+export async function obterContactos(casoId: string): Promise<{
+  email: string; telefone: string | null; morada: string | null;
+} | null> {
+  const caso = bd().casos.find((c) => c.id === casoId);
+  if (!caso || !caso.partilhaContactos) return null;
+  return { email: "cliente@exemplo.pt", telefone: "912 000 000", morada: null };
 }
 
 export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string; id?: string }> {
