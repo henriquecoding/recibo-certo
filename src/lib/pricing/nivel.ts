@@ -97,11 +97,19 @@ export const NIVEL_DE_SECCAO: Record<SeccaoPreco, NivelRevelacao | typeof Infini
 
   // Nível 3 — o que fazer com isto.
   cenarios: 3,
-  objetivo_invertido: 3,
   desconto: 3,
   conclusao: 3,
 
-  // Nunca por omissão — prova e casos raros, sempre a um clique.
+  // Nunca por omissão — prova, casos raros, e as PERGUNTAS AO CONTRÁRIO.
+  //
+  //  O `objetivo_invertido` está aqui e não no nível 3 porque não é uma
+  //  parte do resultado: é outra pergunta. «Quanto devo cobrar?» e
+  //  «quanto tenho de vender para ganhar 2 000 €?» são dois modos da
+  //  ferramenta, e abrir o segundo a quem fez o primeiro é responder a
+  //  uma coisa que não foi perguntada — 815 px dela, medidos. A linha
+  //  recolhida faz a pergunta em voz alta, que é melhor convite do que
+  //  um painel aberto.
+  objetivo_invertido: Infinity,
   memoria: Infinity,
   notas: Infinity,
   sociedade: Infinity,

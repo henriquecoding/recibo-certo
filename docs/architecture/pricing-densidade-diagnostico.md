@@ -453,10 +453,10 @@ apanhadas se regressarem.
 
 | Métrica | Antes | Meta | **Medido no fim** |
 |---|---:|---:|---:|
-| Ecrãs a 360 px, inicial | 13,8 | ≤ 5 | **5,5** ⚠️ |
-| Ecrãs a 360 px, cheio | 20,6 | ≤ 12 | **13,8** ⚠️ |
-| Palavras iniciais | 1 941 | ≤ 900 | **786** ✅ |
-| Texto < 12 px, inicial | 103 | ≤ 40 | **33** ✅ |
+| Ecrãs a 360 px, inicial | 13,8 | ≤ 5 | **5,3** ✅ |
+| Ecrãs a 360 px, cheio | 20,6 | ≤ 12 | **13,2** ⚠️ |
+| Palavras iniciais | 1 941 | ≤ 900 | **720** ✅ |
+| Texto < 12 px, inicial | 103 | ≤ 40 | **31** ✅ |
 | Violações axe | 12 | 0 | **0** ✅ |
 | Alvos < 24 px (área efetiva, fora da exceção «inline») | 4 | 0 | **0** ✅ |
 | Scroll horizontal | +126 px | 0 | **0** ✅ |
@@ -464,31 +464,41 @@ apanhadas se regressarem.
 | Falhas de teclado | 2 | 0 | **0** ✅ |
 | Capacidade (secções disponíveis) | 16 | ≥ 16 | **17** ✅ |
 
-### As duas metas que não foram atingidas, e porquê
+### Como se fecharam os últimos ecrãs
 
-Ambas as que faltam são de ALTURA, e em ambas a distância que resta só se
-fechava a cortar coisas — que é precisamente o que o §23 proíbe.
+A medição por secção (`scripts/medir-seccoes-preco.mjs`) foi o que
+permitiu cortar com dados em vez de por instinto. Quatro cortes, todos
+de duplicação ou de análise fora de tempo — nenhum de profundidade:
 
-**Inicial: 5,5 ecrãs contra os 5 propostos.** O que sobra em altura no
-estado `exemplo` são as notas por fatia da decomposição («o IVA não é
-teu: entras com ele e entregas») e a lista de pressupostos com o *porquê*
-de cada um. São ~90 palavras de conteúdo educativo, no momento em que a
-pessoa mais precisa dele — quem abre a ferramenta pela primeira vez é
-quem menos sabe o que é uma margem de contribuição. Cortá-las dava os 5
-ecrãs e tirava à ferramenta aquilo que a distingue de uma folha de
-cálculo.
+| O que saiu | Onde | Porquê | Valia |
+|---|---|---|---:|
+| Notas fiscais no `exemplo` | `ResultadoPreco` | Explicam um enquadramento que a pessoa não declarou | ~244 px |
+| Explicação das âncoras no `exemplo` | `ResultadoPreco` | Quatro parágrafos a justificar o piso e o teto de uma ficção | ~120 px |
+| `cenarios` da conclusão | `ConclusaoPreco` | Eram as âncoras da faixa outra vez, sob o título da OUTRA secção | ~300 px |
+| Prova recolhida | `ResultadoExplicado` | «Como chegámos aqui» e «Fontes e limites» nascem fechados | ~1 100 px |
+| Frase do `estimado` | `ResultadoPreco` | O `Pressupostos` diz a mesma coisa, verbatim, logo abaixo | ~68 px |
+| «Quanto preciso de vender» a pedido | `nivel.ts` | Não é parte do resultado: é outra pergunta | ~815 px |
 
-**Cheio: 13,8 ecrãs contra os 12 propostos.** No estado `completo` abrem
-sete secções com os números reais da pessoa, e a maior é a
-`ConclusaoPreco` (~1 780 px). Fechá-la por omissão dava os 12 — mas
-`ConclusaoPreco` é onde vive o routing comercial (`escolherRota()`) e o
-próximo passo. Recolhê-lo é uma decisão de negócio, não de densidade, e
-não é minha: fica registada aqui como a alavanca disponível se o
-utilizador a quiser puxar.
+A `provaRecolhida` é **opt-in** e por omissão `false`: o
+`ResultadoExplicado` é partilhado por várias ferramentas, e mudar o
+comportamento de todas para resolver a densidade de uma seria pagar o
+problema com o ecrã das outras.
 
-O cenário `servico` é o pior caso do estado cheio, a 19,6 ecrãs, por ter
-o bloco do tempo e mais avisos do motor. É o candidato natural a uma
-próxima passagem.
+### A meta que não foi atingida, e porquê
+
+**Cheio: 13,2 ecrãs contra os 12 propostos.** O que resta no estado
+completo é a tesouraria (925 px), os cenários (663 px) e a caixa
+(515 px) — que são as RESPOSTAS que a pessoa preencheu o formulário para
+obter. Recolhê-las fecharia a métrica reduzindo aquilo que a ferramenta
+entrega no momento em que o entrega, que é exatamente o que o §23
+proíbe. O routing comercial da conclusão continua aberto pela mesma
+razão.
+
+Nota sobre a medição: o estado «cheio» da auditoria é um pior caso
+sintético — enche todos os campos essenciais **e** abre e enche todos os
+blocos avançados, deixando-os abertos. O cenário `servico` é o pior
+desses piores, a 17,1 ecrãs, por ter o bloco do tempo e mais avisos do
+motor. É o candidato natural a uma próxima passagem.
 
 A última linha é a que importa mais: **a informação disponível não pode
 diminuir**. O que diminui é a que está visível ao mesmo tempo.

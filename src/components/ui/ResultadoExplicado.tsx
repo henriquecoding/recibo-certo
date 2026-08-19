@@ -117,6 +117,22 @@ export interface ResultadoExplicadoProps {
     conteudo: unknown;
     toolId: string;
   };
+  /**
+   * Fazer nascer fechados os blocos que são PROVA — «como chegámos aqui»
+   * (premissas, fórmula, versão do motor) e «fontes e limites».
+   *
+   * Opt-in, `false` por omissão: este componente é partilhado, e mudar o
+   * comportamento de todas as ferramentas para resolver a densidade de
+   * uma seria pagar o problema com o ecrã das outras.
+   *
+   * Medido na calculadora de preço, no estado completo a 360 px: estes
+   * dois blocos valiam ~1 100 px dos 2 395 px da conclusão, e são
+   * exatamente aquilo que quase ninguém lê e que ninguém pode perder — a
+   * definição de conteúdo que deve estar disponível sem estar exposto.
+   * O que decide (o que fazer a seguir) e o próximo passo continuam
+   * abertos.
+   */
+  provaRecolhida?: boolean;
   /** Conteúdo extra, entre os cenários e as fontes. */
   children?: ReactNode;
 }
@@ -153,21 +169,63 @@ function Bloco({
   id,
   titulo,
   icone,
+  recolhido = false,
+  resumo,
   children,
 }: {
   id: string;
   titulo: string;
   icone: ReactNode;
+  /**
+   * Nascer fechado, como `<details>`.
+   *
+   * Opt-in, e por omissão `false`: este componente é partilhado por
+   * várias ferramentas, e mudar o comportamento de todas para resolver a
+   * densidade de uma seria pagar o problema com o ecrã dos outros.
+   */
+  recolhido?: boolean;
+  /** O que o bloco tem lá dentro, para quem lê só o resumo. */
+  resumo?: string;
   children: ReactNode;
 }) {
+  const cabecalho = (
+    <>
+      <span className="text-brand">{icone}</span>
+      {titulo}
+    </>
+  );
+  const classe = "border-t border-stone-200 px-5 py-5 first:border-t-0 sm:px-6 dark:border-stone-700";
+
+  if (recolhido) {
+    return (
+      <details id={id} className={`group ${classe}`}>
+        <summary className="flex min-h-[24px] cursor-pointer list-none items-center gap-2 py-0.5 text-[11px] font-bold uppercase tracking-widest text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand-mint">
+          {cabecalho}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            className="ml-auto flex-shrink-0 transition-transform group-open:rotate-180"
+          >
+            <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+        </summary>
+        {resumo ? (
+          <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500 group-open:hidden dark:text-stone-400">
+            {resumo}
+          </p>
+        ) : null}
+        <div className="mt-3">{children}</div>
+      </details>
+    );
+  }
+
   return (
-    <section
-      id={id}
-      className="border-t border-stone-200 px-5 py-5 first:border-t-0 sm:px-6 dark:border-stone-700"
-    >
+    <section id={id} className={classe}>
       <h3 className="mb-3 flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-stone-400">
-        <span className="text-brand">{icone}</span>
-        {titulo}
+        {cabecalho}
       </h3>
       {children}
     </section>
@@ -177,7 +235,7 @@ function Bloco({
 export default function ResultadoExplicado({
   titulo, valor, valorMaximo, perfil, confianca, notaConfianca,
   premissas, formula, arredondamento, versaoMotor,
-  acao, cenarios, fontes, limites, sinais, partilha, children,
+  acao, cenarios, fontes, limites, sinais, partilha, provaRecolhida = false, children,
 }: ResultadoExplicadoProps) {
   const rota = escolherRota(sinais);
   const destino = DESTINO_ROTA[rota.rota] ?? DESTINO_ROTA.sem_parceiro;
@@ -219,7 +277,13 @@ export default function ResultadoExplicado({
       </header>
 
       {/* 2 · Como chegámos aqui ────────────────────────────────────── */}
-      <Bloco id="como-chegamos" titulo="Como chegámos aqui" icone={<Calculo />}>
+      <Bloco
+        id="como-chegamos"
+        titulo="Como chegámos aqui"
+        icone={<Calculo />}
+        recolhido={provaRecolhida}
+        resumo={`${premissas.length} premissas e a fórmula usada`}
+      >
         <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
           {premissas.map((p) => (
             <div key={p.rotulo} className="flex items-baseline justify-between gap-3 border-b border-dashed border-stone-200 pb-1.5 dark:border-stone-700">
@@ -302,7 +366,17 @@ export default function ResultadoExplicado({
       {children ? <div className="border-t border-stone-200 dark:border-stone-700">{children}</div> : null}
 
       {/* 5 · Fontes e limites ──────────────────────────────────────── */}
-      <Bloco id="fontes-e-limites" titulo="Fontes e limites" icone={<Bank size={13} />}>
+      <Bloco
+        id="fontes-e-limites"
+        titulo="Fontes e limites"
+        icone={<Bank size={13} />}
+        recolhido={provaRecolhida}
+        resumo={
+          limites.length > 0
+            ? `${fontes.length} fontes oficiais · ${limites.length} ${limites.length === 1 ? "coisa que este cálculo não cobre" : "coisas que este cálculo não cobre"}`
+            : `${fontes.length} fontes oficiais`
+        }
+      >
         <ul className="space-y-1.5">
           {fontes.map((f) => (
             <li key={f.url}>

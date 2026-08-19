@@ -160,13 +160,14 @@ export default function ResultadoPreco({
           ser teu.
         </p>
       ) : null}
-      {estado === "estimado" ? (
-        <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-          {faltam === 1
-            ? "Falta uma resposta do essencial, e estamos a assumi-la por ti — está listada aqui em baixo."
-            : `Faltam ${faltam} respostas do essencial, e estamos a assumi-las por ti — estão listadas aqui em baixo.`}
-        </p>
-      ) : null}
+      {/* O parágrafo do estado `estimado` saiu daqui.
+          Dizia «Faltam N respostas do essencial, e estamos a assumi-las
+          por ti — estão listadas aqui em baixo», e o cabeçalho do
+          `Pressupostos`, logo a seguir no ecrã, diz «Faltam N respostas,
+          e estamos a assumi-las por ti» seguido da lista. Era a mesma
+          frase duas vezes, com a segunda a cumprir a promessa da
+          primeira. O sobretítulo já avisa: «Uma estimativa — falta
+          responder ao resto». */}
       {/* Desemfatizar com COR, nunca com `opacity`.
           Havia aqui um `opacity-60` que dizia bem o que queria dizer — «este
           número ainda não é teu» — e cegava quem precisa de contraste: o
@@ -255,9 +256,17 @@ export default function ResultadoPreco({
                     </span>
                     <span className="text-xs font-medium text-stone-500 dark:text-stone-400">{a.rotulo}</span>
                   </span>
-                  <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-                    {a.explicacao}
-                  </span>
+                  {/* A explicação de cada âncora só no `exemplo` é que
+                      não entra: o preço e o rótulo dizem onde cai a
+                      âncora — que é o que a régua serve para mostrar —,
+                      e quatro parágrafos a justificar um piso e um teto
+                      de um preço que ninguém introduziu são análise de
+                      uma ficção. Voltam à primeira resposta. */}
+                  {!exemplo ? (
+                    <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                      {a.explicacao}
+                    </span>
+                  ) : null}
                 </span>
               </li>
             ))}
@@ -481,8 +490,16 @@ export default function ResultadoPreco({
         </div>
       ) : null}
 
-      {/* As notas fiscais do motor. Eram escritas e nunca lidas. */}
-      {resultado.fiscal.aplicavel && resultado.fiscal.notas.length > 0 ? (
+      {/* As notas fiscais do motor. Eram escritas e nunca lidas.
+
+          ⚠️ NÃO NO ESTADO `exemplo`, e por uma razão que é a mesma das
+          outras duas secções acima: explicam as consequências de um
+          ENQUADRAMENTO FISCAL que a pessoa ainda não declarou. São 85
+          palavras e ~244 px — o terceiro maior item do cartão — a
+          descrever o regime por omissão do cenário como se fosse o dela.
+          Reaparecem à primeira resposta, que é quando passam a ser sobre
+          ela. */}
+      {!exemplo && resultado.fiscal.aplicavel && resultado.fiscal.notas.length > 0 ? (
         <ul className="mt-5 space-y-1.5 border-t border-stone-100 pt-4 dark:border-stone-800">
           {resultado.fiscal.notas.map((n) => (
             <li key={n} className="flex items-start gap-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">

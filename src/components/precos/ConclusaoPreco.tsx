@@ -39,10 +39,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ReactNode } from "react";
-import ResultadoExplicado, {
-  type CenarioComparado,
-  type Premissa,
-} from "@/components/ui/ResultadoExplicado";
+import ResultadoExplicado, { type Premissa } from "@/components/ui/ResultadoExplicado";
 import type { EstadoConfianca } from "@/lib/analytics/eventos";
 import { APP_VERSION } from "@/lib/version";
 import { fmt, pct } from "@/lib/format";
@@ -95,9 +92,23 @@ export default function ConclusaoPreco({
       arredondamento="Preço líquido, IVA e PVP arredondados em conjunto, ao cêntimo"
       versaoMotor={APP_VERSION}
       acao={acaoDe(resultado)}
-      cenarios={cenariosDe(resultado)}
+      // ── SEM `cenarios` ─────────────────────────────────────────────
+      //  `cenariosDe()` mapeava `faixa.ancoras` — piso, mínimo,
+      //  recomendado e confortável. São exatamente os quatro preços que a
+      //  régua do `ResultadoPreco` já desenha, com explicação, mais acima
+      //  no ecrã. Repeti-los aqui era mostrar os mesmos números duas
+      //  vezes, e ainda por cima sob o título «E se mudasses uma coisa» —
+      //  que é o título da OUTRA secção, a dos cenários a sério
+      //  (`compararCenarios`). Quem chegava aqui via o mesmo cabeçalho
+      //  pela segunda vez com conteúdo diferente.
+      //
+      //  Nada se perdeu: as âncoras continuam na régua, melhor
+      //  apresentadas. Valia ~300 px no estado completo.
       fontes={FONTES}
       limites={limitesDe(contexto, resultado)}
+      // A prova nasce fechada aqui — e só aqui. Ver o comentário de
+      // `provaRecolhida` em `ResultadoExplicado`.
+      provaRecolhida
       sinais={{
         confianca,
         temResultado: resultado.ok,
@@ -200,18 +211,9 @@ function acaoDe(r: ResultadoPreco) {
   };
 }
 
-function cenariosDe(r: ResultadoPreco): CenarioComparado[] {
-  return [...r.faixa.ancoras]
-    .sort((a, b) => a.pvp - b.pvp)
-    .map((a) => ({
-      rotulo: a.rotulo,
-      valor: fmt(a.pvp),
-      diferenca:
-        Math.abs(a.pvp - r.pvp) < 0.005
-          ? "É o preço recomendado."
-          : `${a.pvp > r.pvp ? "+" : "−"}${fmt(Math.abs(a.pvp - r.pvp))} face ao recomendado · ${pct(a.margem)} de margem`,
-    }));
-}
+// `cenariosDe()` foi apagado, e não comentado: mapeava `faixa.ancoras`
+// para a lista de cenários da conclusão, que duplicava a régua do
+// `ResultadoPreco`. Ver a nota na chamada acima.
 
 const FONTES = [
   {

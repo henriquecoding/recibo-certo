@@ -470,10 +470,32 @@ describe("⑮ as seis camadas do resultado", () => {
     expect(CONCLUSAO).toMatch(/from "@\/components\/ui\/ResultadoExplicado"/);
   });
 
-  it("e alimenta as seis camadas, não só as fáceis", () => {
-    for (const camada of ["premissas=", "formula=", "acao=", "cenarios=", "fontes=", "limites=", "sinais="]) {
+  it("e alimenta as camadas, não só as fáceis", () => {
+    for (const camada of ["premissas=", "formula=", "acao=", "fontes=", "limites=", "sinais="]) {
       expect(CONCLUSAO.includes(camada), `a camada \`${camada}\` ficou por alimentar`).toBe(true);
     }
+  });
+
+  it("mas NÃO alimenta `cenarios` — seria a régua da faixa outra vez", () => {
+    // Decisão deliberada, e por isso afirmada aqui em vez de simplesmente
+    // retirada da lista acima: `cenariosDe()` mapeava `faixa.ancoras`
+    // (piso, mínimo, recomendado, confortável), que são exatamente os
+    // quatro preços que a régua do `ResultadoPreco` já desenha mais acima
+    // no ecrã — e apresentava-os sob o título «E se mudasses uma coisa»,
+    // que é o título da OUTRA secção, a dos cenários a sério. Eram os
+    // mesmos números duas vezes e o mesmo cabeçalho duas vezes, ~300 px.
+    //
+    // Se um dia voltar, que volte por decisão de alguém e não por
+    // distração: este teste falha primeiro.
+    expect(CONCLUSAO).not.toMatch(/^\s*cenarios=/m);
+  });
+
+  it("a prova nasce recolhida — disponível, não exposta", () => {
+    // «Como chegámos aqui» e «Fontes e limites» valiam ~1 100 px dos
+    // 2 395 px da conclusão no estado completo a 360 px. São o que quase
+    // ninguém lê e ninguém pode perder. O que decide — «o que fazer a
+    // seguir» — e o próximo passo continuam abertos.
+    expect(CONCLUSAO).toMatch(/provaRecolhida/);
   });
 
   it("os limites são reais e condicionais, não uma frase de circunstância", () => {
