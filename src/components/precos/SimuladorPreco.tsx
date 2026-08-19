@@ -47,6 +47,7 @@ import Tesouraria from "./Tesouraria";
 import Sociedade from "./Sociedade";
 import DescontoResultado from "./DescontoResultado";
 import Decidir from "./Decidir";
+import ConclusaoPreco from "./ConclusaoPreco";
 import ObjetivoInvertido from "./ObjetivoInvertido";
 import { useMedicaoPreco } from "./medicao";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
@@ -359,14 +360,24 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
               A zona que faltava. A ferramenta acabava num parágrafo de
               isenção de responsabilidade: sem guardar, sem exportar, sem
               próximo passo. «Sem transição, é dívida editorial.» ────── */}
+          {/* A conclusão: as seis camadas do `ResultadoExplicado`, com as
+              ações locais lá dentro. As camadas 2, 3, 5 e 6 — como
+              chegámos aqui, o que fazer, fontes e LIMITES, e o próximo
+              passo — não existiam em lado nenhum desta ferramenta. */}
           {resultado.ok ? (
-            <Decidir
+            <ConclusaoPreco
               contexto={contexto}
               resultado={resultado}
               estado={estadoPreenchimento}
-              respondidos={respondidos}
-              aoGuardar={(n) => atualizar("nome-produto", (c) => void (c.produto.nome = n))}
-            />
+              faltam={preenchimento?.faltam.length ?? 0}
+            >
+              <Decidir
+                contexto={contexto}
+                resultado={resultado}
+                respondidos={respondidos}
+                aoGuardar={(n) => atualizar("nome-produto", (c) => void (c.produto.nome = n))}
+              />
+            </ConclusaoPreco>
           ) : null}
         </div>
       </div>

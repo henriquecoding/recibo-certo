@@ -380,21 +380,27 @@ describe("o slider parado mostra o resultado, não uma re-derivação dele", () 
 
 describe("⑭ a ferramenta tem um próximo passo, e mede-o", () => {
   const DECIDIR = readFileSync(join(SRC, "components", "precos", "Decidir.tsx"), "utf8");
+  const CONCLUSAO = readFileSync(join(SRC, "components", "precos", "ConclusaoPreco.tsx"), "utf8");
   const MEDICAO = readFileSync(join(SRC, "components", "precos", "medicao.ts"), "utf8");
 
   it("a hierarquia dos CTA vem de `escolherRota`, não da página", () => {
     // Se cada página pudesse escolher os seus botões, a regra «nunca três
     // ações com o mesmo peso» duraria até à primeira semana em que a
-    // receita estivesse abaixo do esperado.
-    expect(DECIDIR).toMatch(/escolherRota\(/);
+    // receita estivesse abaixo do esperado. A ferramenta delega-a em
+    // `ResultadoExplicado`, que a delega em `escolherRota`.
+    expect(CONCLUSAO).toMatch(/ResultadoExplicado/);
+    expect(CONCLUSAO).toMatch(/sinais=\{\{/);
+    expect(SIMULADOR).toMatch(/<ConclusaoPreco/);
     expect(SIMULADOR).toMatch(/<Decidir/);
+    // E o rodapé comercial NÃO pode voltar a ser desenhado à mão aqui.
+    expect(semComentarios(DECIDIR).includes("escolherRota")).toBe(false);
   });
 
   it("e nenhuma rota comercial abre sobre um número que a pessoa não alimentou", () => {
     // `escolherRota` devolve `sem_parceiro` com confiança abaixo de
     // completa; o que este teste prende é que a confiança que lhe chega é
     // a REAL, e não um `completo` fixo.
-    expect(DECIDIR).toMatch(/estado === "completo" \? "completo" : "estimado"/);
+    expect(CONCLUSAO).toMatch(/estado === "completo" \? "completo" : "estimado"/);
   });
 
   it("guardar, copiar e imprimir acontecem no dispositivo", () => {
@@ -432,5 +438,62 @@ describe("⑭ a ferramenta tem um próximo passo, e mede-o", () => {
     const OBJ = readFileSync(join(SRC, "components", "precos", "ObjetivoInvertido.tsx"), "utf8");
     expect(OBJ).toMatch(/precoParaGanhar/);
     expect(OBJ).toMatch(/unidadesParaGanhar/);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ⑮ AS SEIS CAMADAS DO RESULTADO
+//  ---------------------------------------------------------------------
+//  `ResultadoExplicado` é a componente que a skill de crescimento manda
+//  usar, e não era usada por NENHUMA das quinze ferramentas. Uma regra que
+//  nada cumpre não é uma regra: é um ficheiro.
+//
+//  A calculadora de preço passa a ser a primeira a cumpri-la, e a
+//  cumpri-la como conclusão do resultado e não como moldura — as seis
+//  camadas são uma ORDEM, não um cartão único, e envolver o cartão nela
+//  desfazia o trabalho de distinguir «um exemplo» de «uma recomendação».
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("⑮ as seis camadas do resultado", () => {
+  const CONCLUSAO = readFileSync(join(SRC, "components", "precos", "ConclusaoPreco.tsx"), "utf8");
+
+  it("a ferramenta usa mesmo o `ResultadoExplicado`", () => {
+    expect(CONCLUSAO).toMatch(/from "@\/components\/ui\/ResultadoExplicado"/);
+  });
+
+  it("e alimenta as seis camadas, não só as fáceis", () => {
+    for (const camada of ["premissas=", "formula=", "acao=", "cenarios=", "fontes=", "limites=", "sinais="]) {
+      expect(CONCLUSAO.includes(camada), `a camada \`${camada}\` ficou por alimentar`).toBe(true);
+    }
+  });
+
+  it("os limites são reais e condicionais, não uma frase de circunstância", () => {
+    // Era a lacuna mais grave: a ferramenta dizia com precisão o que fazia
+    // e nunca dizia onde parava. Um limite por dizer é uma promessa
+    // implícita, e a promessa implícita de uma calculadora fiscal é
+    // sempre «isto está completo».
+    expect(CONCLUSAO).toMatch(/function limitesDe/);
+    expect(CONCLUSAO).toMatch(/não o que o mercado aceita/);
+    expect(
+      /if \(c\.custos\.fixos\.length === 0\)/.test(CONCLUSAO),
+      "os limites deixaram de reagir ao que a pessoa preencheu — uma lista que " +
+        "não lhe diz respeito é uma lista que não se lê",
+    ).toBe(true);
+  });
+
+  it("o resultado é apresentado como intervalo quando existe faixa", () => {
+    // «Nunca devolver um número sem faixa»: dois decimais sozinhos são
+    // falsa precisão sobre dados que a pessoa estimou de cabeça.
+    expect(CONCLUSAO).toMatch(/valorMaximo=/);
+  });
+
+  it("e a componente partilhada deixou de se dizer exclusiva do servidor", () => {
+    // O comentário lia-se como «não serve para ferramentas interativas»,
+    // que é uma das razões por que ninguém a usava.
+    const COMPONENTE = readFileSync(join(SRC, "components", "ui", "ResultadoExplicado.tsx"), "utf8");
+    expect(COMPONENTE).toMatch(/MAS NÃO É EXCLUSIVA DO SERVIDOR/);
+    // Continua sem `"use client"`: pô-lo arrastaria para o cliente todas
+    // as páginas que a importam de um Server Component.
+    expect(COMPONENTE.startsWith('"use client"')).toBe(false);
   });
 });

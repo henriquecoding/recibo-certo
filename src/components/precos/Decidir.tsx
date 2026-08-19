@@ -8,20 +8,14 @@
 //  crescimento é explícita: «Tem transição definida? Guardar, FIZ,
 //  especialista ou nada. Sem transição, é dívida editorial.»
 //
-//  ── A HIERARQUIA DOS CTA NÃO É ESCOLHIDA AQUI ───────────────────────
-//  Passa-se `escolherRota()` os SINAIS e ela decide qual é a ação
-//  principal. É deliberado, e a razão está escrita em
-//  `ResultadoExplicado.tsx`: se cada página pudesse escolher os seus
-//  botões, a regra «nunca três ações com o mesmo peso» duraria até à
+//  ── SÓ AS SAÍDAS LOCAIS ─────────────────────────────────────────────
+//  O próximo passo comercial NÃO vive aqui. Vive em `ConclusaoPreco`,
+//  que o delega a `ResultadoExplicado` e, através dela, a
+//  `escolherRota()`. É deliberado: se cada página pudesse escolher os
+//  seus botões, a regra «nunca três ações com o mesmo peso» duraria até à
 //  primeira semana em que a receita estivesse abaixo do esperado.
 //
-//  Repare-se no sinal mais importante: `confianca`. Enquanto o resultado
-//  for um exemplo ou uma estimativa, `escolherRota` devolve
-//  `sem_parceiro` — nenhuma rota comercial abre sobre um número que a
-//  pessoa não alimentou. Monetizar uma dúvida mal resolvida é exatamente
-//  o que o §12.1 proíbe.
-//
-//  ── E as três saídas locais ─────────────────────────────────────────
+//  ── As três saídas locais ───────────────────────────────────────────
 //  Guardar, copiar e imprimir acontecem TODAS no dispositivo. Não há
 //  envio, não há conta, não há email. `privacy: "local-only"` continua a
 //  ser verdade depois desta secção existir — e é por isso que não há aqui
@@ -31,32 +25,21 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { escolherRota } from "@/lib/routing";
-import type { EstadoConfianca } from "@/lib/analytics/eventos";
 import { fmt, pct } from "@/lib/format";
-import type { ContextoPreco, EstadoPreenchimento, ResultadoPreco } from "@/lib/pricing";
+import type { ContextoPreco, ResultadoPreco } from "@/lib/pricing";
 import { cenarioPorChave } from "@/lib/pricing";
 import { guardarPreco } from "@/lib/store/precos-guardados";
 import { registarAcaoResultado } from "./medicao";
 import { ArrowRight, Check, Copy, Download } from "@/components/ui/Icons";
 
-const DESTINO_ROTA: Record<string, { href: string; rotulo: string }> = {
-  fiz: { href: "/ir/fiz?s=calcular-preco&v=resultado", rotulo: "Continuar na FIZ" },
-  contabilista: { href: "/contabilistas", rotulo: "Falar com um contabilista" },
-  plus: { href: "/precos", rotulo: "Guardar e acompanhar" },
-  sem_parceiro: { href: "/metodologia", rotulo: "Ver como calculamos" },
-};
-
 export default function Decidir({
   contexto,
   resultado,
-  estado,
   respondidos,
   aoGuardar,
 }: {
   contexto: ContextoPreco;
   resultado: ResultadoPreco;
-  estado: EstadoPreenchimento;
   respondidos: ReadonlySet<string>;
   /** Devolve o nome com que ficou guardado, para o cabeçalho o mostrar. */
   aoGuardar?: (nome: string) => void;
@@ -64,21 +47,6 @@ export default function Decidir({
   const [nome, setNome] = useState(contexto.produto.nome ?? "");
   const [guardado, setGuardado] = useState(false);
   const [copiado, setCopiado] = useState(false);
-
-  const confianca: EstadoConfianca = estado === "completo" ? "completo" : "estimado";
-
-  const rota = escolherRota({
-    confianca,
-    temResultado: resultado.ok,
-    enquadramento:
-      contexto.vendedor.tipo === "ti"
-        ? "independente"
-        : contexto.vendedor.tipo === "empresa"
-          ? "sociedade"
-          : "desconhecido",
-    contabilidadeOrganizada: contexto.vendedor.regimeContabilidade === "organizada",
-  });
-  const destino = DESTINO_ROTA[rota.rota] ?? DESTINO_ROTA.sem_parceiro;
 
   const guardar = () => {
     const rotulo = nome.trim() || cenarioPorChave(contexto.cenario).rotulo;
@@ -119,7 +87,7 @@ export default function Decidir({
   return (
     <section
       aria-label="O que fazer com este preço"
-      className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card print:hidden dark:border-stone-800 dark:bg-stone-900"
+      className="px-5 py-5 print:hidden sm:px-6"
     >
       <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">
         Guardar este preço
@@ -176,23 +144,6 @@ export default function Decidir({
         </button>
       </div>
 
-      {/* ── O próximo passo, escolhido por `escolherRota` ─────────────
-          Uma ação principal, nunca três com o mesmo peso. E nenhuma rota
-          comercial enquanto a confiança não for `completo`. ─────────── */}
-      <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
-        <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{rota.mensagem}</p>
-        <Link
-          href={destino.href}
-          data-rota={rota.rota}
-          data-motivo={rota.motivo}
-          className="inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl border border-stone-200 px-4 py-2 text-sm font-semibold text-stone-700 transition-colors hover:border-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:text-stone-200 dark:hover:text-brand-mint"
-          {...(rota.rota === "fiz" ? { rel: "sponsored nofollow" } : {})}
-        >
-          {destino.rotulo}
-          <ArrowRight size={13} />
-        </Link>
-        <p className="mt-2.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{rota.dados}</p>
-      </div>
     </section>
   );
 }
