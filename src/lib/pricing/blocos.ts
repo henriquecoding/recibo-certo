@@ -268,6 +268,75 @@ export function ordenarBlocos(
   return [...blocos].sort((a, b) => Number(apontado(b)) - Number(apontado(a)));
 }
 
+/**
+ * Quantos blocos do topo da ordem ficam SEMPRE à vista.
+ *
+ * Zero seria honesto e mau: «Afinar o preço» sem um único bloco lê-se
+ * como uma secção partida, e a pessoa que quer afinar não descobre que os
+ * outros existem atrás de uma linha de fichas.
+ *
+ * ⚠️ ISTO É UM PISO FIXO, NÃO UMA META. Já foi «encher até chegar a
+ * dois», e essa versão tinha um defeito que um teste apanhou: os blocos
+ * usados para encher não eram estáveis. Promover uma ficha satisfazia a
+ * contagem por outra via, e um bloco que estava à vista DESAPARECIA para
+ * a linha de fichas — a pessoa carregava em «Embalagem» e via «Contas
+ * fixas» sumir-se. Sendo os `MINIMO_A_VISTA` primeiros da ordem sempre
+ * visíveis, acrescentar só acrescenta.
+ */
+const MINIMO_A_VISTA = 2;
+
+export interface ParticaoBlocos {
+  /** Os que se desenham já, como acordeões. */
+  visiveis: BlocoAvancado[];
+  /** Os outros, atrás de «tens outros custos?». */
+  disponiveis: BlocoAvancado[];
+}
+
+/**
+ * Separar o que já interessa do que ainda não interessa.
+ *
+ * ── O PROBLEMA MEDIDO ──────────────────────────────────────────────
+ * «Afinar o preço» abria com DOZE acordeões fechados: 235 palavras e
+ * 978 px de lista, num cenário onde tipicamente três deles dizem
+ * respeito à pessoa. A lista completa não é uma escolha informada — é um
+ * inventário do que a ferramenta sabe fazer.
+ *
+ * ── A REGRA ────────────────────────────────────────────────────────
+ * Fica à vista o que já tem dados da pessoa (`preenchido`) e o que o
+ * motor está a apontar como em falta (`destacado`). Tudo o resto entra
+ * como ficha, a um clique — o mesmo gesto de «adicionar bloco» que o
+ * `EditorBlocos` dos contabilistas já usa, para não haver duas
+ * linguagens para a mesma ação.
+ *
+ * Nada desaparece: `visiveis.length + disponiveis.length` é sempre o
+ * total, e há um teste que o verifica. Reduzir densidade é mover no
+ * tempo, nunca amputar.
+ *
+ * `promovidos` são os que a pessoa já mandou aparecer. Ganham sempre,
+ * pela mesma razão que as escolhas ganham em `nivel.ts`.
+ */
+export function particionarBlocos(
+  ordem: readonly BlocoAvancado[],
+  contexto: ContextoPreco,
+  avisos: readonly { id: string }[],
+  promovidos: ReadonlySet<BlocoAvancado> = new Set(),
+): ParticaoBlocos {
+  // `ordem` já vem ordenada por relevância — o que o motor aponta como em
+  // falta está à cabeça —, por isso o piso são simplesmente os primeiros.
+  const piso = new Set(ordem.slice(0, MINIMO_A_VISTA));
+
+  const aVista = (b: BlocoAvancado): boolean =>
+    piso.has(b) ||
+    promovidos.has(b) ||
+    !!BLOCOS[b]?.preenchido(contexto) ||
+    blocoDestacado(b, contexto, avisos);
+
+  return {
+    visiveis: ordem.filter(aVista),
+    disponiveis: ordem.filter((b) => !aVista(b)),
+  };
+}
+
 /** `true` quando um aviso do motor aponta este bloco como em falta. */
 export function blocoDestacado(
   bloco: BlocoAvancado,

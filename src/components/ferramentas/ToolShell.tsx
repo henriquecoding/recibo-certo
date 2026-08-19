@@ -98,7 +98,30 @@ export default function ToolShell({ tool, children, contexto, subtitulo, medir =
         <div id="ferramenta" className="scroll-mt-24">{children}</div>
       )}
 
-      {contexto ? <div className="mt-12">{contexto}</div> : null}
+      {/* ── ONDE A FERRAMENTA ACABA E A LEITURA COMEÇA ────────────────
+          Isto era um `<div className="mt-12">`: nem marco, nem fronteira,
+          nem nada que dissesse que se tinha saído da ferramenta. Na
+          calculadora de preço mede-se o efeito — a 360 px são ~4 700 px
+          de ferramenta seguidos de ~8 800 px de texto, dois terços da
+          página. Quem acaba de fixar um preço e continua a deslizar cai
+          num artigo sem perceber que mudou de sítio, e quem usa leitor de
+          ecrã ainda menos: o `<h2>` seguinte chegava sem transição
+          nenhuma.
+
+          Uma `<section>` com nome é um marco de navegação — passa a dar
+          para saltar por cima de tudo isto de uma vez — e a linha
+          desenha a mesma fronteira para quem vê. Sem título visível de
+          propósito: o conteúdo de cada ferramenta já abre com os seus
+          `<h2>`, e pôr outro por cima quebrava a ordem dos cabeçalhos
+          que o axe verifica. ─────────────────────────────────────────── */}
+      {contexto ? (
+        <section
+          aria-label={`Sobre a ferramenta: ${tool.title}`}
+          className="mt-12 border-t border-stone-200 pt-10 dark:border-stone-800"
+        >
+          {contexto}
+        </section>
+      ) : null}
 
       {/* ── Percursos: a próxima ação coerente (§P1-05) ───────────────── */}
       {percursos.length > 0 && (

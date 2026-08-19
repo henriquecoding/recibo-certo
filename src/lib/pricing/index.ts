@@ -32,7 +32,14 @@ export {
   type RegraPricing,
 } from "./regras";
 
-export { BLOCOS, ordenarBlocos, blocoDestacado, type MetaBloco } from "./blocos";
+export {
+  BLOCOS,
+  ordenarBlocos,
+  blocoDestacado,
+  particionarBlocos,
+  type MetaBloco,
+  type ParticaoBlocos,
+} from "./blocos";
 
 export {
   avaliarPreenchimento,
@@ -42,6 +49,18 @@ export {
   type Preenchimento,
   type Pressuposto,
 } from "./preenchimento";
+
+export {
+  NIVEL_DE_SECCAO,
+  TOTAL_SECCOES,
+  nivelDe,
+  abreSozinha,
+  aberturaDe,
+  type NivelRevelacao,
+  type SeccaoPreco,
+} from "./nivel";
+
+export { resumoDe } from "./resumos";
 
 export {
   CENARIOS_INICIAIS_DEF,

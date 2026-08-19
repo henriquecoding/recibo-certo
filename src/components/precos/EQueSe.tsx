@@ -24,6 +24,7 @@ import {
   type EstadoPreenchimento,
 } from "@/lib/pricing";
 import Badge from "@/components/ui/Badge";
+import CenariosBarras from "./CenariosBarras";
 
 /**
  * A ressalva de «isto ainda é um exemplo» tem de viajar com os números.
@@ -206,62 +207,12 @@ export function Cenarios({
         Comparar cenários
         <Selo estado={estado} />
       </h2>
-      <p className="mb-4 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-        Os três primeiros são o mesmo negócio com dez pontos de margem a menos e a mais. Os botões acrescentam uma
-        variação ao teu cenário.
-      </p>
-
-      {/* A tabela transborda em ecrãs estreitos. Quem navega por teclado tem
-          de poder chegar ao scroll: `tabIndex` + `role="region"` com nome,
-          que é o que a regra `scrollable-region-focusable` do axe exige. */}
-      <div className="-mx-5 overflow-x-auto px-5" tabIndex={0} role="region" aria-label="Tabela de cenários">
-        <table className="w-full min-w-[420px] border-collapse text-sm">
-          <caption className="sr-only">Comparação de cenários de preço</caption>
-          <thead>
-            <tr className="border-b border-stone-100 text-left dark:border-stone-800">
-              <th scope="col" className="pb-2 pr-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Cenário
-              </th>
-              <th scope="col" className="pb-2 pr-3 text-right text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Preço
-              </th>
-              <th scope="col" className="pb-2 pr-3 text-right text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Margem
-              </th>
-              <th scope="col" className="pb-2 text-right text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
-                Por mês
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {linhas.map((c) => (
-              <tr key={c.chave} className="border-b border-stone-50 last:border-0 dark:border-stone-800/50">
-                <th scope="row" className="py-2.5 pr-3 text-left font-normal">
-                  <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">{c.rotulo}</span>
-                  <span className="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-stone-400">{c.descricao}</span>
-                </th>
-                <td className="py-2.5 pr-3 text-right font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                  {fmt(c.pvp)}
-                </td>
-                <td
-                  className={`py-2.5 pr-3 text-right tabular-nums ${
-                    c.margem < 0 ? "text-red-600 dark:text-red-400" : "text-stone-600 dark:text-stone-300"
-                  }`}
-                >
-                  {pct(c.margem)}
-                </td>
-                <td
-                  className={`py-2.5 text-right tabular-nums ${
-                    c.lucroMensal < 0 ? "text-red-600 dark:text-red-400" : "text-stone-600 dark:text-stone-300"
-                  }`}
-                >
-                  {fmt(c.lucroMensal)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* O parágrafo que explicava a tabela desapareceu, e é assim que o
+          §24 se cumpre: uma visualização nova só entra se deixar tirar
+          texto. As barras dizem «este deixa-te mais do que aquele» sem
+          precisarem de uma frase a dizer que os três primeiros são o
+          mesmo negócio com dez pontos a menos e a mais — vê-se. */}
+      <CenariosBarras linhas={linhas} />
 
       <p className="mb-2 mt-5 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">E se eu…</p>
       <div className="flex flex-wrap gap-2">

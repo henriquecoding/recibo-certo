@@ -16,6 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.86.0",
+    data: "2026-08-19",
+    titulo: "A calculadora de preço deixou de te mostrar tudo ao mesmo tempo",
+    itens: [
+      "A ferramenta tinha ficado rica de mais para o ecrã. Antes de responderes a uma única pergunta, abria com quase duas mil palavras — e mil e trezentas delas eram análise detalhada de um preço que ninguém tinha introduzido, porque sai dos valores de partida do cenário. Em telemóvel, o primeiro ecrã não continha calculadora nenhuma e o segundo continuava sem mostrar um preço. Agora abre com o essencial: os campos, o número e os avisos graves. O resto continua todo lá, e aparece à medida que respondes.",
+      "As secções recolhidas dizem o que têm lá dentro antes de as abrires. Em vez de «Tesouraria», lês «Guardar 47 € por mês · Pagamento do IVA a 20 de fevereiro». Muita gente já fica a saber o que precisava e não abre nada — que é exatamente a ideia. Nada foi removido: o que mudou foi o momento em que aparece.",
+      "O que abriste ou fechaste manda sempre. Se fechares uma secção e responderes a mais uma pergunta, ela não volta a abrir-se sozinha por baixo — e o contrário também não acontece.",
+      "«Afinar o preço» abria com doze caixas fechadas, quase todas sem relação com o teu caso. Agora ficam à vista as que já têm dados teus e as que estão a fazer falta ao cálculo; as outras são uma linha de botões, com o nome de cada uma, a um toque de distância.",
+      "Comparar cenários era uma tabela que não cabia no telemóvel e obrigava a arrastar para o lado. Passou a barras: vê-se de relance qual te deixa melhor, e um mês que dá prejuízo aparece do lado errado da linha em vez de ser um sinal de menos que passa despercebido. Os mesmos números continuam disponíveis em tabela, para quem os quiser ver assim.",
+      "O ponto de equilíbrio era um «34» com a legenda «vendas/mês» ao lado de outros três números. Sozinho não diz nada — 34 é muito ou pouco? Agora está na mesma escala do que esperas vender, e diz o que interessa: «faltam-te 9 vendas por mês para as contas fecharem».",
+      "Enquanto o preço for um exemplo, deixámos de sugerir preços redondos para adotares. Adotar um número que nunca introduziste é o oposto do que esta ferramenta faz — reaparecem assim que responderes a alguma coisa.",
+      "Enquanto o preço for um exemplo, deixámos também de justificar em quatro parágrafos o piso e o teto de um número que não é teu, e de explicar as consequências de um enquadramento fiscal que ainda não nos disseste qual é. Aparecem à primeira resposta.",
+      "«Como chegámos aqui» e «Fontes e limites» passaram a nascer fechados, com o resumo do que têm lá dentro. Continuam a um toque — o que decides e o próximo passo é que continuam abertos.",
+      "Deixámos de te mostrar os mesmos quatro preços duas vezes. A lista de cenários da conclusão repetia as âncoras que a régua já desenha em cima, e ainda por cima sob o título da outra secção.",
+      "Correções de leitura e de toque: uma linha de texto com contraste insuficiente nos dois temas, quatro links pequenos de mais para acertar com o dedo, um rótulo cortado em ecrãs de 320 px, e o balão de ajuda que abria com o teclado mas não fechava com Escape — ficava a tapar o campo seguinte.",
+      "Para quem navega por teclado: recolher uma secção atirava o foco para o topo da página, obrigando a percorrer tudo outra vez. Agora o foco fica onde faz sentido — na secção que abriste, ou na linha que fechaste.",
+      "Em ecrãs estreitos havia scroll horizontal na ferramenta toda, causado por uma tabela larga que esticava a coluna inteira. Desapareceu.",
+      "Onde a ferramenta acaba e começa o texto explicativo passou a ver-se — e a ouvir-se, para quem usa leitor de ecrã, que agora pode saltar essa parte de uma vez. Vale para todas as ferramentas do site.",
+    ],
+  },
+  {
     version: "2.85.0",
     data: "2026-08-19",
     titulo: "A calculadora de preço passou a dizer-te o que estava a assumir por ti",
