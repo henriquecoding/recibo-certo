@@ -30,6 +30,7 @@ import {
   Briefcase, Calendar, Check, ChevronDown, ChevronUp, Clock, Copy, Gift, Invoice,
   Laptop, Lock, MapPin, PaperClip, ShieldCheck,
 } from "@/components/ui/Icons";
+import AdicionarAoCalendario from "@/components/calendario/AdicionarAoCalendario";
 
 export const ESTADO_CONSULTA: Record<string, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
   pedido: { texto: "Por confirmar", tom: "alert" },
@@ -207,7 +208,15 @@ export function ProximaConsulta({
         </p>
       )}
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <AdicionarAoCalendario
+          id={consulta.id}
+          inicio={consulta.inicio}
+          fim={consulta.fim}
+          titulo="Consulta com o meu contabilista"
+          descricao={consulta.assunto ?? undefined}
+          local={consulta.localOuLigacao}
+        />
         <Button size="sm" variant="ghost" disabled={ocupado === consulta.id} onClick={() => onCancelar(consulta)}>
           Cancelar consulta
         </Button>

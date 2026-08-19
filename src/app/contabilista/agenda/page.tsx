@@ -36,12 +36,14 @@ import { useAvisos } from "@/components/ui/Avisos";
 import { useConfirmar, type PedidoConfirmacao } from "@/components/ui/Confirmar";
 import { Calendar, Plus, Trash } from "@/components/ui/Icons";
 import Separadores, { PainelDoSeparador } from "@/components/contabilistas/Separadores";
+import SincronizarCalendario from "@/components/calendario/SincronizarCalendario";
 import { usarRascunhoSujo } from "@/components/contabilistas/usarRascunhoSujo";
 
 const ABAS_AGENDA = [
   { id: "semana" as const, rotulo: "Semana" },
   { id: "mes" as const, rotulo: "Mês" },
   { id: "tipo" as const, rotulo: "Semana-tipo" },
+  { id: "sincronizar" as const, rotulo: "Sincronizar" },
 ];
 
 const ROTULO_ESTADO: Record<EstadoAgendamento, { texto: string; tom: "brand" | "alert" | "neutral" | "danger" }> = {
@@ -106,7 +108,7 @@ export default function AgendaPage() {
   const { ficha, aCarregar } = usarFicha();
   const avisos = useAvisos();
   const confirmar = useConfirmar();
-  const [aba, setAba] = useState<"semana" | "mes" | "tipo">("semana");
+  const [aba, setAba] = useState<"semana" | "mes" | "tipo" | "sincronizar">("semana");
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [aberta, setAberta] = useState<Agendamento | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
@@ -299,6 +301,8 @@ export default function AgendaPage() {
               />
             )}
           </>
+        ) : aba === "sincronizar" ? (
+          <SincronizarCalendario papel="contabilista" />
         ) : (
           <SemanaTipo contabilistaId={ficha.userId} duracaoOmissao={ficha.duracaoConsultaMin} />
         )}

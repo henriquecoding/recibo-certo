@@ -64,10 +64,15 @@ MIGRACOES=($(ls "$RAIZ"/supabase/migrations/*.sql \
 # é ela que prova que a migração se deixa reaplicar, e foi a falta dessa
 # prova que deixou passar o 42723. Aplica-se sobre o esquema de 042-053 sem
 # mexer no que os testes 02, 03, 04 e 12 afirmam.
+#
+# A `fim_da_mediacao` entra no fim, e a ordem não é decorativa: ela DESFAZ
+# a fronteira de contacto e a revisão de mensagens que as anteriores
+# montaram. Aplicada antes delas, seria desfeita por elas.
 MIGRACOES+=(
   "$RAIZ/supabase/migrations/20260816150000_fronteira_de_contacto.sql"
   "$RAIZ/supabase/migrations/20260816160000_sala_de_acompanhamento.sql"
   "$RAIZ/supabase/migrations/20260817120000_local_verificado_da_consulta.sql"
+  "$RAIZ/supabase/migrations/20260818210000_fim_da_mediacao.sql"
 )
 
 if [ ${#MIGRACOES[@]} -eq 0 ]; then

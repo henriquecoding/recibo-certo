@@ -17,7 +17,6 @@ import {
   ACCAO_DO_PEDIDO, diasAtePrazo, ROTULO_ESTADO_PEDIDO, ROTULO_PEDIDO,
   type PedidoCliente,
 } from "@/lib/contabilistas/sala/tipos";
-import { detetarContactoExterno, explicarContactoExterno } from "@/lib/contabilistas/contacto-externo";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import { Check, Clock, PaperClip, Warning } from "@/components/ui/Icons";
@@ -51,7 +50,6 @@ export default function CartaoPedido({
   // O aviso aparece enquanto se escreve, e não ao submeter. A recusa a
   // chegar do servidor depois de carregar em enviar é uma parede; a mesma
   // regra dita a tempo é uma explicação.
-  const fuga = detetarContactoExterno(texto);
 
   return (
     <li
@@ -123,31 +121,14 @@ export default function CartaoPedido({
                   rows={3}
                   autoFocus
                   placeholder="Escreve a tua resposta."
-                  aria-invalid={fuga.encontrado}
-                  aria-describedby={fuga.encontrado ? `fuga-${pedido.id}` : undefined}
-                  className={`w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:outline-none focus:ring-2 ${
-                    fuga.encontrado
-                      ? "border-alert-border focus:border-alert-border focus:ring-alert-border/40"
-                      : "border-stone-200 focus:border-brand focus:ring-brand/30"
-                  }`}
+                  className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
                 />
               </label>
-
-              {fuga.encontrado && (
-                <p
-                  id={`fuga-${pedido.id}`}
-                  role="status"
-                  className="flex items-start gap-2 rounded-xl bg-alert-bg px-3.5 py-2.5 text-sm leading-relaxed text-alert-text"
-                >
-                  <Warning size={15} className="mt-0.5 shrink-0" aria-hidden />
-                  {explicarContactoExterno(fuga.motivos)}
-                </p>
-              )}
 
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
-                  disabled={ocupado || !texto.trim() || fuga.encontrado}
+                  disabled={ocupado || !texto.trim()}
                   onClick={() => { aoResponder?.(texto); setTexto(""); setAResponder(false); }}
                 >
                   Enviar resposta

@@ -54,8 +54,8 @@ export default function MeusCasos() {
             Os meus casos
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-500">
-            Descreve o que precisas e encaminhamos para quem o resolve. Não escolhes o
-            contabilista — recebes propostas e escolhes uma.
+            Descreve o que precisas, escolhe a quem o queres enviar, e fala
+            diretamente com quem responder.
           </p>
         </div>
         <Link href="/dashboard/casos/novo" className="shrink-0">
@@ -67,7 +67,7 @@ export default function MeusCasos() {
         <EstadoVazio
           Icon={Briefcase}
           titulo="Ainda não descreveste nenhum caso"
-          descricao="Diz o que precisas de resolver e encaminhamos para até três contabilistas certificados. É gratuito, e não precisas do Plus."
+          descricao="Diz o que precisas de resolver e escolhe até três contabilistas certificados para o verem. É gratuito, e não precisas do Plus."
           acao={
             <Link href="/dashboard/casos/novo">
               <Button><Plus size={14} aria-hidden /> Descrever um caso</Button>

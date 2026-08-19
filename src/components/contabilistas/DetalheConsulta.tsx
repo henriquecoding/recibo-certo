@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/Icons";
 import CanalDaConsulta, { type CanalEscolhido } from "./local/CanalDaConsulta";
 import CartaoDoLocal from "./local/CartaoDoLocal";
+import AdicionarAoCalendario from "@/components/calendario/AdicionarAoCalendario";
 
 const FOCAVEIS =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -304,6 +305,16 @@ export default function DetalheConsulta({
                   <Button size="sm" variant="ghost" disabled={ocupado} onClick={() => onEstado(consulta, "nao_compareceu")}>
                     Não compareceu
                   </Button>
+                )}
+                {!jaComecou && (
+                  <AdicionarAoCalendario
+                    id={consulta.id}
+                    inicio={consulta.inicio}
+                    fim={consulta.fim}
+                    titulo={nomeCliente ? `Consulta · ${nomeCliente}` : "Consulta"}
+                    descricao={consulta.assunto ?? undefined}
+                    local={consulta.localOuLigacao}
+                  />
                 )}
               </div>
             </footer>

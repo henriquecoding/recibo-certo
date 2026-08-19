@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.82.0",
+    data: "2026-08-19",
+    titulo: "Ninguém do Recibo Certo volta a ler a tua conversa com o teu contabilista",
+    itens: [
+      "Até hoje, tudo o que escrevias a um contabilista — e tudo o que ele te escrevia — parava numa fila para ser lido por alguém da administração antes de seguir. Estava escrito na nossa própria estratégia, com todas as letras: «a plataforma lê o que é escrito». Uma pessoa a ler conversas sobre dívidas, divórcios e heranças que não lhe foram dirigidas. Acabou.",
+      "A mensagem passa a chegar no instante em que a escreves. Não é uma promessa de que deixámos de abrir o ecrã: a administração deixou de ter caminho até estas linhas. Um pedido de administrador sobre a tabela das mensagens devolve zero resultados, e o ecrã que as revia foi apagado.",
+      "Há uma exceção, e é pedida por dentro: se uma das partes denunciar uma mensagem, essa mensagem — e apenas essa — passa a poder ser lida por nós. O resto da conversa continua fora do alcance de qualquer pessoa que não sejam vocês os dois.",
+      "Deixaste também de ser escolhido por nós. Descreves o caso e escolhes tu a quem o queres enviar, até três contabilistas, a partir do diretório. A triagem manual era a mesma leitura de conversa alheia, um passo antes.",
+      "E a parede que recusava emails e telemóveis a meio de uma frase desapareceu. Podes partilhar os teus contactos com quem trata do teu caso — é um interruptor no caso, que ligas e desligas quando quiseres, com efeito imediato.",
+      "As consultas passam a poder ir para o teu calendário — o do Google, o do iPhone e do Mac, o Outlook — e a atualizar-se sozinhas quando alguma muda de hora ou é cancelada. Não pedimos acesso ao teu calendário: publicamos o nosso, num endereço só teu que podes trocar ou desligar. E há a opção de ele dizer apenas «ocupado», sem nomes nem assuntos, para quem partilha o calendário com outras pessoas.",
+    ],
+  },
+  {
     version: "2.81.0",
     data: "2026-08-18",
     titulo: "A calculadora pergunta antes de responder — e o site inteiro passa a ser legível",

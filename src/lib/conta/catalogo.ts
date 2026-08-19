@@ -162,6 +162,15 @@ export const CONJUNTOS: Conjunto[] = [
     tabelas: [{ nome: "agendamentos", posse: { por: "coluna", coluna: "cliente_id" } }],
   },
   {
+    // Vale para os dois lados — quem marca consultas e quem as recebe —, e
+    // por isso não leva `soSe`. Uma linha desta tabela É a chave de leitura
+    // de uma agenda: apagá-la fecha o feed no instante em que sai daqui.
+    id: "calendario", grupo: "contabilista",
+    titulo: "Endereços de calendário",
+    descricao: "Os endereços que criaste para o Google, o Apple ou o Outlook lerem a tua agenda. Apagá-los faz esses calendários deixarem de receber as consultas.",
+    tabelas: [{ nome: "calendario_assinaturas", posse: { por: "coluna", coluna: "user_id" } }],
+  },
+  {
     id: "fidelidade", grupo: "contabilista", soSe: "cliente-de-contabilista",
     titulo: "Cartão de fidelidade",
     descricao: "Os carimbos e os cupões que ganhaste com este contabilista. Um cupão apagado não volta.",

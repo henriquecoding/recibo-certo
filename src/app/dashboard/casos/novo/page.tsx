@@ -72,10 +72,13 @@ export default function DescreverCaso() {
     setAEnviar(false);
     if (r.erro) { avisos.erro(r.erro); return; }
     avisos.sucesso(`Caso ${r.referencia} recebido.`, {
-      detalhe: "Vamos ler o que escreveste e encaminhar para quem o pode resolver.",
+      detalhe: "Agora escolhe a quem o queres enviar.",
       duracaoMs: 9000,
     });
-    router.push("/dashboard/casos");
+    // Para o detalhe, e não para a lista: o passo que falta — escolher a
+    // quem enviar — está lá, e mandar a pessoa para a lista era deixá-la
+    // com um caso parado sem lhe dizer porquê.
+    router.push(r.id ? `/dashboard/casos/${r.id}` : "/dashboard/casos");
   }
 
   if (!carregado) return <div className="h-64 animate-pulse rounded-4xl bg-stone-100" />;
@@ -104,19 +107,18 @@ export default function DescreverCaso() {
         Descreve o teu caso
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-stone-500">
-        Não precisas de escolher ninguém. Diz o que precisas e encaminhamos para até{" "}
-        {TETO_DE_ENCAMINHAMENTOS} contabilistas certificados — se houver mais do que uma
-        proposta, escolhes.
+        Descreve a situação uma vez. No fim escolhes a quem a queres enviar — até{" "}
+        {TETO_DE_ENCAMINHAMENTOS} contabilistas certificados — e se houver mais do que
+        uma proposta, decides.
       </p>
 
       {/* ⚠️ Dito antes de se escrever, e não numa nota de rodapé. */}
       <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-brand-light px-4 py-3 text-xs leading-relaxed text-brand-dark">
         <ShieldCheck size={15} className="mt-0.5 shrink-0" aria-hidden />
         <span>
-          O contabilista recebe o teu <strong>nome e NIF</strong> — precisa deles para trabalhar.
-          Não recebe o teu <strong>email, telefone nem morada</strong>: a conversa acontece toda
-          aqui dentro. E tudo o que for escrito passa por nós antes de seguir — não é um canal
-          privado, e não queremos que penses que é.
+          Quem escolheres recebe o teu <strong>nome e NIF</strong> — precisa deles para
+          trabalhar — e os teus <strong>contactos</strong>, que podes deixar de partilhar
+          quando quiseres. A conversa é entre vocês: <strong>ninguém do Recibo Certo a lê</strong>.
         </span>
       </p>
 
@@ -302,11 +304,12 @@ export default function DescreverCaso() {
                       por uma linha de texto no meio dos outros campos. */}
                   <div className="rounded-2xl border border-stone-200 bg-cream/50 p-4">
                     <p className="flex items-center gap-1.5 text-xs font-bold text-stone-700">
-                      <Lock size={13} aria-hidden /> Fica connosco
+                      <Lock size={13} aria-hidden /> Como te contactam
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-stone-500">
-                      É por aqui que te avisamos. O contabilista nunca chega a isto — é o que
-                      garante que a conversa não sai da plataforma.
+                      É por aqui que te avisamos, e é isto que fica visível para quem
+                      escolheres. Podes desligar essa partilha a qualquer momento no
+                      caso — e aí só falam pelas mensagens daqui.
                     </p>
 
                     <label htmlFor="email" className="mt-3 block text-sm font-semibold text-stone-700">

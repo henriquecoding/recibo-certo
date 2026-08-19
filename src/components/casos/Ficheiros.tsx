@@ -5,7 +5,7 @@
 //  ---------------------------------------------------------------------
 //  O mesmo componente serve os documentos de um caso e os anexos de uma
 //  proposta. Ter dois seria ter um deles a esquecer-se de alguma coisa —
-//  o limite, o tipo, o estado de «por libertar».
+//  o limite, o tipo, e se o documento está entregue ou retirado.
 //
 //  Descarregar passa sempre pela rota que reconfirma a autorização no
 //  instante do pedido: um URL assinado sobreviveria ao acesso que o
@@ -32,7 +32,7 @@ export interface FicheiroListado {
   caminho: string;
   nome: string;
   bytes: number;
-  /** Só para documentos de caso: `null` = ainda não segue para o contabilista. */
+  /** Só para documentos de caso: `null` = o cliente retirou-o. */
   libertadoEm?: string | null;
   eContrato?: boolean;
 }
@@ -52,7 +52,7 @@ export default function Ficheiros({
   podeAnexar: boolean;
   /** Na proposta, o primeiro ficheiro pode ser marcado como o contrato. */
   comoContrato?: boolean;
-  /** No caso, explica-se porque é que um documento ainda não seguiu. */
+  /** No caso, explica-se o que quer dizer um documento retirado. */
   explicaLibertacao?: boolean;
   aoMudar: () => void;
 }) {
@@ -109,11 +109,11 @@ export default function Ficheiros({
                 {explicaLibertacao && (
                   f.libertadoEm ? (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-brand-light px-2 py-0.5 text-[10px] font-semibold text-brand-dark">
-                      <Check size={10} aria-hidden /> Enviado
+                      <Check size={10} aria-hidden /> Entregue
                     </span>
                   ) : (
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500">
-                      <Clock size={10} aria-hidden /> Por rever
+                      <Clock size={10} aria-hidden /> Retirado
                     </span>
                   )
                 )}
@@ -126,8 +126,8 @@ export default function Ficheiros({
       {explicaLibertacao && ficheiros.some((f) => !f.libertadoEm) && (
         <p className="mt-2 flex items-start gap-2 text-[11px] leading-relaxed text-stone-500">
           <Warning size={12} className="mt-0.5 shrink-0" aria-hidden />
-          Os documentos por rever ainda não seguiram. Um ficheiro pode ter os teus contactos lá
-          dentro, e por isso é lido antes de ser encaminhado.
+          Os documentos retirados deixaram de estar ao alcance de quem trata do caso. Continuam
+          aqui para ti.
         </p>
       )}
 

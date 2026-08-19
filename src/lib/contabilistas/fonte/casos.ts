@@ -13,7 +13,7 @@ import { emDemonstracao, loja } from "./nucleo";
 
 export {
   AREAS, SITUACAO_MAX, SITUACAO_MIN, TETO_DE_ENCAMINHAMENTOS, URGENCIAS,
-  estadoDoCasoLegivel, euros, nifMascarado, nifValido,
+  estadoDoCasoLegivel, euros, mensagemVisivel, nifMascarado, nifValido,
 } from "../casos";
 export type {
   AnexoDaProposta, AreaDoCaso, Caso, DocumentoDoCaso, EstadoDoCaso, EstadoMensagem,
@@ -35,14 +35,47 @@ export async function listarPropostas(casoId: string): Promise<Proposta[]> {
   return real.listarPropostas(casoId);
 }
 
-export async function submeterMensagem(
+export async function enviarMensagemDoCaso(
   casoId: string,
   autorId: string,
   papel: "cliente" | "contabilista",
   corpo: string
 ): Promise<{ erro?: string }> {
-  if (emDemonstracao()) return (await loja()).submeterMensagem(casoId, autorId, papel, corpo);
-  return real.submeterMensagem(casoId, autorId, papel, corpo);
+  if (emDemonstracao()) return (await loja()).enviarMensagemDoCaso(casoId, autorId, papel, corpo);
+  return real.enviarMensagemDoCaso(casoId, autorId, papel, corpo);
+}
+
+export async function listarEncaminhamentos(
+  casoId: string,
+): ReturnType<typeof real.listarEncaminhamentos> {
+  if (emDemonstracao()) return (await loja()).listarEncaminhamentos(casoId);
+  return real.listarEncaminhamentos(casoId);
+}
+
+export async function enviarCasoAContabilista(
+  casoId: string, contabilistaId: string,
+): Promise<{ erro?: string }> {
+  if (emDemonstracao()) return (await loja()).enviarCasoAContabilista(casoId, contabilistaId);
+  return real.enviarCasoAContabilista(casoId, contabilistaId);
+}
+
+export async function definirPartilhaDeContactos(
+  casoId: string, partilhar: boolean,
+): Promise<{ erro?: string }> {
+  if (emDemonstracao()) return (await loja()).definirPartilhaDeContactos(casoId, partilhar);
+  return real.definirPartilhaDeContactos(casoId, partilhar);
+}
+
+export async function denunciarMensagem(
+  mensagemId: string, motivo: string,
+): Promise<{ erro?: string }> {
+  if (emDemonstracao()) return (await loja()).denunciarMensagem(mensagemId, motivo);
+  return real.denunciarMensagem(mensagemId, motivo);
+}
+
+export async function obterContactos(casoId: string): ReturnType<typeof real.obterContactos> {
+  if (emDemonstracao()) return (await loja()).obterContactos(casoId);
+  return real.obterContactos(casoId);
 }
 
 export async function enviarProposta(p: NovaProposta): Promise<{ erro?: string; id?: string }> {

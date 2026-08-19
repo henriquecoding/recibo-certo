@@ -32,7 +32,20 @@ export type EstadoDoCaso =
   | "rascunho" | "submetido" | "em_triagem" | "encaminhado"
   | "com_proposta" | "aceite" | "recusado" | "fechado";
 
-export type EstadoMensagem = "submetida" | "aprovada" | "devolvida" | "recusada";
+/**
+ * O estado de uma mensagem.
+ *
+ * `entregue` é o único que nasce. Os outros quatro são história: existiram
+ * enquanto a plataforma leu o que era escrito, e ficam no tipo porque as
+ * linhas antigas ficaram na tabela. Ver `20260818210000_fim_da_mediacao`.
+ */
+export type EstadoMensagem =
+  | "entregue" | "submetida" | "aprovada" | "devolvida" | "recusada";
+
+/** O que o outro lado consegue ler. Hoje: tudo o que foi enviado. */
+export function mensagemVisivel(estado: EstadoMensagem): boolean {
+  return estado === "entregue" || estado === "aprovada" || estado === "submetida";
+}
 
 export type EstadoProposta =
   | "enviada" | "lida" | "aceite" | "desconto_pedido"
@@ -83,6 +96,8 @@ export interface Caso {
   orcamentoCents: number | null;
   estado: EstadoDoCaso;
   notaTriagem: string | null;
+  /** Enquanto for verdadeiro, os contabilistas do caso veem os contactos. */
+  partilhaContactos: boolean;
   criadoEm: string;
   submetidoEm: string | null;
 }
@@ -96,6 +111,7 @@ export interface MensagemDoCaso {
   corpoEncaminhado: string | null;
   estado: EstadoMensagem;
   notaRevisao: string | null;
+  denunciadaEm: string | null;
   criadoEm: string;
 }
 
@@ -159,18 +175,26 @@ export function estadoDoCasoLegivel(estado: EstadoDoCaso): {
     case "rascunho":
       return { titulo: "Por submeter", explicacao: "Ainda não enviaste este caso." };
     case "submetido":
-      return { titulo: "Recebido", explicacao: "Vamos ler o que escreveste e encaminhar." };
+      return {
+        titulo: "Por enviar",
+        explicacao: "Está escrito, mas ainda não seguiu para ninguém. Escolhe quem o vai ver.",
+      };
     case "em_triagem":
-      return { titulo: "Em análise", explicacao: "Estamos a ver quem é a pessoa certa para isto." };
+      // Estado herdado da triagem que deixou de existir. Nenhum caso novo
+      // lá entra; os antigos que lá ficaram leem-se como o que são.
+      return {
+        titulo: "Por enviar",
+        explicacao: "Está escrito, mas ainda não seguiu para ninguém. Escolhe quem o vai ver.",
+      };
     case "encaminhado":
       return {
-        titulo: "Encaminhado",
+        titulo: "Com quem escolheste",
         explicacao: "Já está com quem o vai analisar. Avisamos-te quando houver proposta.",
       };
     case "com_proposta":
       return { titulo: "Com proposta", explicacao: "Tens uma proposta à espera da tua decisão." };
     case "aceite":
-      return { titulo: "Aceite", explicacao: "Aceitaste uma proposta. Já podem falar diretamente." };
+      return { titulo: "Aceite", explicacao: "Aceitaste uma proposta. Podem marcar a consulta." };
     case "recusado":
       return { titulo: "Não seguiu", explicacao: "Este caso não avançou." };
     case "fechado":
@@ -204,13 +228,15 @@ const MOTIVO: Record<string, string> = {
   ja_tens_um_caso_aberto: "Já tens um caso aberto nesta área. Acompanha esse antes de abrires outro.",
   dados_invalidos: "Há um campo por preencher ou mal preenchido.",
   so_a_administracao: "Só a administração pode fazer isto.",
+  nao_e_teu: "Este caso não é teu.",
+  nao_estas_no_caso: "Só quem está no caso pode denunciar uma mensagem.",
+  nao_denuncias_o_que_escreveste: "Não podes denunciar uma mensagem que escreveste.",
+  mensagem_nao_encontrada: "Essa mensagem já não existe.",
+  caso_nao_encontrado: "Esse caso já não existe.",
   contabilista_nao_aprovado: "Esse contabilista ainda não está aprovado.",
   ja_encaminhado: "Este caso já lhe foi encaminhado.",
   teto_atingido: `Um caso vai no máximo para ${TETO_DE_ENCAMINHAMENTOS} contabilistas.`,
   caso_nao_encaminhavel: "Este caso já não está em condições de ser encaminhado.",
-  ja_revista: "Esta mensagem já tinha sido revista.",
-  falta_a_razao: "Diz o que é preciso corrigir — devolver sem razão deixa a pessoa a adivinhar.",
-  decisao_invalida: "Decisão desconhecida.",
   ainda_nao_leste_ate_ao_fim: "Chega ao fim do documento antes de confirmares.",
   ainda_nao_leste_e_confirmaste: "Lê até ao fim e confirma antes de decidires.",
   contrato_por_ler: "Abre o contrato em anexo e lê-o até ao fim antes de decidires.",
@@ -251,7 +277,14 @@ export async function submeterCaso(
   return r.ok ? { id: r.id, referencia: r.referencia } : { erro: traduzir(r.motivo) };
 }
 
-export async function submeterMensagem(
+/**
+ * Envia uma mensagem. Chega ao outro lado no instante em que entra.
+ *
+ * Chamava-se `submeterMensagem` porque havia a quem submeter. Não há: a
+ * política da migração `20260818210000` só aceita `entregue`, e o nome
+ * antigo prometia uma fila que deixou de existir.
+ */
+export async function enviarMensagemDoCaso(
   casoId: string,
   autorId: string,
   papel: "cliente" | "contabilista",
@@ -260,36 +293,64 @@ export async function submeterMensagem(
   const texto = corpo.trim().slice(0, 4000);
   if (!texto) return { erro: "Escreve alguma coisa." };
 
-  // A mensagem nasce `submetida` porque é o único estado que a política
-  // deixa entrar — não porque este código o diga.
   const { error } = await getSupabase().from("caso_mensagens").insert({
-    caso_id: casoId, autor_id: autorId, autor_papel: papel, corpo: texto,
+    caso_id: casoId, autor_id: autorId, autor_papel: papel,
+    corpo: texto, estado: "entregue",
   });
   return error ? { erro: error.message } : {};
 }
 
-export async function reverMensagem(
-  mensagemId: string,
-  decisao: "aprovar" | "devolver" | "recusar",
-  nota?: string,
-  redigido?: string,
+/**
+ * Entrega o caso a um contabilista escolhido por quem o descreveu.
+ *
+ * Substitui `encaminharCaso`, que só a administração podia chamar. A
+ * diferença não é de permissões: é que já ninguém tem de ler o caso para
+ * decidir para onde ele vai.
+ */
+export async function enviarCasoAContabilista(
+  casoId: string, contabilistaId: string,
 ): Promise<{ erro?: string }> {
-  const { data, error } = await getSupabase().rpc("rever_mensagem", {
-    p_mensagem: mensagemId,
-    p_decisao: decisao,
-    p_nota: nota ?? null,
-    p_redigido: redigido ?? null,
+  const { data, error } = await getSupabase().rpc("enviar_caso_a_contabilista", {
+    p_caso: casoId, p_contabilista: contabilistaId,
   });
   if (error) return { erro: error.message };
   const r = (data ?? {}) as { ok?: boolean; motivo?: string };
   return r.ok ? {} : { erro: traduzir(r.motivo) };
 }
 
-export async function encaminharCaso(
-  casoId: string, contabilistaId: string,
+/**
+ * Liga ou desliga a partilha dos contactos com os contabilistas do caso.
+ *
+ * O efeito é imediato e vive na política, não numa cópia do valor: assim
+ * que isto devolve, o contabilista deixa de alcançar a linha.
+ */
+export async function definirPartilhaDeContactos(
+  casoId: string, partilhar: boolean,
 ): Promise<{ erro?: string }> {
-  const { data, error } = await getSupabase().rpc("encaminhar_caso", {
-    p_caso: casoId, p_contabilista: contabilistaId,
+  const { data, error } = await getSupabase().rpc("definir_partilha_de_contactos", {
+    p_caso: casoId, p_partilhar: partilhar,
+  });
+  if (error) return { erro: error.message };
+  const r = (data ?? {}) as { ok?: boolean; motivo?: string };
+  return r.ok ? {} : { erro: traduzir(r.motivo) };
+}
+
+/**
+ * Entrega UMA mensagem à administração, por decisão de quem a recebeu.
+ *
+ * É o único caminho que existe: sem isto, um `select` de administrador
+ * sobre `caso_mensagens` devolve zero linhas. Denunciar o que a própria
+ * pessoa escreveu é recusado — seria uma forma de entregar à
+ * administração o que ela não pode ler.
+ */
+export async function denunciarMensagem(
+  mensagemId: string, motivo: string,
+): Promise<{ erro?: string }> {
+  const texto = motivo.trim().slice(0, 1000);
+  if (!texto) return { erro: "Diz o que se passa — sem isso não há o que analisar." };
+
+  const { data, error } = await getSupabase().rpc("denunciar_mensagem", {
+    p_mensagem: mensagemId, p_motivo: texto,
   });
   if (error) return { erro: error.message };
   const r = (data ?? {}) as { ok?: boolean; motivo?: string };
@@ -365,6 +426,9 @@ const paraCaso = (l: Linha): Caso => ({
   orcamentoCents: (l.orcamento_cents as number | null) ?? null,
   estado: l.estado as EstadoDoCaso,
   notaTriagem: (l.nota_triagem as string | null) ?? null,
+  // Os casos antigos não têm a coluna; para esses, a partilha está
+  // ligada — é o que a migração escreveu como omissão.
+  partilhaContactos: (l.partilha_contactos as boolean | null) ?? true,
   criadoEm: l.criado_em as string,
   submetidoEm: (l.submetido_em as string | null) ?? null,
 });
@@ -378,6 +442,7 @@ const paraMensagem = (l: Linha): MensagemDoCaso => ({
   corpoEncaminhado: (l.corpo_encaminhado as string | null) ?? null,
   estado: l.estado as EstadoMensagem,
   notaRevisao: (l.nota_revisao as string | null) ?? null,
+  denunciadaEm: (l.denunciada_em as string | null) ?? null,
   criadoEm: l.criado_em as string,
 });
 
@@ -440,8 +505,34 @@ export async function listarPropostas(casoId: string): Promise<Proposta[]> {
   return ((data ?? []) as unknown as Linha[]).map(paraProposta);
 }
 
-/** A fila da administração: o que espera por triagem, mais antigo primeiro. */
-export async function filaDeTriagem(): Promise<Caso[]> {
+/** A quem o caso já foi entregue, e em que pé está cada convite. */
+export interface EncaminhamentoDoCaso {
+  contabilistaId: string;
+  estado: "convidado" | "aceite" | "recusado" | "retirado";
+  encaminhadoEm: string;
+}
+
+export async function listarEncaminhamentos(casoId: string): Promise<EncaminhamentoDoCaso[]> {
+  const { data } = await getSupabase()
+    .from("caso_encaminhamentos")
+    .select("contabilista_id, estado, encaminhado_em")
+    .eq("caso_id", casoId)
+    .order("encaminhado_em");
+  return ((data ?? []) as unknown as Linha[]).map((l) => ({
+    contabilistaId: l.contabilista_id as string,
+    estado: l.estado as EncaminhamentoDoCaso["estado"],
+    encaminhadoEm: l.encaminhado_em as string,
+  }));
+}
+
+/**
+ * Os casos que ainda não foram entregues a ninguém.
+ *
+ * Deixou de ser uma fila de trabalho: ninguém tem de os ler para decidir
+ * para onde vão. Serve para a administração saber que existem pedidos
+ * parados — e o que se lê aqui é a área e a data, não a situação.
+ */
+export async function casosPorEntregar(): Promise<Caso[]> {
   const { data } = await getSupabase()
     .from("casos").select("*")
     .in("estado", ["submetido", "em_triagem"])
@@ -449,16 +540,37 @@ export async function filaDeTriagem(): Promise<Caso[]> {
   return ((data ?? []) as unknown as Linha[]).map(paraCaso);
 }
 
-/** As mensagens por rever, de todos os casos. Também para a administração. */
-export async function filaDeRevisao(): Promise<(MensagemDoCaso & { referencia?: string })[]> {
+/** Uma mensagem entregue à administração, e o que quem a entregou disse. */
+export interface MensagemDenunciada {
+  id: string;
+  casoId: string;
+  referencia: string;
+  autorPapel: "cliente" | "contabilista";
+  corpo: string;
+  criadoEm: string;
+  denunciadaEm: string;
+  denunciaMotivo: string | null;
+}
+
+/**
+ * O que a administração pode ler de `caso_mensagens`: só o que alguém de
+ * dentro lhe entregou. Sem denúncias, isto devolve uma lista vazia — e
+ * não por filtro, mas porque a política não deixa passar mais nada.
+ */
+export async function filaDeDenuncias(): Promise<MensagemDenunciada[]> {
   const { data } = await getSupabase()
-    .from("caso_mensagens")
-    .select("*, caso:caso_id (referencia)")
-    .eq("estado", "submetida")
-    .order("criado_em").limit(100);
+    .from("caso_mensagens_denunciadas")
+    .select("*")
+    .order("denunciada_em", { ascending: false }).limit(100);
   return ((data ?? []) as unknown as Linha[]).map((l) => ({
-    ...paraMensagem(l),
-    referencia: (l.caso as Linha | null)?.referencia as string | undefined,
+    id: l.id as string,
+    casoId: l.caso_id as string,
+    referencia: (l.referencia as string | null) ?? "—",
+    autorPapel: l.autor_papel as "cliente" | "contabilista",
+    corpo: l.corpo as string,
+    criadoEm: l.criado_em as string,
+    denunciadaEm: l.denunciada_em as string,
+    denunciaMotivo: (l.denuncia_motivo as string | null) ?? null,
   }));
 }
 
@@ -543,11 +655,21 @@ export async function listarAnexosDaProposta(propostaId: string): Promise<AnexoD
   }));
 }
 
-export async function libertarDocumento(
-  id: string, libertar: boolean,
+/**
+ * Retira — ou repõe — um documento que o cliente anexou ao caso.
+ *
+ * Substitui `libertarDocumento`, que fazia o contrário: um documento
+ * nascia invisível e a administração decidia se seguia. Agora nasce
+ * entregue, e quem muda de ideias é quem o anexou.
+ *
+ * Não apaga o ficheiro. Fecha o acesso, que é o que quem retira quer —
+ * apagar de vez é o que faz a purga de anexos.
+ */
+export async function retirarDocumentoDoCaso(
+  id: string, retirar: boolean,
 ): Promise<{ erro?: string }> {
   const { data, error } = await getSupabase()
-    .rpc("libertar_documento", { p_documento: id, p_libertar: libertar });
+    .rpc("retirar_documento_do_caso", { p_documento: id, p_retirar: retirar });
   if (error) return { erro: error.message };
   const r = (data ?? {}) as { ok?: boolean; motivo?: string };
   return r.ok ? {} : { erro: traduzir(r.motivo) };
