@@ -23,6 +23,7 @@ import {
   PROGRAMA_REGRESSAR,
   PROGRAMA_REGRESSAR_TETO_CALC,
   ESCALOES_IRS,
+  escaloesIRSDaRegiao,
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
   MINIMO_EXISTENCIA,
@@ -392,13 +393,19 @@ export interface EscalaoAplicado {
 /**
  * IRS sobre o rendimento coletável, pelo método progressivo por escalões
  * (cada fração do rendimento é tributada à taxa marginal do seu escalão).
+ *
+ * `regiao` é a **residência fiscal** de quem paga, não a origem do rendimento
+ * nem a região que governa o IVA da operação: quem reside nos Açores e fatura
+ * para Lisboa é tributado às taxas dos Açores, e o contrário também é verdade.
+ * O valor por omissão mantém intacto o resultado de todos os chamadores que
+ * não sabem da existência disto.
  */
-export function irsProgressivo(coletavel: number): number {
+export function irsProgressivo(coletavel: number, regiao: Regiao = "continente"): number {
   let restante = sanitize(coletavel);
   if (restante === 0) return 0;
   let imposto = 0;
   let inferior = 0;
-  for (const escalao of ESCALOES_IRS.value) {
+  for (const escalao of escaloesIRSDaRegiao(regiao)) {
     const superior = escalao.ate ?? Infinity;
     const tranche = Math.min(restante + inferior, superior) - inferior;
     if (tranche <= 0) break;
@@ -414,7 +421,10 @@ export function irsProgressivo(coletavel: number): number {
  * Versão detalhada de irsProgressivo: retorna o imposto total e o detalhamento
  * por escalão (quais escalões foram tocados e quanto).
  */
-export function irsProgressivoDetalhado(coletavel: number): {
+export function irsProgressivoDetalhado(
+  coletavel: number,
+  regiao: Regiao = "continente",
+): {
   imposto: number;
   escaloes: EscalaoAplicado[];
 } {
@@ -423,7 +433,7 @@ export function irsProgressivoDetalhado(coletavel: number): {
   let imposto = 0;
   let inferior = 0;
   const escaloes: EscalaoAplicado[] = [];
-  for (const escalao of ESCALOES_IRS.value) {
+  for (const escalao of escaloesIRSDaRegiao(regiao)) {
     const superior = escalao.ate ?? Infinity;
     const tranche = Math.min(restante + inferior, superior) - inferior;
     if (tranche <= 0) break;
@@ -805,6 +815,17 @@ export function calcularAbatimentoMinimoExistencia(
   }
 
   const reference = MINIMO_EXISTENCIA.value;
+  // NACIONAL de propósito, e não a tabela da região de residência.
+  //
+  // A fórmula do Art. 70.º remete para «a taxa da primeira posição da tabela
+  // do artigo 68.º», e não foi possível confirmar em fonte oficial se, para um
+  // residente numa região autónoma, essa taxa é a nacional ou a regional
+  // reduzida. Perante a dúvida mantém-se o que sempre esteve aqui — que é
+  // também o lado prudente: a taxa nacional é a mais alta, dá um abatimento
+  // MENOR e portanto um imposto estimado maior. Uma ferramenta que diz quanto
+  // reservar erra melhor por excesso.
+  //
+  // Fica registado como pergunta em aberto, não como decisão tomada.
   const firstBracket = ESCALOES_IRS.value[0];
   if (!firstBracket || firstBracket.ate === null || firstBracket.taxa <= 0) {
     return {
@@ -959,6 +980,16 @@ export interface DependentesDetalhe {
 export interface SimulacaoInput {
   brutoAnual: number;
   tipo: TipoAtividade;
+  /**
+   * Residência fiscal do titular. Decide as taxas do Art. 68.º: as regiões
+   * autónomas aplicam menos 30% em todos os escalões.
+   *
+   * **Não é a região do IVA.** O IVA segue a operação; o IRS segue a pessoa.
+   * Quem reside nos Açores e fatura para Lisboa é tributado às taxas dos
+   * Açores. Por omissão, continente — o que preserva o comportamento de
+   * quem chama isto sem saber que a pergunta existe.
+   */
+  residenciaFiscal?: Regiao;
   /** Ano de atividade (1.º e 2.º reduzem o coeficiente); 3+ sem redução. */
   anoAtividade?: number;
   irsJovemAno?: number;
@@ -1399,6 +1430,9 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // ── Coleta: flat 20% (IFICI / RNH antigo, só na parte elegível) + escalões
   //    progressivos (outrosRendimentos sempre; toda a base sem regime flat) ──
   const divisor = conjunta ? QUOCIENTE_CONJUGAL.value : 1;
+  // Onde a pessoa RESIDE decide a tabela de taxas (Art. 68.º + Lei das
+  // Finanças das Regiões Autónomas). Nada mais nesta função muda com isto.
+  const residencia: Regiao = input.residenciaFiscal ?? "continente";
   const rendimentoIsentoProgressividade = sanitize(input.rendimentoIsentoComProgressividade ?? 0);
   let coletaBruta: number;
   let escaloesAplicados: EscalaoAplicado[];
@@ -1409,8 +1443,8 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // mesmo sendo tributado à parte, à taxa fixa) — não do zero. A diferença
     // entre a coleta progressiva do total e a do elegível isola o imposto
     // marginal da parte de outrosRendimentos, nos escalões certos.
-    const detalhadoTotal = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
-    const detalhadoElegivel = irsProgressivoDetalhado(rendimentoElegivelFinal / divisor);
+    const detalhadoTotal = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor, residencia);
+    const detalhadoElegivel = irsProgressivoDetalhado(rendimentoElegivelFinal / divisor, residencia);
     const coletaOutros = detalhadoTotal.imposto - detalhadoElegivel.imposto;
     coletaBruta = coletaFlat + coletaOutros * divisor;
     // Sem detalhe por escalão aqui: misturaria a taxa fixa (elegível) com os
@@ -1423,7 +1457,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // aplicável ao restante. Calcula-se a taxa média sobre o total (isento
     // incluído) e aplica-se essa taxa só à parte tributável.
     const baseComIsento = (rendimentoColetavelFinal + rendimentoIsentoProgressividade) / divisor;
-    const detalhado = irsProgressivoDetalhado(baseComIsento);
+    const detalhado = irsProgressivoDetalhado(baseComIsento, residencia);
     const taxaMediaProgressividade = baseComIsento > 0 ? detalhado.imposto / baseComIsento : 0;
     coletaBruta = rendimentoColetavelFinal * taxaMediaProgressividade;
     // O detalhe por escalão é o da base COM o rendimento isento — é essa a
@@ -1437,7 +1471,7 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
         }))
       : detalhado.escaloes;
   } else {
-    const detalhado = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor);
+    const detalhado = irsProgressivoDetalhado(rendimentoColetavelFinal / divisor, residencia);
     coletaBruta = detalhado.imposto * divisor;
     // Escalar de volta se divisor != 1 (tributação conjunta)
     escaloesAplicados = divisor !== 1
@@ -1619,6 +1653,12 @@ export interface ComparacaoInput {
   deducoes?: DeducoesInput;
   deficiencia?: boolean;
   anoAtividade?: number;
+  /**
+   * Residência fiscal — aplica-se aos DOIS lados da comparação: o IRS dos
+   * recibos verdes e o IRS pessoal de quem recebe dividendos da sociedade.
+   * Deixá-la só num dos lados enviesaria o veredicto.
+   */
+  residenciaFiscal?: Regiao;
 }
 
 export interface ComparacaoResult {
@@ -1666,6 +1706,7 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
     deducoes: input.deducoes,
     deficiencia: input.deficiencia,
     anoAtividade: input.anoAtividade,
+    residenciaFiscal: input.residenciaFiscal,
   });
   // Base de SS com o teto de 12×IAS (coerente com calcular/simularIRSAnual): sem
   // este limite, a SS do independente ficava sobrestimada para rendimentos altos.
@@ -1678,6 +1719,13 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
   const irc = coletaIRC(lucroTributavel);
   const derrama = derramaTaxa * lucroTributavel;
   const aposIRC = Math.max(0, lucroTributavel - irc - derrama);
+  // NACIONAL de propósito. Há indício de que as regiões autónomas também
+  // reduzem as taxas LIBERATÓRIAS do Art. 71.º, mas só o encontrei afirmado
+  // para os Açores e sem o valor de 2026 confirmado em fonte oficial. A
+  // disciplina do projeto é não aplicar o que não se confirmou: aplicar aqui
+  // uma redução por analogia com o Art. 68.º seria inventar. Fica em aberto —
+  // e, entretanto, o lado da sociedade é estimado por excesso, que é o lado
+  // prudente num comparador.
   const dividendos = DIVIDENDOS_TAXA.value * aposIRC;
   const empresaLiquido = aposIRC - dividendos;
 
@@ -1991,6 +2039,8 @@ export interface EntradaEstrangeiroInput {
 
 export interface DeclaracaoInput {
   conjunta?: boolean;
+  /** Residência fiscal do titular — ver `SimulacaoInput.residenciaFiscal`. */
+  residenciaFiscal?: Regiao;
   /** Categoria A — trabalho dependente (Anexo A). */
   salarios?: RendimentoCatAInput;
   /** Categoria H/A — pensões (Anexo A). */
@@ -2712,6 +2762,7 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       programaRegressarTetoConsumido: regressarConsumidoB,
       outrosRendimentos: outrosB,
       conjunta: false,
+      residenciaFiscal: input.residenciaFiscal,
       deficiencia: tb.deficiencia,
       isencaoSSPrimeiroAno: tb.isencaoSSPrimeiroAno,
       acumulaEmprego: tb.acumulaEmprego,
@@ -2760,6 +2811,7 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     programaRegressarTetoConsumido: regressarConsumidoA,
     outrosRendimentos: outros,
     conjunta,
+    residenciaFiscal: input.residenciaFiscal,
     dependentes: input.dependentes,
     dependentesDetalhe: input.dependentesDetalhe,
     dependentesLista: input.dependentesLista,

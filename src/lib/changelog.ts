@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.84.0",
+    data: "2026-08-19",
+    titulo: "Quem vive na Madeira ou nos Açores deixa de pagar IRS a mais nas nossas contas",
+    itens: [
+      "As regiões autónomas cobram menos 30% de IRS do que o continente, em todos os escalões — é um direito de quem lá reside, escrito na Lei das Finanças das Regiões Autónomas. O nosso motor calculava sempre pelas taxas do continente. Quem vive no Funchal ou em Ponta Delgada via um imposto maior do que o seu, na calculadora, no simulador, no comparador e na formação de preço.",
+      "Passa a estar certo. Se resides numa região autónoma, a redução entra no cálculo: no IRS que te estimamos, no preço que te sugerimos cobrar e na comparação entre recibos verdes e sociedade — que era a mais injusta das três, porque só um dos lados da balança levava o desconto.",
+      "Havia até uma contradição dentro do próprio site: no recibo de vencimento a retenção mensal já usava a tabela da tua região, mas o apuramento do ano usava as taxas do continente. O mealheiro prometia um reembolso que não existia, ou escondia um que existia.",
+      "Uma distinção que agora fica explícita, porque muda o resultado: o IVA segue a operação, o IRS segue a pessoa. Quem reside no continente e tem atividade na Madeira liquida IVA da Madeira e paga IRS continental — e o contrário também acontece. Onde a pergunta era só «Região», passa a dizer-se o que ela decide.",
+      "Os números não foram escritos à mão. Guardámos a regra legal — menos 30% — e o site confere-a, escalão a escalão, contra a tabela publicada para 2026. Se um orçamento regional mudar o diferencial, ou se alguém mexer nos escalões nacionais sem pensar nas regiões, o site recusa-se a arrancar em vez de servir um imposto errado em silêncio.",
+      "Duas coisas ficaram deliberadamente por mudar, e dizemo-lo em vez de as fazer à sorte: o mínimo de existência e a taxa dos dividendos continuam a usar a referência nacional, porque não conseguimos confirmar em fonte oficial se a redução regional lhes toca. Nos dois casos o que mostramos peca por excesso de imposto, que é o lado seguro para quem está a decidir quanto guardar.",
+    ],
+  },
+  {
     version: "2.83.0",
     data: "2026-08-19",
     titulo: "Ninguém do Recibo Certo volta a ler a tua conversa com o teu contabilista",

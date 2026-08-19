@@ -230,7 +230,7 @@ export function SeletorCartoes<T extends string | boolean>({
                 {o.label}
               </div>
               {o.sub && (
-                <div className={`mt-0.5 text-xs ${desativada ? "text-stone-400 dark:text-stone-500" : active ? "text-brand" : "text-stone-400"}`}>
+                <div className={`mt-0.5 text-xs ${desativada ? "text-stone-400 dark:text-stone-500" : active ? "text-brand-dark" : "text-stone-400"}`}>
                   {o.sub}
                 </div>
               )}
@@ -341,7 +341,7 @@ export function Checkbox({
       </span>
       <div>
         <div className={`text-sm font-semibold ${checked ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{label}</div>
-        {sub && <div className={`mt-0.5 text-xs leading-relaxed ${checked ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}>{sub}</div>}
+        {sub && <div className={`mt-0.5 text-xs leading-relaxed ${checked ? "text-brand-dark" : "text-stone-400 dark:text-stone-500"}`}>{sub}</div>}
       </div>
     </button>
   );

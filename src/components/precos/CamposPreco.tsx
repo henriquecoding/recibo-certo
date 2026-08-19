@@ -280,8 +280,8 @@ export default function CamposPreco({
               />
               <Seletor
                 id="regiao"
-                rotulo="Região"
-                ajuda="As taxas de IVA são diferentes: 23% no Continente, 22% na Madeira, 16% nos Açores."
+                rotulo="Onde resides e tens atividade"
+                ajuda="Decide duas coisas. O IVA: 23% no Continente, 22% na Madeira, 16% nos Açores. E o IRS: quem reside nas regiões autónomas paga menos 30% em todos os escalões. Se resides num sítio e tens atividade noutro, é a tua residência que manda no IRS."
                 opcoes={[
                   { valor: "continente", rotulo: "Continente" },
                   { valor: "madeira", rotulo: "Madeira" },

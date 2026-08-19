@@ -1673,35 +1673,87 @@ describe("R7 · quanto sai, e QUANDO", () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────
-describe("R9 · regiões autónomas — o IRS mostrado é o do continente, e diz-se", () => {
-  // A verificação em fonte oficial (agosto de 2026) confirmou que a redução
-  // de até 30% das taxas do Art. 68.º é do sujeito passivo RESIDENTE na
-  // região — logo abrange toda a matéria coletável englobada, categoria B
-  // incluída — e que em 2026 as duas regiões aplicam o máximo em todos os
-  // escalões. Enquanto o motor de IRS for nacional, a ferramenta tem de
-  // DIZER que o número é conservador em vez de o apresentar como exato.
-  const ctxRegiao = (regiao: "continente" | "madeira" | "acores") =>
+describe("R9 · regiões autónomas — o IRS regional entra mesmo no preço", () => {
+  // Verificado em fonte oficial (agosto de 2026): a redução de até 30% das
+  // taxas do Art. 68.º é do sujeito passivo RESIDENTE na região (Lei Orgânica
+  // 2/2013), abrange toda a matéria coletável englobada — categoria B
+  // incluída — e em 2026 as duas regiões aplicam o máximo em todos os
+  // escalões. O motor aplica-a; estes testes impedem que deixe de a aplicar,
+  // e que a aplique a quem não tem direito.
+  const ctxRegiao = (
+    regiao: "continente" | "madeira" | "acores",
+    residenciaFiscal?: "continente" | "madeira" | "acores",
+  ) =>
     ctxSimples((c) => {
       c.vendedor = {
         tipo: "ti",
         regimeIVA: "normal",
         regiao,
+        residenciaFiscal,
         atividade: "art151",
         anoAtividade: 3,
         faturacaoAnualPrevista: 40000,
       };
+      c.objetivo = { modo: "margem", percentagem: 0.4 };
     });
 
-  const temAviso = (regiao: "continente" | "madeira" | "acores") =>
-    precificar(ctxRegiao(regiao)).avisos.some((a) => a.id === "irs-regiao-autonoma");
+  it("quem reside numa região autónoma suporta MENOS IRS no preço", () => {
+    const cont = precificar(ctxRegiao("continente"));
+    const mad = precificar(ctxRegiao("madeira"));
+    const aco = precificar(ctxRegiao("acores"));
+    // Menos imposto sobre a mesma faturação → o preço que fecha a mesma
+    // margem é mais baixo. Se isto empatar, a redução não está a chegar cá.
+    expect(mad.fiscal.irsFracao).toBeLessThan(cont.fiscal.irsFracao);
+    expect(aco.fiscal.irsFracao).toBeLessThan(cont.fiscal.irsFracao);
+    expect(mad.precoLiquido).toBeLessThan(cont.precoLiquido);
+  });
 
-  it("quem reside na Madeira ou nos Açores é avisado", () => {
-    expect(temAviso("madeira")).toBe(true);
-    expect(temAviso("acores")).toBe(true);
+  it("as duas regiões são tratadas igual — em 2026 têm a mesma tabela", () => {
+    const mad = precificar(ctxRegiao("madeira"));
+    const aco = precificar(ctxRegiao("acores"));
+    expect(proximo(mad.fiscal.irsFracao, aco.fiscal.irsFracao, 1e-9)).toBe(true);
+  });
+
+  it("O IRS SEGUE A PESSOA, O IVA SEGUE A OPERAÇÃO", () => {
+    // O invariante que justifica `residenciaFiscal` existir. Quem tem
+    // atividade na Madeira mas reside no continente liquida IVA da Madeira e
+    // paga IRS continental. Confundir as duas perguntas dava a esta pessoa um
+    // desconto de imposto a que não tem direito.
+    const soIVA = precificar(ctxRegiao("madeira", "continente"));
+    const ambos = precificar(ctxRegiao("madeira", "madeira"));
+    const contNoContinente = precificar(ctxRegiao("continente", "continente"));
+
+    // IVA da Madeira nos dois casos…
+    expect(soIVA.taxaIVA).toBe(ambos.taxaIVA);
+    expect(soIVA.taxaIVA).not.toBe(contNoContinente.taxaIVA);
+    // …mas o IRS só é reduzido a quem lá reside.
+    expect(proximo(soIVA.fiscal.irsFracao, contNoContinente.fiscal.irsFracao, 1e-9)).toBe(true);
+    expect(ambos.fiscal.irsFracao).toBeLessThan(soIVA.fiscal.irsFracao);
+  });
+
+  it("sem residência declarada assume-se a região da atividade", () => {
+    const implicito = precificar(ctxRegiao("madeira"));
+    const explicito = precificar(ctxRegiao("madeira", "madeira"));
+    expect(proximo(implicito.fiscal.irsFracao, explicito.fiscal.irsFracao, 1e-9)).toBe(true);
+  });
+
+  it("o aviso diz que o desconto JÁ está aplicado, e de que depende", () => {
+    const a = precificar(ctxRegiao("madeira")).avisos.find((x) => x.id === "irs-regiao-autonoma")!;
+    expect(a.severidade).toBe("info");
+    expect(a.texto).toMatch(/já está neste cálculo/i);
+    expect(a.texto).toMatch(/onde RESIDES/);
+    expect(a.fonte).toBeTruthy();
+    expect(a.fonteUrl).toBeTruthy();
   });
 
   it("quem está no continente não recebe um aviso que não lhe diz respeito", () => {
-    expect(temAviso("continente")).toBe(false);
+    expect(
+      precificar(ctxRegiao("continente")).avisos.some((a) => a.id === "irs-regiao-autonoma"),
+    ).toBe(false);
+    // Nem quem só lá tem atividade sem lá residir.
+    expect(
+      precificar(ctxRegiao("madeira", "continente")).avisos.some((a) => a.id === "irs-regiao-autonoma"),
+    ).toBe(false);
   });
 
   it("uma sociedade não é avisada — paga IRC, não IRS", () => {
@@ -1711,13 +1763,5 @@ describe("R9 · regiões autónomas — o IRS mostrado é o do continente, e diz
       }),
     );
     expect(r.avisos.some((a) => a.id === "irs-regiao-autonoma")).toBe(false);
-  });
-
-  it("o aviso diz que o preço é conservador, não que está errado", () => {
-    const a = precificar(ctxRegiao("madeira")).avisos.find((x) => x.id === "irs-regiao-autonoma")!;
-    expect(a.severidade).toBe("info");
-    expect(a.texto).toMatch(/conservador/i);
-    expect(a.fonte).toBeTruthy();
-    expect(a.fonteUrl).toBeTruthy();
   });
 });
