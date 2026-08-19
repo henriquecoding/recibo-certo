@@ -202,7 +202,20 @@ export async function auditar({ estados, seletor = "#ferramenta", vistas = VISTA
         });
         await contexto.addInitScript(SEMEAR);
         if (vista.tema === "dark") {
-          await contexto.addInitScript(`localStorage.setItem("recibocerto:tema","dark");`);
+          // ⚠️ `recibocerto:theme`, em inglês. O script anti-flash do
+          // `layout.tsx` lê esta chave e é ele que põe `.dark` no `<html>`;
+          // `colorScheme: "dark"` no contexto só muda o
+          // `prefers-color-scheme`, que este projeto NÃO usa para decidir
+          // o tema.
+          //
+          // Estava aqui `recibocerto:tema`, e o efeito foi silencioso e
+          // caro: a classe nunca era adicionada, a vista «escuro» era o
+          // tema CLARO outra vez, e o axe validava-a com contraste de
+          // sobra. Ou seja: o modo escuro nunca chegou a ser auditado —
+          // nem aqui, nem na calculadora de preço, que herdou o mesmo
+          // erro. Descoberto ao comparar o `<html>.className` das duas
+          // vistas e encontrá-lo igual.
+          await contexto.addInitScript(`localStorage.setItem("recibocerto:theme","dark");`);
         }
 
         const pagina = await contexto.newPage();
@@ -217,6 +230,24 @@ export async function auditar({ estados, seletor = "#ferramenta", vistas = VISTA
         // o que correu mal nem em que estado.
         if ((await pagina.locator(seletor).count()) === 0) {
           console.log(`  ! ${estado.nome.padEnd(26)}${seletor} não existe — o servidor está de pé?`);
+          violacoesTotais += 1;
+          await pagina.close();
+          await contexto.close();
+          continue;
+        }
+
+        // ── O TEMA ESTÁ MESMO APLICADO? ───────────────────────────
+        //  A vista «escuro» só é escura se o `<html>` tiver `.dark`. Sem
+        //  esta guarda, uma chave de armazenamento errada faz metade da
+        //  matriz auditar duas vezes o tema claro — e ninguém dá por
+        //  isso, porque o resultado é verde.
+        const temaAplicado = await pagina.evaluate(
+          () => document.documentElement.classList.contains("dark"),
+        );
+        if ((vista.tema === "dark") !== temaAplicado) {
+          console.log(
+            `  ! ${estado.nome.padEnd(26)}tema «${vista.tema}» não foi aplicado (.dark=${temaAplicado})`,
+          );
           violacoesTotais += 1;
           await pagina.close();
           await contexto.close();

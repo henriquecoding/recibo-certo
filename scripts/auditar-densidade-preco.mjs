@@ -240,7 +240,7 @@ try {
   });
   await contexto.addInitScript(semear);
   if (TEMA === "escuro") {
-    await contexto.addInitScript(`localStorage.setItem("recibocerto:tema", "dark");`);
+    await contexto.addInitScript(`localStorage.setItem("recibocerto:theme", "dark");`);
   }
 
   for (const cenario of CENARIOS) {
