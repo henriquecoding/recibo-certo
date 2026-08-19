@@ -12,6 +12,7 @@ import {
   canalPorId,
   precoPorMargem,
   fracaoDisponivel,
+  calcularTesouraria,
   type ContextoPreco,
   type EntradaSolver,
 } from "@/lib/pricing";
@@ -1364,5 +1365,359 @@ describe("R2 · a atividade concreta manda sobre o tipo", () => {
       }),
     );
     expect(proximo(semLabel.fiscal.retencaoFracao, RETENCAO.art151.value, 0.001)).toBe(true);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  R5 · A RETENÇÃO CONHECE A DISPENSA E O IRS JOVEM
+//  ---------------------------------------------------------------------
+//  `retencaoNaFonte` sempre aceitou `{ dispensa, irsJovemAno }` e nunca lhe
+//  chegava nenhum dos dois: dava retenção a quem estava dispensado e a base
+//  cheia a quem tem isenção de IRS Jovem.
+//
+//  Isto muda a TESOURARIA e nunca a margem — o invariante abaixo prova-o.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R5 · dispensa de retenção e IRS Jovem", () => {
+  const ctxB2B = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 12000,
+      };
+      c.canal = { canal: "venda_direta", cliente: "empresa_pt" };
+      patch(c);
+    });
+
+  it("a dispensa põe a retenção a zero", () => {
+    const com = precificar(ctxB2B());
+    const sem = precificar(ctxB2B((c) => void (c.vendedor.dispensaRetencao = true)));
+    expect(com.fiscal.retencaoFracao).toBeGreaterThan(0);
+    expect(sem.fiscal.retencaoFracao).toBe(0);
+  });
+
+  it("...e NÃO muda a margem — é tesouraria, não custo (invariante 3)", () => {
+    const com = precificar(ctxB2B());
+    const sem = precificar(ctxB2B((c) => void (c.vendedor.dispensaRetencao = true)));
+    expect(proximo(com.margem.margem, sem.margem.margem, 0.0005)).toBe(true);
+    expect(proximo(com.precoLiquido, sem.precoLiquido, 0.005)).toBe(true);
+  });
+
+  it("o IRS Jovem reduz a retenção sem tocar na margem", () => {
+    const normal = precificar(ctxB2B());
+    const jovem = precificar(ctxB2B((c) => void (c.vendedor.irsJovemAno = 1)));
+    expect(jovem.fiscal.retencaoFracao).toBeLessThan(normal.fiscal.retencaoFracao);
+    expect(proximo(jovem.margem.margem, normal.margem.margem, 0.0005)).toBe(true);
+  });
+
+  it("quem pode dispensar e não dispensou é avisado disso", () => {
+    const r = precificar(ctxB2B());
+    const texto = r.fiscal.notas.join(" ");
+    expect(texto).toMatch(/DISPENSAR a retenção/i);
+    // E quem já dispensou não recebe a sugestão outra vez.
+    const jaDispensou = precificar(ctxB2B((c) => void (c.vendedor.dispensaRetencao = true)));
+    expect(jaDispensou.fiscal.notas.join(" ")).not.toMatch(/podes DISPENSAR/i);
+  });
+
+  it("acima do limiar não se sugere uma dispensa que a lei não permite", () => {
+    const r = precificar(ctxB2B((c) => void (c.vendedor.faturacaoAnualPrevista = 40000)));
+    expect(r.fiscal.notas.join(" ")).not.toMatch(/podes DISPENSAR/i);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  R8 · ATO ISOLADO — nunca isento pelo limiar
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R8 · o ato isolado leva sempre IVA", () => {
+  const ctxAto = (patch: (c: ContextoPreco) => void = () => {}) => {
+    const c = cenarioPorChave("ato_isolado").contexto();
+    c.custos = { direto: { valor: 10, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 1 };
+    c.objetivo = { modo: "margem", percentagem: 0.4 };
+    patch(c);
+    return c;
+  };
+
+  it("existe como cenário próprio", () => {
+    expect(cenarioPorChave("ato_isolado").chave).toBe("ato_isolado");
+  });
+
+  it("mesmo declarando isenção pelo Art. 53.º, leva IVA", () => {
+    const r = precificar(
+      ctxAto((c) => {
+        c.vendedor.regimeIVA = "isento_art53";
+        c.vendedor.faturacaoAnualPrevista = 800;
+      }),
+    );
+    expect(r.taxaIVA).toBeGreaterThan(0);
+    expect(r.pvp).toBeGreaterThan(r.precoLiquido);
+  });
+
+  it("e com faturação minúscula continua a levar — o limiar não se aplica", () => {
+    const r = precificar(
+      ctxAto((c) => {
+        c.vendedor.regimeIVA = "isento_art53";
+        c.vendedor.faturacaoAnualPrevista = 50;
+      }),
+    );
+    expect(r.taxaIVA).toBe(IVA_NORMAL);
+    expect(r.avisos.some((a) => a.id === "ato-isolado-leva-iva")).toBe(true);
+  });
+
+  it("um TI com atividade aberta e a mesma faturação CONTINUA isento", () => {
+    // O contraste que prova que a regra é do ato isolado, não do valor.
+    const r = precificar(
+      ctxSimples((c) => {
+        c.vendedor = {
+          tipo: "ti",
+          regimeIVA: "isento_art53",
+          regiao: "continente",
+          atividade: "art151",
+          anoAtividade: 3,
+          faturacaoAnualPrevista: 800,
+        };
+      }),
+    );
+    expect(r.taxaIVA).toBe(0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  R6 · SOCIEDADE — do lucro operacional ao bolso do dono
+//  ---------------------------------------------------------------------
+//  A armadilha que estes testes prendem (análise de julho, §1.10): não
+//  apresentar o lucro retido como perdido. Riqueza = líquido + retido.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("R6 · o que chega ao dono de uma sociedade", () => {
+  const ctxEmpresa = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = { tipo: "empresa", regimeIVA: "normal", regiao: "continente" };
+      c.volume = { unidadesMes: 200 };
+      c.custos.fixos = [{ id: "f", rotulo: "Estrutura", mensal: 1500 }];
+      patch(c);
+    });
+
+  it("uma sociedade passa a saber quanto lhe chega", () => {
+    const r = precificar(ctxEmpresa());
+    expect(r.sociedade).toBeTruthy();
+    expect(r.sociedade!.faturacaoAnual).toBeGreaterThan(0);
+    expect(r.sociedade!.ircTotal).toBeGreaterThan(0);
+  });
+
+  it("a riqueza total é o líquido pessoal MAIS o lucro retido", () => {
+    const s = precificar(ctxEmpresa()).sociedade!;
+    expect(proximo(s.riquezaTotal, s.liquidoPessoal + s.lucroRetido, 1)).toBe(true);
+  });
+
+  it("o lucro retido nunca é apresentado como perda", () => {
+    const s = precificar(ctxEmpresa()).sociedade!;
+    // Se houver lucro retido, a riqueza total tem de o incluir — e portanto
+    // ser maior do que o líquido pessoal sozinho.
+    if (s.lucroRetido > 0.5) {
+      expect(s.riquezaTotal).toBeGreaterThan(s.liquidoPessoal);
+      expect(s.notas.join(" ")).toMatch(/não é dinheiro perdido/i);
+    }
+  });
+
+  it("um trabalhador independente não recebe esta camada", () => {
+    const r = precificar(
+      ctxSimples((c) => {
+        c.vendedor = {
+          tipo: "ti",
+          regimeIVA: "normal",
+          regiao: "continente",
+          atividade: "art151",
+          anoAtividade: 3,
+          faturacaoAnualPrevista: 30000,
+        };
+      }),
+    );
+    expect(r.sociedade ?? null).toBeNull();
+  });
+
+  it("sem volume não se inventa uma projeção", () => {
+    const r = precificar(ctxEmpresa((c) => void (c.volume = { unidadesMes: 0 })));
+    expect(r.sociedade ?? null).toBeNull();
+  });
+
+  it("e o IRC continua FORA do preço unitário", () => {
+    // O invariante que justifica a camada existir: o IRC incide sobre o
+    // lucro, não é fração da faturação, e não pode entrar em `v`.
+    const r = precificar(ctxEmpresa());
+    expect(r.fiscal.ssFracao).toBe(0);
+    expect(r.fiscal.irsFracao).toBe(0);
+  });
+});
+
+
+// ─────────────────────────────────────────────────────────────────────
+describe("R7 · quanto sai, e QUANDO", () => {
+  const ctxTI = (patch: (c: ContextoPreco) => void = () => {}) =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 40000,
+      };
+      c.volume = { unidadesMes: 100 };
+      patch(c);
+    });
+
+  // Um dia fixo para o calendário não depender de quando os testes correm.
+  const HOJE = new Date(2026, 0, 5); // 5 de janeiro de 2026
+
+  const entrada = (patch: Partial<Parameters<typeof calcularTesouraria>[0]> = {}) => ({
+    contexto: ctxTI(),
+    ivaPorUnidade: 2,
+    ssPorUnidade: 1,
+    liquidaIVA: true,
+    periodicidade: "trimestral" as const,
+    hoje: HOJE,
+    limite: 12,
+    ...patch,
+  });
+
+  it("o preço passa a ter datas: a reserva mensal é a soma das partes", () => {
+    const t = precificar(ctxTI()).tesouraria;
+    expect(t).toBeTruthy();
+    expect(proximo(t!.reservaMensal, t!.ivaMensal + t!.ssMensal, 0.01)).toBe(true);
+    expect(t!.proximos.length).toBeGreaterThan(0);
+  });
+
+  it("DECLARAR NÃO É PAGAR — nenhuma declaração leva quantia", () => {
+    // O erro que este teste existe para impedir: `prazos.ts` separa a
+    // entrega da declaração do pagamento do imposto porque têm datas
+    // diferentes. Pôr o valor nas duas linhas faria a pessoa reservar o
+    // dinheiro a dobrar.
+    const t = calcularTesouraria(entrada())!;
+    const declaracoes = t.proximos.filter((l) => l.natureza === "declaracao");
+    expect(declaracoes.length).toBeGreaterThan(0);
+    for (const d of declaracoes) {
+      expect(d.valor).toBeNull();
+      expect(d.porqueSemValor).toBeTruthy();
+    }
+  });
+
+  it("a Segurança Social paga-se TODOS OS MESES, não por trimestre", () => {
+    // Declara-se por trimestre (Art. 151.º) mas paga-se mensalmente
+    // (Art. 43.º). Multiplicar o pagamento por três seria triplicar a conta.
+    const t = calcularTesouraria(entrada())!;
+    const pagSS = t.proximos.filter((l) => l.categoria === "ss" && l.natureza === "pagamento");
+    expect(pagSS.length).toBeGreaterThan(0);
+    for (const l of pagSS) expect(proximo(l.valor!, t.ssMensal, 0.01)).toBe(true);
+  });
+
+  it("o IVA trimestral cobre três meses; o mensal, um", () => {
+    const tri = calcularTesouraria(entrada())!;
+    const pagTri = tri.proximos.find((l) => l.categoria === "iva" && l.natureza === "pagamento")!;
+    expect(proximo(pagTri.valor!, tri.ivaMensal * 3, 0.01)).toBe(true);
+
+    const mes = calcularTesouraria(entrada({ periodicidade: "mensal" }))!;
+    const pagMes = mes.proximos.find((l) => l.categoria === "iva" && l.natureza === "pagamento")!;
+    expect(proximo(pagMes.valor!, mes.ivaMensal, 0.01)).toBe(true);
+  });
+
+  it("quem está isento de IVA não vê prazos de IVA", () => {
+    const t = calcularTesouraria(entrada({ liquidaIVA: false, ivaPorUnidade: 0 }))!;
+    expect(t.ivaMensal).toBe(0);
+    expect(t.proximos.some((l) => l.categoria === "iva")).toBe(false);
+  });
+
+  it("o IRS não entra — a quantia não sai deste preço", () => {
+    const t = calcularTesouraria(entrada())!;
+    expect(t.proximos.every((l) => l.categoria === "iva" || l.categoria === "ss")).toBe(true);
+    expect(t.notas.join(" ")).toMatch(/IRS não está aqui/i);
+  });
+
+  it("uma sociedade não paga Segurança Social de trabalhador independente", () => {
+    const t = calcularTesouraria(
+      entrada({ contexto: ctxSimples((c) => void (c.volume = { unidadesMes: 100 })), ssPorUnidade: 0 }),
+    )!;
+    expect(t.proximos.some((l) => l.categoria === "ss")).toBe(false);
+  });
+
+  it("todas as datas estão no futuro e por ordem", () => {
+    const t = calcularTesouraria(entrada())!;
+    let anterior = "";
+    for (const l of t.proximos) {
+      expect(l.diasAte).toBeGreaterThanOrEqual(0);
+      expect(l.data >= anterior).toBe(true);
+      anterior = l.data;
+    }
+  });
+
+  it("sem volume não se inventa um calendário", () => {
+    expect(precificar(ctxTI((c) => void (c.volume = { unidadesMes: 0 }))).tesouraria ?? null).toBeNull();
+    expect(calcularTesouraria(entrada({ ivaPorUnidade: 0, ssPorUnidade: 0 }))).toBeNull();
+  });
+
+  it("no primeiro ano de atividade não há pagamento de Segurança Social", () => {
+    const t = calcularTesouraria(
+      entrada({
+        contexto: ctxTI((c) => {
+          c.vendedor = { ...c.vendedor, anoAtividade: 1, isencaoSSPrimeiroAno: true };
+        }),
+      }),
+    )!;
+    expect(t.proximos.some((l) => l.categoria === "ss" && l.natureza === "pagamento")).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────
+describe("R9 · regiões autónomas — o IRS mostrado é o do continente, e diz-se", () => {
+  // A verificação em fonte oficial (agosto de 2026) confirmou que a redução
+  // de até 30% das taxas do Art. 68.º é do sujeito passivo RESIDENTE na
+  // região — logo abrange toda a matéria coletável englobada, categoria B
+  // incluída — e que em 2026 as duas regiões aplicam o máximo em todos os
+  // escalões. Enquanto o motor de IRS for nacional, a ferramenta tem de
+  // DIZER que o número é conservador em vez de o apresentar como exato.
+  const ctxRegiao = (regiao: "continente" | "madeira" | "acores") =>
+    ctxSimples((c) => {
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao,
+        atividade: "art151",
+        anoAtividade: 3,
+        faturacaoAnualPrevista: 40000,
+      };
+    });
+
+  const temAviso = (regiao: "continente" | "madeira" | "acores") =>
+    precificar(ctxRegiao(regiao)).avisos.some((a) => a.id === "irs-regiao-autonoma");
+
+  it("quem reside na Madeira ou nos Açores é avisado", () => {
+    expect(temAviso("madeira")).toBe(true);
+    expect(temAviso("acores")).toBe(true);
+  });
+
+  it("quem está no continente não recebe um aviso que não lhe diz respeito", () => {
+    expect(temAviso("continente")).toBe(false);
+  });
+
+  it("uma sociedade não é avisada — paga IRC, não IRS", () => {
+    const r = precificar(
+      ctxSimples((c) => {
+        c.vendedor = { tipo: "empresa", regimeIVA: "normal", regiao: "madeira" };
+      }),
+    );
+    expect(r.avisos.some((a) => a.id === "irs-regiao-autonoma")).toBe(false);
+  });
+
+  it("o aviso diz que o preço é conservador, não que está errado", () => {
+    const a = precificar(ctxRegiao("madeira")).avisos.find((x) => x.id === "irs-regiao-autonoma")!;
+    expect(a.severidade).toBe("info");
+    expect(a.texto).toMatch(/conservador/i);
+    expect(a.fonte).toBeTruthy();
+    expect(a.fonteUrl).toBeTruthy();
   });
 });

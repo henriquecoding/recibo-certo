@@ -165,6 +165,25 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // ── Ato isolado: nunca isento, por muito baixo que seja ────────────
+  //  O erro que este aviso existe para evitar: «é só um trabalho pequeno,
+  //  não chego aos 15 000 €, logo não levo IVA». O Art. 53.º n.º 6 a)
+  //  exclui a isenção de quem pratica uma só operação tributável, e quem
+  //  passar o recibo sem IVA fica a dever esse IVA ao Estado.
+  if (e.contexto.cenario === "ato_isolado") {
+    avisos.push({
+      id: "ato-isolado-leva-iva",
+      severidade: "atencao",
+      titulo: "Num ato isolado há sempre IVA",
+      texto:
+        `${e.situacaoIVA.oQueAcontece} ${e.situacaoIVA.oQueTensDeFazer} O limiar dos ` +
+        `${eur(IVA_ISENCAO_LIMITE.value)} não te salva aqui: ele é para quem tem atividade aberta.`,
+      fonte: "Art. 53.º, n.º 6, al. a) CIVA",
+      fonteUrl:
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
+    });
+  }
+
   // ── O limiar do Art. 53.º visto A PARTIR DO PREÇO ──────────────────
   //  A pergunta que uma calculadora de preços pode responder e um
   //  simulador de IRS não: a este preço e a este volume, QUANDO é que
@@ -277,6 +296,32 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
       fonte: "Art. 70.º CIRS — mínimo de existência",
       fonteUrl:
         "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs70.aspx",
+    });
+  }
+
+  // ── R9 · Regiões autónomas ─────────────────────────────────────────
+  //  A Lei das Finanças das Regiões Autónomas (Lei Orgânica 2/2013)
+  //  permite às assembleias regionais baixar as taxas nacionais de IRS até
+  //  30%, e em 2026 as duas regiões aplicam o diferencial máximo em TODOS
+  //  os escalões. A redução é do sujeito passivo RESIDENTE na região, o que
+  //  a torna aplicável a toda a matéria coletável englobada — categoria B
+  //  incluída.
+  //
+  //  O motor de IRS deste projeto é nacional. Enquanto for, o número que
+  //  mostramos a quem reside nas regiões autónomas é ALTO — e a escolha
+  //  aqui é dizê-lo, não escondê-lo. Um preço formado por excesso de IRS
+  //  peca por prudência; um preço formado por defeito manda a pessoa
+  //  trabalhar de graça. Mas quem paga tem direito a saber qual é qual.
+  const vend = e.contexto.vendedor;
+  if (vend.tipo === "ti" && (vend.regiao === "madeira" || vend.regiao === "acores")) {
+    const regiaoNome = vend.regiao === "madeira" ? "Madeira" : "Açores";
+    avisos.push({
+      id: "irs-regiao-autonoma",
+      severidade: "info",
+      titulo: `O IRS aqui usa as taxas do continente — na ${regiaoNome} é mais baixo`,
+      texto: `Se resides fiscalmente na ${regiaoNome}, as tuas taxas de IRS são 30% inferiores às do continente em todos os escalões, e essa redução aplica-se a todo o rendimento englobado — o da tua atividade incluído. O IRS que entra neste cálculo é o nacional, por isso o preço que te propomos é conservador: cobre mais imposto do que vais pagar. Não é motivo para baixar o preço sem contas — é motivo para saberes que tens folga a mais, e não a menos.`,
+      fonte: "Lei Orgânica 2/2013 (Finanças das Regiões Autónomas) — diferencial de 30% nas taxas do Art. 68.º CIRS",
+      fonteUrl: "https://diariodarepublica.pt/dr/detalhe/lei-organica/2-2013-499317",
     });
   }
 

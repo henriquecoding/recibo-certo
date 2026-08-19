@@ -110,6 +110,13 @@ export interface EntradaSituacaoIVAPreco {
   regiao: Regiao;
   escalaoVenda: EscalaoIVA;
   /**
+   * É um ato isolado? Muda a regra: NUNCA é isento pelo Art. 53.º, por
+   * muito baixo que seja o valor (n.º 6, al. a). Quem passa um recibo único
+   * e conclui «não chego ao limiar, logo não levo IVA» engana-se — e só
+   * descobre depois.
+   */
+  atoIsolado?: boolean;
+  /**
    * Volume de negócios anual DECLARADO pelo utilizador. É o único número
    * com autoridade para corrigir o regime — ver o cabeçalho.
    */
@@ -131,7 +138,14 @@ export interface EntradaSituacaoIVAPreco {
  * que é a regra que decide o caso dele — e que continua a corrigi-lo se a
  * faturação declarada provar que a isenção já caiu.
  */
-function entidadeDe(tipo: TipoVendedor | undefined, pediuIsencao: boolean): EntidadeIVA {
+function entidadeDe(
+  tipo: TipoVendedor | undefined,
+  pediuIsencao: boolean,
+  atoIsolado: boolean,
+): EntidadeIVA {
+  // O ato isolado manda sobre tudo: a sua regra é do próprio Art. 53.º e
+  // não é uma preferência do utilizador que se possa contrariar.
+  if (atoIsolado) return "ato_isolado";
   return tipo === "empresa" && !pediuIsencao ? "sociedade" : "ti";
 }
 
@@ -179,6 +193,7 @@ function escolhaParaMotor(
  */
 export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAPreco {
   const { regime, regiao, escalaoVenda, tipoVendedor, primeiroAno } = entrada;
+  const atoIsolado = !!entrada.atoIsolado;
 
   const faturacaoConsiderada = naoNegativo(entrada.faturacaoAnual);
   const temFaturacao = faturacaoConsiderada > 0;
@@ -193,7 +208,7 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
     faturacaoAnual: faturacaoConsiderada,
     regiao,
     regimeEscolhido,
-    entidade: entidadeDe(tipoVendedor, pediuIsencao),
+    entidade: entidadeDe(tipoVendedor, pediuIsencao, atoIsolado),
     primeiroAno,
     isentoPorNatureza,
   });
@@ -215,9 +230,13 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
   //  · nao_sei/normal  → o motor decide, que é para isso que ele existe.
   const isentoEfetivo = isentoPorNatureza
     ? true
-    : pediuIsencao
-      ? !corrigidaPeloLimiar
-      : derivada.regimeEfetivo === "isento";
+    : atoIsolado
+      ? // Art. 53.º n.º 6 a): num ato isolado não há isenção por limiar,
+        // escolha nenhuma a repõe, e o motor já devolveu a taxa devida.
+        derivada.regimeEfetivo === "isento"
+      : pediuIsencao
+        ? !corrigidaPeloLimiar
+        : derivada.regimeEfetivo === "isento";
 
   const comum = {
     escalaoVenda,

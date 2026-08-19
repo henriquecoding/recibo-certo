@@ -48,6 +48,8 @@ export { margemDeMarkup, markupDeMargem } from "./motores/margem";
 export { calcularTempo, capacidadeMensal, valorHoraImplicito } from "./motores/tempo";
 export { situacaoIVAPreco, custoRelevante, taxaDe, pvpDe, liquidoDe } from "./motores/iva";
 export { fracoesFiscais, fracaoRetencao } from "./motores/fiscal-ti";
+export { converterParaSocio, type ConversaoSociedade } from "./motores/sociedade";
+export { calcularTesouraria, type Tesouraria, type LinhaTesouraria } from "./motores/tesouraria";
 export {
   precoPorMargem,
   precoPorMarkup,
