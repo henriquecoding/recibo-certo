@@ -6,6 +6,11 @@
 > que ordem, e como o resultado é mostrado**.
 >
 > Escrito a 2026-08-19, contra a v2.78.0 da ferramenta.
+>
+> **ESTADO: aplicado na v2.85.0.** As cinco fases e os três extras estão
+> feitos. O diagnóstico fica como registo do que estava errado e do que se
+> decidiu — não como trabalho por fazer. O que ficou em aberto está no fim,
+> em §5. A descrição do que existe hoje está em `pricing-ux-flow.md`.
 
 ---
 
@@ -351,20 +356,38 @@ Testes novos em `preco-navegacao.test.ts`:
 
 ---
 
-## 5. O que fica deliberadamente de fora
+## 5. O que ficou de fora — e o que entrou depois
 
-- **Adotar `ResultadoExplicado`.** É a componente que a skill manda usar e não é
-  usada por **nenhuma** ferramenta da aplicação — é um Server Component com
-  props estáticas, incompatível com um resultado que recalcula a cada tecla.
-  Adotam-se aqui as suas **seis camadas** e o seu rodapé de `escolherRota()`;
-  reconciliar o componente com o resto da aplicação é um trabalho próprio e
-  maior do que este.
-- **Ligar `simulator_complete`/`result_view` às outras 14 ferramentas.** O mesmo
-  buraco existe em toda a aplicação. Aqui fecha-se para esta ferramenta.
+Três dos cinco itens que este plano tinha deixado de fora foram feitos a
+seguir, um de cada vez, a pedido:
+
+- **`ResultadoExplicado` — FEITO.** Não era incompatível com um resultado
+  interativo: já importa um componente de cliente, e o Next compila-a como
+  cliente quando o pai o é. O que estava errado era o comentário, que se lia
+  como «não serve para ferramentas interativas». Entra como **conclusão** do
+  resultado e não como moldura dele — as seis camadas são uma ordem, não um
+  cartão único —, e traz as quatro que não existiam em lado nenhum: como
+  chegámos aqui, o que fazer, **fontes e limites** e o próximo passo. Ver
+  `components/precos/ConclusaoPreco.tsx`.
+
+- **Medição nas outras ferramentas — FEITO.** Entrou no `ToolShell`, que já
+  envolve a zona interativa das quinze, e não em quinze componentes: quinze
+  definições de «acabou» produzem dados que não se somam. Ver
+  `components/ferramentas/MedidorFerramenta.tsx`.
+
+- **Comparar vários produtos — FEITO.** `/dashboard/precos`. Os números são
+  recalculados com as taxas de hoje, porque comparar dois preços guardados em
+  anos fiscais diferentes não é comparar. Vive no dashboard e não em
+  `/ferramentas` — esse lado da casa é público e entra no sitemap.
+
+Continuam deliberadamente de fora:
+
 - **Preços de mercado / benchmarks por setor.** «Nunca inventar preço de
   mercado» continua a valer. Só se usam âncoras com fonte
   (`TAXA_FATURAVEL_PADRAO`, `CANAIS_COMISSAO`).
-- **Comparar vários produtos lado a lado.** Guardar com nome abre a porta;
-  a grelha de comparação é outra entrega.
 - **Partilhar por link.** Encodar o contexto na URL põe custos de fornecedor no
-  histórico do browser e na área de transferência. Precisa de decisão de produto.
+  histórico do browser e na área de transferência. Precisa de decisão de
+  produto, não de código.
+- **A medição nas versões `/dashboard/*` das ferramentas.** O medidor vive no
+  `ToolShell`, e essas rotas não o usam. As rotas canónicas — as que a pesquisa
+  encontra — são as de `/ferramentas`, e são essas que ficam cobertas.

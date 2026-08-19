@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.85.0",
+    data: "2026-08-19",
+    titulo: "A calculadora de preço passou a dizer-te o que estava a assumir por ti",
+    itens: [
+      "Havia um problema silencioso e caro: escrevias um número em qualquer campo e a ferramenta deixava de dizer «isto é um exemplo» e passava a dizer «QUANTO DEVES COBRAR» — com o à-vontade de um conselho, por cima de vinte e cinco pressupostos que nunca confirmaste. Agora contamos quais respondeste mesmo. Enquanto faltar alguma coisa, o resultado assume-se como estimativa, diz-te exatamente o que está a assumir por ti, com que valor, e leva-te ao campo que o resolve.",
+      "A barra que explica «a cada venda» explicava o número errado. Em cima aparecia o preço com IVA; a barra somava o preço sem IVA — e o IVA, que é a segunda maior fatia, não aparecia em lado nenhum. Quem somasse as parcelas com o dedo no ecrã não chegava ao total, e é assim que se deixa de acreditar nas outras contas. Passa a fechar ao cêntimo, com o IVA marcado como o que é: dinheiro que passa pela tua conta e não é teu.",
+      "Os avisos importantes nasciam quatro ecrãs abaixo do preço a que se referiam. «A este preço cada venda tira-te dinheiro» ficava depois de todos os campos avançados e da memória de cálculo. Passam a estar colados ao número.",
+      "As caixas do modo preciso eram dez, todas fechadas, todas iguais, nenhuma a dizer o que tinha lá dentro. Agora cada uma diz o estado («3 contas · 320 €/mês» ou «por preencher»), o que muda no preço, e sobe ao topo quando é ela que está a fazer falta ao cálculo. E podes repor uma sem perder o resto.",
+      "Perguntas que mudavam o preço e nunca eram feitas: em que ano de atividade estás — no primeiro, o coeficiente do IRS é reduzido a metade —, se compras mais barato em quantidade, se o canal cobra uma parcela fixa por venda, e o preço de referência que vais anunciar num desconto, que a lei obriga a ser o mais baixo dos últimos 30 dias. Quem faz um bolo com farinha, ovos e cobertura também já pode listar as três, e não só a primeira.",
+      "«Não há preço possível com estes números» era uma parede vermelha e mais nada. Agora mostra para onde vai cada euro que cobras, qual é a margem máxima que as tuas contas aguentam, e tem um botão que a aplica. Uma comissão de 15% cobrada sobre o valor com IVA come 18,45% do valor sem IVA — e é isso, quase sempre, e não a margem que pediste.",
+      "Coisas que já eram calculadas e nunca chegavam ao ecrã: o efeito do desconto (o máximo que aguentas, e quantas unidades a mais tens de vender para ficar na mesma — com 35% de margem, um desconto de 20% obriga a vender mais 133%), o percurso do dinheiro de «o cliente paga X» a «fica-te Y», e o caminho inverso: «quero ganhar 2 000 € por mês, o que cobro?».",
+      "Podes guardar cada preço com um nome e vê-los lado a lado em «Os meus preços», no teu painel. Os números são recalculados com as taxas de hoje — comparar um preço guardado o ano passado com um de agora, cada um com a sua tabela de imposto, não é comparar. E há uma linha que só faz sentido com a lista toda à frente: quantos dos teus produtos estão a perder dinheiro em cada venda.",
+      "O resultado passou a dizer onde para. Não cobre o que o mercado aceita, o IRS é uma taxa marginal estimada, e os preçários dos canais são de terceiros com data de verificação. Um limite por dizer é uma promessa implícita de que está tudo coberto.",
+      "Em desktop, os campos e o preço ficam lado a lado, e uma barra fina no topo mantém o número à vista enquanto preenches o resto. Em telemóvel nada muda de ordem: continua a ver-se o preço antes dos campos avançados.",
+      "Para quem navega por teclado: os grupos de opções passaram a responder às setas, como um grupo de rádios a sério. Para quem usa leitor de ecrã: o preço deixou de mudar em silêncio, e a ajuda de cada campo passou a estar ligada ao campo — antes existia só dentro de um balão que o leitor não anunciava.",
+    ],
+  },
+  {
     version: "2.84.0",
     data: "2026-08-19",
     titulo: "Quem vive na Madeira ou nos Açores deixa de pagar IRS a mais nas nossas contas",

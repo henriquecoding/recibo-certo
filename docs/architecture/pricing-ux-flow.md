@@ -1,5 +1,10 @@
 # Fluxo UX — Pricing Engine
 
+> Reescrito a 2026-08-19 (v2.85.0). A versão anterior descrevia um nível 4
+> que não existia, uma medição que não disparava e um modo preciso que não
+> dizia o que tinha lá dentro. Este documento descreve o que está no ecrã.
+> O diagnóstico que levou à reestruturação está em `pricing-ux-restructure.md`.
+
 ## A decisão que governa todas as outras
 
 Não se pergunta o custo antes de saber **o que a pessoa está a vender**.
@@ -9,102 +14,152 @@ diferentes. Perguntar «qual é o custo unitário?» antes de saber qual deles �
 obriga a pessoa a traduzir a sua vida para o vocabulário da ferramenta. A
 inversão é o produto inteiro: é a ferramenta que se adapta.
 
-## Os quatro níveis
+## Três zonas que nunca trocam de sítio
 
 ```
-Nível 1 — cenário          uma pergunta, onze respostas possíveis
-Nível 2 — modo rápido      no máximo 5 campos → resultado imediato
-Nível 3 — modo preciso     blocos dobráveis, um por família de custos
-Nível 4 — simulação        slider, cenários, «e se…», objetivo invertido
+DEFINIR                    PREÇO                      DECIDIR
+cenário                    resumo fixo (56 px)        conclusão (6 camadas)
+o essencial (≤5 campos)    cartão de preço            guardar · copiar · imprimir
+afinar (checklist)         avisos graves              comparar · próximo passo
+memória de cálculo         pressupostos assumidos
+                           desconto · caixa
+                           tesouraria · sociedade
+                           experimentar · objetivo
+                           invertido · cenários
 ```
 
-Não há botão «calcular». O resultado existe desde o primeiro segundo e vai-se
-afinando. É o que transforma o preenchimento de um formulário numa conversa.
+Em mobile é uma coluna, pela ordem do DOM: **essencial → resultado → afinar**.
+Em `lg:` a grelha reposiciona as mesmas caixas em duas colunas sem trocar a
+leitura por teclado nem por leitor de ecrã.
+
+---
 
 ## Nível 1 — «O que queres definir?»
 
-Onze cartões, cada um com um exemplo concreto:
+Doze cenários, agrupados em quatro famílias — vendo uma coisa / vendo o meu
+tempo / vendo através de um canal / sei o que quero ganhar — mais uma saída
+explicada para quem não se reconhece em nenhum.
 
-| Cenário | Exemplo que o torna reconhecível |
+O agrupamento não reduz as opções; reduz quantas é preciso comparar de cada
+vez. Cada cartão traz um exemplo concreto («bolo de aniversário», não «produto
+físico») e diz quantas perguntas faltam até ao primeiro preço.
+
+## Nível 2 — o essencial
+
+Regra dura: **no máximo cinco campos** antes do primeiro resultado. Cada
+cenário declara os seus em `pricing/perguntas.ts` — dados, não `if`.
+
+Cada campo tem `descricao` visível e ligada por `aria-describedby` (o que evita
+o erro) e, quando há detalhe legal, um `InfoTip` (a base legal). A ajuda que
+evita o erro nunca vive só atrás de um clique.
+
+## Nível 3 — afinar
+
+Os blocos do modo preciso são uma **checklist**, não dez caixas anónimas. Cada
+linha diz, antes de se abrir:
+
+| | |
 |---|---|
-| Produto para revender | Roupa, acessórios, eletrónica |
-| Produto que faço eu | Artesanato, bolos, cosmética, mobiliário |
-| Produto digital | Ebook, curso, template, licença |
-| Serviço | Consultoria, design, limpeza, fotografia |
-| Preço por hora | Explicações, aulas, assistência |
-| Projeto com preço fechado | Um site, uma obra, uma campanha |
-| Encomenda por medida | Bolo de aniversário, peça personalizada |
-| Loja online | Shopify, WooCommerce, site próprio |
-| Marketplace | Amazon, Worten, Fnac, OLX |
-| Sei quanto quero ganhar | «Quero 2 000 €/mês — o que cobro?» |
-| Ainda não tenho a certeza | Começa pelo mais simples |
+| estado | «3 contas · 320,00 €/mês» ou «por preencher» |
+| impacto | «muda o preço mínimo e o equilíbrio» |
+| urgência | destacada quando um aviso do motor a aponta como em falta |
 
-O exemplo não é decoração: é o que faz a pessoa reconhecer-se. «Produto físico»
-é uma categoria; «bolo de aniversário» é a vida dela.
+A ordem base é a que o cenário declara; o que está em falta sobe ao topo.
+Tudo vem de `pricing/blocos.ts`. Cada bloco tem «repor», cirúrgico: devolve os
+campos dele — e só esses — aos valores de partida do cenário.
 
-## Nível 2 — o modo rápido
+## Nível 4 — experimentar
 
-Regra dura: **no máximo cinco campos** antes do primeiro resultado. O que não
-couber tem valor por omissão declarado e visível, e o resultado diz o que
-assumiu.
+- **Slider de preço** — margem, lucro por venda, lucro mensal e break-even
+  movem-se ao mesmo tempo. Marca quando se passa abaixo do piso.
+- **Objetivo invertido** — «quero ganhar X por mês, o que cobro?» e «consigo
+  cobrar Y, quantas vendo?». Usa `motores/objetivo.ts`.
+- **Comparar cenários** — conservador / recomendado / ambicioso, mais os
+  botões «e se eu…».
 
-Cada cenário declara os seus campos em `pricing/perguntas.ts` — dados, não `if`.
-Um cenário novo entra lá e a interface segue-o.
+---
 
-## Nível 3 — o modo preciso
+## O estado de preenchimento
 
-Blocos dobráveis, fechados por omissão, um por família:
+O que distingue esta ferramenta de uma calculadora: ela sabe o que **não**
+sabe.
 
-1. **O teu enquadramento fiscal** — o que mais muda o preço em Portugal
-2. **Contas que pagas mesmo sem vender** — custos fixos
-3. **Custos que só existem quando vendes** — variáveis, desperdício, portes
-4. **Comissões e meios de pagamento**
-5. **Devoluções**
-6. **As tuas horas a sério** (serviços)
-7. **Como produzes** (produção própria)
-8. **Custo de trazer o cliente** (CAC)
-9. **Desconto ou promoção**
-10. **Já tinhas um preço em mente?**
+`pricing/preenchimento.ts` mantém o conjunto de campos que a pessoa respondeu
+mesmo — não «tem um valor», que todos têm desde o primeiro segundo. Daí saem
+três estados:
 
-O título de cada bloco é a pergunta, não a categoria contabilística. «Contas que
-pagas mesmo sem vender» ensina o conceito de custo fixo sem usar a expressão.
+| | |
+|---|---|
+| `exemplo` | ninguém tocou em nada; o número é do cenário |
+| `estimado` | falta parte do essencial, **e diz-se o quê** |
+| `completo` | o essencial está respondido; o número é dela |
 
-## Nível 4 — a simulação
+É o mesmo `estimado`/`completo` que `simulator_complete` e `escolherRota()`
+esperam, e é o que impede uma rota comercial de abrir sobre um número que
+ninguém alimentou.
 
-- **Slider de preço** — margem, lucro, lucro mensal e break-even movem-se ao
-  mesmo tempo. Marca visualmente quando se passa abaixo do piso.
-- **Comparar cenários** — conservador / recomendado / ambicioso, mais os botões
-  «e se eu…» que acrescentam uma variação.
-- **Objetivo invertido** — «quero ganhar X» e «consigo cobrar Y».
+O bloco **«estamos a assumir»** lista cada campo em falta com o valor que está
+a ser usado, porque é que ele muda o preço, e um salto para o corrigir.
+
+---
+
+## O resultado
+
+**Resumo fixo (56 px)** — o único elemento pegajoso da página. O cartão tem
+~830 px e não pode sê-lo; a conclusão certa não era «o número pode sair do
+ecrã», era que o que fica fixo tem de ser pequeno.
+
+**Cartão de preço** — o número, a faixa como **escala** (com as zonas de
+prejuízo e sustentável e o preço recomendado marcado), a decomposição do PVP e
+as quatro métricas.
+
+**Secções irmãs**, cada uma só quando tem o que dizer: efeito do desconto,
+percurso do dinheiro (`caixa`), calendário de tesouraria, conversão para
+sociedade.
+
+**Conclusão** — `ResultadoExplicado`, com as seis camadas: como chegámos aqui,
+o que fazer, cenários, as ações locais, fontes e **limites**, e o próximo
+passo escolhido por `escolherRota()`.
+
+### Quando não há preço possível
+
+Um diagnóstico, nunca uma parede: para onde vai cada euro (com as comissões
+sobre o bruto convertidas para fração do líquido, que é onde a margem se mede),
+qual é o teto real, e um botão que aplica a margem máxima que resolve.
+
+---
 
 ## Mobile
 
-O resultado vem **primeiro** (`order-1`), os campos a seguir. Em desktop
-inverte-se e o resultado fica fixo (`lg:sticky`). Não é uma versão reduzida do
-desktop: em mobile a pessoa quer o número, e o número aparece antes do
-formulário.
-
-Todos os alvos ≥ 36 px. A tabela de cenários transborda com scroll horizontal
-alcançável por teclado (`tabIndex` + `role="region"` com nome).
+O resultado vem antes dos campos avançados, na ordem do DOM. Todos os alvos
+≥ 36 px. As tabelas transbordam com scroll horizontal alcançável por teclado
+(`tabIndex` + `role="region"` com nome).
 
 ## O que a interface nunca faz
 
-- **Não substitui o preço recomendado por um preço psicológico.** As terminações
-  comerciais vivem numa coluna à parte, com o custo em margem calculado.
-- **Não esconde que está a perder dinheiro.** Um preço abaixo do piso traz um
-  aviso vermelho com o valor exato da perda por venda.
-- **Não apresenta um número sem faixa.** Dois decimais sozinhos são falsa
-  precisão sobre dados que a pessoa estimou de cabeça.
-- **Não chama inteligência artificial a uma sequência de contas.** As
-  recomendações explicam-se («o preço subiu porque acrescentaste 15% de
-  comissão»), não se anunciam.
-- **Não pede conta, email nem registo.** O contexto fica no cofre local do
-  dispositivo.
+- **Não substitui o preço recomendado por um preço psicológico.** As
+  terminações comerciais vivem à parte, com o custo em margem calculado — e
+  adotar uma é uma escolha explícita.
+- **Não esconde que está a perder dinheiro.** A barra fica maior do que o
+  preço e o aviso `perigo` nasce colado ao número.
+- **Não apresenta um número sem faixa.** O cabeçalho da conclusão é um
+  intervalo.
+- **Não chama inteligência artificial a uma sequência de contas.**
+- **Não pede conta, email nem registo.** Guardar, copiar e imprimir acontecem
+  no dispositivo. Não há «partilhar por link»: encodar o contexto na URL punha
+  custos de fornecedor no histórico do browser.
 
 ## Medição
 
-Usa o dicionário de eventos que já existe (`analytics/eventos.ts`):
-`simulator_start`, `simulator_step`, `simulator_complete`, `result_view`. O
-briefing pedia eventos `pricing_*` próprios; criar um segundo dicionário
-paralelo seria o mesmo defeito que o catálogo de ferramentas corrigiu. A
-barreira de PII do módulo aplica-se automaticamente.
+`simulator_start` (entrada), `simulator_step` (cada campo respondido pela
+primeira vez), `simulator_complete` (o essencial todo respondido) e
+`result_view` (primeira vista de um número que não é exemplo). Mais
+`result_save` e `result_export`.
+
+Nenhum valor sai — mede-se a forma do percurso, nunca o negócio de quem o
+percorre, e há um teste que reprova qualquer «pvp», «margem» ou «custo» no
+payload.
+
+As outras catorze ferramentas são medidas pelo `ToolShell`, via
+`MedidorFerramenta`. Esta mede-se a si própria porque sabe uma definição
+melhor de «concluído», e passa `medir={false}` para não contar duas vezes.
