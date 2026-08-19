@@ -106,18 +106,22 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   // cobertura dos dados e histórico de correções fiscais. Prioridade alta
   // porque são o que sustenta a confiança em tudo o resto — e o que um
   // motor de resposta precisa de encontrar para nos poder citar.
-  // ⚠️ AO FAZER MERGE: acrescentar aqui as duas rotas da plataforma de
-  // contabilistas, e em `REVISOES_MANUAIS` a data real da publicação:
-  //
-  //   { path: "/contabilistas",             changeFrequency: "weekly",  priority: 0.8 },
-  //   { path: "/contabilistas/candidatura", changeFrequency: "monthly", priority: 0.5 },
-  //
-  // Ficam de fora enquanto a branch não é publicada porque as duas
+  // A plataforma de contabilistas. Esteve fora desta lista até ao dia da
+  // publicação, e o comentário que aqui estava explicava porquê: as duas
   // invariantes de `crescimento.test.ts` — «toda a rota pública tem data
-  // material» e «nenhuma data é a do build» — só se podem cumprir as duas
-  // com a data verdadeira da publicação, que ainda não existe. Anunciar no
-  // sitemap uma página que ainda não está no ar, com uma data inventada
-  // para o teste passar, seria mentir duas vezes para não falhar uma.
+  // material» e «nenhuma data é a do build» — só se cumprem as duas com a
+  // data verdadeira, e anunciar no sitemap uma página que ainda não está
+  // no ar seria mentir duas vezes para não falhar uma.
+  //
+  // Publicadas a 19-08-2026 (versão 2.83.0); a data está em
+  // `REVISOES_MANUAIS`, que é onde ela é lida.
+  //
+  // O diretório leva `weekly` e prioridade alta porque muda com cada
+  // contabilista aprovado. A candidatura leva `monthly` e prioridade mais
+  // baixa: é uma página de conversão, não de descoberta — quem a procura
+  // chega-lhe pelo diretório ou por uma ligação direta.
+  { path: "/contabilistas",             changeFrequency: "weekly",  priority: 0.8 },
+  { path: "/contabilistas/candidatura", changeFrequency: "monthly", priority: 0.5 },
   //
   // Os PERFIS individuais (`/contabilistas/[slug]`) nunca entram: dependem
   // de quem está aprovado num dado momento, e um sitemap estático a

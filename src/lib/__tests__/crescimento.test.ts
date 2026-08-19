@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   CATALOGO,
   EVENTOS_SO_SERVIDOR,
@@ -30,6 +32,19 @@ import { DATA_LAST_REVIEW } from "@/lib/fiscal-data";
 // ═══════════════════════════════════════════════════════════════════════
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+const RAIZ = process.cwd();
+
+/**
+ * Sem comentários de linha nem de bloco.
+ *
+ * Os testes que leem código-fonte procuram o que CORRE. Um comentário a
+ * explicar «isto já foi `new Date()`» faria falhar exatamente o teste que
+ * existe para garantir que já não é.
+ */
+const semComentarios = (fonte: string) =>
+  fonte.replace(/\/\*[\s\S]*?\*\//g, "")
+       .split("\n").filter((l) => !l.trim().startsWith("//")).join("\n");
 
 describe("medição: dicionário de eventos", () => {
   it("todo o evento declarado tem disparo, pergunta que serve e origem", () => {
@@ -431,11 +446,59 @@ describe("frescura de indexação: lastmod material", () => {
     expect(semData).toEqual([]);
   });
 
-  it("nenhuma data de revisão é a data do build", () => {
-    // A regressão que este ficheiro existe para impedir.
+  // ⚠️ ESTE TESTE MUDOU DE FORMA, E A RAZÃO IMPORTA
+  //
+  // Era: «nenhuma data de revisão é igual a hoje». Um proxy para a
+  // regressão verdadeira — `lastModified = new Date()` no sitemap, que
+  // punha a data do build em todas as URLs — e um proxy com dois defeitos.
+  //
+  //  1. Tinha uma porta aberta: `|| DATA_LAST_REVIEW === hoje` desligava a
+  //     verificação inteira em qualquer dia de revisão fiscal.
+  //
+  //  2. Dava falso positivo no único dia em que uma data verdadeira é
+  //     hoje: o dia em que uma página é publicada. A instrução em
+  //     `seo.ts` mandava escrever «a data real da publicação» ao fazer
+  //     merge; se o merge é hoje, a data real é hoje, e o teste recusava-a.
+  //     Um teste que empurra para escrever a data de ontem é um teste que
+  //     empurra para mentir.
+  //
+  // Passa a verificar o MECANISMO em vez do sintoma: uma data escrita à
+  // mão no código-fonte não pode virar «a data do build» amanhã, porque
+  // não é lida de relógio nenhum. O que tem de ser proibido é o relógio.
+  it("o sitemap não lê a data de nenhum relógio", () => {
+    const fonte = readFileSync(join(RAIZ, "src/app/sitemap.ts"), "utf8");
+    const codigo = semComentarios(fonte);
+    expect(codigo, "o sitemap voltou a derivar datas do relógio")
+      .not.toMatch(/new Date\(\s*\)|Date\.now\(/);
+  });
+
+  it("as datas manuais são literais no código, nunca calculadas", () => {
+    const fonte = readFileSync(join(RAIZ, "src/lib/revisoes.ts"), "utf8");
+    const bloco = /REVISOES_MANUAIS[^=]*=\s*\{([\s\S]*?)\n\};/.exec(fonte);
+    expect(bloco, "não encontrei o bloco de REVISOES_MANUAIS").not.toBeNull();
+
+    const corpo = semComentarios(bloco![1]);
+    expect(corpo, "uma data manual passou a ser calculada")
+      .not.toMatch(/new Date\(|Date\.now\(|toISOString/);
+
+    // Cada valor é uma data literal, ou uma constante declarada — e nunca
+    // uma expressão. `DATA_LAST_REVIEW` é legítima: é ela própria um
+    // literal, e tem o seu próprio teste.
+    for (const [, valor] of corpo.matchAll(/^\s*"[^"]+":\s*([^,]+),/gm)) {
+      const v = valor.trim();
+      expect(
+        /^"\d{4}-\d{2}-\d{2}"$/.test(v) || /^[A-Z_][A-Z0-9_]*$/.test(v),
+        `«${v}» não é uma data literal nem uma constante`,
+      ).toBe(true);
+    }
+  });
+
+  it("nenhuma data de revisão está no futuro", () => {
+    // O que sobra do proxy antigo, e que continua a valer: uma data à
+    // frente de hoje não é uma revisão, é um engano de dedo.
     const hoje = new Date().toISOString().slice(0, 10);
     const datas = PUBLIC_ROUTES.map((r) => revisaoDaRota(r.path)).filter(Boolean) as string[];
-    expect(datas.every((d) => d !== hoje) || DATA_LAST_REVIEW === hoje).toBe(true);
+    for (const d of datas) expect(d <= hoje, d).toBe(true);
   });
 
   it("comoData recusa lixo em vez de devolver uma data inválida", () => {

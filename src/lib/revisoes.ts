@@ -56,20 +56,17 @@ export const REVISOES_MANUAIS: Record<string, string> = {
   "/metodologia": DATA_LAST_REVIEW,
   "/estado-dos-dados": DATA_LAST_REVIEW,
   "/changelog-fiscal": DATA_LAST_REVIEW,
-  // ⚠️ A plataforma de contabilistas (`/contabilistas` e
-  // `/contabilistas/candidatura`) ainda NÃO tem data aqui, e é deliberado.
+  // A plataforma de contabilistas. Estas datas estiveram ausentes de
+  // propósito até ao dia do merge — a data material de uma página é o dia
+  // em que ela é publicada, e escrevê-la antes disso era inventar uma
+  // revisão que não tinha ocorrido.
   //
-  // A data material destas páginas é o dia em que forem publicadas, e esse
-  // dia é o do merge — que ainda não aconteceu. Escrever agora uma data
-  // seria inventar uma revisão que não ocorreu, exatamente o problema que
-  // este ficheiro existe para resolver.
-  //
-  // Sem entrada, `revisaoDaRota` devolve `null` e o sitemap OMITE o
-  // `lastModified` (ver `app/sitemap.ts`) — dizer nada é melhor do que
-  // dizer uma data falsa.
-  //
-  // AO FAZER MERGE PARA `main`: acrescentar as duas linhas com a data real
-  // da publicação.
+  // Publicadas a 19 de agosto de 2026, com a versão 2.83.0: a mediação de
+  // mensagens acabou, o diretório passou a ser onde a pessoa escolhe, e a
+  // candidatura deixou de ser um formulário para passar a explicar o
+  // programa inteiro. Não é uma correção de texto — é outra página.
+  "/contabilistas": "2026-08-19",
+  "/contabilistas/candidatura": "2026-08-19",
 };
 
 const maisRecente = (datas: readonly string[]): string =>
