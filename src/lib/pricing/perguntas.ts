@@ -306,6 +306,33 @@ export const CENARIOS_INICIAIS_DEF: DefinicaoCenarioInicial[] = [
     }),
   },
   {
+    // ── Ato isolado ────────────────────────────────────────────────
+    //  A regra que distingue este cenário de todos os outros: um ato
+    //  isolado NUNCA é isento de IVA pelo Art. 53.º, por muito baixo que
+    //  seja o valor (Art. 53.º, n.º 6, al. a). Quem passa um recibo único
+    //  e assume que «não chega ao limiar, logo não levo IVA» está a
+    //  engamar-se, e é um erro que só se descobre depois.
+    //
+    //  `situacaoIVA()` já sabia disto — faltava um cenário que lhe dissesse
+    //  que a entidade é um ato isolado.
+    chave: "ato_isolado",
+    rotulo: "Um ato isolado",
+    exemplo: "Um trabalho pontual, sem abrir atividade",
+    icone: "FileSign",
+    rapido: ["custo_compra", "margem", "iva"],
+    avancado: ["custos_variaveis", "fiscalidade", "comissoes"],
+    contexto: com((c) => {
+      c.cenario = "ato_isolado";
+      c.vendedor.tipo = "ti";
+      // Nunca isento pelo limiar: é a regra do cenário, e o motor confirma-a.
+      c.vendedor.regimeIVA = "normal";
+      c.canal = { canal: "venda_direta", cliente: "empresa_pt" };
+      c.produto.natureza = "servico";
+      c.volume = { unidadesMes: 1 };
+      c.objetivo = { modo: "margem", percentagem: 0.4 };
+    }),
+  },
+  {
     chave: "nao_sei",
     rotulo: "Ainda não tenho a certeza",
     exemplo: "Começa pelo mais simples e vamos descobrindo",

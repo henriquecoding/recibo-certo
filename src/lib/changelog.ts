@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.82.0",
+    version: "2.83.0",
     data: "2026-08-19",
     titulo: "Ninguém do Recibo Certo volta a ler a tua conversa com o teu contabilista",
     itens: [
@@ -29,6 +29,20 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Para contabilistas: os primeiros dez a serem aprovados ficam com 5% de comissão — a mais baixa da tabela — de imediato e enquanto a conta estiver ativa. Sem faturação mínima e sem prazo. É o reconhecimento de quem entra numa plataforma sem histórico e sem provas dadas, e o limite de dez é imposto pela base de dados, não por uma promessa.",
       "Esgotados esses dez, quem vier a seguir pode propor um valor próprio para subir de patamar e explicar porque é que faz sentido no caso dele. A proposta vai direta ao administrador, que aceita, contrapõe ou recusa — com uma razão escrita nos três casos. É além dos créditos de fidelidade, não em vez deles, e um valor acordado compra a percentagem e mais nada.",
       "A página de candidatura de contabilistas deixou de ser um formulário com três linhas por cima. Passa a explicar como um cliente chega até ti, o que custa (com a tabela de patamares real), o que o painel te dá, e — com o mesmo detalhe — o que a plataforma não vê.",
+    ],
+  },
+  {
+    version: "2.82.0",
+    data: "2026-08-18",
+    titulo: "A calculadora de preços passa a dizer-te quando é que o dinheiro sai",
+    itens: [
+      "Saber que deves reservar 18% de tudo o que faturas é uma abstração. Saber que a 25 de novembro te saem 340 € é uma coisa que podes fazer. A calculadora de preços passa a cruzar o preço com o calendário fiscal: quanto guardar por mês, e depois as próximas datas, cada uma com a quantia que lhe corresponde a este preço.",
+      "Com duas distinções que enganam muita gente e que aqui ficam explícitas: entregar a declaração periódica de IVA não é pagar o imposto — são datas diferentes, e o dinheiro só sai numa delas, por isso a quantia aparece uma vez e não duas. E a Segurança Social declara-se por trimestre mas paga-se todos os meses; quem confunde as duas coisas reserva a terça parte do que precisa, ou o triplo.",
+      "O IRS não entra nesse calendário, e isso é de propósito: quanto vais pagar depende do teu ano inteiro e da liquidação da Autoridade Tributária, não deste preço. Preferimos deixar a linha vazia e dizer porquê a mostrar-te um número plausível.",
+      "Quem tem sociedade deixa de ficar a meio da resposta. Antes a ferramenta dizia quanto lucro o preço dá à empresa e calava-se sobre quanto disso chega ao dono. Agora mostra o percurso todo — faturação, despesas, IRC e derrama, o que chega à tua conta — e mostra o lucro que fica na empresa ao lado, nunca como perda: continua a ser teu, está noutro bolso. O número que conta é a soma dos dois.",
+      "A dispensa de retenção na fonte (abaixo de 15 000 € por ano) e o IRS Jovem passam a contar. Nenhum dos dois muda a tua margem — mudam quando é que o dinheiro está na tua conta, que é coisa diferente e igualmente importante para quem tem de pagar contas ao dia 8.",
+      "O ato isolado passa a ter cenário próprio. É a situação em que mais gente se engana com o IVA, porque a isenção até 15 000 € simplesmente não se aplica: um ato isolado leva sempre IVA, mesmo que seja o único do ano.",
+      "E se resides na Madeira ou nos Açores, a ferramenta passa a avisar-te de que o IRS que usa nas contas é o do continente. As tuas taxas são 30% mais baixas em todos os escalões, e essa redução aplica-se ao rendimento da tua atividade. Ou seja: o preço que te propomos cobre mais imposto do que vais pagar. Preferimos dizer-te que temos folga a mais a deixar-te descobrir sozinho.",
     ],
   },
   {

@@ -47,6 +47,8 @@ import { calcularDesconto } from "./motores/desconto";
 import { calcularTempo } from "./motores/tempo";
 import { construirExplicacao } from "./motores/explicacao";
 import { reunirAvisos } from "./motores/avisos";
+import { converterParaSocio } from "./motores/sociedade";
+import { calcularTesouraria } from "./motores/tesouraria";
 
 /** Folga por omissão da âncora «margem confortável», em pontos de margem. */
 export const FOLGA_CONFORTAVEL_PADRAO = 0.1;
@@ -67,6 +69,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     faturacaoAnual: contexto.vendedor.faturacaoAnualPrevista,
     tipoVendedor: contexto.vendedor.tipo,
     primeiroAno: (contexto.vendedor.anoAtividade ?? 3) === 1,
+    atoIsolado: contexto.cenario === "ato_isolado",
   });
 
   // ── 2. Custos ──────────────────────────────────────────────────────
@@ -244,6 +247,11 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   });
 
   // ── 12. Fiscalidade em euros ───────────────────────────────────────
+  // ── 11-bis. Sociedade: do lucro operacional ao bolso do dono ───────
+  //  Camada POR CIMA, nunca dentro do solver: o IRC incide sobre o lucro e
+  //  não é fração da faturação. Ver o cabeçalho de `sociedade.ts`.
+  const sociedade = converterParaSocio({ contexto, precoLiquido, despesasAnuais });
+
   const fiscal = fiscalidadeVendedor({
     vendedor: contexto.vendedor,
     cliente: contexto.canal.cliente,
@@ -261,6 +269,19 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     entraNaConta: cent(pvp - fiscal.retencaoPorUnidade - comissoes.fixos - solver.fracaoBruto * pvp),
     saiDepois: cent(ivaEntregue + fiscal.ssPorUnidade + Math.max(0, fiscal.irsPorUnidade - fiscal.retencaoPorUnidade)),
   };
+
+  // ── 13-bis. Tesouraria: o mesmo dinheiro, mas com data ─────────────
+  //  `caixa` diz quanto sai por unidade. Isto diz QUANDO sai, juntando o
+  //  preço ao calendário de `prazos.ts`. O IVA que entra é o que se
+  //  ENTREGA (já líquido do dedutível), não o que se liquida — é esse o
+  //  que sai da conta.
+  const tesouraria = calcularTesouraria({
+    contexto,
+    ivaPorUnidade: ivaEntregue,
+    ssPorUnidade: fiscal.ssPorUnidade,
+    liquidaIVA: iva.liquida,
+    periodicidade: iva.periodicidade,
+  });
 
   // ── 14. Desconto ───────────────────────────────────────────────────
   const desconto =
@@ -350,8 +371,10 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
       liquidoPessoalPorUnidade: cent(fiscal.liquidoPessoalPorUnidade),
     },
     caixa,
+    tesouraria,
     explicacao,
     avisos,
+    sociedade,
     desconto,
     veredicto,
   };
