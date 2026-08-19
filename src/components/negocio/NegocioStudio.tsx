@@ -123,6 +123,32 @@ export default function NegocioStudio() {
   const [caixaAtiva, setCaixaAtiva] = useState(false);
   const retomou = useRef(false);
 
+  // ── O FOCO NÃO PODE CAIR NO CHÃO ──────────────────────────────────
+  //  Entrar na calculadora e voltar dela troca o ECRÃ INTEIRO: o
+  //  elemento que tinha o foco é desmontado e, sem nada a apanhá-lo, o
+  //  foco volta ao `<body>`. Quem navega por teclado carrega em «Tenho
+  //  uma ideia», a calculadora aparece — e o Tab seguinte recomeça no
+  //  topo do documento, percorrendo a navegação toda outra vez.
+  //
+  //  ⚠️ MEDIDO, NÃO IMAGINADO: `auditar-teclado-negocio.mjs` apanhou-o
+  //  («o foco não cai para o body ao trocar de ecrã») depois de o axe ter
+  //  dado zero violações nas 24 combinações. É a mesma falha que
+  //  `SeccaoRevelavel` já tinha corrigido para as secções — aqui é para
+  //  o ecrã inteiro, e nenhuma ferramenta automática de acessibilidade a
+  //  vê.
+  //
+  //  A primeira montagem NÃO conta: focar um contentor sem ninguém ter
+  //  pedido nada rouba o foco a quem acabou de chegar à página.
+  const palco = useRef<HTMLDivElement>(null);
+  const trocou = useRef(false);
+  useEffect(() => {
+    if (!trocou.current) {
+      trocou.current = true;
+      return;
+    }
+    palco.current?.focus();
+  }, [edicao]);
+
   // ── Retomar, uma vez, à entrada ─────────────────────────────────
   //  Duas origens, e a ORDEM importa: um projeto que a pessoa acabou de
   //  mandar reabrir a partir dos cenários guardados ganha sempre ao
@@ -216,7 +242,17 @@ export default function NegocioStudio() {
       "ofertaId" in edicao ? contexto.ofertas.find((o) => o.id === edicao.ofertaId) : undefined;
 
     return (
-      <m.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, ease: EASE }}>
+      <m.div
+        ref={palco}
+        // `-1` para receber o foco por programa sem entrar na ordem do
+        // Tab: quem passa por aqui a tabular não leva um passo extra.
+        tabIndex={-1}
+        aria-label="Definir o preço desta oferta"
+        className="focus:outline-none"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: EASE }}
+      >
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <p className="min-w-0 text-sm text-stone-600 dark:text-stone-300">
             {ofertaEmEdicao ? (
@@ -268,7 +304,7 @@ export default function NegocioStudio() {
   const temResultado = negocio.receitaSemIVAMes > 0;
 
   return (
-    <div className="space-y-4">
+    <div ref={palco} tabIndex={-1} aria-label="O teu negócio" className="space-y-4 focus:outline-none">
       <ResumoNegocio negocio={negocio} nome={contexto.nome} />
 
       {/* ── Cabeçalho do projeto ─────────────────────────────────── */}
