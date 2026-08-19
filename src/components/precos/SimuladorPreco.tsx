@@ -25,6 +25,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import {
+  avaliarPreenchimento,
   cenarioDeQuery,
   cenarioPorChave,
   precificar,
@@ -32,12 +33,13 @@ import {
   type ContextoPreco,
 } from "@/lib/pricing";
 import { registar } from "@/lib/analytics/cliente";
-import { gravarContextoPreco, lerContextoPreco, limparContextoPreco } from "@/lib/store/preco";
+import { gravarContextoPreco, lerEnvelopePreco, limparContextoPreco } from "@/lib/store/preco";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { ArrowLeft, ArrowRight } from "@/components/ui/Icons";
+import { ArrowLeft, ArrowRight, RotateCcw } from "@/components/ui/Icons";
 import CamposPreco from "./CamposPreco";
 import ResultadoPreco from "./ResultadoPreco";
 import AnuncioResultado from "./AnuncioResultado";
+import Pressupostos from "./Pressupostos";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
 import { CENARIOS_INICIAIS_DEF } from "@/lib/pricing";
@@ -50,6 +52,14 @@ const INFORMATIVOS: readonly SeveridadeAviso[] = ["info"];
 export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: string | null }) {
   const [cenario, setCenario] = useState<CenarioInicial | null>(() => cenarioDeQuery(cenarioInicial));
   const [contexto, setContexto] = useState<ContextoPreco | null>(null);
+
+  // ── O que a pessoa respondeu MESMO ────────────────────────────────
+  //  Não é o mesmo que «o campo tem um valor»: todos têm, desde o
+  //  primeiro segundo. Só isto distingue «o custo é 0 porque é um
+  //  ficheiro» de «o custo é 0 porque ainda não disse», e é dessa
+  //  distinção que sai a confiança do resultado. Ver
+  //  `lib/pricing/preenchimento.ts`.
+  const [respondidos, setRespondidos] = useState<Set<string>>(() => new Set());
   const iniciado = useRef(false);
   const retomou = useRef(false);
 
@@ -70,13 +80,15 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     if (retomou.current) return;
     retomou.current = true;
     if (cenario) return;
-    const lido = lerContextoPreco<ContextoPreco>(1);
-    if (lido?.cenario) {
-      setCenario(lido.cenario);
-      setContexto(lido);
+    const lido = lerEnvelopePreco<ContextoPreco>(1);
+    if (lido?.contexto.cenario) {
+      setCenario(lido.contexto.cenario);
+      setContexto(lido.contexto);
       // O que vem do cofre é trabalho já feito por esta pessoa, não um
-      // exemplo nosso.
-      setTocado(true);
+      // exemplo nosso. Um cofre da v1 não sabe QUAIS campos foram
+      // respondidos — só que houve trabalho —, por isso o resultado
+      // apresenta-se como estimativa até a pessoa voltar a tocar neles.
+      setRespondidos(new Set(lido.respondidos));
     }
   }, [cenario]);
 
@@ -119,8 +131,23 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   const voltarAoSeletor = () => {
     setCenario(null);
     setContexto(null);
+    setRespondidos(new Set());
     limparContextoPreco();
     irPara(null, true);
+  };
+
+  /**
+   * Recomeçar SEM sair do cenário.
+   *
+   * «Mudar» e «recomeçar» eram a mesma coisa, e não são: quem quer voltar
+   * a zero com o mesmo tipo de produto não quer escolher o cenário outra
+   * vez — quer o formulário limpo. Ter só o primeiro obrigava a passar
+   * pelo seletor para desfazer um engano num campo.
+   */
+  const recomecar = () => {
+    if (!cenario) return;
+    setContexto(cenarioPorChave(cenario).contexto());
+    setRespondidos(new Set());
   };
 
   useEffect(() => {
@@ -130,8 +157,8 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
   useEffect(() => {
     // Sem armazenamento a ferramenta continua a funcionar; só não retoma.
-    if (contexto) gravarContextoPreco(contexto);
-  }, [contexto]);
+    if (contexto) gravarContextoPreco(contexto, [...respondidos]);
+  }, [contexto, respondidos]);
 
   useEffect(() => {
     if (!cenario || iniciado.current) return;
@@ -155,10 +182,14 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   //  um número que a pessoa nunca introduziu, com a autoridade de um
   //  conselho. Enquanto ninguém tocar em nada, o resultado assume-se como
   //  exemplo — e diz-lo.
-  const [tocado, setTocado] = useState(false);
-
-  const atualizar = (patch: (c: ContextoPreco) => void) => {
-    setTocado(true);
+  //
+  //  ⚠️ ISTO JÁ FOI UM BOOLEANO, e um booleano vira-se com uma tecla:
+  //  bastava escrever um dígito no volume para o cartão passar de «Um
+  //  exemplo, por enquanto» a «QUANTO DEVES COBRAR», por cima de vinte e
+  //  cinco pressupostos por confirmar. Agora regista-se QUAL campo foi
+  //  respondido, e a confiança sai da lista do que ainda falta.
+  const atualizar = (campo: string, patch: (c: ContextoPreco) => void) => {
+    setRespondidos((a) => (a.has(campo) ? a : new Set(a).add(campo)));
     setContexto((atual) => {
       if (!atual) return atual;
       const copia = structuredClone(atual);
@@ -168,6 +199,10 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   };
 
   const resultado = useMemo(() => (contexto ? precificar(contexto) : null), [contexto]);
+  const preenchimento = useMemo(
+    () => (contexto ? avaliarPreenchimento(contexto, respondidos) : null),
+    [contexto, respondidos],
+  );
 
   // ── Passo 1: escolher o cenário ────────────────────────────────────
   if (!cenario || !contexto || !resultado) {
@@ -176,6 +211,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
   const definicao = cenarioPorChave(cenario);
   const temFiscalidade = resultado.fiscal.aplicavel;
+  const estadoPreenchimento = preenchimento?.estado ?? "exemplo";
 
   return (
     <div className="space-y-4">
@@ -185,14 +221,29 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           <span className="text-stone-500 dark:text-stone-400">Estás a calcular: </span>
           <strong className="text-stone-800 dark:text-stone-100">{definicao.rotulo.toLowerCase()}</strong>
         </p>
-        <button
-          type="button"
-          onClick={voltarAoSeletor}
-          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-dark underline-offset-2 dark:text-brand-mint hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-        >
-          <ArrowLeft size={13} />
-          Mudar
-        </button>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {/* «Recomeçar» e «mudar de cenário» eram a mesma coisa, e não
+              são: quem se enganou num campo não quer voltar ao seletor —
+              quer o formulário limpo, no mesmo cenário. */}
+          {respondidos.size > 0 ? (
+            <button
+              type="button"
+              onClick={recomecar}
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-stone-500 underline-offset-2 hover:text-brand-dark hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-400 dark:hover:text-brand-mint"
+            >
+              <RotateCcw size={12} />
+              Recomeçar
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={voltarAoSeletor}
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-brand-dark underline-offset-2 dark:text-brand-mint hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            <ArrowLeft size={13} />
+            Mudar
+          </button>
+        </div>
       </div>
 
       {/* ── O preço, e a maneira de lhe mexer, ficam juntos e em cima ──
@@ -225,8 +276,18 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           janela fica presa com o fundo cortado — e dar-lhe scroll próprio
           transformava metade do ecrã num painel que rouba a roda do rato. */}
       <div className="space-y-4">
-        <ResultadoPreco resultado={resultado} temFiscalidade={temFiscalidade} exemplo={!tocado} />
-        <AnuncioResultado resultado={resultado} exemplo={!tocado} />
+        <ResultadoPreco
+          resultado={resultado}
+          temFiscalidade={temFiscalidade}
+          estado={estadoPreenchimento}
+          faltam={preenchimento?.faltam.length ?? 0}
+        />
+        <AnuncioResultado resultado={resultado} exemplo={estadoPreenchimento === "exemplo"} />
+
+        {/* Os valores por omissão, ditos em voz alta e com o caminho para
+            os corrigir. `perguntas.ts` promete isto desde o primeiro dia;
+            até aqui a promessa não existia no ecrã. */}
+        {preenchimento ? <Pressupostos preenchimento={preenchimento} /> : null}
 
         {/* ── Os avisos graves ficam COLADOS ao número ────────────────
             Estavam todos numa secção única, depois dos campos avançados e
@@ -236,7 +297,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
             são contexto, não urgência. ─────────────────────────────── */}
         <Avisos avisos={resultado.avisos} apenas={GRAVES} rotulo="Avisos importantes" />
 
-        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} exemplo={!tocado} /> : null}
+        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
       </div>
 
       <CamposPreco
@@ -251,7 +312,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
       <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
 
-      {resultado.ok ? <Cenarios contexto={contexto} exemplo={!tocado} /> : null}
+      {resultado.ok ? <Cenarios contexto={contexto} estado={estadoPreenchimento} /> : null}
 
       <p className="px-1 pt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
         Estimativa com base no que introduziste. Não substitui a análise de um contabilista certificado, e a decisão de

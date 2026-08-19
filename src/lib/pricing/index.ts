@@ -33,6 +33,15 @@ export {
 } from "./regras";
 
 export {
+  avaliarPreenchimento,
+  essenciaisDe,
+  type CampoId,
+  type EstadoPreenchimento,
+  type Preenchimento,
+  type Pressuposto,
+} from "./preenchimento";
+
+export {
   CENARIOS_INICIAIS_DEF,
   cenarioPorChave,
   cenarioDeQuery,

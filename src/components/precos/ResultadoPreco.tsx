@@ -21,7 +21,7 @@
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { fmt, pct } from "@/lib/format";
-import { decomporPreco, type ChaveSegmento } from "@/lib/pricing";
+import { decomporPreco, type ChaveSegmento, type EstadoPreenchimento } from "@/lib/pricing";
 import type { ResultadoPreco as Resultado } from "@/lib/pricing";
 import type { ConversaoSociedade, Tesouraria, LinhaTesouraria } from "@/lib/pricing";
 import { Warning, Info, CheckTrend, Calendar, ArrowRight } from "@/components/ui/Icons";
@@ -55,18 +55,28 @@ const CORES_SEGMENTO: Record<ChaveSegmento, string> = {
 export default function ResultadoPreco({
   resultado,
   temFiscalidade,
-  exemplo = false,
+  estado = "completo",
+  faltam = 0,
 }: {
   resultado: Resultado;
   temFiscalidade: boolean;
   /**
-   * `true` enquanto a pessoa ainda não personalizou nada. O número existe —
-   * o motor calcula sempre — mas sai dos valores por omissão do cenário, e
-   * apresentá-lo como «quanto deves cobrar» é dar autoridade de conselho a
-   * algo que ninguém introduziu. Nesse estado o cartão diz o que é.
+   * Quanto do essencial é que a pessoa respondeu. O número existe sempre —
+   * o motor calcula sempre —, mas apresentá-lo como «quanto deves cobrar»
+   * quando saiu dos valores de partida do cenário é dar autoridade de
+   * conselho a algo que ninguém introduziu.
+   *
+   * ISTO JÁ FOI UM BOOLEANO (`exemplo`), e um booleano vira-se com uma
+   * tecla: escrever um dígito no volume promovia um exemplo a
+   * recomendação. Três estados, porque o meio-termo — «já me disseste
+   * alguma coisa, mas ainda não o suficiente» — é onde a maior parte das
+   * pessoas está quando olha para o número.
    */
-  exemplo?: boolean;
+  estado?: EstadoPreenchimento;
+  /** Quantos campos essenciais faltam. Só usado no estado `estimado`. */
+  faltam?: number;
 }) {
+  const exemplo = estado === "exemplo";
   if (!resultado.ok) {
     return (
       <div className="rounded-4xl border border-red-200 bg-red-50 p-6 dark:border-red-900/50 dark:bg-red-950/30">
@@ -109,7 +119,11 @@ export default function ResultadoPreco({
           exemplo ? "text-stone-600 dark:text-stone-400" : "text-brand-dark dark:text-brand-mint"
         }`}
       >
-        {exemplo ? "Um exemplo, por enquanto" : "Quanto deves cobrar"}
+        {exemplo
+          ? "Um exemplo, por enquanto"
+          : estado === "estimado"
+            ? "Uma estimativa — falta responder ao resto"
+            : "Quanto deves cobrar"}
       </p>
       {exemplo ? (
         <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
@@ -119,6 +133,13 @@ export default function ResultadoPreco({
             Preenche o essencial aí em cima
           </strong>{" "}
           e ele passa a ser teu.
+        </p>
+      ) : null}
+      {estado === "estimado" ? (
+        <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
+          {faltam === 1
+            ? "Falta uma resposta do essencial, e estamos a assumi-la por ti — está listada aqui em baixo."
+            : `Faltam ${faltam} respostas do essencial, e estamos a assumi-las por ti — estão listadas aqui em baixo.`}
         </p>
       ) : null}
       {/* Desemfatizar com COR, nunca com `opacity`.

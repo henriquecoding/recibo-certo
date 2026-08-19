@@ -233,6 +233,7 @@ export function CampoNumero({
  * exploração com as setas a forma mais rápida de comparar as opções.
  */
 export function Segmentado<T extends string>({
+  id,
   rotulo,
   ajuda,
   descricao,
@@ -241,6 +242,8 @@ export function Segmentado<T extends string>({
   aoMudar,
   colunas,
 }: {
+  /** Ancora este grupo para o bloco «estamos a assumir» lhe poder saltar. */
+  id?: string;
   rotulo?: string;
   ajuda?: ReactNode;
   descricao?: ReactNode;
@@ -299,7 +302,7 @@ export function Segmentado<T extends string>({
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0" id={id}>
       {rotulo ? (
         <span className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
           {rotulo}

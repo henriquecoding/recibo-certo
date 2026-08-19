@@ -56,12 +56,12 @@ function semComentarios(fonte: string): string {
 /**
  * O corpo do efeito de retoma, isolado do resto do ficheiro.
  *
- * Procura a CHAMADA (`lerContextoPreco<…>(…)`) e não o nome solto, que
+ * Procura a CHAMADA (`lerEnvelopePreco<…>(…)`) e não o nome solto, que
  * também aparece na linha do `import` — apanhar essa devolvia uma fatia
  * sem efeito nenhum lá dentro, e o teste passava a medir vazio.
  */
 function efeitoDeRetoma(fonte: string): string {
-  const i = fonte.search(/lerContextoPreco\s*[<(]/);
+  const i = fonte.search(/lerEnvelopePreco\s*[<(]/);
   expect(i, "o efeito de retoma desapareceu").toBeGreaterThan(-1);
   const inicio = fonte.lastIndexOf("useEffect(", i);
   expect(inicio, "a chamada de retoma deixou de estar dentro de um efeito").toBeGreaterThan(-1);
@@ -125,10 +125,28 @@ describe("④ personaliza-se ANTES de ver o número", () => {
     // Sem isto, escolher «um produto digital» e mais nada anunciava
     // «QUANTO DEVES COBRAR 1,09 €» — um número saído de um custo por omissão
     // de 0 €, uma margem de 70% e um volume de 20 que ninguém escolheu.
-    expect(SIMULADOR).toMatch(/exemplo=\{!tocado\}/);
+    expect(SIMULADOR).toMatch(/estado=\{estadoPreenchimento\}/);
     expect(
-      /setTocado\(true\)/.test(SIMULADOR),
-      "nada marca o contexto como personalizado — o aviso de exemplo nunca sai",
+      /avaliarPreenchimento\(/.test(SIMULADOR),
+      "nada avalia o preenchimento — o aviso de exemplo nunca sai, ou nunca entra",
+    ).toBe(true);
+  });
+
+  it("e a distinção não é um booleano que uma tecla vira", () => {
+    // O `tocado` era um booleano: escrever um dígito no volume promovia um
+    // exemplo a «QUANTO DEVES COBRAR», por cima de vinte e cinco
+    // pressupostos por confirmar. Agora regista-se QUAL campo foi
+    // respondido, e a confiança sai da lista do que falta.
+    expect(
+      /setTocado\s*\(/.test(SIMULADOR),
+      "voltou o booleano `tocado` — uma tecla em qualquer campo volta a " +
+        "promover um exemplo a recomendação",
+    ).toBe(false);
+    expect(SIMULADOR).toMatch(/setRespondidos/);
+    expect(
+      /const atualizar = \(campo: string,/.test(SIMULADOR),
+      "`atualizar` deixou de exigir o id do campo — passa a ser possível " +
+        "mudar o contexto sem que ninguém saiba o que foi respondido",
     ).toBe(true);
   });
 });
@@ -236,9 +254,42 @@ describe("⑨ o número não muda em silêncio", () => {
 
 describe("⑩ a ressalva de exemplo viaja com os números", () => {
   it("o slider e a tabela de cenários também a recebem", () => {
-    expect(SIMULADOR).toMatch(/<SliderPreco[^>]*exemplo=\{!tocado\}/);
-    expect(SIMULADOR).toMatch(/<Cenarios[^>]*exemplo=\{!tocado\}/);
-    expect(SLIDER).toMatch(/SeloExemplo/);
+    expect(SIMULADOR).toMatch(/<SliderPreco[^>]*estado=\{estadoPreenchimento\}/);
+    expect(SIMULADOR).toMatch(/<Cenarios[^>]*estado=\{estadoPreenchimento\}/);
+    expect(SLIDER).toMatch(/function Selo\(/);
+  });
+});
+
+describe("⑪ os pressupostos são declarados", () => {
+  it("o bloco «estamos a assumir» existe e é alimentado pelo preenchimento", () => {
+    // `perguntas.ts` promete isto desde o primeiro dia — «o resultado diz
+    // sempre "estamos a assumir X" quando assume» — e a promessa nunca
+    // chegou a existir no ecrã.
+    expect(SIMULADOR).toMatch(/<Pressupostos preenchimento=\{preenchimento\}/);
+  });
+
+  it("e cada pressuposto leva ao campo que o resolve", () => {
+    const PRESSUPOSTOS = readFileSync(join(SRC, "components", "precos", "Pressupostos.tsx"), "utf8");
+    expect(PRESSUPOSTOS).toMatch(/getElementById/);
+    expect(
+      /focus\(/.test(PRESSUPOSTOS),
+      "sem foco, a lista serve quem vê o scroll e mais ninguém",
+    ).toBe(true);
+  });
+});
+
+describe("⑫ retomar do cofre não perde nem inventa trabalho", () => {
+  it("um cofre da versão anterior continua a ser lido", () => {
+    const STORE = readFileSync(join(SRC, "lib", "store", "preco.ts"), "utf8");
+    expect(
+      STORE.includes("lerEnvelopePreco"),
+      "o envelope v2 desapareceu",
+    ).toBe(true);
+    expect(
+      /env\.versao === versaoContexto/.test(STORE),
+      "deixou de aceitar um contexto v1 solto — quem tinha meia hora de custos " +
+        "introduzidos abre a ferramenta e encontra-a vazia, sem explicação",
+    ).toBe(true);
   });
 });
 
