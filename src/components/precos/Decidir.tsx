@@ -159,6 +159,13 @@ export default function Decidir({
           {copiado ? <Check size={12} /> : <Copy size={12} />}
           {copiado ? "Copiado" : "Copiar resumo"}
         </button>
+        <Link
+          href="/dashboard/precos"
+          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl px-2 py-2 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-brand-mint"
+        >
+          Comparar com os que já guardaste
+          <ArrowRight size={12} />
+        </Link>
         <button
           type="button"
           onClick={imprimir}

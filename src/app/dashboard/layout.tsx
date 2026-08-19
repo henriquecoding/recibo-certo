@@ -27,6 +27,7 @@ import {
   BookOpen,
   Trophy,
   Star,
+  Coin,
   Menu,
   Close,
   LogOut,
@@ -66,6 +67,10 @@ const GRUPOS: NavGroup[] = [
       // não estava na navegação de lado nenhum (RC-P2-01).
       { href: "/dashboard/recibos", label: "Recibos registados", short: "Recibos", icon: Invoice },
       { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
+      // Ninguém põe preço a um produto: põe preço a um catálogo. A
+      // pergunta que só aparece com a lista à frente — qual deles está
+      // mesmo a pagar as contas? — não tinha sítio nenhum onde ser feita.
+      { href: "/dashboard/precos", label: "Os meus preços", short: "Preços", icon: Coin },
       { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
       // «Os meus casos» é a porta de entrada; «O meu contabilista» é o que
       // existe DEPOIS de uma proposta aceite. A ordem diz isso.
