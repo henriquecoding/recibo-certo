@@ -222,6 +222,12 @@ if (CAPTURAS) mkdirSync(CAPTURAS, { recursive: true });
 
 const navegador = await chromium.launch({
   ...(process.env.PLAYWRIGHT_CHROMIUM ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM } : {}),
+  // O Chromium não herda o `HTTPS_PROXY` do ambiente como o `curl` faz.
+  // Isto encaminha-o, mas note-se que num ambiente com proxy de
+  // inspeção o Chromium ainda pode recusar o certificado — nesse caso
+  // meça-se contra um `next start` local, que é o que este script faz
+  // por omissão. Nunca desligar a verificação de TLS para contornar.
+  ...(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {}),
 });
 
 const resultados = [];
