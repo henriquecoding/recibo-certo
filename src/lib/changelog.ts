@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.83.1",
+    data: "2026-08-19",
+    titulo: "O mapa que damos ao Google deixou de se contradizer",
+    itens: [
+      "O sitemap é a lista de páginas que pedimos aos motores de busca para indexar. A página para investidores estava lá — e, ao mesmo tempo, dizia a quem lá chegasse para não a indexar. Ficava por publicar de propósito, enquanto o aviso legal não estiver revisto por advogado; o que estava errado era estarmos a anunciá-la à mesma. Saiu da lista, e fica escrito no código o que é preciso fazer no dia em que for para publicar.",
+      "O painel privado dos contabilistas não constava do ficheiro que diz aos motores de busca onde não entrar. Passa a constar — com o cuidado de não apanhar por engano o diretório público de contabilistas, que é precisamente a página que queremos encontrada.",
+      "As entradas dos painéis pessoal e de administração também escapavam a essa recusa, por uma subtileza do formato: proibir «/dashboard/» não proíbe «/dashboard». Passam a estar cobertas as duas formas.",
+      "Verificámos as 233 ligações internas do site, uma a uma, contra as rotas que existem de facto: nenhuma aponta para o vazio. As 212 páginas submetidas continuam sem repetições e todas com data de revisão verdadeira, não a data da última publicação do site.",
+    ],
+  },
+  {
     version: "2.83.0",
     data: "2026-08-19",
     titulo: "Ninguém do Recibo Certo volta a ler a tua conversa com o teu contabilista",

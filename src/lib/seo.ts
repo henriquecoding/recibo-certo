@@ -80,7 +80,22 @@ export const FERRAMENTA_SLUGS: readonly string[] = SLUGS_PUBLICOS;
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/",            changeFrequency: "weekly",  priority: 1.0 },
   { path: "/precos",      changeFrequency: "monthly", priority: 0.8 },
-  { path: "/investidores", changeFrequency: "monthly", priority: 0.6 },
+  //
+  // `/investidores` NÃO entra, e a razão é a mesma que a dos perfis: o
+  // sitemap é uma afirmação («indexa isto»), e a página afirma o contrário.
+  // `src/app/investidores/layout.tsx` serve `robots: { index: false }` por
+  // instrução expressa (§17, Fase 5 e §21.12) — o aviso de investimento está
+  // por rever por advogado e a ficha da ronda por divulgar.
+  //
+  // Submetê-la assim pedia ao Google para rastrear uma página que, ao chegar
+  // lá, lhe manda embora. Não é só desperdício de rastreio: um sitemap que se
+  // contradiz a si próprio é exatamente o sinal que ensina um motor a confiar
+  // menos em TODAS as outras URLs que ele submete — o mesmo raciocínio que
+  // levou o `lastmod` a deixar de ser a data do build.
+  //
+  // PARA PUBLICAR: trocar o `index: false` do layout por `index: true`, dar-lhe
+  // aqui uma linha, e confirmar que `REVISOES_MANUAIS["/investidores"]` tem a
+  // data real da publicação. A data já lá está; falta a decisão jurídica.
   { path: "/quiz-fiscal", changeFrequency: "monthly", priority: 0.7 },
   // As 16 categorias do quiz são rotas estáticas com conteúdo real e JSON-LD
   // (ver `app/quiz-fiscal/[categoria]`). Derivam do catálogo para nunca
