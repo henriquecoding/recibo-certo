@@ -368,3 +368,69 @@ describe("o slider parado mostra o resultado, não uma re-derivação dele", () 
     ).toBe(true);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  ⑭ DECIDIR E MEDIR
+//  ---------------------------------------------------------------------
+//  A ferramenta acabava num parágrafo de isenção de responsabilidade e
+//  disparava um único evento. As duas coisas são o mesmo defeito visto de
+//  dois lados: não havia transição, e não havia forma de saber se alguém
+//  chegava ao fim.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("⑭ a ferramenta tem um próximo passo, e mede-o", () => {
+  const DECIDIR = readFileSync(join(SRC, "components", "precos", "Decidir.tsx"), "utf8");
+  const MEDICAO = readFileSync(join(SRC, "components", "precos", "medicao.ts"), "utf8");
+
+  it("a hierarquia dos CTA vem de `escolherRota`, não da página", () => {
+    // Se cada página pudesse escolher os seus botões, a regra «nunca três
+    // ações com o mesmo peso» duraria até à primeira semana em que a
+    // receita estivesse abaixo do esperado.
+    expect(DECIDIR).toMatch(/escolherRota\(/);
+    expect(SIMULADOR).toMatch(/<Decidir/);
+  });
+
+  it("e nenhuma rota comercial abre sobre um número que a pessoa não alimentou", () => {
+    // `escolherRota` devolve `sem_parceiro` com confiança abaixo de
+    // completa; o que este teste prende é que a confiança que lhe chega é
+    // a REAL, e não um `completo` fixo.
+    expect(DECIDIR).toMatch(/estado === "completo" \? "completo" : "estimado"/);
+  });
+
+  it("guardar, copiar e imprimir acontecem no dispositivo", () => {
+    expect(DECIDIR).toMatch(/guardarPreco/);
+    expect(DECIDIR).toMatch(/navigator\.clipboard/);
+    expect(DECIDIR).toMatch(/window\.print/);
+    // Nada de partilhar por link: encodar o contexto na URL punha custos
+    // de fornecedor no histórico do browser e na área de transferência.
+    expect(semComentarios(DECIDIR).includes("searchParams.set")).toBe(false);
+  });
+
+  it("os quatro eventos do percurso são disparados", () => {
+    for (const evento of ["simulator_start", "simulator_step", "simulator_complete", "result_view"]) {
+      expect(MEDICAO.includes(`"${evento}"`), `${evento} deixou de ser disparado`).toBe(true);
+    }
+    expect(MEDICAO).toMatch(/result_save/);
+    expect(MEDICAO).toMatch(/result_export/);
+  });
+
+  it("`simulator_complete` só dispara com o essencial todo respondido", () => {
+    // Um `complete` à primeira tecla mede intenção, não conclusão — e
+    // enche a North Star de percursos que ninguém acabou.
+    expect(MEDICAO).toMatch(/estado !== "completo"\) return;/);
+  });
+
+  it("e nenhum valor sai na medição", () => {
+    const codigo = semComentarios(MEDICAO);
+    for (const termo of ["pvp", "margem", "custo", "lucro", "faturacao"]) {
+      expect(codigo.includes(termo), `«${termo}» apareceu no payload de medição`).toBe(false);
+    }
+  });
+
+  it("o objetivo invertido existe — era o «Nível 4» documentado e ausente", () => {
+    expect(SIMULADOR).toMatch(/<ObjetivoInvertido/);
+    const OBJ = readFileSync(join(SRC, "components", "precos", "ObjetivoInvertido.tsx"), "utf8");
+    expect(OBJ).toMatch(/precoParaGanhar/);
+    expect(OBJ).toMatch(/unidadesParaGanhar/);
+  });
+});

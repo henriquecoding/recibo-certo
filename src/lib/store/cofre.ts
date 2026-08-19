@@ -42,6 +42,10 @@ export const DOMINIOS = {
   "ponte-empresa": "recibocerto:export-empresa:v1",
   "ponte-recibos": "recibocerto:export-recibos-verdes:v1",
   preco: "recibocerto:preco:v1",
+  // A lista de produtos a que a pessoa já pôs preço. Separada do contexto
+  // de trabalho de propósito: um é o que está a ser feito agora, a outra é
+  // o que já ficou decidido — e recomeçar um não pode apagar a outra.
+  "precos-guardados": "recibocerto:precos-guardados:v1",
 } as const;
 
 /**

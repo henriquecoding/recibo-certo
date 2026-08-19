@@ -32,7 +32,6 @@ import {
   type CenarioInicial,
   type ContextoPreco,
 } from "@/lib/pricing";
-import { registar } from "@/lib/analytics/cliente";
 import { gravarContextoPreco, lerEnvelopePreco, limparContextoPreco } from "@/lib/store/preco";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { ArrowLeft, ArrowRight, RotateCcw } from "@/components/ui/Icons";
@@ -47,6 +46,9 @@ import Caixa from "./Caixa";
 import Tesouraria from "./Tesouraria";
 import Sociedade from "./Sociedade";
 import DescontoResultado from "./DescontoResultado";
+import Decidir from "./Decidir";
+import ObjetivoInvertido from "./ObjetivoInvertido";
+import { useMedicaoPreco } from "./medicao";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
 import { CENARIOS_INICIAIS_DEF } from "@/lib/pricing";
@@ -67,7 +69,6 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   //  distinção que sai a confiança do resultado. Ver
   //  `lib/pricing/preenchimento.ts`.
   const [respondidos, setRespondidos] = useState<Set<string>>(() => new Set());
-  const iniciado = useRef(false);
   const retomou = useRef(false);
 
   // ── Retomar o que ficou por acabar ─────────────────────────────────
@@ -140,6 +141,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     setContexto(null);
     setRespondidos(new Set());
     limparContextoPreco();
+    reiniciar();
     irPara(null, true);
   };
 
@@ -155,6 +157,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     if (!cenario) return;
     setContexto(cenarioPorChave(cenario).contexto());
     setRespondidos(new Set());
+    reiniciar();
   };
 
   useEffect(() => {
@@ -166,17 +169,6 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     // Sem armazenamento a ferramenta continua a funcionar; só não retoma.
     if (contexto) gravarContextoPreco(contexto, [...respondidos]);
   }, [contexto, respondidos]);
-
-  useEffect(() => {
-    if (!cenario || iniciado.current) return;
-    iniciado.current = true;
-    registar("simulator_start", {
-      tool_id: "calcular-preco",
-      scenario_type: cenario,
-      entry_page: typeof window === "undefined" ? "" : window.location.pathname,
-      user_state: "anonimo",
-    });
-  }, [cenario]);
 
   // ── A pessoa já personalizou alguma coisa? ─────────────────────────
   //  Sem isto, a ferramenta anunciava «QUANTO DEVES COBRAR 1,09 €» a quem
@@ -225,6 +217,19 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     () => (contexto ? avaliarPreenchimento(contexto, respondidos) : null),
     [contexto, respondidos],
   );
+
+  // ── Medição ───────────────────────────────────────────────────────
+  //  A ferramenta disparava `simulator_start` e mais nada — e por isso
+  //  contribuía ZERO para a North Star (DVM = `simulator_complete` +
+  //  `result_view`) e não havia dados sobre onde as pessoas desistem.
+  //  Nenhum valor sai daqui: mede-se a forma do percurso, nunca o
+  //  negócio de quem o percorre.
+  const { reiniciar } = useMedicaoPreco({
+    cenario,
+    estado: preenchimento?.estado ?? "exemplo",
+    respondidos,
+    temPreco: resultado?.ok ?? false,
+  });
 
   // ── Passo 1: escolher o cenário ────────────────────────────────────
   if (!cenario || !contexto || !resultado) {
@@ -328,6 +333,14 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
           {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
 
+          {/* O «Nível 4» que o `pricing-ux-flow.md` descreve desde o
+              primeiro dia e que nunca existiu: `motores/objetivo.ts` tem
+              215 linhas exportadas e testadas que nenhuma interface
+              chamava. São as duas perguntas que as pessoas fazem mesmo. */}
+          {resultado.ok ? (
+            <ObjetivoInvertido contexto={contexto} resultado={resultado} aoAdotarPreco={adotarPreco} />
+          ) : null}
+
           {/* Secções irmãs, e não mais oito coisas dentro do cartão de
               resultado. Cada uma aparece só quando tem o que dizer. */}
           {resultado.desconto ? <DescontoResultado desconto={resultado.desconto} /> : null}
@@ -341,6 +354,20 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           <MemoriaCalculo linhas={resultado.explicacao} />
           <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
           {resultado.ok ? <Cenarios contexto={contexto} estado={estadoPreenchimento} /> : null}
+
+          {/* ── DECIDIR ────────────────────────────────────────────────
+              A zona que faltava. A ferramenta acabava num parágrafo de
+              isenção de responsabilidade: sem guardar, sem exportar, sem
+              próximo passo. «Sem transição, é dívida editorial.» ────── */}
+          {resultado.ok ? (
+            <Decidir
+              contexto={contexto}
+              resultado={resultado}
+              estado={estadoPreenchimento}
+              respondidos={respondidos}
+              aoGuardar={(n) => atualizar("nome-produto", (c) => void (c.produto.nome = n))}
+            />
+          ) : null}
         </div>
       </div>
 
