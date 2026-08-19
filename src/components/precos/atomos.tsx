@@ -63,7 +63,14 @@ export function Campo({
         htmlFor={htmlFor}
         className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400"
       >
-        {rotulo}
+        {/* O rótulo vai num `<span min-w-0>` e não solto.
+            Num contentor flex, um nó de texto vira um item anónimo com
+            `min-width: auto` — não encolhe abaixo da sua largura
+            mínima. Com o InfoTip e o `gap` ao lado, a 320 px o rótulo
+            «Preço de referência que vais anunciar» ficava 2 px cortado
+            em vez de mudar de linha. O `min-w-0` devolve-lhe a
+            capacidade de quebrar. */}
+        <span className="min-w-0">{rotulo}</span>
         {ajuda ? <InfoTip>{ajuda}</InfoTip> : null}
         {sufixo ? (
           <span className="ml-auto text-[11px] font-normal text-stone-500 dark:text-stone-400">{sufixo}</span>

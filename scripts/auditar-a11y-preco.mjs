@@ -172,10 +172,35 @@ const EXTRAS = `(() => {
       caixa: Math.round(caixa.width) + "×" + Math.round(caixa.height),
     }));
 
+  // Texto que não cabe na sua própria caixa.
+  //
+  // O scrollWidth do documento não apanha isto: um valor monetário que
+  // transborda a célula onde vive deixa a PÁGINA com a largura certa e o
+  // número cortado ou por cima do vizinho. É o modo de falha típico de
+  // 320 px com números longos — «1 234,56 €» numa coluna dimensionada
+  // para «12,30 €» — e só se vê a olho, ou assim.
+  // ⚠️ O clientWidth > 4 exclui o padrão sr-only, que recorta o texto
+  // para uma caixa de 1x1 DE PROPÓSITO — é assim que se diz uma coisa a
+  // um leitor de ecrã sem a desenhar. Sem esta condição, a região viva do
+  // AnuncioResultado aparecia como «transborda +536px» nas quatro vistas,
+  // que foi o primeiro resultado deste teste e não era defeito nenhum:
+  // era o teste a não conhecer o padrão.
+  const transbordam = [...raiz.querySelectorAll("*")]
+    .filter(visivel)
+    .filter((el) => el.clientWidth > 4)
+    .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
+    .filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== "auto")
+    .map((el) => ({
+      texto: (el.textContent || "").trim().slice(0, 32),
+      excesso: el.scrollWidth - el.clientWidth,
+    }));
+
   const doc = document.documentElement;
   return {
     alvosPequenos: pequenos.slice(0, 10),
     totalAlvosPequenos: pequenos.length,
+    transbordam: transbordam.slice(0, 5),
+    totalTransbordam: transbordam.length,
     scrollHorizontal: doc.scrollWidth > doc.clientWidth + 1,
     excesso: Math.max(0, doc.scrollWidth - doc.clientWidth),
     regioesVivas: raiz.querySelectorAll("[aria-live],[role=status],[role=alert]").length,
@@ -239,6 +264,7 @@ try {
       if (r.violations.length) sinais.push(`${r.violations.length} axe`);
       if (extras.totalAlvosPequenos) sinais.push(`${extras.totalAlvosPequenos} alvos <24px`);
       if (extras.scrollHorizontal) sinais.push(`scrollX +${extras.excesso}px`);
+      if (extras.totalTransbordam) sinais.push(`${extras.totalTransbordam} texto(s) a transbordar`);
       if (extras.semLabel) sinais.push(`${extras.semLabel} sem label`);
 
       console.log(
@@ -252,6 +278,9 @@ try {
       }
       for (const a of extras.alvosPequenos.slice(0, 4)) {
         console.log(`      alvo ${a.w}×${a.h} (caixa ${a.caixa}) — ${a.tag} «${a.nome}»`);
+      }
+      for (const t of extras.transbordam.slice(0, 4)) {
+        console.log(`      transborda +${t.excesso}px — «${t.texto}»`);
       }
 
       await pagina.close();
