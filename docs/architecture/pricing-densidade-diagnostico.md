@@ -428,25 +428,67 @@ quando aparece.
 | Fase | O que | Verificação |
 |---|---|---|
 | **0** ✅ | Correções medidas: overflow, contraste `/70`, 4 links < 24 px, Escape no `InfoTip` | axe = 0 · alvos = 0 · overflow = 0 |
-| **1** | Camadas de revelação: `nivel.ts` na engine + orquestração | testes de nível |
-| **2** | Afinar filtrado por cenário + «tens outros custos?» com impacto | densidade |
-| **3** | Visualizações: ponte, régua do equilíbrio, cenários com barras | tabela equivalente em cada |
-| **4** | Tipografia e microcopy: menos parágrafos, ajuda no `InfoTip` | contagem < 12 px |
-| **5** | Mobile e camada 3 em folha inferior | 320–430 px |
-| **6** | QA em loop: densidade + axe + teclado + escuro | todas as métricas |
+| **1** ✅ | Camadas de revelação: `nivel.ts` na engine + orquestração | 10 testes de nível |
+| **2** ✅ | Partição de «Afinar»: só o que já interessa + fichas para o resto | 8 testes de partição |
+| **3** ✅ | Cenários em barras divergentes e régua do equilíbrio | 9 testes; tabela equivalente em cada |
+| **4** ✅ | Microcopy, e nada de análise sobre um número que não é de ninguém | 909 → 786 palavras |
+| **5** ✅ | §25: a fronteira entre a ferramenta e a leitura; dois defeitos a 320 px | 0 transbordos |
+| **6** ✅ | QA em loop: densidade + axe + teclado + escuro | `auditar-teclado-preco.mjs` |
+
+### O que a Fase 6 encontrou depois de o axe dar zero
+
+O §18 pede testes manuais além do axe, e teve razão duas vezes:
+
+1. o painel do `InfoTip` abria com o foco de teclado e **não fechava com
+   Escape** (WCAG 1.4.13, *Dismissible*);
+2. recolher uma secção **atirava o foco para o `<body>`** — recolhida e
+   aberta são árvores diferentes, o elemento focado é desmontado, e quem
+   navega por teclado ia parar ao topo do documento a meio da ferramenta.
+
+Nenhuma das duas produz uma violação de axe. Ambas estão corrigidas, e o
+`scripts/auditar-teclado-preco.mjs` existe para que voltem a ser
+apanhadas se regressarem.
 
 ### Metas, para não se declarar vitória sem medir
 
-| Métrica | Hoje | Meta |
-|---|---:|---:|
-| Ecrãs a 360 px, inicial | 13,8 | **≤ 5** |
-| Ecrãs a 360 px, cheio | 20,6 | **≤ 12** |
-| Palavras iniciais | 1 941 | **≤ 900** |
-| Texto < 12 px, inicial | 103 | **≤ 40** |
-| Violações axe | 12 | **0** ✅ |
-| Alvos < 24 px (área efetiva, fora da exceção «inline») | 4 | **0** ✅ |
-| Scroll horizontal | 0 | **0** ✅ |
-| Capacidade (secções disponíveis) | 16 | **≥ 16** |
+| Métrica | Antes | Meta | **Medido no fim** |
+|---|---:|---:|---:|
+| Ecrãs a 360 px, inicial | 13,8 | ≤ 5 | **5,5** ⚠️ |
+| Ecrãs a 360 px, cheio | 20,6 | ≤ 12 | **13,8** ⚠️ |
+| Palavras iniciais | 1 941 | ≤ 900 | **786** ✅ |
+| Texto < 12 px, inicial | 103 | ≤ 40 | **33** ✅ |
+| Violações axe | 12 | 0 | **0** ✅ |
+| Alvos < 24 px (área efetiva, fora da exceção «inline») | 4 | 0 | **0** ✅ |
+| Scroll horizontal | +126 px | 0 | **0** ✅ |
+| Texto a transbordar da sua caixa | 1 | 0 | **0** ✅ |
+| Falhas de teclado | 2 | 0 | **0** ✅ |
+| Capacidade (secções disponíveis) | 16 | ≥ 16 | **17** ✅ |
+
+### As duas metas que não foram atingidas, e porquê
+
+Ambas as que faltam são de ALTURA, e em ambas a distância que resta só se
+fechava a cortar coisas — que é precisamente o que o §23 proíbe.
+
+**Inicial: 5,5 ecrãs contra os 5 propostos.** O que sobra em altura no
+estado `exemplo` são as notas por fatia da decomposição («o IVA não é
+teu: entras com ele e entregas») e a lista de pressupostos com o *porquê*
+de cada um. São ~90 palavras de conteúdo educativo, no momento em que a
+pessoa mais precisa dele — quem abre a ferramenta pela primeira vez é
+quem menos sabe o que é uma margem de contribuição. Cortá-las dava os 5
+ecrãs e tirava à ferramenta aquilo que a distingue de uma folha de
+cálculo.
+
+**Cheio: 13,8 ecrãs contra os 12 propostos.** No estado `completo` abrem
+sete secções com os números reais da pessoa, e a maior é a
+`ConclusaoPreco` (~1 780 px). Fechá-la por omissão dava os 12 — mas
+`ConclusaoPreco` é onde vive o routing comercial (`escolherRota()`) e o
+próximo passo. Recolhê-lo é uma decisão de negócio, não de densidade, e
+não é minha: fica registada aqui como a alavanca disponível se o
+utilizador a quiser puxar.
+
+O cenário `servico` é o pior caso do estado cheio, a 19,6 ecrãs, por ter
+o bloco do tempo e mais avisos do motor. É o candidato natural a uma
+próxima passagem.
 
 A última linha é a que importa mais: **a informação disponível não pode
 diminuir**. O que diminui é a que está visível ao mesmo tempo.

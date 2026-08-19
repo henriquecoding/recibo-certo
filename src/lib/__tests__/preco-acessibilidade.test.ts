@@ -5,13 +5,18 @@ import { describe, expect, it } from "vitest";
 // ═══════════════════════════════════════════════════════════════════════
 //  ACESSIBILIDADE DA CALCULADORA DE PREÇO — as falhas que o axe não vê
 //  ---------------------------------------------------------------------
-//  A auditoria em navegador (`scripts/auditar-a11y-preco.mjs`) mede o que
-//  se renderiza. Estas asserções guardam as três decisões que a auditoria
-//  descobriu mas que só sobrevivem se alguém as escrever:
+//  As auditorias em navegador (`auditar-a11y-preco.mjs` para o axe,
+//  `auditar-teclado-preco.mjs` para o teclado) medem o que se renderiza.
+//  Estas asserções guardam as decisões que elas descobriram mas que só
+//  sobrevivem se alguém as escrever:
 //
 //      1. desênfase por OPACIDADE parte o contraste;
 //      2. um link sozinho na linha não cabe na exceção «inline» da 2.5.8;
-//      3. conteúdo que abre por foco tem de fechar com Escape (1.4.13).
+//      3. conteúdo que abre por foco tem de fechar com Escape (1.4.13);
+//      4. uma secção que muda de forma tem de apanhar o foco que desmonta.
+//
+//  As duas últimas foram encontradas COM O AXE A DAR ZERO. É o argumento
+//  todo do §18 do prompt-mestre numa frase.
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ PORQUE ISTO SE VERIFICA LENDO A FONTE                                │
@@ -32,6 +37,7 @@ const semComentarios = (fonte: string) =>
   fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const INFOTIP = ler("components", "ui", "InfoTip.tsx");
+const REVELAVEL = ler("components", "precos", "SeccaoRevelavel.tsx");
 const RESULTADO_EXPLICADO = ler("components", "ui", "ResultadoExplicado.tsx");
 const TESOURARIA = ler("components", "precos", "Tesouraria.tsx");
 const MEMORIA = ler("components", "precos", "MemoriaCalculo.tsx");
@@ -86,6 +92,7 @@ describe("preco-acessibilidade:infotip", () => {
   });
 
   it("mantém a área de toque alargada por pseudo-elemento", () => {
+    // (mantido junto dos outros testes do InfoTip)
     // O botão desenha-se a 16×16 de propósito — é uma marca ao lado de um
     // rótulo, não um botão. Quem lhe dá os 24×24 da 2.5.8 é o
     // `before:-inset-2.5`, que leva a área efetiva a 36×36 sem gastar uma
@@ -93,5 +100,33 @@ describe("preco-acessibilidade:infotip", () => {
     // por um botão maior seria pagar ~240 px de altura por nada.
     expect(INFOTIP).toContain("before:-inset-2.5");
     expect(INFOTIP).toMatch(/before:absolute|before:content-\[''\]/);
+  });
+});
+
+describe("preco-acessibilidade:foco-nas-camadas", () => {
+  it("o foco é reposicionado quando uma secção muda de forma", () => {
+    // ⚠️ DEFEITO REAL, APANHADO PELO `auditar-teclado-preco.mjs` DEPOIS
+    // DE O AXE TER DADO ZERO. Recolhida e aberta são árvores diferentes:
+    // ao alternar, o elemento com o foco é desmontado e o foco cai no
+    // `<body>` — quem navega por teclado é atirado para o topo do
+    // documento a meio da ferramenta e tem de percorrer tudo de novo.
+    //
+    // Ao abrir, o foco vai para a região revelada; ao fechar, volta para
+    // a linha que substituiu aquilo em que a pessoa carregou.
+    const fonte = semComentarios(REVELAVEL);
+    expect(fonte).toMatch(/useEffect/);
+    expect(fonte).toMatch(/refRegiao|refLinha/);
+    expect(fonte).toMatch(/\.focus\(\)/);
+  });
+
+  it("a região revelada pode receber foco sem entrar na ordem do Tab", () => {
+    // `tabIndex={-1}`: recebe foco por programa, mas quem passa a tabular
+    // não leva um passo extra por cada secção aberta.
+    expect(semComentarios(REVELAVEL)).toMatch(/tabIndex=\{-1\}/);
+  });
+
+  it("a linha recolhida declara o estado e o painel que comanda", () => {
+    expect(REVELAVEL).toMatch(/aria-expanded=\{false\}/);
+    expect(REVELAVEL).toMatch(/aria-controls=\{idPainel\}/);
   });
 });
