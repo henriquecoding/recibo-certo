@@ -28,6 +28,7 @@ import {
   Trophy,
   Star,
   Coin,
+  ChartProjection,
   Menu,
   Close,
   LogOut,
@@ -84,6 +85,11 @@ const GRUPOS: NavGroup[] = [
       { href: "/dashboard/recibos-verdes", label: "Recibos verdes", short: "Recibos verdes", icon: Receipt },
       { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
       { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
+      // Antes de «abrir empresa», e não depois: o negócio começa antes da
+      // empresa, e a forma jurídica é a última decisão. A ordem da lista
+      // diz isso — quem chega aqui a pensar em abrir sociedade passa
+      // primeiro pelo sítio onde descobre se as contas fecham.
+      { href: "/dashboard/negocio", label: "Projeto de negócio", short: "Negócio", icon: ChartProjection },
       { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
       { href: "/dashboard/herancas", label: "Heranças e sucessões", short: "Heranças", icon: Scale },
       { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },

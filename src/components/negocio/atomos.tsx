@@ -44,14 +44,23 @@ export function Metrica({
   return (
     <div className="min-w-0">
       <dt className="text-xs font-medium text-stone-500 dark:text-stone-400">{rotulo}</dt>
+      {/* ⚠️ O `sub` vive DENTRO do `<dd>`, e não como um `<p>` irmão.
+          Um `<dl>` só pode conter grupos `<dt>`/`<dd>` — um terceiro
+          elemento dentro do agrupador parte a lista de definições e é
+          uma violação `serious` do axe (apanhada na auditoria do estúdio,
+          em todos os estados com resultado). Visualmente é idêntico. */}
       <dd
         className={`mt-0.5 font-display font-semibold tabular-nums ${cor} ${
           destaque ? "text-2xl sm:text-3xl" : "text-lg sm:text-xl"
         }`}
       >
         {valor}
+        {sub ? (
+          <span className="mt-0.5 block font-sans text-[11px] font-normal leading-snug text-stone-500 dark:text-stone-400">
+            {sub}
+          </span>
+        ) : null}
       </dd>
-      {sub ? <p className="mt-0.5 text-[11px] leading-snug text-stone-500 dark:text-stone-400">{sub}</p> : null}
     </div>
   );
 }

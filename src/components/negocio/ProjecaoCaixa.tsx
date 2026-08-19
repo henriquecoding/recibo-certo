@@ -134,11 +134,16 @@ export default function ProjecaoCaixa({
         {/* ── A curva ────────────────────────────────────────────── */}
         <div className="mt-4">
           <h4 className="sr-only">Saldo projetado mês a mês</h4>
-          <ul className="flex items-end gap-0.5" role="img" aria-label={resumoTextual(resultado)}>
+          {/* ⚠️ `<div>`, não `<ul>`. Um `role="img"` numa lista remove-lhe
+              a semântica de lista e deixa os `<li>` órfãos — violação
+              `serious` do axe, doze vezes, uma por mês projetado. Isto é
+              um gráfico, e um gráfico não é uma lista: o equivalente
+              textual vive no `aria-label` e na tabela por baixo. */}
+          <div className="flex items-end gap-0.5" role="img" aria-label={resumoTextual(resultado)}>
             {resultado.meses.map((m) => {
               const altura = Math.max(2, (Math.abs(m.saldoFim) / maiorAbs) * 100);
               return (
-                <li
+                <div
                   key={m.mes}
                   className="flex min-w-0 flex-1 flex-col justify-end"
                   style={{ height: 72 }}
@@ -150,10 +155,10 @@ export default function ProjecaoCaixa({
                     }`}
                     style={{ height: `${altura}%` }}
                   />
-                </li>
+                </div>
               );
             })}
-          </ul>
+          </div>
           <div className="mt-1 flex justify-between text-[10px] text-stone-500 dark:text-stone-400">
             <span>{resultado.meses[0]?.rotulo}</span>
             <span>{resultado.meses[resultado.meses.length - 1]?.rotulo}</span>
@@ -164,7 +169,12 @@ export default function ProjecaoCaixa({
           <summary className="cursor-pointer text-xs font-semibold text-stone-600 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-300">
             Ver mês a mês em tabela
           </summary>
-          <div className="mt-2 overflow-x-auto">
+          <div
+            className="mt-2 overflow-x-auto"
+            tabIndex={0}
+            role="region"
+            aria-label="Projeção de caixa mês a mês"
+          >
             <table className="w-full min-w-[26rem] text-left text-xs">
               <caption className="sr-only">Projeção de caixa mês a mês</caption>
               <thead>

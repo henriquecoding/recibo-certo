@@ -146,19 +146,17 @@ export default function ProximoPassoNegocio({
         <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" />
       </Link>
 
-      {/* ── A rota comercial, com o motivo à vista ─────────────────── */}
-      <Cartao titulo="A seguir" id="rota">
-        <p className="text-sm leading-relaxed text-stone-700 dark:text-stone-200">{rota.mensagem}</p>
-        <p className="mt-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-          {rota.dados} · Estás a ver isto porque: <code className="font-mono">{rota.motivo}</code>.
-        </p>
-        {rota.rota === "sem_parceiro" ? (
-          <p className="mt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-            Ainda não há aqui nada a sugerir-te — e é de propósito. Enquanto o cenário for exploratório, qualquer
-            recomendação comercial estaria a apoiar-se em números que ninguém confirmou.
-          </p>
-        ) : null}
-      </Cartao>
+      {/* ── Porque é que esta rota, e não outra ────────────────────
+          O próximo passo em si vive na conclusão (`ConclusaoNegocio`),
+          onde `ResultadoExplicado` impõe a hierarquia. Aqui fica só o
+          MOTIVO — o §13.2 exige que o código de elegibilidade seja
+          visível, e uma sugestão sem motivo é publicidade. ────────── */}
+      <p className="px-1 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+        {rota.rota === "sem_parceiro"
+          ? "Ainda não te sugerimos nada, e é de propósito: enquanto o cenário for exploratório, qualquer recomendação comercial apoiar-se-ia em números que ninguém confirmou."
+          : rota.dados}{" "}
+        Código de elegibilidade: <code className="font-mono">{rota.motivo}</code>.
+      </p>
 
       {/* ── O guia, para quem quer aprender em vez de fazer ──────── */}
       <p className="px-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">

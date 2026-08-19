@@ -92,6 +92,12 @@ const ComparacaoNegocio = dynamic(() => import("./ComparacaoNegocio"), {
   ssr: false,
   loading: () => <Esqueleto altura={280} rotulo="A carregar a comparação fiscal…" />,
 });
+// Arrasta `EnviarAoContabilista`, que por sua vez arrasta o cliente
+// Supabase. Nada disso pesa em quem nunca chega à conclusão.
+const ConclusaoNegocio = dynamic(() => import("./ConclusaoNegocio"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={320} rotulo="A carregar a conclusão…" />,
+});
 
 function Esqueleto({ altura, rotulo }: { altura: number; rotulo: string }) {
   return (
@@ -519,7 +525,17 @@ export default function NegocioStudio() {
       ) : null}
 
       {/* ── ATOS 12-13 — execução ────────────────────────────────── */}
-      {temResultado ? <ProximoPassoNegocio negocio={negocio} contexto={contexto} /> : null}
+      {temResultado ? (
+        <>
+          <ProximoPassoNegocio negocio={negocio} contexto={contexto} />
+          {/* A conclusão fecha o documento: as seis camadas do
+              `ResultadoExplicado`, com a hierarquia dos CTAs decidida
+              por `escolherRota()` e não por este ecrã. */}
+          <ErrorBoundary>
+            <ConclusaoNegocio negocio={negocio} contexto={contexto} />
+          </ErrorBoundary>
+        </>
+      ) : null}
 
       {/* ── Guardar ──────────────────────────────────────────────── */}
       {temNegocio ? <GuardarProjeto contexto={contexto} negocio={negocio} /> : null}

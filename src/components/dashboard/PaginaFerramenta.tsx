@@ -20,7 +20,14 @@ export default function PaginaFerramenta({
         <h1 className="font-display text-3xl font-semibold text-stone-800 dark:text-stone-100">{titulo}</h1>
         {descricao && <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-500 dark:text-stone-400">{descricao}</p>}
       </header>
-      {children}
+      {/* O mesmo `#ferramenta` do `ToolShell` público, e pela mesma razão:
+          é o âmbito que as auditorias de acessibilidade usam para medir a
+          FERRAMENTA e não o cabeçalho, a navegação e o rodapé à volta
+          dela. Sem ele, uma ferramenta alojada no painel não podia ser
+          auditada com o mesmo instrumento que a sua gémea pública. */}
+      <div id="ferramenta" className="scroll-mt-24">
+        {children}
+      </div>
     </div>
   );
 }

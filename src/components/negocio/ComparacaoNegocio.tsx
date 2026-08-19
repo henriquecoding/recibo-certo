@@ -80,7 +80,16 @@ export default function ComparacaoNegocio({
 
         {/* Uma comparação é tabular de verdade — por isso é `<table>`, e
             não uma grelha de `div`s que finge sê-lo. */}
-        <div className="overflow-x-auto">
+        {/* ⚠️ Uma região que faz scroll TEM de ser alcançável por teclado:
+            sem `tabIndex`, quem não usa rato não consegue ver a coluna da
+            direita em telemóvel. É a `scrollable-region-focusable` do axe,
+            e é `serious` porque a informação fica mesmo inacessível. */}
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Comparação entre independente e sociedade"
+        >
           <table className="w-full min-w-[22rem] text-left text-sm">
             <caption className="sr-only">
               O mesmo negócio como trabalhador independente e como sociedade, por ano.

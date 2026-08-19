@@ -86,14 +86,21 @@ export default function GuardarProjeto({
           </p>
         </div>
 
-        <div className="flex-shrink-0">
+        {/* Sem `min-w-0` e sem `w-full` até `sm:`, o rótulo do botão
+            transbordava 2 px a 320 px — e um botão principal cortado é a
+            primeira coisa que se nota num ecrã pequeno. */}
+        <div className="w-full min-w-0 sm:w-auto sm:flex-shrink-0">
           {estado === "guardado" ? (
             <p className="inline-flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-brand-dark dark:text-brand-mint">
               <Check size={15} />
               Guardado
             </p>
           ) : (
-            <BotaoPrincipal onClick={aoGuardar} disabled={!carregado || estado === "a_guardar"}>
+            <BotaoPrincipal
+              onClick={aoGuardar}
+              disabled={!carregado || estado === "a_guardar"}
+              className="w-full sm:w-auto"
+            >
               {estado === "a_guardar" ? "A guardar…" : "Guardar este projeto"}
             </BotaoPrincipal>
           )}

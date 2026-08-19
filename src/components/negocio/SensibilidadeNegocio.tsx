@@ -93,7 +93,12 @@ export default function SensibilidadeNegocio({ s }: { s: ResultadoSensibilidade 
         <summary className="cursor-pointer text-xs font-semibold text-stone-600 underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-300">
           Ver todos os cenários testados em tabela
         </summary>
-        <div className="mt-2 overflow-x-auto">
+        <div
+          className="mt-2 overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label="Cenários testados e o resultado de cada um"
+        >
           <table className="w-full min-w-[20rem] text-left text-xs">
             <caption className="sr-only">
               Resultado operacional mensal em cada cenário testado. O cenário base é {fmt(s.base)}.
