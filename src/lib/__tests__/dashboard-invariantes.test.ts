@@ -28,7 +28,7 @@ import { DEFAULTS as PREFS, normalizar, dentroDoPrimeiroAno } from "@/lib/store/
 import { TIPOS_CENARIO, META_TIPO_CENARIO } from "@/lib/store/cenarios";
 import { dataIsoValida, nifValido, telefoneValido, montanteValido } from "@/lib/validacao-dominio";
 import { adaptarCenarioVencimento } from "@/lib/store/cenario-vencimento-adaptador";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const LIMITE = IVA_ISENCAO_LIMITE.value;
@@ -451,11 +451,24 @@ describe("cenários: uma fonte só de tipos", () => {
   it("a constraint SQL aceita exatamente os tipos do cliente", () => {
     // Uma constraint mais estreita do que o cliente é como os cenários de
     // heranças eram guardados na aparência e recusados na realidade.
-    const sql = readFileSync(join(process.cwd(), "supabase/migrations/032_dashboard_contrato.sql"), "utf8");
-    const m = sql.match(/CHECK \(tipo IN \(([^)]+)\)\)/);
-    expect(m).not.toBeNull();
-    const naSql = [...m![1].matchAll(/'([^']+)'/g)].map((x) => x[1]).sort();
-    expect(naSql).toEqual([...TIPOS_CENARIO].sort());
+    //
+    // A constraint é redefinida por mais do que uma migração (032 abriu-a
+    // a `herancas`; outra abre-a a `negocio`), e o que vale é a ÚLTIMA a
+    // correr. Ler um ficheiro fixo dava um falso negativo à primeira vez
+    // que um tipo novo fosse acrescentado noutra migração — e obrigaria a
+    // reescrever a de 032, que já correu em produção.
+    const dir = join(process.cwd(), "supabase/migrations");
+    const efetiva = readdirSync(dir)
+      .filter((f) => f.endsWith(".sql"))
+      .sort()
+      .reduce<string[] | null>((atual, ficheiro) => {
+        const m = readFileSync(join(dir, ficheiro), "utf8").match(/CHECK \(tipo IN \(([^)]+)\)\)[\s;]*$/m);
+        if (!m || !/public\.cenarios/.test(readFileSync(join(dir, ficheiro), "utf8"))) return atual;
+        return [...m[1].matchAll(/'([^']+)'/g)].map((x) => x[1]).sort();
+      }, null);
+
+    expect(efetiva).not.toBeNull();
+    expect(efetiva).toEqual([...TIPOS_CENARIO].sort());
   });
 
   it("META_TIPO_CENARIO cobre todos os tipos declarados", () => {

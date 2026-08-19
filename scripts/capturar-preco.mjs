@@ -45,7 +45,7 @@ const semear = `
   localStorage.setItem("recibocerto:cookie-consent", ${JSON.stringify(
     JSON.stringify({ necessarios: true, estatistica: false, marketing: false, versao: 1 }),
   )});
-  ${TEMA === "dark" ? 'localStorage.setItem("recibocerto:tema","dark");' : ""}
+  ${TEMA === "dark" ? 'localStorage.setItem("recibocerto:theme","dark");' : ""}
 `;
 
 const navegador = await chromium.launch({

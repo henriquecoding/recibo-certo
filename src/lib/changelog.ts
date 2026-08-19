@@ -16,6 +16,26 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.87.0",
+    data: "2026-08-19",
+    titulo: "Já não te perguntamos quanto vais faturar — ajudamos-te a descobrir",
+    itens: [
+      "O modo «Abrir empresa» começava por te pedir a faturação anual esperada. É a pergunta mais importante da conta toda e quase ninguém sabe a resposta — sobretudo quem ainda não abriu nada. Depois de a adivinhares, mostrávamos-te o resultado dessa adivinhação com toda a autoridade de um cálculo. Agora começa pelo princípio: o que vais vender, quanto precisa de custar, quantas consegues vender por mês, e o que essa operação aguenta pagar. A faturação sai daí, em vez de entrar por ti.",
+      "Podes ter várias coisas à venda, e é quase sempre esse o caso. Consultoria a 85 € doze vezes por mês, uma auditoria a 190 € quatro vezes, um workshop a 450 € uma vez — cada uma com o seu preço, o seu volume e o seu peso. Vês de onde vem mesmo o teu dinheiro, e o que acontece se a maior falhar um mês.",
+      "O preço de cada oferta é calculado pela mesma calculadora de preço que já existe, com tudo o que ela sabe: custos, comissões de canal, IVA por região, Segurança Social e IRS. Não é uma versão simplificada — é a ferramenta inteira, por dentro do teu negócio.",
+      "Perguntamos quantas consegues vender, e não só quantas queres. Se cada projeto leva 20 horas e planeaste vinte por mês, dizemos-te que são 400 horas e que não cabem. Não corrigimos nada — a decisão é tua —, mas deixa de ser uma descoberta para o mês em que já aceitaste o trabalho.",
+      "«Quanto custa manter isto aberto num mês sem vendas?» — contabilidade, software, sede, seguros, alguém contratado. Com isso, dizemos a partir de quantas vendas por mês as contas fecham, e onde estás em relação a esse número.",
+      "Se puseres a contabilidade no preço de uma oferta E nos custos da estrutura, avisamos que está a ser contada duas vezes e perguntamos o que queres fazer. Não corrigimos em silêncio: era um número que escreveste, e ias reencontrá-lo diferente sem saber porquê.",
+      "«E se as coisas não correrem como esperas?» Testamos o teu cenário com menos vendas, preço mais baixo e custos mais altos, e dizemos qual desses é o que mais mexe no resultado — que é o pressuposto a confirmar primeiro.",
+      "Um negócio pode ser lucrativo e ficar sem dinheiro em abril. Se quiseres, projetamos a caixa mês a mês com os teus prazos de recebimento e pagamento, e dizemos de quanto precisas para atravessar o arranque. É uma projeção, não um saldo bancário — e dizemo-lo sempre.",
+      "Só no fim comparamos começar como independente ou como sociedade. E em vez de números abstratos, compara-se o negócio que acabaste de construir. Continuamos a não recomendar abrir empresa só porque deu mais líquido: há contabilidade organizada obrigatória, obrigações declarativas e o facto de fechar uma sociedade dar bem mais trabalho do que cessar atividade.",
+      "O diagnóstico de contabilista deixou de repetir perguntas. A faturação, os custos, os clientes e os trabalhadores já os disseste — usamos esses.",
+      "Podes guardar o projeto e voltar a ele. Enquanto editas, fica só neste aparelho: custos de fornecedor, margens e volumes são o teu negócio, não conteúdo a sincronizar por omissão. Guardar é um botão, e a mensagem diz-te quando os dados saem do aparelho.",
+      "Se enviares o resumo ao teu contabilista, ele vê a faturação projetada, os custos e a estrutura — nunca os custos de fornecedor, as margens nem os preços unitários. Vês campo a campo o que segue, antes de seguir.",
+      "Quem já sabe quanto vai faturar continua a ir direto ao simulador de empresa, com um link no topo e outro por baixo. Nada do que existia foi retirado.",
+    ],
+  },
+  {
     version: "2.86.0",
     data: "2026-08-19",
     titulo: "A calculadora de preço deixou de te mostrar tudo ao mesmo tempo",

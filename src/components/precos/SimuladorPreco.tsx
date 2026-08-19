@@ -63,9 +63,63 @@ import type { SeveridadeAviso } from "@/lib/pricing";
 const GRAVES: readonly SeveridadeAviso[] = ["perigo", "atencao"];
 const INFORMATIVOS: readonly SeveridadeAviso[] = ["info"];
 
-export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: string | null }) {
-  const [cenario, setCenario] = useState<CenarioInicial | null>(() => cenarioDeQuery(cenarioInicial));
-  const [contexto, setContexto] = useState<ContextoPreco | null>(null);
+/**
+ * Onde é que esta composição está a correr.
+ *
+ * ── `standalone` ────────────────────────────────────────────────────
+ * A página pública `/ferramentas/calcular-preco`. Dona do URL (`?c=`), do
+ * histórico do browser e do cofre local — o comportamento de sempre.
+ *
+ * ── `negocio` ───────────────────────────────────────────────────────
+ * Embutida no estúdio de negócio, a definir UMA oferta de várias. Aqui
+ * nada disso lhe pertence:
+ *
+ *  · o URL é do estúdio. Escrever `?c=` a partir daqui trocaria o passo
+ *    da jornada por um parâmetro da calculadora, e o «voltar» do
+ *    telemóvel saltaria para o sítio errado;
+ *  · o cofre é do estúdio. `store/preco.ts` guarda O rascunho da
+ *    ferramenta pública — uma oferta a ser editada aqui esmagá-lo-ia, e
+ *    quem estivesse a meio de um cálculo na outra página perdia-o;
+ *  · o estado sobe por callback, porque o dono do `ContextoPreco` passa
+ *    a ser a `OfertaNegocio`.
+ *
+ * O que NÃO muda em nenhuma superfície: o motor, o solver, os campos, as
+ * camadas de revelação e a memória de cálculo. É a mesma ferramenta —
+ * §9/ATO 2 do relatório é explícito: «Não iframe. Não cópia. Não fork.»
+ */
+export type SuperficiePreco = "standalone" | "negocio";
+
+export interface SimuladorPrecoProps {
+  cenarioInicial?: string | null;
+  superficie?: SuperficiePreco;
+  /** Retomar uma oferta já começada, em vez do exemplo do cenário. */
+  contextoInicial?: ContextoPreco | null;
+  respondidosIniciais?: readonly string[];
+  /** Cada edição, para o dono do estado a poder guardar. */
+  aoMudar?: (contexto: ContextoPreco, respondidos: string[]) => void;
+  /** A ação de saída da superfície embutida. */
+  aoConcluir?: (contexto: ContextoPreco, respondidos: string[]) => void;
+  rotuloConcluir?: string;
+  /** Sair sem concluir. Só faz sentido embutido. */
+  aoCancelar?: () => void;
+}
+
+export default function SimuladorPreco({
+  cenarioInicial,
+  superficie = "standalone",
+  contextoInicial = null,
+  respondidosIniciais,
+  aoMudar,
+  aoConcluir,
+  rotuloConcluir = "Adicionar esta oferta ao negócio",
+  aoCancelar,
+}: SimuladorPrecoProps) {
+  const embutido = superficie === "negocio";
+
+  const [cenario, setCenario] = useState<CenarioInicial | null>(
+    () => contextoInicial?.cenario ?? cenarioDeQuery(cenarioInicial),
+  );
+  const [contexto, setContexto] = useState<ContextoPreco | null>(contextoInicial);
 
   // ── O que a pessoa respondeu MESMO ────────────────────────────────
   //  Não é o mesmo que «o campo tem um valor»: todos têm, desde o
@@ -73,7 +127,9 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   //  ficheiro» de «o custo é 0 porque ainda não disse», e é dessa
   //  distinção que sai a confiança do resultado. Ver
   //  `lib/pricing/preenchimento.ts`.
-  const [respondidos, setRespondidos] = useState<Set<string>>(() => new Set());
+  const [respondidos, setRespondidos] = useState<Set<string>>(
+    () => new Set(respondidosIniciais ?? []),
+  );
   const retomou = useRef(false);
 
   // ── O que a pessoa abriu ou fechou À MÃO ──────────────────────────
@@ -107,6 +163,9 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   useEffect(() => {
     if (retomou.current) return;
     retomou.current = true;
+    // Embutida, o cofre não é desta composição: quem retoma é o estúdio,
+    // e o que ele passa em `contextoInicial` já é o trabalho da pessoa.
+    if (embutido) return;
     if (cenario) return;
     const lido = lerEnvelopePreco<ContextoPreco>(1);
     if (lido?.contexto.cenario) {
@@ -126,6 +185,8 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   // passo. A página já aceita `?c=`; passa a escrevê-lo também.
   const irPara = (destino: CenarioInicial | null, empurrar: boolean) => {
     if (typeof window === "undefined") return;
+    // Embutida, o URL é do estúdio. Ver o comentário de `SuperficiePreco`.
+    if (embutido) return;
     const url = new URL(window.location.href);
     if (destino) url.searchParams.set("c", destino);
     else url.searchParams.delete("c");
@@ -136,6 +197,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
   // O «voltar» do browser passa a recuar dentro da ferramenta.
   useEffect(() => {
+    if (embutido) return;
     const aoVoltar = () => {
       const daUrl = cenarioDeQuery(new URLSearchParams(window.location.search).get("c"));
       setCenario(daUrl);
@@ -143,7 +205,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     };
     window.addEventListener("popstate", aoVoltar);
     return () => window.removeEventListener("popstate", aoVoltar);
-  }, []);
+  }, [embutido]);
 
   /** Escolher um cenário: avança um passo no histórico. */
   const escolherCenario = (c: CenarioInicial) => {
@@ -161,7 +223,9 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     setContexto(null);
     setRespondidos(new Set());
     setEscolhas({});
-    limparContextoPreco();
+    // O cofre é da ferramenta pública. Embutida, limpá-lo apagaria o
+    // trabalho de quem está a meio de um cálculo na OUTRA página.
+    if (!embutido) limparContextoPreco();
     reiniciar();
     irPara(null, true);
   };
@@ -188,9 +252,18 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
   }, [cenario]);
 
   useEffect(() => {
+    if (!contexto) return;
+    if (embutido) {
+      // O dono do estado é a `OfertaNegocio`. Sobe por callback; nada é
+      // gravado a partir daqui — o estúdio tem o seu próprio rascunho.
+      aoMudar?.(contexto, [...respondidos]);
+      return;
+    }
     // Sem armazenamento a ferramenta continua a funcionar; só não retoma.
-    if (contexto) gravarContextoPreco(contexto, [...respondidos]);
-  }, [contexto, respondidos]);
+    gravarContextoPreco(contexto, [...respondidos]);
+    // `aoMudar` é estável na superfície embutida (vem de `useCallback` no
+    // estúdio); incluí-lo aqui evita um callback preso a estado antigo.
+  }, [contexto, respondidos, embutido, aoMudar]);
 
   // ── A pessoa já personalizou alguma coisa? ─────────────────────────
   //  Sem isto, a ferramenta anunciava «QUANTO DEVES COBRAR 1,09 €» a quem
@@ -313,8 +386,31 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
             <ArrowLeft size={13} />
             Mudar
           </button>
+          {embutido && aoCancelar ? (
+            <button
+              type="button"
+              onClick={aoCancelar}
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-stone-500 underline-offset-2 hover:text-brand-dark hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-400 dark:hover:text-brand-mint"
+            >
+              Sair
+            </button>
+          ) : null}
         </div>
       </div>
+
+      {/* ── A saída da superfície embutida ────────────────────────────
+          Fica em CIMA, e não só no fim: em telemóvel o conteúdo desta
+          composição tem vários ecrãs, e obrigar a percorrê-los todos
+          para voltar ao negócio faria a jornada parecer um beco. Repete-
+          se no fim, onde quem lê tudo chega naturalmente. */}
+      {embutido && aoConcluir ? (
+        <ConcluirOferta
+          rotulo={rotuloConcluir}
+          estado={estadoPreenchimento}
+          temPreco={resultado.ok}
+          aoConcluir={() => aoConcluir(contexto, [...respondidos])}
+        />
+      ) : null}
 
       {/* ── DUAS COLUNAS EM DESKTOP, UMA EM MOBILE ─────────────────
           A ferramenta está declarada como `layout: "wide"` no catálogo
@@ -466,10 +562,74 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
         </div>
       </div>
 
+      {embutido && aoConcluir ? (
+        <ConcluirOferta
+          rotulo={rotuloConcluir}
+          estado={estadoPreenchimento}
+          temPreco={resultado.ok}
+          aoConcluir={() => aoConcluir(contexto, [...respondidos])}
+        />
+      ) : null}
+
       <p className="px-1 pt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
         Estimativa com base no que introduziste. Não substitui a análise de um contabilista certificado, e a decisão de
         preço é sempre tua — a ferramenta mostra o que as contas aguentam, não o que o mercado aceita.
       </p>
+    </div>
+  );
+}
+
+// ─── A saída da superfície embutida ────────────────────────────────────
+
+/**
+ * O botão que devolve a oferta ao negócio.
+ *
+ * NÃO bloqueia quando o preenchimento está incompleto — bloquear seria
+ * exigir precisão a quem ainda está a explorar, e o §1.4 é explícito: «o
+ * utilizador nunca deve ser obrigado a inventar precisão». O que faz é
+ * dizer em que estado a oferta vai entrar, para a pessoa saber que o
+ * número que vai ver no portefólio ainda é um exemplo.
+ *
+ * A exceção é não haver preço nenhum: aí não há oferta para adicionar, e
+ * o convite explica o que falta em vez de aceitar e falhar em silêncio.
+ */
+function ConcluirOferta({
+  rotulo,
+  estado,
+  temPreco,
+  aoConcluir,
+}: {
+  rotulo: string;
+  estado: "exemplo" | "estimado" | "completo";
+  temPreco: boolean;
+  aoConcluir: () => void;
+}) {
+  if (!temPreco) {
+    return (
+      <div className="rounded-2xl border border-alert-border bg-alert-bg px-4 py-3 text-sm text-alert-text">
+        Com estes números não há preço possível, por isso ainda não há oferta para adicionar. Ajusta a margem, o canal ou
+        os custos aqui em cima — assim que houver um preço, o botão volta.
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-light bg-brand-light/50 px-4 py-3 dark:border-brand/25 dark:bg-brand/10">
+      <p className="min-w-0 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+        {estado === "completo"
+          ? "O essencial está respondido — esta oferta entra no negócio com o teu preço."
+          : estado === "estimado"
+            ? "Ainda faltam campos essenciais. A oferta entra na mesma, marcada como estimativa."
+            : "Ainda não mexeste em nada: esta oferta entrará com os valores de exemplo do cenário."}
+      </p>
+      <button
+        type="button"
+        onClick={aoConcluir}
+        className="btn-shine inline-flex min-h-[44px] flex-shrink-0 items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card transition-shadow hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+      >
+        {rotulo}
+        <ArrowRight size={15} />
+      </button>
     </div>
   );
 }

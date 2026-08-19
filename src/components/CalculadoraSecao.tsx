@@ -14,6 +14,7 @@
 // se descarrega o simulador que o utilizador realmente usa.
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { usePerfil } from "@/lib/perfil";
 import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
@@ -50,6 +51,13 @@ const ComparadorCenarios = dynamic(() => import("@/components/comparar/Comparado
   ssr: false,
   loading: () => <SimuladorSkeleton />,
 });
+// O estúdio de viabilidade. Substitui a ENTRADA do perfil empresa — não o
+// simulador, que continua inteiro em `/ferramentas/simulador-empresa` e
+// tem saída direta a partir daqui («Já sei quanto vou faturar»).
+const NegocioStudio = dynamic(() => import("@/components/negocio/NegocioStudio"), {
+  ssr: false,
+  loading: () => <SimuladorSkeleton />,
+});
 
 const COPY: Record<string, { eyebrow: string; h2: React.ReactNode; sub: string }> = {
   independente: {
@@ -73,14 +81,14 @@ const COPY: Record<string, { eyebrow: string; h2: React.ReactNode; sub: string }
     sub: "Do salário bruto ao líquido — IRS retido, Segurança Social, subsídio de refeição e os subsídios de férias e de Natal. Taxas oficiais de 2026.",
   },
   empresa: {
-    eyebrow: "Abrir empresa 2026",
+    eyebrow: "Começar um negócio",
     h2: (
       <>
-        Vale a pena abrir empresa?
-        <br className="hidden sm:block" /> Vê o líquido via sociedade.
+        O negócio começa antes da empresa.
+        <br className="hidden sm:block" /> Vamos ver se as contas fecham.
       </>
     ),
-    sub: "Faturação, custos e distribuição de dividendos — estima o líquido com IRC PME, derrama, tributação autónoma e benefícios fiscais (RFAI, SIFIDE II, ICE). Taxas oficiais de 2026.",
+    sub: "Diz-nos o que queres vender. Construímos contigo o preço, o volume necessário e as contas da operação — e só depois comparamos começar como independente ou como sociedade.",
   },
   comparar: {
     eyebrow: "Comparar cenários 2026",
@@ -129,11 +137,30 @@ export default function CalculadoraSecao() {
         ) : perfil === "comparar" ? (
           <ComparadorCenarios key="comparar" />
         ) : perfil === "empresa" ? (
-          <SimuladorIntegrado key="empresa" vista="empresa" />
+          <NegocioStudio key="empresa" />
         ) : (
           <SimuladorIntegrado key="independente" vista="rv" />
         )}
       </div>
+
+      {/* ── A SAÍDA DIRETA PARA O SIMULADOR DE EMPRESA ─────────────────
+          Critério de aceitação n.º 20: o simulador de empresa continua
+          acessível diretamente. Quem já sabe a faturação não tem de
+          construir um modelo comercial para lá chegar — construir um
+          modelo é para quem AINDA NÃO SABE, que é a maioria de quem
+          escolhe este modo. ─────────────────────────────────────────── */}
+      {perfil === "empresa" ? (
+        <p className="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
+          Já sabes quanto vais faturar?{" "}
+          <Link
+            href="/ferramentas/simulador-empresa"
+            className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+          >
+            Vai direto ao simulador de empresa
+          </Link>{" "}
+          — IRC, derrama, dividendos e otimização salário/dividendos.
+        </p>
+      ) : null}
     </div>
   );
 }

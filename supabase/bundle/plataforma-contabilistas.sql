@@ -6,14 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  Estas 35 migrações dependem umas das outras: a 046 usa tabelas
+--  Estas 36 migrações dependem umas das outras: a 046 usa tabelas
 --  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
 --  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
 --  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260819100000_fundadores_e_negociacao.sql).
+--  à última  (20260819120000_cenario_projeto_de_negocio.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -12387,3 +12387,33 @@ COMMENT ON TABLE public.contabilista_fundadores IS
   'Os dez primeiros. 5% de comissão enquanto a conta estiver aprovada. O lugar é único por construção — índice parcial mais bloqueio consultivo, como o vitalício da 035.';
 COMMENT ON TABLE public.desbloqueio_propostas IS
   'Negociação do preço de desbloqueio. Um valor aceite compra a percentagem e mais nada — `DESBLOQUEIO_NAO_COMPRA` continua a valer inteiro.';
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260819120000_cenario_projeto_de_negocio.sql                     ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260819120000_cenario_projeto_de_negocio.sql
+-- Admite o tipo de cenário `negocio` — o projeto do estúdio de viabilidade
+-- (ofertas, volumes, estrutura e resultado).
+--
+-- É o mesmo defeito que a migração 032 fechou para `herancas`, e fecha-se
+-- pela mesma razão: `META_TIPO_CENARIO` do cliente passa a conhecer o tipo
+-- e a guardar com ele, mas a constraint só admitia cinco valores. Numa
+-- conta Plus o insert seria recusado, e — como `guardar()` espera
+-- confirmação durável desde a RC-P0-03 — a pessoa veria um erro sem
+-- perceber que o problema era de esquema, não do que escreveu.
+--
+-- Idempotente — seguro correr múltiplas vezes.
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.cenarios'::regclass AND conname = 'cenarios_tipo_check'
+  ) THEN
+    ALTER TABLE public.cenarios DROP CONSTRAINT cenarios_tipo_check;
+  END IF;
+END $$;
+
+ALTER TABLE public.cenarios
+  ADD CONSTRAINT cenarios_tipo_check
+  CHECK (tipo IN ('recibos', 'vencimento', 'empresa', 'irs', 'herancas', 'negocio'));

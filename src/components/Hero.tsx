@@ -231,14 +231,23 @@ function criarExemplos({
     },
   },
   empresa: {
+    // ── A narrativa mudou, e a mudança é o produto ────────────────
+    //  «Vale a pena abrir empresa?» pressupõe que já se sabe quanto se
+    //  vai faturar — e quem está a começar não sabe. Era pedir à pessoa
+    //  para adivinhar a premissa mais importante da conta e depois
+    //  apresentar-lhe o resultado dessa adivinhação com autoridade.
+    //
+    //  A pergunta certa vem antes: o que vais vender, quanto precisa de
+    //  custar, quantas consegues vender, e o que essa operação aguenta
+    //  pagar. A forma jurídica é a ÚLTIMA decisão, não a primeira.
     h1: (
       <>
-        Vale a pena <span className="text-brand">abrir empresa?</span> Vê o líquido real.
+        Transforma a tua ideia num <span className="text-brand">negócio</span> que fecha as contas.
       </>
     ),
-    sub: "Simula a tua sociedade — IRC PME, derrama, tributação autónoma e distribuição de dividendos. Descobre quanto te fica no bolso e quando compensa face aos recibos verdes.",
-    primary: { label: "Simular a minha empresa", scrollTo: "calculadora" },
-    secondary: { label: "Comparar caminhos", setModo: "comparar" },
+    sub: "Descobre o que precisas de cobrar, quantas vendas sustentam a operação e se faz mais sentido começar como independente ou como empresa — com os teus números, não com um exemplo.",
+    primary: { label: "Construir o meu negócio", scrollTo: "calculadora" },
+    secondary: { label: "Já sei quanto vou faturar", href: "/ferramentas/simulador-empresa" },
     card: {
       etiqueta: `Faturação ${eur0(FAT)}/ano · via empresa`,
       heroLabel: "Líquido pela empresa",
