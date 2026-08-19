@@ -16,6 +16,7 @@ import { useState } from "react";
 import type { ContextoPreco, DefinicaoCenarioInicial, ResultadoPreco } from "@/lib/pricing";
 import { CANAIS_COMISSAO, METODOS_PAGAMENTO } from "@/lib/pricing";
 import { Bloco, CampoEuros, CampoNumero, CampoPercentagem, Segmentado, Seletor } from "./atomos";
+import ListaCustos from "./ListaCustos";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import { ATIVIDADES } from "@/lib/fiscal-data";
 import { fmt } from "@/lib/format";
@@ -73,13 +74,15 @@ export default function CamposPreco({
               <CampoEuros
                 id="custo-direto"
                 rotulo="Quanto te custa uma unidade"
-                ajuda="O que pagas ao fornecedor por cada unidade que vendes. Se produzes tu, usa o bloco «Como produzes» mais abaixo."
+                ajuda="Se produzes tu, deixa este campo a zero e usa antes o bloco «Como produzes», mais abaixo — lá somam-se matérias, mão de obra e energia."
+                descricao="O que pagas por cada unidade que vendes."
                 valor={contexto.custos.direto.valor}
                 aoMudar={(v) => atualizar((c) => void (c.custos.direto.valor = v))}
               />
               <Segmentado
                 rotulo="Esse valor inclui IVA?"
-                ajuda="É a pergunta que mais muda o resultado. Se estás isento pelo Art. 53.º, não deduzes o IVA das compras — logo o teu custo real é o valor COM IVA."
+                ajuda="Art. 53.º, n.º 3 do CIVA: quem está isento não liquida IVA e também não o deduz. Os dois efeitos contam ao mesmo tempo, e é por isso que a isenção nem sempre baixa o preço."
+                descricao="É a pergunta que mais muda o resultado. Estando isento, o teu custo real é o valor COM IVA — porque não o deduzes."
                 opcoes={[
                   { valor: "sim", rotulo: "Com IVA" },
                   { valor: "nao", rotulo: "Sem IVA" },
@@ -94,7 +97,7 @@ export default function CamposPreco({
             <CampoEuros
               id="custo-producao"
               rotulo="Custo por unidade (se existir)"
-              ajuda="Num produto digital costuma ser zero ou quase. Se tens custos de entrega ou de plataforma por venda, entram nos custos variáveis."
+              descricao="Num produto digital costuma ser zero ou quase. Custos de entrega ou de plataforma por venda entram nos custos variáveis, mais abaixo."
               valor={contexto.custos.direto.valor}
               aoMudar={(v) => atualizar((c) => void (c.custos.direto.valor = v))}
             />
@@ -105,7 +108,7 @@ export default function CamposPreco({
               <CampoEuros
                 id="materia-lote"
                 rotulo="Quanto custa o material que compras"
-                ajuda="O valor do lote, embalagem ou pacote que compras de cada vez."
+                descricao="O valor do lote, embalagem ou pacote que compras de cada vez."
                 valor={contexto.producao.materias[0]?.custoLote.valor ?? 0}
                 aoMudar={(v) =>
                   atualizar((c) => {
@@ -116,7 +119,7 @@ export default function CamposPreco({
               <CampoNumero
                 id="materia-unidades"
                 rotulo="Quantas unidades saem daí"
-                ajuda="Quantos produtos consegues fazer com esse material."
+                descricao="Quantos produtos consegues fazer com esse lote."
                 valor={contexto.producao.materias[0]?.unidadesPorLote ?? 1}
                 aoMudar={(v) =>
                   atualizar((c) => {
@@ -132,7 +135,7 @@ export default function CamposPreco({
             <CampoNumero
               id="horas-unidade"
               rotulo={contexto.cenario === "servico_hora" ? "Horas por sessão" : "Horas de trabalho por unidade"}
-              ajuda="Conta o tempo todo: preparação, execução e acabamento."
+              descricao="Conta o tempo todo: preparação, execução, acabamento e limpeza."
               valor={contexto.tempo.horasPorUnidade}
               aoMudar={(v) => atualizar((c) => void (c.tempo && (c.tempo.horasPorUnidade = v)))}
               sufixo="h"
@@ -145,7 +148,8 @@ export default function CamposPreco({
             <CampoEuros
               id="rendimento-ano"
               rotulo="Quanto queres ganhar por ano"
-              ajuda="Líquido, para ti. A ferramenta reparte-o pelas horas que consegues mesmo faturar e repõe o que sai em impostos."
+              ajuda="A repartição não é por 160 horas por mês: tiram-se férias, feriados, semanas sem clientes e a fatia de horas não faturáveis. O bloco «As tuas horas a sério» deixa-te afinar todas."
+              descricao="Líquido, na mão. A ferramenta reparte-o pelas horas que consegues mesmo faturar e repõe o que sai em impostos."
               valor={contexto.tempo.rendimentoAnualPretendido ?? 0}
               aoMudar={(v) => atualizar((c) => void (c.tempo && (c.tempo.rendimentoAnualPretendido = v)))}
               max={500_000}
@@ -156,7 +160,7 @@ export default function CamposPreco({
             <CampoEuros
               id="ganho-mensal"
               rotulo="Quanto queres ganhar por mês"
-              ajuda="O lucro que queres que o negócio gere. Se és trabalhador independente, a ferramenta acrescenta o que sai em Segurança Social e IRS."
+              descricao="O que queres que sobre, já depois de impostos. A ferramenta acrescenta o que sai em Segurança Social e IRS para lá chegar."
               valor={contexto.objetivo.valor ?? 0}
               aoMudar={(v) =>
                 atualizar((c) => {
@@ -172,7 +176,8 @@ export default function CamposPreco({
             <Seletor
               id="canal-venda"
               rotulo="Onde vais vender"
-              ajuda="A comissão do canal incide sobre o valor total da encomenda, com IVA incluído — por isso pesa mais do que a percentagem sugere."
+              ajuda="Os valores por omissão saem dos preçários publicados de cada canal, com data de verificação. A comissão real depende da categoria — confirma no teu contrato."
+              descricao="A comissão incide sobre o total da encomenda, com IVA. Uma comissão de 15% custa 18,45% do valor sem IVA."
               opcoes={CANAIS_COMISSAO.value.map((c) => ({ valor: c.id, rotulo: c.rotulo }))}
               valor={contexto.canal.marketplaceId ?? "nenhum"}
               aoMudar={(v) =>
@@ -223,7 +228,7 @@ export default function CamposPreco({
             <CampoNumero
               id="volume"
               rotulo="Quantas contas vender por mês"
-              ajuda="Serve para repartir as contas fixas e para calcular o ponto de equilíbrio. Uma estimativa conservadora vale mais do que uma otimista."
+              descricao="Reparte as contas fixas e dá o ponto de equilíbrio. Uma estimativa conservadora vale mais do que uma otimista."
               valor={contexto.volume.unidadesMes}
               aoMudar={(v) => atualizar((c) => void (c.volume.unidadesMes = v))}
               sufixo="/mês"
@@ -234,7 +239,8 @@ export default function CamposPreco({
             <Seletor
               id="regime-iva"
               rotulo="O teu regime de IVA"
-              ajuda="Isento pelo Art. 53.º significa duas coisas ao mesmo tempo: não cobras IVA e não deduzes o IVA que pagas. As duas mudam o preço."
+              ajuda="A isenção do Art. 53.º depende da faturação do ano anterior. Se preencheres a faturação anual prevista no bloco fiscal, a ferramenta avisa-te quando este preço e este volume te fazem passar o limiar."
+              descricao="Isento pelo Art. 53.º são duas coisas ao mesmo tempo: não cobras IVA e não deduzes o que pagas. As duas mudam o preço."
               opcoes={[
                 { valor: "nao_sei", rotulo: "Não tenho a certeza" },
                 { valor: "normal", rotulo: "Regime normal — cobro IVA" },
@@ -437,6 +443,7 @@ export default function CamposPreco({
             alternar={() => alternar("fixos")}
           >
             <ListaCustos
+              nomeLista="Custo fixo"
               itens={contexto.custos.fixos.map((f) => ({ id: f.id, rotulo: f.rotulo, valor: f.mensal }))}
               sufixo="/mês"
               sugestoes={["Renda", "Contabilidade", "Software", "Seguros", "Telecomunicações", "Marketing"]}
@@ -466,6 +473,7 @@ export default function CamposPreco({
             alternar={() => alternar("variaveis")}
           >
             <ListaCustos
+              nomeLista="Custo variável"
               itens={contexto.custos.variaveis.map((v) => ({ id: v.id, rotulo: v.rotulo, valor: v.porUnidade }))}
               sufixo="/un."
               sugestoes={["Embalagem", "Etiqueta", "Consumíveis", "Cartão de agradecimento"]}
@@ -504,18 +512,36 @@ export default function CamposPreco({
             alternar={() => alternar("comissoes")}
           >
             <div className="grid gap-4 sm:grid-cols-2">
-              <Seletor
-                id="marketplace"
-                rotulo="Canal / marketplace"
-                opcoes={CANAIS_COMISSAO.value.map((c) => ({ valor: c.id, rotulo: c.rotulo }))}
-                valor={contexto.canal.marketplaceId ?? "nenhum"}
-                aoMudar={(v) =>
-                  atualizar((c) => {
-                    c.canal.marketplaceId = v;
-                    c.canal.comissaoPercentagem = undefined;
-                  })
-                }
-              />
+              {/* ── D5: um estado, um controlo ──────────────────────────
+                  Este seletor e o «Onde vais vender» do bloco essencial
+                  escreviam ambos em `canal.marketplaceId`. Dois controlos
+                  para o mesmo valor, em dois sítios do ecrã, é a receita
+                  para alguém mudar um, não ver o outro mexer-se, e
+                  concluir que a ferramenta se enganou. Quando o cenário já
+                  pergunta o canal em cima, aqui fica só a leitura. */}
+              {rapidos.has("canal") ? (
+                <p className="text-xs leading-relaxed text-stone-500 dark:text-stone-400 sm:col-span-2">
+                  Canal escolhido:{" "}
+                  <strong className="font-semibold text-stone-700 dark:text-stone-200">
+                    {CANAIS_COMISSAO.value.find((c) => c.id === (contexto.canal.marketplaceId ?? "nenhum"))?.rotulo ??
+                      "Nenhum"}
+                  </strong>
+                  . Muda-o em «Onde vais vender», lá em cima; a comissão aqui ao lado afina o valor.
+                </p>
+              ) : (
+                <Seletor
+                  id="marketplace"
+                  rotulo="Canal / marketplace"
+                  opcoes={CANAIS_COMISSAO.value.map((c) => ({ valor: c.id, rotulo: c.rotulo }))}
+                  valor={contexto.canal.marketplaceId ?? "nenhum"}
+                  aoMudar={(v) =>
+                    atualizar((c) => {
+                      c.canal.marketplaceId = v;
+                      c.canal.comissaoPercentagem = undefined;
+                    })
+                  }
+                />
+              )}
               <CampoPercentagem
                 id="comissao"
                 rotulo="Comissão (afinar)"
@@ -767,105 +793,6 @@ export default function CamposPreco({
     </div>
   );
 }
-
-// ─── Lista editável de custos ──────────────────────────────────────────
-
-interface ItemCusto {
-  id: string;
-  rotulo: string;
-  valor: number;
-}
-
-function ListaCustos({
-  itens,
-  sufixo,
-  sugestoes,
-  aoMudar,
-}: {
-  itens: ItemCusto[];
-  sufixo: string;
-  sugestoes: string[];
-  aoMudar: (itens: ItemCusto[]) => void;
-}) {
-  const adicionar = (rotulo: string) =>
-    aoMudar([...itens, { id: `c${Date.now()}${itens.length}`, rotulo, valor: 0 }]);
-
-  return (
-    <div>
-      {itens.length > 0 ? (
-        <ul className="mb-3 space-y-2">
-          {itens.map((item, i) => (
-            <li key={item.id} className="flex items-center gap-2">
-              <input
-                type="text"
-                value={item.rotulo}
-                onChange={(e) => {
-                  const copia = [...itens];
-                  copia[i] = { ...item, rotulo: e.target.value };
-                  aoMudar(copia);
-                }}
-                aria-label="Nome do custo"
-                className="min-h-[38px] min-w-0 flex-1 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-              />
-              <div className="relative w-28 flex-shrink-0">
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={item.valor === 0 ? "" : String(item.valor).replace(".", ",")}
-                  onChange={(e) => {
-                    const bruto = e.target.value.replace(/[^\d,.]/g, "").replace(",", ".");
-                    const n = Number(bruto);
-                    const copia = [...itens];
-                    copia[i] = { ...item, valor: Number.isFinite(n) ? n : 0 };
-                    aoMudar(copia);
-                  }}
-                  aria-label={`Valor ${sufixo}`}
-                  className="min-h-[38px] w-full rounded-xl border border-stone-200 bg-white px-3 py-2 pr-12 text-sm tabular-nums text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100"
-                />
-                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-stone-500 dark:text-stone-400">
-                  €{sufixo}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => aoMudar(itens.filter((_, j) => j !== i))}
-                aria-label={`Remover ${item.rotulo}`}
-                className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-stone-500 dark:text-stone-400 transition-colors hover:border-red-300 hover:text-red-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700"
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                </svg>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        {sugestoes
-          .filter((s) => !itens.some((i) => i.rotulo === s))
-          .map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => adicionar(s)}
-              className="min-h-[36px] rounded-xl border border-dashed border-stone-300 px-3 py-2 text-xs font-semibold text-stone-500 transition-colors hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-600 dark:text-stone-400"
-            >
-              + {s}
-            </button>
-          ))}
-        <button
-          type="button"
-          onClick={() => adicionar("")}
-          className="min-h-[36px] rounded-xl border border-dashed border-stone-300 px-3 py-2 text-xs font-semibold text-stone-500 transition-colors hover:border-brand hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-600 dark:text-stone-400"
-        >
-          + Outro
-        </button>
-      </div>
-    </div>
-  );
-}
-
 
 /**
  * A mesma escolha, dita nas duas unidades e em euros.

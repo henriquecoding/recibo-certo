@@ -43,6 +43,12 @@ export {
 } from "./perguntas";
 
 export { CENARIOS, compararCenarios, correrCenario } from "./motores/cenarios";
+export {
+  decomporPreco,
+  type Decomposicao,
+  type SegmentoPreco,
+  type ChaveSegmento,
+} from "./motores/decomposicao";
 export { precoParaGanhar, unidadesParaGanhar, resultadoAoPreco } from "./motores/objetivo";
 export { margemDeMarkup, markupDeMargem } from "./motores/margem";
 export { calcularTempo, capacidadeMensal, valorHoraImplicito } from "./motores/tempo";

@@ -37,9 +37,15 @@ import { iconeDe } from "@/components/ferramentas/icon-map";
 import { ArrowLeft, ArrowRight } from "@/components/ui/Icons";
 import CamposPreco from "./CamposPreco";
 import ResultadoPreco from "./ResultadoPreco";
+import AnuncioResultado from "./AnuncioResultado";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
 import { CENARIOS_INICIAIS_DEF } from "@/lib/pricing";
+import type { SeveridadeAviso } from "@/lib/pricing";
+
+/** O que sobe para junto do número e o que fica em baixo como contexto. */
+const GRAVES: readonly SeveridadeAviso[] = ["perigo", "atencao"];
+const INFORMATIVOS: readonly SeveridadeAviso[] = ["info"];
 
 export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: string | null }) {
   const [cenario, setCenario] = useState<CenarioInicial | null>(() => cenarioDeQuery(cenarioInicial));
@@ -220,7 +226,17 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           transformava metade do ecrã num painel que rouba a roda do rato. */}
       <div className="space-y-4">
         <ResultadoPreco resultado={resultado} temFiscalidade={temFiscalidade} exemplo={!tocado} />
-        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} /> : null}
+        <AnuncioResultado resultado={resultado} exemplo={!tocado} />
+
+        {/* ── Os avisos graves ficam COLADOS ao número ────────────────
+            Estavam todos numa secção única, depois dos campos avançados e
+            depois da memória de cálculo: um aviso `perigo` («a este preço
+            cada venda tira-te dinheiro») nascia quatro ecrãs abaixo do
+            preço a que se refere. Os informativos continuam lá em baixo —
+            são contexto, não urgência. ─────────────────────────────── */}
+        <Avisos avisos={resultado.avisos} apenas={GRAVES} rotulo="Avisos importantes" />
+
+        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} exemplo={!tocado} /> : null}
       </div>
 
       <CamposPreco
@@ -233,9 +249,9 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
       <MemoriaCalculo linhas={resultado.explicacao} />
 
-      <Avisos avisos={resultado.avisos} />
+      <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
 
-      {resultado.ok ? <Cenarios contexto={contexto} /> : null}
+      {resultado.ok ? <Cenarios contexto={contexto} exemplo={!tocado} /> : null}
 
       <p className="px-1 pt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
         Estimativa com base no que introduziste. Não substitui a análise de um contabilista certificado, e a decisão de

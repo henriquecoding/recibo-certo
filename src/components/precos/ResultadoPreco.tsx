@@ -21,6 +21,7 @@
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { fmt, pct } from "@/lib/format";
+import { decomporPreco, type ChaveSegmento } from "@/lib/pricing";
 import type { ResultadoPreco as Resultado } from "@/lib/pricing";
 import type { ConversaoSociedade, Tesouraria, LinhaTesouraria } from "@/lib/pricing";
 import { Warning, Info, CheckTrend, Calendar, ArrowRight } from "@/components/ui/Icons";
@@ -31,6 +32,24 @@ const CORES_ANCORA: Record<string, string> = {
   minimo: "bg-alert-border",
   recomendado: "bg-brand",
   confortavel: "bg-brand-mint",
+};
+
+/**
+ * As cores da decomposição.
+ *
+ * As duas fatias do Estado (IVA e impostos pessoais) partilham o amarelo
+ * pastel de aviso, e não um cinzento qualquer: o que as separa de todos os
+ * outros custos é que este dinheiro nunca chega a ser da pessoa. Pintá-las
+ * como mais uma despesa é o que leva alguém a gastar o IVA que tem a
+ * entregar.
+ */
+const CORES_SEGMENTO: Record<ChaveSegmento, string> = {
+  custo: "bg-stone-400",
+  venda: "bg-stone-300",
+  impostos: "bg-alert-border",
+  fixos: "bg-stone-200",
+  iva: "bg-alert",
+  lucro: "bg-brand",
 };
 
 export default function ResultadoPreco({
@@ -62,26 +81,19 @@ export default function ResultadoPreco({
     );
   }
 
-  const { faixa, margem, breakEven, custo } = resultado;
+  const { faixa, margem, breakEven } = resultado;
   const recomendado = faixa.ancoras.find((a) => a.chave === "recomendado");
   const ancorasOrdenadas = [...faixa.ancoras].sort((a, b) => a.pvp - b.pvp);
   const maximo = ancorasOrdenadas.length > 0 ? ancorasOrdenadas[ancorasOrdenadas.length - 1].pvp : 1;
 
-  const decomposicao = [
-    { rotulo: "Custo", valor: custo.direto, cor: "bg-stone-400" },
-    {
-      rotulo: "Custos de venda",
-      valor: Math.max(0, custo.variaveisTotais - custo.direto - impostosDoVendedor(resultado)),
-      cor: "bg-stone-300",
-    },
-    ...(temFiscalidade
-      ? [{ rotulo: "Impostos teus", valor: impostosDoVendedor(resultado), cor: "bg-alert-border" }]
-      : []),
-    { rotulo: "Contas fixas", valor: custo.fixosPorUnidade, cor: "bg-stone-200" },
-    { rotulo: temFiscalidade ? "Fica para ti" : "Margem", valor: Math.max(0, margem.lucroUnidade), cor: "bg-brand" },
-  ].filter((d) => d.valor > 0.004);
-
-  const totalBarra = decomposicao.reduce((s, d) => s + d.valor, 0) || 1;
+  // A barra que explica o número tem de explicar O NÚMERO. Esta soma era
+  // feita aqui, no componente, e dava o preço LÍQUIDO enquanto o cabeçalho
+  // mostrava o PVP — a 23%, uma barra que decompunha 24,60 € somando
+  // 20,00 €, com o IVA ausente. A aritmética passou para a engine
+  // (`motores/decomposicao.ts`), onde é testável e onde a soma fecha por
+  // construção.
+  const decomposicao = decomporPreco(resultado);
+  const totalBarra = decomposicao.total || 1;
 
   return (
     <m.section
@@ -179,25 +191,64 @@ export default function ResultadoPreco({
       )}
 
       {/* ── A cada venda ─────────────────────────────────────────── */}
-      <div className="mt-7 border-t border-stone-100 pt-5 dark:border-stone-800">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">A cada venda</p>
-        <div className="flex h-3 w-full overflow-hidden rounded-full" aria-hidden="true">
-          {decomposicao.map((d) => (
-            <span key={d.rotulo} className={`${d.cor} h-full`} style={{ width: `${(d.valor / totalBarra) * 100}%` }} />
-          ))}
+      {decomposicao.segmentos.length > 0 ? (
+        <div className="mt-7 border-t border-stone-100 pt-5 dark:border-stone-800">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+              A cada venda de {fmt(decomposicao.pvp)}
+            </p>
+            {decomposicao.prejuizo > 0 ? (
+              <p className="text-xs font-semibold text-red-600 dark:text-red-400">
+                custa {fmt(decomposicao.total)} — faltam {fmt(decomposicao.prejuizo)}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="relative">
+            <div className="flex h-3 w-full overflow-hidden rounded-full" aria-hidden="true">
+              {decomposicao.segmentos.map((d) => (
+                <span
+                  key={d.chave}
+                  className={`${CORES_SEGMENTO[d.chave]} h-full`}
+                  style={{ width: `${(d.valor / totalBarra) * 100}%` }}
+                />
+              ))}
+            </div>
+            {/* Com prejuízo a barra é MAIOR do que o preço, e é essa a
+                história. O marcador diz onde o dinheiro do cliente acaba —
+                tudo o que fica à direita sai do bolso de quem vende. */}
+            {decomposicao.prejuizo > 0 ? (
+              <span
+                aria-hidden="true"
+                className="absolute -top-1 h-5 w-0.5 rounded-full bg-red-600"
+                style={{ left: `${Math.min(100, (decomposicao.pvp / totalBarra) * 100)}%` }}
+              />
+            ) : null}
+          </div>
+
+          <ul className="mt-3 space-y-1.5">
+            {decomposicao.segmentos.map((d) => (
+              <li key={d.chave} className="flex items-start gap-2.5 text-sm">
+                <span
+                  aria-hidden="true"
+                  className={`mt-1 h-2.5 w-2.5 flex-shrink-0 rounded-sm ${CORES_SEGMENTO[d.chave]}`}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-baseline justify-between gap-x-2">
+                    <span className="text-stone-600 dark:text-stone-400">{d.rotulo}</span>
+                    <span className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+                      {fmt(d.valor)}
+                    </span>
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                    {d.nota}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
-        <ul className="mt-3 space-y-1.5">
-          {decomposicao.map((d) => (
-            <li key={d.rotulo} className="flex items-center gap-2.5 text-sm">
-              <span aria-hidden="true" className={`h-2.5 w-2.5 flex-shrink-0 rounded-sm ${d.cor}`} />
-              <span className="min-w-0 flex-1 truncate text-stone-600 dark:text-stone-400">{d.rotulo}</span>
-              <span className="flex-shrink-0 font-semibold tabular-nums text-stone-800 dark:text-stone-100">
-                {fmt(d.valor)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      ) : null}
 
       {/* ── Números-chave ────────────────────────────────────────── */}
       <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -321,11 +372,6 @@ function Metrica({
       <p className="mt-0.5 text-[11px] leading-tight text-stone-500 dark:text-stone-400">{nota}</p>
     </div>
   );
-}
-
-/** Segurança Social + IRS marginal por unidade. Zero para quem não é TI. */
-function impostosDoVendedor(r: Resultado): number {
-  return r.fiscal.aplicavel ? r.fiscal.ssPorUnidade + r.fiscal.irsPorUnidade : 0;
 }
 
 

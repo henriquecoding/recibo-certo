@@ -36,6 +36,22 @@ import { describe, expect, it } from "vitest";
 const SRC = join(__dirname, "..", "..");
 const SIMULADOR = readFileSync(join(SRC, "components", "precos", "SimuladorPreco.tsx"), "utf8");
 const SLIDER = readFileSync(join(SRC, "components", "precos", "EQueSe.tsx"), "utf8");
+const ATOMOS = readFileSync(join(SRC, "components", "precos", "atomos.tsx"), "utf8");
+const LISTA = readFileSync(join(SRC, "components", "precos", "ListaCustos.tsx"), "utf8");
+const ANUNCIO = readFileSync(join(SRC, "components", "precos", "AnuncioResultado.tsx"), "utf8");
+
+/**
+ * A fonte sem comentários.
+ *
+ * Estes testes leem código como texto, e neste projeto os comentários
+ * citam com frequência o defeito que a linha corrigiu — «fazia
+ * `replace(/[^\d,.]/g, "")` à mão». Uma asserção negativa que não
+ * distinga o código da sua própria autópsia reprova a correção por ela
+ * estar documentada.
+ */
+function semComentarios(fonte: string): string {
+  return fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
 
 /**
  * O corpo do efeito de retoma, isolado do resto do ficheiro.
@@ -133,6 +149,96 @@ describe("③ o preço fica onde se lhe mexe", () => {
       "o slider saiu da coluna do resultado — em mobile isso empurra-o para " +
         "depois de todos os campos, que foi exactamente o defeito reportado",
     ).toBe(true);
+  });
+});
+
+describe("⑤ o `Segmentado` é o radiogroup que diz ser", () => {
+  // O comentário do componente afirmava, palavra por palavra, ser «um
+  // radiogroup a sério — com setas do teclado — e não uma fila de botões
+  // que só parece um». Não havia `onKeyDown` nem `tabIndex` móvel: as
+  // setas não faziam nada e todos os botões eram tabuláveis. O axe não o
+  // apanha (a estrutura `radiogroup`/`radio` está formalmente correta), e
+  // por isso passou o «zero violações» estando partido para teclado.
+  it("trata as setas do teclado", () => {
+    const i = ATOMOS.indexOf("export function Segmentado");
+    expect(i, "o Segmentado desapareceu").toBeGreaterThan(-1);
+    const bloco = ATOMOS.slice(i, ATOMOS.indexOf("export function Seletor"));
+
+    expect(bloco).toMatch(/onKeyDown/);
+    for (const tecla of ["ArrowRight", "ArrowLeft", "ArrowDown", "ArrowUp", "Home", "End"]) {
+      expect(bloco.includes(`"${tecla}"`), `o \`${tecla}\` deixou de ser tratado`).toBe(true);
+    }
+  });
+
+  it("e tem um só ponto de tabulação", () => {
+    const i = ATOMOS.indexOf("export function Segmentado");
+    const bloco = ATOMOS.slice(i, ATOMOS.indexOf("export function Seletor"));
+    expect(
+      /tabIndex=\{[^}]*\?\s*0\s*:\s*-1\s*\}/.test(bloco),
+      "sem `tabIndex` móvel o grupo tem tantas paragens de tabulação como opções, " +
+        "que é precisamente o que o padrão WAI-ARIA de radiogroup existe para evitar",
+    ).toBe(true);
+  });
+});
+
+describe("⑥ a ajuda dos campos está ligada ao campo", () => {
+  it("os campos numéricos passam `aria-describedby`", () => {
+    // A ajuda vivia só dentro do `InfoTip`, sem ligação nenhuma ao input:
+    // para quem usa leitor de ecrã, a descrição não existia.
+    for (const campo of ["CampoEuros", "CampoPercentagem", "CampoNumero", "Seletor"]) {
+      const i = ATOMOS.indexOf(`export function ${campo}`);
+      expect(i, `${campo} desapareceu`).toBeGreaterThan(-1);
+      const bloco = ATOMOS.slice(i, i + 2200);
+      expect(bloco.includes("aria-describedby"), `${campo} sem \`aria-describedby\``).toBe(true);
+    }
+  });
+});
+
+describe("⑦ os números todos passam pelo mesmo parser", () => {
+  it("a lista de custos usa `LocalizedNumberInput`", () => {
+    // Fazia parsing à mão. «1.234,50» — como o Excel português escreve mil
+    // duzentos e trinta e quatro e meio — virava 1,23450.
+    expect(LISTA).toMatch(/LocalizedNumberInput/);
+    expect(
+      /replace\(\s*\/\[\^\\d,\.\]\/g/.test(semComentarios(LISTA)),
+      "voltou o parser à mão na lista de custos",
+    ).toBe(false);
+  });
+});
+
+describe("⑧ os avisos graves ficam colados ao número", () => {
+  it("os `perigo` e `atencao` renderizam antes dos campos avançados", () => {
+    const iGraves = SIMULADOR.indexOf("apenas={GRAVES}");
+    const iAvancado = SIMULADOR.indexOf('parte="avancado"');
+    expect(iGraves, "os avisos graves deixaram de ser separados dos informativos").toBeGreaterThan(-1);
+    expect(
+      iGraves < iAvancado,
+      "um aviso `perigo` («cada venda tira-te dinheiro») voltou a nascer depois de " +
+        "todos os campos avançados — quatro ecrãs abaixo do preço a que se refere",
+    ).toBe(true);
+  });
+});
+
+describe("⑨ o número não muda em silêncio", () => {
+  it("há uma região viva a anunciar o resultado", () => {
+    expect(SIMULADOR).toMatch(/<AnuncioResultado/);
+    expect(ANUNCIO).toMatch(/role="status"/);
+    expect(ANUNCIO).toMatch(/aria-live="polite"/);
+  });
+
+  it("e o anúncio é adiado, para não ler um preço por cada tecla", () => {
+    expect(
+      /setTimeout/.test(ANUNCIO),
+      "sem debounce, escrever «1250» anuncia quatro preços, três dos quais nunca existiram",
+    ).toBe(true);
+  });
+});
+
+describe("⑩ a ressalva de exemplo viaja com os números", () => {
+  it("o slider e a tabela de cenários também a recebem", () => {
+    expect(SIMULADOR).toMatch(/<SliderPreco[^>]*exemplo=\{!tocado\}/);
+    expect(SIMULADOR).toMatch(/<Cenarios[^>]*exemplo=\{!tocado\}/);
+    expect(SLIDER).toMatch(/SeloExemplo/);
   });
 });
 
