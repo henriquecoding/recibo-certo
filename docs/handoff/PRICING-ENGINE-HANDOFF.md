@@ -127,12 +127,11 @@ Os três primeiros mudam **números que a pessoa vê**; os restantes alargam o
 >   Social declara-se por trimestre mas paga-se todos os meses**.
 > - **R8** — cenário `ato_isolado` + `atoIsolado` em `situacaoIVAPreco` e o
 >   aviso `ato-isolado-leva-iva` (Art. 53.º n.º 6 a).
-> - **R9** — **verificado, parcialmente resolvido.** Ver a secção R9 abaixo:
->   a pergunta em aberto passou a resposta com fonte, ficou o aviso
->   `irs-regiao-autonoma`, e o que falta é uma decisão de produto.
+> - **R9** — **feito.** As taxas regionais de IRS entraram no motor. Ver a
+>   secção R9 abaixo, incluindo as duas coisas que ficaram deliberadamente
+>   nacionais e porquê.
 >
-> **Ainda por fazer: a parte de motor do R9** (taxas regionais de IRS a sério),
-> que depende de uma decisão descrita na secção respetiva.
+> **Backlog fechado.**
 
 ### R1 · Ligar `situacaoIVA()` — o maior desperdício atual
 
@@ -321,36 +320,49 @@ sim, aplicam-se.**
   | 46 566 – 86 634 | 44,60% | 31,22% |
   | > 86 634 | 48,00% | 33,60% |
 
-**O que já foi feito.** O aviso `irs-regiao-autonoma` diz a quem reside nas
-regiões autónomas que o IRS deste cálculo é o nacional e que o preço proposto
-é, por isso, **conservador** — cobre mais imposto do que a pessoa vai pagar.
-Uma inexatidão declarada é honesta; a mesma inexatidão em silêncio não é.
+**Como ficou implementado.**
 
-**O que falta, e porque não foi feito.** Aplicar as taxas regionais a sério
-significa passar a região a `irsProgressivo()`, e esse é o motor de IRS de
-**toda** a aplicação: calculadora, simulador, comparador, guias, `payout-mor`,
-`fiscal-dependente`, `fiscal-empresa` e a auditoria. Muda o imposto mostrado
-em todo o lado para uma parte dos utilizadores — é «mudança grande» na aceção
-da regra 7 do `CLAUDE.md` e precisa de validação antes de ser implementada.
-
-Há ainda uma **decisão de produto por tomar, e ela é a parte difícil**:
-`vendedor.regiao` significa hoje *região para efeitos de IVA*. O que decide a
-redução de IRS é a **residência fiscal**. Coincidem quase sempre, mas não são
-a mesma pergunta, e aplicar uma redução de imposto a partir de um campo que
-significa outra coisa seria assumir em silêncio um facto que determina o
-imposto de alguém — exatamente o que a regra 1 existe para impedir. Antes de
-mexer no motor é preciso decidir se o perfil passa a ter um campo próprio de
-residência fiscal, ou se se assume a coincidência **e se diz que se assume**.
-
-**Plano, quando houver decisão.**
-1. `REDUCAO_IRS_REGIOES_AUTONOMAS` em `fiscal-data.ts` como `Sourced<number>`
-   (0,30), com base legal e fonte. Não transcrever as 18 taxas à mão: derivar
-   e **assertar** contra a tabela publicada, para que qualquer desvio futuro,
-   nosso ou do legislador, parta o build em vez de passar despercebido.
+1. `REDUCAO_IRS_REGIOES_AUTONOMAS` em `fiscal-data.ts` guarda a REGRA (30%),
+   não dezoito taxas transcritas à mão — cada uma delas seria uma
+   oportunidade de erro que ninguém voltaria a conferir. `escaloesIRSDaRegiao()`
+   deriva a tabela, e `assertFiscalDataIntegrity()` confere a derivação contra
+   a tabela publicada de 2026, escalão a escalão. Mexer no diferencial ou nos
+   escalões nacionais sem pensar nas regiões parte o build.
 2. `irsProgressivo(coletavel, regiao = "continente")` — o valor por omissão
-   mantém todos os chamadores atuais com o comportamento de hoje.
-3. Propagar a região a partir do perfil fiscal, uma superfície de cada vez.
-4. Retirar o aviso `irs-regiao-autonoma` quando deixar de ser verdade.
+   deixa intacto todo o chamador que não sabe que a pergunta existe.
+3. A residência propaga-se por `SimulacaoInput.residenciaFiscal`,
+   `DeclaracaoInput.residenciaFiscal`, `ComparacaoInput.residenciaFiscal`,
+   `PerfilGerente.regiao` e `PerfilVendedor.residenciaFiscal`.
+4. `residenciaParaRegiao()` (em `irs-guiado.ts`) é a implementação ÚNICA da
+   regra «que região governa as taxas» — havia uma segunda cópia dentro do
+   `SimuladorIRS.tsx` e foi eliminada.
+
+**A distinção que isto obrigou a tornar explícita.** O IVA segue a OPERAÇÃO;
+o IRS segue a PESSOA. Coincidem quase sempre, e por isso a residência assume
+por omissão a região da atividade — mas `PerfilVendedor.residenciaFiscal`
+existe para que a coincidência seja uma **escolha** e não um pressuposto
+escondido no código. O simulador de IRS já perguntava a residência em
+separado, e essa resposta agora decide também as taxas: até aqui retinha pela
+tabela da região e apurava pelas taxas nacionais, e o reembolso que anunciava
+não era o que a AT daria.
+
+**O que ficou nacional de propósito, e porquê.** Duas coisas, ambas por não se
+ter conseguido confirmar em fonte oficial se a redução regional lhes toca:
+
+- o **mínimo de existência** (Art. 70.º remete para «a taxa da primeira
+  posição da tabela do artigo 68.º» — não está confirmado se, para um
+  residente numa região autónoma, essa taxa é a nacional ou a regional);
+- a **taxa liberatória dos dividendos** (Art. 71.º) no comparador — há indício
+  de redução regional, mas encontrado só para os Açores e sem o valor de 2026
+  confirmado.
+
+Nos dois casos o valor nacional é o mais alto, logo o resultado peca por
+excesso de imposto — o lado seguro para quem está a decidir quanto guardar.
+Ficam registados como perguntas em aberto, com comentário no código.
+
+**O aviso mudou de sentido.** `irs-regiao-autonoma` já não diz «o preço é
+conservador»; diz que o desconto **já está aplicado** e de que depende — que é
+onde a pessoa reside, não onde está o cliente.
 
 ---
 

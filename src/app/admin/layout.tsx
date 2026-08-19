@@ -125,7 +125,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
                 </li>
               ) : (
                 <li key={seccao.id} className="pt-3 first:pt-0">
-                  <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
+                  <p className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                     {seccao.label}
                   </p>
                   <ul className="space-y-0.5">

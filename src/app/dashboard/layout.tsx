@@ -278,7 +278,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
             {GRUPOS.map((grupo) => (
               <div key={grupo.titulo} className="mb-3">
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-300">
+                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-500 dark:text-stone-400">
                   {grupo.titulo}
                 </p>
                 <ul className="flex flex-col gap-0.5">

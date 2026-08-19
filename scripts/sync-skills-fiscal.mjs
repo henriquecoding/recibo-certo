@@ -121,6 +121,19 @@ async function main() {
   const escaloesMin = pct(Math.min(...taxasEscaloes));
   const escaloesMax = pct(Math.max(...taxasEscaloes));
 
+  // Redução regional das taxas do Art. 68.º (Lei das Finanças das Regiões
+  // Autónomas). Lida da fonte, não escrita à mão: se um orçamento regional
+  // mudar o diferencial, a skill acompanha sem ninguém se lembrar dela.
+  const reducaoBloco = grab(
+    src,
+    /REDUCAO_IRS_REGIOES_AUTONOMAS = sv[\s\S]*?\{([\s\S]*?)\}/,
+    "REDUCAO_IRS_REGIOES_AUTONOMAS"
+  );
+  const reducaoMadeira = Number(grab(reducaoBloco, /madeira:\s*([\d.]+)/, "reducao madeira"));
+  const reducaoAcores = Number(grab(reducaoBloco, /acores:\s*([\d.]+)/, "reducao acores"));
+  const escaloesMinRA = pct(Math.min(...taxasEscaloes) * (1 - reducaoMadeira));
+  const escaloesMaxRA = pct(Math.max(...taxasEscaloes) * (1 - reducaoMadeira));
+
   // Total de atividades no catálogo.
   const totalAtividades = [...src.matchAll(/^\s*(?:a\(|\{ label:|\{\n\s*label:)/gm)].length;
 
@@ -135,6 +148,7 @@ async function main() {
     `- **Segurança Social**: taxa ${pct(ssTaxa)} sobre 70% (serviços) ou 20% (bens/hotelaria).`,
     `- **Categoria F (rendas puras)**: taxa autónoma habitação ${pct(catFHab)} · não habitacional ${pct(catFNaoHab)}; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio \`calcularCategoriaF\`.`,
     `- **IRS**: escalões de ${escaloesMin} a ${escaloesMax}; mínimo de existência ${eur(minExist)}.`,
+    `- **IRS nas regiões autónomas**: taxas do Art. 68.º reduzidas em ${pct(reducaoMadeira)} na Madeira e ${pct(reducaoAcores)} nos Açores (de ${escaloesMinRA} a ${escaloesMaxRA}), com os MESMOS limites de escalão. Decide a **residência fiscal**, não a origem do rendimento nem a região do IVA. Motor: \`escaloesIRSDaRegiao()\` + \`irsProgressivo(coletavel, regiao)\`.`,
     `- **IRC** (comparador): geral ${pct(ircGeral)} · PME ${pct(ircPme)} até ${eur(ircLimite)}; dividendos ${pct(dividendos)}.`,
     `- **Catálogo**: ${totalAtividades} atividades (Art. 151.º + regimes especiais + subsídios).`,
     END,

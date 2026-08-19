@@ -40,6 +40,7 @@ import {
   type Dependente,
   type AscendenteDetalhe,
   type ResidenciaFiscal,
+  residenciaParaRegiao,
   type EstadoCivil,
   type RendimentosTitularB,
 } from "@/lib/irs-guiado";
@@ -143,11 +144,6 @@ const TSU_TRABALHADOR = SS_DEPENDENTE.trabalhador.value;
 function estadoCivilRetencao(estadoCivil: EstadoCivil, conjunta: boolean): EstadoCivilRet {
   if (estadoCivil !== "casado" && estadoCivil !== "uniao") return "naoCasado";
   return conjunta ? "casadoDois" : "casadoUnico";
-}
-
-/** As Regiões Autónomas têm tabelas de retenção próprias. */
-function regiaoRetencao(residencia: ResidenciaFiscal): Regiao {
-  return residencia === "madeira" || residencia === "acores" ? residencia : "continente";
 }
 
 function tempoRelativo(ts: number, agora: number): string {
@@ -390,7 +386,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
         dependentes: dependentes.length,
         estadoCivil: estadoCivilRetencao(contribuinte.estadoCivil, conjunta),
         deficiencia,
-        regiao: regiaoRetencao(contribuinte.residencia),
+        regiao: residenciaParaRegiao(contribuinte.residencia),
         irsJovemAno: jovemAno,
       }),
     [salBruto, dependentes.length, contribuinte.estadoCivil, contribuinte.residencia, conjunta, deficiencia, jovemAno]
@@ -1623,7 +1619,7 @@ function Triagem({ ativos, onToggle }: { ativos: RendimentoId[]; onToggle: (id: 
                 </span>
               </div>
               <div className={`text-sm font-semibold ${active ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{m.titulo}</div>
-              <div className={`text-[11px] leading-tight ${active ? "text-brand" : "text-stone-400"}`}>{m.sub}</div>
+              <div className={`text-[11px] leading-tight ${active ? "text-brand-dark" : "text-stone-400"}`}>{m.sub}</div>
             </button>
           );
         })}
@@ -1925,7 +1921,10 @@ function CartaoAgregado({ icon, titulo, sub, destaque = false }: { icon: ReactNo
       <span className={`flex h-8 w-8 items-center justify-center rounded-full ${destaque ? "bg-brand text-white" : "bg-stone-100 text-stone-400 dark:bg-stone-800"}`}>{icon}</span>
       <div>
         <div className={`text-sm font-semibold ${destaque ? "text-brand-dark" : "text-stone-700 dark:text-stone-200"}`}>{titulo}</div>
-        <div className={`text-[11px] ${destaque ? "text-brand" : "text-stone-400"}`}>{sub}</div>
+        {/* `text-brand-dark`, não `text-brand`: sobre `bg-brand-light` o verde da
+          marca dá 4,42:1 e falha AA por pouco. O título mesmo por cima já usa
+          o tom escuro — eram os dois tons no mesmo cartão, e só um passava. */}
+        <div className={`text-[11px] ${destaque ? "text-brand-dark" : "text-stone-500 dark:text-stone-400"}`}>{sub}</div>
       </div>
     </div>
   );

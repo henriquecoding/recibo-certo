@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-07" as const;
+export const DATA_LAST_REVIEW = "2026-08-19" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -63,6 +63,18 @@ export const SOURCES = {
   art68aCirs: {
     label: "Art. 68.º-A CIRS — Taxa adicional de solidariedade · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs68a.aspx",
+  },
+  lfra: {
+    label: "Lei Orgânica n.º 2/2013 — Lei das Finanças das Regiões Autónomas (Título VI, poder tributário próprio)",
+    url: "https://diariodarepublica.pt/dr/detalhe/lei-organica/2-2013-499317",
+  },
+  dlrMadeira2026: {
+    label: "Decreto Legislativo Regional n.º 8/2025/M — Orçamento da Região Autónoma da Madeira para 2026",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-legislativo-regional/8-2025-993031451",
+  },
+  dlrAcores: {
+    label: "Decreto Legislativo Regional n.º 15-A/2021/A — adaptação do sistema fiscal nacional à Região Autónoma dos Açores",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-legislativo-regional/15-a-2021-164193991",
   },
   art25cirs: {
     label: "Art. 25.º CIRS — Dedução específica do trabalho dependente · Portal das Finanças (AT)",
@@ -712,6 +724,9 @@ function sv<T>(
 }
 
 const TODAY = "2026-06-11";
+// Verificação das taxas regionais de IRS (Madeira e Açores) contra a tabela
+// publicada para 2026 e os diplomas regionais que a fixam.
+const REV_REGIOES = "2026-08-19";
 // Data de verificação dos parâmetros adicionados na revisão de mais-valias
 // (categoria G) e rendimentos estrangeiros — confirmados em fontes oficiais/de
 // referência nesta data.
@@ -1814,6 +1829,67 @@ export const ESCALOES_IRS = sv<EscalaoIRS[]>(
   TODAY,
   "Taxas marginais. Confirmar anualmente contra a tabela oficial da AT."
 );
+
+// ═══════════════════════════════════════════════════════════════════════
+//  IRS NAS REGIÕES AUTÓNOMAS — o mesmo Art. 68.º, com taxas reduzidas
+//  ---------------------------------------------------------------------
+//  A Lei das Finanças das Regiões Autónomas permite às assembleias
+//  legislativas regionais baixar as taxas nacionais de IRS até 30%. Em 2026
+//  as duas regiões aplicam o diferencial MÁXIMO, em TODOS os escalões — na
+//  Madeira depois de o Orçamento regional o ter alargado do 6.º ao 9.º.
+//
+//  ── O QUE DECIDE A REDUÇÃO ───────────────────────────────────────────
+//
+//  A RESIDÊNCIA FISCAL do sujeito passivo, e mais nada. Não é o lugar onde
+//  se presta o serviço, nem onde está o cliente, nem a região que governa o
+//  IVA da operação. Quem reside nos Açores e fatura para Lisboa é tributado
+//  às taxas dos Açores; quem reside em Lisboa e fatura para os Açores não é.
+//  É por isso que `Regiao` NÃO chega para decidir isto sozinha — ver
+//  `residenciaFiscal` nos perfis, que é uma pergunta diferente da do IVA.
+//
+//  ── PORQUE É UM FATOR, E NÃO DEZOITO TAXAS ESCRITAS À MÃO ────────────
+//
+//  A regra legal é «menos 30% sobre a taxa nacional», e é a regra que se
+//  guarda. Transcrever 9 taxas × 2 regiões seria copiar dezoito números que
+//  já se derivam de um, e cada um deles seria uma oportunidade de erro de
+//  transcrição que ninguém voltaria a conferir.
+//
+//  Para que a derivação não vire um ato de fé, `assertFiscalDataIntegrity()`
+//  confere-a contra a tabela PUBLICADA para 2026 (Agenda da OCC): se o
+//  legislador mudar o diferencial, ou se alguém mexer nos escalões
+//  nacionais sem pensar nas regiões, o build parte.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Regiões com poder tributário próprio sobre as taxas do Art. 68.º. */
+export type RegiaoFiscal = Regiao;
+
+export const REDUCAO_IRS_REGIOES_AUTONOMAS = sv<Record<Exclude<Regiao, "continente">, number>>(
+  { madeira: 0.3, acores: 0.3 },
+  "Lei Orgânica n.º 2/2013 (Lei das Finanças das Regiões Autónomas), Título VI — diferencial máximo de 30% sobre as taxas nacionais de IRS; aplicado na íntegra em 2026 pelo DLR n.º 8/2025/M (Madeira, alargado a todos os escalões) e pelo DLR n.º 15-A/2021/A (Açores)",
+  "lfra",
+  REV_REGIOES,
+  "A redução é do sujeito passivo RESIDENTE na região, seja qual for a categoria de rendimento ou o local onde exerce a atividade. Confirmar anualmente: o diferencial é decidido a cada orçamento regional."
+);
+
+/**
+ * Escalões do Art. 68.º aplicáveis a quem reside na região indicada.
+ *
+ * Os limites de escalão são os nacionais — a lei regional baixa as TAXAS, não
+ * as fronteiras. Devolve o array nacional tal e qual para o continente, para
+ * que quem não sabe da existência disto continue a obter o que sempre obteve.
+ */
+export function escaloesIRSDaRegiao(regiao: Regiao = "continente"): EscalaoIRS[] {
+  if (regiao === "continente") return ESCALOES_IRS.value;
+  const reducao = REDUCAO_IRS_REGIOES_AUTONOMAS.value[regiao];
+  return ESCALOES_IRS.value.map((e) => ({
+    ate: e.ate,
+    // Duas casas decimais em pontos percentuais é como a tabela oficial as
+    // publica (12,50% → 8,75%); arredondar aqui evita que 0,157 × 0,7 vire
+    // 0,10989999999999999 e que a comparação com a tabela publicada falhe
+    // por um erro de vírgula flutuante que não existe na lei.
+    taxa: Math.round(e.taxa * (1 - reducao) * 10000) / 10000,
+  }));
+}
 
 // Dedução específica = máx(piso fixo; 8,54 × IAS). Para 2026 = 4.587,09 €.
 export const DEDUCAO_ESPECIFICA_FLOOR = 4104;
@@ -7216,6 +7292,40 @@ export function assertFiscalDataIntegrity(): void {
   if (!isRate(majDep.porDependente)) {
     erros.push("Majoração do limite global por dependente inválida.");
   }
+  // ── Taxas de IRS das regiões autónomas ──────────────────────────────
+  //  A tabela abaixo é a PUBLICADA para 2026 (Agenda da OCC), transcrita
+  //  aqui com um único propósito: provar que a derivação «taxa nacional
+  //  menos 30%» reproduz a lei, escalão a escalão. Não é a fonte de verdade
+  //  — é a testemunha. Se um orçamento regional mudar o diferencial, ou se
+  //  alguém mexer nos escalões nacionais sem pensar nas regiões, isto parte
+  //  o build em vez de servir em silêncio um imposto errado.
+  const TAXAS_REGIOES_2026 = [0.0875, 0.1099, 0.1484, 0.1687, 0.2177, 0.2443, 0.3017, 0.3122, 0.336];
+  for (const reg of ["madeira", "acores"] as const) {
+    const reducao = REDUCAO_IRS_REGIOES_AUTONOMAS.value[reg];
+    if (!isRate(reducao) || reducao > 0.3) {
+      erros.push(`Redução de IRS (${reg}): fora de [0, 0.30] — a Lei das Finanças das Regiões Autónomas limita o diferencial a 30%.`);
+      continue;
+    }
+    const derivados = escaloesIRSDaRegiao(reg);
+    if (derivados.length !== ESCALOES_IRS.value.length) {
+      erros.push(`Escalões de IRS (${reg}): número de escalões diferente do nacional.`);
+      continue;
+    }
+    derivados.forEach((e, i) => {
+      if (e.ate !== ESCALOES_IRS.value[i].ate) {
+        erros.push(`Escalões de IRS (${reg}) escalão ${i + 1}: a lei regional baixa a taxa, não o limite do escalão.`);
+      }
+      if (!isRate(e.taxa)) {
+        erros.push(`Escalões de IRS (${reg}) escalão ${i + 1}: taxa fora de [0,1].`);
+      }
+      if (Math.abs(e.taxa - TAXAS_REGIOES_2026[i]) > 1e-9) {
+        erros.push(
+          `Escalões de IRS (${reg}) escalão ${i + 1}: a derivação dá ${(e.taxa * 100).toFixed(2)}% mas a tabela publicada para 2026 diz ${(TAXAS_REGIOES_2026[i] * 100).toFixed(2)}%.`
+        );
+      }
+    });
+  }
+
   // Valida as tabelas de retenção das três regiões. Nota: a taxa marginal NÃO é
   // necessariamente crescente entre escalões (ex.: Tabela I da Madeira desce de
   // 30,28% para 28,02%), por isso só se valida o domínio [0,1] e o limite crescente.

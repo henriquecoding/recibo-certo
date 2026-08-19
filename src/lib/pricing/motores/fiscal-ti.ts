@@ -228,6 +228,10 @@ export function fracoesFiscais(
   if (faturacaoBase > 0) {
     const irsCom = (bruto: number) =>
       simularDeclaracaoIRS({
+        // O IRS segue a PESSOA. Sem residência declarada assume-se a região
+        // da atividade, que é o que coincide para quase toda a gente — e o
+        // campo existe justamente para quem é a exceção o poder dizer.
+        residenciaFiscal: vendedor.residenciaFiscal ?? vendedor.regiao,
         salarios: salarioBruto > 0 ? { bruto: salarioBruto } : undefined,
         independente: {
           brutoAnual: bruto,

@@ -109,8 +109,19 @@ export default function ResultadoPreco({
           e ele passa a ser teu.
         </p>
       ) : null}
-      <div className={`flex flex-wrap items-baseline gap-x-3 gap-y-1 ${exemplo ? "opacity-60" : ""}`}>
-        <span className="font-display text-4xl font-semibold tabular-nums text-ink dark:text-stone-50 sm:text-5xl">
+      {/* Desemfatizar com COR, nunca com `opacity`.
+          Havia aqui um `opacity-60` que dizia bem o que queria dizer — «este
+          número ainda não é teu» — e cegava quem precisa de contraste: o
+          cinzento da legenda caía de 4,5:1 para 2,38:1. A opacidade mistura o
+          texto com o fundo sem que nenhuma regra de cor o denuncie, por isso
+          escapa a quem lê o CSS e só aparece no medidor. Trocar o tom faz o
+          mesmo efeito visual e continua legível. */}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span
+          className={`font-display text-4xl font-semibold tabular-nums sm:text-5xl ${
+            exemplo ? "text-stone-500 dark:text-stone-400" : "text-ink dark:text-stone-50"
+          }`}
+        >
           {fmt(resultado.pvp)}
         </span>
         <span className="text-sm text-stone-500 dark:text-stone-400">
