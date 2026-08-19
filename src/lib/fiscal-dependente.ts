@@ -958,6 +958,9 @@ export function compararCategorias(input: ComparacaoCategoriasInput): Comparacao
     deducoes: input.deducoes,
     deficiencia: input.deficiencia,
     anoAtividade: input.anoAtividade,
+    // A residência é da PESSOA: aplica-se às três colunas da comparação, não
+    // só a uma. Aplicá-la a umas e não a outras inverteria o veredicto.
+    residenciaFiscal: input.regiao,
   });
 
   // Cat. A (trabalho dependente): o mesmo bruto como salário de 14 meses,
@@ -1148,7 +1151,12 @@ export function mealheiroDependente(input: MealheiroDependenteInput): MealheiroD
   // quociente 2, tal como no motor da Categoria B.
   const divisor = input.conjunta ? 2 : 1;
   const coletavelPorTitular = rendimentoColetavel / divisor;
-  const impostoEscaloes = irsProgressivo(coletavelPorTitular) * divisor;
+  // A MESMA região que escolheu a tabela de retenção mensal. Enquanto isto
+  // não existia, o produto contradizia-se a si próprio: a retenção usava a
+  // tabela regional (que já embute a redução de 30%) e o apuramento anual
+  // usava as taxas nacionais, o que fazia o «mealheiro» prometer um reembolso
+  // que não existia — ou escondê-lo.
+  const impostoEscaloes = irsProgressivo(coletavelPorTitular, input.regiao ?? "continente") * divisor;
   const adicional = adicionalSolidariedade(coletavelPorTitular, divisor);
   const coletaBruta = cent(impostoEscaloes + adicional);
 

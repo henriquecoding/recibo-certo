@@ -52,7 +52,7 @@ export default function PartnerCard({
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-[10px] font-medium uppercase tracking-widest text-stone-300">
+          <span className="text-[10px] font-medium uppercase tracking-widest text-stone-500 dark:text-stone-400">
             Parceiro
           </span>
           <button

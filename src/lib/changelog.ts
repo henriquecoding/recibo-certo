@@ -16,14 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.83.1",
+    version: "2.84.1",
     data: "2026-08-19",
     titulo: "O mapa que damos ao Google deixou de se contradizer",
     itens: [
       "O sitemap é a lista de páginas que pedimos aos motores de busca para indexar. A página para investidores estava lá — e, ao mesmo tempo, dizia a quem lá chegasse para não a indexar. Ficava por publicar de propósito, enquanto o aviso legal não estiver revisto por advogado; o que estava errado era estarmos a anunciá-la à mesma. Saiu da lista, e fica escrito no código o que é preciso fazer no dia em que for para publicar.",
       "O painel privado dos contabilistas não constava do ficheiro que diz aos motores de busca onde não entrar. Passa a constar — com o cuidado de não apanhar por engano o diretório público de contabilistas, que é precisamente a página que queremos encontrada.",
       "As entradas dos painéis pessoal e de administração também escapavam a essa recusa, por uma subtileza do formato: proibir «/dashboard/» não proíbe «/dashboard». Passam a estar cobertas as duas formas.",
-      "Verificámos as 233 ligações internas do site, uma a uma, contra as rotas que existem de facto: nenhuma aponta para o vazio. As 212 páginas submetidas continuam sem repetições e todas com data de revisão verdadeira, não a data da última publicação do site.",
+      "Verificámos as 233 ligações internas do site, uma a uma, contra as rotas que existem de facto: nenhuma aponta para o vazio. As 211 páginas submetidas continuam sem repetições e todas com data de revisão verdadeira, não a data da última publicação do site.",
+    ],
+  },
+  {
+    version: "2.84.0",
+    data: "2026-08-19",
+    titulo: "Quem vive na Madeira ou nos Açores deixa de pagar IRS a mais nas nossas contas",
+    itens: [
+      "As regiões autónomas cobram menos 30% de IRS do que o continente, em todos os escalões — é um direito de quem lá reside, escrito na Lei das Finanças das Regiões Autónomas. O nosso motor calculava sempre pelas taxas do continente. Quem vive no Funchal ou em Ponta Delgada via um imposto maior do que o seu, na calculadora, no simulador, no comparador e na formação de preço.",
+      "Passa a estar certo. Se resides numa região autónoma, a redução entra no cálculo: no IRS que te estimamos, no preço que te sugerimos cobrar e na comparação entre recibos verdes e sociedade — que era a mais injusta das três, porque só um dos lados da balança levava o desconto.",
+      "Havia até uma contradição dentro do próprio site: no recibo de vencimento a retenção mensal já usava a tabela da tua região, mas o apuramento do ano usava as taxas do continente. O mealheiro prometia um reembolso que não existia, ou escondia um que existia.",
+      "Uma distinção que agora fica explícita, porque muda o resultado: o IVA segue a operação, o IRS segue a pessoa. Quem reside no continente e tem atividade na Madeira liquida IVA da Madeira e paga IRS continental — e o contrário também acontece. Onde a pergunta era só «Região», passa a dizer-se o que ela decide.",
+      "Os números não foram escritos à mão. Guardámos a regra legal — menos 30% — e o site confere-a, escalão a escalão, contra a tabela publicada para 2026. Se um orçamento regional mudar o diferencial, ou se alguém mexer nos escalões nacionais sem pensar nas regiões, o site recusa-se a arrancar em vez de servir um imposto errado em silêncio.",
+      "Duas coisas ficaram deliberadamente por mudar, e dizemo-lo em vez de as fazer à sorte: o mínimo de existência e a taxa dos dividendos continuam a usar a referência nacional, porque não conseguimos confirmar em fonte oficial se a redução regional lhes toca. Nos dois casos o que mostramos peca por excesso de imposto, que é o lado seguro para quem está a decidir quanto guardar.",
     ],
   },
   {

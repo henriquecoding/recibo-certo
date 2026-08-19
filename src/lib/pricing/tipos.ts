@@ -114,6 +114,20 @@ export interface PerfilVendedor {
   faturacaoAnualPrevista?: number;
   /** Isenções de Segurança Social (1.º ano, acumulação com emprego). */
   isencaoSSPrimeiroAno?: boolean;
+  /**
+   * Residência fiscal, quando NÃO coincide com `regiao`.
+   *
+   * As duas respondem a perguntas diferentes: `regiao` governa o IVA, que
+   * segue a operação; a residência governa o IRS, que segue a pessoa. Quem
+   * reside nos Açores e fatura para Lisboa é tributado às taxas dos Açores;
+   * quem reside em Lisboa com estabelecimento na Madeira liquida IVA da
+   * Madeira e paga IRS continental.
+   *
+   * Para quase toda a gente coincidem, e é por isso que o valor por omissão
+   * é `regiao` — mas o campo existe para que a coincidência seja uma
+   * ESCOLHA e não um pressuposto escondido no código.
+   */
+  residenciaFiscal?: Regiao;
   acumulaEmprego?: boolean;
   /**
    * Regime de determinação do rendimento (Art. 28.º CIRS). Muda uma

@@ -17,6 +17,8 @@ import {
   PROGRAMA_REGRESSAR,
   PROGRAMA_REGRESSAR_TETO_CALC,
   ESCALOES_IRS,
+  REDUCAO_IRS_REGIOES_AUTONOMAS,
+  escaloesIRSDaRegiao,
   DEDUCAO_ESPECIFICA_CATB,
   REGIME_15PCT,
   MINIMO_EXISTENCIA,
@@ -135,6 +137,14 @@ export function GET() {
         tetoAnual: PROGRAMA_REGRESSAR_TETO_CALC,
       },
       escaloesIRS: expose(ESCALOES_IRS),
+      // As regiões autónomas têm taxa própria, e quem consome esta API tem
+      // de a poder ver — expor só a nacional era afirmar que só existe uma.
+      reducaoIRSRegioesAutonomas: expose(REDUCAO_IRS_REGIOES_AUTONOMAS),
+      escaloesIRSPorRegiao: {
+        continente: escaloesIRSDaRegiao("continente"),
+        madeira: escaloesIRSDaRegiao("madeira"),
+        acores: escaloesIRSDaRegiao("acores"),
+      },
       deducaoEspecificaCatB: expose(DEDUCAO_ESPECIFICA_CATB),
       regime15Pct: expose(REGIME_15PCT),
       minimoExistencia: expose(MINIMO_EXISTENCIA),

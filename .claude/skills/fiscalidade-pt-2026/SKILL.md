@@ -79,7 +79,7 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 > `npm run skills:sync`. Não editar à mão — alterar os dados na fonte de verdade.
 
 <!-- AUTO-GERADO:valores-fiscais — não editar à mão. Atualizado por `npm run skills:sync`. -->
-<!-- Ano fiscal 2026 · última revisão 2026-08-07 · gerado de src/lib/fiscal-data.ts -->
+<!-- Ano fiscal 2026 · última revisão 2026-08-19 · gerado de src/lib/fiscal-data.ts -->
 
 - **IAS** 537,13 €.
 - **Retenção na fonte** (cat. B): Art. 151.º 23% · outros serviços 11,5% · direitos de autor 16,5% · vendas sem retenção. Dispensa abaixo de 15 000 €/ano.
@@ -88,6 +88,7 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 - **Segurança Social**: taxa 21,4% sobre 70% (serviços) ou 20% (bens/hotelaria).
 - **Categoria F (rendas puras)**: taxa autónoma habitação 25% · não habitacional 28%; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio `calcularCategoriaF`.
 - **IRS**: escalões de 12,5% a 48%; mínimo de existência 12 880 €.
+- **IRS nas regiões autónomas**: taxas do Art. 68.º reduzidas em 30% na Madeira e 30% nos Açores (de 8,75% a 33,6%), com os MESMOS limites de escalão. Decide a **residência fiscal**, não a origem do rendimento nem a região do IVA. Motor: `escaloesIRSDaRegiao()` + `irsProgressivo(coletavel, regiao)`.
 - **IRC** (comparador): geral 19% · PME 15% até 50 000 €; dividendos 28%.
 - **Catálogo**: 123 atividades (Art. 151.º + regimes especiais + subsídios).
 <!-- /AUTO-GERADO:valores-fiscais -->

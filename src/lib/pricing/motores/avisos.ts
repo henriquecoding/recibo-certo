@@ -300,26 +300,23 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
   }
 
   // ── R9 · Regiões autónomas ─────────────────────────────────────────
-  //  A Lei das Finanças das Regiões Autónomas (Lei Orgânica 2/2013)
-  //  permite às assembleias regionais baixar as taxas nacionais de IRS até
-  //  30%, e em 2026 as duas regiões aplicam o diferencial máximo em TODOS
-  //  os escalões. A redução é do sujeito passivo RESIDENTE na região, o que
-  //  a torna aplicável a toda a matéria coletável englobada — categoria B
-  //  incluída.
-  //
-  //  O motor de IRS deste projeto é nacional. Enquanto for, o número que
-  //  mostramos a quem reside nas regiões autónomas é ALTO — e a escolha
-  //  aqui é dizê-lo, não escondê-lo. Um preço formado por excesso de IRS
-  //  peca por prudência; um preço formado por defeito manda a pessoa
-  //  trabalhar de graça. Mas quem paga tem direito a saber qual é qual.
+  //  A Lei das Finanças das Regiões Autónomas (Lei Orgânica 2/2013) permite
+  //  às assembleias regionais baixar as taxas nacionais de IRS até 30%, e em
+  //  2026 as duas regiões aplicam o diferencial máximo em TODOS os escalões.
+  //  O motor já o aplica — este aviso existe para a pessoa saber que está a
+  //  ser aplicado, e para tornar visível a única coisa que o pode tornar
+  //  errado: o IRS segue a RESIDÊNCIA, e o campo que o decide é o mesmo que
+  //  responde pelo IVA, que segue a OPERAÇÃO. Coincidem quase sempre. Quando
+  //  não coincidem, mais vale a pessoa saber do que descobrir na liquidação.
   const vend = e.contexto.vendedor;
-  if (vend.tipo === "ti" && (vend.regiao === "madeira" || vend.regiao === "acores")) {
-    const regiaoNome = vend.regiao === "madeira" ? "Madeira" : "Açores";
+  const residencia = vend.residenciaFiscal ?? vend.regiao;
+  if (vend.tipo === "ti" && (residencia === "madeira" || residencia === "acores")) {
+    const regiaoNome = residencia === "madeira" ? "Madeira" : "Açores";
     avisos.push({
       id: "irs-regiao-autonoma",
       severidade: "info",
-      titulo: `O IRS aqui usa as taxas do continente — na ${regiaoNome} é mais baixo`,
-      texto: `Se resides fiscalmente na ${regiaoNome}, as tuas taxas de IRS são 30% inferiores às do continente em todos os escalões, e essa redução aplica-se a todo o rendimento englobado — o da tua atividade incluído. O IRS que entra neste cálculo é o nacional, por isso o preço que te propomos é conservador: cobre mais imposto do que vais pagar. Não é motivo para baixar o preço sem contas — é motivo para saberes que tens folga a mais, e não a menos.`,
+      titulo: `Este preço já conta com o IRS mais baixo da ${regiaoNome}`,
+      texto: `Quem reside fiscalmente na ${regiaoNome} paga menos 30% de IRS do que no continente, em todos os escalões, e a redução abrange o rendimento da tua atividade. Esse desconto já está neste cálculo — por isso o preço que te propomos é mais baixo do que seria para a mesma pessoa em Lisboa. Uma ressalva: quem decide isto é onde RESIDES, não onde está o cliente. Se resides no continente e só tens cá atividade, diz-nos — o IVA continua a ser o da região, mas o IRS não.`,
       fonte: "Lei Orgânica 2/2013 (Finanças das Regiões Autónomas) — diferencial de 30% nas taxas do Art. 68.º CIRS",
       fonteUrl: "https://diariodarepublica.pt/dr/detalhe/lei-organica/2-2013-499317",
     });

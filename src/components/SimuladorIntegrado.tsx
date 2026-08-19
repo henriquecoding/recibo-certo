@@ -554,6 +554,10 @@ function simularContabOrganizada(
   naoDocumentadas: number,
   // Comparação com simplificado
   liquidoSimplificado: number,
+  // Residência fiscal: as regiões autónomas aplicam menos 30% de IRS em
+  // todos os escalões. Sem isto, a contabilidade organizada era comparada
+  // com o regime simplificado a taxas diferentes das dele.
+  regiao: Regiao = "continente",
 ): ResultadoContabOrganizada {
   const custoContabilista = CONTAB_ORG_CUSTO_MENSAL * 12;
   const rendimentoLiquido = Math.max(
@@ -583,6 +587,7 @@ function simularContabOrganizada(
   });
   const irs = irsProgressivo(
     Math.max(0, rendimentoTributavel - minimoExistencia.abatement),
+    regiao,
   );
 
   // TA: TI organizado está sujeito ao Art. 88.º CIRC via Art. 73.º CIRS
@@ -652,6 +657,10 @@ interface InputsParticularidades {
   outrosRendimentos?: number; // outros rendimentos (Cat. A / pensões) a englobar
   anoAtividade?: number; // 1.º/2.º ano → redução do coeficiente
   dispensaRetencao?: boolean; // Art. 101.º-B: sem retenção na fonte
+  // Residência fiscal: as regiões autónomas aplicam menos 30% nas taxas do
+  // Art. 68.º. É uma particularidade DA PESSOA, e por isso vive aqui e não
+  // ao lado do IVA — que segue a operação, não quem a faz.
+  residenciaFiscal?: Regiao;
   numDep3plus: number; // dependentes > 3 anos
   numDep3minus: number; // dependentes ≤ 3 anos
   numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
@@ -784,6 +793,7 @@ function simularAnualRV(
 
   const salarioBruto = Math.max(0, partic.outrosRendimentos ?? 0);
   const decl = simularDeclaracaoIRS({
+    residenciaFiscal: partic.residenciaFiscal,
     independente: {
       brutoAnual: faturacao,
       tipo: TIPO_LOCAL_PARA_CANONICO[tipo],
@@ -3422,6 +3432,10 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     outrosRendimentos,
     anoAtividade,
     dispensaRetencao,
+    // A mesma região que o utilizador escolheu para o IVA. Para quase toda a
+    // gente é a residência; quando não for, o campo do perfil de preço é que
+    // permite dizê-lo — aqui há uma pergunta só, e é esta.
+    residenciaFiscal: regiao,
     numDep3plus,
     numDep3minus,
     numDep2_6,
@@ -3592,9 +3606,11 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
       ajudasTI,
       naoDocTI,
       resultAnualRV.liquido,
+      regiao,
     );
   }, [
     contabOrganizada,
+    regiao,
     brutoAnual,
     despesasReaisTI,
     irsJovemAno,

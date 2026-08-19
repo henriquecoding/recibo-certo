@@ -424,7 +424,8 @@ function annualManagerTax(
     // motor de IRS usa para `outrosRendimentos`.
     const parteDividendos = dividends * DIV_INCLUSAO_ENGLOBAMENTO.value;
     const coletaDividendos =
-      irsProgressivo(salarioTributavel + parteDividendos) - irsProgressivo(salarioTributavel);
+      irsProgressivo(salarioTributavel + parteDividendos, perfil.regiao)
+      - irsProgressivo(salarioTributavel, perfil.regiao);
     return cent(coletaSalario + Math.max(0, coletaDividendos));
   }
 
@@ -436,7 +437,12 @@ function annualManagerTax(
   // implementações ÚNICAS de `fiscal.ts`: a cópia local que aqui existia era
   // a quarta do projeto, e não conhecia bebés nem guarda partilhada.
   const deducaoDependentes = deducaoDependentesColeta({ normais: perfil.dependentes });
-  const coleta = irsProgressivo(taxable) + adicionalSolidariedade(taxable);
+  // O IRS do gerente é o IRS de uma PESSOA: segue a residência dela, tal como
+  // seguiria se ela recebesse o mesmo por recibos verdes. Sem isto, o
+  // comparador dizia a um residente na Madeira que a sociedade compensava
+  // menos do que compensa — porque só um dos lados da balança tinha a
+  // redução regional.
+  const coleta = irsProgressivo(taxable, perfil.regiao) + adicionalSolidariedade(taxable);
   return cent(Math.max(0, coleta - deducaoDependentes));
 }
 

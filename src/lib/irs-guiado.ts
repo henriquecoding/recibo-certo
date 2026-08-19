@@ -12,7 +12,7 @@
 
 import type { CategoriaEstrangeiro, DeclaracaoInput } from "./fiscal";
 import { IRS_JOVEM } from "./fiscal-data";
-import type { TipoAtividade, DuracaoArrendamento, TipoDonativo } from "./fiscal-data";
+import type { TipoAtividade, DuracaoArrendamento, TipoDonativo, Regiao } from "./fiscal-data";
 import {
   IVA_ISENCAO_EXCESSO,
   REGIME_SIMPLIFICADO,
@@ -29,6 +29,18 @@ import {
 // ─── Identificação / agregado familiar ──────────────────────────────────────
 export type ResidenciaFiscal = "continente" | "madeira" | "acores" | "estrangeiro";
 export type EstadoCivil = "solteiro" | "casado" | "uniao" | "divorciado" | "viuvo";
+
+/**
+ * A região que governa as taxas do Art. 68.º, a partir da residência declarada.
+ *
+ * Só a Madeira e os Açores têm taxa própria; «continente» e «não residente»
+ * caem ambos na tabela nacional — o não residente porque não é tributado por
+ * estas taxas de todo, e devolver-lhe uma redução regional seria um erro com
+ * consequências.
+ */
+export function residenciaParaRegiao(residencia?: ResidenciaFiscal): Regiao {
+  return residencia === "madeira" || residencia === "acores" ? residencia : "continente";
+}
 
 export const META_RESIDENCIA: Record<ResidenciaFiscal, string> = {
   continente: "Continente",
@@ -458,6 +470,15 @@ export function construirDeclaracaoInput(e: EstadoDeclaracao): DeclaracaoInput {
     conjunta: e.conjunta,
     deficiencia: e.deficiencia,
     ifici: e.ifici,
+    // A residência declarada no agregado passa a decidir também as TAXAS, e
+    // não só a tabela de retenção. Enquanto não decidia, o simulador
+    // contradizia-se: retinha pela tabela da Madeira e apurava pelas taxas
+    // do continente, e o reembolso que anunciava não era o que a AT daria.
+    //
+    // «estrangeiro» não entra: um não residente não é tributado pelas taxas
+    // gerais do Art. 68.º nem beneficia de reduções regionais — cai na taxa
+    // do Art. 72.º, que este motor trata à parte.
+    residenciaFiscal: residenciaParaRegiao(e.contribuinte?.residencia),
     titularB: tb
       ? {
           // O IRS Jovem do SP B é dele, com teto próprio de 55 × IAS, e

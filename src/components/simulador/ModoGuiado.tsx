@@ -2501,7 +2501,7 @@ function PassoSituacao({
                 Despesas que abatam ao IRS?
               </div>
               <p
-                className={`mt-0.5 text-xs ${mostrarDeducoes ? "text-brand" : "text-stone-400"}`}
+                className={`mt-0.5 text-xs ${mostrarDeducoes ? "text-brand-dark" : "text-stone-400"}`}
               >
                 Saúde · Educação · Rendas · Despesas gerais — opcional
               </p>
