@@ -24,7 +24,7 @@ import Link from "next/link";
 import { fmt } from "@/lib/format";
 import { diagnosticoContabilista } from "@/lib/contabilista";
 import { escolherRota } from "@/lib/routing";
-import { ArrowRight, MapPin, Scale, ShieldCheck } from "@/components/ui/Icons";
+import { ArrowRight, MapPin, Scale } from "@/components/ui/Icons";
 import { paraDiagnosticoContabilista } from "@/lib/negocio/adapters/contabilista";
 import { sinaisDoNegocio } from "@/lib/negocio/adapters/routing";
 import { passosAntesDaFiz } from "@/lib/negocio/adapters/fiz";
@@ -34,11 +34,9 @@ import { Cartao } from "./atomos";
 export default function ProximoPassoNegocio({
   negocio,
   contexto,
-  aoPartilhar,
 }: {
   negocio: ResultadoNegocio;
   contexto: ContextoNegocio;
-  aoPartilhar?: () => void;
 }) {
   const diagnostico = useMemo(
     () => (negocio.receitaSemIVAAno > 0 ? diagnosticoContabilista(paraDiagnosticoContabilista(negocio, contexto)) : null),
@@ -113,17 +111,13 @@ export default function ProximoPassoNegocio({
               <Scale size={14} />
               Encontrar contabilista
             </Link>
-            {aoPartilhar ? (
-              <button
-                type="button"
-                onClick={aoPartilhar}
-                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-stone-200 bg-white px-4 text-sm font-semibold text-stone-700 transition-colors hover:border-brand hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200 dark:hover:border-brand dark:hover:text-brand-mint"
-              >
-                <ShieldCheck size={14} />
-                Ver o que posso partilhar
-              </button>
-            ) : null}
           </div>
+
+          {/* O envio ao contabilista da própria pessoa vive na conclusão,
+              dentro do `ResultadoExplicado` — que já mostra campo a campo
+              o que segue, ANTES de seguir. Repeti-lo aqui daria dois
+              sítios para a mesma ação, com dois pré-visualizadores a
+              divergir ao primeiro campo novo. */}
         </Cartao>
       ) : null}
 

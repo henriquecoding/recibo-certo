@@ -67,8 +67,6 @@ export {
   conteudoPartilhaNegocio,
   formaJuridicaDe,
   paraDiagnosticoContabilista,
-  resumoParaContabilista,
-  type CampoPartilha,
 } from "./adapters/contabilista";
 export { paraFiz, passosAntesDaFiz, simuladorFizDe, type ValoresFizNegocio } from "./adapters/fiz";
 export { confiancaParaRouting, sinaisDoNegocio, type OpcoesSinais } from "./adapters/routing";

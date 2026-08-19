@@ -34,7 +34,7 @@ import {
   paraEmpresa,
   paraFiz,
   paraDiagnosticoContabilista,
-  resumoParaContabilista,
+  conteudoPartilhaNegocio,
   sinaisDoNegocio,
   type ContextoNegocio,
   type OfertaNegocio,
@@ -626,22 +626,24 @@ describe("negocio:privacidade", () => {
   })();
   const negocio = analisarNegocio(contexto);
 
-  it("o resumo para o contabilista não leva custos de fornecedor nem margens", () => {
-    const campos = resumoParaContabilista(negocio, contexto);
-    const texto = JSON.stringify(campos);
+  it("o conteúdo para o contabilista não leva custos de fornecedor nem margens", () => {
+    const conteudo = conteudoPartilhaNegocio(negocio, contexto);
+    const texto = JSON.stringify(conteudo);
     expect(texto).not.toContain("7,77");
     expect(texto).not.toContain("7.77");
     expect(texto.toLowerCase()).not.toContain("margem");
     expect(texto.toLowerCase()).not.toContain("markup");
   });
 
-  it("o resumo é enumerável campo a campo — é o que o consentimento mostra", () => {
-    const campos = resumoParaContabilista(negocio, contexto);
-    expect(campos.length).toBeGreaterThan(0);
-    for (const c of campos) {
-      expect(typeof c.rotulo).toBe("string");
-      expect(typeof c.valor).toBe("string");
-      expect(c.rotulo.length).toBeGreaterThan(0);
+  it("é enumerável campo a campo — é o que o consentimento mostra", () => {
+    const conteudo = conteudoPartilhaNegocio(negocio, contexto);
+    const chaves = Object.keys(conteudo);
+    expect(chaves.length).toBeGreaterThan(0);
+    // Nada de `undefined` nem de funções: o que segue tem de ser dados
+    // inertes, enumeráveis e mostráveis antes do envio.
+    for (const k of chaves) {
+      expect(conteudo[k]).toBeDefined();
+      expect(typeof conteudo[k]).not.toBe("function");
     }
   });
 
