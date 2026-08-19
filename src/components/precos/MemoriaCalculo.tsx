@@ -13,7 +13,7 @@ import { useState } from "react";
 import { AnimatePresence, m } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { fmt, pct } from "@/lib/format";
-import type { Aviso, LinhaExplicacao, NivelConfianca } from "@/lib/pricing";
+import type { Aviso, LinhaExplicacao, NivelConfianca, SeveridadeAviso } from "@/lib/pricing";
 import { REVISAO_PRICING } from "@/lib/pricing";
 import { Warning, Info, ExternalLink } from "@/components/ui/Icons";
 
@@ -131,14 +131,38 @@ export function MemoriaCalculo({ linhas }: { linhas: LinhaExplicacao[] }) {
   );
 }
 
-export function Avisos({ avisos }: { avisos: Aviso[] }) {
-  if (avisos.length === 0) return null;
-
+/**
+ * Os avisos, filtráveis por severidade.
+ *
+ * O filtro existe por causa de um defeito de posição, não de conteúdo: os
+ * avisos renderizavam TODOS numa secção única, depois dos campos avançados
+ * e depois da memória de cálculo. Um aviso `perigo` — «a este preço cada
+ * venda tira-te dinheiro» — nascia quatro ecrãs abaixo do preço a que se
+ * referia, que é o pior sítio possível para a mensagem mais urgente da
+ * ferramenta.
+ *
+ * Agora os graves ficam colados ao número e os informativos continuam onde
+ * estavam. A ordenação por severidade dentro de cada grupo mantém-se.
+ */
+export function Avisos({
+  avisos,
+  apenas,
+  rotulo = "Avisos",
+}: {
+  avisos: Aviso[];
+  /** Severidades a mostrar. Sem isto, mostra todas. */
+  apenas?: readonly SeveridadeAviso[];
+  rotulo?: string;
+}) {
   const ordem = { perigo: 0, atencao: 1, info: 2 } as const;
-  const ordenados = [...avisos].sort((a, b) => ordem[a.severidade] - ordem[b.severidade]);
+  const ordenados = [...avisos]
+    .filter((a) => !apenas || apenas.includes(a.severidade))
+    .sort((a, b) => ordem[a.severidade] - ordem[b.severidade]);
+
+  if (ordenados.length === 0) return null;
 
   return (
-    <section aria-label="Avisos" className="space-y-3">
+    <section aria-label={rotulo} className="space-y-3">
       {ordenados.map((a) => (
         <div
           key={a.id}

@@ -32,6 +32,17 @@ export {
   type RegraPricing,
 } from "./regras";
 
+export { BLOCOS, ordenarBlocos, blocoDestacado, type MetaBloco } from "./blocos";
+
+export {
+  avaliarPreenchimento,
+  essenciaisDe,
+  type CampoId,
+  type EstadoPreenchimento,
+  type Preenchimento,
+  type Pressuposto,
+} from "./preenchimento";
+
 export {
   CENARIOS_INICIAIS_DEF,
   cenarioPorChave,
@@ -43,6 +54,12 @@ export {
 } from "./perguntas";
 
 export { CENARIOS, compararCenarios, correrCenario } from "./motores/cenarios";
+export {
+  decomporPreco,
+  type Decomposicao,
+  type SegmentoPreco,
+  type ChaveSegmento,
+} from "./motores/decomposicao";
 export { precoParaGanhar, unidadesParaGanhar, resultadoAoPreco } from "./motores/objetivo";
 export { margemDeMarkup, markupDeMargem } from "./motores/margem";
 export { calcularTempo, capacidadeMensal, valorHoraImplicito } from "./motores/tempo";

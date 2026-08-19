@@ -21,15 +21,35 @@ import {
   type ChaveCenario,
   type ContextoPreco,
   type ResultadoPreco,
+  type EstadoPreenchimento,
 } from "@/lib/pricing";
 import Badge from "@/components/ui/Badge";
+
+/**
+ * A ressalva de «isto ainda é um exemplo» tem de viajar com os números.
+ *
+ * O cartão de resultado dizia-o e estes dois, logo por baixo, apresentavam
+ * os mesmos valores sem qualquer reserva — o que fazia a ressalva parecer
+ * uma modéstia do cabeçalho em vez do que é: o aviso de que nada daquilo
+ * saiu ainda do negócio de quem está a ler.
+ */
+function Selo({ estado }: { estado: EstadoPreenchimento }) {
+  if (estado === "completo") return null;
+  return (
+    <span className="rounded-md bg-stone-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+      {estado === "exemplo" ? "valores de exemplo" : "ainda uma estimativa"}
+    </span>
+  );
+}
 
 export function SliderPreco({
   contexto,
   resultado,
+  estado = "completo",
 }: {
   contexto: ContextoPreco;
   resultado: ResultadoPreco;
+  estado?: EstadoPreenchimento;
 }) {
   const piso = resultado.faixa.ancoras.find((a) => a.chave === "piso")?.pvp ?? 0;
   const minimo = Math.max(0.5, Math.min(piso * 0.7, resultado.pvp * 0.5));
@@ -64,8 +84,9 @@ export function SliderPreco({
       className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
     >
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="font-display text-lg font-semibold text-stone-800 dark:text-stone-100">
+        <h2 className="flex flex-wrap items-center gap-2 font-display text-lg font-semibold text-stone-800 dark:text-stone-100">
           E se cobrasses outro preço?
+          <Selo estado={estado} />
         </h2>
         {preco !== null ? (
           <button
@@ -151,7 +172,13 @@ export function SliderPreco({
   );
 }
 
-export function Cenarios({ contexto }: { contexto: ContextoPreco }) {
+export function Cenarios({
+  contexto,
+  estado = "completo",
+}: {
+  contexto: ContextoPreco;
+  estado?: EstadoPreenchimento;
+}) {
   const [extra, setExtra] = useState<ChaveCenario | null>(null);
 
   const base = useMemo(() => compararCenarios(contexto), [contexto]);
@@ -175,8 +202,9 @@ export function Cenarios({ contexto }: { contexto: ContextoPreco }) {
       aria-label="Cenários"
       className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900"
     >
-      <h2 className="font-display mb-1 text-lg font-semibold text-stone-800 dark:text-stone-100">
+      <h2 className="font-display mb-1 flex flex-wrap items-center gap-2 text-lg font-semibold text-stone-800 dark:text-stone-100">
         Comparar cenários
+        <Selo estado={estado} />
       </h2>
       <p className="mb-4 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
         Os três primeiros são o mesmo negócio com dez pontos de margem a menos e a mais. Os botões acrescentam uma

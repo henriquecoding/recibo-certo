@@ -1118,3 +1118,48 @@ html.dark .dark\:text-brand-dark {
 html.dark .dark\:text-brand-mint {
   color: #9fe1cb;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   IMPRESSÃO — a saída em papel e em PDF
+   ---------------------------------------------------------------------
+   A calculadora de preço ganhou «imprimir ou guardar em PDF», que é a
+   forma mais simples de levar um resultado para fora do dispositivo sem
+   o enviar para lado nenhum — e por isso a única compatível com
+   `privacy: "local-only"`.
+
+   O que se esconde é o que não faz sentido em papel: navegação, rodapé,
+   controlos e os avisos de consentimento. O que fica é o resultado.
+   Nada disto toca no ecrã: vive inteiro dentro de `@media print`.
+   ═══════════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Fundo branco e texto preto: as cores de marca gastam tinta e reduzem
+     a legibilidade a preto e branco. */
+  html,
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  header nav,
+  footer,
+  [data-print="hide"] {
+    display: none !important;
+  }
+
+  /* Um elemento pegajoso numa folha A4 repete-se em todas as páginas. */
+  .sticky {
+    position: static !important;
+  }
+
+  /* Não partir um cartão a meio entre duas folhas. */
+  section,
+  article {
+    break-inside: avoid;
+  }
+
+  a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 10px;
+    color: #555;
+  }
+}

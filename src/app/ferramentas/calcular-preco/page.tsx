@@ -101,6 +101,10 @@ export default async function CalcularPrecoPage({
       />
       <ToolShell
         tool={TOOL}
+        // Esta mede-se a si própria, e melhor: sabe quantos campos
+        // essenciais do cenário é que faltam, e só chama «concluído» a uma
+        // simulação que os tem todos. Ver `components/precos/medicao.ts`.
+        medir={false}
         subtitulo="Diz-nos o que estás a vender e construímos o preço contigo — com os custos que costumam ficar de fora, as regras de IVA da tua região e o que a Segurança Social e o IRS levam de cada euro faturado."
         contexto={<Contexto />}
       >

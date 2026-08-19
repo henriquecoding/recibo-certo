@@ -21,6 +21,7 @@ import type { ToolDefinition, ToolLayout } from "@/lib/ferramentas";
 import { relacionadas, percursosCom, resolverPercurso } from "@/lib/ferramentas";
 import { iconeDe } from "./icon-map";
 import ToolStart from "./ToolStart";
+import MedidorFerramenta from "./MedidorFerramenta";
 
 /** A largura que cada tarefa pede. `map` e `wide` saem da coluna de leitura. */
 export const LARGURA_POR_LAYOUT: Record<ToolLayout, string> = {
@@ -38,9 +39,18 @@ interface ToolShellProps {
   contexto?: ReactNode;
   /** Substitui o subtítulo por omissão (`shortOutcome`) quando é preciso mais. */
   subtitulo?: ReactNode;
+  /**
+   * Medir a conclusão desta ferramenta a partir da moldura.
+   *
+   * `false` para quem se mede a si própria com uma definição melhor de
+   * «concluído» — hoje só a calculadora de preço, que sabe quantos campos
+   * essenciais do cenário é que faltam. Medir nos dois sítios duplicaria
+   * `simulator_start` e inflacionaria a North Star.
+   */
+  medir?: boolean;
 }
 
-export default function ToolShell({ tool, children, contexto, subtitulo }: ToolShellProps) {
+export default function ToolShell({ tool, children, contexto, subtitulo, medir = true }: ToolShellProps) {
   const Icone = iconeDe(tool.icon);
   const relacionadasResolvidas = relacionadas(tool);
   const percursos = percursosCom(tool.id);
@@ -73,8 +83,20 @@ export default function ToolShell({ tool, children, contexto, subtitulo }: ToolS
         <ToolStart tool={tool} />
       </div>
 
-      {/* ── Zonas 2–5: a ferramenta ───────────────────────────────────── */}
-      <div id="ferramenta" className="scroll-mt-24">{children}</div>
+      {/* ── Zonas 2–5: a ferramenta ─────────────────────────────────────
+          O medidor envolve exatamente esta zona, e é onde `simulator_start`,
+          `simulator_complete` e `result_view` passam a nascer para TODAS as
+          ferramentas. Antes disto, nenhum componente da aplicação disparava
+          os dois últimos — e a North Star (DVM) não estava baixa, estava
+          estruturalmente a zero. Ver `MedidorFerramenta.tsx`.
+
+          Um mapa não é uma simulação: contá-lo como tal inflacionaria a
+          métrica com navegação. ────────────────────────────────────────── */}
+      {medir && tool.kind !== "map" ? (
+        <MedidorFerramenta tool={tool}>{children}</MedidorFerramenta>
+      ) : (
+        <div id="ferramenta" className="scroll-mt-24">{children}</div>
+      )}
 
       {contexto ? <div className="mt-12">{contexto}</div> : null}
 

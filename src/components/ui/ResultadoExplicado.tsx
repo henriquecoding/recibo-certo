@@ -13,10 +13,23 @@
 //   6. Próximo passo — «guardar/Plus; executar/FIZ; especialista; NUNCA os
 //      três com igual peso».
 //
-//  Server Component: renderiza no servidor, sem JavaScript. Uma das
-//  lacunas do §3.4 é precisamente prova e resultados que só existem depois
-//  de o JavaScript correr, e um resultado fiscal é a última coisa que deve
-//  depender disso.
+//  Sem `"use client"`, de propósito: importada de um Server Component
+//  renderiza no servidor, sem JavaScript. Uma das lacunas do §3.4 é
+//  precisamente prova e resultados que só existem depois de o JavaScript
+//  correr, e um resultado fiscal é a última coisa que deve depender disso.
+//
+//  ── MAS NÃO É EXCLUSIVA DO SERVIDOR ─────────────────────────────────
+//  Durante muito tempo o comentário aqui dizia «Server Component» sem
+//  mais, e isso leu-se como «não serve para ferramentas interativas» —
+//  que é uma das razões por que NENHUMA das quinze ferramentas a usava.
+//  Não é verdade: ela já importa `EnviarAoContabilista`, que é cliente, e
+//  o Next compila-a como cliente quando o pai o é. Uma ferramenta que
+//  recalcula a cada tecla pode passar-lhe props novas a cada render.
+//
+//  A primeira a fazê-lo é a calculadora de preço, via
+//  `components/precos/ConclusaoPreco.tsx` — e lá está explicado porque é
+//  que entra como CONCLUSÃO do resultado e não como moldura dele: as seis
+//  camadas são uma ordem, não um cartão único.
 //
 //  ── Porque é que a hierarquia dos CTAs é imposta pelo tipo ────────────
 //  O componente não aceita uma lista de ações; aceita SINAIS, e é
