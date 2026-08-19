@@ -191,14 +191,24 @@ if [ -d "$COMPLETO" ]; then
       }
     }'))
 
+  # ⚠️ NÃO escrever ficheiros debaixo de `$BASE`. Ele faz dupla função: na
+  # máquina de quem corre isto é a pasta do cluster descartável, mas em CI
+  # passa a ser `localhost` — um NOME DE MÁQUINA, não uma pasta. Um
+  # `2>>"$BASE/erro"` funcionava localmente e, em CI, tentava escrever numa
+  # pasta chamada `localhost` que não existe: o redirecionamento falhava, o
+  # `if !` lia isso como erro da migração, e a suíte acusava a primeira
+  # migração de não aplicar quando o problema era o caminho do log.
+  ERROS_COMPLETO="$(mktemp)"
+  trap 'rm -f "$ERROS_COMPLETO"' EXIT
+
   P -q -c "DROP DATABASE IF EXISTS rc_completo;" -c "CREATE DATABASE rc_completo;" >/dev/null
   P -q -d rc_completo -f "$TESTES/00-arreio-supabase.sql" >/dev/null
 
   for passagem in "1.ª" "2.ª (idempotência)"; do
     for m in "${TODAS[@]}"; do
-      if ! P -q -d rc_completo -f "$m" >/dev/null 2>>"$BASE/completo.err"; then
+      if ! P -q -d rc_completo -f "$m" >/dev/null 2>>"$ERROS_COMPLETO"; then
         echo "FALHOU a aplicar $(basename "$m") — passagem $passagem" >&2
-        tail -3 "$BASE/completo.err" >&2
+        tail -3 "$ERROS_COMPLETO" >&2
         falhou=1
       fi
     done
