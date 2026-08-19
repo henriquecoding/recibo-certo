@@ -214,6 +214,17 @@ try {
       if (estado.preparar) await estado.preparar(pagina);
       await pagina.waitForTimeout(300);
 
+      // Sem esta guarda, uma página que não renderizou — servidor caído a
+      // meio, build trocado, rota mudada — sai como um stack trace do
+      // axe («No elements found for include in page Context») que não diz
+      // o que correu mal nem em que estado.
+      if ((await pagina.locator("#ferramenta").count()) === 0) {
+        console.log(`  ! ${estado.nome.padEnd(26)}#ferramenta não existe — o servidor está de pé?`);
+        violacoesTotais += 1;
+        await pagina.close();
+        continue;
+      }
+
       const r = await new AxeBuilder({ page: pagina })
         .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
         .include("#ferramenta")

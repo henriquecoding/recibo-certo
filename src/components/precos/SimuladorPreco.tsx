@@ -355,6 +355,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
               temFiscalidade={temFiscalidade}
               estado={estadoPreenchimento}
               faltam={preenchimento?.faltam.length ?? 0}
+              unidadesEsperadas={contexto.volume.unidadesMes}
               aoAdotarPreco={adotarPreco}
             />
           ) : (

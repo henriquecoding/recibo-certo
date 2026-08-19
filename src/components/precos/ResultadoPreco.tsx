@@ -25,6 +25,7 @@ import { decomporPreco, type ChaveSegmento, type EstadoPreenchimento } from "@/l
 import type { ResultadoPreco as Resultado } from "@/lib/pricing";
 import { Warning, Info, CheckTrend } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
+import ReguaEquilibrio from "./ReguaEquilibrio";
 
 const CORES_ANCORA: Record<string, string> = {
   piso: "bg-red-400",
@@ -56,6 +57,7 @@ export default function ResultadoPreco({
   temFiscalidade,
   estado = "completo",
   faltam = 0,
+  unidadesEsperadas = 0,
   aoAdotarPreco,
 }: {
   resultado: Resultado;
@@ -75,6 +77,15 @@ export default function ResultadoPreco({
   estado?: EstadoPreenchimento;
   /** Quantos campos essenciais faltam. Só usado no estado `estimado`. */
   faltam?: number;
+  /**
+   * As unidades que a pessoa espera vender por mês.
+   *
+   * Vem por propriedade e não do `resultado` porque é uma ENTRADA, não um
+   * cálculo — está no contexto. A régua do equilíbrio precisa dela para
+   * responder à única pergunta que o ponto de equilíbrio serve para
+   * responder: «34 vendas é muito ou pouco para mim?».
+   */
+  unidadesEsperadas?: number;
   /** Adotar um preço redondo como o preço da pessoa. */
   aoAdotarPreco?: (pvp: number) => void;
 }) {
@@ -138,13 +149,15 @@ export default function ResultadoPreco({
             : "Quanto deves cobrar"}
       </p>
       {exemplo ? (
+        // Trinta e seis palavras para dizer uma coisa. A honestidade que
+        // esta frase carrega — «este número não é teu» — não depende do
+        // comprimento, e no estado onde ela aparece a pessoa ainda não
+        // leu nada: cada palavra a mais é uma a menos de atenção para o
+        // formulário, que é onde ela precisa de ir.
         <p className="mb-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-          Ainda não nos disseste nada sobre o teu caso, por isso este número sai dos valores de partida deste cenário —
-          não do teu negócio.{" "}
-          <strong className="font-semibold text-stone-800 dark:text-stone-100">
-            Preenche o essencial aí em cima
-          </strong>{" "}
-          e ele passa a ser teu.
+          Sai dos valores de partida do cenário, não do teu negócio.{" "}
+          <strong className="font-semibold text-stone-800 dark:text-stone-100">Preenche o essencial</strong> e passa a
+          ser teu.
         </p>
       ) : null}
       {estado === "estimado" ? (
@@ -312,8 +325,13 @@ export default function ResultadoPreco({
         </div>
       ) : null}
 
-      {/* ── Números-chave ────────────────────────────────────────── */}
-      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* ── Números-chave ──────────────────────────────────────────
+          São TRÊS, e já foram quatro. O «Equilíbrio» saiu daqui para a
+          régua abaixo: uma célula com «34» e a legenda «vendas/mês · 11
+          dias» obrigava a pessoa a comparar de cabeça com o volume que
+          espera vender, que é a única pergunta que aquele número serve
+          para responder. ─────────────────────────────────────────── */}
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Metrica
           rotulo="Margem"
           valor={pct(margem.margem)}
@@ -331,28 +349,37 @@ export default function ResultadoPreco({
           nota="ao volume que esperas"
           alerta={margem.lucroMensal < 0}
         />
-        {/* `diasAoRitmoAtual` era calculado e nunca mostrado. «34 vendas»
-            é um número; «11 dias de vendas» é uma sensação — e é a
-            sensação que faz a pessoa perceber se o negócio respira. */}
-        <Metrica
-          rotulo="Equilíbrio"
-          valor={breakEven.possivel ? `${breakEven.unidades}` : "—"}
+      </div>
+
+      {/* ── A régua do equilíbrio ─────────────────────────────────
+          Põe o ponto de equilíbrio e o volume esperado na MESMA escala,
+          e diz quantas vendas faltam. `diasAoRitmoAtual` era calculado e
+          nunca mostrado; agora entra na nota, onde cabe. ─────────── */}
+      <div className="mt-4 rounded-2xl bg-stone-50 px-4 py-3.5 dark:bg-stone-800/40">
+        <ReguaEquilibrio
+          unidadesEquilibrio={breakEven.unidades}
+          unidadesEsperadas={unidadesEsperadas}
+          possivel={breakEven.possivel}
           nota={
-            breakEven.possivel
-              ? breakEven.unidades === 0
-                ? "sem custos fixos"
-                : breakEven.diasAoRitmoAtual !== undefined && breakEven.diasAoRitmoAtual > 0
-                  ? `vendas/mês · ${breakEven.diasAoRitmoAtual} dias`
-                  : "vendas por mês"
-              : "não existe"
+            breakEven.nota ??
+            (breakEven.diasAoRitmoAtual !== undefined && breakEven.diasAoRitmoAtual > 0
+              ? `São cerca de ${breakEven.diasAoRitmoAtual} dias de vendas ao ritmo que esperas.`
+              : undefined)
           }
-          alerta={!breakEven.possivel}
         />
       </div>
 
       {/* A margem de contribuição é o número que decide se aceitar mais
-          uma encomenda vale a pena. Era calculado e nunca aparecia. */}
-      {margem.contribuicaoUnidade !== 0 ? (
+          uma encomenda vale a pena. Era calculado e nunca aparecia.
+
+          ⚠️ NÃO APARECE NO ESTADO `exemplo`, e a razão é a mesma que
+          governa as camadas de revelação: é uma REGRA DE DECISÃO («é
+          este o número a olhar quando decides se aceitas mais uma
+          encomenda»), e uma regra de decisão sobre um preço que saiu dos
+          valores de partida do cenário é um conselho sobre um negócio
+          que ainda não descrevemos. Reaparece assim que a pessoa
+          responder a alguma coisa. */}
+      {!exemplo && margem.contribuicaoUnidade !== 0 ? (
         <p className="mt-3 rounded-xl bg-stone-50 px-3 py-2.5 text-xs leading-relaxed text-stone-600 dark:bg-stone-800/40 dark:text-stone-400">
           Cada venda extra, para lá das contas fixas já pagas, deixa-te{" "}
           <strong className="font-semibold tabular-nums text-stone-800 dark:text-stone-100">
@@ -363,12 +390,9 @@ export default function ResultadoPreco({
         </p>
       ) : null}
 
-      {breakEven.nota ? (
-        <p className="mt-3 flex items-start gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-          <Info size={14} className="mt-0.5 flex-shrink-0 text-stone-500 dark:text-stone-400" />
-          {breakEven.nota}
-        </p>
-      ) : null}
+      {/* A nota do equilíbrio saiu daqui: vive agora DENTRO da régua, ao
+          lado do número a que se refere, em vez de flutuar dois blocos
+          abaixo dele. */}
 
       {/* ── Veredicto sobre o preço pensado ──────────────────────── */}
       {resultado.veredicto ? (
@@ -402,7 +426,13 @@ export default function ResultadoPreco({
           que não muda é a outra: um preço redondo NUNCA substitui o
           recomendado, e o custo em margem de cada terminação está sempre
           à vista. ──────────────────────────────────────────────────── */}
-      {faixa.psicologicos.length > 0 && recomendado ? (
+      {/* ⚠️ TAMBÉM NÃO APARECE NO ESTADO `exemplo`. Aqui a razão é ainda
+          mais forte do que na contribuição: estes botões ADOTAM um
+          preço. Oferecer «16,50 €» para adotar quando os 16,67 € saíram
+          dos valores de partida do cenário é convidar a pessoa a fixar
+          como seu um número que nunca introduziu — que é exatamente o
+          defeito que o estado `exemplo` existe para impedir. */}
+      {!exemplo && faixa.psicologicos.length > 0 && recomendado ? (
         <div className="mt-6 border-t border-stone-100 pt-5 dark:border-stone-800">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
             Se preferires um preço redondo
