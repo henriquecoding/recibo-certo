@@ -91,7 +91,10 @@ export default function Tesouraria({ t }: { t: DadosTesouraria }) {
 
       <a
         href="/dashboard/prazos"
-        className="mt-3 inline-flex items-center gap-1.5 rounded-lg text-xs font-semibold text-brand-dark underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand dark:text-brand-mint"
+        // `py-1` leva a altura de 16 para 24 px. Não é estética: a WCAG 2.2 ·
+        // 2.5.8 pede 24×24 e este link não cabe na exceção «inline» — está
+        // sozinho no fim da secção, não dentro de uma frase.
+        className="mt-3 inline-flex min-h-[24px] items-center gap-1.5 rounded-lg py-1 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand dark:text-brand-mint"
       >
         Ver o calendário completo
         <ArrowRight size={12} className="flex-shrink-0" />

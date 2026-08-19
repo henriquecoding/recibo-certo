@@ -104,7 +104,9 @@ export function MemoriaCalculo({ linhas }: { linhas: LinhaExplicacao[] }) {
                             href={linha.fonteUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 underline-offset-2 hover:text-brand hover:underline"
+                            // `min-h-[24px]`: sozinho na sua linha, este link
+                            // não cabe na exceção «inline» da WCAG 2.5.8.
+                            className="inline-flex min-h-[24px] items-center gap-1 underline-offset-2 hover:text-brand hover:underline"
                           >
                             {linha.fonte}
                             <ExternalLink size={10} />
@@ -193,7 +195,9 @@ export function Avisos({
                   href={a.fonteUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 underline-offset-2 hover:text-brand hover:underline"
+                  // Como o link da fonte acima: sozinho no seu `<p>`, fora da
+                  // exceção «inline» da WCAG 2.5.8.
+                  className="inline-flex min-h-[24px] items-center gap-1 underline-offset-2 hover:text-brand hover:underline"
                 >
                   {a.fonte}
                   <ExternalLink size={10} />

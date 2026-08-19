@@ -256,7 +256,14 @@ export default function ResultadoExplicado({
                 {acao.texto}
               </p>
               {acao.prazo ? (
-                <p className="mt-0.5 text-[11.5px] text-brand-dark/70 dark:text-brand-mint/70">
+                // Sem `/70`: a 11,5 px, `text-brand-dark/70` mistura-se com o
+                // `bg-brand-light` e dá 3,06:1 — abaixo dos 4,5:1 que a AA
+                // exige (12 violações medidas pelo axe, nos dois temas). A
+                // opacidade é uma forma de desênfase que o contraste não
+                // perdoa; aqui a hierarquia já vem do tamanho (13 → 11,5) e
+                // do peso (semibold → normal), que não custam legibilidade.
+                // A cor cheia dá 5,47:1.
+                <p className="mt-0.5 text-[11.5px] text-brand-dark dark:text-brand-mint">
                   {acao.prazo}
                 </p>
               ) : null}
@@ -303,7 +310,11 @@ export default function ResultadoExplicado({
                 href={f.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-start gap-1.5 text-[12.5px] leading-relaxed text-stone-600 underline decoration-stone-300 underline-offset-2 hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand-mint"
+                // `min-h-[24px]`: cada fonte é um `<li>` só com o link, não
+                // uma frase — a exceção «inline» da WCAG 2.5.8 não se aplica.
+                // Com o `space-y-1.5` da lista, ficam 24 px de alvo e 6 px de
+                // intervalo, que é o que a norma pede.
+                className="inline-flex min-h-[24px] items-start gap-1.5 text-[12.5px] leading-relaxed text-stone-600 underline decoration-stone-300 underline-offset-2 hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand-mint"
               >
                 <ShieldCheck size={12} className="mt-1 shrink-0 text-brand" />
                 {f.rotulo}

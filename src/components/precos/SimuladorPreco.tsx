@@ -285,11 +285,11 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           formulário. Em `lg:` a grelha reposiciona as mesmas caixas em
           duas colunas, sem trocar a leitura por teclado ou leitor de
           ecrã. ─────────────────────────────────────────────────────── */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
         {/* PRIMEIRO PERSONALIZA-SE, DEPOIS VÊ-SE O NÚMERO.
             O resultado já esteve à frente de tudo, e isso punha uma
             recomendação por cima de campos que ninguém tinha preenchido. */}
-        <div className="lg:col-start-1 lg:row-start-1">
+        <div className="min-w-0 lg:col-start-1 lg:row-start-1">
           <CamposEssenciais
             contexto={contexto}
             definicao={definicao}
@@ -302,7 +302,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
             O slider já esteve depois de TODOS os campos: em mobile nascia
             a 3 415 px do topo, quatro ecrãs abaixo do número que serve
             para o afinar. */}
-        <div className="space-y-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div className="min-w-0 space-y-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
           {/* A única coisa fixa da página. O cartão tem ~830 px e não pode
               ser pegajoso; esta barra tem 56 px e pode. */}
           <ResumoPreco resultado={resultado} estado={estadoPreenchimento} />
@@ -350,7 +350,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           {resultado.sociedade ? <Sociedade s={resultado.sociedade} /> : null}
         </div>
 
-        <div className="space-y-4 lg:col-start-1 lg:row-start-2">
+        <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-2">
           <Afinar contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
           <MemoriaCalculo linhas={resultado.explicacao} />
           <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
