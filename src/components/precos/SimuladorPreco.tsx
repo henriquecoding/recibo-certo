@@ -36,7 +36,8 @@ import { registar } from "@/lib/analytics/cliente";
 import { gravarContextoPreco, lerEnvelopePreco, limparContextoPreco } from "@/lib/store/preco";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { ArrowLeft, ArrowRight, RotateCcw } from "@/components/ui/Icons";
-import CamposPreco from "./CamposPreco";
+import CamposEssenciais from "./CamposEssenciais";
+import Afinar from "./Afinar";
 import ResultadoPreco from "./ResultadoPreco";
 import AnuncioResultado from "./AnuncioResultado";
 import Pressupostos from "./Pressupostos";
@@ -262,12 +263,11 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
           a ordem é a da conversa: dizes o essencial, aparece o preço com o
           cursor para o afinar, e só quem quiser mais precisão desce aos
           blocos avançados. */}
-      <CamposPreco
+      <CamposEssenciais
         contexto={contexto}
         definicao={definicao}
         atualizar={atualizar}
         resultado={resultado}
-        parte="essencial"
       />
 
       {/* Sem `sticky`, de propósito. O cartão de resultado tem ~830 px de
@@ -300,13 +300,7 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
         {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
       </div>
 
-      <CamposPreco
-        contexto={contexto}
-        definicao={definicao}
-        atualizar={atualizar}
-        resultado={resultado}
-        parte="avancado"
-      />
+      <Afinar contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
 
       <MemoriaCalculo linhas={resultado.explicacao} />
 
@@ -324,7 +318,47 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
 
 // ─── Passo 1 ───────────────────────────────────────────────────────────
 
+/**
+ * As famílias do seletor.
+ *
+ * Eram doze cartões numa grelha única, por ordem de ficheiro, com «Ainda
+ * não tenho a certeza» em décimo segundo lugar — ou seja, a saída para
+ * quem não se reconhecia em nada estava depois de onze coisas em que não
+ * se reconheceu. Em telemóvel são três ecrãs de escolhas antes da
+ * primeira pergunta.
+ *
+ * Agrupar não reduz as opções; reduz o número de coisas que é preciso
+ * comparar de cada vez. E o exemplo continua a fazer o trabalho pesado:
+ * «produto físico» é uma categoria, «bolo de aniversário» é a vida de
+ * alguém.
+ */
+const FAMILIAS: { titulo: string; nota: string; chaves: CenarioInicial[] }[] = [
+  {
+    titulo: "Vendo uma coisa",
+    nota: "Um objeto, um ficheiro, uma peça — com um custo por unidade",
+    chaves: ["produto_revenda", "produto_proprio", "produto_digital", "encomenda"],
+  },
+  {
+    titulo: "Vendo o meu tempo",
+    nota: "Horas, projetos e trabalhos — onde o custo és tu",
+    chaves: ["servico", "servico_hora", "projeto", "ato_isolado"],
+  },
+  {
+    titulo: "Vendo através de um canal",
+    nota: "Onde há comissões e taxas pelo meio",
+    chaves: ["loja_online", "marketplace"],
+  },
+  {
+    titulo: "Sei o que quero ganhar",
+    nota: "O caminho inverso: do objetivo para o preço",
+    chaves: ["objetivo"],
+  },
+];
+
 function SeletorCenario({ aoEscolher }: { aoEscolher: (c: CenarioInicial) => void }) {
+  const porChave = new Map(CENARIOS_INICIAIS_DEF.map((c) => [c.chave, c]));
+  const indeciso = porChave.get("nao_sei");
+
   return (
     <m.section
       initial={{ opacity: 0, y: 8 }}
@@ -335,39 +369,90 @@ function SeletorCenario({ aoEscolher }: { aoEscolher: (c: CenarioInicial) => voi
       <h2 className="font-display mb-1 text-xl font-semibold text-stone-800 dark:text-stone-100">
         O que queres definir?
       </h2>
-      <p className="mb-5 text-sm text-stone-500 dark:text-stone-400">
+      <p className="mb-6 text-sm text-stone-500 dark:text-stone-400">
         Escolhe o que se parece mais com o teu caso. As perguntas seguintes adaptam-se — não vais preencher campos que
         não te dizem respeito.
       </p>
 
-      <ul className="grid gap-3 sm:grid-cols-2">
-        {CENARIOS_INICIAIS_DEF.map((c) => {
-          const Icone = iconeDe(c.icone);
-          return (
-            <li key={c.chave}>
-              <button
-                type="button"
-                onClick={() => aoEscolher(c.chave)}
-                className="group flex w-full items-start gap-3 rounded-4xl border border-stone-100 bg-white p-4 text-left shadow-card transition-all hover:border-brand hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
-              >
-                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">
-                  <Icone size={17} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">{c.rotulo}</span>
-                  <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                    {c.exemplo}
-                  </span>
-                </span>
-                <ArrowRight
-                  size={15}
-                  className="mt-1 flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
-                />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+      <div className="space-y-6">
+        {FAMILIAS.map((familia) => (
+          <section key={familia.titulo} aria-labelledby={`familia-${familia.titulo.replace(/\s+/g, "-")}`}>
+            <h3
+              id={`familia-${familia.titulo.replace(/\s+/g, "-")}`}
+              className="text-sm font-semibold text-stone-800 dark:text-stone-100"
+            >
+              {familia.titulo}
+            </h3>
+            <p className="mb-3 mt-0.5 text-xs text-stone-500 dark:text-stone-400">{familia.nota}</p>
+
+            <ul className="grid gap-3 sm:grid-cols-2">
+              {familia.chaves.map((chave) => {
+                const c = porChave.get(chave);
+                if (!c) return null;
+                return (
+                  <li key={c.chave}>
+                    <CartaoCenario definicao={c} aoEscolher={aoEscolher} />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+
+      {/* A saída para quem não se reconhece em nada fica em último lugar,
+          mas visível e explicada — e não como décimo segundo cartão de
+          uma grelha indiferenciada. */}
+      {indeciso ? (
+        <div className="mt-8 border-t border-stone-100 pt-6 dark:border-stone-800">
+          <p className="mb-3 text-xs text-stone-500 dark:text-stone-400">
+            Nenhum destes é o teu caso, ou preferes começar pelo mais simples?
+          </p>
+          <CartaoCenario definicao={indeciso} aoEscolher={aoEscolher} discreto />
+        </div>
+      ) : null}
     </m.section>
+  );
+}
+
+function CartaoCenario({
+  definicao,
+  aoEscolher,
+  discreto = false,
+}: {
+  definicao: (typeof CENARIOS_INICIAIS_DEF)[number];
+  aoEscolher: (c: CenarioInicial) => void;
+  discreto?: boolean;
+}) {
+  const Icone = iconeDe(definicao.icone);
+  return (
+    <button
+      type="button"
+      onClick={() => aoEscolher(definicao.chave)}
+      className={`group flex w-full items-start gap-3 rounded-4xl border p-4 text-left transition-all hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-stone-900 ${
+        discreto
+          ? "border-dashed border-stone-200 bg-transparent dark:border-stone-700"
+          : "border-stone-100 bg-white shadow-card hover:shadow-lift dark:border-stone-800"
+      }`}
+    >
+      <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand">
+        <Icone size={17} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">{definicao.rotulo}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+          {definicao.exemplo}
+        </span>
+        {/* O que vem a seguir, dito antes de se escolher: é a diferença
+            entre um botão e uma decisão informada. */}
+        <span className="mt-1.5 block text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+          {definicao.rapido.length} {definicao.rapido.length === 1 ? "pergunta" : "perguntas"} e já tens um preço
+        </span>
+      </span>
+      <ArrowRight
+        size={15}
+        className="mt-1 flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
+      />
+    </button>
   );
 }

@@ -32,6 +32,8 @@ export {
   type RegraPricing,
 } from "./regras";
 
+export { BLOCOS, ordenarBlocos, blocoDestacado, type MetaBloco } from "./blocos";
+
 export {
   avaliarPreenchimento,
   essenciaisDe,

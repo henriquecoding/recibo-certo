@@ -3,6 +3,10 @@ import {
   avaliarPreenchimento,
   essenciaisDe,
   cenarioPorChave,
+  contextoBase,
+  BLOCOS,
+  ordenarBlocos,
+  blocoDestacado,
   CENARIOS_INICIAIS,
   type CenarioInicial,
 } from "@/lib/pricing";
@@ -123,5 +127,84 @@ describe("os pressupostos são úteis, não decorativos", () => {
     ctx.volume.unidadesMes = 137;
     const volume = avaliarPreenchimento(ctx, nada).pressupostos.find((p) => p.campo === "volume");
     expect(volume?.valor).toBe("137");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  OS BLOCOS DO MODO PRECISO
+//  ---------------------------------------------------------------------
+//  Três coisas que não podem voltar a partir-se:
+//
+//   · um bloco declarado num cenário tem de ter metadados — senão a
+//     interface mostra um acordeão sem estado nem impacto, que é o
+//     defeito que `blocos.ts` existe para corrigir;
+//   · `escaloes` estava declarado em `produto_revenda` e não tinha
+//     interface nenhuma. Um bloco declarado que não existe promete uma
+//     capacidade que a ferramenta não tem;
+//   · repor um bloco não pode mexer no que não é dele.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("os blocos do modo preciso", () => {
+  it("todo o bloco declarado por um cenário tem metadados", () => {
+    for (const c of CENARIOS_INICIAIS) {
+      for (const bloco of cenarioPorChave(c).avancado) {
+        expect(BLOCOS[bloco], `${c} declara «${bloco}» e não há metadados`).toBeDefined();
+      }
+    }
+  });
+
+  it("e cada um diz o que muda, em poucas palavras", () => {
+    for (const [chave, meta] of Object.entries(BLOCOS)) {
+      expect(meta.oQueMuda.length, chave).toBeGreaterThan(5);
+      expect(meta.oQueMuda.split(" ").length, `${chave}: «${meta.oQueMuda}» é longo demais`).toBeLessThanOrEqual(7);
+      expect(meta.titulo.length, chave).toBeGreaterThan(3);
+    }
+  });
+
+  it("um bloco por preencher diz «por preencher»", () => {
+    const ctx = contextoBase();
+    expect(BLOCOS.custos_fixos.preenchido(ctx)).toBe(false);
+    expect(BLOCOS.custos_fixos.resumo(ctx)).toBe("por preencher");
+  });
+
+  it("e um bloco preenchido resume o que lá está", () => {
+    const ctx = contextoBase();
+    ctx.custos.fixos = [
+      { id: "a", rotulo: "Renda", mensal: 300 },
+      { id: "b", rotulo: "Software", mensal: 20 },
+    ];
+    expect(BLOCOS.custos_fixos.preenchido(ctx)).toBe(true);
+    expect(BLOCOS.custos_fixos.resumo(ctx)).toContain("2 contas");
+    expect(BLOCOS.custos_fixos.resumo(ctx)).toContain("320,00 €");
+  });
+
+  it("repor um bloco devolve os campos DELE aos valores do cenário", () => {
+    const base = cenarioPorChave("loja_online").contexto();
+    const ctx = cenarioPorChave("loja_online").contexto();
+
+    ctx.custos.fixos = [{ id: "x", rotulo: "Renda", mensal: 999 }];
+    ctx.volume.unidadesMes = 777;
+    ctx.vendedor.tipo = "ti";
+
+    BLOCOS.custos_fixos.repor(ctx, base);
+
+    expect(ctx.custos.fixos).toEqual(base.custos.fixos);
+    // …e não toca em nada que não seja dele.
+    expect(ctx.volume.unidadesMes).toBe(777);
+    expect(ctx.vendedor.tipo).toBe("ti");
+  });
+
+  it("o que o motor aponta como em falta sobe ao topo da lista", () => {
+    const ctx = cenarioPorChave("produto_revenda").contexto();
+    const avisos = [{ id: "sem-custos-fixos" }];
+    const ordenados = ordenarBlocos(cenarioPorChave("produto_revenda").avancado, ctx, avisos);
+    expect(ordenados[0]).toBe("custos_fixos");
+    expect(blocoDestacado("custos_fixos", ctx, avisos)).toBe(true);
+  });
+
+  it("mas um bloco JÁ preenchido não se destaca, mesmo com aviso", () => {
+    const ctx = cenarioPorChave("produto_revenda").contexto();
+    ctx.custos.fixos = [{ id: "a", rotulo: "Renda", mensal: 300 }];
+    expect(blocoDestacado("custos_fixos", ctx, [{ id: "sem-custos-fixos" }])).toBe(false);
   });
 });

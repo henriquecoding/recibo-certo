@@ -108,14 +108,14 @@ describe("② o «voltar» do telemóvel recua dentro da ferramenta", () => {
 
 describe("④ personaliza-se ANTES de ver o número", () => {
   it("o essencial vem antes do resultado, e o avançado depois", () => {
-    const iEssencial = SIMULADOR.indexOf('parte="essencial"');
+    const iEssencial = SIMULADOR.indexOf("<CamposEssenciais");
     const iResultado = SIMULADOR.indexOf("<ResultadoPreco");
-    const iAvancado = SIMULADOR.indexOf('parte="avancado"');
+    const iAvancado = SIMULADOR.indexOf("<Afinar");
     expect(iEssencial, "os campos essenciais desapareceram").toBeGreaterThan(-1);
     expect(iAvancado, "os campos avançados desapareceram").toBeGreaterThan(-1);
     expect(
       iEssencial < iResultado && iResultado < iAvancado,
-      "a ordem tem de ser essencial → resultado → avançado. O resultado já esteve " +
+      "a ordem tem de ser essencial → resultado → afinar. O resultado já esteve " +
         "à frente de tudo, e anunciava «quanto deves cobrar» sobre campos que " +
         "ninguém tinha preenchido",
     ).toBe(true);
@@ -227,7 +227,7 @@ describe("⑦ os números todos passam pelo mesmo parser", () => {
 describe("⑧ os avisos graves ficam colados ao número", () => {
   it("os `perigo` e `atencao` renderizam antes dos campos avançados", () => {
     const iGraves = SIMULADOR.indexOf("apenas={GRAVES}");
-    const iAvancado = SIMULADOR.indexOf('parte="avancado"');
+    const iAvancado = SIMULADOR.indexOf("<Afinar");
     expect(iGraves, "os avisos graves deixaram de ser separados dos informativos").toBeGreaterThan(-1);
     expect(
       iGraves < iAvancado,
