@@ -532,6 +532,46 @@ export interface DetalheCaixa {
   saiDepois: number;
 }
 
+/**
+ * Uma fatia de cada euro cobrado que não chega a ser do vendedor, e sobre
+ * o que incide.
+ *
+ * A distinção `sobreBruto` não é detalhe: 15% de comissão sobre o valor
+ * COM IVA são 18,45% do valor sem IVA. Apresentar as duas bases com o
+ * mesmo número faz a soma não fechar — e faz a pessoa concluir que o
+ * problema é a margem que pediu, quando é a base sobre que a comissão
+ * incide.
+ */
+export interface FracaoDoPreco {
+  rotulo: string;
+  /** Fração já convertida para o preço LÍQUIDO, comparável com a margem. */
+  fracao: number;
+  /** `true` quando a taxa original incide sobre o PVP. */
+  sobreBruto?: boolean;
+  /** A percentagem tal como a pessoa a introduziu, quando difere. */
+  fracaoOriginal?: number;
+}
+
+/**
+ * Onde é que cada euro vai parar, em frações — e quanto sobra.
+ *
+ * Existe sobretudo para o caso em que NÃO há preço possível. Aí a
+ * ferramenta mostrava um retângulo vermelho com uma frase e mais nada:
+ * desapareciam a faixa, o cursor, as métricas e os cenários, exatamente
+ * no momento em que a pessoa mais precisa de saber QUAL fração está a
+ * comer o preço e qual é o teto real. Uma parede não é um diagnóstico.
+ */
+export interface DiagnosticoPreco {
+  /** Fração de cada euro de preço líquido que sobra para margem. */
+  disponivel: number;
+  /** A margem que foi pedida (em `margem`/`markup`). */
+  margemPedida: number;
+  /** O teto que estas frações permitem. Acima disto não existe preço. */
+  margemMaxima: number;
+  /** Quem consome o resto, por ordem decrescente. */
+  consumidores: FracaoDoPreco[];
+}
+
 export type SeveridadeAviso = "info" | "atencao" | "perigo";
 
 export interface Aviso {
@@ -560,6 +600,12 @@ export interface ResultadoPreco {
   faixa: FaixaPreco;
   fiscal: DetalheFiscalVendedor;
   caixa: DetalheCaixa;
+  /**
+   * Para onde vai cada euro, em frações, e quanto sobra para margem.
+   * Preenchido SEMPRE — é o que permite explicar um preço impossível em
+   * vez de o anunciar.
+   */
+  diagnostico: DiagnosticoPreco;
   /**
    * Quanto sai e QUANDO, cruzando o preço com o calendário de obrigações.
    * `null` sem volume declarado — sem ele a projeção seria inventada.

@@ -293,6 +293,68 @@ describe("⑫ retomar do cofre não perde nem inventa trabalho", () => {
   });
 });
 
+describe("⑬ o resultado deixou de ser um cartão monolítico", () => {
+  it("as secções são irmãs, não oito coisas dentro da mesma caixa", () => {
+    // Tesouraria e sociedade viviam DENTRO do cartão de resultado, que
+    // tinha ~830 px e empilhava número, faixa, decomposição, métricas,
+    // tesouraria, sociedade, veredicto e preços psicológicos sem
+    // hierarquia nenhuma.
+    for (const secao of ["<Caixa", "<Tesouraria", "<Sociedade", "<DescontoResultado"]) {
+      expect(SIMULADOR.includes(secao), `${secao} deixou de ser uma secção irmã`).toBe(true);
+    }
+  });
+
+  it("o desconto tem saída, e não só entrada", () => {
+    // `motores/desconto.ts` calculava o desconto máximo, se destrói a
+    // rentabilidade e as unidades extra para compensar — e nada disso
+    // chegava ao ecrã. O bloco de desconto era um formulário que aceitava
+    // um número e não respondia nada.
+    expect(SIMULADOR).toMatch(/resultado\.desconto \? <DescontoResultado/);
+    const DESCONTO = readFileSync(join(SRC, "components", "precos", "DescontoResultado.tsx"), "utf8");
+    expect(DESCONTO).toMatch(/descontoMaximo/);
+    expect(DESCONTO).toMatch(/unidadesExtraParaCompensar/);
+  });
+
+  it("a caixa mostra o percurso do dinheiro, que era calculado e nunca visto", () => {
+    const CAIXA = readFileSync(join(SRC, "components", "precos", "Caixa.tsx"), "utf8");
+    expect(CAIXA).toMatch(/cobradoAoCliente/);
+    expect(CAIXA).toMatch(/entraNaConta/);
+    expect(CAIXA).toMatch(/saiDepois/);
+  });
+
+  it("«não há preço possível» deixou de ser uma parede", () => {
+    const SEM = readFileSync(join(SRC, "components", "precos", "SemPreco.tsx"), "utf8");
+    expect(SEM).toMatch(/diagnostico\.consumidores/);
+    expect(SEM).toMatch(/margemMaxima/);
+    expect(
+      /aoAceitarMaximo/.test(SEM),
+      "sem a saída para a margem máxima, o ecrã diz que o problema existe e " +
+        "deixa a pessoa a adivinhar o número que o resolve",
+    ).toBe(true);
+  });
+
+  it("há um resumo fixo, e é o único elemento pegajoso da ferramenta", () => {
+    expect(SIMULADOR).toMatch(/<ResumoPreco/);
+    const RESUMO = readFileSync(join(SRC, "components", "precos", "ResumoPreco.tsx"), "utf8");
+    expect(RESUMO).toMatch(/sticky top-14/);
+    // O cartão de resultado NÃO pode voltar a ser pegajoso: tem ~830 px e
+    // uma coluna pegajosa mais alta do que a janela fica presa com o
+    // fundo cortado.
+    const RESULTADO = readFileSync(join(SRC, "components", "precos", "ResultadoPreco.tsx"), "utf8");
+    expect(semComentarios(RESULTADO).includes("sticky")).toBe(false);
+  });
+
+  it("em mobile a ordem do DOM continua a ser essencial → resultado → afinar", () => {
+    // A grelha de duas colunas só existe a partir de `lg:`; o que manda em
+    // mobile é a ordem do documento, e é ela que o leitor de ecrã segue.
+    expect(SIMULADOR).toMatch(/lg:grid-cols-/);
+    const iEssencial = SIMULADOR.indexOf("<CamposEssenciais");
+    const iResultado = SIMULADOR.indexOf("<ResultadoPreco");
+    const iAfinar = SIMULADOR.indexOf("<Afinar");
+    expect(iEssencial < iResultado && iResultado < iAfinar).toBe(true);
+  });
+});
+
 describe("o slider parado mostra o resultado, não uma re-derivação dele", () => {
   it("só recalcula quando a pessoa lhe mexe", () => {
     // Resolver outra vez a partir do PVP já arredondado devolvia 338,15 €

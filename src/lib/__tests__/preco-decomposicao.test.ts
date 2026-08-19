@@ -188,3 +188,117 @@ describe("nenhuma entrada produz NaN nem negativos", () => {
     }
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O DIAGNÓSTICO — «não há preço possível» tem de dizer PORQUÊ
+//  ---------------------------------------------------------------------
+//  O ecrã de preço impossível era um retângulo vermelho com uma frase, e
+//  desapareciam a faixa, o cursor, as métricas e os cenários. No momento
+//  em que a pessoa mais precisa de saber qual fração está a comer o preço
+//  e qual é o teto real, a ferramenta ficava mais calada do que em
+//  qualquer outro estado.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("o diagnóstico das frações", () => {
+  it("existe sempre, mesmo quando o preço é possível", () => {
+    const r = precificar(ctx());
+    expect(r.diagnostico).toBeDefined();
+    expect(r.diagnostico.disponivel).toBeGreaterThan(0);
+    expect(r.diagnostico.disponivel).toBeLessThanOrEqual(1);
+  });
+
+  it("nomeia quem consome cada euro, por ordem decrescente", () => {
+    const r = precificar(
+      ctx((c) => {
+        c.vendedor = {
+          tipo: "ti", regimeIVA: "normal", regiao: "continente",
+          atividade: "art151", anoAtividade: 3, faturacaoAnualPrevista: 30_000,
+        };
+        c.canal = { canal: "marketplace", cliente: "consumidor", marketplaceId: "worten" };
+      }),
+    );
+    const nomes = r.diagnostico.consumidores.map((c) => c.rotulo);
+    expect(nomes).toContain("Segurança Social");
+    expect(r.diagnostico.consumidores.length).toBeGreaterThan(1);
+
+    const fracoes = r.diagnostico.consumidores.map((c) => c.fracao);
+    expect([...fracoes].sort((a, b) => b - a)).toEqual(fracoes);
+  });
+
+  it("converte as comissões sobre o BRUTO para fração do líquido", () => {
+    // 15% do valor com IVA são 18,45% do valor sem IVA. Apresentar as
+    // duas bases com o mesmo número faz a soma não fechar — e faz a
+    // pessoa culpar a margem que pediu.
+    const r = precificar(
+      ctx((c) => {
+        c.canal = { canal: "marketplace", cliente: "consumidor", marketplaceId: "worten" };
+      }),
+    );
+    const comissao = r.diagnostico.consumidores.find((c) => c.sobreBruto);
+    expect(comissao, "a comissão de canal desapareceu do diagnóstico").toBeDefined();
+    expect(comissao!.fracaoOriginal).toBeDefined();
+    expect(comissao!.fracao).toBeCloseTo(comissao!.fracaoOriginal! * (1 + r.taxaIVA), 6);
+    expect(comissao!.fracao).toBeGreaterThan(comissao!.fracaoOriginal!);
+  });
+
+  it("quando não há preço possível, diz qual é o teto — e ele resolve", () => {
+    // Um caso mesmo impossível: comissão de canal sobre o bruto MAIS a
+    // Segurança Social e o IRS sobre a faturação, com 95% de margem
+    // pedida. Sem as frações, 95% resolve — o teto é 1.
+    const apertado = (c: ContextoPreco) => {
+      c.vendedor = {
+        tipo: "ti", regimeIVA: "normal", regiao: "continente",
+        atividade: "art151", anoAtividade: 3, faturacaoAnualPrevista: 40_000,
+      };
+      c.canal = { canal: "marketplace", cliente: "consumidor", marketplaceId: "amazon" };
+    };
+
+    const impossivel = precificar(
+      ctx((c) => {
+        apertado(c);
+        c.objetivo = { modo: "margem", percentagem: 0.95 };
+      }),
+    );
+    expect(impossivel.ok).toBe(false);
+    expect(impossivel.diagnostico.margemPedida).toBeCloseTo(0.95, 2);
+
+    const teto = impossivel.diagnostico.margemMaxima;
+    expect(teto).toBeGreaterThan(0);
+    expect(teto).toBeLessThan(0.95);
+
+    // A proposta que o ecrã faz — dois pontos abaixo do teto — tem mesmo
+    // de produzir um preço. Um botão que não resolve nada é pior do que
+    // não haver botão.
+    const proposta = precificar(
+      ctx((c) => {
+        apertado(c);
+        c.objetivo = { modo: "margem", percentagem: teto - 0.02 };
+      }),
+    );
+    expect(proposta.ok, "a margem proposta pelo diagnóstico não resolve").toBe(true);
+    expect(proposta.pvp).toBeGreaterThan(0);
+  });
+
+  it("o teto desce quando se acrescenta uma comissão", () => {
+    const semCanal = precificar(ctx()).diagnostico.margemMaxima;
+    const comCanal = precificar(
+      ctx((c) => {
+        c.canal = { canal: "marketplace", cliente: "consumidor", marketplaceId: "amazon" };
+      }),
+    ).diagnostico.margemMaxima;
+    expect(comCanal).toBeLessThan(semCanal);
+  });
+
+  it("nunca devolve NaN nem frações negativas", () => {
+    for (const pctAlvo of [0, 0.3, 0.9, 0.95]) {
+      const d = precificar(ctx((c) => void (c.objetivo = { modo: "margem", percentagem: pctAlvo }))).diagnostico;
+      expect(Number.isFinite(d.disponivel)).toBe(true);
+      expect(Number.isFinite(d.margemMaxima)).toBe(true);
+      expect(d.margemMaxima).toBeGreaterThanOrEqual(0);
+      for (const c of d.consumidores) {
+        expect(Number.isFinite(c.fracao)).toBe(true);
+        expect(c.fracao).toBeGreaterThan(0);
+      }
+    }
+  });
+});

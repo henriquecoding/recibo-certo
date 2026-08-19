@@ -41,6 +41,12 @@ import Afinar from "./Afinar";
 import ResultadoPreco from "./ResultadoPreco";
 import AnuncioResultado from "./AnuncioResultado";
 import Pressupostos from "./Pressupostos";
+import ResumoPreco from "./ResumoPreco";
+import SemPreco from "./SemPreco";
+import Caixa from "./Caixa";
+import Tesouraria from "./Tesouraria";
+import Sociedade from "./Sociedade";
+import DescontoResultado from "./DescontoResultado";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
 import { CENARIOS_INICIAIS_DEF } from "@/lib/pricing";
@@ -199,6 +205,21 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
     });
   };
 
+  /**
+   * Adotar um preço redondo. Passa o objetivo para `preco_fixo` — que é
+   * o que a escolha significa: «este é o meu preço, diz-me o que dá».
+   */
+  const adotarPreco = (pvp: number) =>
+    atualizar("adotar-preco", (c) => {
+      c.objetivo = { ...c.objetivo, modo: "preco_fixo", valor: pvp, valorEhPVP: true };
+    });
+
+  /** Do ecrã de «não há preço possível» para um preço que existe. */
+  const aceitarMargemMaxima = (margem: number) =>
+    atualizar("objetivo-pct", (c) => {
+      c.objetivo = { ...c.objetivo, modo: "margem", percentagem: margem };
+    });
+
   const resultado = useMemo(() => (contexto ? precificar(contexto) : null), [contexto]);
   const preenchimento = useMemo(
     () => (contexto ? avaliarPreenchimento(contexto, respondidos) : null),
@@ -247,66 +268,81 @@ export default function SimuladorPreco({ cenarioInicial }: { cenarioInicial?: st
         </div>
       </div>
 
-      {/* ── O preço, e a maneira de lhe mexer, ficam juntos e em cima ──
-          O slider já esteve depois de TODOS os campos: em mobile nascia a
-          3 415 px do topo, quatro ecrãs abaixo do número que ele serve
-          para afinar. Quem queria experimentar outro preço tinha de passar
-          por onze secções de formulário para lá chegar.
+      {/* ── DUAS COLUNAS EM DESKTOP, UMA EM MOBILE ─────────────────
+          A ferramenta está declarada como `layout: "wide"` no catálogo
+          (max-w-6xl) e desenhava-se numa coluna só: metade do ecrã vazia
+          enquanto o número que se está a afinar saía do viewport ao abrir
+          o primeiro acordeão.
 
-          Passa a viver ao lado do resultado, porque é o mesmo gesto: ver
-          quanto dá e experimentar outra coisa. A memória de cálculo desce
-          para debaixo dos campos — é para conferir depois, não para
-          atravessar antes. ─────────────────────────────────────────── */}
-      {/* PRIMEIRO PERSONALIZA-SE, DEPOIS VÊ-SE O NÚMERO.
-          O resultado já esteve à frente de tudo, e isso punha uma
-          recomendação por cima de campos que ninguém tinha preenchido. Agora
-          a ordem é a da conversa: dizes o essencial, aparece o preço com o
-          cursor para o afinar, e só quem quiser mais precisão desce aos
-          blocos avançados. */}
-      <CamposEssenciais
-        contexto={contexto}
-        definicao={definicao}
-        atualizar={atualizar}
-        resultado={resultado}
-      />
+          A ORDEM DO DOM NÃO MUDA — essencial → resultado → afinar — e é
+          ela que manda em mobile, onde a pessoa quer o número antes do
+          formulário. Em `lg:` a grelha reposiciona as mesmas caixas em
+          duas colunas, sem trocar a leitura por teclado ou leitor de
+          ecrã. ─────────────────────────────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start lg:gap-6">
+        {/* PRIMEIRO PERSONALIZA-SE, DEPOIS VÊ-SE O NÚMERO.
+            O resultado já esteve à frente de tudo, e isso punha uma
+            recomendação por cima de campos que ninguém tinha preenchido. */}
+        <div className="lg:col-start-1 lg:row-start-1">
+          <CamposEssenciais
+            contexto={contexto}
+            definicao={definicao}
+            atualizar={atualizar}
+            resultado={resultado}
+          />
+        </div>
 
-      {/* Sem `sticky`, de propósito. O cartão de resultado tem ~830 px de
-          altura; com o cursor por baixo, a coluna passa dos 1 200 px e não
-          cabe em portátil nenhum. Uma coluna pegajosa mais alta do que a
-          janela fica presa com o fundo cortado — e dar-lhe scroll próprio
-          transformava metade do ecrã num painel que rouba a roda do rato. */}
-      <div className="space-y-4">
-        <ResultadoPreco
-          resultado={resultado}
-          temFiscalidade={temFiscalidade}
-          estado={estadoPreenchimento}
-          faltam={preenchimento?.faltam.length ?? 0}
-        />
-        <AnuncioResultado resultado={resultado} exemplo={estadoPreenchimento === "exemplo"} />
+        {/* O preço, e a maneira de lhe mexer, ficam juntos.
+            O slider já esteve depois de TODOS os campos: em mobile nascia
+            a 3 415 px do topo, quatro ecrãs abaixo do número que serve
+            para o afinar. */}
+        <div className="space-y-4 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+          {/* A única coisa fixa da página. O cartão tem ~830 px e não pode
+              ser pegajoso; esta barra tem 56 px e pode. */}
+          <ResumoPreco resultado={resultado} estado={estadoPreenchimento} />
 
-        {/* Os valores por omissão, ditos em voz alta e com o caminho para
-            os corrigir. `perguntas.ts` promete isto desde o primeiro dia;
-            até aqui a promessa não existia no ecrã. */}
-        {preenchimento ? <Pressupostos preenchimento={preenchimento} /> : null}
+          {resultado.ok ? (
+            <ResultadoPreco
+              resultado={resultado}
+              temFiscalidade={temFiscalidade}
+              estado={estadoPreenchimento}
+              faltam={preenchimento?.faltam.length ?? 0}
+              aoAdotarPreco={adotarPreco}
+            />
+          ) : (
+            <SemPreco resultado={resultado} aoAceitarMaximo={aceitarMargemMaxima} />
+          )}
 
-        {/* ── Os avisos graves ficam COLADOS ao número ────────────────
-            Estavam todos numa secção única, depois dos campos avançados e
-            depois da memória de cálculo: um aviso `perigo` («a este preço
-            cada venda tira-te dinheiro») nascia quatro ecrãs abaixo do
-            preço a que se refere. Os informativos continuam lá em baixo —
-            são contexto, não urgência. ─────────────────────────────── */}
-        <Avisos avisos={resultado.avisos} apenas={GRAVES} rotulo="Avisos importantes" />
+          <AnuncioResultado resultado={resultado} exemplo={estadoPreenchimento === "exemplo"} />
 
-        {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
+          {/* Os valores por omissão, ditos em voz alta e com o caminho
+              para os corrigir. */}
+          {preenchimento ? <Pressupostos preenchimento={preenchimento} /> : null}
+
+          {/* ── Os avisos graves ficam COLADOS ao número ──────────────
+              Estavam todos numa secção única, depois dos campos avançados
+              e depois da memória de cálculo: um aviso `perigo` («a este
+              preço cada venda tira-te dinheiro») nascia quatro ecrãs
+              abaixo do preço a que se refere. ────────────────────────── */}
+          <Avisos avisos={resultado.avisos} apenas={GRAVES} rotulo="Avisos importantes" />
+
+          {resultado.ok ? <SliderPreco contexto={contexto} resultado={resultado} estado={estadoPreenchimento} /> : null}
+
+          {/* Secções irmãs, e não mais oito coisas dentro do cartão de
+              resultado. Cada uma aparece só quando tem o que dizer. */}
+          {resultado.desconto ? <DescontoResultado desconto={resultado.desconto} /> : null}
+          {resultado.ok ? <Caixa resultado={resultado} /> : null}
+          {resultado.tesouraria ? <Tesouraria t={resultado.tesouraria} /> : null}
+          {resultado.sociedade ? <Sociedade s={resultado.sociedade} /> : null}
+        </div>
+
+        <div className="space-y-4 lg:col-start-1 lg:row-start-2">
+          <Afinar contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
+          <MemoriaCalculo linhas={resultado.explicacao} />
+          <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
+          {resultado.ok ? <Cenarios contexto={contexto} estado={estadoPreenchimento} /> : null}
+        </div>
       </div>
-
-      <Afinar contexto={contexto} definicao={definicao} atualizar={atualizar} resultado={resultado} />
-
-      <MemoriaCalculo linhas={resultado.explicacao} />
-
-      <Avisos avisos={resultado.avisos} apenas={INFORMATIVOS} rotulo="Notas" />
-
-      {resultado.ok ? <Cenarios contexto={contexto} estado={estadoPreenchimento} /> : null}
 
       <p className="px-1 pt-2 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
         Estimativa com base no que introduziste. Não substitui a análise de um contabilista certificado, e a decisão de

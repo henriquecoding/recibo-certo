@@ -22,6 +22,8 @@ import type {
   ContextoPreco,
   DetalheCaixa,
   DetalheCustoUnitario,
+  DiagnosticoPreco,
+  FracaoDoPreco,
   LinhaExplicacao,
   ResultadoPreco,
   VeredictoPreco,
@@ -33,6 +35,7 @@ import { ivaAEntregar, liquidoDe, pvpDe, situacaoIVAPreco } from "./motores/iva"
 import { fiscalidadeVendedor, fracoesFiscais } from "./motores/fiscal-ti";
 import {
   custosVariaveisAoPreco,
+  fracaoDisponivel,
   lucroAoPreco,
   precoPorLucroUnidade,
   precoPorMargem,
@@ -296,6 +299,20 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
         })
       : undefined;
 
+  // ── 14-bis. O diagnóstico das frações ──────────────────────────────
+  //  Quem consome cada euro cobrado, e quanto sobra. É o que transforma
+  //  «não há preço possível com estes números» de parede em explicação:
+  //  sem isto, o ecrã dizia que o problema existia e não dizia onde.
+  const diagnostico = diagnosticar({
+    solver: solverComFixos,
+    comissoes,
+    ssFracao,
+    irsFracao,
+    irsSobreLucro,
+    margemAlvo,
+    taxaIVA: iva.taxaVenda,
+  });
+
   // ── 15. Veredicto sobre o preço pensado ────────────────────────────
   const veredicto = contexto.precoPensado
     ? avaliarPrecoPensado({
@@ -371,6 +388,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
       liquidoPessoalPorUnidade: cent(fiscal.liquidoPessoalPorUnidade),
     },
     caixa,
+    diagnostico,
     tesouraria,
     explicacao,
     avisos,
@@ -381,6 +399,63 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
 }
 
 // ─── Auxiliares ────────────────────────────────────────────────────────
+
+/**
+ * Para onde vai cada euro cobrado.
+ *
+ * Tudo é convertido para fração do preço LÍQUIDO, que é a base em que a
+ * margem se mede — senão as parcelas não são comparáveis entre si nem
+ * com a margem pedida. É por isso que as comissões de canal aparecem
+ * multiplicadas por (1 + IVA): 15% do bruto são 18,45% do líquido, e é
+ * essa a percentagem que sai mesmo da margem.
+ */
+function diagnosticar(e: {
+  solver: EntradaSolver;
+  comissoes: { sobreBruto: number; sobreLiquido: number; detalhe: { rotulo: string; percentagem?: number; base: string }[] };
+  ssFracao: number;
+  irsFracao: number;
+  irsSobreLucro: number;
+  margemAlvo: number;
+  taxaIVA: number;
+}): DiagnosticoPreco {
+  const t = fracao(e.taxaIVA, 0, 1);
+  const consumidores: FracaoDoPreco[] = [];
+
+  for (const d of e.comissoes.detalhe) {
+    if (!d.percentagem || d.percentagem <= 0) continue;
+    if (d.base === "bruto") {
+      consumidores.push({
+        rotulo: d.rotulo,
+        fracao: d.percentagem * (1 + t),
+        sobreBruto: true,
+        fracaoOriginal: d.percentagem,
+      });
+    } else if (d.base === "liquido") {
+      consumidores.push({ rotulo: d.rotulo, fracao: d.percentagem });
+    }
+  }
+
+  if (e.ssFracao > 0) {
+    consumidores.push({ rotulo: "Segurança Social", fracao: e.ssFracao });
+  }
+  if (e.irsFracao > 0) {
+    consumidores.push({ rotulo: "IRS sobre a faturação", fracao: e.irsFracao });
+  }
+  if (e.irsSobreLucro > 0) {
+    consumidores.push({ rotulo: "IRS sobre o lucro", fracao: e.irsSobreLucro });
+  }
+
+  const disponivel = fracaoDisponivel(e.solver);
+
+  return {
+    disponivel,
+    margemPedida: e.margemAlvo,
+    // O teto é a fração disponível: uma margem igual a ela deixa o
+    // denominador do solver a zero, e daí para cima não existe preço.
+    margemMaxima: Math.max(0, disponivel),
+    consumidores: consumidores.sort((a, b) => b.fracao - a.fracao),
+  };
+}
 
 function textoImpossivel(saida: SaidaSolver, margemAlvo: number): string {
   if (saida.motivo === "margem_inalcancavel") {
