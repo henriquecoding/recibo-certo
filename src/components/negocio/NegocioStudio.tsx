@@ -99,6 +99,12 @@ const ConclusaoNegocio = dynamic(() => import("./ConclusaoNegocio"), {
   ssr: false,
   loading: () => <Esqueleto altura={320} rotulo="A carregar a conclusão…" />,
 });
+// §77 — o handoff é transformação de dados, não o motor de empresa. Ainda
+// assim carrega à parte: só interessa a quem chega ao fim do percurso.
+const ContinuarNaEmpresa = dynamic(() => import("./ContinuarNaEmpresa"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={180} rotulo="A preparar a continuidade…" />,
+});
 
 function Esqueleto({ altura, rotulo }: { altura: number; rotulo: string }) {
   return (
@@ -598,6 +604,12 @@ export default function NegocioStudio() {
       {/* ── ATOS 12-13 — execução ────────────────────────────────── */}
       {temResultado ? (
         <>
+          {/* §19 — a continuidade tem de ser mais do que um link. O que
+              a pessoa acabou de construir viaja com ela, com revisão
+              antes de sair e sem nada no URL. */}
+          <ErrorBoundary>
+            <ContinuarNaEmpresa negocio={negocio} contexto={contexto} />
+          </ErrorBoundary>
           <ProximoPassoNegocio negocio={negocio} contexto={contexto} />
           {/* A conclusão fecha o documento: as seis camadas do
               `ResultadoExplicado`, com a hierarquia dos CTAs decidida

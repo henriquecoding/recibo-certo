@@ -51,6 +51,12 @@ export const DOMINIOS = {
   // a estrutura de custos inteira — e por isso nunca sai daqui sem uma
   // ação explícita de «Guardar este projeto». Ver `store/negocio.ts`.
   negocio: "recibocerto:negocio:v1",
+  // A ponte do estúdio para o simulador de empresa. Vive no cofre pela
+  // mesma razão que o rascunho: leva volume de negócios, custos e
+  // estrutura de alguém — e leva-os por TTL curto e consumo único, porque
+  // um handoff que fica no browser deixa de ser uma ponte e passa a ser
+  // uma cópia esquecida. Ver `store/handoff-negocio-empresa.ts`.
+  "handoff-negocio-empresa": "recibocerto:handoff-negocio-empresa:v1",
 } as const;
 
 /**

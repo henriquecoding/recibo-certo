@@ -57,9 +57,14 @@ export default function ComparacaoNegocio({
 
   return (
     <div className="space-y-3" id="comparar">
+      {/* §61 — o nome diz o que isto é. «O mesmo negócio, nas duas
+          formas» soava a veredito; isto é uma primeira aproximação, que
+          serve para decidir se vale a pena aprofundar. O cálculo
+          societário completo é do simulador de empresa, com este mesmo
+          negócio. */}
       <Cartao
-        titulo="O mesmo negócio, nas duas formas"
-        descricao="Em vez de comparar números abstratos, comparamos o negócio que acabaste de construir"
+        titulo="Primeira aproximação fiscal"
+        descricao="Serve para perceber se vale a pena aprofundar — com o negócio que acabaste de construir, não com números abstratos"
       >
         {/* ── A proveniência, antes dos números ──────────────────── */}
         <dl className="mb-4 space-y-1 rounded-2xl bg-stone-50 p-3 dark:bg-stone-800/50">
@@ -167,7 +172,13 @@ export default function ComparacaoNegocio({
         </p>
       </Cartao>
 
-      {/* ── As duas saídas para os motores completos ───────────────── */}
+      {/* ── As saídas para os motores completos ─────────────────────
+          ⚠️ O SIMULADOR DE EMPRESA NÃO ESTÁ AQUI COMO LINK, e é
+          deliberado. A porta que leva os dados consigo é o cartão
+          «Continuar no Simulador de Empresa», mais abaixo. Duas ações com
+          o mesmo destino e pesos iguais — uma que leva o negócio e outra
+          que o deixa para trás — era uma armadilha: quem clicasse na
+          errada voltava a preencher tudo sem perceber porquê. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
           href="/ferramentas/comparar-regimes"
@@ -181,23 +192,24 @@ export default function ComparacaoNegocio({
               Com dependentes, estado civil, região, IRS Jovem e o ponto de viragem
             </span>
           </span>
-          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" />
+          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" aria-hidden />
         </Link>
 
-        <Link
-          href="/ferramentas/simulador-empresa"
-          className="group flex items-start justify-between gap-3 rounded-4xl border border-stone-100 bg-white p-4 shadow-card transition-all hover:border-brand hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
+        <a
+          href="#continuar-empresa"
+          className="group flex items-start justify-between gap-3 rounded-4xl border border-brand/30 bg-brand-light/40 p-4 shadow-card transition-all hover:border-brand hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-brand/30 dark:bg-brand/10"
         >
           <span className="min-w-0">
-            <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-              Simulador de empresa
+            <span className="block text-sm font-semibold text-brand-deep dark:text-brand-mint">
+              Aprofundar como sociedade
             </span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-              Salário do gerente, dividendos, tributação autónoma, RFAI e localização
+            <span className="mt-0.5 block text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+              O cálculo societário completo — gerência, dividendos, tributação autónoma, RFAI e localização — com este
+              mesmo negócio
             </span>
           </span>
-          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" />
-        </Link>
+          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-brand" aria-hidden />
+        </a>
       </div>
     </div>
   );
