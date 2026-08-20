@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.87.0",
+  "version": "2.88.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -8,6 +8,7 @@
     "busca:indice": "node scripts/gen-busca-indice.mjs",
     "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
+    "contrato:check": "node scripts/check-contrato-publico.mjs",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
@@ -33,6 +34,7 @@
     "guias:year-rollover": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:year-rollover\"",
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
+    "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
     "novidades:gen": "node scripts/gen-novidades.mjs",
     "parcerias:check": "vitest run src/lib/__tests__/parcerias.test.ts",
@@ -52,13 +54,12 @@
     "skills:check": "node scripts/sync-skills-fiscal.mjs --check",
     "skills:sync": "node scripts/sync-skills-fiscal.mjs",
     "start": "next start",
+    "stripe:check": "node scripts/check-stripe-config.mjs",
+    "supabase:check": "node scripts/check-supabase.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "versao:check": "node scripts/check-versao.mjs",
-    "versao:fix": "node scripts/check-versao.mjs --fix",
-    "stripe:check": "node scripts/check-stripe-config.mjs",
-    "contrato:check": "node scripts/check-contrato-publico.mjs",
-    "supabase:check": "node scripts/check-supabase.mjs"
+    "versao:fix": "node scripts/check-versao.mjs --fix"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
