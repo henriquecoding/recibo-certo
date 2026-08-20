@@ -15,6 +15,24 @@ import AnimatedNumber from "@/components/ui/AnimatedNumber";
 import InfoTip from "@/components/ui/InfoTip";
 import { gravarExportEmpresa } from "@/lib/store/importacao-irs";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
+// ── O contrato de interoperabilidade (§12) ────────────────────────────
+//  Estes tipos estavam declarados dentro deste ficheiro. Um formato que
+//  outras ferramentas têm de escrever não pode viver num componente.
+import type {
+  PassoEmpresa,
+  PerfilFundador,
+  RegiaoRFAIGuiado,
+  SnapshotEmpresaGuiada,
+  TipoSede,
+  TipoSociedade,
+  TipoViaturaGuiado,
+} from "@/lib/empresa/snapshot";
+import { custosEstruturaIniciais, resolverEstadoEmpresa } from "@/lib/empresa/importacao";
+import ImportacaoNegocio from "@/components/empresa/ImportacaoNegocio";
+import { consumirHandoffEmpresa } from "@/lib/store/handoff-negocio-empresa";
+import type { PerfilFiscalPessoa } from "@/lib/perfil-pessoa";
+import PerfilGerenteEditor from "@/components/empresa/PerfilGerenteEditor";
+import type { HandoffNegocioEmpresaV1 } from "@/lib/negocio/adapters/empresa-handoff";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -126,17 +144,11 @@ const CUSTO_CONSTITUICAO_DEFAULT = 360;
 const SMN_2026 = SMN_SRC.value;
 
 // TA (Art. 88.º CIRC 2026)
-type TipoViaturaGuiado =
-  | "nenhuma"
-  | "eletrica"
-  | "eletrica_cara"
-  | "phev_baixo"
-  | "phev_medio"
-  | "phev_alto"
-  | "comb_baixo"
-  | "comb_medio"
-  | "comb_alto";
-
+// ⚠️ O VOCABULÁRIO VIVE EM `lib/empresa/snapshot.ts` (§12). Estava aqui,
+// e isso fazia deste componente o dono implícito do formato de
+// interoperabilidade: quem quisesse ler ou escrever um cenário de empresa
+// tinha de importar React, Leaflet e o motor fiscal para chegar a um
+// `type`. Agora o contrato é um ficheiro sem UI, e a UI segue-o.
 const TA_TAXAS_GUIADO: Record<TipoViaturaGuiado, number> = {
   nenhuma: 0,
   eletrica: TA_VIATURAS_ELETRICA.value,
@@ -172,7 +184,6 @@ const TA_TAXA_NAO_DOC = TA_NAO_DOCUMENTADAS.value;
 const TA_AGRAVAMENTO = TA_AGRAVAMENTO_PREJUIZO.value;
 
 // RFAI (Art. 22.º–26.º CFI)
-type RegiaoRFAIGuiado = "interior" | "litoral";
 const RFAI_TAXA: Record<RegiaoRFAIGuiado, number> = { interior: RFAI_TAXA_INTERIOR_SRC.value, litoral: RFAI_TAXA_LITORAL_SRC.value };
 const RFAI_TAXA_EXCEDENTE = RFAI_TAXA_INTERIOR_EXCEDENTE.value;
 const RFAI_LIMITE_INVEST = RFAI_LIMITE_INVESTIMENTO_INTERIOR.value;
@@ -213,12 +224,8 @@ const CUSTO_REPRESENTANTE_FISCAL_DEFAULT = 350;
 // IFICI (Art. 58.º-A EBF)
 const IFICI_TAXA_FLAT = IFICI_TAXA.value;
 
-type TipoSede = "fisica" | "virtual" | "coworking";
-type PerfilFundador = "residente" | "estrangeiro_ue" | "estrangeiro_extra_ue";
-
-type Passo = 0 | 1 | "local" | 2 | 3 | 4 | "resultado" | "aseguir";
-
-type TipoSociedade = "unipessoal" | "quotas";
+/** O passo do fluxo. O tipo canónico é `PassoEmpresa` (§12, §21). */
+type Passo = PassoEmpresa;
 
 // URLs legais para citação inline
 // NOTA: URLs mantidas em sincronia manual com `SOURCES` em fiscal-data.ts —
@@ -731,6 +738,12 @@ export default function ModoGuiadoEmpresa({
   const [faturacaoComIva, setFaturacaoComIva] = useState(false);
   const [despesasOper, setDespesasOper] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(SMN_2026);
+  // §44 — o motor aceita 12 ou 14 desde sempre; a superfície nunca o
+  // expôs, e por isso a capacidade existia sem ninguém lhe chegar.
+  const [mesesSalarioGerente, setMesesSalarioGerente] = useState<12 | 14>(12);
+  // §43 — a situação pessoal de quem gere. Sem ela o motor mantém o
+  // comportamento antigo; com ela, personaliza. Nunca se inventa.
+  const [perfilGerente, setPerfilGerente] = useState<PerfilFiscalPessoa>({});
   const [incluirConstituicao, setIncluirConstituicao] = useState(true);
   const [custoConstituicao, setCustoConstituicao] = useState(CUSTO_CONSTITUICAO_DEFAULT);
   const [anosAmortizacao, setAnosAmortizacao] = useState(3);
@@ -801,6 +814,7 @@ export default function ModoGuiadoEmpresa({
       despesasOper,
       custosExtra: custosEstrutura,
       salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente,
       distribuirDividendos,
       opcaoEnglobamento,
       incluirConstituicao,
@@ -830,15 +844,20 @@ export default function ModoGuiadoEmpresa({
       sedeVirtualCustoMensal: sedeVirtualEfetivo,
       isEstrangeiro,
       custoRepFiscal: custoRepFiscalEfetivo,
+      // §43 — o perfil declarado manda; o resto mantém o comportamento
+      // anterior, para um contrato novo não mudar cenários já guardados.
       perfil: {
-        dependentes: 0,
-        conjunta: false,
-        regiao: "continente",
-        ifici: aplicarIFICI,
+        dependentes: perfilGerente.dependentes ?? 0,
+        conjunta: perfilGerente.conjunta ?? false,
+        regiao: perfilGerente.regiao ?? "continente",
+        ifici: aplicarIFICI || (perfilGerente.ifici ?? false),
+        estadoCivil: perfilGerente.estadoCivil,
+        deficiencia: perfilGerente.deficiencia,
+        irsJovemAno: perfilGerente.irsJovemAno,
       },
     }),
     [
-      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
+      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal, mesesSalarioGerente,
       distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
       custoConstituicao, anosAmortizacao,
       tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -848,7 +867,7 @@ export default function ModoGuiadoEmpresa({
       temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
       valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
       localizacao, sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo,
-      aplicarIFICI,
+      aplicarIFICI, perfilGerente,
     ],
   );
 
@@ -914,10 +933,16 @@ export default function ModoGuiadoEmpresa({
   }
 
   // ── Instantâneo COMPLETO dos campos (para reabrir/gerir) ──────────────────
-  const montarSnapshot = () => ({
-    jaTemEmpresa, tipoSociedade, tipoSelecionado, perfilFundador, aplicarIFICI,
+  //  §12: o tipo de retorno é agora um CONTRATO (`SnapshotEmpresaGuiada`),
+  //  não `ReturnType<typeof montarSnapshot>`. A diferença aparece no dia em
+  //  que alguém renomeia um campo: com o contrato, o TypeScript aponta os
+  //  dois lados da ponte; sem ele, o formato muda sozinho e o cenário
+  //  guardado no mês passado passa a ser lido a meio.
+  const montarSnapshot = (): SnapshotEmpresaGuiada => ({
+    versao: 2,
+    jaTemEmpresa: jaTemEmpresa ?? undefined, tipoSociedade, tipoSelecionado, perfilFundador, aplicarIFICI,
     tipoSede, custoSedeVirtual, localizacao, localNome,
-    faturacaoAnual, faturacaoComIva, despesasOper, salGerenteMensal, incluirConstituicao,
+    faturacaoAnual, faturacaoComIva, despesasOper, salGerenteMensal, mesesSalarioGerente, perfilGerente, incluirConstituicao,
     custoConstituicao, anosAmortizacao, custosEstrutura,
     distribuirDividendos, opcaoEnglobamento,
     tipoViatura, encargosViatura, despRepresentacao, ajudasCusto, naoDocumentadas, emPrejuizo, excecaoPrejuizo,
@@ -940,22 +965,47 @@ export default function ModoGuiadoEmpresa({
         { label: "Taxa efetiva", valor: resultado.taxaEfetiva, fmt: "pct" },
       ],
     };
-    const r = await cenariosStore.guardar({ tipo: "empresa", nome: nome || nomePadrao, resumo, dados: montarSnapshot() });
+    // A store de cenários guarda `Record<string, unknown>`; o snapshot é
+    // um contrato fechado. O spread converte-o sem perder nada e sem dar
+    // à store uma assinatura de índice que ela não deve ter.
+    const r = await cenariosStore.guardar({
+      tipo: "empresa",
+      nome: nome || nomePadrao,
+      resumo,
+      dados: { ...montarSnapshot() },
+    });
     setCenarioFeedback(r.ok ? { tipo: "ok", texto: "Cenário guardado em «Os meus cenários»." } : { tipo: "erro", texto: r.erro.mensagem });
     if (r.ok) setDialogGuardar(false);
   }
 
-  // Reabre um cenário marcado a partir da página de gestão (uma vez, na montagem).
+  // ── A ENTRADA: cenário reaberto, handoff do Estúdio, ou defaults ─────────
+  //  §22 — a precedência é uma REGRA, não a ordem por que os efeitos
+  //  correm. `resolverEstadoEmpresa()` decide-a num ficheiro puro e
+  //  testável; aqui só se aplica o que ela devolveu.
+  //
+  //  ⚠️ AS DUAS LEITURAS SÃO DESTRUTIVAS e têm de acontecer as duas, mesmo
+  //  quando o cenário ganha: um handoff que ficasse por consumir voltava a
+  //  aparecer na abertura seguinte, a propor uma importação que a pessoa já
+  //  tinha resolvido.
+  const [handoffAtivo, setHandoffAtivo] = useState<HandoffNegocioEmpresaV1 | null>(null);
+  const [defaultsSubstituidos, setDefaultsSubstituidos] = useState<string | null>(null);
+
   useEffect(() => {
-    const d = consumirReabertura("empresa") as Partial<ReturnType<typeof montarSnapshot>> | null;
-    if (!d) return;
+    const cenario = consumirReabertura("empresa");
+    const handoff = consumirHandoffEmpresa();
+    const r = resolverEstadoEmpresa({ cenario, handoff });
+    if (r.fonte === "defaults") return;
+
+    const d = r.snapshot;
     const set = <T,>(v: T | undefined, fn: (x: T) => void) => { if (v !== undefined) fn(v); };
     set(d.jaTemEmpresa, setJaTemEmpresa); set(d.tipoSociedade, setTipoSociedade); set(d.tipoSelecionado, setTipoSelecionado);
     set(d.perfilFundador, setPerfilFundador); set(d.aplicarIFICI, setAplicarIFICI);
-    set(d.tipoSede, setTipoSede); set(d.custoSedeVirtual, setCustoSedeVirtual); set(d.localizacao, setLocalizacao); set(d.localNome, setLocalNome);
+    set(d.tipoSede, setTipoSede); set(d.custoSedeVirtual, setCustoSedeVirtual); set(d.localizacao ?? undefined, setLocalizacao); set(d.localNome, setLocalNome);
     set(d.faturacaoAnual, setFaturacaoAnual); set(d.faturacaoComIva, setFaturacaoComIva); set(d.despesasOper, setDespesasOper);
-    set(d.salGerenteMensal, setSalGerenteMensal); set(d.incluirConstituicao, setIncluirConstituicao);
-    set(d.custoConstituicao, setCustoConstituicao); set(d.anosAmortizacao, setAnosAmortizacao); set(d.custosEstrutura, setCustosEstrutura);
+    set(d.salGerenteMensal, setSalGerenteMensal); set(d.mesesSalarioGerente, setMesesSalarioGerente);
+    set(d.perfilGerente, setPerfilGerente);
+    set(d.incluirConstituicao, setIncluirConstituicao);
+    set(d.custoConstituicao, setCustoConstituicao); set(d.anosAmortizacao, setAnosAmortizacao);
     set(d.distribuirDividendos, setDistribuirDividendos); set(d.opcaoEnglobamento, setOpcaoEnglobamento);
     set(d.tipoViatura, setTipoViatura); set(d.encargosViatura, setEncargosViatura); set(d.despRepresentacao, setDespRepresentacao);
     set(d.ajudasCusto, setAjudasCusto); set(d.naoDocumentadas, setNaoDocumentadas); set(d.emPrejuizo, setEmPrejuizo); set(d.excecaoPrejuizo, setExcecaoPrejuizo);
@@ -963,8 +1013,35 @@ export default function ModoGuiadoEmpresa({
     set(d.sifideDespesas, setSifideDespesas); set(d.tipoSifide, setTipoSifide); set(d.rfaiContratualValor, setRfaiContratualValor);
     set(d.temImovelEmpresa, setTemImovelEmpresa); set(d.vptImovel, setVptImovel); set(d.taxaIMI, setTaxaIMI); set(d.isencaoIMI_RFAI, setIsencaoIMI_RFAI);
     set(d.valorAquisicaoImovel, setValorAquisicaoImovel); set(d.isencaoIMT_RFAI, setIsencaoIMT_RFAI); set(d.anosAmortizacaoIMT, setAnosAmortizacaoIMT);
-    setPasso("resultado"); // mostra logo o resultado guardado
+
+    // ── §81-82: um default deixa de ser facto quando há resposta ────
+    //  A estrutura importada SUBSTITUI a estimativa padrão de
+    //  contabilidade e software. Somá-la por cima contava a contabilidade
+    //  duas vezes — e 2 400 € ou 4 200 € são ambos plausíveis para uma
+    //  empresa nova, por isso o erro não dava sinal nenhum.
+    const estrutura = custosEstruturaIniciais(d, CUSTO_CONTABILIDADE_DEFAULT + CUSTO_SOFTWARE_DEFAULT);
+    setCustosEstrutura(estrutura.valor);
+    if (estrutura.nota) setDefaultsSubstituidos(estrutura.nota);
+
+    if (r.handoff) setHandoffAtivo(r.handoff);
+    // §21 — abrir onde a resposta falta, não no princípio.
+    setPasso(r.passo);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Ignorar a importação: os campos voltam aos valores por omissão. */
+  const ignorarImportacao = useCallback(() => {
+    setHandoffAtivo(null);
+    setDefaultsSubstituidos(null);
+    setFaturacaoAnual(60_000);
+    setFaturacaoComIva(false);
+    setDespesasOper(2_000);
+    setCustosEstrutura(CUSTO_CONTABILIDADE_DEFAULT + CUSTO_SOFTWARE_DEFAULT);
+    setJaTemEmpresa(null);
+    setIncluirConstituicao(true);
+    setLocalizacao(null);
+    setLocalNome("");
+    setPasso(0);
   }, []);
 
   const progressLabels = ["Empresa", "Localização", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
@@ -977,6 +1054,13 @@ export default function ModoGuiadoEmpresa({
       <div className="min-h-0 bg-white dark:bg-stone-950">
         <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 py-12 sm:px-8">
           <div className="w-full max-w-md">
+            {/* O banner acompanha o primeiro ecrã: um handoff sem
+                `jaTemEmpresa` respondido abre aqui, e é aqui que a pessoa
+                tem de saber que o projeto veio com ela. */}
+            {handoffAtivo ? (
+              <ImportacaoNegocio handoff={handoffAtivo} aoIgnorar={ignorarImportacao} />
+            ) : null}
+
             <span className="mb-6 inline-flex items-center gap-1.5 rounded-full border border-brand/20 bg-brand-light/60 px-3 py-1 text-xs font-semibold text-brand-dark">
               <span className="h-1.5 w-1.5 rounded-full bg-brand" />
               Simulador empresa guiado
@@ -1120,6 +1204,13 @@ export default function ModoGuiadoEmpresa({
   return (
     <div ref={topoRef} className="min-h-0 scroll-mt-20 bg-white dark:bg-stone-950 sm:scroll-mt-24">
       <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* ── §20 — quem chegou do Estúdio tem de saber que chegou ───
+            Antes de qualquer campo: o que veio, de onde saiu cada
+            número, e a saída para ignorar tudo isto. */}
+        {handoffAtivo ? (
+          <ImportacaoNegocio handoff={handoffAtivo} aoIgnorar={ignorarImportacao} />
+        ) : null}
+
         {/* Barra de progresso */}
         <div className="mb-8">
           <div className="flex items-center gap-1 mb-2">
@@ -1687,7 +1778,13 @@ export default function ModoGuiadoEmpresa({
                         label={faturacaoComIva ? "Faturação anual com IVA (€)" : "Faturação anual (€)"}
                         value={faturacaoAnual}
                         min={0}
-                        max={faturacaoComIva ? 370_000 : 300_000}
+                        // A escala acomoda o que veio do projeto: uma
+                        // faturação importada acima do teto ficava a
+                        // parecer encostada ao máximo da régua.
+                        max={Math.max(
+                          faturacaoComIva ? 370_000 : 300_000,
+                          Math.ceil(faturacaoAnual / 50_000) * 50_000,
+                        )}
                         step={5_000}
                         onChange={setFaturacaoAnual}
                         presets={faturacaoComIva ? [36_900, 73_800, 123_000, 184_500] : [30_000, 60_000, 100_000, 150_000]}
@@ -1738,36 +1835,116 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    <NumericSlider
-                      label="Salário gerente (€/mês bruto)"
-                      value={salGerenteMensal}
-                      min={0}
-                      max={5_000}
-                      step={50}
-                      onChange={setSalGerenteMensal}
-                      presets={[0, SMN_2026, 1_200, 2_000]}
-                      tooltip={
-                        <>
-                          Salário bruto mensal do gerente-sócio. A empresa paga
-                          SS patronal (23,75%) e o trabalhador desconta 11%.
-                          Custo dedutível ao IRC. A estimativa de IRS assume
-                          Continente, não casado, sem dependentes, 12 meses e
-                          sem subsídios; confirma o enquadramento pessoal/MOE.
-                        </>
-                      }
-                    />
+                    <div>
+                      <NumericSlider
+                        label="Salário gerente (€/mês bruto)"
+                        value={salGerenteMensal}
+                        min={0}
+                        max={5_000}
+                        step={50}
+                        onChange={setSalGerenteMensal}
+                        presets={[0, SMN_2026, 1_200, 2_000]}
+                        tooltip={
+                          <>
+                            Salário bruto mensal do gerente-sócio. A empresa paga
+                            SS patronal ({pct(SS_EMP_TAXA)}) e o trabalhador
+                            desconta {pct(SS_TRAB_TAXA)}. Custo dedutível ao IRC.
+                            A estimativa de IRS usa o perfil pessoal que
+                            declarares — sem ele, assume Continente, não casado e
+                            sem dependentes.
+                          </>
+                        }
+                      />
+
+                      {/* ── §44 — a capacidade existia no motor e não se via ──
+                          `mesesSalarioGerente` está em `fiscal-empresa.ts` e
+                          tem testes desde sempre; a superfície guiada nunca a
+                          expunha, e por isso ninguém a conseguia configurar.
+                          A pergunta é semântica — os subsídios do gerente
+                          dependem dos termos da nomeação, ao contrário dos de
+                          um trabalhador, que são lei — e não um seletor
+                          «12/14» copiado de outro ecrã. */}
+                      {salGerenteMensal > 0 ? (
+                        <div className="mt-3 rounded-2xl border border-stone-200 p-3 dark:border-stone-700">
+                          <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+                            A gerência recebe subsídios de férias e Natal?
+                          </p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                            Num membro de órgão estatutário isto depende dos termos da nomeação — não é automático como
+                            num contrato de trabalho.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {([
+                              { valor: 12 as const, rotulo: "Não — 12 pagamentos" },
+                              { valor: 14 as const, rotulo: "Sim — 14 pagamentos" },
+                            ]).map((op) => {
+                              const ativo = mesesSalarioGerente === op.valor;
+                              return (
+                                <button
+                                  key={op.valor}
+                                  type="button"
+                                  onClick={() => setMesesSalarioGerente(op.valor)}
+                                  aria-pressed={ativo}
+                                  className={`min-h-[40px] rounded-full border px-4 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                                    ativo
+                                      ? "border-brand bg-brand-light/60 text-brand-deep dark:bg-brand/15 dark:text-brand-mint"
+                                      : "border-stone-200 text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:text-stone-300"
+                                  }`}
+                                >
+                                  {op.rotulo}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="mt-2 text-[11px] tabular-nums text-stone-500 dark:text-stone-400">
+                            Remuneração anual: {fmt(salGerenteMensal * mesesSalarioGerente)}
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {/* §43, §45 — a situação pessoal de quem gere, com a
+                          tabela de retenção explícita e as preferências já
+                          guardadas oferecidas em vez de aplicadas. */}
+                      {salGerenteMensal > 0 ? (
+                        <div className="mt-3">
+                          <PerfilGerenteEditor perfil={perfilGerente} aoMudar={setPerfilGerente} />
+                        </div>
+                      ) : null}
+                    </div>
 
                     <Collapsible title="Custos de estrutura" defaultOpen>
                       <NumericSlider
-                        label="Contabilidade + software (€/ano)"
+                        // §82 — o rótulo tem de dizer a verdade sobre o que
+                        // o campo contém. Quando o projeto trouxe estrutura
+                        // (que inclui sede, seguros e equipa), chamar-lhe
+                        // «contabilidade + software» escondia o resto.
+                        label={
+                          defaultsSubstituidos
+                            ? "Estrutura do teu projeto (€/ano)"
+                            : "Contabilidade + software (€/ano)"
+                        }
                         value={custosEstrutura}
-                        min={1_000}
-                        max={10_000}
+                        min={0}
+                        // A escala acompanha o valor importado: um teto de
+                        // 10 000 € fazia uma estrutura de 40 000 € parecer
+                        // encostada ao máximo, como se fosse um exagero.
+                        max={Math.max(10_000, Math.ceil(custosEstrutura / 5_000) * 5_000)}
                         step={200}
                         onChange={setCustosEstrutura}
                         presets={[1_500, 2_700, 4_000, 6_000]}
-                        tooltip={<>Contabilista Certificado (OCC) + software de faturação. Obrigatório para sociedades.</>}
+                        tooltip={
+                          defaultsSubstituidos ? (
+                            <>{defaultsSubstituidos}</>
+                          ) : (
+                            <>Contabilista Certificado (OCC) + software de faturação. Obrigatório para sociedades.</>
+                          )
+                        }
                       />
+                      {defaultsSubstituidos ? (
+                        <p className="mt-2 rounded-xl bg-brand-light/50 px-3 py-2 text-[11px] leading-relaxed text-brand-deep dark:bg-brand/10 dark:text-brand-mint">
+                          {defaultsSubstituidos}
+                        </p>
+                      ) : null}
                       <div className="mt-4 space-y-3">
                         <div className="flex items-center gap-3">
                           <button
@@ -2435,7 +2612,7 @@ export default function ModoGuiadoEmpresa({
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
                       { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
-                      resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
+                      resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × ${mesesSalarioGerente})`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
                       resultado.ssSalGerente > 0 ? { label: `SS da entidade sobre o salário (${pct(SS_EMP_TAXA)})`, value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
                       resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,

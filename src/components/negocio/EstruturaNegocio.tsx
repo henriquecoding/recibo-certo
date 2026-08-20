@@ -22,9 +22,15 @@
 //  defeito.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { useMemo } from "react";
 import { fmt } from "@/lib/format";
-import { CampoEuros, CampoNumero } from "@/components/precos/atomos";
+import { CampoEuros } from "@/components/precos/atomos";
 import { Building, Check, Plus, Trash, Warning } from "@/components/ui/Icons";
+import {
+  custosDosPostos,
+  custoTrabalhadoresPrimeiroAnoMensal,
+} from "@/lib/negocio/agregar";
+import type { ResultadoCustoPosto } from "@/lib/payroll/custo-empregador";
 import type {
   CategoriaCustoEstrutura,
   CategoriaInvestimento,
@@ -34,6 +40,7 @@ import type {
   InvestimentoInicial,
   TrabalhadorPlaneado,
 } from "@/lib/negocio/tipos";
+import CartaoTrabalhador from "./CartaoTrabalhador";
 import { BotaoSecundario, BotaoTexto, Cartao } from "./atomos";
 
 /** As fichas do §9/ATO 5 — sugestões, não um formulário obrigatório. */
@@ -94,6 +101,20 @@ export default function EstruturaNegocioEditor({
   const investimentos = estrutura.investimentosIniciais;
   const trabalhadores = estrutura.trabalhadores ?? [];
   const vazio = custos.length === 0 && trabalhadores.length === 0;
+
+  // O custo de cada posto, calculado UMA vez para o cartão e para o
+  // total. Calculá-lo dentro de cada cartão corria o motor de vencimento
+  // uma vez por letra escrita no campo da função.
+  const custosPorPosto = useMemo(() => {
+    const mapa = new Map<string, ResultadoCustoPosto>();
+    for (const p of custosDosPostos(estrutura)) mapa.set(p.trabalhador.id, p.custo);
+    return mapa;
+  }, [estrutura]);
+
+  const custoPrimeiroAnoMes = useMemo(
+    () => custoTrabalhadoresPrimeiroAnoMensal(estrutura),
+    [estrutura],
+  );
 
   return (
     <div className="space-y-3" id="estrutura">
@@ -210,8 +231,8 @@ export default function EstruturaNegocioEditor({
 
       {/* ── Trabalhadores ─────────────────────────────────────────── */}
       <Cartao
-        titulo="Alguém contratado"
-        descricao="O custo inclui a TSU da entidade e reparte os subsídios pelos 12 meses"
+        titulo="Quem trabalha contigo"
+        descricao="O custo real de um posto: remuneração, subsídios, contribuições, refeição e seguro"
         id="trabalhadores"
         acao={
           <BotaoSecundario onClick={aoAdicionarTrabalhador}>
@@ -222,51 +243,29 @@ export default function EstruturaNegocioEditor({
       >
         {trabalhadores.length === 0 ? (
           <p className="text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-            Sem ninguém contratado. Se estás a pensar contratar, acrescenta aqui — o ponto de equilíbrio sobe, e é essa
-            a pergunta a fazer antes de decidir.
+            Sem ninguém contratado. Se estás a pensar contratar, acrescenta aqui — mostramos o que a empresa paga, o
+            que a pessoa recebe e o que vai para o Estado, e o ponto de equilíbrio sobe com isso.
           </p>
         ) : (
           <ul className="space-y-2">
             {trabalhadores.map((t) => (
-              <li key={t.id} className="rounded-2xl border border-stone-100 p-3 dark:border-stone-800">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0 flex-1">
-                    <label className="sr-only" htmlFor={`trab-funcao-${t.id}`}>
-                      Função
-                    </label>
-                    <input
-                      id={`trab-funcao-${t.id}`}
-                      value={t.funcao}
-                      placeholder="Função"
-                      onChange={(e) => aoMudarTrabalhador(t.id, { funcao: e.target.value })}
-                      className="w-full min-w-0 rounded-lg border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold text-stone-800 placeholder:font-normal placeholder:text-stone-400 hover:border-stone-200 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-100 dark:hover:border-stone-700"
-                    />
-                  </div>
-                  <BotaoTexto onClick={() => aoRemoverTrabalhador(t.id)} tom="perigo" ariaLabel="Remover trabalhador">
-                    <Trash size={12} />
-                  </BotaoTexto>
-                </div>
-                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  <CampoEuros
-                    id={`trab-salario-${t.id}`}
-                    rotulo="Salário bruto mensal"
-                    valor={t.salarioBrutoMensal}
-                    aoMudar={(v) => aoMudarTrabalhador(t.id, { salarioBrutoMensal: v })}
-                    max={20000}
-                  />
-                  <CampoNumero
-                    id={`trab-meses-${t.id}`}
-                    rotulo="Meses por ano"
-                    descricao="14 inclui férias e Natal"
-                    valor={t.meses}
-                    aoMudar={(v) => aoMudarTrabalhador(t.id, { meses: v >= 13 ? 14 : 12 })}
-                    max={14}
-                  />
-                </div>
-              </li>
+              <CartaoTrabalhador
+                key={t.id}
+                trabalhador={t}
+                custo={custosPorPosto.get(t.id) ?? null}
+                aoMudar={(patch) => aoMudarTrabalhador(t.id, patch)}
+                aoRemover={() => aoRemoverTrabalhador(t.id)}
+              />
             ))}
-            <li className="pt-1 text-sm tabular-nums text-stone-700 dark:text-stone-200">
-              Pessoal: <strong>{fmt(custoTrabalhadoresMes)}</strong> por mês, já com encargos
+            <li className="pt-1 text-sm text-stone-700 dark:text-stone-200">
+              Pessoal: <strong className="tabular-nums">{fmt(custoTrabalhadoresMes)}</strong> por mês, já com todos os
+              encargos
+              {custoPrimeiroAnoMes !== custoTrabalhadoresMes ? (
+                <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
+                  No primeiro ano, com as datas de entrada:{" "}
+                  <strong className="tabular-nums">{fmt(custoPrimeiroAnoMes)}</strong> por mês
+                </span>
+              ) : null}
             </li>
           </ul>
         )}
@@ -298,7 +297,7 @@ export default function EstruturaNegocioEditor({
                     <Trash size={12} />
                   </BotaoTexto>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <CampoEuros
                     id={`inv-valor-${i.id}`}
                     rotulo="Valor"
@@ -306,6 +305,38 @@ export default function EstruturaNegocioEditor({
                     aoMudar={(v) => aoMudarInvestimento(i.id, { valor: v })}
                     max={1000000}
                   />
+                  {/* §58 — o timing existia no contrato e a interface só
+                      oferecia «antes de abrir». Um forno comprado no mês 4
+                      aparecia como despesa do mês 0, e o buraco de caixa
+                      saía no sítio errado. */}
+                  <div>
+                    <label
+                      htmlFor={`inv-mes-${i.id}`}
+                      className="block text-xs font-semibold text-stone-700 dark:text-stone-200"
+                    >
+                      Quando sai este dinheiro
+                    </label>
+                    <p
+                      id={`inv-mes-${i.id}-desc`}
+                      className="mt-0.5 text-[11px] leading-snug text-stone-500 dark:text-stone-400"
+                    >
+                      Não muda o resultado — muda o mês em que a conta sente.
+                    </p>
+                    <select
+                      id={`inv-mes-${i.id}`}
+                      aria-describedby={`inv-mes-${i.id}-desc`}
+                      value={i.mes ?? 0}
+                      onChange={(e) => aoMudarInvestimento(i.id, { mes: Number(e.target.value) })}
+                      className="mt-1.5 min-h-[40px] w-full rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-800 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    >
+                      <option value={0}>Antes de abrir</option>
+                      {Array.from({ length: 36 }, (_, m) => m + 1).map((m) => (
+                        <option key={m} value={m}>
+                          No mês {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </li>
             ))}

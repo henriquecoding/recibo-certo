@@ -14,7 +14,27 @@
 
 export * from "./tipos";
 
-export { agregar, overheadMensal, custoTrabalhadoresMensal, custosOperacionaisAnuais, contaParaONegocio, type AgregadoNegocio } from "./agregar";
+export {
+  agregar,
+  agregarBase,
+  overheadMensal,
+  custoTrabalhadoresMensal,
+  custoTrabalhadoresPrimeiroAnoMensal,
+  custosDosPostos,
+  custosOperacionaisAnuais,
+  contaParaONegocio,
+  entradaDoPosto,
+  temTrabalhadorValido,
+  type AgregadoBase,
+  type AgregadoNegocio,
+} from "./agregar";
+
+export {
+  migrarNegocioV1ParaV2,
+  migrarTrabalhadorV1ParaV2,
+  precisaMigrar,
+  type ContextoNegocioV1,
+} from "./migracoes/v1-v2";
 
 export {
   calcularOferta,
@@ -27,9 +47,13 @@ export {
 } from "./ofertas";
 
 export {
+  capacidadeDaEquipa,
   diagnosticarCapacidade,
   gargaloDeHoras,
+  horasProdutivasDoPosto,
   LIMIAR_APERTADO,
+  type CapacidadeEquipa,
+  type HorasDoPosto,
 } from "./capacidade";
 
 export {
@@ -43,7 +67,66 @@ export {
 } from "./viabilidade";
 
 export { analisarSensibilidade, margemDeSeguranca, CHOQUES } from "./sensibilidade";
-export { projetarCaixa, PROJECAO_NAO_E_SALDO } from "./caixa";
+export {
+  explicarMes,
+  IVA_DEDUTIVEL_NAO_MODELADO,
+  projetarCaixa,
+  projetarCaixaDoNegocio,
+  PROJECAO_NAO_E_SALDO,
+  type OpcoesCaixa,
+} from "./caixa";
+export {
+  CALENDARIO_ENTREGAS,
+  fluxosDeArranque,
+  fluxosDeInvestimento,
+  fluxosDeIVA,
+  fluxosDePayroll,
+  fluxosDeVendas,
+  porMes,
+  type FluxoCaixa,
+  type OpcoesFluxos,
+  type TipoFluxo,
+} from "./fluxos";
+export {
+  entidadeDoNegocio,
+  periodicidadeIVA,
+  regimeDoNegocio,
+  situacaoIVADoNegocio,
+} from "./adapters/iva";
+
+export {
+  compararContratacao,
+  custoMedioPorHora,
+  custoPorHoraDaEquipa,
+  diferencaEntre,
+  type CenarioContratacao,
+  type ComparacaoContratacao,
+  type CustoPorHora,
+  type QuandoContratar,
+} from "./contratacao";
+
+export {
+  CURVA_UNIFORME,
+  MESES_CURTOS,
+  curvaComPico,
+  curvaSazonal,
+  escalaDoMes,
+  evolucaoDe,
+  fatorEvolucao,
+  fatorSazonal,
+  normalizarCurva,
+  procuraConfigurada,
+} from "./procura";
+
+export {
+  LOCALIZACOES_CONHECIDAS,
+  localizacaoDeclarada,
+  municipioDoNegocio,
+  nomeDaLocalizacao,
+  parametrosDaLocalizacao,
+  regiaoDeclarada,
+  regiaoDoNegocio,
+} from "./localizacao";
 export { levantarPressupostos, confirmados } from "./pressupostos";
 
 export {
@@ -56,11 +139,17 @@ export {
 
 export { entradaEmpresa, paraEmpresa, sociedadeValeAPena, type EntradaEmpresa } from "./adapters/empresa";
 export {
-  atividadeDominante,
   atividadeLabelDominante,
+  comparacaoPossivel,
   entradaComparacao,
+  extremosDaComparacao,
+  naturezaPrincipal,
   paraComparacao,
+  portfolioFiscal,
   type EntradaComparacao,
+  type EstadoNatureza,
+  type PortfolioFiscal,
+  type RendimentoPorNatureza,
 } from "./adapters/comparar";
 export {
   ambitoClientes,

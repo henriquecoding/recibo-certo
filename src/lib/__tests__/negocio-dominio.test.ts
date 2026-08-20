@@ -38,7 +38,9 @@ import {
   sinaisDoNegocio,
   type ContextoNegocio,
   type OfertaNegocio,
+  type TrabalhadorPlaneado,
 } from "@/lib/negocio";
+import { custoDoPosto } from "@/lib/payroll/custo-empregador";
 import { precificar } from "@/lib/pricing";
 import { escolherRota } from "@/lib/routing";
 import { diagnosticoContabilista } from "@/lib/contabilista";
@@ -64,6 +66,16 @@ function negocioCom(ofertas: OfertaNegocio[], overhead: number[] = []): Contexto
 }
 
 const perto = (a: number, b: number, tol = 0.02) => Math.abs(a - b) <= tol;
+
+/** Um posto no contrato v2, para os testes não repetirem a montagem. */
+function posto(funcao: string, salarioBaseMensal: number, inicioMes = 0): TrabalhadorPlaneado {
+  return {
+    id: `t_${funcao}`,
+    funcao,
+    remuneracao: { salarioBaseMensal },
+    contrato: { inicioMes, pagamentoSubsidios: "normal" },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  0. A CAMADA É UM ORQUESTRADOR — e prova-se lendo o próprio código
@@ -102,9 +114,25 @@ describe("negocio:sem-fonte-propria", () => {
   it("as taxas que usa vêm importadas de `fiscal-data`", () => {
     const agregarSrc = readFileSync(join(RAIZ, "agregar.ts"), "utf8");
     expect(agregarSrc).toContain('from "@/lib/fiscal-data"');
-    expect(agregarSrc).toContain("SS_DEPENDENTE.entidade.value");
-    // E não a escreve à mão em lado nenhum.
+    // E não escreve nenhuma à mão: nem a TSU, nem o IVA.
     expect(agregarSrc).not.toMatch(/0\.2375/);
+    expect(agregarSrc).not.toMatch(/0\.23\b/);
+  });
+
+  it("o custo de pessoal é DELEGADO ao motor de payroll (§26)", () => {
+    // «Nenhuma fórmula de payroll nova deve viver em `lib/negocio`.» A
+    // conta de encargos estava aqui e era `bruto × meses × (1 + TSU)`:
+    // ignorava refeição, seguro obrigatório, medicina do trabalho e a
+    // retenção autónoma dos subsídios.
+    const agregarSrc = readFileSync(join(RAIZ, "agregar.ts"), "utf8");
+    expect(agregarSrc).toContain('from "@/lib/payroll/custo-empregador"');
+    expect(agregarSrc).toContain("custoDoPosto");
+
+    for (const caminho of ficheiros(RAIZ)) {
+      const src = readFileSync(caminho, "utf8");
+      // As assinaturas do motor de vencimento não podem reaparecer aqui.
+      expect(src, caminho).not.toMatch(/function\s+(retencaoIRS|calcularRecibo|isencaoJovem)/);
+    }
   });
 
   it("nenhum ficheiro do domínio reimplementa o solver de preço", () => {
@@ -572,37 +600,46 @@ describe("negocio:integracao", () => {
 
   it("contratar alguém torna o caso complexo", () => {
     const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
-    contexto.estrutura.trabalhadores = [
-      { id: "t1", funcao: "Apoio", salarioBrutoMensal: 900, meses: 14 },
-    ];
+    contexto.estrutura.trabalhadores = [posto("Apoio", 900)];
     const sinais = sinaisDoNegocio(analisarNegocio(contexto), contexto);
     expect(sinais.casoComplexo).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  TRABALHADORES — a TSU vem de `fiscal-data`, não daqui
+//  TRABALHADORES — o cálculo é do motor de vencimento, não daqui
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("negocio:trabalhadores", () => {
-  it("o custo inclui a TSU da entidade e reparte os 14 meses por 12", () => {
+  it("o custo é o do motor de payroll, não uma fórmula própria", () => {
+    // ⚠️ ISTO JÁ FOI `bruto × meses × (1 + TSU) ÷ 12`, e o teste verificava
+    // essa fórmula. Verificar uma fórmula que o domínio não devia ter era
+    // prender aqui a duplicação que §26 proíbe: o domínio delega, e o
+    // teste tem de verificar a DELEGAÇÃO, não uma segunda conta.
     const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
-    contexto.estrutura.trabalhadores = [
-      { id: "t1", funcao: "Apoio", salarioBrutoMensal: 1000, meses: 14 },
-    ];
+    contexto.estrutura.trabalhadores = [posto("Apoio", 1000)];
 
-    const esperado = (1000 * 14 * (1 + SS_DEPENDENTE.entidade.value)) / 12;
-    expect(perto(agregar(contexto).custoTrabalhadoresMes, esperado, 0.02)).toBe(true);
+    const doMotor = custoDoPosto({ salarioBaseMensal: 1000, pagamentoSubsidios: "normal" });
+    expect(perto(agregar(contexto).custoTrabalhadoresMes, doMotor.empresa.custoMedioMensal, 0.02)).toBe(
+      true,
+    );
+  });
+
+  it("o custo cobre mais do que o bruto e a TSU (§25)", () => {
+    // O seguro de acidentes de trabalho é obrigatório desde o primeiro dia
+    // e a conta antiga deixava-o de fora, junto com a refeição e a SST.
+    const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
+    contexto.estrutura.trabalhadores = [posto("Apoio", 1000)];
+
+    const antigo = (1000 * 14 * (1 + SS_DEPENDENTE.entidade.value)) / 12;
+    expect(agregar(contexto).custoTrabalhadoresMes).toBeGreaterThan(antigo);
   });
 
   it("o custo dos trabalhadores entra nos fixos e sobe o ponto de equilíbrio", () => {
     const base = negocioCom([respondida(novaOferta("produto_revenda", { volumeMes: 60 }))], [200]);
     const comEquipa: ContextoNegocio = {
       ...base,
-      estrutura: {
-        ...base.estrutura,
-        trabalhadores: [{ id: "t1", funcao: "Apoio", salarioBrutoMensal: 900, meses: 12 }],
-      },
+      estrutura: { ...base.estrutura, trabalhadores: [posto("Apoio", 900)] },
     };
 
     const a = analisarNegocio(base);
@@ -800,19 +837,63 @@ describe("negocio:caixa", () => {
   });
 
   it("o IVA cobrado não fica na caixa como se fosse receita", () => {
+    // ⚠️ ISTO MUDOU NA CAIXA v2, E A MUDANÇA É O PONTO.
+    //
+    // A v1 neutralizava o IVA no MESMO mês, por não saber o calendário. O
+    // fluxo do mês 1 era, por construção, igual ao resultado operacional
+    // — e este teste verificava essa igualdade.
+    //
+    // Só que essa igualdade escondia o efeito que interessa: entre cobrar
+    // o IVA e o entregar passam dois a cinco meses, e nesse intervalo o
+    // dinheiro está na conta sem ser da empresa. A pergunta certa não é
+    // «o mês 1 bate com o resultado» — é «o IVA acaba por sair».
     const oferta = novaOferta("produto_revenda", { nome: "A", volumeMes: 30 });
     oferta.pricing.vendedor.regimeIVA = "normal";
     const base = negocioCom([respondida(oferta)]);
     const contexto: ContextoNegocio = {
       ...base,
+      // Sociedade: é para ela que o Art. 41.º determina periodicidade.
+      fiscal: { ...base.fiscal, enquadramento: "sociedade" },
+      procura: { ...base.procura, horizonteMeses: 24 },
       caixa: { saldoInicial: 0, prazoRecebimentoDias: 0, prazoFornecedorDias: 0 },
     };
 
     const r = analisarNegocio(contexto, { comCaixa: true });
-    const mes = r.caixa!.meses[0];
-    // O fluxo do mês não pode ser a receita COM IVA menos os custos: o IVA
-    // entra e volta a sair, e tratá-lo como receita inflacionaria a caixa.
-    expect(mes.recebimentos - mes.pagamentos).toBeLessThan(r.receitaClienteMes);
-    expect(perto(mes.fluxo, r.resultadoOperacionalMes, 1)).toBe(true);
+    expect(r.ivaCobradoMes).toBeGreaterThan(0);
+
+    // ① O IVA SAI mesmo — e sai etiquetado, não diluído num total.
+    const saidasDeIVA = (r.caixa!.fluxos ?? []).filter((f) => f.tipo === "iva");
+    expect(saidasDeIVA.length).toBeGreaterThan(0);
+    expect(saidasDeIVA.every((f) => f.valor < 0)).toBe(true);
+
+    // ② E não sai no mês em que é cobrado: é esse o efeito de tesouraria
+    //    que a v1 não conseguia mostrar.
+    expect(saidasDeIVA.every((f) => f.mes > 1)).toBe(true);
+
+    // ③ Ao longo do horizonte, o que sai aproxima-se do que foi cobrado.
+    //    Não é igual: o IVA dos últimos meses só se entrega depois do fim
+    //    da projeção — e é isso mesmo que acontece na vida real.
+    const totalSaido = Math.abs(saidasDeIVA.reduce((s, f) => s + f.valor, 0));
+    const totalCobrado = r.ivaCobradoMes * contexto.procura.horizonteMeses;
+    expect(totalSaido).toBeGreaterThan(totalCobrado * 0.6);
+    expect(totalSaido).toBeLessThanOrEqual(totalCobrado + 0.01);
+  });
+
+  it("sem periodicidade determinada, o IVA não gera um calendário inventado", () => {
+    // Para um trabalhador independente o motor não determina
+    // periodicidade. A caixa NÃO pode escolher uma por ela — §53.
+    const oferta = novaOferta("produto_revenda", { nome: "A", volumeMes: 30 });
+    oferta.pricing.vendedor.regimeIVA = "normal";
+    const base = negocioCom([respondida(oferta)]);
+    const r = analisarNegocio(
+      {
+        ...base,
+        fiscal: { ...base.fiscal, enquadramento: "independente" },
+        caixa: { saldoInicial: 0, prazoRecebimentoDias: 0, prazoFornecedorDias: 0 },
+      },
+      { comCaixa: true },
+    );
+
+    expect((r.caixa!.fluxos ?? []).filter((f) => f.tipo === "iva")).toHaveLength(0);
   });
 });

@@ -92,7 +92,11 @@ export default function LivroPressupostos({
                     <button
                       type="button"
                       onClick={() => aoResolver(p.resolverEm!)}
-                      className="inline-flex min-h-[32px] items-center rounded-lg px-1.5 text-[11px] font-semibold text-brand-dark underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-brand-mint"
+                      // 36 px é o mínimo do projeto (regra 5b). Estes botões
+                      // estavam a 32 e passaram a aparecer muitas mais vezes
+                      // desde que o livro ganhou os pressupostos do posto de
+                      // trabalho, da procura e da caixa.
+                      className="inline-flex min-h-[36px] items-center rounded-lg px-1.5 text-[11px] font-semibold text-brand-dark underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-brand-mint"
                     >
                       Resolver isto
                     </button>

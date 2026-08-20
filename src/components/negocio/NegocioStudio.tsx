@@ -55,12 +55,17 @@ import {
 } from "@/lib/negocio";
 import { confirmados } from "@/lib/negocio/pressupostos";
 import { agregar } from "@/lib/negocio/agregar";
+import { localizacaoDeclarada, regiaoDoNegocio } from "@/lib/negocio/localizacao";
+import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import { gravarRascunhoNegocio, lerRascunhoNegocio, limparRascunhoNegocio } from "@/lib/store/negocio";
 import { consumirReabertura } from "@/lib/store/cenarios";
 import type { CenarioInicial, ContextoPreco } from "@/lib/pricing/tipos";
 import { ArrowLeft, RotateCcw } from "@/components/ui/Icons";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import SeletorMaturidade from "./SeletorMaturidade";
+import BaseNegocioEditor from "./BaseNegocio";
+import LocalizacaoNegocioEditor from "./LocalizacaoNegocio";
+import ProcuraNegocioEditor from "./ProcuraNegocio";
 import PortfolioOfertas from "./PortfolioOfertas";
 import EstruturaNegocioEditor from "./EstruturaNegocio";
 import CockpitViabilidade from "./CockpitViabilidade";
@@ -97,6 +102,22 @@ const ComparacaoNegocio = dynamic(() => import("./ComparacaoNegocio"), {
 const ConclusaoNegocio = dynamic(() => import("./ConclusaoNegocio"), {
   ssr: false,
   loading: () => <Esqueleto altura={320} rotulo="A carregar a conclusão…" />,
+});
+// §77 — o handoff é transformação de dados, não o motor de empresa. Ainda
+// assim carrega à parte: só interessa a quem chega ao fim do percurso.
+const ContinuarNaEmpresa = dynamic(() => import("./ContinuarNaEmpresa"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={180} rotulo="A preparar a continuidade…" />,
+});
+const SituacaoIVANegocio = dynamic(() => import("./SituacaoIVANegocio"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={200} rotulo="A carregar a situação de IVA…" />,
+});
+// §88 — três agregações completas com projeção de caixa. Nada disto pesa
+// em quem nunca faz a pergunta.
+const DecisaoContratar = dynamic(() => import("./DecisaoContratar"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={200} rotulo="A carregar a decisão de contratar…" />,
 });
 
 function Esqueleto({ altura, rotulo }: { altura: number; rotulo: string }) {
@@ -159,9 +180,11 @@ export default function NegocioStudio() {
     retomou.current = true;
 
     const reaberto = consumirReabertura("negocio");
-    const doCenario = reaberto?.contexto;
-    if (doCenario && typeof doCenario === "object") {
-      const c = doCenario as ContextoNegocio;
+    // §95 — nunca `as` sobre um instantâneo guardado. Um cenário criado
+    // antes da v2 tem trabalhadores no contrato antigo, e o `as` só
+    // adiava o erro até ao primeiro acesso a `t.remuneracao`.
+    const c = migrarNegocioV1ParaV2(reaberto?.contexto);
+    if (c) {
       setContexto(c);
       setCaixaAtiva(Boolean(c.caixa));
       return;
@@ -274,6 +297,10 @@ export default function NegocioStudio() {
             superficie="negocio"
             contextoInicial={ofertaEmEdicao?.pricing ?? null}
             respondidosIniciais={ofertaEmEdicao?.respondidos}
+            // §4 — a porta de entrada decide a PERGUNTA INICIAL, não só a
+            // copy. Quem já vende começa pelo preço que pratica; quem tem
+            // uma ideia constrói-o dos custos para cima.
+            intencaoInicial={contexto.maturidade === "ja_vendo" ? "validar_atual" : "formar"}
             rotuloConcluir={ofertaEmEdicao ? "Guardar esta oferta" : "Adicionar esta oferta ao negócio"}
             aoCancelar={() => setEdicao(null)}
             aoConcluir={(pricing, respondidos) => {
@@ -336,6 +363,25 @@ export default function NegocioStudio() {
           Recomeçar
         </BotaoTexto>
       </div>
+
+      {/* ── ATO 3b — o negócio que já existe (§6) ────────────────────
+          Aparece a quem entrou por «Já tenho empresa» e a quem já
+          declarou uma base, venha da porta que vier. Nunca substitui as
+          ofertas: soma-se-lhes. */}
+      {contexto.maturidade === "empresa_existente" || contexto.base ? (
+        <BaseNegocioEditor
+          base={contexto.base}
+          regiao={regiaoDoNegocio(contexto)}
+          temOfertas={contexto.ofertas.length > 0}
+          aoAdicionarOferta={() => setEdicao({ nova: true })}
+          aoMudar={(patch) =>
+            mudar((c) => ({
+              ...c,
+              base: { volumeAnual: 0, custosAtividadeAno: 0, ...c.base, ...patch },
+            }))
+          }
+        />
+      ) : null}
 
       {/* ── ATO 4 — portefólio ───────────────────────────────────── */}
       <PortfolioOfertas
@@ -474,6 +520,34 @@ export default function NegocioStudio() {
         />
       ) : null}
 
+      {/* ── §59 — a região, perguntada uma vez ────────────────────
+          Aparece quando já há negócio para analisar: antes disso é uma
+          pergunta sobre uma coisa que ainda não existe. */}
+      {temNegocio || contexto.base ? (
+        <LocalizacaoNegocioEditor
+          localizacao={contexto.localizacao}
+          aoMudar={(localizacao) =>
+            mudar((c) => ({
+              ...c,
+              localizacao,
+              // O campo legado acompanha, para os cenários guardados e as
+              // pontes que ainda o leem continuarem coerentes.
+              fiscal: { ...c.fiscal, regiao: localizacao.regiao },
+            }))
+          }
+        />
+      ) : null}
+
+      {/* ── §55-57 — a forma do ano ────────────────────────────────
+          Depois da estrutura e antes do cockpit: é aqui que a média
+          deixa de chegar e o mês fraco começa a decidir. */}
+      {temResultado ? (
+        <ProcuraNegocioEditor
+          contexto={contexto}
+          aoMudar={(patch) => mudar((c) => ({ ...c, procura: { ...c.procura, ...patch } }))}
+        />
+      ) : null}
+
       {/* ── ATO 6 — cockpit ──────────────────────────────────────── */}
       <CockpitViabilidade negocio={negocio} aoAdicionarOferta={() => setEdicao({ nova: true })} />
 
@@ -545,13 +619,38 @@ export default function NegocioStudio() {
         </ErrorBoundary>
       ) : null}
 
+      {/* ── §49-50 — a situação de IVA, do motor que a sabe ──────── */}
+      {temResultado ? (
+        <ErrorBoundary>
+          <SituacaoIVANegocio contexto={contexto} negocio={negocio} />
+        </ErrorBoundary>
+      ) : null}
+
+      {/* ── §88-89 — contratar agora, depois, ou não ─────────────── */}
+      {temResultado ? (
+        <ErrorBoundary>
+          <DecisaoContratar contexto={contexto} />
+        </ErrorBoundary>
+      ) : null}
+
       {/* ── ATOS 9-11 — enquadramento ────────────────────────────── */}
       {temResultado ? (
         <>
           <SeletorEnquadramento
             valor={contexto.fiscal.enquadramento}
+            // §5 — quem entrou por «Já tenho empresa» já respondeu a isto.
+            // A pergunta continua no ecrã (é uma decisão reversível), mas
+            // apresentada como resposta dada, não como dúvida por
+            // resolver.
+            jaRespondido={contexto.respondidos.includes("enquadramento")}
             aoMudar={(enquadramento) =>
-              mudar((c) => ({ ...c, fiscal: { ...c.fiscal, enquadramento } }))
+              mudar((c) => ({
+                ...c,
+                fiscal: { ...c.fiscal, enquadramento },
+                respondidos: c.respondidos.includes("enquadramento")
+                  ? c.respondidos
+                  : [...c.respondidos, "enquadramento"],
+              }))
             }
           />
           <ErrorBoundary>
@@ -563,6 +662,12 @@ export default function NegocioStudio() {
       {/* ── ATOS 12-13 — execução ────────────────────────────────── */}
       {temResultado ? (
         <>
+          {/* §19 — a continuidade tem de ser mais do que um link. O que
+              a pessoa acabou de construir viaja com ela, com revisão
+              antes de sair e sem nada no URL. */}
+          <ErrorBoundary>
+            <ContinuarNaEmpresa negocio={negocio} contexto={contexto} />
+          </ErrorBoundary>
           <ProximoPassoNegocio negocio={negocio} contexto={contexto} />
           {/* A conclusão fecha o documento: as seis camadas do
               `ResultadoExplicado`, com a hierarquia dos CTAs decidida
@@ -609,19 +714,22 @@ const ENQUADRAMENTOS: { valor: EnquadramentoPretendido; rotulo: string; sub: str
 
 function SeletorEnquadramento({
   valor,
+  jaRespondido,
   aoMudar,
 }: {
   valor: EnquadramentoPretendido;
+  jaRespondido?: boolean;
   aoMudar: (v: EnquadramentoPretendido) => void;
 }) {
   return (
     <fieldset className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
       <legend className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">
-        Como pensas operar?
+        {jaRespondido ? "Como operas" : "Como pensas operar?"}
       </legend>
       <p className="mb-3 mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-        Não é preciso decidir agora — «ainda não sei» é uma resposta legítima, e é a que mostra as duas contas lado a
-        lado.
+        {jaRespondido
+          ? "Já nos disseste isto à entrada. Fica aqui porque é reversível — mas não voltamos a perguntar."
+          : "Não é preciso decidir agora — «ainda não sei» é uma resposta legítima, e é a que mostra as duas contas lado a lado."}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {ENQUADRAMENTOS.map((e) => {

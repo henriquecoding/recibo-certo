@@ -29,8 +29,11 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ContextoPreco, ResultadoPreco, Regiao } from "@/lib/pricing/tipos";
+import type { PagamentoSubsidios, PerfilPessoalPosto } from "@/lib/payroll/custo-empregador";
+import type { FluxoCaixa } from "./fluxos";
 
 export type { ContextoPreco, ResultadoPreco };
+export type { PagamentoSubsidios, PerfilPessoalPosto };
 
 // ─── 1. Em que ponto está a pessoa ─────────────────────────────────────
 
@@ -174,13 +177,99 @@ export interface InvestimentoInicial {
   mes?: number;
 }
 
+/**
+ * Um posto de trabalho planeado. (§25-42, v2)
+ *
+ * ── PORQUE É QUE ISTO DEIXOU DE SER TRÊS CAMPOS ────────────────────
+ * A v1 era `{ salarioBrutoMensal, meses: 12 | 14, entraNoMes }`, e o
+ * custo saía de `bruto × meses × (1 + TSU) ÷ 12`. O número respondia a
+ * uma pergunta e escondia quatro:
+ *
+ *   · quanto recebe a pessoa ao fim do mês?
+ *   · quanto é contribuição, quanto é imposto, e para quem vai cada um?
+ *   · e a refeição, o seguro obrigatório, a medicina do trabalho?
+ *   · e se ela entrar em julho?
+ *
+ * E o «12 ou 14» perguntava se um trabalhador «tem direito» a subsídios,
+ * que não é uma escolha do empregador — é lei (§30). O que é escolha é o
+ * CALENDÁRIO do pagamento.
+ *
+ * ── O CÁLCULO NÃO VIVE AQUI ────────────────────────────────────────
+ * §26: nenhuma fórmula de payroll nova em `lib/negocio`. Este é o
+ * CONTRATO; quem calcula é `lib/payroll/custo-empregador.ts`, que chama
+ * o motor de vencimento que já existe.
+ */
 export interface TrabalhadorPlaneado {
   id: string;
   funcao: string;
-  /** Salário BRUTO mensal. Os encargos calculam-se, não se pedem. */
+
+  remuneracao: {
+    /** Salário BASE mensal, ilíquido. Os encargos calculam-se. */
+    salarioBaseMensal: number;
+  };
+
+  contrato: {
+    /** Mês do horizonte em que entra. 0 = desde o início. */
+    inicioMes: number;
+    /** Como se pagam os subsídios de férias e Natal. */
+    pagamentoSubsidios: PagamentoSubsidios;
+  };
+
+  /** §34 — configuração, nunca ativada por omissão para toda a gente. */
+  refeicao?: {
+    ativo: boolean;
+    valorDia: number;
+    diasMes: number;
+    /** Cartão/vale tem limite isento mais alto do que numerário. */
+    cartao: boolean;
+  };
+
+  /** §35 — obrigatório por lei; o prémio depende da atividade. */
+  seguroAT?: { premioAnual?: number };
+
+  /** §36 — saúde e segurança no trabalho / medicina do trabalho. */
+  sst?: { custoAnual?: number };
+
+  /** §37 — formação contínua (Art. 131.º CT). Custo E tempo. */
+  formacao?: { custoAnual?: number; horasAno?: number };
+
+  /** Fardas, equipamento, deslocações fixas. */
+  outrosAnual?: number;
+
+  /**
+   * A situação pessoal, para estimar o líquido. §29: NUNCA se inventa
+   * estado civil ou dependentes de alguém que ainda não foi contratado —
+   * sem isto, o líquido é «ainda não estimado» e diz-se.
+   */
+  perfil?: PerfilPessoalPosto;
+
+  /** §40 — este posto aumenta a capacidade de entrega? */
+  capacidade?: CapacidadePosto;
+}
+
+/**
+ * Um posto que produz. (§39-40)
+ *
+ * Contratar aumentava o custo e o ponto de equilíbrio, e não mexia na
+ * capacidade — o que torna qualquer contratação economicamente
+ * unilateral e sempre má. Para um cargo produtivo isso é falso.
+ */
+export interface CapacidadePosto {
+  /** `false` num cargo administrativo: custa e não entrega. */
+  aumenta: boolean;
+  horasSemana?: number;
+  /** Fração das horas que é mesmo faturável (0–1). */
+  fracaoProdutiva?: number;
+  /** Ids das ofertas que este posto consegue entregar. Vazio = todas. */
+  ofertas?: string[];
+}
+
+/** O contrato ANTIGO, para o migrador o poder ler (§71). */
+export interface TrabalhadorPlaneadoV1 {
+  id: string;
+  funcao: string;
   salarioBrutoMensal: number;
   meses: 12 | 14;
-  /** Mês do horizonte em que entra. 0 = desde o início. */
   entraNoMes?: number;
 }
 
@@ -190,13 +279,87 @@ export interface EstruturaNegocio {
   trabalhadores?: TrabalhadorPlaneado[];
 }
 
+// ─── 3b. A base já existente ───────────────────────────────────────────
+
+/**
+ * O negócio que já acontece, declarado de uma vez.
+ *
+ * §5-6 do relatório: «Já tenho empresa» prometia saltar para a estrutura e
+ * a comparação, mas o contexto nascia vazio — sem ofertas não havia
+ * receita, sem receita não abria comparação, caixa nem conclusão, e o
+ * enquadramento continuava `nao_sei`. A porta existia e não levava a lado
+ * nenhum.
+ *
+ * Quem trabalha a partir da contabilidade não tem de reconstruir o negócio
+ * oferta a oferta para poder responder a uma pergunta de estrutura. Tem os
+ * dois números que importam e escreve-os.
+ *
+ * ── A FRONTEIRA QUE IMPEDE A DUPLA CONTAGEM ────────────────────────
+ * `custosAtividadeAno` são os custos que ANDAM COM A FATURAÇÃO —
+ * fornecedores, matérias, subcontratos, comissões. A estrutura
+ * (contabilidade, software, sede, pessoal) declara-se em
+ * `EstruturaNegocio` e NUNCA aqui. Somar as duas coisas no mesmo campo
+ * faria o overhead entrar duas vezes no resultado, e o handoff para o
+ * simulador de empresa herdava o erro.
+ *
+ * ── E CONVIVE COM AS OFERTAS ───────────────────────────────────────
+ * Não é uma alternativa exclusiva: quem começa pela base e depois
+ * acrescenta ofertas soma as duas coisas. O que se declara aqui é a parte
+ * do negócio que não está modelada em ofertas.
+ */
+export interface BaseDeclarada {
+  /** Volume de negócios ANUAL. Ver `comIVA` para saber se traz IVA dentro. */
+  volumeAnual: number;
+  /**
+   * `true` quando o valor escrito é o que os clientes pagaram, com IVA
+   * incluído. A conversão usa a taxa normal da região — nunca uma taxa
+   * escrita neste diretório.
+   */
+  comIVA?: boolean;
+  /** Custos da atividade por ano. NÃO inclui estrutura nem pessoal. */
+  custosAtividadeAno: number;
+}
+
 // ─── 4. A procura ──────────────────────────────────────────────────────
+
+/**
+ * Como se espera que o volume evolua. (§57)
+ *
+ * «Crescimento mensal %» é a linguagem do motor, não a de quem responde.
+ * Quase ninguém sabe dizer «2,3% ao mês»; toda a gente sabe dizer «demoro
+ * uns meses a arrancar» ou «espero crescer».
+ *
+ * ── PORQUE É QUE «ARRANQUE» NÃO É UMA TAXA ─────────────────────────
+ * São fenómenos diferentes. Um arranque tem um TETO — chega-se ao volume
+ * esperado e fica-se lá; um crescimento composto não pára nunca. Modelar
+ * o primeiro com o segundo dá, ao 24.º mês, um volume que ninguém previu.
+ */
+export type EvolucaoProcura =
+  /** O mesmo volume todos os meses. */
+  | "estavel"
+  /** Sobe linearmente até ao volume esperado e fica lá. */
+  | "arranque"
+  /** Crescimento composto, sem teto. A percentagem é declarada. */
+  | "crescimento";
 
 export interface ProcuraNegocio {
   horizonteMeses: HorizonteProjecao;
-  /** `sazonal` usa `OfertaNegocio.sazonalidade`; `simples` ignora-a. */
+  /** `sazonal` usa a curva; `simples` ignora-a. */
   modo: "simples" | "sazonal";
-  /** Crescimento composto mês a mês (0,02 = +2%/mês). */
+  /**
+   * A curva de sazonalidade do NEGÓCIO — doze fatores, 1 = mês médio.
+   *
+   * Tem precedência sobre `OfertaNegocio.sazonalidade`: quem responde à
+   * pergunta «as vendas são iguais durante o ano?» está a falar do
+   * negócio, não de uma oferta. A curva por oferta continua a valer
+   * quando esta não existe.
+   */
+  sazonalidade?: number[];
+  /** Como evolui. Omissa, é `estavel` — e isso é um pressuposto declarado. */
+  evolucao?: EvolucaoProcura;
+  /** Meses até atingir o volume esperado, em `arranque`. */
+  arranqueMeses?: number;
+  /** Crescimento composto mês a mês (0,02 = +2%/mês), em `crescimento`. */
   crescimentoMensal?: number;
 }
 
@@ -224,22 +387,72 @@ export type EnquadramentoPretendido =
 
 export interface PreferenciasEstrutura {
   enquadramento: EnquadramentoPretendido;
+  /** @deprecated Usar `ContextoNegocio.localizacao`. Lido por `regiaoDoNegocio()`. */
   regiao?: Regiao;
   compararAlternativas: boolean;
+}
+
+// ─── 6b. Onde é que o negócio acontece ─────────────────────────────────
+
+/**
+ * A localização, como dado de primeira classe. (§59)
+ *
+ * Estava enterrada em `fiscal.regiao`, e por isso cada motor voltava a
+ * pedi-la: o simulador de empresa pergunta a localização, o de IVA
+ * pergunta a região, o comparador pergunta a residência fiscal. É a mesma
+ * resposta três vezes — e três oportunidades de divergirem.
+ *
+ * Ela decide mais do que parece: salário mínimo regional, tabelas de
+ * retenção de IRS, taxas de IVA, IRC das autónomas, derrama municipal,
+ * benefícios de interior e o preçário de contabilidade.
+ *
+ * ── A PROVENIÊNCIA NÃO É DECORATIVA ────────────────────────────────
+ * «Continente» por omissão e «Continente» porque a pessoa o disse são
+ * coisas diferentes, e só a segunda pode fechar um pressuposto. Sem este
+ * campo, o livro de pressupostos não conseguia distinguir as duas.
+ */
+export interface LocalizacaoNegocio {
+  regiao: Regiao;
+  /**
+   * O município, quando declarado. NUNCA inventado a partir da região —
+   * «continente» não é um município, e a derrama é municipal (§111).
+   */
+  municipio?: string;
+  /**
+   * O id da região de incentivos correspondente, quando resolvido. É o
+   * que permite ao handoff levar `paramLocal` inteiro para o simulador
+   * de empresa em vez de o deixar pendente.
+   */
+  regiaoIncentivoId?: string;
+  origem: OrigemPressuposto;
 }
 
 // ─── 7. O contexto completo ────────────────────────────────────────────
 
 export interface ContextoNegocio {
-  /** Versão do esquema. As migrações futuras dependem disto. */
-  versao: 1;
+  /**
+   * Versão do esquema.
+   *
+   * Subiu para 2 quando o trabalhador deixou de ser três campos (§70).
+   * Um rascunho da v1 lê-se com `migrarNegocioV1ParaV2()` — nunca com um
+   * `as`, que é uma promessa ao TypeScript que os dados guardados há seis
+   * meses não têm obrigação de cumprir (§95).
+   */
+  versao: 2;
   id: string;
   nome?: string;
   maturidade: MaturidadeNegocio;
   ofertas: OfertaNegocio[];
+  /**
+   * A parte do negócio declarada em bloco, sem passar por ofertas. É o
+   * atalho de quem já fatura e trabalha a partir da contabilidade (§6).
+   */
+  base?: BaseDeclarada;
   estrutura: EstruturaNegocio;
   procura: ProcuraNegocio;
   caixa?: CaixaNegocio;
+  /** Onde o negócio acontece (§59). Lida sempre por `regiaoDoNegocio()`. */
+  localizacao?: LocalizacaoNegocio;
   fiscal: PreferenciasEstrutura;
   /** Campos do NEGÓCIO (não das ofertas) em que a pessoa mexeu. */
   respondidos: string[];
@@ -353,8 +566,19 @@ export interface DiagnosticoConcentracao {
 export interface BreakEvenNegocio {
   possivel: boolean;
   /**
+   * Em que unidade o ponto de equilíbrio faz sentido.
+   *
+   * `unidades` — há ofertas com volume, e a pergunta é «quantas vendas».
+   * `receita`  — o negócio foi declarado em bloco (§6): não há vendas
+   *              para contar, e a pergunta certa é «que volume de
+   *              negócios». Dizer «0 vendas» a quem já fatura seria uma
+   *              resposta errada com ar de resposta.
+   */
+  base: "unidades" | "receita";
+  /**
    * Vendas por mês necessárias para cobrir a estrutura, mantendo o MIX
-   * atual. Sem mix (uma oferta), é a conta de sempre.
+   * atual. Sem mix (uma oferta), é a conta de sempre. Zero quando
+   * `base === "receita"`.
    */
   vendasMes: number;
   /** Volume de negócios correspondente, sem IVA. */
@@ -424,6 +648,13 @@ export interface ResultadoCaixa {
   capitalAdicionalNecessario: number;
   /** Meses até o saldo ficar positivo e assim permanecer. `null` se nunca. */
   mesesAteEquilibrio: number | null;
+  /**
+   * Os fluxos que produziram estes meses, etiquetados (§52).
+   *
+   * É o que permite dizer «o buraco de março é o IVA do 4.º trimestre
+   * mais o subsídio de férias» em vez de mostrar uma linha a descer.
+   */
+  fluxos?: FluxoCaixa[];
 }
 
 // ─── 14. O resultado do negócio ────────────────────────────────────────
@@ -467,6 +698,12 @@ export interface ResultadoNegocio {
 
   breakEven: BreakEvenNegocio;
   capacidade: DiagnosticoCapacidade[];
+  /**
+   * As horas faturáveis que a equipa acrescenta, e por que postos (§40).
+   * Zero quando ninguém foi declarado como posto produtivo — que é o
+   * valor por omissão, porque contratar nem sempre aumenta capacidade.
+   */
+  capacidadeEquipaMes: number;
   concentracao: DiagnosticoConcentracao;
   sensibilidade?: ResultadoSensibilidade;
   caixa?: ResultadoCaixa;

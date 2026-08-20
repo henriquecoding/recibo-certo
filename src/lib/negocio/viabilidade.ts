@@ -21,12 +21,12 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { cent, dividir, num, unidades } from "@/lib/pricing/numeros";
-import { agregar, type AgregadoNegocio } from "./agregar";
-import { diagnosticarCapacidade, gargaloDeHoras } from "./capacidade";
+import { agregar, temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
+import { capacidadeDaEquipa, diagnosticarCapacidade, gargaloDeHoras } from "./capacidade";
 import { detetarDuplicacoes } from "./duplicacao";
 import { levantarPressupostos } from "./pressupostos";
 import { analisarSensibilidade } from "./sensibilidade";
-import { projetarCaixa } from "./caixa";
+import { projetarCaixaDoNegocio } from "./caixa";
 import type {
   AvisoNegocio,
   BreakEvenNegocio,
@@ -47,8 +47,15 @@ export function calcularBreakEvenNegocio(a: AgregadoNegocio): BreakEvenNegocio {
   const receitaMedia = dividir(a.receitaSemIVAMes, vendasEsperadas);
 
   if (vendasEsperadas <= 0) {
+    // ── O negócio declarado em bloco (§6) ─────────────────────────
+    //  Há faturação e não há unidades: quem trabalha a partir da
+    //  contabilidade não conta vendas, conta volume de negócios. Dizer-lhe
+    //  «0 vendas por mês» seria uma resposta errada com ar de resposta.
+    if (a.receitaSemIVAMes > 0) return equilibrioEmReceita(a, fixos);
+
     return {
       possivel: false,
+      base: "unidades",
       vendasMes: 0,
       receitaSemIVAMes: 0,
       vendasEsperadasMes: 0,
@@ -61,6 +68,7 @@ export function calcularBreakEvenNegocio(a: AgregadoNegocio): BreakEvenNegocio {
   if (contribuicaoMedia <= 0) {
     return {
       possivel: false,
+      base: "unidades",
       vendasMes: 0,
       receitaSemIVAMes: 0,
       vendasEsperadasMes: vendasEsperadas,
@@ -74,6 +82,7 @@ export function calcularBreakEvenNegocio(a: AgregadoNegocio): BreakEvenNegocio {
   if (fixos <= 0) {
     return {
       possivel: true,
+      base: "unidades",
       vendasMes: 0,
       receitaSemIVAMes: 0,
       vendasEsperadasMes: vendasEsperadas,
@@ -89,6 +98,7 @@ export function calcularBreakEvenNegocio(a: AgregadoNegocio): BreakEvenNegocio {
 
   return {
     possivel: true,
+    base: "unidades",
     vendasMes,
     receitaSemIVAMes: cent(vendasMes * receitaMedia),
     vendasEsperadasMes: vendasEsperadas,
@@ -98,6 +108,63 @@ export function calcularBreakEvenNegocio(a: AgregadoNegocio): BreakEvenNegocio {
       folga < 0
         ? `Ao ritmo que esperas faltam ${Math.abs(folga)} vendas por mês para as contas fecharem.`
         : undefined,
+  };
+}
+
+/**
+ * O ponto de equilíbrio de quem declarou o negócio em bloco.
+ *
+ * A conta é a mesma do manual — custos fixos a dividir pela taxa de
+ * margem de contribuição — mas a resposta vem em euros de faturação, que
+ * é a única unidade que este caso tem. `vendasMes` fica a zero e
+ * `base: "receita"` diz à interface para não falar de vendas.
+ */
+function equilibrioEmReceita(a: AgregadoNegocio, fixos: number): BreakEvenNegocio {
+  const taxa = dividir(a.margemContribuicaoMes, a.receitaSemIVAMes);
+
+  if (taxa <= 0) {
+    return {
+      possivel: false,
+      base: "receita",
+      vendasMes: 0,
+      receitaSemIVAMes: 0,
+      vendasEsperadasMes: 0,
+      folgaVendas: 0,
+      progresso: 0,
+      nota:
+        "Os custos da atividade consomem toda a faturação declarada. Não há ponto de equilíbrio: faturar mais aumenta o prejuízo. O problema está no preço ou no custo, não no volume.",
+    };
+  }
+
+  if (fixos <= 0) {
+    return {
+      possivel: true,
+      base: "receita",
+      vendasMes: 0,
+      receitaSemIVAMes: 0,
+      vendasEsperadasMes: 0,
+      folgaVendas: 0,
+      progresso: 1,
+      nota:
+        "Não declaraste custos de estrutura, por isso toda a margem já é lucro. Vale a pena confirmar: contabilidade, software, seguros e sede contam mesmo nos meses fracos.",
+    };
+  }
+
+  const necessaria = cent(dividir(fixos, taxa));
+  const folga = cent(a.receitaSemIVAMes - necessaria);
+
+  return {
+    possivel: true,
+    base: "receita",
+    vendasMes: 0,
+    receitaSemIVAMes: necessaria,
+    vendasEsperadasMes: 0,
+    folgaVendas: 0,
+    progresso: dividir(a.receitaSemIVAMes, necessaria),
+    nota:
+      folga < 0
+        ? `Faltam ${fmt(Math.abs(folga))} de faturação por mês para as contas fecharem.`
+        : `Acima de ${fmt(necessaria)} por mês de volume de negócios, a estrutura está paga.`,
   };
 }
 
@@ -165,25 +232,38 @@ export function diagnosticarConcentracao(
  * que `pricing/preenchimento.ts` tomou, com os mesmos três degraus.
  */
 export function confiancaDe(contexto: ContextoNegocio, a: AgregadoNegocio): ConfiancaNegocio {
-  if (contexto.ofertas.length === 0) return "exploratorio";
+  const temEstrutura =
+    (contexto.estrutura?.overheadMensal?.length ?? 0) > 0 ||
+    temTrabalhadorValido(contexto.estrutura) ||
+    contexto.respondidos.includes("estrutura-sem-custos");
+
+  // ── O negócio declarado em bloco (§6, §86) ──────────────────────
+  //  Um volume de negócios escrito por quem já fatura é trabalho da
+  //  pessoa, não um exemplo nosso — e não passa por `respondidos` das
+  //  ofertas porque não há ofertas. Mas também não é «real» só porque foi
+  //  escrito: pode ser uma estimativa, e a proveniência diz «declarado
+  //  pelo utilizador», nunca «real».
+  const temBase = (contexto.base?.volumeAnual ?? 0) > 0;
+
+  if (contexto.ofertas.length === 0) {
+    if (!temBase) return "exploratorio";
+    return temEstrutura ? "estruturado" : "estimado";
+  }
 
   // Uma oferta conta como respondida quando a pessoa mexeu nos campos
   // essenciais dela — o mesmo critério da pricing engine, guardado por
   // oferta em `respondidos`.
   const ofertasComTrabalho = contexto.ofertas.filter((o) => o.respondidos.length > 0);
-  if (ofertasComTrabalho.length === 0) return "exploratorio";
+  if (ofertasComTrabalho.length === 0) return temBase ? "estimado" : "exploratorio";
 
-  const temVolume = a.unidadesMes > 0;
-  const temEstrutura =
-    (contexto.estrutura?.overheadMensal?.length ?? 0) > 0 ||
-    (contexto.estrutura?.trabalhadores?.length ?? 0) > 0 ||
-    contexto.respondidos.includes("estrutura-sem-custos");
+  const temVolume = a.unidadesMes > 0 || temBase;
 
   if (ofertasComTrabalho.length === contexto.ofertas.length && temVolume && temEstrutura) {
     return "estruturado";
   }
   return "estimado";
 }
+
 
 export const ROTULO_CONFIANCA: Record<ConfiancaNegocio, string> = {
   exploratorio: "Exploratório",
@@ -228,7 +308,11 @@ function reunirAvisos(contexto: ContextoNegocio, a: AgregadoNegocio, breakEven: 
     }
   }
 
-  if (a.resultadoOperacionalMes < 0 && a.ofertas.length > 0) {
+  // Um resultado negativo é um resultado negativo, venha de ofertas ou de
+  // uma base declarada. Prender o aviso a `ofertas.length > 0` fazia o
+  // percurso de «já tenho empresa» esconder exatamente o que a pessoa veio
+  // saber.
+  if (a.resultadoOperacionalMes < 0 && (a.ofertas.length > 0 || a.receitaBaseMes > 0)) {
     avisos.push({
       id: "resultado-negativo",
       severidade: "perigo",
@@ -299,8 +383,12 @@ export function analisarNegocio(
   const a = agregar(contexto);
   const breakEven = calcularBreakEvenNegocio(a);
 
+  // §40 — quem foi contratado para produzir acrescenta ao teto de horas.
+  // Sem isto, contratar só subia o custo, e a ferramenta dizia sempre que
+  // era má ideia.
+  const equipa = capacidadeDaEquipa(contexto.estrutura);
   const capacidade = diagnosticarCapacidade(a.ofertas);
-  const gargalo = gargaloDeHoras(a.ofertas);
+  const gargalo = gargaloDeHoras(a.ofertas, equipa);
   if (gargalo) capacidade.unshift(gargalo);
 
   const avisos = reunirAvisos(contexto, a, breakEven);
@@ -339,9 +427,12 @@ export function analisarNegocio(
 
     breakEven,
     capacidade,
+    capacidadeEquipaMes: equipa.horasMes,
     concentracao: diagnosticarConcentracao(a.ofertas),
     sensibilidade: opcoes.comSensibilidade ? analisarSensibilidade(contexto) : undefined,
-    caixa: opcoes.comCaixa ? projetarCaixa(contexto, a) : undefined,
+    // §53 — o calendário de IVA vem do motor de IVA, não de um limiar
+    // recodificado aqui.
+    caixa: opcoes.comCaixa ? projetarCaixaDoNegocio(contexto, a) : undefined,
 
     confianca: confiancaDe(contexto, a),
     pressupostos: levantarPressupostos(contexto, a),

@@ -27,12 +27,17 @@ import { EASE } from "@/lib/motion";
 import {
   aberturaDe,
   avaliarPreenchimento,
+  CAMPO_PRECO_ATUAL,
   cenarioDeQuery,
   cenarioPorChave,
+  comPrecoAtual,
+  contextoParaIntencao,
   precificar,
+  precoAtualDeclarado,
   resumoDe,
   type CenarioInicial,
   type ContextoPreco,
+  type IntencaoPreco,
   type SeccaoPreco,
 } from "@/lib/pricing";
 import { gravarContextoPreco, lerEnvelopePreco, limparContextoPreco } from "@/lib/store/preco";
@@ -53,6 +58,7 @@ import Decidir from "./Decidir";
 import ConclusaoPreco from "./ConclusaoPreco";
 import ObjetivoInvertido from "./ObjetivoInvertido";
 import SeccaoRevelavel from "./SeccaoRevelavel";
+import PrecoAtual from "./PrecoAtual";
 import { useMedicaoPreco } from "./medicao";
 import { Avisos, MemoriaCalculo } from "./MemoriaCalculo";
 import { Cenarios, SliderPreco } from "./EQueSe";
@@ -95,6 +101,12 @@ export interface SimuladorPrecoProps {
   /** Retomar uma oferta já começada, em vez do exemplo do cenário. */
   contextoInicial?: ContextoPreco | null;
   respondidosIniciais?: readonly string[];
+  /**
+   * Porque é que esta pessoa aqui chegou (§4). `formar` constrói o preço
+   * dos custos para cima; `validar_atual` começa pelo preço que ela já
+   * cobra. O motor é o mesmo — muda a ordem de descoberta.
+   */
+  intencaoInicial?: IntencaoPreco;
   /** Cada edição, para o dono do estado a poder guardar. */
   aoMudar?: (contexto: ContextoPreco, respondidos: string[]) => void;
   /** A ação de saída da superfície embutida. */
@@ -109,12 +121,25 @@ export default function SimuladorPreco({
   superficie = "standalone",
   contextoInicial = null,
   respondidosIniciais,
+  intencaoInicial = "formar",
   aoMudar,
   aoConcluir,
   rotuloConcluir = "Adicionar esta oferta ao negócio",
   aoCancelar,
 }: SimuladorPrecoProps) {
   const embutido = superficie === "negocio";
+
+  // ── A intenção é ESTADO, não uma prop congelada ───────────────────
+  //  Porque tem uma saída: quem entra por «já vendo» e descobre que não
+  //  tem preço nenhum passa para o percurso de formação sem sair da
+  //  ferramenta. Uma porta que não deixa recuar é uma armadilha.
+  //
+  //  Retomar uma oferta já trabalhada NUNCA volta a perguntar o preço
+  //  atual: a resposta já foi dada, e §0 é explícito — «uma resposta já
+  //  dada não volta a ser uma pergunta».
+  const [intencao, setIntencao] = useState<IntencaoPreco>(() =>
+    contextoInicial ? "formar" : intencaoInicial,
+  );
 
   const [cenario, setCenario] = useState<CenarioInicial | null>(
     () => contextoInicial?.cenario ?? cenarioDeQuery(cenarioInicial),
@@ -240,7 +265,7 @@ export default function SimuladorPreco({
    */
   const recomecar = () => {
     if (!cenario) return;
-    setContexto(cenarioPorChave(cenario).contexto());
+    setContexto(contextoParaIntencao(cenarioPorChave(cenario).contexto(), intencao));
     setRespondidos(new Set());
     setEscolhas({});
     reiniciar();
@@ -248,7 +273,16 @@ export default function SimuladorPreco({
 
   useEffect(() => {
     if (!cenario) return;
-    setContexto((atual) => (atual && atual.cenario === cenario ? atual : cenarioPorChave(cenario).contexto()));
+    setContexto((atual) =>
+      atual && atual.cenario === cenario
+        ? atual
+        : contextoParaIntencao(cenarioPorChave(cenario).contexto(), intencao),
+    );
+    // `intencao` de propósito FORA das dependências: mudar de intenção não
+    // pode reconstruir o contexto por baixo de quem já respondeu a campos.
+    // Quem passa de «validar» para «formar» fá-lo pelo botão, que trata do
+    // objetivo explicitamente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cenario]);
 
   useEffect(() => {
@@ -332,6 +366,31 @@ export default function SimuladorPreco({
   }
 
   const definicao = cenarioPorChave(cenario);
+
+  // ── Passo 1b: quem já vende começa pelo preço que pratica ─────────
+  //  §4.2. A calculadora inteira só aparece depois — não porque seja um
+  //  wizard, mas porque a ordem É a mensagem: descontar custos de um preço
+  //  real é uma conversa diferente de somar margem a um custo.
+  if (intencao === "validar_atual" && !precoAtualDeclarado(contexto, respondidos)) {
+    return (
+      <PrecoAtual
+        definicao={definicao}
+        aoConfirmar={(pvp) => {
+          setRespondidos((a) => new Set(a).add(CAMPO_PRECO_ATUAL));
+          setContexto((atual) => (atual ? comPrecoAtual(atual, pvp) : atual));
+        }}
+        aoFormarEmVezDisso={() => {
+          setIntencao("formar");
+          // O objetivo volta ao modo do cenário: quem não tem preço não
+          // pode ficar com um `preco_fixo` a zero, que não forma preço
+          // nenhum e mostraria o ecrã de «não há preço possível».
+          setContexto(() => cenarioPorChave(cenario).contexto());
+        }}
+        aoVoltar={voltarAoSeletor}
+      />
+    );
+  }
+
   const temFiscalidade = resultado.fiscal.aplicavel;
   const estadoPreenchimento = preenchimento?.estado ?? "exemplo";
 
@@ -361,7 +420,9 @@ export default function SimuladorPreco({
       {/* ── Cenário escolhido ─────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-900/50">
         <p className="min-w-0 text-sm">
-          <span className="text-stone-500 dark:text-stone-400">Estás a calcular: </span>
+          <span className="text-stone-500 dark:text-stone-400">
+            {intencao === "validar_atual" ? "Estás a validar: " : "Estás a calcular: "}
+          </span>
           <strong className="text-stone-800 dark:text-stone-100">{definicao.rotulo.toLowerCase()}</strong>
         </p>
         <div className="flex flex-shrink-0 items-center gap-1">

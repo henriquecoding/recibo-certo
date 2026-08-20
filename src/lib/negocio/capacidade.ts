@@ -26,16 +26,103 @@
 //  diz que não cabe e diz quanto falta; a decisão é dela.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { dividir, num } from "@/lib/pricing/numeros";
+import { FERIAS, FORMACAO_CONTINUA, HORARIO_SEMANAL_COMPLETO } from "@/lib/fiscal-data";
+import { cent, dividir, num } from "@/lib/pricing/numeros";
 import { capacidadeDe } from "./ofertas";
 import type {
   DiagnosticoCapacidade,
   EstadoCapacidade,
+  EstruturaNegocio,
   ResultadoOfertaNegocio,
+  TrabalhadorPlaneado,
 } from "./tipos";
 
 /** Acima disto a capacidade é «apertada»: não é impossível, é frágil. */
 export const LIMIAR_APERTADO = 0.85;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A CAPACIDADE QUE A EQUIPA ACRESCENTA — §39-40
+//  ---------------------------------------------------------------------
+//  Contratar alguém subia o custo e o ponto de equilíbrio, e não mexia na
+//  capacidade. Isso torna QUALQUER contratação economicamente unilateral
+//  e sempre má — o que é falso para um cargo produtivo, e é precisamente
+//  a decisão que a ferramenta devia ajudar a tomar.
+//
+//  ── O QUE NÃO SE ASSUME ────────────────────────────────────────────
+//  Que contratar aumenta a capacidade. Um administrativo, um comercial ou
+//  um contabilista custam e não entregam mais horas faturáveis. Por isso
+//  `capacidade.aumenta` nasce por declarar, e o valor por omissão é NÃO.
+//
+//  ── E O TEMPO QUE NÃO É PRODUTIVO ──────────────────────────────────
+//  §37: a formação contínua (Art. 131.º CT, 40 h anuais mínimas) sai do
+//  teto produtivo, tal como as férias. Um posto de 40 h/semana não
+//  entrega 40 × 52 horas faturáveis por ano, e a diferença é material.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** As semanas de férias que a lei garante, em semanas de 5 dias úteis. */
+const SEMANAS_FERIAS = FERIAS.diasUteisAno.value / 5;
+const SEMANAS_ANO = 52;
+
+export interface HorasDoPosto {
+  id: string;
+  funcao: string;
+  /** Horas faturáveis por mês, já sem férias nem formação. */
+  horasMes: number;
+  /** Ofertas que este posto consegue entregar. Vazio = todas. */
+  ofertas: string[];
+}
+
+export interface CapacidadeEquipa {
+  /** Horas faturáveis que a equipa acrescenta por mês. */
+  horasMes: number;
+  postos: HorasDoPosto[];
+}
+
+/**
+ * As horas faturáveis que um posto acrescenta, por mês.
+ *
+ * Deliberadamente CONSERVADOR: tira as férias, tira a formação e só
+ * depois aplica a fração produtiva. Contar as horas duas vezes daria um
+ * teto maior e um plano que não cabe — e o módulo inteiro existe para
+ * apanhar planos que não cabem.
+ */
+export function horasProdutivasDoPosto(t: TrabalhadorPlaneado): number {
+  const cap = t.capacidade;
+  if (!cap?.aumenta) return 0;
+
+  const horasSemana = num(cap.horasSemana) > 0 ? num(cap.horasSemana) : HORARIO_SEMANAL_COMPLETO.value;
+  const fracao = num(cap.fracaoProdutiva) > 0 ? Math.min(1, num(cap.fracaoProdutiva)) : 1;
+
+  const horasAno = horasSemana * (SEMANAS_ANO - SEMANAS_FERIAS);
+  // Sem horas declaradas, usa-se o mínimo legal: é o que a empresa TEM de
+  // dar, e ignorá-lo daria um teto que a lei não permite atingir.
+  const formacaoAno = num(t.formacao?.horasAno) > 0
+    ? num(t.formacao?.horasAno)
+    : FORMACAO_CONTINUA.horasAnuais.value;
+
+  return cent(Math.max(0, (horasAno - formacaoAno) * fracao) / 12);
+}
+
+/** O que a equipa inteira acrescenta ao teto de horas do negócio. */
+export function capacidadeDaEquipa(estrutura: EstruturaNegocio | undefined): CapacidadeEquipa {
+  const postos: HorasDoPosto[] = [];
+
+  for (const t of estrutura?.trabalhadores ?? []) {
+    // Um posto sem salário não é uma contratação (§41) — e por isso
+    // também não é capacidade.
+    if (num(t.remuneracao?.salarioBaseMensal) <= 0) continue;
+    const horasMes = horasProdutivasDoPosto(t);
+    if (horasMes <= 0) continue;
+    postos.push({
+      id: t.id,
+      funcao: t.funcao?.trim() || "posto sem nome",
+      horasMes,
+      ofertas: t.capacidade?.ofertas ?? [],
+    });
+  }
+
+  return { horasMes: cent(postos.reduce((s, p) => s + p.horasMes, 0)), postos };
+}
 
 /**
  * Capacidade de cada oferta face ao volume esperado.
@@ -88,8 +175,11 @@ export function diagnosticarCapacidade(
  */
 export function gargaloDeHoras(
   resultados: readonly ResultadoOfertaNegocio[],
+  /** As horas que a equipa acrescenta ao teto (§40). */
+  equipa?: CapacidadeEquipa,
 ): DiagnosticoCapacidade | null {
   const comHoras = resultados.filter((r) => (r.horasMes ?? 0) > 0);
+  const daEquipa = equipa?.horasMes ?? 0;
   if (comHoras.length === 0) return null;
 
   const carga = comHoras.reduce((s, r) => s + (r.horasMes ?? 0), 0);
@@ -97,7 +187,7 @@ export function gargaloDeHoras(
   // O teto é o MAIOR das horas produtivas declaradas, não a soma: as
   // ofertas partilham a mesma semana de trabalho. Somar os tetos de três
   // ofertas de 40 h/semana daria 120 h/semana à mesma pessoa.
-  const maximo = comHoras.reduce((maior, r) => {
+  const doTitular = comHoras.reduce((maior, r) => {
     const cap = capacidadeDe(r.oferta);
     const horasPorUnidade = num(r.oferta.pricing.tempo?.horasPorUnidade);
     if (!cap || !cap.derivada || horasPorUnidade <= 0) return maior;
@@ -105,6 +195,10 @@ export function gargaloDeHoras(
     // horas produtivas que o modelo de tempo daquela oferta declara.
     return Math.max(maior, cap.maximoMes * horasPorUnidade);
   }, 0);
+
+  // A equipa SOMA-SE ao titular: são pessoas diferentes, com semanas de
+  // trabalho diferentes. É o oposto das ofertas, que partilham a mesma.
+  const maximo = doTitular + daEquipa;
 
   if (maximo <= 0) return null;
 
@@ -119,7 +213,7 @@ export function gargaloDeHoras(
     carga: Math.round(carga),
     maximo: Math.round(maximo),
     utilizacao,
-    mensagem: mensagemDeHoras(estado, Math.round(carga), Math.round(maximo)),
+    mensagem: mensagemDeHoras(estado, Math.round(carga), Math.round(maximo), Math.round(daEquipa)),
   };
 }
 
@@ -151,16 +245,25 @@ function mensagemDe(
   }
 }
 
-function mensagemDeHoras(estado: EstadoCapacidade, carga: number, maximo: number): string {
+function mensagemDeHoras(
+  estado: EstadoCapacidade,
+  carga: number,
+  maximo: number,
+  daEquipa = 0,
+): string {
+  // Quando parte do teto vem da equipa, diz-se — senão o número parece
+  // vir de lado nenhum e ninguém sabe o que o faria mudar.
+  const comEquipa = daEquipa > 0 ? ` (${maximo - daEquipa} tuas + ${daEquipa} da equipa)` : "";
+
   switch (estado) {
     case "excedida":
-      return `Somando tudo o que planeaste vender, são ${carga} horas de trabalho por mês — e só tens ${maximo} horas faturáveis. Faltam ${
+      return `Somando tudo o que planeaste vender, são ${carga} horas de trabalho por mês — e só tens ${maximo}${comEquipa} horas faturáveis. Faltam ${
         carga - maximo
-      } horas: o mix não cabe na mesma pessoa.`;
+      } horas: o mix não cabe em quem cá está.`;
     case "apertada":
-      return `São ${carga} horas por mês das ${maximo} que tens. Cabe, mas sem margem para imprevistos.`;
+      return `São ${carga} horas por mês das ${maximo}${comEquipa} que tens. Cabe, mas sem margem para imprevistos.`;
     case "folgada":
-      return `São ${carga} horas por mês das ${maximo} disponíveis. Sobra tempo para vender mais ou para o que não é faturável.`;
+      return `São ${carga} horas por mês das ${maximo}${comEquipa} disponíveis. Sobra tempo para vender mais ou para o que não é faturável.`;
     default:
       return "Sem horas suficientes declaradas para avaliar o gargalo.";
   }

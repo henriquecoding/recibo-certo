@@ -16,6 +16,33 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.88.0",
+    data: "2026-08-20",
+    titulo: "O teu negócio deixa de ser reconstruído de cada vez que mudas de ferramenta",
+    itens: [
+      "Acabavas de definir a faturação, os custos, a estrutura, a equipa e a região — e ao passar para o simulador de empresa encontravas campos vazios. A ligação entre as duas ferramentas era um link. Agora o projeto vai contigo: antes de saíres, mostramos o que levas e o que ainda vais decidir, em duas listas separadas. Chegado lá, um aviso diz o que foi importado e de onde saiu cada número — e há sempre como ignorar tudo e começar do zero.",
+      "Nada disto viaja pelo endereço da página. Um link com a tua faturação lá dentro fica no histórico do browser, nos registos de quem serve a página e em qualquer sítio onde o coles. Os dados passam por armazenamento local, expiram ao fim de duas horas e apagam-se assim que são usados.",
+      "O simulador de empresa abre na primeira pergunta que ainda não tem resposta, em vez de te obrigar a percorrer as que já respondeste.",
+      "As três portas de entrada passaram a levar mesmo a sítios diferentes. «Já vendo» começa pelo preço que praticas hoje e desconta-lhe custos, IVA, comissões e impostos até chegar à margem que te fica — antes, abria a mesma calculadora de quem ainda não tem preço nenhum e pedia-te a margem que querias, que é justamente o que vinhas descobrir.",
+      "«Já tenho sociedade» ganhou um atalho a sério: escreves o volume de negócios e os custos da atividade, e passas direto à estrutura, à caixa e à comparação. Não tens de reconstruir o negócio oferta a oferta para responderes a uma pergunta de estrutura. E deixámos de te perguntar como pensas operar depois de já teres dito que tens empresa.",
+      "O custo de ter alguém contratado mostrava uma linha: «Pessoal: X por mês, já com encargos». Não respondia a nenhuma das perguntas que se fazem antes de contratar. Agora vês três: o que a empresa paga, o que a pessoa recebe, e o que vai para o Estado e para a Segurança Social. E não chamamos «impostos» ao conjunto — a Segurança Social é uma contribuição, o seguro de acidentes vai para uma seguradora e a medicina do trabalho é um custo teu.",
+      "Nessa conta passam a entrar coisas que faltavam e que se pagam mesmo: o subsídio de refeição com o limite isento certo para cartão e para numerário, o seguro de acidentes de trabalho — obrigatório desde o primeiro dia —, a medicina do trabalho, a formação, e a retenção dos subsídios de férias e Natal, que não é a taxa do mês.",
+      "Desapareceu o seletor «12 ou 14 meses por ano». Perguntava-te se um trabalhador tem direito a subsídios, e isso não é uma escolha tua: é lei. O que é escolha — quando se pagam — passou a ser a pergunta.",
+      "Se contratares alguém a meio do ano, deixa de custar doze meses de salários no primeiro ano.",
+      "Contratar deixou de ser sempre má ideia. Podes dizer que um posto entrega horas faturáveis, e essas horas entram no teto do que consegues produzir — antes, contratar só subia o custo. Continua a ser preciso dizê-lo: um administrativo custa e não entrega horas, e não assumimos o contrário.",
+      "E há uma comparação nova: sem contratar, contratar já, ou contratar daqui a uns meses. Vês o resultado, a capacidade, o ponto de equilíbrio e o capital de que precisas em cada cenário. Não escolhemos por ti — adiar poupa dinheiro e deixa procura por servir, e qual dos dois vale mais depende de coisas que este modelo não sabe.",
+      "A projeção de caixa deixou de usar médias. O IVA que cobras em janeiro só sai da conta em março ou em maio, conforme o regime; a Segurança Social do mês paga-se no mês seguinte; os subsídios de férias e Natal saem em junho e dezembro. Cada um destes cria um mês pior do que a média — e é sempre o mês pior que decide se há dinheiro na conta. Agora, quando o saldo aperta, dizemos o que pesou nesse mês em concreto.",
+      "Um investimento que só sai no mês 4 deixa de aparecer como despesa do mês zero.",
+      "Perguntamos se as vendas são iguais durante o ano. Se não forem, dás forma ao ano arrastando doze barras — e o total do ano não muda por lhe teres dado forma. E em vez de te pedirmos uma percentagem de crescimento mensal, perguntamos como esperas que evolua: estável, arranque gradual, ou crescimento.",
+      "Se vendes coisas de naturezas fiscais diferentes, cada uma passa a contar com o seu próprio coeficiente. Quarenta mil euros de consultoria mais trinta mil de venda de produtos não são setenta mil de consultoria — e tratá-los como tal inflacionava o rendimento tributável em milhares de euros. Pelo caminho corrigimos a base de Segurança Social de quem vende bens, que estava a ser calculada como se fosse prestação de serviços.",
+      "Quando nenhuma oferta diz qual é a atividade, deixámos de assumir uma. Mostramos o intervalo que a tua resposta vai fechar, para se ver o que está em jogo.",
+      "Passámos a mostrar a tua situação de IVA — se estás dentro ou fora da isenção do Art. 53.º, quanto falta para o limiar, e com que periodicidade entregarias a declaração. Era informação que a ferramenta já sabia calcular e nunca mostrava.",
+      "A região passou a ser perguntada uma vez só. Decide o salário mínimo, o IRS, o IVA, o IRC e a derrama em tudo o que se segue — e cada simulador voltava a pedi-la.",
+      "O perfil de quem gere a empresa deixou de confundir «tributação conjunta» com «casado, único titular». São coisas diferentes: a primeira é uma opção da declaração anual, a segunda é a tabela de retenção, e só se aplica quando um dos cônjuges não tem rendimentos. Um casal com dois rendimentos recebia a tabela que retém menos.",
+      "Se já configuraste o teu perfil fiscal noutro sítio, oferecemos essas respostas em vez de te voltarmos a perguntar — com o que preenchem e o que não preenchem à vista. Nunca as aplicamos sem tu veres.",
+    ],
+  },
+  {
     version: "2.87.0",
     data: "2026-08-19",
     titulo: "Já não te perguntamos quanto vais faturar — ajudamos-te a descobrir",

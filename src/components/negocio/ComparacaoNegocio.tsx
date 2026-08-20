@@ -26,8 +26,15 @@ import Link from "next/link";
 import { fmt } from "@/lib/format";
 import { compararRegimes } from "@/lib/fiscal";
 import { ArrowRight, Info } from "@/components/ui/Icons";
-import { entradaComparacao } from "@/lib/negocio/adapters/comparar";
+import {
+  comparacaoPossivel,
+  entradaComparacao,
+  extremosDaComparacao,
+  paraComparacao,
+  type PortfolioFiscal,
+} from "@/lib/negocio/adapters/comparar";
 import { entradaEmpresa } from "@/lib/negocio/adapters/empresa";
+import { META_TIPO } from "@/lib/fiscal-data";
 import type { ContextoNegocio, ResultadoNegocio } from "@/lib/negocio/tipos";
 import { Cartao } from "./atomos";
 
@@ -38,9 +45,14 @@ export default function ComparacaoNegocio({
   negocio: ResultadoNegocio;
   contexto: ContextoNegocio;
 }) {
+  const base = useMemo(() => paraComparacao(negocio, contexto), [negocio, contexto]);
   const entrada = useMemo(() => entradaComparacao(negocio, contexto), [negocio, contexto]);
   const comparacao = useMemo(() => compararRegimes(entrada), [entrada]);
   const empresa = useMemo(() => entradaEmpresa(negocio), [negocio]);
+  const extremos = useMemo(
+    () => (comparacaoPossivel(base.portfolio) ? null : extremosDaComparacao(negocio, contexto)),
+    [base.portfolio, negocio, contexto],
+  );
 
   if (negocio.receitaSemIVAAno <= 0) {
     return (
@@ -53,13 +65,27 @@ export default function ComparacaoNegocio({
     );
   }
 
+  // ── §48 — a ausência de atividade tem um nome ────────────────────
+  //  Sem nenhuma natureza fiscal declarada, o coeficiente do Art. 31.º
+  //  pode ir de 0,15 a 0,75. Escolher `art151` em silêncio dava um número
+  //  com autoridade de resultado sobre um palpite que muda o IRS por um
+  //  fator de cinco.
+  if (extremos) {
+    return <SemAtividade negocio={negocio} extremos={extremos} />;
+  }
+
   const empresaCompensa = comparacao.diferenca > 0;
 
   return (
     <div className="space-y-3" id="comparar">
+      {/* §61 — o nome diz o que isto é. «O mesmo negócio, nas duas
+          formas» soava a veredito; isto é uma primeira aproximação, que
+          serve para decidir se vale a pena aprofundar. O cálculo
+          societário completo é do simulador de empresa, com este mesmo
+          negócio. */}
       <Cartao
-        titulo="O mesmo negócio, nas duas formas"
-        descricao="Em vez de comparar números abstratos, comparamos o negócio que acabaste de construir"
+        titulo="Primeira aproximação fiscal"
+        descricao="Serve para perceber se vale a pena aprofundar — com o negócio que acabaste de construir, não com números abstratos"
       >
         {/* ── A proveniência, antes dos números ──────────────────── */}
         <dl className="mb-4 space-y-1 rounded-2xl bg-stone-50 p-3 dark:bg-stone-800/50">
@@ -77,6 +103,14 @@ export default function ComparacaoNegocio({
             </div>
           ))}
         </dl>
+
+        {/* ── §47 — o portefólio por natureza, quando há mais de uma ──
+            Cada natureza é tratada com o SEU coeficiente e só depois se
+            agrega. Mostrá-lo é o que impede alguém de perguntar porque é
+            que o número não bate com «70 000 € de consultoria». */}
+        {base.portfolio.rendimentos.length > 1 ? (
+          <PortfolioPorNatureza portfolio={base.portfolio} />
+        ) : null}
 
         {/* Uma comparação é tabular de verdade — por isso é `<table>`, e
             não uma grelha de `div`s que finge sê-lo. */}
@@ -167,7 +201,13 @@ export default function ComparacaoNegocio({
         </p>
       </Cartao>
 
-      {/* ── As duas saídas para os motores completos ───────────────── */}
+      {/* ── As saídas para os motores completos ─────────────────────
+          ⚠️ O SIMULADOR DE EMPRESA NÃO ESTÁ AQUI COMO LINK, e é
+          deliberado. A porta que leva os dados consigo é o cartão
+          «Continuar no Simulador de Empresa», mais abaixo. Duas ações com
+          o mesmo destino e pesos iguais — uma que leva o negócio e outra
+          que o deixa para trás — era uma armadilha: quem clicasse na
+          errada voltava a preencher tudo sem perceber porquê. */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Link
           href="/ferramentas/comparar-regimes"
@@ -181,25 +221,146 @@ export default function ComparacaoNegocio({
               Com dependentes, estado civil, região, IRS Jovem e o ponto de viragem
             </span>
           </span>
-          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" />
+          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" aria-hidden />
         </Link>
 
-        <Link
-          href="/ferramentas/simulador-empresa"
-          className="group flex items-start justify-between gap-3 rounded-4xl border border-stone-100 bg-white p-4 shadow-card transition-all hover:border-brand hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-800 dark:bg-stone-900"
+        <a
+          href="#continuar-empresa"
+          className="group flex items-start justify-between gap-3 rounded-4xl border border-brand/30 bg-brand-light/40 p-4 shadow-card transition-all hover:border-brand hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-brand/30 dark:bg-brand/10"
         >
           <span className="min-w-0">
-            <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-              Simulador de empresa
+            <span className="block text-sm font-semibold text-brand-deep dark:text-brand-mint">
+              Aprofundar como sociedade
             </span>
-            <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-              Salário do gerente, dividendos, tributação autónoma, RFAI e localização
+            <span className="mt-0.5 block text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+              O cálculo societário completo — gerência, dividendos, tributação autónoma, RFAI e localização — com este
+              mesmo negócio
             </span>
           </span>
-          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-stone-300 group-hover:text-brand" />
-        </Link>
+          <ArrowRight size={15} className="mt-0.5 flex-shrink-0 text-brand" aria-hidden />
+        </a>
       </div>
     </div>
+  );
+}
+
+/** O portefólio por natureza fiscal, com o coeficiente de cada uma (§47). */
+function PortfolioPorNatureza({ portfolio }: { portfolio: PortfolioFiscal }) {
+  return (
+    <div className="mb-4 rounded-2xl border border-stone-100 p-3 dark:border-stone-800">
+      <p className="eyebrow mb-2 text-stone-500 dark:text-stone-400">
+        O teu negócio tem {portfolio.rendimentos.length} naturezas fiscais
+      </p>
+      <dl className="space-y-1">
+        {portfolio.rendimentos.map((r) => (
+          <div key={r.natureza} className="flex flex-wrap items-baseline justify-between gap-x-3">
+            <dt className="min-w-0 text-xs text-stone-600 dark:text-stone-300">
+              {META_TIPO[r.natureza].label}
+              <span className="mt-0.5 block text-[10px] leading-snug text-stone-500 dark:text-stone-400">
+                {r.ofertas.join(" · ")}
+              </span>
+            </dt>
+            <dd className="flex-shrink-0 text-xs tabular-nums text-stone-700 dark:text-stone-200">
+              {fmt(r.valorAnual)}/ano
+            </dd>
+          </div>
+        ))}
+        {portfolio.semNaturezaAnual > 0 ? (
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-t border-stone-100 pt-1 dark:border-stone-800">
+            <dt className="min-w-0 text-xs text-alert-text">Sem atividade declarada</dt>
+            <dd className="flex-shrink-0 text-xs tabular-nums text-alert-text">
+              {fmt(portfolio.semNaturezaAnual)}/ano
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+      <p className="mt-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+        Cada natureza entra com o seu próprio coeficiente do Art. 31.º e a sua própria base de Segurança Social. Somar
+        tudo na atividade com mais peso dava um rendimento tributável diferente do real.
+      </p>
+    </div>
+  );
+}
+
+/**
+ * O ecrã de quando não se sabe a natureza fiscal. (§48)
+ *
+ * Três saídas, e nenhuma delas é «assumimos consultoria»:
+ *  ① pedir a classificação, que é onde ela se resolve de vez;
+ *  ② mostrar o INTERVALO que a escolha vai fechar;
+ *  ③ não apresentar uma conclusão precisa.
+ *
+ * O intervalo não é um consolo — é a informação: ver que o líquido varia
+ * milhares de euros conforme a atividade ensina porque é que a pergunta
+ * importa, o que um número inventado nunca faria.
+ */
+function SemAtividade({
+  negocio,
+  extremos,
+}: {
+  negocio: ResultadoNegocio;
+  extremos: { maisFavoravel: Parameters<typeof compararRegimes>[0]; menosFavoravel: Parameters<typeof compararRegimes>[0] };
+}) {
+  const melhor = compararRegimes(extremos.maisFavoravel);
+  const pior = compararRegimes(extremos.menosFavoravel);
+
+  return (
+    <Cartao
+      titulo="Falta saber o que vendes, para efeitos fiscais"
+      descricao="Sem isso, a conta pode variar por um fator de cinco — e um número aqui seria um palpite com ar de resultado"
+      id="comparar"
+    >
+      <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+        O regime simplificado aplica um coeficiente diferente conforme a atividade: {" "}
+        {(Object.keys(META_TIPO) as (keyof typeof META_TIPO)[])
+          .map((t) => META_TIPO[t].label.toLowerCase())
+          .join(", ")}
+        . Nenhuma das tuas ofertas diz qual é a tua — e nós não a escolhemos por ti.
+      </p>
+
+      <dl className="mt-4 space-y-2 rounded-2xl bg-stone-50 p-3 dark:bg-stone-800/50">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <dt className="text-xs text-stone-600 dark:text-stone-300">
+            Como independente, no cenário mais favorável
+            <span className="mt-0.5 block text-[10px] text-stone-500 dark:text-stone-400">
+              {META_TIPO[extremos.maisFavoravel.tipo].label}
+            </span>
+          </dt>
+          <dd className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+            {fmt(melhor.freelancer.liquido)}
+          </dd>
+        </div>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+          <dt className="text-xs text-stone-600 dark:text-stone-300">
+            No cenário menos favorável
+            <span className="mt-0.5 block text-[10px] text-stone-500 dark:text-stone-400">
+              {META_TIPO[extremos.menosFavoravel.tipo].label}
+            </span>
+          </dt>
+          <dd className="text-sm font-semibold tabular-nums text-stone-800 dark:text-stone-100">
+            {fmt(pior.freelancer.liquido)}
+          </dd>
+        </div>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 border-t border-stone-200 pt-2 dark:border-stone-700">
+          <dt className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+            O que a resposta decide
+          </dt>
+          <dd className="text-sm font-semibold tabular-nums text-alert-text">
+            {fmt(Math.abs(melhor.freelancer.liquido - pior.freelancer.liquido))}/ano
+          </dd>
+        </div>
+      </dl>
+
+      <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+        <Info size={13} className="mt-0.5 flex-shrink-0" aria-hidden />
+        <span>
+          Escolhe a atividade em cada oferta — na calculadora de preço, no campo da atividade — e a comparação passa a
+          ser um número em vez de um intervalo. Com {negocio.ofertas.length}{" "}
+          {negocio.ofertas.length === 1 ? "oferta" : "ofertas"} de naturezas diferentes, cada uma conta com o seu
+          coeficiente: um portefólio misto não é o mesmo que o total na atividade dominante.
+        </span>
+      </p>
+    </Cartao>
   );
 }
 

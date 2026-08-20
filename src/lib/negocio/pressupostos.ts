@@ -20,7 +20,8 @@
 
 import { fmt } from "@/lib/format";
 import { num } from "@/lib/pricing/numeros";
-import type { AgregadoNegocio } from "./agregar";
+import { custosDosPostos, temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
+import { evolucaoDe } from "./procura";
 import { capacidadeDe, volumeDerivado } from "./ofertas";
 import type { ContextoNegocio, PressupostoNegocio } from "./tipos";
 
@@ -97,9 +98,30 @@ export function levantarPressupostos(
   }
 
   // ── Do negócio ──────────────────────────────────────────────────
+  // §41: um cartão de trabalhador em branco não é estrutura declarada.
   const temEstrutura =
     (contexto.estrutura?.overheadMensal?.length ?? 0) > 0 ||
-    (contexto.estrutura?.trabalhadores?.length ?? 0) > 0;
+    temTrabalhadorValido(contexto.estrutura);
+
+  // E se houver cartões por preencher, isso é um pressuposto por direito
+  // próprio — não um silêncio.
+  const vazios = (contexto.estrutura?.trabalhadores ?? []).filter(
+    (t) => num(t.remuneracao?.salarioBaseMensal) <= 0,
+  );
+  if (vazios.length > 0) {
+    lista.push({
+      id: "trabalhador-por-preencher",
+      rotulo: vazios.length === 1 ? "Um posto por preencher" : `${vazios.length} postos por preencher`,
+      valor: "sem salário declarado",
+      origem: "default",
+      impacto: "alto",
+      resolverEm: "trabalhadores",
+      porque:
+        "Um posto sem salário não entra em custo nenhum, mas ocupa uma linha no ecrã — e faz o modelo parecer mais completo do que está.",
+    });
+  }
+
+  lista.push(...pressupostosDosPostos(contexto));
 
   if (!temEstrutura && !contexto.respondidos.includes("estrutura-sem-custos")) {
     lista.push({
@@ -127,15 +149,47 @@ export function levantarPressupostos(
     });
   }
 
-  if (!contexto.procura.crescimentoMensal) {
+  // §57 — «estável» declarado é uma resposta; «estável» por omissão é um
+  // pressuposto. A diferença estava a perder-se num campo só.
+  const evolucao = evolucaoDe(contexto);
+  if (evolucao === "estavel" && !contexto.procura.evolucao) {
     lista.push({
       id: "crescimento",
-      rotulo: "Crescimento",
-      valor: "0% ao mês",
+      rotulo: "Evolução do volume",
+      valor: "estável, todos os meses iguais",
       origem: "default",
       impacto: "baixo",
       resolverEm: "procura",
       porque: "O cenário assume o mesmo volume todos os meses — nem arranque lento, nem bola de neve.",
+    });
+  }
+
+  if (evolucao === "arranque") {
+    lista.push({
+      id: "arranque",
+      rotulo: "Arranque",
+      valor: `${Math.max(1, Math.round(num(contexto.procura.arranqueMeses) || 6))} meses até ao volume esperado`,
+      origem: "utilizador",
+      impacto: "medio",
+      resolverEm: "procura",
+      porque:
+        "Os primeiros meses vendem menos do que o cenário base. É deles que sai o capital de que precisas para atravessar o arranque.",
+    });
+  }
+
+  // §51 — o que a projeção de caixa ainda não modela, dito em voz alta.
+  // Só interessa a quem liquida IVA: sem IVA cobrado, não há IVA
+  // dedutível para faltar.
+  if (contexto.caixa && a.ivaCobradoMes > 0) {
+    lista.push({
+      id: "iva-dedutivel",
+      rotulo: "IVA dedutível das compras",
+      valor: "fora da projeção de caixa",
+      origem: "default",
+      impacto: "medio",
+      resolverEm: "caixa",
+      porque:
+        "O IVA que suportas nas compras é dedutível e não está nesta projeção. Na prática entregas menos do que aqui aparece — a projeção erra para o lado seguro, de propósito.",
     });
   }
 
@@ -149,6 +203,24 @@ export function levantarPressupostos(
       resolverEm: "caixa",
       porque:
         "Assume-se que recebes no ato. Se faturas a 30 ou 60 dias, o lucro é o mesmo mas o dinheiro chega mais tarde — e é aí que os negócios rentáveis ficam sem caixa.",
+    });
+  }
+
+  // ── A base declarada é trabalho da pessoa, mas não é «real» ─────
+  //  §86: quem escreveu números vindos da contabilidade merece um nível de
+  //  confiança superior a um exemplo nosso — e não merece que lhe
+  //  chamemos «real» se ela escreveu uma estimativa. A proveniência diz o
+  //  que sabemos: foi declarado.
+  if ((contexto.base?.volumeAnual ?? 0) > 0) {
+    lista.push({
+      id: "base-declarada",
+      rotulo: "Volume de negócios e custos da atividade",
+      valor: `${fmt(contexto.base!.volumeAnual)}/ano, declarado por ti`,
+      origem: "utilizador",
+      impacto: "alto",
+      resolverEm: "base",
+      porque:
+        "Estes números entraram em bloco, sem passar pelas ofertas. Servem para a estrutura e para a comparação, mas não dizem a que preço nem em que volume — e é isso que decide se o negócio aguenta um mês fraco.",
     });
   }
 
@@ -182,6 +254,92 @@ export function levantarPressupostos(
 }
 
 const ORDEM: Record<PressupostoNegocio["impacto"], number> = { alto: 3, medio: 2, baixo: 1 };
+
+/**
+ * O que fica por saber em cada posto de trabalho. (§42)
+ *
+ * Cada um destes é um custo real que a conta não tem, ou um número que a
+ * conta assumiu. O seguro de acidentes de trabalho é obrigatório desde o
+ * primeiro dia e nós estimamo-lo; a medicina do trabalho é obrigatória e
+ * fica a zero; o líquido depende de uma situação pessoal que ninguém
+ * declarou. Sem esta lista, os três desapareciam num número só.
+ */
+function pressupostosDosPostos(contexto: ContextoNegocio): PressupostoNegocio[] {
+  const lista: PressupostoNegocio[] = [];
+
+  for (const { trabalhador: t, custo } of custosDosPostos(contexto.estrutura)) {
+    const quem = t.funcao?.trim() || "posto sem nome";
+
+    if (custo.estimado.calendarioPorConfirmar) {
+      lista.push({
+        id: `posto-calendario-${t.id}`,
+        rotulo: `Subsídios de ${quem}`,
+        valor: "fora da conta — calendário por confirmar",
+        origem: "default",
+        impacto: "alto",
+        resolverEm: "trabalhadores",
+        porque:
+          "Este posto veio de uma versão anterior do projeto, em que os subsídios de férias e Natal não entravam no custo. São devidos por lei — confirma o calendário para a conta ficar certa.",
+      });
+    }
+
+    if (custo.estimado.seguroAT) {
+      lista.push({
+        id: `posto-seguro-${t.id}`,
+        rotulo: `Seguro de acidentes de trabalho de ${quem}`,
+        valor: `${fmt(custo.empresa.seguroAT)}/ano, estimado`,
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "É obrigatório desde o primeiro dia, mas o prémio depende da atividade e da seguradora. O valor na conta é uma estimativa de planeamento, não um prémio real.",
+      });
+    }
+
+    if (custo.estimado.sst) {
+      lista.push({
+        id: `posto-sst-${t.id}`,
+        rotulo: `Saúde e segurança no trabalho de ${quem}`,
+        valor: "ainda sem orçamento",
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "A medicina do trabalho é obrigatória e não está nesta conta. Enquanto não houver orçamento, o custo do posto está abaixo da verdade.",
+      });
+    }
+
+    if (custo.estimado.liquidoPorEstimar) {
+      lista.push({
+        id: `posto-liquido-${t.id}`,
+        rotulo: `Líquido de ${quem}`,
+        valor: "não estimado",
+        origem: "default",
+        // Baixo para o NEGÓCIO — o custo da empresa não muda com isto —
+        // e alto para quem quiser saber o que vai oferecer a alguém.
+        impacto: "baixo",
+        resolverEm: "trabalhadores",
+        porque:
+          "O líquido depende do estado civil, dos dependentes e da região de quem for contratado. Não inventamos nenhum: o custo da empresa está certo, o que a pessoa recebe é que fica por estimar.",
+      });
+    }
+
+    if (num(t.contrato?.inicioMes) === 0) {
+      lista.push({
+        id: `posto-entrada-${t.id}`,
+        rotulo: `Entrada de ${quem}`,
+        valor: "desde o início",
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "Assume-se que a pessoa está lá desde o primeiro mês. Contratar a meio do ano muda o custo do primeiro ano e a caixa dos meses anteriores.",
+      });
+    }
+  }
+
+  return lista;
+}
 
 /** Os que a pessoa confirmou — o outro lado do livro. */
 export function confirmados(contexto: ContextoNegocio, a: AgregadoNegocio): PressupostoNegocio[] {

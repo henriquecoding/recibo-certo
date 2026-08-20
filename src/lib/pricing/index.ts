@@ -63,6 +63,13 @@ export {
 export { resumoDe } from "./resumos";
 
 export {
+  CAMPO_PRECO_ATUAL,
+  comPrecoAtual,
+  contextoParaIntencao,
+  precoAtualDeclarado,
+} from "./intencao";
+
+export {
   CENARIOS_INICIAIS_DEF,
   cenarioPorChave,
   cenarioDeQuery,
