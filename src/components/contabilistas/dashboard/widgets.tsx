@@ -26,7 +26,9 @@
 
 import Link from "next/link";
 import { MODULOS, densidadeDe } from "@/lib/contabilistas/dashboard/modulos";
-import type { WidgetDensity, WidgetType } from "@/lib/contabilistas/dashboard/tipos";
+import type {
+  WidgetDensity, WidgetPresentationConfig, WidgetType,
+} from "@/lib/contabilistas/dashboard/tipos";
 import { tratamentoDoCliente, type Vinculo } from "@/lib/contabilistas/tipos";
 import { eurosDeCents, progresso } from "@/lib/contabilistas/fidelidade";
 import {
@@ -40,12 +42,24 @@ import type { PrazoAvaliado } from "@/lib/prazos";
 import type { CartaoAberto } from "@/lib/contabilistas/fonte/dados";
 import { ArrowRight, Check, Clock, Warning } from "@/components/ui/Icons";
 import { CorpoVazio } from "./MolduraModulo";
-import type { Broker, DadosDoDominio } from "./broker";
+import { usarDominio } from "./broker";
+import type { Broker } from "./broker";
 import type { DominioDados } from "@/lib/contabilistas/dashboard/modulos";
 
 export interface PropsDoWidget {
   type: WidgetType;
   densidade: WidgetDensity;
+  /**
+   * A configuração que a pessoa escolheu para ESTE módulo, já normalizada
+   * contra as opções que o módulo declara suportar.
+   *
+   * ⚠️ Chega sempre — vazia, se não houver escolha nenhuma. Era o contrário
+   * disto que estava errado: `WidgetPresentationConfig` era guardado e
+   * validado desde a migração do painel modular, e `CorpoDoModulo` nunca o
+   * passava a lado nenhum. Havia um contrato de personalização com
+   * persistência, validação, testes de serialização — e zero efeito.
+   */
+  config: WidgetPresentationConfig;
   broker: Broker;
   /** Base onde o painel está aberto, para as ligações irem ao sítio certo. */
   href: (destino: string) => string;
@@ -55,15 +69,32 @@ export interface PropsDoWidget {
 /* Utilidades de leitura                                               */
 /* ------------------------------------------------------------------ */
 
-/** Lê um domínio já carregado. `null` significa «ainda não» ou «falhou». */
-function ler<K extends DominioDados>(
-  broker: Broker, dominio: K,
-): DadosDoDominio[K] | null {
-  const e = broker.estado(dominio);
-  return e.estado === "pronto" ? e.dados : null;
-}
+/**
+ * Lê um domínio. `null` significa «ainda não chegou» ou «falhou».
+ *
+ * ⚠️ É UM HOOK, e por isso todas as chamadas têm de estar no topo do
+ * componente e nunca dentro de um `if`. Era uma função pura que lia o
+ * broker durante o render e dependia de a raiz do painel a voltar a
+ * chamar — o que a raiz fazia sempre que qualquer um dos treze domínios
+ * mudava, renderizando os 24 módulos de cada vez.
+ *
+ * Agora cada widget subscreve só o que consome.
+ */
+const ler = usarDominio;
 
-const quantos = (d: WidgetDensity, mapa: Record<WidgetDensity, number>) => mapa[d];
+/**
+ * Quantas linhas mostrar: a densidade decide o teto natural, e o
+ * `maxItems` da pessoa só pode APERTÁ-LO.
+ *
+ * Nunca alargar: um módulo pequeno com `maxItems: 20` passaria a
+ * desenhar vinte linhas dentro de uma caixa que não as comporta, e o
+ * resultado é uma lista cortada a meio pelo overflow.
+ */
+const quantos = (
+  d: WidgetDensity,
+  mapa: Record<WidgetDensity, number>,
+  config?: WidgetPresentationConfig,
+) => Math.min(mapa[d], config?.maxItems ?? Number.POSITIVE_INFINITY);
 
 const HORA = new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-digit" });
 const DIA_MES = new Intl.DateTimeFormat("pt-PT", { day: "numeric", month: "short" });
@@ -160,7 +191,7 @@ const ROTULO_DO_ESTADO: Record<string, string> = {
   nao_compareceu: "Faltou",
 };
 
-function AgendaHoje({ densidade, broker, href }: PropsDoWidget) {
+function AgendaHoje({ densidade, config, broker, href }: PropsDoWidget) {
   const agenda = ler(broker, "agenda");
   const clientes = ler(broker, "clientes");
   if (!agenda) return null;
@@ -169,7 +200,7 @@ function AgendaHoje({ densidade, broker, href }: PropsDoWidget) {
   hoje.setHours(23, 59, 59, 999);
   const doDia = agenda
     .filter((a) => Date.parse(a.inicio) <= hoje.getTime())
-    .slice(0, quantos(densidade, { compact: 1, normal: 3, expanded: 6, full: 8 }));
+    .slice(0, quantos(densidade, { compact: 1, normal: 3, expanded: 6, full: 8 }, config));
 
   if (doDia.length === 0) {
     return <CorpoVazio texto="Sem consultas para hoje." />;
@@ -220,7 +251,7 @@ function AgendaHoje({ densidade, broker, href }: PropsDoWidget) {
  * vencido, hoje, amanhã, sem resposta há mais tempo — e NÃO há score
  * artificial: cada linha diz o que é e porque está aqui.
  */
-function PrecisamAtencao({ densidade, broker, href }: PropsDoWidget) {
+function PrecisamAtencao({ densidade, config, broker, href }: PropsDoWidget) {
   const atencao = ler(broker, "atencao");
   const clientes = ler(broker, "clientes");
   if (!atencao) return null;
@@ -255,7 +286,7 @@ function PrecisamAtencao({ densidade, broker, href }: PropsDoWidget) {
 
   return (
     <ul className="divide-y divide-stone-100 dark:divide-stone-800">
-      {linhas.slice(0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 })).map((l) => (
+      {linhas.slice(0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 }, config)).map((l) => (
         <li key={l.chave}>
           <Link href={href(l.destino)} className={`${LINHA} focus-marca w-full rounded-lg hover:bg-stone-50 dark:hover:bg-white/[0.03]`}>
             <Circulo texto={iniciais(l.nome)} />
@@ -285,10 +316,10 @@ const COR_DA_CATEGORIA: Record<string, string> = {
   outros: "bg-categoria-rosa-bg text-categoria-rosa-text dark:bg-rose-500/15 dark:text-rose-300",
 };
 
-function PrazosProximos({ densidade, broker }: PropsDoWidget) {
+function PrazosProximos({ densidade, config, broker }: PropsDoWidget) {
   const prazos = ler(broker, "prazos");
   if (!prazos) return null;
-  const lista = prazos.slice(0, quantos(densidade, { compact: 1, normal: 4, expanded: 6, full: 8 }));
+  const lista = prazos.slice(0, quantos(densidade, { compact: 1, normal: 4, expanded: 6, full: 8 }, config));
   if (lista.length === 0) return <CorpoVazio texto="Sem prazos nas próximas semanas." />;
 
   return (
@@ -340,15 +371,20 @@ const ROTULO_DA_PARTILHA: Record<string, string> = {
 };
 
 function ListaDePartilhas({
-  densidade, broker, href, apenasSimulacoes,
+  densidade, config, broker, href, apenasSimulacoes,
 }: PropsDoWidget & { apenasSimulacoes: boolean }) {
   const partilhas = ler(broker, "partilhas");
   const clientes = ler(broker, "clientes");
   if (!partilhas) return null;
 
-  const lista = partilhas
+  const lista = [...partilhas]
     .filter((p: Partilha) => (apenasSimulacoes ? TIPOS_DE_SIMULACAO.has(p.tipo) : true))
-    .slice(0, quantos(densidade, { compact: 2, normal: 3, expanded: 6, full: 9 }));
+    // A ordem que vem da leitura já é a mais recente primeiro. `alpha`
+    // ordena pelo título — útil quando se procura uma partilha concreta
+    // em vez de ver o que chegou.
+    .sort((a: Partilha, b: Partilha) =>
+      config.sort === "alpha" ? a.titulo.localeCompare(b.titulo, "pt") : 0)
+    .slice(0, quantos(densidade, { compact: 2, normal: 3, expanded: 6, full: 9 }, config));
 
   if (lista.length === 0) {
     return (
@@ -398,7 +434,7 @@ function ListaDePartilhas({
 /* DOC — Documentos por rever                                          */
 /* ================================================================== */
 
-function DocumentosRever({ densidade, broker, href }: PropsDoWidget) {
+function DocumentosRever({ densidade, config, broker, href }: PropsDoWidget) {
   const casos = ler(broker, "documentos");
   if (!casos) return null;
 
@@ -421,7 +457,7 @@ function DocumentosRever({ densidade, broker, href }: PropsDoWidget) {
 
   const linhas = [...porEstado.entries()]
     .sort((a, b) => b[1] - a[1])
-    .slice(0, quantos(densidade, { compact: 2, normal: 3, expanded: 6, full: 8 }));
+    .slice(0, quantos(densidade, { compact: 2, normal: 3, expanded: 6, full: 8 }, config));
 
   if (linhas.length === 0) return <CorpoVazio texto="Nada por rever." />;
 
@@ -454,7 +490,7 @@ function DocumentosRever({ densidade, broker, href }: PropsDoWidget) {
  * e M os números sozinhos dizem mais do que uma linha de sete pontos com
  * 40px de altura.
  */
-function AtividadeSemana({ densidade, broker }: PropsDoWidget) {
+function AtividadeSemana({ densidade, config, broker }: PropsDoWidget) {
   const atividade = ler(broker, "atividade");
   if (!atividade) return null;
 
@@ -536,7 +572,7 @@ function GraficoSemana({ tarefas }: { tarefas: Tarefa[] }) {
  * Por isso agrupa por tipo e mostra uma ação, em vez de listar tudo por
  * ordem de chegada.
  */
-function CentroAvisos({ densidade, broker, href }: PropsDoWidget) {
+function CentroAvisos({ densidade, config, broker, href }: PropsDoWidget) {
   const avisos = ler(broker, "avisos");
   const prazos = ler(broker, "prazos");
   if (!avisos) return null;
@@ -564,7 +600,7 @@ function CentroAvisos({ densidade, broker, href }: PropsDoWidget) {
 
   return (
     <ul className="space-y-1.5">
-      {cartoes.slice(0, quantos(densidade, { compact: 1, normal: 2, expanded: 3, full: 4 })).map((c) => (
+      {cartoes.slice(0, quantos(densidade, { compact: 1, normal: 2, expanded: 3, full: 4 }, config)).map((c) => (
         <li
           key={c.chave}
           className={`rounded-xl px-2.5 py-2 ${
@@ -611,17 +647,28 @@ const COLUNAS_TRABALHO: { estado: EstadoTarefa; titulo: string }[] = [
  * O «+ N» resolve a altura sem scroll interno por coluna: o módulo tem a
  * altura que a grelha lhe deu, e o excedente é dito em vez de escondido.
  */
-function EstadoTrabalho({ densidade, broker, href }: PropsDoWidget) {
+function EstadoTrabalho({ densidade, config, broker, href }: PropsDoWidget) {
   const tarefas = ler(broker, "trabalho");
   const clientes = ler(broker, "clientes");
   if (!tarefas) return null;
 
   const porEstado = (e: EstadoTarefa) => (tarefas as Tarefa[]).filter((t) => t.estado === e);
 
+  // `showCompleted` decide se a coluna do que já está feito aparece. Quem
+  // usa este módulo para saber o que falta não quer um quarto do espaço
+  // ocupado por trabalho terminado; quem o usa para prestar contas quer.
+  //
+  // O valor por omissão é MOSTRAR — é o que o módulo fazia antes de esta
+  // opção existir, e mudar o comportamento de quem nunca escolheu nada
+  // seria personalizar por eles.
+  const colunas = config.showCompleted === false
+    ? COLUNAS_TRABALHO.filter((c) => c.estado !== "entregue")
+    : COLUNAS_TRABALHO;
+
   if (densidade === "compact" || densidade === "normal") {
     return (
       <ul className="space-y-0.5">
-        {COLUNAS_TRABALHO.map((c) => (
+        {colunas.map((c) => (
           <li key={c.estado} className="flex items-center gap-2 py-1">
             <span className={`min-w-0 flex-1 ${TITULO_LINHA}`}>{c.titulo}</span>
             <Contagem n={porEstado(c.estado).length} />
@@ -631,7 +678,7 @@ function EstadoTrabalho({ densidade, broker, href }: PropsDoWidget) {
     );
   }
 
-  const porColuna = densidade === "full" ? 4 : 2;
+  const porColuna = quantos(densidade, { compact: 2, normal: 2, expanded: 2, full: 4 }, config);
   const nomeDe = (t: Tarefa) => {
     const v = clientes?.find((c: Vinculo) => c.id === t.vinculoId);
     return v ? tratamentoDoCliente(v) : null;
@@ -640,7 +687,7 @@ function EstadoTrabalho({ densidade, broker, href }: PropsDoWidget) {
   return (
     <div>
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {COLUNAS_TRABALHO.map((c) => {
+        {colunas.map((c) => {
           const lista = porEstado(c.estado);
           const mostradas = lista.slice(0, porColuna);
           const resto = lista.length - mostradas.length;
@@ -693,7 +740,7 @@ function EstadoTrabalho({ densidade, broker, href }: PropsDoWidget) {
 /* CLI / CAS / RSK / COM / RES                                         */
 /* ================================================================== */
 
-function Clientes({ densidade, broker, href }: PropsDoWidget) {
+function Clientes({ densidade, config, broker, href }: PropsDoWidget) {
   const clientes = ler(broker, "clientes");
   if (!clientes) return null;
   const ativos = clientes.filter((v) => v.estado === "ativo");
@@ -713,7 +760,7 @@ function Clientes({ densidade, broker, href }: PropsDoWidget) {
       </dl>
       {densidade !== "compact" && (
         <ul className="mt-1.5 divide-y divide-stone-100 dark:divide-stone-800">
-          {ativos.slice(0, quantos(densidade, { compact: 0, normal: 3, expanded: 6, full: 8 })).map((v) => (
+          {ativos.slice(0, quantos(densidade, { compact: 0, normal: 3, expanded: 6, full: 8 }, config)).map((v) => (
             <li key={v.id} className={LINHA}>
               <Circulo texto={iniciais(tratamentoDoCliente(v))} />
               <span className={`min-w-0 flex-1 ${TITULO_LINHA}`}>{tratamentoDoCliente(v)}</span>
@@ -732,7 +779,7 @@ const ROTULO_CASO: Record<string, string> = {
   aceite: "Aceite", recusado: "Recusado", fechado: "Fechado",
 };
 
-function ListaDeCasos({ densidade, broker, href, soEmRisco }: PropsDoWidget & { soEmRisco: boolean }) {
+function ListaDeCasos({ densidade, config, broker, href, soEmRisco }: PropsDoWidget & { soEmRisco: boolean }) {
   const casos = ler(broker, "casos");
   if (!casos) return null;
 
@@ -745,15 +792,30 @@ function ListaDeCasos({ densidade, broker, href, soEmRisco }: PropsDoWidget & { 
   // aparecer aqui, e é por isso que a coluna de última movimentação é a
   // primeira coisa a acrescentar quando esta definição for afinada.
   const PARADO_DIAS = 7;
+  const instante = (c: Caso) => Date.parse(c.submetidoEm ?? c.criadoEm);
+
   const lista = (casos as Caso[])
     .filter((c) => {
-      if (c.estado === "fechado" || c.estado === "recusado") return false;
+      const fechado = c.estado === "fechado" || c.estado === "recusado";
+      // Um caso fechado só entra se a pessoa o pediu — e nunca na vista
+      // «em risco», onde a pergunta é o que está parado, não o que acabou.
+      if (fechado) return config.showCompleted === true && !soEmRisco;
       if (!soEmRisco) return true;
-      const t = Date.parse(c.submetidoEm ?? c.criadoEm);
+      const t = instante(c);
       if (!Number.isFinite(t)) return false;
       return (Date.now() - t) / 86_400_000 > PARADO_DIAS;
     })
-    .slice(0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 }));
+    .sort((a, b) => {
+      // `deadline` aqui é «há mais tempo parado primeiro»: os casos não
+      // têm prazo próprio, e o mais antigo sem movimento é o que mais se
+      // aproxima da pergunta que a ordenação por prazo responde.
+      if (config.sort === "alpha") {
+        return (a.assunto || a.referencia).localeCompare(b.assunto || b.referencia, "pt");
+      }
+      if (config.sort === "deadline") return (instante(a) || 0) - (instante(b) || 0);
+      return (instante(b) || 0) - (instante(a) || 0);
+    })
+    .slice(0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 }, config));
 
   if (lista.length === 0) {
     return <CorpoVazio texto={soEmRisco ? "Nenhum caso parado." : "Sem casos abertos."} />;
@@ -786,11 +848,11 @@ function ListaDeCasos({ densidade, broker, href, soEmRisco }: PropsDoWidget & { 
  * conteúdo num painel que pode estar aberto num ecrã partilhado é uma
  * fuga que ninguém pediu; o conteúdo abre na conversa.
  */
-function ComunicacoesRecentes({ densidade, broker, href }: PropsDoWidget) {
+function ComunicacoesRecentes({ densidade, config, broker, href }: PropsDoWidget) {
   const notas = ler(broker, "mensagens");
   if (!notas) return null;
   const lista = (notas as Notificacao[]).slice(
-    0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 }),
+    0, quantos(densidade, { compact: 2, normal: 4, expanded: 7, full: 10 }, config),
   );
   if (lista.length === 0) return <CorpoVazio texto="Sem comunicações recentes." />;
 
@@ -847,14 +909,14 @@ function ComunicacoesRecentes({ densidade, broker, href }: PropsDoWidget) {
  * As tarefas continuam a vir de `trabalho`, porque «tarefas abertas» é
  * mesmo uma contagem de estado e não entra na agregação do resumo.
  */
-function ResumoPorCliente({ densidade, broker, href }: PropsDoWidget) {
+function ResumoPorCliente({ densidade, config, broker, href }: PropsDoWidget) {
   const resumo = ler(broker, "resumo_clientes");
   const tarefas = ler(broker, "trabalho");
   if (!resumo) return null;
 
   const lista = resumo
     .filter((r) => r.vinculo.estado === "ativo")
-    .slice(0, quantos(densidade, { compact: 3, normal: 5, expanded: 8, full: 12 }));
+    .slice(0, quantos(densidade, { compact: 3, normal: 5, expanded: 8, full: 12 }, config));
 
   if (lista.length === 0) return <CorpoVazio texto="Sem clientes ativos." />;
 
@@ -1015,26 +1077,79 @@ const CORPOS: Record<WidgetType, Componente> = {
   resumo_por_cliente: ResumoPorCliente,
 };
 
-/** O corpo de um módulo, escolhido pelo tipo e pela geometria. */
+/**
+ * O corpo de um módulo, escolhido pelo tipo, pela geometria e pelo que a
+ * pessoa escolheu para ele.
+ *
+ * ⚠️ A configuração passava por aqui e não seguia. `WidgetPresentationConfig`
+ * era validado no cliente, validado outra vez em SQL, persistido no layout
+ * e coberto por testes de serialização — e nenhum widget a recebia. O
+ * schema anunciava uma personalização que não existia, e um teste verde
+ * sobre o JSON dava-lhe a aparência de funcionar.
+ */
 export default function CorpoDoModulo({
-  type, colSpan, rowSpan, broker, href,
+  type, colSpan, rowSpan, broker, config, href,
 }: {
   type: WidgetType;
   colSpan: number;
   rowSpan: number;
   broker: Broker;
-  /**
-   * Não é lida aqui — existe para o `memo` de `GrelhaEdicao` ver que algo
-   * mudou. Os widgets leem o broker imperativamente e por isso nenhuma
-   * outra prop se mexe quando os dados chegam. Removê-la volta a congelar
-   * os módulos em modo de edição.
-   */
-  versao?: number;
+  config?: WidgetPresentationConfig;
   href: (destino: string) => string;
 }) {
   const Corpo = CORPOS[type];
-  const densidade = densidadeDe(colSpan, rowSpan);
-  return <Corpo type={type} densidade={densidade} broker={broker} href={href} />;
+  const normalizada = normalizarConfig(type, config);
+  return (
+    <Corpo
+      type={type}
+      densidade={densidadeEfetiva(type, colSpan, rowSpan, normalizada)}
+      config={normalizada}
+      broker={broker}
+      href={href}
+    />
+  );
 }
+
+/**
+ * A configuração, reduzida ao que ESTE módulo declara suportar.
+ *
+ * Um layout gravado pode trazer chaves que já não fazem sentido — de uma
+ * versão anterior, de outro tipo de módulo, ou de alguém a escrever JSON
+ * à mão. Ignorá-las aqui é o que faz o comportamento ser previsível: o
+ * que o menu do módulo não oferece, o módulo não obedece.
+ */
+export function normalizarConfig(
+  type: WidgetType, config?: WidgetPresentationConfig,
+): WidgetPresentationConfig {
+  if (!config) return {};
+  const permitidas = new Set<string>(MODULOS[type].opcoes);
+  const saida: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(config)) {
+    if (v !== undefined && permitidas.has(k)) saida[k] = v;
+  }
+  return saida as WidgetPresentationConfig;
+}
+
+/**
+ * A densidade final: a automática, ou a escolhida — se couber.
+ *
+ * A densidade nasce da geometria porque é a geometria que diz quanto
+ * espaço há. Uma escolha manual pode APERTAR (mostrar menos do que cabe é
+ * sempre possível), mas não pode alargar: pedir `full` a um módulo de
+ * 3×2 desenha oito linhas numa caixa de duas, e o que a pessoa vê é uma
+ * lista cortada — não a personalização que pediu.
+ */
+function densidadeEfetiva(
+  type: WidgetType, colSpan: number, rowSpan: number, config: WidgetPresentationConfig,
+): WidgetDensity {
+  const automatica = densidadeDe(colSpan, rowSpan);
+  const escolhida = config.density;
+  if (!escolhida || !MODULOS[type].opcoes.includes("density")) return automatica;
+  return ORDEM_DENSIDADE.indexOf(escolhida) < ORDEM_DENSIDADE.indexOf(automatica)
+    ? escolhida
+    : automatica;
+}
+
+const ORDEM_DENSIDADE: WidgetDensity[] = ["compact", "normal", "expanded", "full"];
 
 export { MODULOS };

@@ -24,7 +24,9 @@ import type { WorkspaceLayoutV2, WorkspaceWidgetInstance } from "@/lib/contabili
 import MolduraModulo, { CorpoACarregar, CorpoErro, type AcaoDoMenu } from "./MolduraModulo";
 import CorpoDoModulo from "./widgets";
 import { estiloDaCelula } from "./celula";
+import { usarDominios } from "./broker";
 import type { Broker } from "./broker";
+import type { DominioDados } from "@/lib/contabilistas/dashboard/modulos";
 import styles from "./painel-modular.module.css";
 
 export default function GrelhaVista({
@@ -90,6 +92,10 @@ function Celula({
     return () => obs.disconnect();
   }, [broker, def.dominios, def.prioridade]);
 
+  // ⚠️ Sem esta subscrição, a moldura lia o broker durante o render e
+  // dependia de a raiz do painel a voltar a renderizar. A raiz deixou de
+  // ter subscrição global — cada módulo reage ao que consome.
+  usarDominios(broker, def.dominios);
   const estados = def.dominios.map((d) => broker.estado(d));
   const erro = estados.find((e) => e.estado === "erro");
   const aCarregar = estados.some((e) => e.estado === "a-carregar");
@@ -122,6 +128,7 @@ function Celula({
         tag={item.tag}
         placement={item.desktop}
         edicao={false}
+        frescura={frescuraDe(broker, def.dominios)}
         acoes={acoes}
       >
         {erro && erro.estado === "erro" ? (
@@ -140,6 +147,7 @@ function Celula({
             colSpan={item.desktop.colSpan}
             rowSpan={item.desktop.rowSpan}
             broker={broker}
+            config={item.config}
             href={href}
           />
         )}
@@ -152,4 +160,37 @@ function Celula({
 function classeMovel(item: WorkspaceWidgetInstance): string {
   const size = item.mobile?.size ?? "M";
   return size === "L" ? styles.celulaL : size === "S" ? styles.celulaS : styles.celulaM;
+}
+
+
+/**
+ * O que dizer sobre a idade dos dados deste módulo — ou nada.
+ *
+ * ⚠️ Devolve `undefined` no caso normal, e é isso o mais importante aqui.
+ * O painel não anuncia frescura enquanto os dados estão dentro do prazo:
+ * 24 módulos a dizer «há 1 min» é ruído, e ruído ensina a não ler.
+ *
+ * Fala em duas situações: quando alguma coisa está a ser relida com o
+ * resultado anterior ainda no ecrã, e quando passou do TTL do domínio.
+ */
+function frescuraDe(broker: Broker, dominios: readonly DominioDados[]): string | undefined {
+  let aRevalidar = false;
+  let maisAntigo: number | null = null;
+
+  for (const d of dominios) {
+    const e = broker.estado(d);
+    if (e.estado !== "pronto") continue;
+    if (e.aRevalidar) aRevalidar = true;
+    if (broker.velho(d)) {
+      maisAntigo = maisAntigo === null ? e.atualizadoEm : Math.min(maisAntigo, e.atualizadoEm);
+    }
+  }
+
+  if (aRevalidar) return "a atualizar…";
+  if (maisAntigo === null) return undefined;
+
+  const min = Math.floor((Date.now() - maisAntigo) / 60_000);
+  if (min < 60) return `há ${Math.max(1, min)} min`;
+  const horas = Math.floor(min / 60);
+  return horas < 24 ? `há ${horas} h` : "há mais de um dia";
 }

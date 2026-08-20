@@ -16,6 +16,23 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.89.0",
+    data: "2026-08-20",
+    titulo: "O contacto de um contabilista deixa de ser público, e passa a ser teu quando ele te aceita",
+    itens: [
+      "Até hoje, o email de um contabilista aparecia no perfil público dele. Isso mudou: no diretório e no perfil ficam o nome, o número de inscrição na Ordem e a ligação ao LinkedIn — o suficiente para confirmares quem é sem dependeres de nós. O email, o telefone e o site aparecem-te quando ele te aceitar como cliente.",
+      "E aparecem mesmo. Havia contactos guardados para quem tem acompanhamento, e ecrã nenhum os mostrava: estava ao contrário — visíveis para quem não tinha relação, invisíveis para quem tinha. Agora estão no topo da tua sala de acompanhamento, com o email a abrir o correio e o telefone a ligar de um toque.",
+      "Se o acompanhamento terminar, ou se a conta do contabilista for suspensa, os contactos fecham no mesmo instante. Durante uma pausa mantêm-se — uma pausa é uma pausa no trabalho, não uma quebra de confiança.",
+      "Quando descreves um caso, os teus contactos deixaram de seguir sozinhos. Passou a haver uma caixa, e nasce por marcar: sem ela, falam contigo pelas mensagens do caso. Podes ligá-la e desligá-la a qualquer momento, e o efeito é imediato.",
+      "Onde dizíamos que o teu contacto «não segue» numa mensagem, deixámos de o dizer — porque deixou de ser verdade quando as conversas passaram a ser diretas. O que se garante não é que nunca sai: é que só sai por decisão de quem é dono dele.",
+      "Os anexos que ninguém reclama passaram a ser mesmo apagados. Havia uma limpeza diária que falhava todos os dias sem ninguém dar por isso, e os ficheiros ficavam para lá do prazo que prometemos.",
+      "Um prazo de um pedido podia dizer «é hoje» na véspera à noite, conforme o relógio do teu computador. Passou a contar sempre pelo calendário de Portugal.",
+      "No painel do contabilista, cada módulo passou a poder ser configurado: quantas linhas mostra, em que ordem, se esconde o trabalho já concluído, e quão apertado fica. As opções estavam guardadas há meses e não mudavam nada no ecrã.",
+      "O painel deixou de redesenhar tudo de cada vez que um dado chega, e passou a reler o que está velho quando voltas ao separador — com um aviso discreto quando o que estás a ver já tem idade.",
+      "Na demonstração do painel, o cartão de fidelidade seguia uma regra diferente da real: abria um cartão novo mal o anterior ficasse completo. Passou a fazer o que a tua conta faz — o ciclo seguinte só começa depois de usares o benefício.",
+    ],
+  },
+  {
     version: "2.88.0",
     data: "2026-08-20",
     titulo: "O teu negócio deixa de ser reconstruído de cada vez que mudas de ferramenta",

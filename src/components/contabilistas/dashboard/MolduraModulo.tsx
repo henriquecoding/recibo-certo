@@ -71,6 +71,7 @@ export default function MolduraModulo({
   tag,
   placement,
   edicao,
+  frescura,
   aArrastar,
   acoes,
   arrastarProps,
@@ -84,6 +85,14 @@ export default function MolduraModulo({
   aArrastar?: boolean;
   /** Entradas do menu `•••`. Em edição inclui mover/tamanho/remover. */
   acoes?: AcaoDoMenu[];
+  /**
+   * Texto curto sobre a idade dos dados («há 12 min», «a atualizar…»).
+   *
+   * Só chega preenchido quando há alguma coisa a dizer — ver `Celula`.
+   * Um painel que anuncia a frescura de tudo o tempo todo ensina a
+   * ignorá-la, e no dia em que interessa já ninguém a lê.
+   */
+  frescura?: string;
   /** Handlers de arrasto, injetados pela grelha de edição. */
   arrastarProps?: React.HTMLAttributes<HTMLButtonElement>;
   /** Começa o redimensionamento pelo canto. */
@@ -124,6 +133,18 @@ export default function MolduraModulo({
         <h3 className={styles.moduloTitulo}>{def.titulo}</h3>
 
         <span className="ml-auto flex shrink-0 items-center gap-1">
+          {/* A frescura só aparece quando é NOTÍCIA: enquanto os dados
+              estão dentro do prazo, um «há 1 min» em cada um dos 24
+              módulos é ruído que ninguém lê. Aparece quando passaram do
+              prazo, e enquanto estão a ser relidos. */}
+          {frescura && (
+            <span
+              className="hidden text-[0.5625rem] font-medium tabular-nums text-stone-400 sm:inline"
+              title="Estes dados podem estar desatualizados."
+            >
+              {frescura}
+            </span>
+          )}
           {edicao && <span className={styles.badgeTamanho}>{tamanho}</span>}
           {acoes && acoes.length > 0 && <MenuModulo titulo={def.titulo} acoes={acoes} />}
         </span>
