@@ -1,12 +1,20 @@
 import type { CenarioInicial } from "@/lib/pricing";
-import type { MarketEvidenceGateResult, MarketObservation, MarketSourceHealth } from "./tipos";
+import { marketRegionLabel, type MarketRegion } from "./geografia";
+import type {
+  MarketEvidenceGateResult,
+  MarketObservation,
+  MarketSemanticMappingStatus,
+  MarketSignalKind,
+  MarketSourceHealth,
+} from "./tipos";
 
 export type BusinessStructurePreference = "recibos-verdes" | "empresa" | "por-decidir";
 export type DeliveryPreference = "local" | "remoto" | "hibrido";
 export type CapitalBand = "ate-500" | "500-3000" | "mais-3000";
 export type RecurrencePreference = "pontual" | "recorrente" | "indiferente";
 export type BusinessStrength = "comercial" | "digital" | "operacoes" | "cuidado" | "tecnico";
-export type MarketRegion = "grande-lisboa" | "peninsula-setubal" | "outra-portugal";
+
+export type { MarketRegion } from "./geografia";
 
 export interface BusinessDiscoveryProfile {
   structure: BusinessStructurePreference;
@@ -24,8 +32,16 @@ export interface OpportunityTemplate {
   customer: string;
   problem: string;
   delivery: readonly DeliveryPreference[];
-  /** `portugal` significa que o modelo não depende destes dois pilotos locais. */
-  regions: readonly (MarketRegion | "portugal")[];
+  /**
+   * Onde o MODELO faz sentido — nunca onde temos dados.
+   *
+   * Confundir as duas coisas foi um erro real: o piloto turístico esteve
+   * limitado a duas NUTS II só porque o manifesto começou por mapear duas,
+   * e quem escolhia outra zona era penalizado na compatibilidade por uma
+   * limitação nossa. `portugal` significa «investigável em qualquer zona»;
+   * a diferença entre regiões passa a vir do valor observado, não daqui.
+   */
+  regions: readonly MarketRegion[];
   capital: CapitalBand;
   recurrence: Exclude<RecurrencePreference, "indiferente">;
   strengths: readonly BusinessStrength[];
@@ -62,6 +78,23 @@ export interface MarketObservationSummary {
   validUntil: string;
   sourceId: string;
   license: MarketObservation["license"];
+  /** A série de onde a leitura veio — duas séries nunca são somadas. */
+  seriesId: string;
+  seriesLabel: string;
+  /** O que o número diz, e o que continua a não dizer. */
+  reading: string;
+  /**
+   * Lineage e papel do sinal, publicados de propósito.
+   *
+   * O servidor não conhece a zona de quem pergunta e por isso o seu gate
+   * assume compatibilidade geográfica. Sem estes três campos, o browser —
+   * que conhece a zona — não conseguia voltar a correr o gate sem inventar
+   * a origem estatística do sinal.
+   */
+  independenceKey: string;
+  kind: MarketSignalKind;
+  critical: boolean;
+  semanticMapping: MarketSemanticMappingStatus;
 }
 
 export interface MarketPilotEvidence {
@@ -83,7 +116,7 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
     customer: "Alojamentos independentes e pequenos gestores sem equipa própria permanente.",
     problem: "A ocupação cria picos operacionais que não justificam contratar uma equipa a tempo inteiro.",
     delivery: ["local", "hibrido"],
-    regions: ["grande-lisboa", "peninsula-setubal"],
+    regions: ["portugal"],
     capital: "ate-500",
     recurrence: "recorrente",
     strengths: ["operacoes", "comercial"],
@@ -137,8 +170,9 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
       "Rejeitar a hipótese se o processo não consumir tempo mensurável ou se cinco decisores não pagarem sequer pelo diagnóstico.",
     evidencePlan: [
       {
-        source: "Eurostat — Digital Intensity Index",
-        purpose: "Dimensionar adoção digital por classe de empresa, sem a confundir com compra de consultoria.",
+        source: "Eurostat — Digital Intensity Index (isoc_e_dii)",
+        purpose:
+          "Comparar microempresas com pequenas empresas na mesma medida. A distância entre classes é o défice a investigar, não a compra de consultoria.",
         url: "https://ec.europa.eu/eurostat/databrowser/view/isoc_e_dii/default/table?lang=en",
         status: "live",
       },
@@ -174,10 +208,11 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
       "Parar se as famílias não aceitarem pagar pelo acompanhamento ou se a responsabilidade necessária exceder o seguro e o âmbito do serviço.",
     evidencePlan: [
       {
-        source: "Eurostat — competências digitais",
-        purpose: "Medir o défice por idade; não assumir que população envelhecida equivale a procura paga.",
+        source: "Eurostat — competências digitais (isoc_sk_dskl_i21)",
+        purpose:
+          "Medir o défice dos 65–74 anos contra a população total. Um défice é barreira de uso, não procura paga — quem paga costuma ser a família.",
         url: "https://ec.europa.eu/eurostat/databrowser/view/isoc_sk_dskl_i21/default/table?lang=en",
-        status: "planned",
+        status: "live",
       },
       {
         source: "INE — Censos/população",
@@ -257,6 +292,41 @@ const CAPITAL_RANK: Readonly<Record<CapitalBand, number>> = {
   "mais-3000": 2,
 };
 
+// ── Rótulos: os enums NÃO são texto de interface ──────────────────────
+//  Estes valores são identificadores em ASCII, e estavam a ser
+//  interpolados diretamente na copy: «Funciona em modelo hibrido»,
+//  «Aproveita operacoes». Português de Portugal é inegociável, e um id
+//  interno nunca é uma palavra.
+const DELIVERY_LABEL: Readonly<Record<DeliveryPreference, string>> = {
+  local: "presencial",
+  remoto: "remoto",
+  hibrido: "híbrido",
+};
+
+const RECURRENCE_LABEL: Readonly<Record<Exclude<RecurrencePreference, "indiferente">, string>> = {
+  pontual: "por projeto pontual",
+  recorrente: "recorrente",
+};
+
+const STRENGTH_LABEL: Readonly<Record<BusinessStrength, string>> = {
+  comercial: "a tua veia comercial",
+  digital: "o teu à-vontade digital",
+  operacoes: "a tua capacidade de organizar e executar",
+  cuidado: "o teu jeito para acompanhar pessoas",
+  tecnico: "a tua resolução de problemas técnicos",
+};
+
+const STRUCTURE_LABEL: Readonly<Record<Exclude<BusinessStructurePreference, "por-decidir">, string>> = {
+  "recibos-verdes": "recibos verdes",
+  empresa: "empresa",
+};
+
+/** Junta com «e» antes do último, como se escreve em português. */
+function enumerar(itens: readonly string[]): string {
+  if (itens.length <= 1) return itens[0] ?? "";
+  return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+}
+
 /** Compatibilidade pessoal, deliberadamente separada da evidência de mercado. */
 export function calculateOpportunityFit(
   template: OpportunityTemplate,
@@ -268,9 +338,11 @@ export function calculateOpportunityFit(
 
   if (template.delivery.includes(profile.delivery)) {
     score += 20;
-    reasons.push(`Funciona em modelo ${profile.delivery}.`);
+    reasons.push(`Funciona em modelo ${DELIVERY_LABEL[profile.delivery]}.`);
   } else {
-    tensions.push(`O modelo pede ${template.delivery.join(" ou ")}, não ${profile.delivery}.`);
+    tensions.push(
+      `O modelo pede trabalho ${template.delivery.map((item) => DELIVERY_LABEL[item]).join(" ou ")}, não ${DELIVERY_LABEL[profile.delivery]}.`,
+    );
   }
 
   if (CAPITAL_RANK[template.capital] <= CAPITAL_RANK[profile.capital]) {
@@ -282,37 +354,49 @@ export function calculateOpportunityFit(
 
   if (profile.recurrence === "indiferente" || profile.recurrence === template.recurrence) {
     score += 15;
-    reasons.push(`O modelo de receita é ${template.recurrence}.`);
+    reasons.push(`O modelo de receita é ${RECURRENCE_LABEL[template.recurrence]}.`);
   } else {
-    tensions.push(`A receita tende a ser ${template.recurrence}.`);
+    tensions.push(`A receita tende a ser ${RECURRENCE_LABEL[template.recurrence]}.`);
   }
 
   const matchingStrengths = template.strengths.filter((strength) => profile.strengths.includes(strength));
   const strengthScore = Math.min(25, matchingStrengths.length * 12.5);
   score += strengthScore;
-  if (matchingStrengths.length) reasons.push(`Aproveita ${matchingStrengths.join(" e ")}.`);
-  else tensions.push("Não coincide ainda com as competências que selecionaste.");
+  if (matchingStrengths.length) {
+    reasons.push(`Aproveita ${enumerar(matchingStrengths.map((item) => STRENGTH_LABEL[item]))}.`);
+  } else {
+    tensions.push("Não coincide ainda com as competências que selecionaste.");
+  }
 
   if (profile.structure === "por-decidir" || template.structures.includes(profile.structure)) {
     score += 10;
     reasons.push(
       profile.structure === "por-decidir"
         ? "Pode ser testado antes de decidir a estrutura."
-        : `Pode arrancar em ${profile.structure}.`,
+        : `Pode arrancar em ${STRUCTURE_LABEL[profile.structure]}.`,
     );
   } else {
     tensions.push("A estrutura preferida não é a indicada para este piloto.");
   }
 
-  if (template.regions.includes("portugal") || template.regions.includes(profile.region)) {
+  // A zona só pode PENALIZAR quando o modelo depende mesmo de estar noutro
+  // sítio. Não saber ainda onde testar não é uma incompatibilidade — e a
+  // falta de dados nossos sobre uma região nunca foi razão para baixar a
+  // compatibilidade de ninguém.
+  const nacional = template.regions.includes("portugal");
+  if (nacional || profile.region === "portugal" || template.regions.includes(profile.region)) {
     score += 10;
     reasons.push(
-      template.regions.includes("portugal")
-        ? "O modelo pode ser investigado em qualquer região."
-        : "Existe um piloto de dados para a zona escolhida.",
+      nacional
+        ? "O modelo pode ser investigado em qualquer zona do país."
+        : profile.region === "portugal"
+          ? "Podes escolher a zona depois de veres os sinais."
+          : `Funciona na zona escolhida (${marketRegionLabel(profile.region)}).`,
     );
   } else {
-    tensions.push("Ainda não existe sinal local curado para a zona escolhida.");
+    tensions.push(
+      `Este modelo depende de ${template.regions.map(marketRegionLabel).join(" ou ")}, não de ${marketRegionLabel(profile.region)}.`,
+    );
   }
 
   const rounded = Math.round(score);
@@ -323,6 +407,18 @@ export function calculateOpportunityFit(
     reasons,
     tensions,
   };
+}
+
+/**
+ * Este piloto tem ingestão pública ativa, ou continua a ser só um plano?
+ *
+ * A interface precisa de saber para não prometer «a consultar…» sobre uma
+ * fonte que ninguém está a consultar. Vem do `evidencePlan` curado e não de
+ * uma lista de ids escrita à mão dentro de um componente — que foi
+ * exatamente o que aqui existia.
+ */
+export function templateHasLiveEvidence(template: OpportunityTemplate): boolean {
+  return template.evidencePlan.some((entry) => entry.status === "live");
 }
 
 export function rankOpportunityTemplates(profile: BusinessDiscoveryProfile) {

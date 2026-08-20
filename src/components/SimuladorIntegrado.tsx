@@ -3110,6 +3110,12 @@ export default function SimuladorIntegrado({
     // No modo "Abrir Empresa" entramos direto no simulador profissional
     // (o onboarding guiado é orientado a recibos verdes).
     if (vista === "empresa") return "profissional";
+    // Quem chega com um valor já formado no Pricing Engine não é «novo
+    // aqui»: acabou de construir o preço. Mostrar-lhe o «Como queres
+    // simular?» escondia atrás de mais uma escolha o número que o ecrã
+    // anterior acabou de prometer ter transferido — e o modo guiado
+    // voltaria a pedir a faturação que ele já calculou.
+    if (Number.isFinite(valorInicial) && (valorInicial ?? 0) > 0) return "profissional";
     // Se houver um cenário de recibos verdes marcado para reabrir, entramos
     // logo no modo guiado (onde o instantâneo é hidratado).
     if (haReabertura("recibos")) return "guiado";

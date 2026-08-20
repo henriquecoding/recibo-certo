@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import SimuladorIntegrado from "@/components/SimuladorIntegrado";
 import SimuladorPreco from "@/components/precos/SimuladorPreco";
 import { precificar, type ContextoPreco } from "@/lib/pricing";
+import { baseFiscalDoPreco, type BaseFiscalDoPreco } from "@/lib/negocio/market/preco-handoff";
+import { assessMarketEconomics } from "@/lib/negocio/market/pricing-adapter";
+import { newHypothesis } from "@/lib/negocio/market/hipoteses";
+import { OPPORTUNITY_TEMPLATES } from "@/lib/negocio/market/opportunities";
+import { guardarHipotese, lerHipotese } from "@/lib/store/hipoteses-mercado";
 import { ArrowLeft, Calculator, Receipt, Sparkle } from "@/components/ui/Icons";
 
 type Vista = "liquido" | "preco";
 
-interface PrecoTransferido {
-  liquido: number;
-  anual: number;
-  unidadesMes: number;
-  nome?: string;
-}
+type PrecoTransferido = BaseFiscalDoPreco & { nome?: string };
 
 const euro = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" });
 
@@ -30,15 +30,43 @@ export default function RecibosVerdesStudio() {
   );
   const [transferido, setTransferido] = useState<PrecoTransferido | null>(null);
 
+  // O `?h=` só é aceite quando corresponde a uma hipótese CURADA. Um id
+  // arbitrário no URL não pode criar entradas no cofre de quem abre o
+  // link — é um parâmetro público e trata-se como tal.
+  const hipoteseId = useMemo(() => {
+    const bruto = searchParams.get("h");
+    return OPPORTUNITY_TEMPLATES.some((item) => item.id === bruto) ? bruto : null;
+  }, [searchParams]);
+
   const usarPreco = (contexto: ContextoPreco) => {
     const resultado = precificar(contexto);
-    if (!resultado.ok || resultado.precoLiquido <= 0) return;
-    setTransferido({
-      liquido: resultado.precoLiquido,
-      anual: resultado.precoLiquido * contexto.volume.unidadesMes * 12,
-      unidadesMes: contexto.volume.unidadesMes,
-      nome: contexto.produto.nome,
-    });
+    // A conversão «preço por unidade → valor mensal do recibo» é domínio e
+    // vive em `baseFiscalDoPreco`, testada contra o motor real. Aqui só se
+    // decide o que fazer com o resultado.
+    const base = baseFiscalDoPreco(resultado, contexto.volume.unidadesMes);
+    if (!base) return;
+
+    // ── A volta do handoff ────────────────────────────────────────────
+    //  Quem chegou aqui a partir de uma hipótese do motor de descoberta
+    //  leva a viabilidade de volta: sem isto, o gate ficava eternamente a
+    //  pedir «viabilidade económica confirmada» mesmo depois de a pessoa
+    //  ter fechado o cenário. Só viaja o veredicto do motor canónico e o
+    //  preço líquido — nunca custos, margens ou clientes.
+    if (hipoteseId) {
+      const avaliacao = assessMarketEconomics(resultado);
+      const existente = lerHipotese(hipoteseId);
+      guardarHipotese({
+        ...(existente ?? newHypothesis(hipoteseId, "portugal")),
+        pricing: {
+          viable: avaliacao.viable === true,
+          priceNet: base.unitario,
+          concludedAt: new Date().toISOString(),
+        },
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    setTransferido({ ...base, nome: contexto.produto.nome });
     setVista("liquido");
     requestAnimationFrame(() => document.getElementById("resultado-preco-transferido")?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
@@ -127,10 +155,17 @@ export default function RecibosVerdesStudio() {
                 <div>
                   <p className="eyebrow text-brand-dark dark:text-brand-mint">Preço calculado, agora com fiscalidade</p>
                   <h2 className="font-display mt-1 text-2xl font-semibold text-ink">
-                    {euro.format(transferido.liquido)} <span className="font-sans text-sm font-medium text-stone-500">sem IVA</span>
+                    {euro.format(transferido.unitario)} <span className="font-sans text-sm font-medium text-stone-500">por unidade, sem IVA</span>
                   </h2>
                   <p className="mt-1 max-w-xl text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                    O simulador abaixo recebeu este valor como base do recibo. A projeção anual usa {transferido.unidadesMes} {transferido.unidadesMes === 1 ? "unidade" : "unidades"} por mês e pode ser alterada.
+                    {transferido.unidadesMes === 1 ? (
+                      <>O simulador abaixo recebeu <strong className="font-semibold text-ink">{euro.format(transferido.mensal)} por mês</strong> como base do recibo, sem IVA. Podes alterar tudo.</>
+                    ) : (
+                      <>
+                        A {transferido.unidadesMes} unidades por mês, isso dá{" "}
+                        <strong className="font-semibold text-ink">{euro.format(transferido.mensal)} por mês</strong> sem IVA — foi essa base mensal que passou para o simulador, e não o preço de uma unidade. Podes alterar tudo.
+                      </>
+                    )}
                   </p>
                 </div>
                 <button
@@ -144,9 +179,9 @@ export default function RecibosVerdesStudio() {
             </section>
           ) : null}
           <SimuladorIntegrado
-            key={transferido ? `${transferido.liquido}:${transferido.anual}` : "sem-preco"}
+            key={transferido ? `${transferido.mensal}:${transferido.anual}` : "sem-preco"}
             vista="rv"
-            valorInicial={transferido?.liquido}
+            valorInicial={transferido?.mensal}
             faturacaoAnualInicial={transferido?.anual}
           />
         </div>

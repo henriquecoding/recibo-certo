@@ -5,13 +5,29 @@ import Link from "next/link";
 import {
   OPPORTUNITY_TEMPLATES,
   rankOpportunityTemplates,
+  templateHasLiveEvidence,
   type BusinessDiscoveryProfile,
   type BusinessStrength,
+  type MarketObservationSummary,
   type MarketPilotEvidence,
   type MarketRegion,
   type OpportunityTemplate,
 } from "@/lib/negocio/market/opportunities";
-import { ArrowRight, Check, ChevronDown, ExternalLink, Lightbulb, Spinner, Target } from "@/components/ui/Icons";
+import type { MarketEvidenceGateResult } from "@/lib/negocio/market/tipos";
+import { MARKET_REGIONS, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
+import { evaluateLocalMarketEvidence } from "@/lib/negocio/market/gate-local";
+import {
+  addProof,
+  newHypothesis,
+  PROOF_LABELS,
+  PROOF_VALIDITY_DAYS,
+  removeProof,
+  summarizeProofs,
+  type MarketHypothesis,
+  type MarketProofKind,
+} from "@/lib/negocio/market/hipoteses";
+import { guardarHipotese, lerHipoteses } from "@/lib/store/hipoteses-mercado";
+import { ArrowRight, Check, ChevronDown, ExternalLink, Lightbulb, Plus, Spinner, Target, Trash } from "@/components/ui/Icons";
 
 const DEFAULT_PROFILE: BusinessDiscoveryProfile = {
   structure: "por-decidir",
@@ -19,7 +35,7 @@ const DEFAULT_PROFILE: BusinessDiscoveryProfile = {
   capital: "ate-500",
   recurrence: "indiferente",
   strengths: ["operacoes"],
-  region: "grande-lisboa",
+  region: "portugal",
 };
 
 const STRENGTHS: readonly { value: BusinessStrength; label: string }[] = [
@@ -76,69 +92,119 @@ function ChoiceGroup<T extends string>({
   );
 }
 
-const REGION_CODE: Readonly<Record<MarketRegion, string | null>> = {
-  "grande-lisboa": "1A",
-  "peninsula-setubal": "1B",
-  "outra-portugal": null,
+const HEALTH_LABEL: Readonly<Record<string, string>> = {
+  healthy: "a responder",
+  delayed: "sem resposta",
+  stale: "fora de validade",
+  schema_changed: "mudou de formato",
+  license_review: "licença por rever",
+  quarantined: "em quarentena",
+  disabled: "desligada",
 };
+
+function Leitura({ observation, contexto }: { observation: MarketObservationSummary; contexto?: boolean }) {
+  return (
+    <div
+      className={`rounded-2xl px-3 py-2.5 ${
+        contexto
+          ? "border border-dashed border-stone-200 bg-transparent dark:border-stone-700"
+          : "bg-white dark:bg-stone-900"
+      }`}
+    >
+      <p className="text-lg font-semibold tabular-nums text-ink">
+        {typeof observation.value === "number"
+          ? observation.value.toLocaleString("pt-PT")
+          : String(observation.value)}
+        <span className="ml-1 text-xs font-medium text-stone-500">{observation.unit}</span>
+      </p>
+      <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+        {observation.seriesLabel} · {observation.geography.name} ·{" "}
+        {observation.referencePeriod.label ?? observation.referencePeriod.end}
+      </p>
+      {contexto ? <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-400">Contexto nacional</p> : null}
+    </div>
+  );
+}
 
 function EvidenceBlock({
   template,
   evidence,
+  gate,
   loading,
   region,
 }: {
   template: OpportunityTemplate;
   evidence?: MarketPilotEvidence;
+  /** O gate recalculado no browser, com zona, preço e provas locais. */
+  gate: MarketEvidenceGateResult;
   loading: boolean;
   region: MarketRegion;
 }) {
-  const regionCode = REGION_CODE[region];
-  const observations = evidence?.observations.filter((observation) => observation.geography.code === regionCode) ?? [];
-  const geographyMissing = Boolean(evidence?.observations.length && observations.length === 0);
-  const state = geographyMissing ? "template" : evidence?.gate.state ?? "template";
-  const badge = geographyMissing
-    ? { label: "Falta sinal na tua zona", className: "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200" }
+  // A repartição por zona é uma regra de domínio, testada, e não um filtro
+  // de igualdade dentro do componente. Foi por ser um filtro que a leitura
+  // NACIONAL — publicável e válida para o país inteiro — desaparecia para
+  // quem não escolhesse uma das duas zonas mapeadas.
+  const { local, nacional } = splitObservationsByRegion(evidence?.observations ?? [], region);
+  const aConsultar = loading && templateHasLiveEvidence(template);
+  const semSinalLocal = local.length === 0 && nacional.length === 0 && (evidence?.observations.length ?? 0) > 0;
+  const state = gate.state;
+  const badge = semSinalLocal && state !== "user_validated" && state !== "operating"
+    ? { label: "Sem sinal para esta zona", className: "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200" }
     : stateStyle[state] ?? stateStyle.template;
+  const leituras = [...local, ...nacional];
+
   return (
     <div className="rounded-3xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/40">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Evidência de mercado</p>
-        {loading && template.id === "tourism-guest-operations" ? (
+        {aConsultar ? (
           <span className="inline-flex items-center gap-1.5 text-xs text-stone-500"><Spinner size={13} className="animate-spin" /> A consultar</span>
         ) : (
           <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${badge.className}`}>{badge.label}</span>
         )}
       </div>
 
-      {observations.length ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          {observations.map((observation) => (
-            <div key={observation.id} className="rounded-2xl bg-white px-3 py-2.5 dark:bg-stone-900">
-              <p className="text-lg font-semibold tabular-nums text-ink">
-                {typeof observation.value === "number" ? observation.value.toLocaleString("pt-PT") : String(observation.value)}
-                <span className="ml-1 text-xs font-medium text-stone-500">{observation.unit}</span>
-              </p>
-              <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
-                {observation.geography.name} · {observation.referencePeriod.label ?? observation.referencePeriod.end}
-              </p>
-            </div>
-          ))}
-        </div>
+      {leituras.length ? (
+        <>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {local.map((observation) => (
+              <Leitura key={observation.id} observation={observation} />
+            ))}
+            {nacional.map((observation) => (
+              <Leitura key={observation.id} observation={observation} contexto={local.length > 0} />
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] leading-relaxed text-stone-500">{leituras[0].reading}</p>
+        </>
       ) : (
         <p className="mt-2 text-xs leading-relaxed text-stone-500">
-          {loading
+          {aConsultar
             ? "A verificar a fonte oficial. Nenhum número provisório é mostrado durante a consulta."
-            : geographyMissing
-              ? "A fonte respondeu noutras geografias, mas esse sinal não é transferido para a zona que escolheste."
+            : semSinalLocal
+              ? "A fonte respondeu para outras zonas. Esse sinal não se transfere para a que escolheste, e não vamos fingir que sim."
               : evidence?.note ?? "O manifesto de fontes existe, mas ainda não há observação publicável para este piloto."}
         </p>
       )}
 
+      <div className="mt-3 space-y-1.5 border-t border-stone-200/70 pt-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-800">
+        {gate.reasons.slice(0, 1).map((reason) => (
+          <p key={reason} className="font-medium text-stone-600 dark:text-stone-300">{reason}</p>
+        ))}
+        {gate.missing.slice(0, 3).map((missing) => <p key={missing}>Falta: {missing}</p>)}
+      </div>
+
       {evidence ? (
-        <div className="mt-3 space-y-1.5 text-[11px] leading-relaxed text-stone-500">
-          <p>Consultado em {new Date(evidence.checkedAt).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short" })}.</p>
-          {evidence.gate.missing.slice(0, 2).map((missing) => <p key={missing}>Falta: {missing}</p>)}
+        <div className="mt-3 space-y-1.5 border-t border-stone-200/70 pt-3 text-[11px] leading-relaxed text-stone-500 dark:border-stone-800">
+          <p>
+            Consultado em {new Date(evidence.checkedAt).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short" })}.
+          </p>
+          {evidence.sourceHealth.map((health) => (
+            <p key={health.sourceId}>
+              Fonte {health.sourceId.toUpperCase()}: {HEALTH_LABEL[health.state] ?? health.state}
+              {health.latestReferencePeriodEnd ? ` · dados até ${health.latestReferencePeriodEnd}` : ""}
+              {health.message ? ` — ${health.message}` : ""}
+            </p>
+          ))}
           {evidence.datasetUrl ? (
             <a href={evidence.datasetUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-semibold text-brand-dark hover:underline dark:text-brand-mint">
               Ver dataset e licença <ExternalLink size={11} />
@@ -150,11 +216,193 @@ function EvidenceBlock({
   );
 }
 
+const PROOF_ORDER: readonly MarketProofKind[] = [
+  "interview",
+  "accepted_quote",
+  "pre_sale",
+  "paid_pilot",
+  "sale",
+];
+
+function novoId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `prova_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * O painel onde a hipótese deixa de ser leitura e passa a ser trabalho.
+ *
+ * A ordem dos botões é a escada de evidência do relatório, e a entrevista
+ * está lá em primeiro precisamente para se poder dizer, ao lado, que não
+ * chega. Sem isto, `user_validated` e `operating` eram estados que o motor
+ * sabia calcular e ninguém conseguia atingir.
+ */
+function ProvaLocal({
+  template,
+  hypothesis,
+  asOf,
+  onChange,
+}: {
+  template: OpportunityTemplate;
+  hypothesis?: MarketHypothesis;
+  asOf: string;
+  onChange: (proximo: MarketHypothesis) => void;
+}) {
+  const [dia, setDia] = useState(() => asOf.slice(0, 10));
+  const [tipo, setTipo] = useState<MarketProofKind>("interview");
+  const [recebido, setRecebido] = useState(false);
+  const [margem, setMargem] = useState(false);
+
+  const resumo = hypothesis ? summarizeProofs(hypothesis, asOf) : null;
+  const paga = tipo === "paid_pilot" || tipo === "sale" || tipo === "pre_sale";
+
+  const registar = () => {
+    const base = hypothesis ?? newHypothesis(template.id, "portugal");
+    onChange(
+      addProof(base, {
+        id: novoId(),
+        kind: tipo,
+        occurredAt: dia,
+        ...(paga ? { paymentReceived: recebido, positiveContribution: margem } : {}),
+      }),
+    );
+    setRecebido(false);
+    setMargem(false);
+  };
+
+  return (
+    <div className="rounded-3xl border border-stone-100 bg-white p-4 dark:border-stone-800 dark:bg-stone-900">
+      <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Provar no teu mercado</p>
+      <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+        Fica tudo neste dispositivo. Uma entrevista conta-se, mas não promove a hipótese — só orçamento
+        aceite, pré-venda, piloto pago ou venda o fazem. As provas valem {PROOF_VALIDITY_DAYS} dias.
+      </p>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {PROOF_ORDER.map((kind) => (
+          <button
+            key={kind}
+            type="button"
+            aria-pressed={tipo === kind}
+            onClick={() => setTipo(kind)}
+            className={`min-h-[36px] rounded-full border px-3 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+              tipo === kind
+                ? "border-brand bg-brand text-white"
+                : "border-stone-200 text-stone-600 dark:border-stone-700 dark:text-stone-300"
+            }`}
+          >
+            {PROOF_LABELS[kind]}
+          </button>
+        ))}
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-end gap-2">
+        <label className="min-w-[9rem] flex-1 text-[11px] font-semibold text-stone-600 dark:text-stone-300 sm:max-w-[14rem]">
+          Quando aconteceu
+          <input
+            type="date"
+            value={dia}
+            max={asOf.slice(0, 10)}
+            onChange={(event) => setDia(event.target.value)}
+            className="mt-1 block h-9 w-full rounded-xl border border-stone-200 bg-white px-2.5 text-xs text-ink focus:border-brand focus:outline-none dark:border-stone-700 dark:bg-stone-950"
+          />
+        </label>
+        <button
+          type="button"
+          onClick={registar}
+          disabled={!dia}
+          className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-brand-deep px-3.5 text-[11px] font-semibold text-white disabled:opacity-40"
+        >
+          <Plus size={12} /> Registar
+        </button>
+      </div>
+
+      {paga ? (
+        <div className="mt-2 space-y-1.5">
+          {[
+            { on: recebido, set: setRecebido, label: "O dinheiro entrou mesmo" },
+            { on: margem, set: setMargem, label: "A margem observada foi positiva depois dos custos reais" },
+          ].map((item) => (
+            <label key={item.label} className="flex items-start gap-2 text-[11px] leading-snug text-stone-600 dark:text-stone-300">
+              <input
+                type="checkbox"
+                checked={item.on}
+                onChange={(event) => item.set(event.target.checked)}
+                className="mt-0.5 h-4 w-4 flex-none accent-brand"
+              />
+              {item.label}
+            </label>
+          ))}
+        </div>
+      ) : null}
+
+      {hypothesis?.proofs.length ? (
+        <ul className="mt-3 space-y-1.5 border-t border-stone-100 pt-3 dark:border-stone-800">
+          {hypothesis.proofs.slice(0, 6).map((proof) => (
+            <li key={proof.id} className="flex items-center justify-between gap-2 text-[11px] text-stone-600 dark:text-stone-300">
+              <span>
+                {PROOF_LABELS[proof.kind]} · {proof.occurredAt}
+                {proof.paymentReceived ? " · recebido" : ""}
+              </span>
+              <button
+                type="button"
+                onClick={() => onChange(removeProof(hypothesis, proof.id))}
+                aria-label={`Apagar ${PROOF_LABELS[proof.kind]} de ${proof.occurredAt}`}
+                className="inline-flex h-9 w-9 flex-none items-center justify-center rounded-full text-stone-400 hover:text-red-600"
+              >
+                <Trash size={13} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {resumo ? (
+        <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+          {resumo.currentInterviews} {resumo.currentInterviews === 1 ? "entrevista" : "entrevistas"} ·{" "}
+          {resumo.currentMarketProofs} {resumo.currentMarketProofs === 1 ? "prova de mercado" : "provas de mercado"} válidas
+          {resumo.expired > 0 ? ` · ${resumo.expired} fora de validade` : ""}.
+        </p>
+      ) : null}
+
+      <label className="mt-3 flex items-start gap-2 border-t border-stone-100 pt-3 text-[11px] leading-snug text-stone-600 dark:border-stone-800 dark:text-stone-300">
+        <input
+          type="checkbox"
+          checked={hypothesis?.requirementsReviewed ?? false}
+          onChange={(event) =>
+            onChange({
+              ...(hypothesis ?? newHypothesis(template.id, "portugal")),
+              requirementsReviewed: event.target.checked,
+              updatedAt: asOf,
+            })
+          }
+          className="mt-0.5 h-4 w-4 flex-none accent-brand"
+        />
+        Já verifiquei os requisitos críticos: {template.criticalRequirements.join("; ")}.
+      </label>
+
+      {hypothesis?.pricing ? (
+        <p className="mt-2 text-[11px] leading-relaxed text-stone-500">
+          Cenário de preço concluído em {hypothesis.pricing.concludedAt.slice(0, 10)}:{" "}
+          {hypothesis.pricing.viable
+            ? "o motor canónico encontrou preço, contribuição e ponto de equilíbrio."
+            : "o motor canónico não fechou as contas com estes pressupostos."}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export default function DescobrirNegocioStudio() {
   const [profile, setProfile] = useState<BusinessDiscoveryProfile>(DEFAULT_PROFILE);
   const [expanded, setExpanded] = useState<string>(OPPORTUNITY_TEMPLATES[0]?.id ?? "");
   const [evidence, setEvidence] = useState<readonly MarketPilotEvidence[]>([]);
   const [loadingEvidence, setLoadingEvidence] = useState(true);
+  const [hipoteses, setHipoteses] = useState<readonly MarketHypothesis[]>([]);
+  // Um instante fixo por sessão. Recalcular `Date.now()` a cada render fazia
+  // a frescura e a validade das provas mudarem por baixo do ecrã.
+  const [asOf] = useState(() => new Date().toISOString());
 
   useEffect(() => {
     const controller = new AbortController();
@@ -163,7 +411,7 @@ export default function DescobrirNegocioStudio() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json() as Promise<{ pilots: MarketPilotEvidence[] }>;
       })
-      .then((payload) => setEvidence(payload.pilots))
+      .then((payload) => setEvidence(Array.isArray(payload.pilots) ? payload.pilots : []))
       .catch((error) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) setEvidence([]);
       })
@@ -171,8 +419,21 @@ export default function DescobrirNegocioStudio() {
     return () => controller.abort();
   }, []);
 
+  // As hipóteses são lidas depois da montagem, nunca durante o render: o
+  // cofre depende do browser e o componente tem de abrir na mesma antes de
+  // saber se há alguma coisa guardada.
+  useEffect(() => setHipoteses(lerHipoteses()), []);
+
   const ranked = useMemo(() => rankOpportunityTemplates(profile), [profile]);
   const evidenceByTemplate = useMemo(() => new Map(evidence.map((item) => [item.templateId, item])), [evidence]);
+  const hipotesePorTemplate = useMemo(
+    () => new Map(hipoteses.map((item) => [item.templateId, item])),
+    [hipoteses],
+  );
+
+  const guardar = (proxima: MarketHypothesis) => {
+    setHipoteses(guardarHipotese({ ...proxima, region: profile.region }));
+  };
 
   const toggleStrength = (strength: BusinessStrength) =>
     setProfile((current) => ({
@@ -205,11 +466,7 @@ export default function DescobrirNegocioStudio() {
           <ChoiceGroup
             label="Onde queres testar"
             value={profile.region}
-            options={[
-              { value: "grande-lisboa", label: "Grande Lisboa" },
-              { value: "peninsula-setubal", label: "Península de Setúbal" },
-              { value: "outra-portugal", label: "Outra zona de Portugal" },
-            ]}
+            options={MARKET_REGIONS.map((item) => ({ value: item.id, label: item.label }))}
             onChange={(region) => setProfile((current) => ({ ...current, region }))}
           />
           <ChoiceGroup
@@ -260,6 +517,16 @@ export default function DescobrirNegocioStudio() {
           {ranked.map(({ template, fit }, position) => {
             const open = expanded === template.id;
             const pilotEvidence = evidenceByTemplate.get(template.id);
+            const hipotese = hipotesePorTemplate.get(template.id);
+            // O gate volta a correr aqui — o mesmo motor, agora com a zona,
+            // o preço e as provas que só existem neste dispositivo.
+            const gate = evaluateLocalMarketEvidence({
+              template,
+              evidence: pilotEvidence,
+              hypothesis: hipotese,
+              region: profile.region,
+              asOf,
+            });
             return (
               <article key={template.id} className="overflow-hidden rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
                 <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? "" : template.id)} className="flex w-full items-start gap-4 p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:p-6">
@@ -305,14 +572,30 @@ export default function DescobrirNegocioStudio() {
                         <EvidenceBlock
                           template={template}
                           evidence={pilotEvidence}
+                          gate={gate}
                           loading={loadingEvidence}
                           region={profile.region}
                         />
                       </div>
                     </div>
 
+                    {/* A prova é o passo seguinte à leitura, não uma nota de
+                        rodapé da coluna estreita — e a largura toda é o que
+                        ela precisa para caber sem se espremer. */}
+                    <div className="mt-5">
+                      <ProvaLocal
+                        template={template}
+                        hypothesis={hipotese}
+                        asOf={asOf}
+                        onChange={guardar}
+                      />
+                    </div>
+
                     <div className="mt-5 flex flex-wrap gap-3 border-t border-stone-100 pt-5 dark:border-stone-800">
-                      <Link href={`/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}`} className="btn-shine inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card hover:shadow-lift">
+                      <Link
+                        href={`/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}&h=${encodeURIComponent(template.id)}`}
+                        className="btn-shine inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card hover:shadow-lift"
+                      >
                         Testar preço como recibos verdes <ArrowRight size={14} />
                       </Link>
                       <Link href={`/dashboard/negocio?o=${encodeURIComponent(template.id)}`} className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-stone-200 px-5 text-sm font-semibold text-stone-700 hover:border-brand hover:text-brand-dark dark:border-stone-700 dark:text-stone-200">
