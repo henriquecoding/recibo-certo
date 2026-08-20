@@ -55,6 +55,7 @@ import {
 } from "@/lib/negocio";
 import { confirmados } from "@/lib/negocio/pressupostos";
 import { agregar } from "@/lib/negocio/agregar";
+import { localizacaoDeclarada, regiaoDoNegocio } from "@/lib/negocio/localizacao";
 import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import { gravarRascunhoNegocio, lerRascunhoNegocio, limparRascunhoNegocio } from "@/lib/store/negocio";
 import { consumirReabertura } from "@/lib/store/cenarios";
@@ -63,6 +64,7 @@ import { ArrowLeft, RotateCcw } from "@/components/ui/Icons";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import SeletorMaturidade from "./SeletorMaturidade";
 import BaseNegocioEditor from "./BaseNegocio";
+import LocalizacaoNegocioEditor from "./LocalizacaoNegocio";
 import PortfolioOfertas from "./PortfolioOfertas";
 import EstruturaNegocioEditor from "./EstruturaNegocio";
 import CockpitViabilidade from "./CockpitViabilidade";
@@ -358,7 +360,7 @@ export default function NegocioStudio() {
       {contexto.maturidade === "empresa_existente" || contexto.base ? (
         <BaseNegocioEditor
           base={contexto.base}
-          regiao={contexto.fiscal.regiao}
+          regiao={regiaoDoNegocio(contexto)}
           temOfertas={contexto.ofertas.length > 0}
           aoAdicionarOferta={() => setEdicao({ nova: true })}
           aoMudar={(patch) =>
@@ -503,6 +505,24 @@ export default function NegocioStudio() {
           }
           aoResolverDuplicacao={(d: DuplicacaoCusto, acao) =>
             mudar((c) => (acao === "empresa" ? moverParaEstrutura(c, d) : manterNaOferta(c, d)))
+          }
+        />
+      ) : null}
+
+      {/* ── §59 — a região, perguntada uma vez ────────────────────
+          Aparece quando já há negócio para analisar: antes disso é uma
+          pergunta sobre uma coisa que ainda não existe. */}
+      {temNegocio || contexto.base ? (
+        <LocalizacaoNegocioEditor
+          localizacao={contexto.localizacao}
+          aoMudar={(localizacao) =>
+            mudar((c) => ({
+              ...c,
+              localizacao,
+              // O campo legado acompanha, para os cenários guardados e as
+              // pontes que ainda o leem continuarem coerentes.
+              fiscal: { ...c.fiscal, regiao: localizacao.regiao },
+            }))
           }
         />
       ) : null}

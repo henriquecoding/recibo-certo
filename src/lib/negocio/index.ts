@@ -93,6 +93,16 @@ export {
   regimeDoNegocio,
   situacaoIVADoNegocio,
 } from "./adapters/iva";
+
+export {
+  LOCALIZACOES_CONHECIDAS,
+  localizacaoDeclarada,
+  municipioDoNegocio,
+  nomeDaLocalizacao,
+  parametrosDaLocalizacao,
+  regiaoDeclarada,
+  regiaoDoNegocio,
+} from "./localizacao";
 export { levantarPressupostos, confirmados } from "./pressupostos";
 
 export {

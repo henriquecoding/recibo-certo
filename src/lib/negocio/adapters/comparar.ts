@@ -50,6 +50,7 @@ import {
   type Regiao,
 } from "@/lib/fiscal-data";
 import { cent, dividir } from "@/lib/pricing/numeros";
+import { regiaoDoNegocio } from "../localizacao";
 import type { ContextoNegocio, ResultadoNegocio } from "../tipos";
 
 // ─── O portefólio, por natureza fiscal ─────────────────────────────────
@@ -229,7 +230,7 @@ export function paraComparacao(
     tipo: portfolio.rendimentos[0]?.natureza ?? "art151",
     coefIRS: portfolio.coefIRS ?? undefined,
     coefSS: portfolio.coefSS ?? undefined,
-    residenciaFiscal: contexto?.fiscal.regiao,
+    residenciaFiscal: contexto ? regiaoDoNegocio(contexto) : undefined,
     portfolio,
   };
 }

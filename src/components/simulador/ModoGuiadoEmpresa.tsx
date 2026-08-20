@@ -30,6 +30,8 @@ import type {
 import { custosEstruturaIniciais, resolverEstadoEmpresa } from "@/lib/empresa/importacao";
 import ImportacaoNegocio from "@/components/empresa/ImportacaoNegocio";
 import { consumirHandoffEmpresa } from "@/lib/store/handoff-negocio-empresa";
+import type { PerfilFiscalPessoa } from "@/lib/perfil-pessoa";
+import PerfilGerenteEditor from "@/components/empresa/PerfilGerenteEditor";
 import type { HandoffNegocioEmpresaV1 } from "@/lib/negocio/adapters/empresa-handoff";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -736,6 +738,12 @@ export default function ModoGuiadoEmpresa({
   const [faturacaoComIva, setFaturacaoComIva] = useState(false);
   const [despesasOper, setDespesasOper] = useState(2_000);
   const [salGerenteMensal, setSalGerenteMensal] = useState(SMN_2026);
+  // §44 — o motor aceita 12 ou 14 desde sempre; a superfície nunca o
+  // expôs, e por isso a capacidade existia sem ninguém lhe chegar.
+  const [mesesSalarioGerente, setMesesSalarioGerente] = useState<12 | 14>(12);
+  // §43 — a situação pessoal de quem gere. Sem ela o motor mantém o
+  // comportamento antigo; com ela, personaliza. Nunca se inventa.
+  const [perfilGerente, setPerfilGerente] = useState<PerfilFiscalPessoa>({});
   const [incluirConstituicao, setIncluirConstituicao] = useState(true);
   const [custoConstituicao, setCustoConstituicao] = useState(CUSTO_CONSTITUICAO_DEFAULT);
   const [anosAmortizacao, setAnosAmortizacao] = useState(3);
@@ -806,6 +814,7 @@ export default function ModoGuiadoEmpresa({
       despesasOper,
       custosExtra: custosEstrutura,
       salarioGerenteMensal: salGerenteMensal,
+      mesesSalarioGerente,
       distribuirDividendos,
       opcaoEnglobamento,
       incluirConstituicao,
@@ -835,15 +844,20 @@ export default function ModoGuiadoEmpresa({
       sedeVirtualCustoMensal: sedeVirtualEfetivo,
       isEstrangeiro,
       custoRepFiscal: custoRepFiscalEfetivo,
+      // §43 — o perfil declarado manda; o resto mantém o comportamento
+      // anterior, para um contrato novo não mudar cenários já guardados.
       perfil: {
-        dependentes: 0,
-        conjunta: false,
-        regiao: "continente",
-        ifici: aplicarIFICI,
+        dependentes: perfilGerente.dependentes ?? 0,
+        conjunta: perfilGerente.conjunta ?? false,
+        regiao: perfilGerente.regiao ?? "continente",
+        ifici: aplicarIFICI || (perfilGerente.ifici ?? false),
+        estadoCivil: perfilGerente.estadoCivil,
+        deficiencia: perfilGerente.deficiencia,
+        irsJovemAno: perfilGerente.irsJovemAno,
       },
     }),
     [
-      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal,
+      faturacaoBase, despesasOper, custosEstrutura, salGerenteMensal, mesesSalarioGerente,
       distribuirDividendos, opcaoEnglobamento, incluirConstituicao,
       custoConstituicao, anosAmortizacao,
       tipoViatura, encargosViatura, despRepresentacao, ajudasCusto,
@@ -853,7 +867,7 @@ export default function ModoGuiadoEmpresa({
       temImovelEmpresa, vptImovel, taxaIMI, isencaoIMI_RFAI,
       valorAquisicaoImovel, isencaoIMT_RFAI, anosAmortizacaoIMT,
       localizacao, sedeVirtualEfetivo, isEstrangeiro, custoRepFiscalEfetivo,
-      aplicarIFICI,
+      aplicarIFICI, perfilGerente,
     ],
   );
 
@@ -928,7 +942,7 @@ export default function ModoGuiadoEmpresa({
     versao: 2,
     jaTemEmpresa: jaTemEmpresa ?? undefined, tipoSociedade, tipoSelecionado, perfilFundador, aplicarIFICI,
     tipoSede, custoSedeVirtual, localizacao, localNome,
-    faturacaoAnual, faturacaoComIva, despesasOper, salGerenteMensal, incluirConstituicao,
+    faturacaoAnual, faturacaoComIva, despesasOper, salGerenteMensal, mesesSalarioGerente, perfilGerente, incluirConstituicao,
     custoConstituicao, anosAmortizacao, custosEstrutura,
     distribuirDividendos, opcaoEnglobamento,
     tipoViatura, encargosViatura, despRepresentacao, ajudasCusto, naoDocumentadas, emPrejuizo, excecaoPrejuizo,
@@ -988,7 +1002,9 @@ export default function ModoGuiadoEmpresa({
     set(d.perfilFundador, setPerfilFundador); set(d.aplicarIFICI, setAplicarIFICI);
     set(d.tipoSede, setTipoSede); set(d.custoSedeVirtual, setCustoSedeVirtual); set(d.localizacao ?? undefined, setLocalizacao); set(d.localNome, setLocalNome);
     set(d.faturacaoAnual, setFaturacaoAnual); set(d.faturacaoComIva, setFaturacaoComIva); set(d.despesasOper, setDespesasOper);
-    set(d.salGerenteMensal, setSalGerenteMensal); set(d.incluirConstituicao, setIncluirConstituicao);
+    set(d.salGerenteMensal, setSalGerenteMensal); set(d.mesesSalarioGerente, setMesesSalarioGerente);
+    set(d.perfilGerente, setPerfilGerente);
+    set(d.incluirConstituicao, setIncluirConstituicao);
     set(d.custoConstituicao, setCustoConstituicao); set(d.anosAmortizacao, setAnosAmortizacao);
     set(d.distribuirDividendos, setDistribuirDividendos); set(d.opcaoEnglobamento, setOpcaoEnglobamento);
     set(d.tipoViatura, setTipoViatura); set(d.encargosViatura, setEncargosViatura); set(d.despRepresentacao, setDespRepresentacao);
@@ -1819,24 +1835,82 @@ export default function ModoGuiadoEmpresa({
                       }
                     />
 
-                    <NumericSlider
-                      label="Salário gerente (€/mês bruto)"
-                      value={salGerenteMensal}
-                      min={0}
-                      max={5_000}
-                      step={50}
-                      onChange={setSalGerenteMensal}
-                      presets={[0, SMN_2026, 1_200, 2_000]}
-                      tooltip={
-                        <>
-                          Salário bruto mensal do gerente-sócio. A empresa paga
-                          SS patronal (23,75%) e o trabalhador desconta 11%.
-                          Custo dedutível ao IRC. A estimativa de IRS assume
-                          Continente, não casado, sem dependentes, 12 meses e
-                          sem subsídios; confirma o enquadramento pessoal/MOE.
-                        </>
-                      }
-                    />
+                    <div>
+                      <NumericSlider
+                        label="Salário gerente (€/mês bruto)"
+                        value={salGerenteMensal}
+                        min={0}
+                        max={5_000}
+                        step={50}
+                        onChange={setSalGerenteMensal}
+                        presets={[0, SMN_2026, 1_200, 2_000]}
+                        tooltip={
+                          <>
+                            Salário bruto mensal do gerente-sócio. A empresa paga
+                            SS patronal ({pct(SS_EMP_TAXA)}) e o trabalhador
+                            desconta {pct(SS_TRAB_TAXA)}. Custo dedutível ao IRC.
+                            A estimativa de IRS usa o perfil pessoal que
+                            declarares — sem ele, assume Continente, não casado e
+                            sem dependentes.
+                          </>
+                        }
+                      />
+
+                      {/* ── §44 — a capacidade existia no motor e não se via ──
+                          `mesesSalarioGerente` está em `fiscal-empresa.ts` e
+                          tem testes desde sempre; a superfície guiada nunca a
+                          expunha, e por isso ninguém a conseguia configurar.
+                          A pergunta é semântica — os subsídios do gerente
+                          dependem dos termos da nomeação, ao contrário dos de
+                          um trabalhador, que são lei — e não um seletor
+                          «12/14» copiado de outro ecrã. */}
+                      {salGerenteMensal > 0 ? (
+                        <div className="mt-3 rounded-2xl border border-stone-200 p-3 dark:border-stone-700">
+                          <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">
+                            A gerência recebe subsídios de férias e Natal?
+                          </p>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                            Num membro de órgão estatutário isto depende dos termos da nomeação — não é automático como
+                            num contrato de trabalho.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {([
+                              { valor: 12 as const, rotulo: "Não — 12 pagamentos" },
+                              { valor: 14 as const, rotulo: "Sim — 14 pagamentos" },
+                            ]).map((op) => {
+                              const ativo = mesesSalarioGerente === op.valor;
+                              return (
+                                <button
+                                  key={op.valor}
+                                  type="button"
+                                  onClick={() => setMesesSalarioGerente(op.valor)}
+                                  aria-pressed={ativo}
+                                  className={`min-h-[40px] rounded-full border px-4 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+                                    ativo
+                                      ? "border-brand bg-brand-light/60 text-brand-deep dark:bg-brand/15 dark:text-brand-mint"
+                                      : "border-stone-200 text-stone-600 hover:border-stone-300 dark:border-stone-700 dark:text-stone-300"
+                                  }`}
+                                >
+                                  {op.rotulo}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="mt-2 text-[11px] tabular-nums text-stone-500 dark:text-stone-400">
+                            Remuneração anual: {fmt(salGerenteMensal * mesesSalarioGerente)}
+                          </p>
+                        </div>
+                      ) : null}
+
+                      {/* §43, §45 — a situação pessoal de quem gere, com a
+                          tabela de retenção explícita e as preferências já
+                          guardadas oferecidas em vez de aplicadas. */}
+                      {salGerenteMensal > 0 ? (
+                        <div className="mt-3">
+                          <PerfilGerenteEditor perfil={perfilGerente} aoMudar={setPerfilGerente} />
+                        </div>
+                      ) : null}
+                    </div>
 
                     <Collapsible title="Custos de estrutura" defaultOpen>
                       <NumericSlider
@@ -2538,7 +2612,7 @@ export default function ModoGuiadoEmpresa({
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
                       { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
-                      resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × 12)`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
+                      resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × ${mesesSalarioGerente})`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
                       resultado.ssSalGerente > 0 ? { label: `SS da entidade sobre o salário (${pct(SS_EMP_TAXA)})`, value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
                       resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
                       resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,

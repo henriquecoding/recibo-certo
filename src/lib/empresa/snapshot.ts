@@ -23,6 +23,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ParametrosFiscaisRegiao } from "@/lib/incentivos-regioes";
+import { ESTADOS_CIVIS, type PerfilFiscalPessoa } from "@/lib/perfil-pessoa";
 
 // ─── Os vocabulários do simulador guiado ───────────────────────────────
 //  Estavam declarados dentro do componente. Um formato de interoperabilidade
@@ -105,6 +106,22 @@ export interface SnapshotEmpresaGuiada {
   /** Estrutura: contabilidade, software, sede, seguros, pessoal. */
   custosEstrutura?: number;
   salGerenteMensal?: number;
+  /**
+   * Quantos pagamentos por ano recebe a gerência (§44).
+   *
+   * O motor aceita 12 ou 14 desde sempre e tem testes para o efeito; era
+   * a superfície guiada que não o expunha, e por isso a capacidade
+   * existia sem ninguém lhe chegar.
+   */
+  mesesSalarioGerente?: 12 | 14;
+  /**
+   * A situação pessoal de quem gere (§43).
+   *
+   * Não é o perfil do NEGÓCIO: é da pessoa, e é ela que decide a tabela
+   * de retenção, os dependentes e o IRS Jovem. Omissa, o motor mantém o
+   * comportamento anterior — não se inventa uma família.
+   */
+  perfilGerente?: PerfilFiscalPessoa;
   incluirConstituicao?: boolean;
   custoConstituicao?: number;
   anosAmortizacao?: number;
@@ -250,6 +267,14 @@ export function normalizarSnapshotEmpresa(bruto: unknown): SnapshotEmpresaGuiada
     "isencaoIMT_RFAI",
   ]);
 
+  // 12 ou 14 — e nada mais. Um snapshot com 13 é um snapshot corrompido.
+  if (o.mesesSalarioGerente === 12 || o.mesesSalarioGerente === 14) {
+    s.mesesSalarioGerente = o.mesesSalarioGerente;
+  }
+
+  const perfilPessoal = normalizarPerfilPessoa(o.perfilGerente);
+  if (perfilPessoal) s.perfilGerente = perfilPessoal;
+
   const viatura = umDe(o.tipoViatura, TIPOS_VIATURA);
   if (viatura) s.tipoViatura = viatura;
   const rfai = umDe(o.rfaiRegiao, REGIOES_RFAI);
@@ -258,6 +283,42 @@ export function normalizarSnapshotEmpresa(bruto: unknown): SnapshotEmpresaGuiada
   if (sifide) s.tipoSifide = sifide;
 
   return s;
+}
+
+/**
+ * A situação pessoal, campo a campo.
+ *
+ * Devolve `undefined` quando nada é reconhecível — um perfil vazio não é
+ * a mesma coisa que um perfil declarado a zeros, e a diferença decide se
+ * o motor personaliza ou assume.
+ */
+export function normalizarPerfilPessoa(v: unknown): PerfilFiscalPessoa | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const o = v as Record<string, unknown>;
+  const p: PerfilFiscalPessoa = {};
+
+  const civil = umDe(o.estadoCivil, ESTADOS_CIVIS);
+  if (civil) p.estadoCivil = civil;
+
+  const dependentes = numeroNaoNegativo(o.dependentes);
+  if (dependentes !== undefined) p.dependentes = Math.floor(dependentes);
+
+  const regiao = umDe(o.regiao, ["continente", "madeira", "acores"] as const);
+  if (regiao) p.regiao = regiao;
+
+  const deficiencia = booleano(o.deficiencia);
+  if (deficiencia !== undefined) p.deficiencia = deficiencia;
+
+  const jovem = numeroNaoNegativo(o.irsJovemAno);
+  if (jovem !== undefined && jovem <= 10) p.irsJovemAno = Math.floor(jovem);
+
+  const ifici = booleano(o.ifici);
+  if (ifici !== undefined) p.ifici = ifici;
+
+  const conjunta = booleano(o.conjunta);
+  if (conjunta !== undefined) p.conjunta = conjunta;
+
+  return Object.keys(p).length > 0 ? p : undefined;
 }
 
 type ChaveNumerica = {

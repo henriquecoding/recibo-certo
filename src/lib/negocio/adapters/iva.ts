@@ -20,6 +20,7 @@
 import { situacaoIVA, type EntidadeIVA, type SituacaoIVA } from "@/lib/fiscal-iva";
 import type { RegimeIVA } from "@/lib/fiscal";
 import type { RegimeIVAVendedor } from "@/lib/pricing/tipos";
+import { regiaoDoNegocio } from "../localizacao";
 import type { ContextoNegocio, ResultadoNegocio } from "../tipos";
 
 /**
@@ -59,7 +60,7 @@ export function situacaoIVADoNegocio(
 ): SituacaoIVA {
   return situacaoIVA({
     faturacaoAnual: negocio.receitaSemIVAAno,
-    regiao: contexto.fiscal.regiao ?? "continente",
+    regiao: regiaoDoNegocio(contexto),
     regimeEscolhido: regimeDoNegocio(contexto),
     entidade: entidadeDoNegocio(contexto),
   });

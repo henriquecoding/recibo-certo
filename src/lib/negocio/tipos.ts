@@ -354,8 +354,44 @@ export type EnquadramentoPretendido =
 
 export interface PreferenciasEstrutura {
   enquadramento: EnquadramentoPretendido;
+  /** @deprecated Usar `ContextoNegocio.localizacao`. Lido por `regiaoDoNegocio()`. */
   regiao?: Regiao;
   compararAlternativas: boolean;
+}
+
+// ─── 6b. Onde é que o negócio acontece ─────────────────────────────────
+
+/**
+ * A localização, como dado de primeira classe. (§59)
+ *
+ * Estava enterrada em `fiscal.regiao`, e por isso cada motor voltava a
+ * pedi-la: o simulador de empresa pergunta a localização, o de IVA
+ * pergunta a região, o comparador pergunta a residência fiscal. É a mesma
+ * resposta três vezes — e três oportunidades de divergirem.
+ *
+ * Ela decide mais do que parece: salário mínimo regional, tabelas de
+ * retenção de IRS, taxas de IVA, IRC das autónomas, derrama municipal,
+ * benefícios de interior e o preçário de contabilidade.
+ *
+ * ── A PROVENIÊNCIA NÃO É DECORATIVA ────────────────────────────────
+ * «Continente» por omissão e «Continente» porque a pessoa o disse são
+ * coisas diferentes, e só a segunda pode fechar um pressuposto. Sem este
+ * campo, o livro de pressupostos não conseguia distinguir as duas.
+ */
+export interface LocalizacaoNegocio {
+  regiao: Regiao;
+  /**
+   * O município, quando declarado. NUNCA inventado a partir da região —
+   * «continente» não é um município, e a derrama é municipal (§111).
+   */
+  municipio?: string;
+  /**
+   * O id da região de incentivos correspondente, quando resolvido. É o
+   * que permite ao handoff levar `paramLocal` inteiro para o simulador
+   * de empresa em vez de o deixar pendente.
+   */
+  regiaoIncentivoId?: string;
+  origem: OrigemPressuposto;
 }
 
 // ─── 7. O contexto completo ────────────────────────────────────────────
@@ -382,6 +418,8 @@ export interface ContextoNegocio {
   estrutura: EstruturaNegocio;
   procura: ProcuraNegocio;
   caixa?: CaixaNegocio;
+  /** Onde o negócio acontece (§59). Lida sempre por `regiaoDoNegocio()`. */
+  localizacao?: LocalizacaoNegocio;
   fiscal: PreferenciasEstrutura;
   /** Campos do NEGÓCIO (não das ofertas) em que a pessoa mexeu. */
   respondidos: string[];

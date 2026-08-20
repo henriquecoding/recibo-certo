@@ -40,6 +40,7 @@ import {
   type ResultadoCustoPosto,
 } from "@/lib/payroll/custo-empregador";
 import { cent, dividir, naoNegativo, num } from "@/lib/pricing/numeros";
+import { regiaoDoNegocio } from "./localizacao";
 import { calcularOferta } from "./ofertas";
 import type {
   BaseDeclarada,
@@ -256,7 +257,7 @@ export function agregar(
   // A base declarada soma-se às ofertas; não as substitui. Quem começou
   // pela contabilidade e depois modelou uma oferta nova quer as duas
   // coisas no mesmo negócio — e é aqui, e só aqui, que se juntam.
-  const base = agregarBase(contexto.base, contexto.fiscal?.regiao);
+  const base = agregarBase(contexto.base, regiaoDoNegocio(contexto));
 
   const receitaSemIVAMes = cent(
     resultados.reduce((s, r) => s + r.mensal.receitaSemIVA, 0) + base.receitaSemIVAMes,

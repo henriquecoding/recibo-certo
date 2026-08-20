@@ -37,9 +37,9 @@
 //  continua a carregar no chunk do simulador, onde é preciso.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { parametrosFiscaisPorRegiao } from "@/lib/incentivos-regioes";
 import { cent, num } from "@/lib/pricing/numeros";
 import type { SnapshotEmpresaGuiada } from "@/lib/empresa/snapshot";
+import { municipioDoNegocio, parametrosDaLocalizacao } from "../localizacao";
 import type {
   CategoriaCustoEstrutura,
   ContextoNegocio,
@@ -237,16 +237,19 @@ export function criarHandoffEmpresa(
     });
   }
 
-  // ── ③ A região, se for uma que tenha parâmetros próprios (§15) ──
-  const regiao = contexto.fiscal.regiao;
-  if (regiao === "madeira" || regiao === "acores") {
-    const params = parametrosFiscaisPorRegiao(regiao);
+  // ── ③ A localização, quando chega para determinar parâmetros (§15) ──
+  //  Um município declarado leva `paramLocal` inteiro — derrama, IRC de
+  //  interior, RFAI. As autónomas também, porque são regiões com
+  //  parâmetros próprios e conhecidos. «Continente» sozinho não: não é um
+  //  município, e a derrama é municipal.
+  const params = parametrosDaLocalizacao(contexto);
+  if (params) {
     prefill.localizacao = params;
-    prefill.localNome = params.nome;
+    prefill.localNome = municipioDoNegocio(contexto) ?? params.nome;
     prefill.rfaiRegiao = params.rfaiTipo;
     proveniencia.localizacao = {
       origem: "utilizador",
-      texto: `Do teu percurso — declaraste ${params.nome}.`,
+      texto: `Do teu percurso — declaraste ${prefill.localNome}.`,
     };
   } else {
     // §116: continente não é um município, e a derrama é municipal.

@@ -14,6 +14,7 @@ import {
   DIVIDENDOS_TAXA,
   DIV_INCLUSAO_ENGLOBAMENTO,
   ESCALOES_IRS,
+  type EstadoCivilRet,
   IRC_LIMITE_PME,
   IRC_TAXA_GERAL,
   IRC_TAXA_PME,
@@ -170,7 +171,45 @@ export interface PerfilGerente {
    * de fora — seguem a taxa liberatória.
    */
   ifici: boolean;
+  /**
+   * A TABELA DE RETENÇÃO, quando é conhecida. (§43)
+   *
+   * ⚠️ ISTO NÃO É `conjunta`, e a diferença custa dinheiro. «Tributação
+   * conjunta» é uma opção da declaração anual (Art. 13.º, n.º 2 CIRS);
+   * «casado, único titular» é uma tabela do Despacho de retenção, que só
+   * se aplica quando um dos cônjuges não aufere rendimentos.
+   *
+   * O mapeamento antigo — `conjunta ? "casadoUnico" : "naoCasado"` — dava
+   * a um casal com dois rendimentos a tabela de único titular, que retém
+   * menos. O líquido do gerente saía acima do real, e só desse lado da
+   * comparação.
+   *
+   * Omisso, deriva-se de `conjunta` como antes: um contrato novo não pode
+   * mudar o resultado de cenários já guardados sem ninguém pedir.
+   */
+  estadoCivil?: EstadoCivilRet;
+  /** Grau de incapacidade ≥ 60% do próprio titular (tabelas IV-VII). */
+  deficiencia?: boolean;
+  /** Ano de benefício do IRS Jovem (1 a 10). */
+  irsJovemAno?: number;
 }
+
+// ⚠️ O QUE ESTES TRÊS CAMPOS AINDA NÃO FAZEM, E É PRECISO SABER.
+//
+// `estadoCivil`, `deficiencia` e `irsJovemAno` chegam ao motor de
+// RETENÇÃO — decidem o que a empresa desconta todos os meses, que é o que
+// aparece no recibo da gerência e o que decide a tesouraria da pessoa.
+//
+// NÃO chegam ao IRS ANUAL deste simulador, que sai dos escalões do
+// Art. 68.º através de `irsProgressivo()`. Em concreto, falta:
+//
+//   · o quociente conjugal da tributação conjunta (Art. 69.º CIRS);
+//   · a exclusão por incapacidade (Art. 56.º-A CIRS);
+//   · a isenção parcial do IRS Jovem no apuramento anual.
+//
+// `simularIRSAnual()` sabe fazer os três, e é onde eles estão certos.
+// Trazê-los para cá é uma alteração fiscal com verificação própria — e
+// declarar aqui o que falta vale mais do que fingir que não falta.
 
 export const PERFIL_GERENTE_PADRAO: PerfilGerente = {
   dependentes: 0,
@@ -337,11 +376,13 @@ function managerPayroll(
     baseSalary: salary,
     weeklyHours: 40,
     dependants: Math.max(0, Math.floor(perfil.dependentes)),
-    // Casado com um único titular: é a tabela que corresponde ao cenário
-    // típico de quem abre a empresa sozinho e declara em conjunto.
-    maritalStatus: perfil.conjunta ? "casadoUnico" : "naoCasado",
-    disability: false,
+    // §43 — a tabela declarada ganha sempre. Sem ela, mantém-se a
+    // derivação antiga: mudar o resultado de cenários já guardados sem
+    // ninguém pedir seria pior do que a imprecisão que se corrige.
+    maritalStatus: perfil.estadoCivil ?? (perfil.conjunta ? "casadoUnico" : "naoCasado"),
+    disability: perfil.deficiencia ?? false,
     region: perfil.regiao,
+    youthIrsBenefitYear: perfil.irsJovemAno,
     meal: { enabled: false, days: 0, dailyAmount: 0, card: false },
   }, []);
 
