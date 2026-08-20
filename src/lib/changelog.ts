@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.89.0",
+    data: "2026-08-20",
+    titulo: "Uma ideia só passa a oportunidade quando os dados a sustentam",
+    itens: [
+      "Começámos a construir o motor que vai cruzar recibos verdes e empresas com sinais atuais do mercado português. Nesta versão entra a fundação técnica; o explorador público ainda não muda.",
+      "As ideias deixam de poder ser apresentadas como oportunidades atuais apenas porque parecem plausíveis. Cada valor precisa de fonte, unidade, geografia, período de referência, data de recolha, validade, transformação e prova de licença.",
+      "Consultar hoje uma série antiga não a torna atual. O motor separa o período dos dados, a publicação, a recolha e o fim da validade — e, quando a evidência expira, o estado degrada em vez de receber uma média inventada.",
+      "O primeiro conector real usa a API oficial do INE, valida o formato recebido e calcula uma impressão digital SHA-256. Valores ambíguos, sinais convencionais, geografias alteradas e duplicados ficam em quarentena.",
+      "Acesso público não significa automaticamente autorização para republicar. INE e BPstat ficam bloqueados para snapshots públicos enquanto os termos de reutilização comercial não forem confirmados.",
+      "O preço e a viabilidade continuam a vir da calculadora que já existe. Este motor não cria um segundo cálculo: só permite chamar «oportunidade sustentada por dados» ao que também funciona economicamente.",
+      "O perfil, a localização precisa, os testes e as vendas da pessoa continuam locais por omissão. O mercado pode ser público e agregado; o negócio de cada utilizador não precisa de sair do dispositivo.",
+    ],
+  },
+  {
     version: "2.88.0",
     data: "2026-08-20",
     titulo: "O teu negócio deixa de ser reconstruído de cada vez que mudas de ferramenta",
