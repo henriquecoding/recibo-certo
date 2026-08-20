@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.92.0",
+    data: "2026-08-20",
+    titulo: "As cinco ideias passam a ter números reais — e três já cruzam duas fontes independentes",
+    itens: [
+      "Todas as cinco hipóteses passam a mostrar dados oficiais. Antes só uma tinha; as outras quatro eram texto à espera de ligação.",
+      "Entrou a demografia das empresas do INE: quantas empresas individuais e quantas sociedades nasceram na tua zona no último ano. É o corte que este produto pergunta todos os dias — e vem de um apuramento diferente do dos inquéritos, por isso conta mesmo como segunda fonte.",
+      "Entraram também as transações de casas por famílias, o índice de envelhecimento e o emprego em empresas com menos de dez pessoas. Todas por região, todas com período de referência e licença à vista.",
+      "Três hipóteses — operações turísticas, operações digitais e transições de casa — passam a «candidata a teste», porque cruzam duas operações estatísticas independentes. As outras duas continuam a dizer que falta um sinal de procura, em vez de fingirem que já o têm.",
+      "Cada número passa a trazer a sua própria explicação. Antes, com várias leituras no mesmo cartão, todas ficavam rotuladas com o texto da primeira — números certos a dizer a coisa errada.",
+      "O cartão diz agora quantas operações estatísticas independentes estão por trás do que mostra. Duas leituras do mesmo inquérito continuam a valer por uma, e isso está escrito.",
+      "Deixámos de pedir o mesmo indicador uma vez por cada hipótese que o usa. Eram dez pedidos em paralelo ao INE, que respondia a metade — e metade dos cartões aparecia em falha por culpa nossa.",
+      "Quando uma fonte não confirma, a página volta a tentar dentro de minutos em vez de guardar seis horas de dados incompletos.",
+      "As centenas de concelhos que uma série publica e que a ferramenta não usa deixaram de ser contadas como linhas rejeitadas. Nunca foram um problema de qualidade: simplesmente não foram pedidas.",
+    ],
+  },
+  {
     version: "2.91.0",
     data: "2026-08-20",
     titulo: "O motor de descoberta passa a servir o país inteiro — e a reconhecer quem já vendeu",

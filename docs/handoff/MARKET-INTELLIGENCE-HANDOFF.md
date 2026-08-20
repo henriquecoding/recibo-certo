@@ -10,7 +10,7 @@
 - Data: `2026-08-20`.
 - Repositório: `henriquecoding/recibo-certo`.
 - Branch: `claude/business-discovery-tool-z6xihz`.
-- Versão: `2.91.0`.
+- Versão: `2.92.0`.
 - Base: MI-1 (`95b171a`, `b6fffd6`, `86b137a`), com as correções abaixo por cima.
 - Deploy manual: nenhum. Merge: nenhum.
 
@@ -73,6 +73,34 @@ explicação. Agora devolve lista vazia identificada, com cache curta.
 
 As 48 rotas sob `/ferramentas` não tinham marco `main`; a home e os guias
 tinham. Sem ele, um leitor de ecrã não consegue saltar navegação e breadcrumb.
+
+## As cinco hipóteses, ligadas a sério
+
+Treze séries, cinco operações estatísticas independentes, todas verificadas
+contra a API em 2026-08-20.
+
+| Indicador | O que traz | Operação | Usado por |
+|---|---|---|---|
+| INE `0013314` | ocupação-quarto na hotelaria, NUTS II | inquérito à permanência de hóspedes | turismo |
+| INE `0014098` | nascimentos de empresas por forma jurídica | demografia das empresas | turismo, digital, concursos |
+| INE `0012909` | índice de envelhecimento | estimativas anuais da população | sénior, transições |
+| INE `0012787` | transações de casas por famílias | transações de alojamentos | transições |
+| INE `0014044` | emprego em empresas <10 pessoas | contas integradas das empresas | concursos |
+| Eurostat `isoc_e_dii` | intensidade digital, micro vs 10–49 | inquérito TIC às empresas | digital |
+| Eurostat `isoc_sk_dskl_i21` | competências digitais, 65–74 vs total | inquérito TIC às famílias | sénior |
+
+**Sobre a série de empresas.** A primeira candidata estudada foi a `0008466`
+(contas integradas das empresas), rejeitada por estar em NUTS 2013 e terminar
+em 2023. A `0014098` é melhor em tudo o que importava: NUTS 2024, referência
+2024, publicada em dezembro de 2025, CC BY — e traz o corte «empresa individual
+vs sociedade», que é a decisão central deste produto.
+
+**Um erro apanhado a tempo, que vale a pena não repetir.** Ao mapear o
+`0014044` presumi que `11A` fosse Grande Lisboa, por analogia. `11A` é **Área
+Metropolitana do Porto**. O `expectedName` do manifesto teria posto a linha em
+quarentena em vez de rotular dados do Porto como Lisboa — mas confirmar os
+códigos contra a API antes de escrever o manifesto é mais barato do que confiar
+na rede de segurança.
 
 ## O que MI-2 acrescenta
 
@@ -138,14 +166,14 @@ npm run negocio:e2e
 
 ## Próximo checkpoint recomendado — MI-3
 
-1. **Uma segunda operação estatística independente por hipótese.** É o único
-   bloqueio real para `candidate`/`evidence_qualified`: hoje as séries de cada
-   piloto digital partilham `independenceKey` e contam por uma. Candidata
-   estudada: INE `0008466` (Sistema de contas integradas das empresas) — mas
-   está em NUTS 2013 e termina em 2023, pelo que traria uma classificação
-   desalinhada; procurar a série equivalente em NUTS 2024 antes de a ligar.
-2. Manifests BASE/TED para o piloto de concursos (o único com `kind`
-   transacional por ligar).
+1. **Portal BASE/TED.** É o que falta ao piloto de concursos: hoje só tem
+   séries estruturais e o cartão diz, corretamente, que falta um sinal de
+   procura. Contar procedimentos elegíveis por CPV e região seria o primeiro
+   sinal transacional dessa hipótese.
+2. **Um sinal de procura para o acompanhamento sénior.** Mesmo problema: as
+   duas séries que tem são estruturais. Nenhuma estatística pública mede
+   procura por acompanhamento digital pago; talvez não exista, e nesse caso a
+   resposta honesta é a prova local da própria pessoa.
 3. Job servidor que publica snapshot assinado atomicamente (`snapshot.ts` já
    existe e está testado; falta o job).
 4. Painel interno de source health com alertas de schema e frescura.

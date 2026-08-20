@@ -1,7 +1,8 @@
 # Market Intelligence Engine
 
-> Estado da implementação: **MI-2 — cobertura nacional, três pilotos com ingestão
-> ativa e prova comercial local, em 2026-08-20**.
+> Estado da implementação: **MI-2 — cobertura nacional, os cinco pilotos com
+> ingestão ativa, triangulação real em três deles e prova comercial local, em
+> 2026-08-20**.
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 
@@ -101,6 +102,24 @@ flowchart TD
 O browser não deve consultar dez fornecedores quando alguém abre um cartão.
 A ingestão ocorre no servidor, publica um pack público compacto e o cliente
 combina esse pack localmente com o perfil privado.
+
+## 6.1. Transporte: um pedido por indicador, não por série
+
+Três pilotos leem o indicador de demografia das empresas e dois o índice de
+envelhecimento. Um pedido por SÉRIE dava dez chamadas concorrentes ao INE, que
+respondia 503 a metade — e os cartões apareciam em `delayed` por culpa nossa.
+
+`MarketTransport` resolve isto dentro de cada execução:
+
+- **cache por URL**: duas séries que só diferem no filtro de dimensões
+  partilham a resposta HTTP e normalizam-na de maneira diferente;
+- **serialização por fonte**: o INE recebe um pedido de cada vez;
+- **três tentativas com recuo** (400 ms, 800 ms), porque a recusa costuma ser
+  de carga e não de contrato. Uma fonte que mudou de contrato falha nas três.
+
+A rota `/api/market/pilots` completa a defesa: quando alguma fonte fica por
+confirmar, devolve `s-maxage=300` em vez de `21600`. Sem isso, uma build
+infeliz servia seis horas de cartões degradados.
 
 ## 7. Source registry atual
 
@@ -205,15 +224,39 @@ A rota `/ferramentas/descobrir-negocio` pode existir antes de haver uma
 7. integração explícita com a Pricing Engine;
 8. cartões com fonte, geografia, período, recolha e limitações visíveis.
 
-Três pilotos consultam fontes oficiais no servidor: o turístico via INE (licença
-CC BY do dataset) e os dois digitais via Eurostat. Os restantes ficam `template`;
-nenhum recebe valores fictícios.
+Os cinco pilotos consultam fontes oficiais no servidor. Treze séries, cinco
+operações estatísticas independentes, todas com licença CC BY do dataset ou a
+política de reutilização do Eurostat.
 
-Nenhum piloto atinge `evidence_qualified` neste checkpoint, e isso é a leitura
-correta: as duas séries digitais nascem do mesmo inquérito e partilham
-`independenceKey`, pelo que contam por uma fonte. O cartão diz exatamente isso
-em vez de fingir triangulação. Uma segunda operação estatística independente
-por hipótese é trabalho de MI-3.
+| Hipótese | Séries | Operações | Estado sem input do utilizador |
+|---|---|---|---|
+| Operações turísticas | ocupação-quarto + nascimentos de sociedades | 2 | `candidate` |
+| Operações digitais | intensidade digital (micro, 10–49) + nascimentos (individual, sociedade) | 2 | `candidate` |
+| Transições de casa | transações por famílias + índice de envelhecimento | 2 | `candidate` |
+| Acompanhamento sénior | competências digitais (65–74, total) + envelhecimento | 2 | `signal_detected` |
+| Concursos públicos | emprego em empresas <10 + nascimentos de sociedades | 2 | `signal_detected` |
+
+Os dois últimos ficam em `signal_detected` de propósito: nenhuma das suas séries
+é de procura ou transação. A honestidade está na falta declarada — «falta um
+sinal recente de procura ou transação» — e não numa promoção arranjada. Para o
+piloto de concursos, esse sinal é o Portal BASE, que continua por ligar.
+
+`evidence_qualified` é atingível a partir de `candidate`, e só com o que a
+pessoa traz: um cenário de preço viável no motor canónico e os requisitos
+críticos confirmados. Nenhum servidor pode decidir isso por ela.
+
+### A regra que decide o `kind` de uma série
+
+Escrita para não ser escolhida ao sabor do estado que daria melhor:
+
+- `demand` — mede a intensidade da própria necessidade (ocupação-quarto);
+- `transactional` — conta eventos reais registados que criam a necessidade
+  (uma empresa que nasce, uma casa que muda de mãos entre famílias);
+- `structural` — stock, composição ou capacidade do universo (intensidade
+  digital, índice de envelhecimento, emprego por escalão).
+
+Nenhum deles prova disposição a pagar, e é por isso que nenhum, sozinho ou
+acompanhado, chega a `user_validated`.
 
 ## 12. Verificação local
 
