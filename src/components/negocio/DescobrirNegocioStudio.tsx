@@ -102,6 +102,16 @@ const HEALTH_LABEL: Readonly<Record<string, string>> = {
   disabled: "desligada",
 };
 
+const KIND_LABEL: Readonly<Record<string, string>> = {
+  demand: "procura",
+  transactional: "transação",
+  structural: "estrutura",
+  supply: "oferta",
+  competition: "concorrência",
+  cost: "custo",
+  negative: "sinal contrário",
+};
+
 function Leitura({ observation, contexto }: { observation: MarketObservationSummary; contexto?: boolean }) {
   return (
     <div
@@ -118,12 +128,52 @@ function Leitura({ observation, contexto }: { observation: MarketObservationSumm
         <span className="ml-1 text-xs font-medium text-stone-500">{observation.unit}</span>
       </p>
       <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
-        {observation.seriesLabel} · {observation.geography.name} ·{" "}
+        {contexto ? "Portugal" : observation.geography.name} ·{" "}
         {observation.referencePeriod.label ?? observation.referencePeriod.end}
+        {contexto ? " · contexto nacional" : ""}
       </p>
-      {contexto ? <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-400">Contexto nacional</p> : null}
     </div>
   );
+}
+
+interface GrupoSerie {
+  seriesId: string;
+  seriesLabel: string;
+  reading: string;
+  kind: string;
+  local: MarketObservationSummary[];
+  nacional: MarketObservationSummary[];
+}
+
+/**
+ * Uma leitura por SÉRIE, com o texto dessa série.
+ *
+ * Enquanto cada piloto tinha uma série só, mostrar `leituras[0].reading`
+ * dizia a verdade por acaso. Com quatro séries — duas classes de empresa,
+ * duas faixas etárias — passava a rotular todos os números com a
+ * explicação do primeiro, que é a maneira mais silenciosa de mentir com
+ * dados corretos.
+ */
+function agruparPorSerie(
+  local: readonly MarketObservationSummary[],
+  nacional: readonly MarketObservationSummary[],
+): GrupoSerie[] {
+  const grupos = new Map<string, GrupoSerie>();
+  const registar = (observation: MarketObservationSummary, onde: "local" | "nacional") => {
+    const grupo = grupos.get(observation.seriesId) ?? {
+      seriesId: observation.seriesId,
+      seriesLabel: observation.seriesLabel,
+      reading: observation.reading,
+      kind: observation.kind,
+      local: [],
+      nacional: [],
+    };
+    grupo[onde].push(observation);
+    grupos.set(observation.seriesId, grupo);
+  };
+  for (const observation of local) registar(observation, "local");
+  for (const observation of nacional) registar(observation, "nacional");
+  return [...grupos.values()];
 }
 
 function EvidenceBlock({
@@ -151,7 +201,10 @@ function EvidenceBlock({
   const badge = semSinalLocal && state !== "user_validated" && state !== "operating"
     ? { label: "Sem sinal para esta zona", className: "bg-amber-50 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200" }
     : stateStyle[state] ?? stateStyle.template;
-  const leituras = [...local, ...nacional];
+  const grupos = agruparPorSerie(local, nacional);
+  const operacoes = new Set(
+    [...local, ...nacional].map((observation) => observation.independenceKey),
+  );
 
   return (
     <div className="rounded-3xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/40">
@@ -164,18 +217,39 @@ function EvidenceBlock({
         )}
       </div>
 
-      {leituras.length ? (
-        <>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {local.map((observation) => (
-              <Leitura key={observation.id} observation={observation} />
-            ))}
-            {nacional.map((observation) => (
-              <Leitura key={observation.id} observation={observation} contexto={local.length > 0} />
+      {grupos.length ? (
+        <div className="mt-3">
+          <div className="grid gap-4 md:grid-cols-2">
+            {grupos.map((grupo) => (
+              <div key={grupo.seriesId} className="rounded-2xl bg-white/60 p-3 dark:bg-stone-900/40">
+                <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-stone-700 dark:text-stone-200">
+                  {grupo.seriesLabel}
+                  <span className="rounded-full bg-stone-200/70 px-1.5 py-px text-[10px] font-medium text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+                    {KIND_LABEL[grupo.kind] ?? grupo.kind}
+                  </span>
+                </p>
+                <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
+                  {grupo.local.map((observation) => (
+                    <Leitura key={observation.id} observation={observation} />
+                  ))}
+                  {grupo.nacional.map((observation) => (
+                    <Leitura
+                      key={observation.id}
+                      observation={observation}
+                      contexto={grupo.local.length > 0}
+                    />
+                  ))}
+                </div>
+                <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500">{grupo.reading}</p>
+              </div>
             ))}
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-stone-500">{leituras[0].reading}</p>
-        </>
+          <p className="mt-3 text-[11px] leading-relaxed text-stone-500">
+            {operacoes.size > 1
+              ? `${operacoes.size} operações estatísticas independentes por trás destes números.`
+              : "Uma só operação estatística por trás destes números: ainda não é triangulação."}
+          </p>
+        </div>
       ) : (
         <p className="mt-2 text-xs leading-relaxed text-stone-500">
           {aConsultar
@@ -561,28 +635,30 @@ export default function DescobrirNegocioStudio() {
                         </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="rounded-3xl border border-brand-light bg-brand-light/30 p-4 dark:border-brand/20 dark:bg-brand/10">
-                          <p className="text-xs font-semibold text-brand-deep dark:text-brand-mint">Porque apareceu aqui</p>
-                          <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
-                            {fit.reasons.slice(0, 4).map((reason) => <li key={reason} className="flex gap-2"><Check size={12} className="mt-0.5 flex-none text-brand" />{reason}</li>)}
-                          </ul>
-                          {fit.tensions.length ? <p className="mt-3 text-[11px] leading-relaxed text-stone-500">Atenção: {fit.tensions[0]}</p> : null}
-                        </div>
-                        <EvidenceBlock
-                          template={template}
-                          evidence={pilotEvidence}
-                          gate={gate}
-                          loading={loadingEvidence}
-                          region={profile.region}
-                        />
+                      <div className="self-start rounded-3xl border border-brand-light bg-brand-light/30 p-4 dark:border-brand/20 dark:bg-brand/10">
+                        <p className="text-xs font-semibold text-brand-deep dark:text-brand-mint">Porque apareceu aqui</p>
+                        <ul className="mt-2 space-y-1.5 text-xs leading-relaxed text-stone-600 dark:text-stone-300">
+                          {fit.reasons.slice(0, 4).map((reason) => <li key={reason} className="flex gap-2"><Check size={12} className="mt-0.5 flex-none text-brand" />{reason}</li>)}
+                        </ul>
+                        {fit.tensions.length ? <p className="mt-3 text-[11px] leading-relaxed text-stone-500">Atenção: {fit.tensions[0]}</p> : null}
                       </div>
                     </div>
 
-                    {/* A prova é o passo seguinte à leitura, não uma nota de
-                        rodapé da coluna estreita — e a largura toda é o que
-                        ela precisa para caber sem se espremer. */}
-                    <div className="mt-5">
+                    {/* ── Largura toda para o que cresceu ────────────────
+                        A evidência era uma nota na coluna estreita quando
+                        cada piloto tinha uma série. Com quatro séries, cada
+                        uma com a sua leitura e o seu contexto nacional, essa
+                        coluna passou a ter o triplo da altura da outra — e o
+                        ecrã ficava com metade vazia ao lado do que interessa
+                        ler. */}
+                    <div className="mt-5 space-y-5">
+                      <EvidenceBlock
+                        template={template}
+                        evidence={pilotEvidence}
+                        gate={gate}
+                        loading={loadingEvidence}
+                        region={profile.region}
+                      />
                       <ProvaLocal
                         template={template}
                         hypothesis={hipotese}
