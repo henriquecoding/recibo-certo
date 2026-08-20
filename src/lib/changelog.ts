@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.90.0",
+    data: "2026-08-20",
+    titulo: "Descobre o que testar — e forma o preço antes de passares o recibo",
+    itens: [
+      "Há uma ferramenta nova para explorar que negócio faz sentido testar. Primeiro cruza a forma como queres trabalhar, o capital disponível e as competências que queres usar; depois mantém essa compatibilidade separada da evidência externa, para uma preferência pessoal nunca aparecer disfarçada de procura de mercado.",
+      "As primeiras cinco hipóteses têm cliente, problema, modelo de receita, requisitos, caminho para o primeiro cliente e um teste que pode matar a ideia. Não há rankings de rentabilidade nem faturações inventadas: uma ideia sem observação publicável continua marcada como ideia por investigar.",
+      "O piloto de operações turísticas consulta o indicador oficial do INE no servidor. Só mostra valores com geografia, período, recolha, validade, checksum e licença CC BY daquele dataset; quando a fonte falha ou muda, o número desaparece em vez de receber um fallback plausível.",
+      "Duas páginas que republicam a mesma operação estatística já não contam como duas fontes. O motor guarda a origem efetivamente independente e exige triangulação real antes de chamar uma hipótese de oportunidade sustentada por dados.",
+      "A calculadora de recibos verdes ganhou uma segunda porta: se ainda não sabes quanto cobrar, formas primeiro o preço com o mesmo Pricing Engine usado no estúdio de empresas. Ao concluir, o valor sem IVA e a projeção anual passam diretamente para o cálculo de IRS, Segurança Social e IVA.",
+      "O preço não foi copiado nem simplificado. Custos, tempo, margem, comissões, fiscalidade e ponto de equilíbrio continuam num único motor; a nova jornada apenas transfere a saída para os recibos verdes.",
+      "Se uma hipótese fizer sentido, podes levá-la para o estúdio de empresa. A oferta abre no cenário de preço certo, sem apagar o projeto que já tinhas e sem se duplicar se atualizares a página.",
+      "O teu perfil de descoberta fica no browser. A chamada externa leva apenas um pedido pelo pack público de mercado e nunca as tuas competências, capital ou preferência de estrutura.",
+    ],
+  },
+  {
     version: "2.89.0",
     data: "2026-08-20",
     titulo: "Uma ideia só passa a oportunidade quando os dados a sustentam",

@@ -10,7 +10,7 @@
 //  `freshness.ts` e `integridade.ts`; o tipo, sozinho, não a pode provar.
 // ═══════════════════════════════════════════════════════════════════════
 
-export type MarketSourceId = "ine" | "bpstat" | "dados-gov";
+export type MarketSourceId = "ine" | "bpstat" | "dados-gov" | "eurostat" | "iefp";
 
 export type MarketAccessMode = "api" | "file" | "rss" | "manual" | "licensed";
 
@@ -195,6 +195,14 @@ export type MarketSignalKind =
 export interface MarketEvidenceSignal {
   observationId: string;
   sourceId: string;
+  /**
+   * Origem estatística efetivamente independente.
+   *
+   * Dois portais podem republicar a mesma operação (por exemplo, um
+   * indicador do INE também exposto no Eurostat). Nesses casos o valor é
+   * deliberadamente igual nos dois sinais e o gate conta-os uma só vez.
+   */
+  independenceKey: string;
   kind: MarketSignalKind;
   freshness: MarketFreshnessState;
   geographyCompatible: boolean;
@@ -249,4 +257,15 @@ export interface MarketAttractivenessBreakdown {
   competitiveSpace: number;
   acquisitionSpeed: number;
   resilience: number;
+}
+
+export interface MarketEconomicAssessment {
+  viable: true | false | null;
+  engine: "pricing";
+  formulaVersion: string;
+  reasons: readonly string[];
+  priceNet?: number;
+  contributionPerUnit?: number;
+  profitPerUnit?: number;
+  breakEvenUnits?: number;
 }

@@ -11,6 +11,7 @@ import { getMarketSource } from "../source-registry";
 import type {
   GeographyRef,
   MarketObservation,
+  MarketObservationLicense,
   MarketObservationStatus,
   MarketSemanticMappingStatus,
 } from "../tipos";
@@ -87,6 +88,11 @@ export interface IneAnnualIndicatorManifest {
   methodologyRef?: string;
   observationStatus: MarketObservationStatus;
   semanticMapping: MarketSemanticMappingStatus;
+  /**
+   * Licença publicada para esta série/dataset concreto. Permite usar uma
+   * entrada CC BY do dados.gov sem aprovar, por arrasto, toda a API do INE.
+   */
+  datasetLicense?: MarketObservationLicense;
 }
 
 export interface IneQuarantinedRow {
@@ -410,7 +416,7 @@ export function normalizeIneAnnualIndicator(
           version: "1",
           description: `Filtro curado de ${Object.keys(manifest.dimensionFilters).sort().join(", ") || "todas as dimensões"}.`,
         },
-        license: {
+        license: manifest.datasetLicense ?? {
           status: source.license.status,
           scope: "source",
           identifier: source.license.identifier,

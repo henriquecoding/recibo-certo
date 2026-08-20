@@ -1,6 +1,6 @@
 # Market Intelligence Engine
 
-> Estado da implementação: **MI-0 — fundação local concluída em 2026-08-20**.
+> Estado da implementação: **MI-1 — primeiro percurso público implementado localmente em 2026-08-20**.
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 
@@ -101,7 +101,7 @@ O browser não deve consultar dez fornecedores quando alguém abre um cartão.
 A ingestão ocorre no servidor, publica um pack público compacto e o cliente
 combina esse pack localmente com o perfil privado.
 
-## 7. Source registry inicial
+## 7. Source registry atual
 
 Estado revisto em 2026-08-20:
 
@@ -110,8 +110,10 @@ Estado revisto em 2026-08-20:
 | [INE — API da Base de Dados](https://www.ine.pt/xportal/xmain?xpgid=ine_api_db&xpid=INE) | JSON por indicador | `ready` | `review_required` |
 | [BPstat — Data API](https://bpstat.bportugal.pt/data/docs) | API JSON-stat | `planned` | `review_required` |
 | [dados.gov.pt](https://dados.gov.pt/) | API/catálogo aberto | `planned` | catálogo aprovado; licença de cada recurso é separada |
+| [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-getting-started) | JSON-stat | `ready` | `approved`, com atribuição e termos específicos por recurso |
+| [IEFP](https://www.iefp.pt/estatisticas) | ODS mensal | `planned` | `review_required` |
 
-### Porque o INE ainda fica em quarentena
+### Porque o INE genérico ainda fica em quarentena
 
 A documentação oficial confirma o endpoint e o acesso público. Nesta revisão
 não foi encontrada, na própria documentação da API, uma licença inequívoca que
@@ -119,10 +121,12 @@ autorize armazenamento e republicação comercial de qualquer série. O conector
 funciona, mas `validateMarketObservation()` bloqueia publicação até essa questão
 ser resolvida e registada. O mesmo princípio aplica-se ao BPstat.
 
-Isto é uma propriedade do produto, não um atraso acidental: **acesso público não
-é sinónimo automático de direito de republicação**.
+Datasets concretos publicados no dados.gov com licença CC BY 4.0 podem atravessar
+o gate através de `datasetLicense`. Isto não aprova outras séries do INE. É uma
+propriedade do produto: **acesso público não é sinónimo automático de direito de
+republicação**.
 
-## 8. Conector INE MI-0
+## 8. Conectores MI-1
 
 Implementação: `src/lib/negocio/market/connectors/ine.ts`.
 
@@ -143,6 +147,11 @@ O indicador `0000540` presente nos testes é uma fixture do schema oficial. Foi
 escolhido porque a resposta pública contém períodos, geografias, dimensões,
 valores e sinais convencionais. **Não é uma métrica de oportunidade e não entra
 no produto.**
+
+`connectors/eurostat.ts` valida o cubo JSON-stat pelas dimensões `id`/`size`,
+percorre índices de forma determinística e só publica células selecionadas por
+manifesto. O `independenceKey` pertence ao sinal: duas superfícies que derivam
+da mesma operação estatística contam uma vez.
 
 ## 9. Integridade e source health
 
@@ -179,9 +188,11 @@ Não existe fallback numérico quando uma fonte falha.
 - IA pode propor um mapeamento CAE/CPV/termo, mas não o aprova nem fornece o
   valor numérico.
 
-## 11. Critérios antes da primeira interface pública
+## 11. Primeira interface pública
 
-Não criar cartões verdes de “oportunidade” enquanto não existirem:
+A rota `/ferramentas/descobrir-negocio` pode existir antes de haver uma
+“oportunidade verde” porque mostra estados incompletos e o que falta. Um cartão
+`evidence_qualified` continua bloqueado enquanto não existirem:
 
 1. licença resolvida para as séries publicadas;
 2. três fontes independentes úteis, sendo pelo menos duas oficiais ou
@@ -193,8 +204,8 @@ Não criar cartões verdes de “oportunidade” enquanto não existirem:
 7. integração explícita com a Pricing Engine;
 8. cartões com fonte, geografia, período, recolha e limitações visíveis.
 
-Até lá, qualquer protótipo visual usa estados `template`/`dados insuficientes`
-e nunca valores fictícios apresentados como mercado atual.
+O piloto turístico consulta o INE no servidor e usa a licença CC BY do dataset.
+Os restantes pilotos ficam `template`; nenhum recebe valores fictícios.
 
 ## 12. Verificação local
 
@@ -204,5 +215,17 @@ npm run market:check
 npx tsc --noEmit
 ```
 
-O primeiro checkpoint contém 28 testes dedicados a source registry, integridade,
-frescura, evidence gate e conector INE.
+O conjunto dedicado cobre source registry, integridade, frescura, lineage,
+evidence gate, conectores INE/Eurostat, quarentena, snapshots e adapter de preço.
+
+## 13. Superfícies implementadas
+
+- `/ferramentas/descobrir-negocio`: compatibilidade local + dossiers + evidência oficial;
+- `/api/market/pilots`: pack público agregado, cacheado, sem perfil do utilizador;
+- `/ferramentas/recibos-verdes`: incorpora o Pricing Engine e transfere o preço
+  líquido/projeção anual para o cálculo fiscal;
+- `/dashboard/negocio?o=<opportunity-id>`: leva a hipótese selecionada para o
+  motor de empresa, acrescenta a oferta sem apagar o rascunho existente e abre
+  o cenário canónico de preço correspondente;
+- relatório completo em
+  [`docs/research/RELATORIO-MESTRE-MOTOR-NEGOCIO-PORTUGAL-2026.md`](../research/RELATORIO-MESTRE-MOTOR-NEGOCIO-PORTUGAL-2026.md).

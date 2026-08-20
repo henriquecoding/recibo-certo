@@ -79,12 +79,18 @@ export function validateMarketObservation(
     issue(issues, "unknown-source", "sourceId", `Fonte desconhecida: ${observation.sourceId || "(vazia)"}.`);
   } else if (source.license.status === "prohibited") {
     issue(issues, "license-prohibited", "sourceId", "A política da fonte proíbe esta utilização.");
-  } else if (source.license.status === "review_required") {
+  } else if (
+    source.license.status === "review_required" &&
+    !(
+      observation.license?.status === "approved" &&
+      (observation.license.scope === "series" || observation.license.scope === "dataset")
+    )
+  ) {
     issue(
       issues,
       "license-review",
       "sourceId",
-      "A licença ainda não foi aprovada para publicação; a observação fica em quarentena.",
+      "A licença da fonte ainda não foi aprovada e não existe uma licença específica de série/dataset; a observação fica em quarentena.",
     );
   }
 

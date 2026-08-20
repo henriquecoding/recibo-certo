@@ -21,6 +21,7 @@ const signal = (
 ): MarketEvidenceSignal => ({
   observationId,
   sourceId,
+  independenceKey: sourceId,
   kind,
   freshness: "fresh",
   geographyCompatible: true,
@@ -109,6 +110,22 @@ describe("market: evidence gate", () => {
           signal("bpstat:negative", "bpstat", "negative", { critical: false }),
         ],
         sourceHealth: [health("ine"), { ...health("bpstat"), critical: false }],
+      }),
+    );
+    expect(result.state).toBe("signal_detected");
+    expect(result.missing).toContain("Duas fontes independentes e saudáveis.");
+  });
+
+  it("dois portais que republicam a mesma operação não fabricam triangulação", () => {
+    const result = evaluateMarketEvidence(
+      input({
+        signals: [
+          signal("ine:tourism", "ine", "demand", { independenceKey: "tourism:pt:ine" }),
+          signal("eurostat:tourism", "eurostat", "structural", {
+            independenceKey: "tourism:pt:ine",
+          }),
+        ],
+        sourceHealth: [health("ine"), health("eurostat")],
       }),
     );
     expect(result.state).toBe("signal_detected");

@@ -35,7 +35,13 @@ function observation(sourceId = "dados-gov"): MarketObservation {
 describe("market: source registry", () => {
   it("todas as fontes têm contrato, cobertura, licença e HTTPS válidos", () => {
     const sources = listMarketSources();
-    expect(sources.map((source) => source.id)).toEqual(["ine", "bpstat", "dados-gov"]);
+    expect(sources.map((source) => source.id)).toEqual([
+      "ine",
+      "bpstat",
+      "dados-gov",
+      "eurostat",
+      "iefp",
+    ]);
     for (const source of sources) expect(validateMarketSourceDefinition(source)).toEqual([]);
   });
 
@@ -68,6 +74,23 @@ describe("market: source registry", () => {
     });
     expect(result.publishable).toBe(true);
     expect(result.issues).toEqual([]);
+  });
+
+  it("aceita licença CC BY de um dataset INE sem aprovar toda a fonte", () => {
+    const ineDataset = observation("ine");
+    ineDataset.license = {
+      status: "approved",
+      scope: "dataset",
+      identifier: "CC BY 4.0",
+      url: "https://creativecommons.org/licenses/by/4.0/",
+      attribution: "Fonte: INE, I.P. via dados.gov.pt",
+    };
+    expect(
+      validateMarketObservation(ineDataset, {
+        asOf: "2026-08-20T12:00:00Z",
+        expiringWithinDays: 30,
+      }).publishable,
+    ).toBe(true);
   });
 
   it("bloqueia semântica por rever, checksum fraco e fonte desconhecida", () => {

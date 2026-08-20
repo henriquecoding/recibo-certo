@@ -102,6 +102,24 @@ describe("market: conector INE", () => {
     expect(result.observations[1].value).toBe(295);
   });
 
+  it("preserva uma licença específica do dataset", () => {
+    const result = normalizeIneAnnualIndicator(fetched, {
+      ...manifest,
+      datasetLicense: {
+        status: "approved",
+        scope: "dataset",
+        identifier: "CC BY 4.0",
+        url: "https://creativecommons.org/licenses/by/4.0/",
+        attribution: "Fonte: INE, I.P. via dados.gov.pt",
+      },
+    });
+    expect(result.observations[0]?.license).toMatchObject({
+      status: "approved",
+      scope: "dataset",
+      identifier: "CC BY 4.0",
+    });
+  });
+
   it("põe mudança semântica e números ambíguos em quarentena", () => {
     const changed = structuredClone(fetched);
     changed.payload.Dados = {

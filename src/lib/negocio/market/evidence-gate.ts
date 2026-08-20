@@ -188,9 +188,9 @@ export function evaluateMarketEvidence(input: MarketEvidenceInput): MarketEviden
       signal.kind === "cost",
   );
   const positiveSignals = usable.filter((signal) => signal.kind !== "negative");
-  const independentSources = new Set(positiveSignals.map((signal) => signal.sourceId));
+  const independentSources = new Set(positiveSignals.map((signal) => signal.independenceKey));
   const triangulated = demandSignals.some((demand) =>
-    supportingSignals.some((support) => support.sourceId !== demand.sourceId),
+    supportingSignals.some((support) => support.independenceKey !== demand.independenceKey),
   );
 
   if (input.signals.some((signal) => !signal.geographyCompatible)) {

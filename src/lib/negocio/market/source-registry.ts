@@ -101,6 +101,63 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
       "Metadados incompletos ou ligações quebradas ficam em quarentena.",
     ]),
   }),
+  eurostat: Object.freeze({
+    id: "eurostat",
+    publisher: "Eurostat — Comissão Europeia",
+    access: "api",
+    canonicalUrl: "https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/",
+    documentationUrl: "https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-getting-started",
+    license: Object.freeze({
+      status: "approved",
+      identifier: "European Commission reuse decision 2011/833/EU",
+      url: "https://ec.europa.eu/eurostat/help/copyright-notice",
+      attribution: "Fonte: Eurostat",
+      storagePolicy:
+        "Guardar apenas extratos necessários, com código do dataset, filtros, período, data de recolha e atribuição; excluir recursos com termos específicos incompatíveis.",
+    }),
+    expectedCadence: "irregular",
+    coverage: Object.freeze({
+      countries: Object.freeze(["PT"] as const),
+      geographicLevels: Object.freeze(["country", "nuts1", "nuts2", "nuts3"] as const),
+      notes: "A granularidade depende do dataset. Recursos GISCO não herdam automaticamente esta política.",
+    }),
+    parserVersion: "eurostat-jsonstat@1",
+    connectorStatus: "ready",
+    allowedUses: Object.freeze(["structural", "conjunctural", "operational"] as const),
+    limitations: Object.freeze([
+      "Uma republicação de dados do INE conserva a mesma lineage e não conta como fonte independente.",
+      "Os filtros e a ordem das dimensões fazem parte do manifesto reproduzível.",
+      "Não usar dados geoespaciais GISCO sem rever os termos específicos.",
+    ]),
+  }),
+  iefp: Object.freeze({
+    id: "iefp",
+    publisher: "Instituto do Emprego e Formação Profissional, I.P.",
+    access: "file",
+    canonicalUrl: "https://www.iefp.pt/estatisticas",
+    documentationUrl: "https://www.iefp.pt/estatisticas",
+    license: Object.freeze({
+      status: "review_required",
+      url: "https://www.iefp.pt/estatisticas",
+      attribution: "Fonte: IEFP, I.P.",
+      storagePolicy: "Ler para investigação; não republicar extratos até a licença do ficheiro estar confirmada.",
+      reviewNote:
+        "Os relatórios mensais e ficheiros ODS estão acessíveis, mas falta uma licença inequívoca de reutilização comercial por recurso.",
+    }),
+    expectedCadence: "monthly",
+    coverage: Object.freeze({
+      countries: Object.freeze(["PT"] as const),
+      geographicLevels: Object.freeze(["country", "nuts2", "district"] as const),
+      notes: "Os relatórios mensais incluem ofertas por região e atividade; o manifesto deve fixar a folha e as colunas.",
+    }),
+    parserVersion: "iefp-ods@0",
+    connectorStatus: "planned",
+    allowedUses: Object.freeze(["conjunctural", "transactional", "operational"] as const),
+    limitations: Object.freeze([
+      "Ofertas de emprego não equivalem automaticamente a procura por serviços independentes.",
+      "Alterações de folhas/colunas ficam em quarentena.",
+    ]),
+  }),
 });
 
 export interface MarketSourceDefinitionIssue {

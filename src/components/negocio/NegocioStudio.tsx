@@ -75,6 +75,10 @@ import ProximoPassoNegocio from "./ProximoPassoNegocio";
 import GuardarProjeto from "./GuardarProjeto";
 import { BotaoTexto } from "./atomos";
 import { useMedicaoNegocio } from "./medicao";
+import {
+  seedOpportunityOffer,
+  type OpportunityPricingSeed,
+} from "@/lib/negocio/market/opportunity-handoff";
 
 // ── Carregamento por proximidade ──────────────────────────────────────
 //  A calculadora de preço arrasta a engine inteira; a sensibilidade corre
@@ -137,7 +141,16 @@ function Esqueleto({ altura, rotulo }: { altura: number; rotulo: string }) {
 /** Que oferta está a ser editada na calculadora, ou nenhuma. */
 type Edicao = { ofertaId: string } | { nova: true } | null;
 
-export default function NegocioStudio() {
+export interface NegocioStudioProps {
+  /**
+   * Oferta proposta por uma superfície anterior, como o motor de
+   * descoberta. É apenas um ponto de partida: a pricing engine continua
+   * a ser a única responsável pelos cálculos e a pessoa confirma tudo.
+   */
+  ofertaInicial?: OpportunityPricingSeed;
+}
+
+export default function NegocioStudio({ ofertaInicial }: NegocioStudioProps = {}) {
   const [contexto, setContexto] = useState<ContextoNegocio | null>(null);
   const [edicao, setEdicao] = useState<Edicao>(null);
   const [mostrarSensibilidade, setMostrarSensibilidade] = useState(false);
@@ -171,13 +184,32 @@ export default function NegocioStudio() {
   }, [edicao]);
 
   // ── Retomar, uma vez, à entrada ─────────────────────────────────
-  //  Duas origens, e a ORDEM importa: um projeto que a pessoa acabou de
+  //  Três origens, e a ORDEM importa: um projeto que a pessoa acabou de
   //  mandar reabrir a partir dos cenários guardados ganha sempre ao
   //  rascunho local, senão carregava-se o trabalho antigo por cima do que
   //  ela pediu — e o botão «reabrir» parecia não fazer nada.
+  //
+  //  Uma oportunidade escolhida no motor de descoberta não apaga nenhum
+  //  destes trabalhos. É acrescentada como oferta (ou reutilizada quando
+  //  já existe) e abre diretamente na pricing engine. Assim, o handoff é
+  //  útil sem transformar um clique num overwrite silencioso.
   useEffect(() => {
     if (retomou.current) return;
     retomou.current = true;
+
+    const abrir = (base: ContextoNegocio) => {
+      if (!ofertaInicial) {
+        setContexto(base);
+        setCaixaAtiva(Boolean(base.caixa));
+        return;
+      }
+
+      const { contexto: proximo, oferta } = seedOpportunityOffer(base, ofertaInicial);
+
+      setContexto(proximo);
+      setCaixaAtiva(Boolean(proximo.caixa));
+      setEdicao({ ofertaId: oferta.id });
+    };
 
     const reaberto = consumirReabertura("negocio");
     // §95 — nunca `as` sobre um instantâneo guardado. Um cenário criado
@@ -185,17 +217,18 @@ export default function NegocioStudio() {
     // adiava o erro até ao primeiro acesso a `t.remuneracao`.
     const c = migrarNegocioV1ParaV2(reaberto?.contexto);
     if (c) {
-      setContexto(c);
-      setCaixaAtiva(Boolean(c.caixa));
+      abrir(c);
       return;
     }
 
     const lido = lerRascunhoNegocio();
     if (lido) {
-      setContexto(lido);
-      setCaixaAtiva(Boolean(lido.caixa));
+      abrir(lido);
+      return;
     }
-  }, []);
+
+    if (ofertaInicial) abrir(contextoNegocioVazio("ideia"));
+  }, [ofertaInicial]);
 
   // ── Autosave LOCAL, e só local ──────────────────────────────────
   useEffect(() => {
