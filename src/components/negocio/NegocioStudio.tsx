@@ -109,6 +109,16 @@ const ContinuarNaEmpresa = dynamic(() => import("./ContinuarNaEmpresa"), {
   ssr: false,
   loading: () => <Esqueleto altura={180} rotulo="A preparar a continuidade…" />,
 });
+const SituacaoIVANegocio = dynamic(() => import("./SituacaoIVANegocio"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={200} rotulo="A carregar a situação de IVA…" />,
+});
+// §88 — três agregações completas com projeção de caixa. Nada disto pesa
+// em quem nunca faz a pergunta.
+const DecisaoContratar = dynamic(() => import("./DecisaoContratar"), {
+  ssr: false,
+  loading: () => <Esqueleto altura={200} rotulo="A carregar a decisão de contratar…" />,
+});
 
 function Esqueleto({ altura, rotulo }: { altura: number; rotulo: string }) {
   return (
@@ -606,6 +616,20 @@ export default function NegocioStudio() {
               }))
             }
           />
+        </ErrorBoundary>
+      ) : null}
+
+      {/* ── §49-50 — a situação de IVA, do motor que a sabe ──────── */}
+      {temResultado ? (
+        <ErrorBoundary>
+          <SituacaoIVANegocio contexto={contexto} negocio={negocio} />
+        </ErrorBoundary>
+      ) : null}
+
+      {/* ── §88-89 — contratar agora, depois, ou não ─────────────── */}
+      {temResultado ? (
+        <ErrorBoundary>
+          <DecisaoContratar contexto={contexto} />
         </ErrorBoundary>
       ) : null}
 

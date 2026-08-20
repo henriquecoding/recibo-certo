@@ -95,6 +95,17 @@ export {
 } from "./adapters/iva";
 
 export {
+  compararContratacao,
+  custoMedioPorHora,
+  custoPorHoraDaEquipa,
+  diferencaEntre,
+  type CenarioContratacao,
+  type ComparacaoContratacao,
+  type CustoPorHora,
+  type QuandoContratar,
+} from "./contratacao";
+
+export {
   CURVA_UNIFORME,
   MESES_CURTOS,
   curvaComPico,
