@@ -19,7 +19,7 @@
 //  justificação escrita na migração era que o formulário do caso mostrava
 //  a caixa marcada e a pessoa a desmarcava antes de submeter — só que essa
 //  caixa não existia. A ficha inteira seguia sozinha e a pessoa descobria
-//  aqui, depois. Ver `20260820092000`.
+//  aqui, depois. Ver `20260820165820`.
 //
 //  Dois componentes, um por lado da mesma coluna:
 //   · `PartilhaDeContactos` — o cliente decide.

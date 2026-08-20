@@ -1,4 +1,4 @@
--- 20260820090000_o_contrato_publico_fecha_a_tabela.sql
+-- 20260820165708_o_contrato_publico_fecha_a_tabela.sql
 -- ═══════════════════════════════════════════════════════════════════════
 --  O PASSO SEGUINTE DA 20260815200000 — AGORA QUE O FRONTEND JÁ LÊ A VIEW
 --  ---------------------------------------------------------------------
@@ -77,7 +77,40 @@ END $$;
 --  Um papel sem login não é assumível por ninguém que venha da API: nem
 --  `anon`, nem `authenticated`, nem a chave de serviço. Chega-se-lhe pela
 --  view e por mais nada.
-ALTER ROLE contrato_publico NOLOGIN NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;
+--
+--  ⚠️ SEM `NOSUPERUSER` E SEM `NOBYPASSRLS`, e não por descuido.
+--
+--  Mexer nesses dois atributos — mesmo para os DESLIGAR — exige SUPERUSER,
+--  e o `postgres` do Supabase não é superuser. Escritos aqui, a migração
+--  morre com «42501: permission denied to alter role» e não chega a
+--  aplicar nada.
+--
+--  Custou uma aplicação falhada em produção, e o arreio de RLS não podia
+--  tê-lo apanhado: corre contra um Postgres local onde `postgres` É
+--  superuser, e ali a linha passava. É a diferença entre o ambiente de
+--  teste e o real, no sítio em que ela existe.
+--
+--  Não se perde nada: `CREATE ROLE` já nasce NOSUPERUSER e NOBYPASSRLS
+--  por omissão. E quem garante que assim continua não é esta linha — é a
+--  alínea (d) de `assert_contrato_publico_contabilistas()`, que falha se
+--  o dono da view alguma vez ganhar login ou BYPASSRLS. Uma asserção que
+--  verifica vale mais do que uma instrução que impõe uma vez.
+ALTER ROLE contrato_publico NOLOGIN NOCREATEDB NOCREATEROLE;
+
+--  E quem aplica a migração tem de poder `SET ROLE` para este papel, ou o
+--  `ALTER VIEW ... OWNER TO` mais abaixo recusa com «42501: must be able
+--  to SET ROLE "contrato_publico"».
+--
+--  ⚠️ Num Postgres onde quem aplica é SUPERUSER isto é dispensável, e foi
+--  por isso que o arreio de RLS não o exigiu: lá, o `postgres` pode mudar
+--  o dono de qualquer coisa para qualquer papel. No Supabase não é
+--  superuser — tem CREATEROLE, e em PG16+ criar um papel dá ADMIN sobre
+--  ele mas não dá SET. São duas coisas diferentes, e é a segunda que o
+--  `ALTER ... OWNER` pede.
+DO $$
+BEGIN
+  EXECUTE format('GRANT contrato_publico TO %I WITH SET TRUE', current_user);
+END $$;
 
 COMMENT ON ROLE contrato_publico IS
   'Dono de `contabilistas_publico`. Sem login e sem BYPASSRLS: a view lê o que as políticas deste papel deixam ler, e nada mais. Não conceder aqui nada que não seja para ser público.';
@@ -195,7 +228,25 @@ LEFT JOIN public.contabilista_stripe s
        ON s.contabilista_id = c.user_id
 WHERE c.estado = 'aprovado';
 
+--  ⚠️ O DONO NOVO PRECISA DE `CREATE` NO SCHEMA — durante o `ALTER`, e
+--  só durante ele.
+--
+--  O Postgres verifica, ao mudar o dono de um objeto, que o dono NOVO
+--  poderia tê-lo criado ali. Sem `CREATE` em `public`, o `ALTER` recusa
+--  com «42501: permission denied for schema public» — uma mensagem que
+--  aponta para o schema e não para o que se está mesmo a fazer.
+--
+--  No arreio de RLS isto passa despercebido: lá o schema `public` é do
+--  `postgres`, que é superuser. No Supabase o dono é `pg_database_owner`,
+--  e a ACL dá `CREATE` só a ele — toda a gente tem `USAGE` e mais nada.
+--
+--  Dá-se e tira-se na mesma migração. O papel fica dono da view e sem
+--  poder criar seja o que for, que é metade da razão de ele existir.
+--  Idempotente: reaplicar dá `CREATE`, muda o dono (já é ele, sem efeito)
+--  e volta a tirar.
+GRANT CREATE ON SCHEMA public TO contrato_publico;
 ALTER VIEW public.contabilistas_publico OWNER TO contrato_publico;
+REVOKE CREATE ON SCHEMA public FROM contrato_publico;
 
 COMMENT ON VIEW public.contabilistas_publico IS
   'O contrato público do diretório e do perfil. Nome, OCC e LinkedIn identificam; o perfil profissional ajuda a escolher. Nenhum canal direto sai daqui — email, telefone e site saem por contacto_do_contabilista, a quem tem vínculo vivo. Acrescentar uma coluna aqui é uma decisão explícita, e assert_contrato_publico_contabilistas() recusa as que nunca podem entrar.';

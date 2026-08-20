@@ -21,7 +21,7 @@
 //
 //  E no fim entram os canais diretos DO CONTABILISTA, que é o outro
 //  sentido e a outra decisão: email, telefone e site saíram do perfil
-//  público em `20260820090000` e passaram a abrir-se aqui, com a
+//  público em `20260820165708` e passaram a abrir-se aqui, com a
 //  aceitação. Quem decide se este bloco aparece é a base de dados.
 // ═══════════════════════════════════════════════════════════════════════
 

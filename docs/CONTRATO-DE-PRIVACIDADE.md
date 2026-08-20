@@ -85,7 +85,7 @@ A separação técnica é essa, e não «público vs. privado» em geral:
 | Dono da view | Papel `contrato_publico`, sem login e sem `BYPASSRLS` |
 | Canais diretos | `contactos_do_contabilista(uuid)`, exige vínculo vivo |
 | Guarda | `assert_contrato_publico_contabilistas()` |
-| Migração | `20260820090000_o_contrato_publico_fecha_a_tabela.sql` |
+| Migração | `20260820165708_o_contrato_publico_fecha_a_tabela.sql` |
 | Prova (banco) | `supabase/tests/completo/02-contrato-publico-de-contactos.sql` |
 | Prova (produção) | `scripts/check-contrato-publico.mjs --exigir-ambiente` |
 
@@ -108,7 +108,7 @@ tudo para o manter de pé.
 **Ficha estruturada** (`caso_contactos`: email, telefone, morada). Só
 chega aos contabilistas com o caso encaminhado enquanto
 `casos.partilha_contactos` for verdadeiro. Nasce **falso** desde
-`20260820092000`, o formulário do caso mostra a escolha por marcar, e o
+`20260820165820`, o formulário do caso mostra a escolha por marcar, e o
 detalhe do caso liga e desliga com efeito imediato — a política lê a
 coluna, não uma cópia dela.
 
@@ -141,7 +141,7 @@ Imposto em `20260818210000_fim_da_mediacao.sql`.
 - **A retenção é verificável:** os objetos sem nada que os reclame são
   removidos pela Storage API, e a metadata só diz «apagado» depois de o
   objeto ter desaparecido. Ver
-  `20260820091000_a_purga_passa_pela_storage_api.sql`.
+  `20260820165802_a_purga_passa_pela_storage_api.sql`.
 
 ⚠️ A definição de órfão vive numa função só —
 `public.anexo_e_orfao(balde, caminho)`. O balde `contabilista-anexos`

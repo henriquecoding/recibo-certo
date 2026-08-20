@@ -161,7 +161,7 @@ for (const coluna of PROIBIDAS) {
       `${TABELA}.${coluna} SAI para quem não tem sessão (HTTP 200).\n` +
         "         A tabela não é o contrato público — a view é. Retira a política\n" +
         "         de SELECT aberta a anon e revoga-lhe os privilégios:\n" +
-        "         ver `20260820090000_o_contrato_publico_fecha_a_tabela.sql`.",
+        "         ver `20260820165708_o_contrato_publico_fecha_a_tabela.sql`.",
     );
   } else {
     oks.push(`${TABELA}.${coluna} recusado a anon (HTTP ${r.status})`);

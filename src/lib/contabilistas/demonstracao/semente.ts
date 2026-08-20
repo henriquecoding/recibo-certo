@@ -718,7 +718,7 @@ export function semear(agora: Date = new Date()): EstadoDemonstracao {
       estado: "com_proposta",
       notaTriagem: null,
       // Um dos dois casos NÃO partilha contactos, de propósito: é o estado
-      // por omissão desde `20260820092000`, e uma demonstração em que
+      // por omissão desde `20260820165820`, e uma demonstração em que
       // todos partilham ensina o contrário do que o produto faz.
       partilhaContactos: false,
       criadoEm: instante(agora, -8, 11),

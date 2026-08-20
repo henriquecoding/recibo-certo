@@ -1,4 +1,4 @@
--- 20260820092000_a_ficha_de_contactos_passa_a_ser_escolhida.sql
+-- 20260820165820_a_ficha_de_contactos_passa_a_ser_escolhida.sql
 -- ═══════════════════════════════════════════════════════════════════════
 --  A PARTILHA DE CONTACTOS DEIXA DE NASCER LIGADA
 --  ---------------------------------------------------------------------

@@ -113,7 +113,7 @@ const CAMPOS_DA_FICHA =
  * O contrato público é uma VIEW, não a tabela.
  *
  * A tabela está fechada a `anon` desde
- * `20260820090000_o_contrato_publico_fecha_a_tabela.sql`: nem política,
+ * `20260820165708_o_contrato_publico_fecha_a_tabela.sql`: nem política,
  * nem privilégio. Antes disso, uma política dava a linha INTEIRA a quem
  * não tinha sessão nenhuma — escolhia linhas, não colunas — e saíam o
  * telefone, o `linkedin_subject` (o identificador OIDC) e o `pedido_id`.

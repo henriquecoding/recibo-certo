@@ -20,7 +20,7 @@
 //   · NOME e NIF seguem sempre com o caso. São identificação, não canal:
 //     sem eles não se faz o trabalho nem se orçamenta com seriedade.
 //   · A FICHA DE CONTACTOS (email, telefone, morada) só segue se o cliente
-//     escolher partilhá-la. Nasce desligada desde `20260820092000`, e
+//     escolher partilhá-la. Nasce desligada desde `20260820165820`, e
 //     liga-se e desliga-se com efeito imediato — a política de
 //     `caso_contactos` lê a coluna, não uma cópia dela.
 //   · Um contacto ESCRITO À MÃO numa mensagem segue. É uma decisão de quem
@@ -238,7 +238,7 @@ export interface NovoCaso {
    * Se a ficha estruturada de contactos acompanha o caso.
    *
    * Omitir é NÃO partilhar. A coluna nasce falsa desde
-   * `20260820092000`, e este campo só existe para o formulário poder
+   * `20260820165820`, e este campo só existe para o formulário poder
    * dizer «sim» — nunca para poder dizer «não», que é o estado inicial.
    */
   partilharContactos?: boolean;
@@ -306,7 +306,7 @@ export async function submeterCaso(
   //
   // ⚠️ E é chamada SEMPRE, também para desligar. Não depende do DEFAULT da
   // coluna, e não pode depender: entre o dia em que este ecrã ganhou a
-  // caixa e o dia em que a migração `20260820092000` chega à base, o
+  // caixa e o dia em que a migração `20260820165820` chega à base, o
   // default ainda é `true`. Confiar nele nesse intervalo era desenhar uma
   // caixa por marcar sobre uma ficha que seguia na mesma — a interface a
   // prometer o contrário do que a base faz, que é o defeito que esta

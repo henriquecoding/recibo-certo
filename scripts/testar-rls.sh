@@ -80,7 +80,7 @@ MIGRACOES+=(
   "$RAIZ/supabase/migrations/20260816160000_sala_de_acompanhamento.sql"
   "$RAIZ/supabase/migrations/20260817120000_local_verificado_da_consulta.sql"
   "$RAIZ/supabase/migrations/20260818210000_fim_da_mediacao.sql"
-  "$RAIZ/supabase/migrations/20260820091000_a_purga_passa_pela_storage_api.sql"
+  "$RAIZ/supabase/migrations/20260820165802_a_purga_passa_pela_storage_api.sql"
 )
 
 if [ ${#MIGRACOES[@]} -eq 0 ]; then

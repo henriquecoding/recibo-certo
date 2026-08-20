@@ -29,7 +29,7 @@
 > | Conversa | Mediada: cada mensagem submetida, revista, aprovada | **Direta.** Nasce entregue |
 > | Quem lê | A administração lê tudo | **Ninguém.** Zero linhas para um `select` de administrador |
 > | Exceção | — | Uma mensagem **denunciada** por quem está no caso |
-> | Contactos | Nunca chegam ao contabilista | Do cliente para dar, num interruptor revogável que **nasce desligado** (ver `20260820092000`) |
+> | Contactos | Nunca chegam ao contabilista | Do cliente para dar, num interruptor revogável que **nasce desligado** (ver `20260820165820`) |
 > | Documentos | Libertados pela triagem | Entregues ao anexar; retiráveis por quem os anexou |
 >
 > ### O que se manteve, e vale a pena não voltar a discutir

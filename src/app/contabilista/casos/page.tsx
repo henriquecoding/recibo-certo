@@ -10,7 +10,7 @@
 //  ⚠️ Este cabeçalho dizia que ele «não chega por caminho nenhum» a
 //  `caso_contactos`. Foi verdade até `20260818210000_fim_da_mediacao`, que
 //  abriu um caminho declarado: a política lê `casos.partilha_contactos`, e
-//  o cliente liga-a e desliga-a. Desde `20260820092000` nasce desligada.
+//  o cliente liga-a e desliga-a. Desde `20260820165820` nasce desligada.
 //
 //  Ou seja: email, telefone e morada chegam aqui SE — e enquanto — a
 //  pessoa o tiver escolhido. Não é esta página que decide isso, e um

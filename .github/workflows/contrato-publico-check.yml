@@ -99,7 +99,7 @@ jobs:
                 "   está em baixo para qualquer visitante.",
                 "",
                 "O registo do job diz qual. Ver a migração",
-                "`20260820090000_o_contrato_publico_fecha_a_tabela.sql` e a função",
+                "`20260820165708_o_contrato_publico_fecha_a_tabela.sql` e a função",
                 "`assert_contrato_publico_contabilistas()`.",
               ].join("\n"),
             });

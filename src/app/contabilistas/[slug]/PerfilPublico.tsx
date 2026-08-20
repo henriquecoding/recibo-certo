@@ -313,7 +313,7 @@ export default function PerfilPublico({ slug }: { slug: string }) {
             </div>
             {/* ⚠️ AQUI ESTAVAM O EMAIL E O SITE, e saíam para quem não
                 tinha sessão nenhuma. Saíram com o contrato público novo
-                (20260820090000): um canal direto abre-se com a aceitação,
+                (20260820165708): um canal direto abre-se com a aceitação,
                 não com a pesquisa. Quem quiser confirmar quem está do
                 outro lado tem o OCC e o LinkedIn, logo acima — e esses
                 são públicos de propósito. */}

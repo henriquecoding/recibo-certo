@@ -827,7 +827,7 @@ export default function PerfilPage() {
             </div>
 
             {/* A frase tem de dizer a verdade sobre o esquema, e desde
-                20260820090000 o esquema trata os três campos da mesma
+                20260820165708 o esquema trata os três campos da mesma
                 maneira: nenhum está no contrato público, e os três saem
                 por `contactos_do_contabilista` a quem tem vínculo vivo.
                 É esta frase que a pessoa lê antes de escrever aqui o seu
