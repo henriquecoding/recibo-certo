@@ -11,8 +11,8 @@
 //  e nunca produz um número de substituição.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { fetchEurostatDataset, normalizeEurostatDataset } from "./connectors/eurostat";
-import { fetchIneIndicator, normalizeIneAnnualIndicator } from "./connectors/ine";
+import { buildEurostatUrl, fetchEurostatDataset, normalizeEurostatDataset } from "./connectors/eurostat";
+import { buildIneIndicatorUrl, fetchIneIndicator, normalizeIneAnnualIndicator } from "./connectors/ine";
 import { evaluateMarketEvidence } from "./evidence-gate";
 import { classifyObservationFreshness } from "./freshness";
 import { MARKET_PILOTS, type MarketPilotDefinition, type MarketPilotSeries } from "./pilots";
@@ -89,14 +89,82 @@ interface SeriesOutcome {
   failed: boolean;
 }
 
+/**
+ * Transporte partilhado por execução.
+ *
+ * Três pilotos leem o mesmo indicador de demografia das empresas e dois o
+ * mesmo índice de envelhecimento. Um pedido por SÉRIE dava dez chamadas
+ * concorrentes ao INE — que respondia 503 e punha metade dos cartões em
+ * `delayed` por culpa nossa, não da fonte.
+ *
+ * A chave é o URL: duas séries que só diferem no filtro de dimensões
+ * partilham a mesma resposta HTTP e normalizam-na de maneira diferente.
+ */
+class MarketTransport {
+  private readonly emCurso = new Map<string, Promise<unknown>>();
+  private readonly filaPorFonte = new Map<string, Promise<unknown>>();
+
+  constructor(
+    private readonly checkedAt: string,
+    private readonly options: LoadPilotEvidenceOptions,
+  ) {}
+
+  /**
+   * Serializa por fonte e repete em falha transitória.
+   *
+   * As tentativas extra existem porque a primeira pode ter sido recusada
+   * por CARGA — muitas vezes a nossa. Foi o que aconteceu numa build: o
+   * INE respondeu 503 a metade das séries e a rota, prerenderizada, ficava
+   * seis horas a servir cartões degradados por culpa nossa.
+   *
+   * Não é uma forma de insistir com uma fonte que mudou de contrato: essa
+   * falha nas três, e o resultado é `delayed` sem número inventado.
+   */
+  private async emSerie<T>(sourceId: string, tarefa: () => Promise<T>): Promise<T> {
+    const tentar = async (): Promise<T> => {
+      let ultimo: unknown;
+      for (let ronda = 0; ronda < 3; ronda += 1) {
+        try {
+          return await tarefa();
+        } catch (erro) {
+          ultimo = erro;
+          if (ronda < 2) {
+            await new Promise((resolve) => setTimeout(resolve, 400 * 2 ** ronda));
+          }
+        }
+      }
+      throw ultimo;
+    };
+
+    const anterior = this.filaPorFonte.get(sourceId) ?? Promise.resolve();
+    const proxima = anterior.then(tentar, tentar);
+    // A fila avança mesmo quando falha; um erro não pode bloquear o resto.
+    this.filaPorFonte.set(sourceId, proxima.catch(() => undefined));
+    return proxima;
+  }
+
+  buscar<T>(chave: string, sourceId: string, tarefa: () => Promise<T>): Promise<T> {
+    const existente = this.emCurso.get(chave);
+    if (existente) return existente as Promise<T>;
+    const promessa = this.emSerie(sourceId, tarefa);
+    this.emCurso.set(chave, promessa);
+    return promessa;
+  }
+
+  get transporte() {
+    return {
+      fetchImpl: this.options.fetchImpl,
+      now: () => this.checkedAt,
+      signal: this.options.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    };
+  }
+}
+
 async function loadSeries(
   series: MarketPilotSeries,
   checkedAt: string,
-  options: LoadPilotEvidenceOptions,
+  transport: MarketTransport,
 ): Promise<SeriesOutcome> {
-  const signal = options.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS);
-  const transport = { fetchImpl: options.fetchImpl, now: () => checkedAt, signal };
-
   try {
     const definition = series.source;
     let observations: readonly MarketObservation[];
@@ -104,16 +172,26 @@ async function loadSeries(
     let sourceUrl: string;
 
     if (definition.connector === "ine") {
-      const fetched = await fetchIneIndicator(definition.manifest.indicatorCode, transport);
+      const url = buildIneIndicatorUrl(definition.manifest.indicatorCode);
+      const fetched = await transport.buscar(url, series.sourceId, () =>
+        fetchIneIndicator(definition.manifest.indicatorCode, transport.transporte),
+      );
       const normalized = normalizeIneAnnualIndicator(fetched, definition.manifest);
       observations = normalized.observations;
+      // `outOfScope` fica de fora da contagem de propósito: são as
+      // geografias que o manifesto nunca pediu, não linhas rejeitadas.
       parserRejected = normalized.quarantined.length;
       sourceUrl = fetched.sourceUrl;
     } else {
-      const fetched = await fetchEurostatDataset(definition.manifest.datasetCode, {
-        ...transport,
+      const url = buildEurostatUrl(definition.manifest.datasetCode, {
         filters: definition.fetchFilters,
       });
+      const fetched = await transport.buscar(url, series.sourceId, () =>
+        fetchEurostatDataset(definition.manifest.datasetCode, {
+          ...transport.transporte,
+          filters: definition.fetchFilters,
+        }),
+      );
       const normalized = normalizeEurostatDataset(fetched, definition.manifest);
       observations = normalized.observations;
       parserRejected = normalized.quarantined.length;
@@ -186,10 +264,10 @@ function healthFor(
 async function loadPilot(
   pilot: MarketPilotDefinition,
   checkedAt: string,
-  options: LoadPilotEvidenceOptions,
+  transport: MarketTransport,
 ): Promise<MarketPilotEvidence> {
   const outcomes = await Promise.all(
-    pilot.series.map((series) => loadSeries(series, checkedAt, options)),
+    pilot.series.map((series) => loadSeries(series, checkedAt, transport)),
   );
 
   const bySource = new Map<string, SeriesOutcome[]>();
@@ -257,5 +335,8 @@ export async function loadPilotMarketEvidence(
 ): Promise<readonly MarketPilotEvidence[]> {
   const checkedAt = (options.now ?? (() => new Date().toISOString()))();
   const pilots = options.pilots ?? MARKET_PILOTS;
-  return Promise.all(pilots.map((pilot) => loadPilot(pilot, checkedAt, options)));
+  // Um transporte por execução: é ele que garante que o mesmo indicador
+  // não é pedido uma vez por cada piloto que o usa.
+  const transport = new MarketTransport(checkedAt, options);
+  return Promise.all(pilots.map((pilot) => loadPilot(pilot, checkedAt, transport)));
 }

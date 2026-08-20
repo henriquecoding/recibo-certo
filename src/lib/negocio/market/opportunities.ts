@@ -139,6 +139,13 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
         status: "live",
       },
       {
+        source: "INE — Demografia das empresas (0014098)",
+        purpose:
+          "Contar sociedades constituídas por ano na zona. É uma operação estatística diferente do inquérito à hotelaria, por isso triangula a sério.",
+        url: "https://www.ine.pt/xurl/indx/0014098/PT",
+        status: "live",
+      },
+      {
         source: "Validação do utilizador",
         purpose: "Provar dor operacional e disposição a pagar no microterritório.",
         url: "https://www.recibocerto.pt/ferramentas/descobrir-negocio",
@@ -174,6 +181,13 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
         purpose:
           "Comparar microempresas com pequenas empresas na mesma medida. A distância entre classes é o défice a investigar, não a compra de consultoria.",
         url: "https://ec.europa.eu/eurostat/databrowser/view/isoc_e_dii/default/table?lang=en",
+        status: "live",
+      },
+      {
+        source: "INE — Demografia das empresas (0014098)",
+        purpose:
+          "Contar empresas individuais e sociedades nascidas por ano na zona: é o momento em que um negócio monta processos do zero.",
+        url: "https://www.ine.pt/xurl/indx/0014098/PT",
         status: "live",
       },
       {
@@ -215,10 +229,11 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
         status: "live",
       },
       {
-        source: "INE — Censos/população",
-        purpose: "Dimensionar o contexto demográfico local com período de referência visível.",
-        url: "https://dados.gov.pt/datasets/687062128c1cd0da86632362",
-        status: "planned",
+        source: "INE — Índice de envelhecimento (0012909)",
+        purpose:
+          "Dimensionar quantas pessoas na zona podem precisar de acompanhamento. Estimativas anuais da população: operação distinta do inquérito europeu às famílias.",
+        url: "https://www.ine.pt/xurl/indx/0012909/PT",
+        status: "live",
       },
     ],
   },
@@ -246,8 +261,16 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
       "Rejeitar o nicho se não houver procedimentos elegíveis recorrentes ou se as empresas não valorizarem a poupança de tempo acima do preço sustentável.",
     evidencePlan: [
       {
+        source: "INE — Sistema de contas integradas das empresas (0014044)",
+        purpose:
+          "Dimensionar o universo de empresas pequenas capazes de entregar, por zona.",
+        url: "https://www.ine.pt/xurl/indx/0014044/PT",
+        status: "live",
+      },
+      {
         source: "BASE / TED",
-        purpose: "Contar procedimentos e adjudicações por CPV, geografia e período — nunca valor anunciado como receita provável.",
+        purpose:
+          "Contar procedimentos e adjudicações por CPV, geografia e período — nunca valor anunciado como receita provável. Enquanto não estiver ligado, falta a esta hipótese o sinal de procura, e o cartão diz isso.",
         url: "https://www.base.gov.pt/Base4/pt/",
         status: "planned",
       },
@@ -277,10 +300,18 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
       "Parar se o cliente preferir contratar diretamente ou se o custo de aquisição exceder a margem do projeto em três testes consecutivos.",
     evidencePlan: [
       {
-        source: "INE / IRN — demografia e transações",
-        purpose: "Procurar sinais estruturais e transacionais locais sem inferir intenção de compra.",
-        url: "https://dados.gov.pt/",
-        status: "planned",
+        source: "INE — Transações de alojamentos familiares (0012787)",
+        purpose:
+          "Contar casas transacionadas por famílias, por zona e por ano. É o evento que cria a transição — e o sinal mais próximo de procura que existe publicado.",
+        url: "https://www.ine.pt/xurl/indx/0012787/PT",
+        status: "live",
+      },
+      {
+        source: "INE — Índice de envelhecimento (0012909)",
+        purpose:
+          "Contexto das transições ligadas a herança e a redução de casa, sem inferir intenção de contratar.",
+        url: "https://www.ine.pt/xurl/indx/0012909/PT",
+        status: "live",
       },
     ],
   },

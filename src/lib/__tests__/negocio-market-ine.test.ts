@@ -120,6 +120,34 @@ describe("market: conector INE", () => {
     });
   });
 
+  it("uma geografia que o manifesto não pede fica fora do âmbito, não em quarentena", () => {
+    // Vários indicadores publicam as 347 unidades territoriais até ao
+    // concelho. Contá-las como quarentena fazia a interface anunciar
+    // centenas de «linhas não atravessaram a quarentena» — alarmante, e
+    // falso: nenhuma foi rejeitada, nenhuma foi sequer pedida.
+    const comConcelhos = structuredClone(fetched);
+    comConcelhos.payload.Dados = {
+      "2025": [
+        { geocod: "PT", geodsg: "Portugal", dim_3: "T", valor: "295" },
+        { geocod: "1111601", geodsg: "Arcos de Valdevez", dim_3: "T", valor: "3" },
+        { geocod: "1111602", geodsg: "Caminha", dim_3: "T", valor: "4" },
+      ],
+    };
+    const result = normalizeIneAnnualIndicator(comConcelhos, manifest);
+    expect(result.observations).toHaveLength(1);
+    expect(result.quarantined).toEqual([]);
+    expect(result.outOfScope).toBe(2);
+  });
+
+  it("uma linha sem geografia identificável continua a ser quarentena", () => {
+    const semGeo = structuredClone(fetched);
+    semGeo.payload.Dados = { "2025": [{ dim_3: "T", valor: "295" }] };
+    const result = normalizeIneAnnualIndicator(semGeo, manifest);
+    expect(result.observations).toEqual([]);
+    expect(result.outOfScope).toBe(0);
+    expect(result.quarantined.map((row) => row.reason)).toEqual(["unmapped-geography"]);
+  });
+
   it("põe mudança semântica e números ambíguos em quarentena", () => {
     const changed = structuredClone(fetched);
     changed.payload.Dados = {

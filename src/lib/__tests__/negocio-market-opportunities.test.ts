@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   calculateOpportunityFit,
   classifyObservationGeography,
+  evaluateLocalMarketEvidence,
   loadPilotMarketEvidence,
   MARKET_PILOTS,
   MARKET_REGIONS,
@@ -66,8 +67,43 @@ const EUROSTAT_DII = {
   value: { "0": 48.1, "1": 51.65 },
 };
 
-const responder = (corpo: unknown) =>
-  vi.fn(async () => new Response(JSON.stringify(corpo), { status: 200 })) as unknown as typeof fetch;
+/** Demografia das empresas: operação distinta, e por isso triangula. */
+const INE_NASCIMENTOS = [
+  {
+    IndicadorCod: "0014098",
+    IndicadorDsg: "Nascimentos (N.º) de empresas por Localização geográfica (NUTS - 2024) e Forma jurídica; Anual - INE, Demografia das empresas",
+    MetaInfUrl: "https://www.ine.pt/xurl/indx/0014098/PT",
+    DataUltimoAtualizacao: "2025-12-11",
+    UltimoPref: "2024",
+    Dados: {
+      "2024": [
+        { geocod: "PT", geodsg: "Portugal", dim_3: "1", valor: "201033" },
+        { geocod: "PT", geodsg: "Portugal", dim_3: "2", valor: "44468" },
+        { geocod: "1A", geodsg: "Grande Lisboa", dim_3: "1", valor: "52823" },
+        { geocod: "1A", geodsg: "Grande Lisboa", dim_3: "2", valor: "12836" },
+        // Concelho: fora do âmbito do manifesto, e não uma rejeição.
+        { geocod: "1111601", geodsg: "Arcos de Valdevez", dim_3: "1", valor: "60" },
+      ],
+    },
+  },
+];
+
+/**
+ * Um mock que responde pelo INDICADOR pedido.
+ *
+ * Um piloto lê agora várias séries, e mais do que uma fonte. Um mock que
+ * devolvesse sempre o mesmo corpo estaria a testar uma coisa que já não
+ * existe — e a esconder que o conector rejeita, e bem, um payload cujo
+ * `IndicadorCod` não corresponde ao manifesto.
+ */
+function responderPorUrl(mapa: Readonly<Record<string, unknown>>) {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const chave = Object.keys(mapa).find((codigo) => url.includes(codigo));
+    if (!chave) return new Response("não mapeado", { status: 404 });
+    return new Response(JSON.stringify(mapa[chave]), { status: 200 });
+  }) as unknown as typeof fetch;
+}
 
 describe("market: descoberta e pilotos", () => {
   it("liga o dossier ao estúdio de empresa por um id público curado", () => {
@@ -167,54 +203,131 @@ describe("market: descoberta e pilotos", () => {
     for (const template of OPPORTUNITY_TEMPLATES) {
       expect(templateHasLiveEvidence(template)).toBe(comPilot.has(template.id));
     }
-    expect(comPilot.size).toBeGreaterThanOrEqual(3);
+    // Os cinco dossiers têm ingestão: nenhum ficou só como texto editorial.
+    expect(comPilot.size).toBe(OPPORTUNITY_TEMPLATES.length);
   });
 
-  it("consulta o INE, publica apenas o dataset licenciado e mantém um único lineage", async () => {
-    const fetchImpl = responder(INE_TURISMO);
+  it("cada série declara a operação estatística que a torna independente", () => {
+    for (const pilot of MARKET_PILOTS) {
+      for (const series of pilot.series) {
+        expect(series.independenceKey.trim(), `${pilot.templateId}/${series.id}`).not.toBe("");
+        expect(series.reading.trim().length).toBeGreaterThan(40);
+      }
+      // Uma hipótese com uma única operação por trás não pode triangular,
+      // e o gate tem de continuar a dizê-lo em vez de a promover.
+      const operacoes = new Set(pilot.series.map((series) => series.independenceKey));
+      const temProcura = pilot.series.some(
+        (series) => series.kind === "demand" || series.kind === "transactional",
+      );
+      if (temProcura) expect(operacoes.size, pilot.templateId).toBeGreaterThan(1);
+    }
+  });
+
+  it("consulta o INE, publica apenas o dataset licenciado e triangula com outra operação", async () => {
+    const fetchImpl = responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS });
     const [pilot] = await loadPilotMarketEvidence({
       fetchImpl,
       now: () => "2026-08-20T10:00:00Z",
       pilots: pilotoTurismo,
     });
-    expect(fetchImpl).toHaveBeenCalledOnce();
-    expect(pilot.gate.state).toBe("signal_detected");
-    expect(pilot.observations).toHaveLength(4);
+
     expect(pilot.observations.every((item) => item.license.identifier === "CC BY 4.0")).toBe(true);
-    expect(pilot.observations.every((item) => item.seriesId === "tourism-occupancy")).toBe(true);
-    // O código NUTS I `1` não está mapeado: fica de fora e é contado.
-    expect(pilot.note).toContain("1 linhas/células");
-    expect(pilot.gate.missing).toContain("Duas fontes independentes e saudáveis.");
+    const ocupacao = pilot.observations.filter((item) => item.seriesId === "tourism-occupancy");
+    const nascimentos = pilot.observations.filter((item) => item.seriesId === "tourism-new-companies");
+    expect(ocupacao).toHaveLength(4);
+    expect(nascimentos).toHaveLength(2);
+    // Duas séries do mesmo indicador nunca se somam: o `metricId` separa-as.
+    expect(new Set(pilot.observations.map((item) => item.metricId)).size).toBe(2);
+
+    // A ocupação vem do inquérito à hotelaria; os nascimentos, da demografia
+    // das empresas. São operações diferentes, logo a triangulação é real.
+    expect(new Set(pilot.observations.map((item) => item.independenceKey)).size).toBe(2);
+    expect(pilot.gate.state).toBe("candidate");
+    expect(pilot.gate.missing).not.toContain("Duas fontes independentes e saudáveis.");
+
+    // Nem concelhos nem NUTS I contam como rejeição: nunca foram pedidos.
+    expect(pilot.note).toBeUndefined();
+  });
+
+  it("com preço viável e requisitos conhecidos, a hipótese chega a sustentada por dados", async () => {
+    // O que o servidor NÃO pode decidir sozinho: preço e requisitos são de
+    // quem decide. Este é o único caminho até `evidence_qualified`.
+    const [pilot] = await loadPilotMarketEvidence({
+      fetchImpl: responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS }),
+      now: () => "2026-08-20T10:00:00Z",
+      pilots: pilotoTurismo,
+    });
+    const template = OPPORTUNITY_TEMPLATES.find((item) => item.id === "tourism-guest-operations")!;
+
+    const qualificada = evaluateLocalMarketEvidence({
+      template,
+      evidence: pilot,
+      region: "grande-lisboa",
+      asOf: "2026-08-20T10:00:00Z",
+      hypothesis: {
+        templateId: template.id,
+        region: "grande-lisboa",
+        createdAt: "2026-08-20T10:00:00Z",
+        updatedAt: "2026-08-20T10:00:00Z",
+        proofs: [],
+        requirementsReviewed: true,
+        pricing: { viable: true, priceNet: 120, concludedAt: "2026-08-20T10:00:00Z" },
+      },
+    });
+    expect(qualificada.state).toBe("evidence_qualified");
+    expect(qualificada.missing).toEqual([]);
   });
 
   it("publica o piloto Eurostat com a série identificada e sem fundir universos", async () => {
-    const fetchImpl = responder(EUROSTAT_DII);
     const [pilot] = await loadPilotMarketEvidence({
-      fetchImpl,
+      fetchImpl: responderPorUrl({ isoc_e_dii: EUROSTAT_DII, "0014098": INE_NASCIMENTOS }),
       now: () => "2026-08-20T10:00:00Z",
       pilots: pilotoDigital,
     });
-    // Duas séries do mesmo dataset ⇒ duas consultas independentes.
-    expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(pilot.templateId).toBe("sme-digital-operations");
-    // Só a série «micro» coincide com o cubo devolvido pelo duplo mock;
-    // a de 10–49 filtra tudo e não inventa um valor.
+    // Só a série «micro» coincide com o cubo devolvido; a de 10–49 filtra
+    // tudo e não inventa um valor para preencher o espaço.
     const micro = pilot.observations.filter((item) => item.seriesId === "digital-intensity-micro");
     expect(micro).toHaveLength(1);
     expect(micro[0]?.value).toBe(51.65);
     expect(micro[0]?.referencePeriod.label).toBe("2024");
     expect(micro[0]?.seriesLabel).toContain("Microempresas");
-    expect(pilot.sourceHealth.map((item) => item.sourceId)).toEqual(["eurostat"]);
+    expect(pilot.sourceHealth.map((item) => item.sourceId)).toEqual(["eurostat", "ine"]);
   });
 
-  it("duas séries do mesmo inquérito não passam por duas fontes independentes", async () => {
+  it("duas séries do mesmo inquérito continuam a valer por uma fonte", async () => {
+    // Só a Eurostat responde: as duas séries dela partilham operação, e
+    // por isso a triangulação continua a faltar.
     const [pilot] = await loadPilotMarketEvidence({
-      fetchImpl: responder(EUROSTAT_DII),
+      fetchImpl: responderPorUrl({ isoc_e_dii: EUROSTAT_DII }),
       now: () => "2026-08-20T10:00:00Z",
       pilots: pilotoDigital,
     });
+    expect(new Set(pilot.observations.map((item) => item.independenceKey)).size).toBe(1);
     expect(pilot.gate.missing).toContain("Duas fontes independentes e saudáveis.");
     expect(pilot.gate.state).not.toBe("evidence_qualified");
+  });
+
+  it("o mesmo indicador partilhado por vários pilotos é pedido uma só vez", async () => {
+    // Três pilotos leem o indicador de demografia das empresas. Um pedido
+    // por série dava dez chamadas concorrentes ao INE — que respondia 503 e
+    // punha metade dos cartões em `delayed` por culpa nossa.
+    const fetchImpl = responderPorUrl({
+      "0013314": INE_TURISMO,
+      "0014098": INE_NASCIMENTOS,
+      isoc_e_dii: EUROSTAT_DII,
+    });
+    await loadPilotMarketEvidence({
+      fetchImpl,
+      now: () => "2026-08-20T10:00:00Z",
+      pilots: [...pilotoTurismo, ...pilotoDigital],
+    });
+    const urls = (fetchImpl as unknown as { mock: { calls: unknown[][] } }).mock.calls.map((call) =>
+      String(call[0]),
+    );
+    const nascimentos = urls.filter((url) => url.includes("0014098"));
+    expect(nascimentos).toHaveLength(1);
+    expect(new Set(urls).size).toBe(urls.length);
   });
 
   it("não inventa fallback quando a fonte oficial falha", async () => {
@@ -224,6 +337,7 @@ describe("market: descoberta e pilotos", () => {
       pilots: pilotoTurismo,
     });
     expect(pilot.observations).toEqual([]);
+    expect(pilot.gate.state).toBe("template");
     expect(pilot.sourceHealth[0]?.state).toBe("delayed");
     expect(pilot.sourceHealth[0]?.message).toBe(
       "Não foi possível confirmar o dataset oficial nesta execução.",
@@ -231,14 +345,13 @@ describe("market: descoberta e pilotos", () => {
     expect(pilot.note).toContain("Nenhum valor de fallback");
   });
 
-  it("a falha de um piloto não contamina os outros", async () => {
-    let chamada = 0;
-    const fetchImpl = (async () => {
-      chamada += 1;
-      return chamada === 1
-        ? new Response("indisponível", { status: 503 })
-        : new Response(JSON.stringify(EUROSTAT_DII), { status: 200 });
-    }) as typeof fetch;
+  it("a falha de uma fonte não contamina o piloto que não depende dela", async () => {
+    // O INE recusa tudo; a Eurostat responde. O piloto digital continua a
+    // mostrar o que confirmou, e o turístico — que só lê INE — fica vazio.
+    const fetchImpl = (async (input: RequestInfo | URL) =>
+      String(input).includes("eurostat")
+        ? new Response(JSON.stringify(EUROSTAT_DII), { status: 200 })
+        : new Response("indisponível", { status: 503 })) as typeof fetch;
 
     const pilots = await loadPilotMarketEvidence({
       fetchImpl,
@@ -249,6 +362,8 @@ describe("market: descoberta e pilotos", () => {
     const digital = pilots.find((item) => item.templateId === "sme-digital-operations")!;
     expect(turismo.observations).toEqual([]);
     expect(digital.observations.length).toBeGreaterThan(0);
+    expect(digital.sourceHealth.find((item) => item.sourceId === "ine")?.state).toBe("delayed");
+    expect(digital.sourceHealth.find((item) => item.sourceId === "eurostat")?.state).toBe("healthy");
   });
 });
 

@@ -112,6 +112,17 @@ export interface IneQuarantinedRow {
 export interface IneNormalizationResult {
   observations: readonly MarketObservation[];
   quarantined: readonly IneQuarantinedRow[];
+  /**
+   * Linhas que o manifesto simplesmente não pediu — e que por isso NÃO são
+   * uma falha.
+   *
+   * Vários indicadores publicam as 347 unidades territoriais até ao
+   * concelho. Um manifesto que declara Portugal e as nove NUTS II ignora
+   * 337 delas por desenho. Contá-las como quarentena fazia a interface
+   * anunciar «337 linhas não atravessaram a quarentena» — alarmante, e
+   * falso: nenhuma dessas linhas foi rejeitada, nenhuma foi sequer pedida.
+   */
+  outOfScope: number;
 }
 
 const INDICATOR_CODE = /^\d{7}$/;
@@ -302,6 +313,7 @@ export function normalizeIneAnnualIndicator(
   const observations: MarketObservation[] = [];
   const quarantined: IneQuarantinedRow[] = [];
   const ids = new Set<string>();
+  let outOfScope = 0;
 
   for (const periodLabel of Object.keys(fetched.payload.Dados).sort()) {
     const period = annualPeriod(periodLabel);
@@ -321,14 +333,28 @@ export function normalizeIneAnnualIndicator(
         continue;
       }
 
-      const geographyMapping = geographyCode ? manifest.geographyByCode[geographyCode] : undefined;
-      if (!geographyCode || !geographyMapping || typeof row.geodsg !== "string") {
+      // Um código geográfico que o manifesto não pede está FORA DO ÂMBITO,
+      // não rejeitado: é o mesmo caso de uma dimensão que não coincide, e
+      // essa nem sequer chega aqui. Uma linha sem `geocod`/`geodsg` já é
+      // outra coisa — aí o contrato quebrou e vai para a quarentena.
+      const geographyMapping = geographyCode
+        ? Object.prototype.hasOwnProperty.call(manifest.geographyByCode, geographyCode)
+          ? manifest.geographyByCode[geographyCode]
+          : undefined
+        : undefined;
+
+      if (!geographyCode || typeof row.geodsg !== "string") {
         quarantined.push({
           period: periodLabel,
           geographyCode,
           reason: "unmapped-geography",
-          detail: "O código geográfico não existe no manifesto revisto.",
+          detail: "A linha não identifica a geografia com código e designação.",
         });
+        continue;
+      }
+
+      if (!geographyMapping) {
+        outOfScope += 1;
         continue;
       }
 
@@ -438,5 +464,6 @@ export function normalizeIneAnnualIndicator(
   return {
     observations: observations.sort((left, right) => left.id.localeCompare(right.id)),
     quarantined,
+    outOfScope,
   };
 }

@@ -102,10 +102,50 @@ describe("negocio:sem-fonte-propria", () => {
       linhas.forEach((linha, i) => {
         const semComentario = linha.replace(/\/\/.*$/, "").replace(/^\s*\*.*$/, "");
         // Uma constante exportada com nome de taxa e um número por valor.
-        if (/(?:const|let)\s+\w*(?:TAXA|IVA|IRS|IRC|TSU|SS_|DERRAMA|COEF)\w*\s*=\s*[\d.]/i.test(semComentario)) {
+        //
+        // O nome tem de COMEÇAR pela palavra-chave, tê-la num degrau de
+        // camelCase, ou estar todo em maiúsculas. A versão anterior era
+        // `\w*(?:…|IVA|…)\w*` com `/i`, e casava «iva» dentro de qualquer
+        // palavra portuguesa terminada em -iva: tentativa, alternativa,
+        // iniciativa. Apanhou um contador de tentativas e ia continuar a
+        // apanhar quem escrevesse português normal.
+        //
+        // `const iva = 0.23`, `taxaIvaNormal`, `TAXA_IVA` continuam todos
+        // a ser apanhados — que é o que esta guarda existe para impedir.
+        if (
+          /(?:const|let)\s+(?:[A-Z0-9_]*(?:TAXA|IVA|IRS|IRC|TSU|SS_|DERRAMA|COEF)[A-Z0-9_]*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
+            semComentario,
+          )
+        ) {
           suspeitos.push(`${caminho.replace(process.cwd(), "")}:${i + 1} → ${linha.trim()}`);
         }
       });
+    }
+
+    // A própria guarda tem de continuar a apanhar o que existe para
+    // apanhar. Sem isto, afinar o padrão para calar um falso positivo
+    // podia esvaziá-lo sem ninguém dar por nada.
+    const apanha = (linha: string) =>
+      /(?:const|let)\s+(?:[A-Z0-9_]*(?:TAXA|IVA|IRS|IRC|TSU|SS_|DERRAMA|COEF)[A-Z0-9_]*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
+        linha,
+      );
+    for (const real of [
+      "const TAXA_IVA = 0.23",
+      "const IVA_NORMAL = 23",
+      "const taxaIvaNormal = 0.23",
+      "const iva = 0.23",
+      "const COEF_SERVICOS = 0.75",
+      "let derramaMunicipal = 1.5",
+    ]) {
+      expect(apanha(real), `devia apanhar: ${real}`).toBe(true);
+    }
+    for (const inocente of [
+      "for (let ronda = 0; ronda < 3; ronda += 1) {",
+      "const tentativa = 0",
+      "const alternativa = 2",
+      "const iniciativa = 1",
+    ]) {
+      expect(apanha(inocente), `não devia apanhar: ${inocente}`).toBe(false);
     }
 
     expect(suspeitos).toEqual([]);

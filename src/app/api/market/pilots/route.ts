@@ -3,6 +3,10 @@ import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
 
 export const revalidate = 21_600;
 
+/** Uma fonte que não respondeu não pode ficar seis horas colada à borda. */
+const CACHE_SAUDAVEL = "public, s-maxage=21600, stale-while-revalidate=86400";
+const CACHE_DEGRADADO = "public, s-maxage=300, stale-while-revalidate=3600";
+
 /**
  * O pack público de mercado. Não recebe nem devolve nada do perfil de quem
  * pergunta: o browser pede o mesmo objeto para toda a gente.
@@ -19,9 +23,18 @@ export async function GET() {
 
   try {
     const pilots = await loadPilotMarketEvidence({ fetchImpl });
+
+    // Uma build pode apanhar o INE sob carga e prerenderizar um pack com
+    // metade das séries em falta. Guardar isso durante seis horas fazia um
+    // problema de trinta segundos durar uma tarde: quando alguma fonte
+    // ficou por confirmar, a borda volta a tentar dentro de minutos.
+    const degradado = pilots.some((pilot) =>
+      pilot.sourceHealth.some((health) => health.state !== "healthy"),
+    );
+
     return NextResponse.json(
       { schemaVersion: 1, generatedAt: new Date().toISOString(), pilots },
-      { headers: { "Cache-Control": "public, s-maxage=21600, stale-while-revalidate=86400" } },
+      { headers: { "Cache-Control": degradado ? CACHE_DEGRADADO : CACHE_SAUDAVEL } },
     );
   } catch {
     return NextResponse.json(
@@ -31,9 +44,7 @@ export async function GET() {
         pilots: [],
         degraded: "Não foi possível montar o pack de mercado nesta execução.",
       },
-      // Sem cache longo: um erro nosso não pode ficar seis horas colado à
-      // borda a servir uma lista vazia como se fosse a verdade do dia.
-      { status: 200, headers: { "Cache-Control": "public, s-maxage=60" } },
+      { status: 200, headers: { "Cache-Control": CACHE_DEGRADADO } },
     );
   }
 }
