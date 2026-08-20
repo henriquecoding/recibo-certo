@@ -105,11 +105,17 @@ export {
 
 export { entradaEmpresa, paraEmpresa, sociedadeValeAPena, type EntradaEmpresa } from "./adapters/empresa";
 export {
-  atividadeDominante,
   atividadeLabelDominante,
+  comparacaoPossivel,
   entradaComparacao,
+  extremosDaComparacao,
+  naturezaPrincipal,
   paraComparacao,
+  portfolioFiscal,
   type EntradaComparacao,
+  type EstadoNatureza,
+  type PortfolioFiscal,
+  type RendimentoPorNatureza,
 } from "./adapters/comparar";
 export {
   ambitoClientes,

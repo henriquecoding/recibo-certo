@@ -1659,6 +1659,33 @@ export interface ComparacaoInput {
    * Deixá-la só num dos lados enviesaria o veredicto.
    */
   residenciaFiscal?: Regiao;
+  /**
+   * Coeficiente do regime simplificado, quando o rendimento tem MAIS DO
+   * QUE UMA natureza fiscal.
+   *
+   * 40 000 € de consultoria (coef. 0,75) mais 30 000 € de venda de
+   * produtos (coef. 0,15) não é 70 000 € de consultoria — e reduzir os
+   * dois a uma «atividade dominante» inflaciona o rendimento tributável
+   * em milhares de euros. Quem chama passa aqui a média ponderada, que é
+   * matematicamente exata para esta parcela: Σ(valor × coef) ÷ Σ valor.
+   *
+   * Omisso, usa-se o coeficiente de `tipo`, como sempre.
+   */
+  coefOverride?: number;
+  /**
+   * Coeficiente da base contributiva, pela mesma razão.
+   *
+   * ⚠️ ISTO ESTAVA ERRADO PARA QUALQUER NEGÓCIO DE VENDAS, e não só para
+   * os mistos: a base de Segurança Social era sempre a de prestação de
+   * serviços (70%), quando o Art. 162.º do Código Contributivo manda
+   * aplicar 20% à produção e venda de bens, hotelaria e restauração. Um
+   * retalhista via a sua Segurança Social estimada a mais de três vezes o
+   * valor real, nos dois lados da comparação.
+   *
+   * Omisso, deriva-se de `tipo` — que é o comportamento certo, e não o
+   * que estava lá.
+   */
+  coefBaseSS?: number;
 }
 
 export interface ComparacaoResult {
@@ -1698,6 +1725,7 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
   const sim = simularIRSAnual({
     brutoAnual: bruto,
     tipo: input.tipo,
+    coefOverride: input.coefOverride,
     irsJovemAno: input.irsJovemAno,
     despesasJustificadas: despesas,
     dependentes: input.dependentes,
@@ -1710,7 +1738,14 @@ export function compararRegimes(input: ComparacaoInput): ComparacaoResult {
   });
   // Base de SS com o teto de 12×IAS (coerente com calcular/simularIRSAnual): sem
   // este limite, a SS do independente ficava sobrestimada para rendimentos altos.
-  const baseSSAnual = Math.min(bruto * SS_COEFICIENTE.servicos.value, SS_BASE_MAX_MENSAL.value * 12);
+  //
+  // ⚠️ O COEFICIENTE NÃO É SEMPRE 70%. Estava fixo em `servicos`, e por
+  // isso a Segurança Social de um negócio de vendas saía mais de três
+  // vezes acima da real (Art. 162.º do Código Contributivo: 20% para
+  // produção e venda de bens, hotelaria e restauração).
+  const coefSS =
+    input.coefBaseSS ?? SS_COEFICIENTE[BASE_SS_POR_TIPO[input.tipo]].value;
+  const baseSSAnual = Math.min(bruto * coefSS, SS_BASE_MAX_MENSAL.value * 12);
   const ss = baseSSAnual * SS_TAXA.value;
   const freelancerLiquido = bruto - despesas - sim.irsEstimado - ss;
 
