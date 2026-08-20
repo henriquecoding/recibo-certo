@@ -23,13 +23,20 @@
 //  entrou antes. Ver `store/cofre.ts`.
 // ─────────────────────────────────────────────────────────────────────────
 
+import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import type { ContextoNegocio } from "@/lib/negocio/tipos";
 import { chaveAtiva } from "./cofre";
 import { gravarChave, lerChave, removerChave } from "./persistencia";
 
 const CHAVE = () => chaveAtiva("negocio");
 
-/** Versão do envelope. Sobe quando a forma do rascunho mudar. */
+/**
+ * Versão do envelope. Sobe quando a forma do rascunho mudar.
+ *
+ * ⚠️ Continua em 1: o envelope não mudou, mudou o CONTEÚDO. Subi-la
+ * obrigaria a deitar fora rascunhos que a migração sabe ler — que é
+ * exatamente o que a migração existe para não ser preciso fazer.
+ */
 export const ENVELOPE_NEGOCIO_VERSAO = 1;
 
 export interface EnvelopeNegocio {
@@ -57,9 +64,14 @@ export function lerRascunhoNegocio(): ContextoNegocio | null {
     const env = lido as Partial<EnvelopeNegocio>;
     if (env.versao !== ENVELOPE_NEGOCIO_VERSAO) return null;
 
-    const c = env.contexto;
-    if (!valido(c)) return null;
-    return c;
+    // ── §70 — migrar, não deitar fora ────────────────────────────
+    //  Um rascunho da v1 tem trabalhadores com `salarioBrutoMensal` e
+    //  `meses`. Recusá-lo apagava o trabalho de quem tinha um projeto por
+    //  acabar; lê-lo com `as` rebentava no primeiro acesso a
+    //  `t.remuneracao.salarioBaseMensal`, no browser dessa pessoa.
+    const migrado = migrarNegocioV1ParaV2(env.contexto);
+    if (!valido(migrado)) return null;
+    return migrado;
   } catch {
     return null;
   }
@@ -68,7 +80,7 @@ export function lerRascunhoNegocio(): ContextoNegocio | null {
 function valido(c: unknown): c is ContextoNegocio {
   if (!c || typeof c !== "object") return false;
   const o = c as Partial<ContextoNegocio>;
-  if (o.versao !== 1) return false;
+  if (o.versao !== 2) return false;
   if (typeof o.id !== "string" || o.id.length === 0) return false;
   if (!Array.isArray(o.ofertas)) return false;
   // Uma oferta sem `pricing` faria `precificar()` rebentar no primeiro

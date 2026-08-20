@@ -19,12 +19,22 @@ export {
   agregarBase,
   overheadMensal,
   custoTrabalhadoresMensal,
+  custoTrabalhadoresPrimeiroAnoMensal,
+  custosDosPostos,
   custosOperacionaisAnuais,
   contaParaONegocio,
+  entradaDoPosto,
   temTrabalhadorValido,
   type AgregadoBase,
   type AgregadoNegocio,
 } from "./agregar";
+
+export {
+  migrarNegocioV1ParaV2,
+  migrarTrabalhadorV1ParaV2,
+  precisaMigrar,
+  type ContextoNegocioV1,
+} from "./migracoes/v1-v2";
 
 export {
   calcularOferta,

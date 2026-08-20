@@ -38,7 +38,9 @@ import {
   sinaisDoNegocio,
   type ContextoNegocio,
   type OfertaNegocio,
+  type TrabalhadorPlaneado,
 } from "@/lib/negocio";
+import { custoDoPosto } from "@/lib/payroll/custo-empregador";
 import { precificar } from "@/lib/pricing";
 import { escolherRota } from "@/lib/routing";
 import { diagnosticoContabilista } from "@/lib/contabilista";
@@ -64,6 +66,16 @@ function negocioCom(ofertas: OfertaNegocio[], overhead: number[] = []): Contexto
 }
 
 const perto = (a: number, b: number, tol = 0.02) => Math.abs(a - b) <= tol;
+
+/** Um posto no contrato v2, para os testes não repetirem a montagem. */
+function posto(funcao: string, salarioBaseMensal: number, inicioMes = 0): TrabalhadorPlaneado {
+  return {
+    id: `t_${funcao}`,
+    funcao,
+    remuneracao: { salarioBaseMensal },
+    contrato: { inicioMes, pagamentoSubsidios: "normal" },
+  };
+}
 
 // ═══════════════════════════════════════════════════════════════════════
 //  0. A CAMADA É UM ORQUESTRADOR — e prova-se lendo o próprio código
@@ -102,9 +114,25 @@ describe("negocio:sem-fonte-propria", () => {
   it("as taxas que usa vêm importadas de `fiscal-data`", () => {
     const agregarSrc = readFileSync(join(RAIZ, "agregar.ts"), "utf8");
     expect(agregarSrc).toContain('from "@/lib/fiscal-data"');
-    expect(agregarSrc).toContain("SS_DEPENDENTE.entidade.value");
-    // E não a escreve à mão em lado nenhum.
+    // E não escreve nenhuma à mão: nem a TSU, nem o IVA.
     expect(agregarSrc).not.toMatch(/0\.2375/);
+    expect(agregarSrc).not.toMatch(/0\.23\b/);
+  });
+
+  it("o custo de pessoal é DELEGADO ao motor de payroll (§26)", () => {
+    // «Nenhuma fórmula de payroll nova deve viver em `lib/negocio`.» A
+    // conta de encargos estava aqui e era `bruto × meses × (1 + TSU)`:
+    // ignorava refeição, seguro obrigatório, medicina do trabalho e a
+    // retenção autónoma dos subsídios.
+    const agregarSrc = readFileSync(join(RAIZ, "agregar.ts"), "utf8");
+    expect(agregarSrc).toContain('from "@/lib/payroll/custo-empregador"');
+    expect(agregarSrc).toContain("custoDoPosto");
+
+    for (const caminho of ficheiros(RAIZ)) {
+      const src = readFileSync(caminho, "utf8");
+      // As assinaturas do motor de vencimento não podem reaparecer aqui.
+      expect(src, caminho).not.toMatch(/function\s+(retencaoIRS|calcularRecibo|isencaoJovem)/);
+    }
   });
 
   it("nenhum ficheiro do domínio reimplementa o solver de preço", () => {
@@ -572,37 +600,46 @@ describe("negocio:integracao", () => {
 
   it("contratar alguém torna o caso complexo", () => {
     const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
-    contexto.estrutura.trabalhadores = [
-      { id: "t1", funcao: "Apoio", salarioBrutoMensal: 900, meses: 14 },
-    ];
+    contexto.estrutura.trabalhadores = [posto("Apoio", 900)];
     const sinais = sinaisDoNegocio(analisarNegocio(contexto), contexto);
     expect(sinais.casoComplexo).toBe(true);
   });
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  TRABALHADORES — a TSU vem de `fiscal-data`, não daqui
+//  TRABALHADORES — o cálculo é do motor de vencimento, não daqui
 // ═══════════════════════════════════════════════════════════════════════
 
 describe("negocio:trabalhadores", () => {
-  it("o custo inclui a TSU da entidade e reparte os 14 meses por 12", () => {
+  it("o custo é o do motor de payroll, não uma fórmula própria", () => {
+    // ⚠️ ISTO JÁ FOI `bruto × meses × (1 + TSU) ÷ 12`, e o teste verificava
+    // essa fórmula. Verificar uma fórmula que o domínio não devia ter era
+    // prender aqui a duplicação que §26 proíbe: o domínio delega, e o
+    // teste tem de verificar a DELEGAÇÃO, não uma segunda conta.
     const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
-    contexto.estrutura.trabalhadores = [
-      { id: "t1", funcao: "Apoio", salarioBrutoMensal: 1000, meses: 14 },
-    ];
+    contexto.estrutura.trabalhadores = [posto("Apoio", 1000)];
 
-    const esperado = (1000 * 14 * (1 + SS_DEPENDENTE.entidade.value)) / 12;
-    expect(perto(agregar(contexto).custoTrabalhadoresMes, esperado, 0.02)).toBe(true);
+    const doMotor = custoDoPosto({ salarioBaseMensal: 1000, pagamentoSubsidios: "normal" });
+    expect(perto(agregar(contexto).custoTrabalhadoresMes, doMotor.empresa.custoMedioMensal, 0.02)).toBe(
+      true,
+    );
+  });
+
+  it("o custo cobre mais do que o bruto e a TSU (§25)", () => {
+    // O seguro de acidentes de trabalho é obrigatório desde o primeiro dia
+    // e a conta antiga deixava-o de fora, junto com a refeição e a SST.
+    const contexto = negocioCom([respondida(novaOferta("servico", { volumeMes: 8 }))]);
+    contexto.estrutura.trabalhadores = [posto("Apoio", 1000)];
+
+    const antigo = (1000 * 14 * (1 + SS_DEPENDENTE.entidade.value)) / 12;
+    expect(agregar(contexto).custoTrabalhadoresMes).toBeGreaterThan(antigo);
   });
 
   it("o custo dos trabalhadores entra nos fixos e sobe o ponto de equilíbrio", () => {
     const base = negocioCom([respondida(novaOferta("produto_revenda", { volumeMes: 60 }))], [200]);
     const comEquipa: ContextoNegocio = {
       ...base,
-      estrutura: {
-        ...base.estrutura,
-        trabalhadores: [{ id: "t1", funcao: "Apoio", salarioBrutoMensal: 900, meses: 12 }],
-      },
+      estrutura: { ...base.estrutura, trabalhadores: [posto("Apoio", 900)] },
     };
 
     const a = analisarNegocio(base);

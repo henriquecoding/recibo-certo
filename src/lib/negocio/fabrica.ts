@@ -43,7 +43,7 @@ export function contextoNegocioVazio(
 ): ContextoNegocio {
   const agora = new Date().toISOString();
   return {
-    versao: 1,
+    versao: 2,
     id: uid("neg"),
     maturidade,
     ofertas: [],
@@ -117,6 +117,20 @@ export function novoInvestimento(
   return { id: uid("inv"), categoria, rotulo, valor, mes: 0 };
 }
 
-export function novoTrabalhador(funcao = "", salarioBrutoMensal = 0): TrabalhadorPlaneado {
-  return { id: uid("trb"), funcao, salarioBrutoMensal, meses: 14, entraNoMes: 0 };
+/**
+ * Um posto novo.
+ *
+ * `pagamentoSubsidios: "normal"` é o caso corrente e o legalmente devido
+ * — não é uma escolha que se esconda num seletor de «12 ou 14 meses»
+ * (§30). Tudo o resto nasce POR DECLARAR: um subsídio de refeição ativo
+ * por omissão, ou um prémio de seguro assumido, seriam respostas que
+ * ninguém deu.
+ */
+export function novoTrabalhador(funcao = "", salarioBaseMensal = 0): TrabalhadorPlaneado {
+  return {
+    id: uid("trb"),
+    funcao,
+    remuneracao: { salarioBaseMensal },
+    contrato: { inicioMes: 0, pagamentoSubsidios: "normal" },
+  };
 }

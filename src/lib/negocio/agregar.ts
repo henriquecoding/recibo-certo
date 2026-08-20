@@ -33,7 +33,12 @@
 //  a criar o defeito que ela acabou de resolver.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { IVA_TAXAS, SS_DEPENDENTE, type Regiao } from "@/lib/fiscal-data";
+import { IVA_TAXAS, type Regiao } from "@/lib/fiscal-data";
+import {
+  custoDoPosto,
+  type EntradaCustoPosto,
+  type ResultadoCustoPosto,
+} from "@/lib/payroll/custo-empregador";
 import { cent, dividir, naoNegativo, num } from "@/lib/pricing/numeros";
 import { calcularOferta } from "./ofertas";
 import type {
@@ -42,6 +47,7 @@ import type {
   CustoEstrutura,
   EstruturaNegocio,
   ResultadoOfertaNegocio,
+  TrabalhadorPlaneado,
 } from "./tipos";
 
 /** As três grandezas mensais que uma base declarada contribui. */
@@ -153,30 +159,82 @@ export const contaParaONegocio = (c: CustoEstrutura): boolean => c.escopo !== "o
  * confirmado só porque ocupa uma linha no ecrã.
  */
 export function temTrabalhadorValido(estrutura: EstruturaNegocio | undefined): boolean {
-  return (estrutura?.trabalhadores ?? []).some((t) => num(t.salarioBrutoMensal) > 0);
+  return (estrutura?.trabalhadores ?? []).some((t) => num(t.remuneracao?.salarioBaseMensal) > 0);
+}
+
+/** A entrada do motor de payroll a partir do contrato do negócio. */
+export function entradaDoPosto(t: TrabalhadorPlaneado): EntradaCustoPosto {
+  const refeicao = t.refeicao?.ativo
+    ? {
+        valorDia: Math.max(0, num(t.refeicao.valorDia)),
+        diasMes: Math.max(0, num(t.refeicao.diasMes)),
+        cartao: t.refeicao.cartao,
+      }
+    : undefined;
+
+  return {
+    salarioBaseMensal: Math.max(0, num(t.remuneracao?.salarioBaseMensal)),
+    pagamentoSubsidios: t.contrato?.pagamentoSubsidios ?? "normal",
+    inicioMes: Math.max(0, num(t.contrato?.inicioMes)),
+    refeicao,
+    // `undefined` e `0` são coisas diferentes: `undefined` é «ainda não
+    // sei» (vira pressuposto), `0` é «não pago nada». Preservar essa
+    // diferença é o que separa uma estimativa de uma omissão.
+    seguroAT: { anual: t.seguroAT?.premioAnual },
+    sst: { anual: t.sst?.custoAnual },
+    formacao: { anual: t.formacao?.custoAnual },
+    outrosAnual: num(t.outrosAnual),
+    perfil: t.perfil,
+  };
+}
+
+/** O custo completo de cada posto, calculado uma vez e reutilizado. */
+export function custosDosPostos(
+  estrutura: EstruturaNegocio | undefined,
+): { trabalhador: TrabalhadorPlaneado; custo: ResultadoCustoPosto }[] {
+  return (estrutura?.trabalhadores ?? [])
+    .filter((t) => num(t.remuneracao?.salarioBaseMensal) > 0)
+    .map((t) => ({ trabalhador: t, custo: custoDoPosto(entradaDoPosto(t)) }));
 }
 
 /**
- * O custo mensal de ter alguém contratado — o BRUTO mais a TSU da
- * entidade, repartido pelos 12 meses do ano.
+ * O custo mensal ESTABILIZADO de ter alguém contratado.
  *
- * A taxa vem de `fiscal-data.ts` (Código Contributivo). Escrevê-la aqui
- * seria criar uma segunda fonte para um número que é lei — o defeito que
- * `assertFiscalDataIntegrity()` existe para apanhar.
+ * ── O QUE MUDOU NA v2 (§25-27) ─────────────────────────────────────
+ * Era `bruto × meses × (1 + TSU) ÷ 12`, e ficava por aí. Deixava de fora
+ * o subsídio de refeição, o seguro de acidentes de trabalho (que é
+ * obrigatório desde o primeiro dia), a medicina do trabalho e a formação
+ * — tudo dinheiro que sai da empresa todos os meses.
  *
- * ⚠️ NÃO inclui subsídio de refeição, seguro de acidentes de trabalho nem
- * formação obrigatória: são custos reais e variáveis por caso, e vão para
- * o overhead como qualquer outra despesa declarada. Um valor inventado
- * para eles seria pior do que a omissão que o pressuposto declara.
+ * Agora delega em `lib/payroll/custo-empregador.ts`, que chama o motor de
+ * vencimento. Nenhuma fórmula de salários vive neste diretório (§26), e a
+ * TSU já não é escrita aqui: chega através do motor que a lê de
+ * `fiscal-data.ts`.
+ *
+ * ⚠️ ESTABILIZADO quer dizer: como se a pessoa lá estivesse o ano
+ * inteiro. É o número certo para o break-even. O PRIMEIRO ANO, com a data
+ * de entrada respeitada, é `custoTrabalhadoresPrimeiroAnoMensal()` — e
+ * confundi-los faz um negócio que contrata em julho parecer que paga doze
+ * meses de salários no primeiro ano (§38).
  */
 export function custoTrabalhadoresMensal(estrutura: EstruturaNegocio | undefined): number {
-  const tsu = SS_DEPENDENTE.entidade.value;
   return cent(
-    (estrutura?.trabalhadores ?? []).reduce((s, t) => {
-      const bruto = Math.max(0, num(t.salarioBrutoMensal));
-      const meses = t.meses === 14 ? 14 : 12;
-      return s + dividir(bruto * meses * (1 + tsu), 12);
-    }, 0),
+    custosDosPostos(estrutura).reduce((s, p) => s + p.custo.empresa.custoMedioMensal, 0),
+  );
+}
+
+/**
+ * O mesmo custo, mas só com os meses em que cada pessoa trabalha (§38).
+ *
+ * `entraNoMes` existia no contrato v1 e não fechava o ciclo: a conta
+ * anual ignorava-o, e o primeiro ano de um negócio que contrata a meio do
+ * ano saía sistematicamente acima da verdade.
+ */
+export function custoTrabalhadoresPrimeiroAnoMensal(
+  estrutura: EstruturaNegocio | undefined,
+): number {
+  return cent(
+    custosDosPostos(estrutura).reduce((s, p) => s + p.custo.primeiroAno.custoMedioMensal, 0),
   );
 }
 

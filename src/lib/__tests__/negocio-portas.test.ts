@@ -272,7 +272,7 @@ describe("portas:trabalhador-vazio", () => {
     estrutura: {
       overheadMensal: [],
       investimentosIniciais: [],
-      trabalhadores: [{ ...novoTrabalhador("Designer"), salarioBrutoMensal: salario }],
+      trabalhadores: [{ ...novoTrabalhador("Designer"), remuneracao: { salarioBaseMensal: salario } }],
     },
   });
 

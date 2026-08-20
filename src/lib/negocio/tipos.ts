@@ -29,8 +29,10 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ContextoPreco, ResultadoPreco, Regiao } from "@/lib/pricing/tipos";
+import type { PagamentoSubsidios, PerfilPessoalPosto } from "@/lib/payroll/custo-empregador";
 
 export type { ContextoPreco, ResultadoPreco };
+export type { PagamentoSubsidios, PerfilPessoalPosto };
 
 // ─── 1. Em que ponto está a pessoa ─────────────────────────────────────
 
@@ -174,13 +176,99 @@ export interface InvestimentoInicial {
   mes?: number;
 }
 
+/**
+ * Um posto de trabalho planeado. (§25-42, v2)
+ *
+ * ── PORQUE É QUE ISTO DEIXOU DE SER TRÊS CAMPOS ────────────────────
+ * A v1 era `{ salarioBrutoMensal, meses: 12 | 14, entraNoMes }`, e o
+ * custo saía de `bruto × meses × (1 + TSU) ÷ 12`. O número respondia a
+ * uma pergunta e escondia quatro:
+ *
+ *   · quanto recebe a pessoa ao fim do mês?
+ *   · quanto é contribuição, quanto é imposto, e para quem vai cada um?
+ *   · e a refeição, o seguro obrigatório, a medicina do trabalho?
+ *   · e se ela entrar em julho?
+ *
+ * E o «12 ou 14» perguntava se um trabalhador «tem direito» a subsídios,
+ * que não é uma escolha do empregador — é lei (§30). O que é escolha é o
+ * CALENDÁRIO do pagamento.
+ *
+ * ── O CÁLCULO NÃO VIVE AQUI ────────────────────────────────────────
+ * §26: nenhuma fórmula de payroll nova em `lib/negocio`. Este é o
+ * CONTRATO; quem calcula é `lib/payroll/custo-empregador.ts`, que chama
+ * o motor de vencimento que já existe.
+ */
 export interface TrabalhadorPlaneado {
   id: string;
   funcao: string;
-  /** Salário BRUTO mensal. Os encargos calculam-se, não se pedem. */
+
+  remuneracao: {
+    /** Salário BASE mensal, ilíquido. Os encargos calculam-se. */
+    salarioBaseMensal: number;
+  };
+
+  contrato: {
+    /** Mês do horizonte em que entra. 0 = desde o início. */
+    inicioMes: number;
+    /** Como se pagam os subsídios de férias e Natal. */
+    pagamentoSubsidios: PagamentoSubsidios;
+  };
+
+  /** §34 — configuração, nunca ativada por omissão para toda a gente. */
+  refeicao?: {
+    ativo: boolean;
+    valorDia: number;
+    diasMes: number;
+    /** Cartão/vale tem limite isento mais alto do que numerário. */
+    cartao: boolean;
+  };
+
+  /** §35 — obrigatório por lei; o prémio depende da atividade. */
+  seguroAT?: { premioAnual?: number };
+
+  /** §36 — saúde e segurança no trabalho / medicina do trabalho. */
+  sst?: { custoAnual?: number };
+
+  /** §37 — formação contínua (Art. 131.º CT). Custo E tempo. */
+  formacao?: { custoAnual?: number; horasAno?: number };
+
+  /** Fardas, equipamento, deslocações fixas. */
+  outrosAnual?: number;
+
+  /**
+   * A situação pessoal, para estimar o líquido. §29: NUNCA se inventa
+   * estado civil ou dependentes de alguém que ainda não foi contratado —
+   * sem isto, o líquido é «ainda não estimado» e diz-se.
+   */
+  perfil?: PerfilPessoalPosto;
+
+  /** §40 — este posto aumenta a capacidade de entrega? */
+  capacidade?: CapacidadePosto;
+}
+
+/**
+ * Um posto que produz. (§39-40)
+ *
+ * Contratar aumentava o custo e o ponto de equilíbrio, e não mexia na
+ * capacidade — o que torna qualquer contratação economicamente
+ * unilateral e sempre má. Para um cargo produtivo isso é falso.
+ */
+export interface CapacidadePosto {
+  /** `false` num cargo administrativo: custa e não entrega. */
+  aumenta: boolean;
+  horasSemana?: number;
+  /** Fração das horas que é mesmo faturável (0–1). */
+  fracaoProdutiva?: number;
+  /** Ids das ofertas que este posto consegue entregar. Vazio = todas. */
+  ofertas?: string[];
+}
+
+/** O contrato ANTIGO, para o migrador o poder ler (§71). */
+export interface TrabalhadorPlaneadoV1 {
+  id: string;
+  funcao: string;
   salarioBrutoMensal: number;
   meses: 12 | 14;
-  /** Mês do horizonte em que entra. 0 = desde o início. */
   entraNoMes?: number;
 }
 
@@ -272,8 +360,15 @@ export interface PreferenciasEstrutura {
 // ─── 7. O contexto completo ────────────────────────────────────────────
 
 export interface ContextoNegocio {
-  /** Versão do esquema. As migrações futuras dependem disto. */
-  versao: 1;
+  /**
+   * Versão do esquema.
+   *
+   * Subiu para 2 quando o trabalhador deixou de ser três campos (§70).
+   * Um rascunho da v1 lê-se com `migrarNegocioV1ParaV2()` — nunca com um
+   * `as`, que é uma promessa ao TypeScript que os dados guardados há seis
+   * meses não têm obrigação de cumprir (§95).
+   */
+  versao: 2;
   id: string;
   nome?: string;
   maturidade: MaturidadeNegocio;

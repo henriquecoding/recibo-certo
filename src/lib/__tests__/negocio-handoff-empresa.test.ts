@@ -81,7 +81,7 @@ function negocioCompleto(
         novoCustoEstrutura("software", "Software", 60),
       ],
       investimentosIniciais: [{ ...novoInvestimento("equipamento", "Máquina"), valor: 20_000 }],
-      trabalhadores: [{ ...novoTrabalhador("Designer"), salarioBrutoMensal: 1_500 }],
+      trabalhadores: [{ ...novoTrabalhador("Designer"), remuneracao: { salarioBaseMensal: 1_500 } }],
     },
     ...extra,
   };
@@ -187,7 +187,7 @@ describe("handoff:o-que-viaja", () => {
         estrutura: {
           overheadMensal: [novoCustoEstrutura("contabilidade", "Contabilidade", 150)],
           investimentosIniciais: [],
-          trabalhadores: [{ ...novoTrabalhador("Designer"), salarioBrutoMensal: 1_500 }],
+          trabalhadores: [{ ...novoTrabalhador("Designer"), remuneracao: { salarioBaseMensal: 1_500 } }],
         },
       }),
     );

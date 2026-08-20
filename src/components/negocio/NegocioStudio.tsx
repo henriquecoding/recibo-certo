@@ -55,6 +55,7 @@ import {
 } from "@/lib/negocio";
 import { confirmados } from "@/lib/negocio/pressupostos";
 import { agregar } from "@/lib/negocio/agregar";
+import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import { gravarRascunhoNegocio, lerRascunhoNegocio, limparRascunhoNegocio } from "@/lib/store/negocio";
 import { consumirReabertura } from "@/lib/store/cenarios";
 import type { CenarioInicial, ContextoPreco } from "@/lib/pricing/tipos";
@@ -166,9 +167,11 @@ export default function NegocioStudio() {
     retomou.current = true;
 
     const reaberto = consumirReabertura("negocio");
-    const doCenario = reaberto?.contexto;
-    if (doCenario && typeof doCenario === "object") {
-      const c = doCenario as ContextoNegocio;
+    // §95 — nunca `as` sobre um instantâneo guardado. Um cenário criado
+    // antes da v2 tem trabalhadores no contrato antigo, e o `as` só
+    // adiava o erro até ao primeiro acesso a `t.remuneracao`.
+    const c = migrarNegocioV1ParaV2(reaberto?.contexto);
+    if (c) {
       setContexto(c);
       setCaixaAtiva(Boolean(c.caixa));
       return;

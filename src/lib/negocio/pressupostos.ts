@@ -20,7 +20,7 @@
 
 import { fmt } from "@/lib/format";
 import { num } from "@/lib/pricing/numeros";
-import { temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
+import { custosDosPostos, temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
 import { capacidadeDe, volumeDerivado } from "./ofertas";
 import type { ContextoNegocio, PressupostoNegocio } from "./tipos";
 
@@ -105,7 +105,7 @@ export function levantarPressupostos(
   // E se houver cartões por preencher, isso é um pressuposto por direito
   // próprio — não um silêncio.
   const vazios = (contexto.estrutura?.trabalhadores ?? []).filter(
-    (t) => num(t.salarioBrutoMensal) <= 0,
+    (t) => num(t.remuneracao?.salarioBaseMensal) <= 0,
   );
   if (vazios.length > 0) {
     lista.push({
@@ -119,6 +119,8 @@ export function levantarPressupostos(
         "Um posto sem salário não entra em custo nenhum, mas ocupa uma linha no ecrã — e faz o modelo parecer mais completo do que está.",
     });
   }
+
+  lista.push(...pressupostosDosPostos(contexto));
 
   if (!temEstrutura && !contexto.respondidos.includes("estrutura-sem-custos")) {
     lista.push({
@@ -219,6 +221,92 @@ export function levantarPressupostos(
 }
 
 const ORDEM: Record<PressupostoNegocio["impacto"], number> = { alto: 3, medio: 2, baixo: 1 };
+
+/**
+ * O que fica por saber em cada posto de trabalho. (§42)
+ *
+ * Cada um destes é um custo real que a conta não tem, ou um número que a
+ * conta assumiu. O seguro de acidentes de trabalho é obrigatório desde o
+ * primeiro dia e nós estimamo-lo; a medicina do trabalho é obrigatória e
+ * fica a zero; o líquido depende de uma situação pessoal que ninguém
+ * declarou. Sem esta lista, os três desapareciam num número só.
+ */
+function pressupostosDosPostos(contexto: ContextoNegocio): PressupostoNegocio[] {
+  const lista: PressupostoNegocio[] = [];
+
+  for (const { trabalhador: t, custo } of custosDosPostos(contexto.estrutura)) {
+    const quem = t.funcao?.trim() || "posto sem nome";
+
+    if (custo.estimado.calendarioPorConfirmar) {
+      lista.push({
+        id: `posto-calendario-${t.id}`,
+        rotulo: `Subsídios de ${quem}`,
+        valor: "fora da conta — calendário por confirmar",
+        origem: "default",
+        impacto: "alto",
+        resolverEm: "trabalhadores",
+        porque:
+          "Este posto veio de uma versão anterior do projeto, em que os subsídios de férias e Natal não entravam no custo. São devidos por lei — confirma o calendário para a conta ficar certa.",
+      });
+    }
+
+    if (custo.estimado.seguroAT) {
+      lista.push({
+        id: `posto-seguro-${t.id}`,
+        rotulo: `Seguro de acidentes de trabalho de ${quem}`,
+        valor: `${fmt(custo.empresa.seguroAT)}/ano, estimado`,
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "É obrigatório desde o primeiro dia, mas o prémio depende da atividade e da seguradora. O valor na conta é uma estimativa de planeamento, não um prémio real.",
+      });
+    }
+
+    if (custo.estimado.sst) {
+      lista.push({
+        id: `posto-sst-${t.id}`,
+        rotulo: `Saúde e segurança no trabalho de ${quem}`,
+        valor: "ainda sem orçamento",
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "A medicina do trabalho é obrigatória e não está nesta conta. Enquanto não houver orçamento, o custo do posto está abaixo da verdade.",
+      });
+    }
+
+    if (custo.estimado.liquidoPorEstimar) {
+      lista.push({
+        id: `posto-liquido-${t.id}`,
+        rotulo: `Líquido de ${quem}`,
+        valor: "não estimado",
+        origem: "default",
+        // Baixo para o NEGÓCIO — o custo da empresa não muda com isto —
+        // e alto para quem quiser saber o que vai oferecer a alguém.
+        impacto: "baixo",
+        resolverEm: "trabalhadores",
+        porque:
+          "O líquido depende do estado civil, dos dependentes e da região de quem for contratado. Não inventamos nenhum: o custo da empresa está certo, o que a pessoa recebe é que fica por estimar.",
+      });
+    }
+
+    if (num(t.contrato?.inicioMes) === 0) {
+      lista.push({
+        id: `posto-entrada-${t.id}`,
+        rotulo: `Entrada de ${quem}`,
+        valor: "desde o início",
+        origem: "default",
+        impacto: "medio",
+        resolverEm: "trabalhadores",
+        porque:
+          "Assume-se que a pessoa está lá desde o primeiro mês. Contratar a meio do ano muda o custo do primeiro ano e a caixa dos meses anteriores.",
+      });
+    }
+  }
+
+  return lista;
+}
 
 /** Os que a pessoa confirmou — o outro lado do livro. */
 export function confirmados(contexto: ContextoNegocio, a: AgregadoNegocio): PressupostoNegocio[] {
