@@ -30,8 +30,9 @@
 
 import { useState } from "react";
 import { fmt } from "@/lib/format";
-import { CampoEuros, CampoNumero, Segmentado } from "@/components/precos/atomos";
+import { CampoEuros, CampoNumero, CampoPercentagem, Segmentado } from "@/components/precos/atomos";
 import { ChevronDown, Trash, Warning } from "@/components/ui/Icons";
+import { horasProdutivasDoPosto } from "@/lib/negocio/capacidade";
 import type { ResultadoCustoPosto } from "@/lib/payroll/custo-empregador";
 import type { PagamentoSubsidios, TrabalhadorPlaneado } from "@/lib/negocio/tipos";
 import { BotaoTexto } from "./atomos";
@@ -376,6 +377,53 @@ function Afinar({
                 aoMudar({ refeicao: { ...t.refeicao!, cartao: v === "cartao", ativo: true } })
               }
             />
+          </div>
+        ) : null}
+      </div>
+
+      {/* §40 — este posto produz, ou só custa? */}
+      <div>
+        <Segmentado
+          id={`trab-produtivo-${t.id}`}
+          rotulo="Este posto aumenta a capacidade de entrega?"
+          descricao="Um administrativo custa e não entrega horas faturáveis. Um operador produtivo entrega — e sem isto, contratar parecia sempre má ideia."
+          opcoes={[
+            { valor: "nao", rotulo: "Não" },
+            { valor: "sim", rotulo: "Sim" },
+          ]}
+          valor={t.capacidade?.aumenta ? "sim" : "nao"}
+          aoMudar={(v) =>
+            aoMudar({
+              capacidade: {
+                horasSemana: t.capacidade?.horasSemana ?? 40,
+                fracaoProdutiva: t.capacidade?.fracaoProdutiva ?? 0.7,
+                ofertas: t.capacidade?.ofertas,
+                aumenta: v === "sim",
+              },
+            })
+          }
+        />
+        {t.capacidade?.aumenta ? (
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <CampoNumero
+              id={`trab-horas-${t.id}`}
+              rotulo="Horas por semana"
+              valor={t.capacidade.horasSemana ?? 40}
+              aoMudar={(v) => aoMudar({ capacidade: { ...t.capacidade!, horasSemana: v } })}
+              max={40}
+            />
+            <CampoPercentagem
+              id={`trab-produtiva-${t.id}`}
+              rotulo="Fração faturável"
+              descricao="Quanto do tempo é mesmo entregue ao cliente. Reuniões, admin e imprevistos ficam de fora."
+              valor={t.capacidade.fracaoProdutiva ?? 0.7}
+              aoMudar={(v) => aoMudar({ capacidade: { ...t.capacidade!, fracaoProdutiva: v } })}
+              max={100}
+            />
+            <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400 sm:col-span-2">
+              Acrescenta cerca de <strong>{Math.round(horasProdutivasDoPosto(t))} horas faturáveis por mês</strong> ao
+              teto do negócio — já sem as férias e sem as 40 horas anuais de formação que o Código do Trabalho prevê.
+            </p>
           </div>
         ) : null}
       </div>

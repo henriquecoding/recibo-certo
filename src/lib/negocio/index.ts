@@ -47,9 +47,13 @@ export {
 } from "./ofertas";
 
 export {
+  capacidadeDaEquipa,
   diagnosticarCapacidade,
   gargaloDeHoras,
+  horasProdutivasDoPosto,
   LIMIAR_APERTADO,
+  type CapacidadeEquipa,
+  type HorasDoPosto,
 } from "./capacidade";
 
 export {

@@ -22,7 +22,7 @@
 
 import { cent, dividir, num, unidades } from "@/lib/pricing/numeros";
 import { agregar, temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
-import { diagnosticarCapacidade, gargaloDeHoras } from "./capacidade";
+import { capacidadeDaEquipa, diagnosticarCapacidade, gargaloDeHoras } from "./capacidade";
 import { detetarDuplicacoes } from "./duplicacao";
 import { levantarPressupostos } from "./pressupostos";
 import { analisarSensibilidade } from "./sensibilidade";
@@ -383,8 +383,12 @@ export function analisarNegocio(
   const a = agregar(contexto);
   const breakEven = calcularBreakEvenNegocio(a);
 
+  // §40 — quem foi contratado para produzir acrescenta ao teto de horas.
+  // Sem isto, contratar só subia o custo, e a ferramenta dizia sempre que
+  // era má ideia.
+  const equipa = capacidadeDaEquipa(contexto.estrutura);
   const capacidade = diagnosticarCapacidade(a.ofertas);
-  const gargalo = gargaloDeHoras(a.ofertas);
+  const gargalo = gargaloDeHoras(a.ofertas, equipa);
   if (gargalo) capacidade.unshift(gargalo);
 
   const avisos = reunirAvisos(contexto, a, breakEven);
@@ -423,6 +427,7 @@ export function analisarNegocio(
 
     breakEven,
     capacidade,
+    capacidadeEquipaMes: equipa.horasMes,
     concentracao: diagnosticarConcentracao(a.ofertas),
     sensibilidade: opcoes.comSensibilidade ? analisarSensibilidade(contexto) : undefined,
     caixa: opcoes.comCaixa ? projetarCaixa(contexto, a) : undefined,

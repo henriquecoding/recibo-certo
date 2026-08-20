@@ -619,6 +619,12 @@ export interface ResultadoNegocio {
 
   breakEven: BreakEvenNegocio;
   capacidade: DiagnosticoCapacidade[];
+  /**
+   * As horas faturáveis que a equipa acrescenta, e por que postos (§40).
+   * Zero quando ninguém foi declarado como posto produtivo — que é o
+   * valor por omissão, porque contratar nem sempre aumenta capacidade.
+   */
+  capacidadeEquipaMes: number;
   concentracao: DiagnosticoConcentracao;
   sensibilidade?: ResultadoSensibilidade;
   caixa?: ResultadoCaixa;
