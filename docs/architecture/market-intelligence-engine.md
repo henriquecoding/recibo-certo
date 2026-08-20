@@ -1,6 +1,7 @@
 # Market Intelligence Engine
 
-> Estado da implementação: **MI-1 — primeiro percurso público implementado localmente em 2026-08-20**.
+> Estado da implementação: **MI-2 — cobertura nacional, três pilotos com ingestão
+> ativa e prova comercial local, em 2026-08-20**.
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 
@@ -126,7 +127,7 @@ o gate através de `datasetLicense`. Isto não aprova outras séries do INE. É 
 propriedade do produto: **acesso público não é sinónimo automático de direito de
 republicação**.
 
-## 8. Conectores MI-1
+## 8. Conectores
 
 Implementação: `src/lib/negocio/market/connectors/ine.ts`.
 
@@ -138,7 +139,7 @@ O conector:
 - valida o envelope antes de o usar;
 - calcula SHA-256 da resposta, sem fallback para hash fraco;
 - recebe `fetch` e relógio por injeção para testes determinísticos;
-- normaliza apenas períodos anuais nesta primeira versão;
+- normaliza apenas períodos anuais;
 - exige unidade, métrica, validade, dimensões e geografias num manifesto curado;
 - põe sinais convencionais, valores ambíguos, duplicados e mudanças de nome
   geográfico em quarentena.
@@ -204,8 +205,15 @@ A rota `/ferramentas/descobrir-negocio` pode existir antes de haver uma
 7. integração explícita com a Pricing Engine;
 8. cartões com fonte, geografia, período, recolha e limitações visíveis.
 
-O piloto turístico consulta o INE no servidor e usa a licença CC BY do dataset.
-Os restantes pilotos ficam `template`; nenhum recebe valores fictícios.
+Três pilotos consultam fontes oficiais no servidor: o turístico via INE (licença
+CC BY do dataset) e os dois digitais via Eurostat. Os restantes ficam `template`;
+nenhum recebe valores fictícios.
+
+Nenhum piloto atinge `evidence_qualified` neste checkpoint, e isso é a leitura
+correta: as duas séries digitais nascem do mesmo inquérito e partilham
+`independenceKey`, pelo que contam por uma fonte. O cartão diz exatamente isso
+em vez de fingir triangulação. Uma segunda operação estatística independente
+por hipótese é trabalho de MI-3.
 
 ## 12. Verificação local
 
@@ -213,17 +221,84 @@ Os restantes pilotos ficam `template`; nenhum recebe valores fictícios.
 npm ci
 npm run market:check
 npx tsc --noEmit
+npm test
+npm run build
+# com `npm start` noutro terminal:
+npm run descobrir:e2e
 ```
 
 O conjunto dedicado cobre source registry, integridade, frescura, lineage,
-evidence gate, conectores INE/Eurostat, quarentena, snapshots e adapter de preço.
+evidence gate, conectores INE/Eurostat, quarentena, snapshots, adapter de preço,
+geografia, provas locais e o gate local.
 
-## 13. Superfícies implementadas
+`descobrir:e2e` cobre o que não cabe no vitest e onde os dois defeitos mais
+caros de MI-1 viveram: o contexto nacional a desaparecer do ecrã e o preço
+unitário no campo do recibo mensal. Nenhum dos dois partia build, testes ou
+type-check. Corre em 360 px e desktop, claro e escuro, com axe.
 
-- `/ferramentas/descobrir-negocio`: compatibilidade local + dossiers + evidência oficial;
+## 13. Geografia: onde o modelo funciona ≠ onde temos dados
+
+Confundir as duas coisas custou um defeito real em MI-1. O piloto turístico
+declarava `regions: ["grande-lisboa", "peninsula-setubal"]` porque o manifesto
+começou por mapear duas NUTS II — e a interface filtrava as observações
+comparando o código geográfico com `null` para quem escolhesse «outra zona».
+Resultado: a leitura NACIONAL, publicável e válida para o país inteiro, era
+descartada, e a página afirmava não haver sinal enquanto a fonte respondia.
+
+As regras agora são explícitas e testadas em `geografia.ts`:
+
+- `regions` de um template descreve onde o MODELO faz sentido, nunca onde
+  existem dados. A diferença entre zonas vem do valor observado;
+- uma observação de nível `country` é contexto legítimo para qualquer zona,
+  e é mostrada marcada como nacional — nunca como sinal local;
+- uma observação regional só serve a sua própria NUTS II;
+- não fixar zona não penaliza a compatibilidade de ninguém;
+- a zona é escolhida de uma lista fechada de NUTS II. Não se recolhe morada,
+  código postal nem GPS.
+
+## 14. Prova local e o gate que corre duas vezes
+
+O servidor monta um pack público igual para toda a gente: não conhece a zona
+de quem pergunta, nem o preço formado, nem se alguém já pagou. O gate que
+corre lá é, por construção, o mais fraco dos dois.
+
+`gate-local.ts` corre O MESMO `evaluateMarketEvidence` — sem cópia nem
+variante — acrescentando o que só existe no dispositivo:
+
+| Entrada local | Origem |
+|---|---|
+| zona escolhida | filtra que observações servem |
+| cenário de preço concluído | `assessMarketEconomics` do motor canónico |
+| requisitos revistos | confirmação explícita da pessoa |
+| provas comerciais | `hipoteses.ts`, guardadas em `store/hipoteses-mercado.ts` |
+
+Regras da prova, retiradas do relatório e não desta implementação:
+
+1. entrevista **não** é prova de mercado: conta-se, mostra-se e não muda o estado;
+2. prova comercial é orçamento aceite, pré-venda, piloto pago ou venda;
+3. `operating` exige repetição, contribuição positiva observada **e**
+   recebimento — as três, não duas;
+4. uma prova vale 180 dias; expirada, degrada em vez de conservar crédito.
+
+Sem isto, `user_validated` e `operating` eram estados que o motor sabia
+calcular e ninguém conseguia atingir.
+
+## 15. Superfícies implementadas
+
+- `/ferramentas/descobrir-negocio`: compatibilidade local + dossiers + evidência
+  oficial + registo de provas comerciais no dispositivo;
 - `/api/market/pilots`: pack público agregado, cacheado, sem perfil do utilizador;
-- `/ferramentas/recibos-verdes`: incorpora o Pricing Engine e transfere o preço
-  líquido/projeção anual para o cálculo fiscal;
+- `/api/market/pilots`: degrada para uma lista vazia identificada em vez de 500
+  quando algo falha antes da ingestão;
+- `/ferramentas/recibos-verdes`: incorpora o Pricing Engine e transfere a BASE
+  MENSAL sem IVA (preço × unidades/mês) e a projeção anual para o cálculo
+  fiscal. Passar o preço unitário para o campo mensal foi um defeito real de
+  MI-1: os dois números discordavam por um fator igual ao volume. A conversão
+  vive em `preco-handoff.ts` e é testada contra o motor;
+- `/ferramentas/recibos-verdes?...&h=<opportunity-id>`: devolve o veredicto do
+  motor canónico de preço à hipótese, fechando o ciclo descoberta → preço →
+  gate. Só viaja o veredicto e o preço líquido: nunca custos, margens ou
+  clientes;
 - `/dashboard/negocio?o=<opportunity-id>`: leva a hipótese selecionada para o
   motor de empresa, acrescenta a oferta sem apagar o rascunho existente e abre
   o cenário canónico de preço correspondente;

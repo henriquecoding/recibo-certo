@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.90.0",
+  "version": "2.91.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -10,6 +10,7 @@
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
     "contrato:check": "node scripts/check-contrato-publico.mjs",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
+    "descobrir:e2e": "node scripts/verificar-descobrir-negocio.mjs",
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
     "docs:build": "python3 scripts/compor-documento.py",

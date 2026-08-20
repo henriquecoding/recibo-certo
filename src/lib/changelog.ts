@@ -16,6 +16,25 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.91.0",
+    data: "2026-08-20",
+    titulo: "O motor de descoberta passa a servir o país inteiro — e a reconhecer quem já vendeu",
+    itens: [
+      "A escolha da zona deixou de ser Lisboa, Setúbal ou «outra». Passam a estar lá as nove regiões do país, e a leitura oficial de cada uma vem da mesma fonte. Quem testa no Algarve, no Norte ou nos Açores vê o número dessa zona, não um aviso a dizer que não há dados.",
+      "Antes, quem não escolhesse uma das duas zonas mapeadas via «falta sinal na tua zona» enquanto a fonte oficial estava, nesse instante, a responder com o valor de Portugal. Esse valor era descartado por engano. Agora o contexto nacional aparece sempre, marcado como nacional, sem se fazer passar por um sinal local.",
+      "Escolher uma zona também deixou de tirar pontos de compatibilidade. O que contava como incompatibilidade do modelo era, afinal, uma limitação dos nossos dados — e isso não é problema de quem está a decidir.",
+      "Mais duas hipóteses passaram a ter números reais. A das operações digitais compara microempresas com pequenas empresas na intensidade digital; a do acompanhamento a seniores compara os 65-74 anos com a população total nas competências digitais. Ambas do Eurostat, com período, unidade e licença à vista.",
+      "Duas leituras do mesmo inquérito continuam a contar como uma só fonte, e o cartão diz isso em voz alta em vez de fingir que já triangulou.",
+      "Passas a poder registar o que aconteceu mesmo: entrevistas, orçamentos aceites, pré-vendas, pilotos pagos e vendas. Uma entrevista é contada, mas não promove a hipótese — só uma prova paga o faz, e só repetição com margem positiva e dinheiro recebido a dá como operação.",
+      "As provas ficam neste dispositivo e valem 180 dias. Quando passam da validade, a hipótese volta a pedir validação em vez de conservar o crédito antigo.",
+      "Se formares o preço a partir de uma hipótese, o resultado do motor canónico volta para ela. Um cenário que não fecha as contas passa a contrariar a ideia, em vez de a deixar à espera para sempre.",
+      "O preço que passa para o simulador fiscal ficou correto. Estava a ir o preço de UMA unidade para o campo do recibo mensal, enquanto a projeção anual já contava o volume — os dois números discordavam entre si. Agora vai a base mensal, e o ecrã mostra as duas contas.",
+      "Depois de formares um preço, o simulador abre já com ele. Deixou de perguntar «como queres simular?» a quem acabou de construir o número.",
+      "A saúde de cada fonte passou a aparecer no cartão: se está a responder, até que data tem dados e quantas linhas ficaram em quarentena.",
+      "As páginas de ferramentas ganharam a marca `<main>` que lhes faltava. Quem usa leitor de ecrã já consegue saltar a navegação e ir direto à ferramenta.",
+    ],
+  },
+  {
     version: "2.90.0",
     data: "2026-08-20",
     titulo: "Descobre o que testar — e forma o preço antes de passares o recibo",
