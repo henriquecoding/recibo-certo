@@ -54,10 +54,22 @@ export function contextoNegocioVazio(
       // maioria de quem chega a este ecrã. Assumir «independente» seria
       // responder por ela à pergunta que a ferramenta existe para ajudar
       // a responder.
-      enquadramento: "nao_sei",
-      compararAlternativas: true,
+      //
+      // ⚠️ EXCETO quem entrou por «Já tenho empresa» (§5). Essa pessoa já
+      // respondeu: tem uma sociedade constituída. Voltar a perguntar-lhe
+      // «como pensas operar?» seria transformar uma resposta dada numa
+      // pergunta — exatamente o que §0 proíbe. E deixá-la em `nao_sei`
+      // fazia a comparação e a conclusão nascerem incoerentes com a porta
+      // por onde ela entrou.
+      enquadramento: maturidade === "empresa_existente" ? "sociedade" : "nao_sei",
+      // Quem já tem sociedade não vem escolher forma jurídica; vem
+      // otimizar a que tem. A comparação continua disponível a pedido,
+      // mas não é o eixo do percurso.
+      compararAlternativas: maturidade !== "empresa_existente",
     },
-    respondidos: [],
+    // A porta de entrada É uma resposta. Sem isto, o livro de pressupostos
+    // pedia para sempre uma decisão que já tinha sido tomada no ato 0.
+    respondidos: maturidade === "empresa_existente" ? ["enquadramento"] : [],
     meta: { criadoEm: agora, atualizadoEm: agora },
   };
 }

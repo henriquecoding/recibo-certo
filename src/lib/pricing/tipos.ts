@@ -347,6 +347,28 @@ export type ModoObjetivo =
   /** «Quero cobrar X € — diz-me se dá.» */
   | "preco_fixo";
 
+/**
+ * Porque é que esta pessoa abriu a calculadora.
+ *
+ * Não muda o motor — muda a ORDEM DE DESCOBERTA, que é uma coisa
+ * diferente e igualmente decisiva. Quem ainda não vendeu nada não tem
+ * preço para dar: constrói-o dos custos para cima. Quem já vende tem-no,
+ * e perguntar-lhe «que margem queres?» antes de «quanto cobras hoje?»
+ * obriga-a a inventar uma resposta que ela já tinha dado ao mercado.
+ *
+ * ── `formar` ────────────────────────────────────────────────────────
+ * O caminho de sempre: custo → margem pretendida → preço.
+ *
+ * ── `validar_atual` ─────────────────────────────────────────────────
+ * O caminho inverso: preço atual → custos → impostos e comissões →
+ * margem EFETIVA. O objetivo entra em `preco_fixo`, que é exatamente o
+ * modo que a engine já tem para «quero cobrar X — diz-me se dá».
+ *
+ * A engine é a mesma, os campos são os mesmos, a memória de cálculo é a
+ * mesma. §4 do relatório: «Não copiar `SimuladorPreco`.»
+ */
+export type IntencaoPreco = "formar" | "validar_atual";
+
 export interface ModeloObjetivo {
   modo: ModoObjetivo;
   /** Fração (0,35 = 35%). Usado em `margem` e `markup`. */

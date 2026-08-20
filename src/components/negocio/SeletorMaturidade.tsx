@@ -39,14 +39,19 @@ const PORTAS: {
     chave: "ja_vendo",
     rotulo: "Já vendo",
     exemplo: "Tenho clientes e quero perceber se estou a cobrar bem",
-    aSeguir: "Partimos do teu preço atual e validamos as contas",
+    aSeguir: "Perguntamos primeiro quanto cobras hoje e validamos as contas a partir daí",
     Icone: Receipt,
   },
   {
+    // §5 — a copy tinha uma ambiguidade cara: «já tenho empresa» tanto
+    // podia querer dizer «tenho uma sociedade constituída» como «tenho um
+    // negócio a funcionar». O modelo assume a primeira (é ela que decide o
+    // enquadramento sem voltar a perguntar), por isso é ela que o texto
+    // tem de dizer.
     chave: "empresa_existente",
-    rotulo: "Já tenho empresa",
-    exemplo: "Quero otimizar a estrutura, os custos ou a tesouraria",
-    aSeguir: "Saltamos para a estrutura e a comparação fiscal",
+    rotulo: "Já tenho sociedade",
+    exemplo: "A empresa está constituída e quero otimizar estrutura, custos ou tesouraria",
+    aSeguir: "Começamos pelo teu volume de negócios — sem reconstruir as ofertas",
     Icone: Building,
   },
 ];

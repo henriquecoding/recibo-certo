@@ -136,7 +136,7 @@ export default function CockpitViabilidade({
       </Cartao>
 
       {/* ── Break-even ────────────────────────────────────────────── */}
-      <BreakEvenNegocio breakEven={negocio.breakEven} />
+      <BreakEvenNegocio breakEven={negocio.breakEven} receitaSemIVAMes={negocio.receitaSemIVAMes} />
 
       {/* ── Capacidade, quando há o que dizer ─────────────────────── */}
       {negocio.capacidade.length > 0 ? (

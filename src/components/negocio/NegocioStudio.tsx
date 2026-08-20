@@ -61,6 +61,7 @@ import type { CenarioInicial, ContextoPreco } from "@/lib/pricing/tipos";
 import { ArrowLeft, RotateCcw } from "@/components/ui/Icons";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import SeletorMaturidade from "./SeletorMaturidade";
+import BaseNegocioEditor from "./BaseNegocio";
 import PortfolioOfertas from "./PortfolioOfertas";
 import EstruturaNegocioEditor from "./EstruturaNegocio";
 import CockpitViabilidade from "./CockpitViabilidade";
@@ -274,6 +275,10 @@ export default function NegocioStudio() {
             superficie="negocio"
             contextoInicial={ofertaEmEdicao?.pricing ?? null}
             respondidosIniciais={ofertaEmEdicao?.respondidos}
+            // §4 — a porta de entrada decide a PERGUNTA INICIAL, não só a
+            // copy. Quem já vende começa pelo preço que pratica; quem tem
+            // uma ideia constrói-o dos custos para cima.
+            intencaoInicial={contexto.maturidade === "ja_vendo" ? "validar_atual" : "formar"}
             rotuloConcluir={ofertaEmEdicao ? "Guardar esta oferta" : "Adicionar esta oferta ao negócio"}
             aoCancelar={() => setEdicao(null)}
             aoConcluir={(pricing, respondidos) => {
@@ -336,6 +341,25 @@ export default function NegocioStudio() {
           Recomeçar
         </BotaoTexto>
       </div>
+
+      {/* ── ATO 3b — o negócio que já existe (§6) ────────────────────
+          Aparece a quem entrou por «Já tenho empresa» e a quem já
+          declarou uma base, venha da porta que vier. Nunca substitui as
+          ofertas: soma-se-lhes. */}
+      {contexto.maturidade === "empresa_existente" || contexto.base ? (
+        <BaseNegocioEditor
+          base={contexto.base}
+          regiao={contexto.fiscal.regiao}
+          temOfertas={contexto.ofertas.length > 0}
+          aoAdicionarOferta={() => setEdicao({ nova: true })}
+          aoMudar={(patch) =>
+            mudar((c) => ({
+              ...c,
+              base: { volumeAnual: 0, custosAtividadeAno: 0, ...c.base, ...patch },
+            }))
+          }
+        />
+      ) : null}
 
       {/* ── ATO 4 — portefólio ───────────────────────────────────── */}
       <PortfolioOfertas
@@ -550,8 +574,19 @@ export default function NegocioStudio() {
         <>
           <SeletorEnquadramento
             valor={contexto.fiscal.enquadramento}
+            // §5 — quem entrou por «Já tenho empresa» já respondeu a isto.
+            // A pergunta continua no ecrã (é uma decisão reversível), mas
+            // apresentada como resposta dada, não como dúvida por
+            // resolver.
+            jaRespondido={contexto.respondidos.includes("enquadramento")}
             aoMudar={(enquadramento) =>
-              mudar((c) => ({ ...c, fiscal: { ...c.fiscal, enquadramento } }))
+              mudar((c) => ({
+                ...c,
+                fiscal: { ...c.fiscal, enquadramento },
+                respondidos: c.respondidos.includes("enquadramento")
+                  ? c.respondidos
+                  : [...c.respondidos, "enquadramento"],
+              }))
             }
           />
           <ErrorBoundary>
@@ -609,19 +644,22 @@ const ENQUADRAMENTOS: { valor: EnquadramentoPretendido; rotulo: string; sub: str
 
 function SeletorEnquadramento({
   valor,
+  jaRespondido,
   aoMudar,
 }: {
   valor: EnquadramentoPretendido;
+  jaRespondido?: boolean;
   aoMudar: (v: EnquadramentoPretendido) => void;
 }) {
   return (
     <fieldset className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
       <legend className="font-display text-base font-semibold text-stone-800 dark:text-stone-100">
-        Como pensas operar?
+        {jaRespondido ? "Como operas" : "Como pensas operar?"}
       </legend>
       <p className="mb-3 mt-0.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-        Não é preciso decidir agora — «ainda não sei» é uma resposta legítima, e é a que mostra as duas contas lado a
-        lado.
+        {jaRespondido
+          ? "Já nos disseste isto à entrada. Fica aqui porque é reversível — mas não voltamos a perguntar."
+          : "Não é preciso decidir agora — «ainda não sei» é uma resposta legítima, e é a que mostra as duas contas lado a lado."}
       </p>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         {ENQUADRAMENTOS.map((e) => {

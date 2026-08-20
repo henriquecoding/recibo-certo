@@ -20,7 +20,7 @@
 
 import { fmt } from "@/lib/format";
 import { num } from "@/lib/pricing/numeros";
-import type { AgregadoNegocio } from "./agregar";
+import { temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
 import { capacidadeDe, volumeDerivado } from "./ofertas";
 import type { ContextoNegocio, PressupostoNegocio } from "./tipos";
 
@@ -97,9 +97,28 @@ export function levantarPressupostos(
   }
 
   // ── Do negócio ──────────────────────────────────────────────────
+  // §41: um cartão de trabalhador em branco não é estrutura declarada.
   const temEstrutura =
     (contexto.estrutura?.overheadMensal?.length ?? 0) > 0 ||
-    (contexto.estrutura?.trabalhadores?.length ?? 0) > 0;
+    temTrabalhadorValido(contexto.estrutura);
+
+  // E se houver cartões por preencher, isso é um pressuposto por direito
+  // próprio — não um silêncio.
+  const vazios = (contexto.estrutura?.trabalhadores ?? []).filter(
+    (t) => num(t.salarioBrutoMensal) <= 0,
+  );
+  if (vazios.length > 0) {
+    lista.push({
+      id: "trabalhador-por-preencher",
+      rotulo: vazios.length === 1 ? "Um posto por preencher" : `${vazios.length} postos por preencher`,
+      valor: "sem salário declarado",
+      origem: "default",
+      impacto: "alto",
+      resolverEm: "trabalhadores",
+      porque:
+        "Um posto sem salário não entra em custo nenhum, mas ocupa uma linha no ecrã — e faz o modelo parecer mais completo do que está.",
+    });
+  }
 
   if (!temEstrutura && !contexto.respondidos.includes("estrutura-sem-custos")) {
     lista.push({
@@ -149,6 +168,24 @@ export function levantarPressupostos(
       resolverEm: "caixa",
       porque:
         "Assume-se que recebes no ato. Se faturas a 30 ou 60 dias, o lucro é o mesmo mas o dinheiro chega mais tarde — e é aí que os negócios rentáveis ficam sem caixa.",
+    });
+  }
+
+  // ── A base declarada é trabalho da pessoa, mas não é «real» ─────
+  //  §86: quem escreveu números vindos da contabilidade merece um nível de
+  //  confiança superior a um exemplo nosso — e não merece que lhe
+  //  chamemos «real» se ela escreveu uma estimativa. A proveniência diz o
+  //  que sabemos: foi declarado.
+  if ((contexto.base?.volumeAnual ?? 0) > 0) {
+    lista.push({
+      id: "base-declarada",
+      rotulo: "Volume de negócios e custos da atividade",
+      valor: `${fmt(contexto.base!.volumeAnual)}/ano, declarado por ti`,
+      origem: "utilizador",
+      impacto: "alto",
+      resolverEm: "base",
+      porque:
+        "Estes números entraram em bloco, sem passar pelas ofertas. Servem para a estrutura e para a comparação, mas não dizem a que preço nem em que volume — e é isso que decide se o negócio aguenta um mês fraco.",
     });
   }
 

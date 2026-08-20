@@ -190,6 +190,47 @@ export interface EstruturaNegocio {
   trabalhadores?: TrabalhadorPlaneado[];
 }
 
+// ─── 3b. A base já existente ───────────────────────────────────────────
+
+/**
+ * O negócio que já acontece, declarado de uma vez.
+ *
+ * §5-6 do relatório: «Já tenho empresa» prometia saltar para a estrutura e
+ * a comparação, mas o contexto nascia vazio — sem ofertas não havia
+ * receita, sem receita não abria comparação, caixa nem conclusão, e o
+ * enquadramento continuava `nao_sei`. A porta existia e não levava a lado
+ * nenhum.
+ *
+ * Quem trabalha a partir da contabilidade não tem de reconstruir o negócio
+ * oferta a oferta para poder responder a uma pergunta de estrutura. Tem os
+ * dois números que importam e escreve-os.
+ *
+ * ── A FRONTEIRA QUE IMPEDE A DUPLA CONTAGEM ────────────────────────
+ * `custosAtividadeAno` são os custos que ANDAM COM A FATURAÇÃO —
+ * fornecedores, matérias, subcontratos, comissões. A estrutura
+ * (contabilidade, software, sede, pessoal) declara-se em
+ * `EstruturaNegocio` e NUNCA aqui. Somar as duas coisas no mesmo campo
+ * faria o overhead entrar duas vezes no resultado, e o handoff para o
+ * simulador de empresa herdava o erro.
+ *
+ * ── E CONVIVE COM AS OFERTAS ───────────────────────────────────────
+ * Não é uma alternativa exclusiva: quem começa pela base e depois
+ * acrescenta ofertas soma as duas coisas. O que se declara aqui é a parte
+ * do negócio que não está modelada em ofertas.
+ */
+export interface BaseDeclarada {
+  /** Volume de negócios ANUAL. Ver `comIVA` para saber se traz IVA dentro. */
+  volumeAnual: number;
+  /**
+   * `true` quando o valor escrito é o que os clientes pagaram, com IVA
+   * incluído. A conversão usa a taxa normal da região — nunca uma taxa
+   * escrita neste diretório.
+   */
+  comIVA?: boolean;
+  /** Custos da atividade por ano. NÃO inclui estrutura nem pessoal. */
+  custosAtividadeAno: number;
+}
+
 // ─── 4. A procura ──────────────────────────────────────────────────────
 
 export interface ProcuraNegocio {
@@ -237,6 +278,11 @@ export interface ContextoNegocio {
   nome?: string;
   maturidade: MaturidadeNegocio;
   ofertas: OfertaNegocio[];
+  /**
+   * A parte do negócio declarada em bloco, sem passar por ofertas. É o
+   * atalho de quem já fatura e trabalha a partir da contabilidade (§6).
+   */
+  base?: BaseDeclarada;
   estrutura: EstruturaNegocio;
   procura: ProcuraNegocio;
   caixa?: CaixaNegocio;
@@ -353,8 +399,19 @@ export interface DiagnosticoConcentracao {
 export interface BreakEvenNegocio {
   possivel: boolean;
   /**
+   * Em que unidade o ponto de equilíbrio faz sentido.
+   *
+   * `unidades` — há ofertas com volume, e a pergunta é «quantas vendas».
+   * `receita`  — o negócio foi declarado em bloco (§6): não há vendas
+   *              para contar, e a pergunta certa é «que volume de
+   *              negócios». Dizer «0 vendas» a quem já fatura seria uma
+   *              resposta errada com ar de resposta.
+   */
+  base: "unidades" | "receita";
+  /**
    * Vendas por mês necessárias para cobrir a estrutura, mantendo o MIX
-   * atual. Sem mix (uma oferta), é a conta de sempre.
+   * atual. Sem mix (uma oferta), é a conta de sempre. Zero quando
+   * `base === "receita"`.
    */
   vendasMes: number;
   /** Volume de negócios correspondente, sem IVA. */

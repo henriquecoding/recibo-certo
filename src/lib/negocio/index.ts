@@ -14,7 +14,17 @@
 
 export * from "./tipos";
 
-export { agregar, overheadMensal, custoTrabalhadoresMensal, custosOperacionaisAnuais, contaParaONegocio, type AgregadoNegocio } from "./agregar";
+export {
+  agregar,
+  agregarBase,
+  overheadMensal,
+  custoTrabalhadoresMensal,
+  custosOperacionaisAnuais,
+  contaParaONegocio,
+  temTrabalhadorValido,
+  type AgregadoBase,
+  type AgregadoNegocio,
+} from "./agregar";
 
 export {
   calcularOferta,

@@ -33,15 +33,72 @@
 //  a criar o defeito que ela acabou de resolver.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { SS_DEPENDENTE } from "@/lib/fiscal-data";
-import { cent, dividir, num } from "@/lib/pricing/numeros";
+import { IVA_TAXAS, SS_DEPENDENTE, type Regiao } from "@/lib/fiscal-data";
+import { cent, dividir, naoNegativo, num } from "@/lib/pricing/numeros";
 import { calcularOferta } from "./ofertas";
 import type {
+  BaseDeclarada,
   ContextoNegocio,
   CustoEstrutura,
   EstruturaNegocio,
   ResultadoOfertaNegocio,
 } from "./tipos";
+
+/** As três grandezas mensais que uma base declarada contribui. */
+export interface AgregadoBase {
+  receitaClienteMes: number;
+  receitaSemIVAMes: number;
+  ivaCobradoMes: number;
+  custosVariaveisMes: number;
+}
+
+const BASE_VAZIA: AgregadoBase = {
+  receitaClienteMes: 0,
+  receitaSemIVAMes: 0,
+  ivaCobradoMes: 0,
+  custosVariaveisMes: 0,
+};
+
+/**
+ * O que a base declarada contribui, por mês.
+ *
+ * ⚠️ A ÚNICA CONVERSÃO QUE ESTA CAMADA FAZ, e faz com a taxa que vem de
+ * `fiscal-data.ts`. Escrever 23% aqui criaria a segunda fonte de verdade
+ * que este diretório inteiro existe para não ter — e `negocio:sem-fonte-
+ * propria` reprova-o.
+ *
+ * Sem `comIVA`, o valor É o volume de negócios e o IVA fica a zero. Não se
+ * infere um IVA liquidado que a pessoa não declarou: a situação de IVA de
+ * um negócio depende do regime, da natureza e da região, e é
+ * `fiscal-iva.ts` que a sabe determinar — não uma multiplicação otimista.
+ */
+export function agregarBase(base: BaseDeclarada | undefined, regiao?: Regiao): AgregadoBase {
+  if (!base) return BASE_VAZIA;
+
+  const anual = naoNegativo(base.volumeAnual);
+  const custosMes = dividir(naoNegativo(base.custosAtividadeAno), 12);
+
+  if (!base.comIVA) {
+    const semIVA = dividir(anual, 12);
+    return {
+      receitaClienteMes: semIVA,
+      receitaSemIVAMes: semIVA,
+      ivaCobradoMes: 0,
+      custosVariaveisMes: cent(custosMes),
+    };
+  }
+
+  const taxa = IVA_TAXAS[regiao ?? "continente"].value.normal;
+  const clienteMes = dividir(anual, 12);
+  const semIVAMes = dividir(clienteMes, 1 + taxa);
+
+  return {
+    receitaClienteMes: cent(clienteMes),
+    receitaSemIVAMes: cent(semIVAMes),
+    ivaCobradoMes: cent(clienteMes - semIVAMes),
+    custosVariaveisMes: cent(custosMes),
+  };
+}
 
 /** As somas mensais de um negócio, sem diagnósticos. */
 export interface AgregadoNegocio {
@@ -61,6 +118,12 @@ export interface AgregadoNegocio {
   temFiscalidadeVendedor: boolean;
   /** Unidades vendidas por mês, somadas. É a base do break-even ao mix. */
   unidadesMes: number;
+  /**
+   * A parte da receita que veio declarada em bloco, sem ofertas por
+   * trás. O break-even precisa de a distinguir: receita sem unidades não
+   * se converte em «quantas vendas por mês».
+   */
+  receitaBaseMes: number;
 }
 
 /**
@@ -78,6 +141,20 @@ export function overheadMensal(estrutura: EstruturaNegocio | undefined): number 
 }
 
 export const contaParaONegocio = (c: CustoEstrutura): boolean => c.escopo !== "oferta";
+
+/**
+ * Há ALGUÉM contratado, ou só uma linha em branco?
+ *
+ * §41: `trabalhadores.length > 0` fazia um cartão vazio — sem função e sem
+ * salário — subir a confiança do modelo inteiro para «estruturado». Um
+ * trabalhador a zero euros não é uma decisão declarada: é um clique em
+ * «Adicionar» que ficou por preencher, e não pode valer como resposta.
+ * Um pressuposto por confirmar não pode disfarçar-se de pressuposto
+ * confirmado só porque ocupa uma linha no ecrã.
+ */
+export function temTrabalhadorValido(estrutura: EstruturaNegocio | undefined): boolean {
+  return (estrutura?.trabalhadores ?? []).some((t) => num(t.salarioBrutoMensal) > 0);
+}
 
 /**
  * O custo mensal de ter alguém contratado — o BRUTO mais a TSU da
@@ -118,12 +195,21 @@ export function agregar(
     calcularOferta(oferta, { unidades: opcoes.volumes?.[oferta.id] }),
   );
 
-  const receitaSemIVAMes = cent(resultados.reduce((s, r) => s + r.mensal.receitaSemIVA, 0));
-  const receitaClienteMes = cent(resultados.reduce((s, r) => s + r.mensal.receitaCliente, 0));
+  // A base declarada soma-se às ofertas; não as substitui. Quem começou
+  // pela contabilidade e depois modelou uma oferta nova quer as duas
+  // coisas no mesmo negócio — e é aqui, e só aqui, que se juntam.
+  const base = agregarBase(contexto.base, contexto.fiscal?.regiao);
+
+  const receitaSemIVAMes = cent(
+    resultados.reduce((s, r) => s + r.mensal.receitaSemIVA, 0) + base.receitaSemIVAMes,
+  );
+  const receitaClienteMes = cent(
+    resultados.reduce((s, r) => s + r.mensal.receitaCliente, 0) + base.receitaClienteMes,
+  );
   const ivaCobradoMes = cent(receitaClienteMes - receitaSemIVAMes);
 
   const custosVariaveisMes = cent(
-    resultados.reduce((s, r) => s + r.custosVariaveisOperacionaisMes, 0),
+    resultados.reduce((s, r) => s + r.custosVariaveisOperacionaisMes, 0) + base.custosVariaveisMes,
   );
   const encargosVendedorMes = cent(resultados.reduce((s, r) => s + r.encargosVendedorMes, 0));
   const margemContribuicaoMes = cent(receitaSemIVAMes - custosVariaveisMes);
@@ -156,6 +242,7 @@ export function agregar(
     resultadoDepoisEncargosMes: cent(resultadoOperacionalMes - encargosVendedorMes),
     temFiscalidadeVendedor: resultados.some((r) => r.preco.fiscal.aplicavel),
     unidadesMes: resultados.reduce((s, r) => s + r.unidadesMes, 0),
+    receitaBaseMes: base.receitaSemIVAMes,
   };
 }
 
