@@ -65,6 +65,7 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import SeletorMaturidade from "./SeletorMaturidade";
 import BaseNegocioEditor from "./BaseNegocio";
 import LocalizacaoNegocioEditor from "./LocalizacaoNegocio";
+import ProcuraNegocioEditor from "./ProcuraNegocio";
 import PortfolioOfertas from "./PortfolioOfertas";
 import EstruturaNegocioEditor from "./EstruturaNegocio";
 import CockpitViabilidade from "./CockpitViabilidade";
@@ -524,6 +525,16 @@ export default function NegocioStudio() {
               fiscal: { ...c.fiscal, regiao: localizacao.regiao },
             }))
           }
+        />
+      ) : null}
+
+      {/* ── §55-57 — a forma do ano ────────────────────────────────
+          Depois da estrutura e antes do cockpit: é aqui que a média
+          deixa de chegar e o mês fraco começa a decidir. */}
+      {temResultado ? (
+        <ProcuraNegocioEditor
+          contexto={contexto}
+          aoMudar={(patch) => mudar((c) => ({ ...c, procura: { ...c.procura, ...patch } }))}
         />
       ) : null}
 

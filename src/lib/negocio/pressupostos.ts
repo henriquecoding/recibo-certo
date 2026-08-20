@@ -21,6 +21,7 @@
 import { fmt } from "@/lib/format";
 import { num } from "@/lib/pricing/numeros";
 import { custosDosPostos, temTrabalhadorValido, type AgregadoNegocio } from "./agregar";
+import { evolucaoDe } from "./procura";
 import { capacidadeDe, volumeDerivado } from "./ofertas";
 import type { ContextoNegocio, PressupostoNegocio } from "./tipos";
 
@@ -148,15 +149,31 @@ export function levantarPressupostos(
     });
   }
 
-  if (!contexto.procura.crescimentoMensal) {
+  // §57 — «estável» declarado é uma resposta; «estável» por omissão é um
+  // pressuposto. A diferença estava a perder-se num campo só.
+  const evolucao = evolucaoDe(contexto);
+  if (evolucao === "estavel" && !contexto.procura.evolucao) {
     lista.push({
       id: "crescimento",
-      rotulo: "Crescimento",
-      valor: "0% ao mês",
+      rotulo: "Evolução do volume",
+      valor: "estável, todos os meses iguais",
       origem: "default",
       impacto: "baixo",
       resolverEm: "procura",
       porque: "O cenário assume o mesmo volume todos os meses — nem arranque lento, nem bola de neve.",
+    });
+  }
+
+  if (evolucao === "arranque") {
+    lista.push({
+      id: "arranque",
+      rotulo: "Arranque",
+      valor: `${Math.max(1, Math.round(num(contexto.procura.arranqueMeses) || 6))} meses até ao volume esperado`,
+      origem: "utilizador",
+      impacto: "medio",
+      resolverEm: "procura",
+      porque:
+        "Os primeiros meses vendem menos do que o cenário base. É deles que sai o capital de que precisas para atravessar o arranque.",
     });
   }
 

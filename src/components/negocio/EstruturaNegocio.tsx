@@ -297,7 +297,7 @@ export default function EstruturaNegocioEditor({
                     <Trash size={12} />
                   </BotaoTexto>
                 </div>
-                <div className="mt-2">
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   <CampoEuros
                     id={`inv-valor-${i.id}`}
                     rotulo="Valor"
@@ -305,6 +305,38 @@ export default function EstruturaNegocioEditor({
                     aoMudar={(v) => aoMudarInvestimento(i.id, { valor: v })}
                     max={1000000}
                   />
+                  {/* §58 — o timing existia no contrato e a interface só
+                      oferecia «antes de abrir». Um forno comprado no mês 4
+                      aparecia como despesa do mês 0, e o buraco de caixa
+                      saía no sítio errado. */}
+                  <div>
+                    <label
+                      htmlFor={`inv-mes-${i.id}`}
+                      className="block text-xs font-semibold text-stone-700 dark:text-stone-200"
+                    >
+                      Quando sai este dinheiro
+                    </label>
+                    <p
+                      id={`inv-mes-${i.id}-desc`}
+                      className="mt-0.5 text-[11px] leading-snug text-stone-500 dark:text-stone-400"
+                    >
+                      Não muda o resultado — muda o mês em que a conta sente.
+                    </p>
+                    <select
+                      id={`inv-mes-${i.id}`}
+                      aria-describedby={`inv-mes-${i.id}-desc`}
+                      value={i.mes ?? 0}
+                      onChange={(e) => aoMudarInvestimento(i.id, { mes: Number(e.target.value) })}
+                      className="mt-1.5 min-h-[40px] w-full rounded-xl border border-stone-200 bg-white px-3 text-sm text-stone-800 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                    >
+                      <option value={0}>Antes de abrir</option>
+                      {Array.from({ length: 36 }, (_, m) => m + 1).map((m) => (
+                        <option key={m} value={m}>
+                          No mês {m}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </li>
             ))}

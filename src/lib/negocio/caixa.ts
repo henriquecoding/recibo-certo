@@ -38,8 +38,9 @@
 //  erro que fecha empresas.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { cent, fracao, num } from "@/lib/pricing/numeros";
+import { cent, num } from "@/lib/pricing/numeros";
 import { agregar, type AgregadoNegocio } from "./agregar";
+import { escalaDoMes } from "./procura";
 import { periodicidadeIVA } from "./adapters/iva";
 import {
   fluxosDeArranque,
@@ -65,18 +66,6 @@ const MESES = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
 
-/** O fator de sazonalidade de um mês, 1 quando não há sazonalidade. */
-function fatorSazonal(contexto: ContextoNegocio, mesDoAno: number): number {
-  if (contexto.procura.modo !== "sazonal") return 1;
-  const fatores = contexto.ofertas
-    .map((o) => o.sazonalidade)
-    .filter((s): s is number[] => Array.isArray(s) && s.length === 12);
-  if (fatores.length === 0) return 1;
-  // Média simples: uma média ponderada pela receita exigiria recalcular o
-  // agregado a cada mês, e a diferença não justifica o custo.
-  return fatores.reduce((s, f) => s + fracao(f[mesDoAno], 0, 5), 0) / fatores.length;
-}
-
 export interface OpcoesCaixa {
   /**
    * O periodicidade de IVA, quando se sabe. Passa-se de fora para a caixa
@@ -99,15 +88,11 @@ export function projetarCaixa(
 ): ResultadoCaixa {
   const a = agregado ?? agregar(contexto);
   const horizonte = contexto.procura.horizonteMeses ?? 12;
-  const crescimento = num(contexto.procura.crescimentoMensal);
 
-  const escalaDe = (mes: number): number => {
-    if (mes < 1) return 0;
-    const cresc = Math.pow(1 + crescimento, mes - 1);
-    return cresc * fatorSazonal(contexto, (mes - 1) % 12);
-  };
-
-  const o = { horizonteMeses: horizonte, escalaDe };
+  // §55-57 — a forma do ano e a evolução são eixos independentes, e quem
+  // os multiplica é `procura.ts`. A caixa não os conhece: só pergunta
+  // «que escala tem este mês».
+  const o = { horizonteMeses: horizonte, escalaDe: (mes: number) => escalaDoMes(contexto, mes) };
 
   const fluxos: FluxoCaixa[] = [
     ...fluxosDeArranque(contexto),

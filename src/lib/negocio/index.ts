@@ -95,6 +95,19 @@ export {
 } from "./adapters/iva";
 
 export {
+  CURVA_UNIFORME,
+  MESES_CURTOS,
+  curvaComPico,
+  curvaSazonal,
+  escalaDoMes,
+  evolucaoDe,
+  fatorEvolucao,
+  fatorSazonal,
+  normalizarCurva,
+  procuraConfigurada,
+} from "./procura";
+
+export {
   LOCALIZACOES_CONHECIDAS,
   localizacaoDeclarada,
   municipioDoNegocio,

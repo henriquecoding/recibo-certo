@@ -322,11 +322,44 @@ export interface BaseDeclarada {
 
 // ─── 4. A procura ──────────────────────────────────────────────────────
 
+/**
+ * Como se espera que o volume evolua. (§57)
+ *
+ * «Crescimento mensal %» é a linguagem do motor, não a de quem responde.
+ * Quase ninguém sabe dizer «2,3% ao mês»; toda a gente sabe dizer «demoro
+ * uns meses a arrancar» ou «espero crescer».
+ *
+ * ── PORQUE É QUE «ARRANQUE» NÃO É UMA TAXA ─────────────────────────
+ * São fenómenos diferentes. Um arranque tem um TETO — chega-se ao volume
+ * esperado e fica-se lá; um crescimento composto não pára nunca. Modelar
+ * o primeiro com o segundo dá, ao 24.º mês, um volume que ninguém previu.
+ */
+export type EvolucaoProcura =
+  /** O mesmo volume todos os meses. */
+  | "estavel"
+  /** Sobe linearmente até ao volume esperado e fica lá. */
+  | "arranque"
+  /** Crescimento composto, sem teto. A percentagem é declarada. */
+  | "crescimento";
+
 export interface ProcuraNegocio {
   horizonteMeses: HorizonteProjecao;
-  /** `sazonal` usa `OfertaNegocio.sazonalidade`; `simples` ignora-a. */
+  /** `sazonal` usa a curva; `simples` ignora-a. */
   modo: "simples" | "sazonal";
-  /** Crescimento composto mês a mês (0,02 = +2%/mês). */
+  /**
+   * A curva de sazonalidade do NEGÓCIO — doze fatores, 1 = mês médio.
+   *
+   * Tem precedência sobre `OfertaNegocio.sazonalidade`: quem responde à
+   * pergunta «as vendas são iguais durante o ano?» está a falar do
+   * negócio, não de uma oferta. A curva por oferta continua a valer
+   * quando esta não existe.
+   */
+  sazonalidade?: number[];
+  /** Como evolui. Omissa, é `estavel` — e isso é um pressuposto declarado. */
+  evolucao?: EvolucaoProcura;
+  /** Meses até atingir o volume esperado, em `arranque`. */
+  arranqueMeses?: number;
+  /** Crescimento composto mês a mês (0,02 = +2%/mês), em `crescimento`. */
   crescimentoMensal?: number;
 }
 
