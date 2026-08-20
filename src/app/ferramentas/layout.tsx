@@ -65,7 +65,14 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
             )}
           </nav>
 
-          {children}
+          {/* ── O marco que faltava ─────────────────────────────────────
+              As 48 landings de ferramenta não tinham `<main>` nenhum: a
+              home e os guias tinham, estas não. Sem esse marco, um leitor
+              de ecrã não consegue saltar a navegação e o breadcrumb para
+              chegar à ferramenta, e a única forma de lá chegar era ouvir
+              tudo desde o início. Um `<main>` é `display: block`, como o
+              `<div>` que envolvia; não muda uma linha de layout. */}
+          <main>{children}</main>
         </div>
       </div>
       <Footer />
