@@ -837,19 +837,63 @@ describe("negocio:caixa", () => {
   });
 
   it("o IVA cobrado não fica na caixa como se fosse receita", () => {
+    // ⚠️ ISTO MUDOU NA CAIXA v2, E A MUDANÇA É O PONTO.
+    //
+    // A v1 neutralizava o IVA no MESMO mês, por não saber o calendário. O
+    // fluxo do mês 1 era, por construção, igual ao resultado operacional
+    // — e este teste verificava essa igualdade.
+    //
+    // Só que essa igualdade escondia o efeito que interessa: entre cobrar
+    // o IVA e o entregar passam dois a cinco meses, e nesse intervalo o
+    // dinheiro está na conta sem ser da empresa. A pergunta certa não é
+    // «o mês 1 bate com o resultado» — é «o IVA acaba por sair».
     const oferta = novaOferta("produto_revenda", { nome: "A", volumeMes: 30 });
     oferta.pricing.vendedor.regimeIVA = "normal";
     const base = negocioCom([respondida(oferta)]);
     const contexto: ContextoNegocio = {
       ...base,
+      // Sociedade: é para ela que o Art. 41.º determina periodicidade.
+      fiscal: { ...base.fiscal, enquadramento: "sociedade" },
+      procura: { ...base.procura, horizonteMeses: 24 },
       caixa: { saldoInicial: 0, prazoRecebimentoDias: 0, prazoFornecedorDias: 0 },
     };
 
     const r = analisarNegocio(contexto, { comCaixa: true });
-    const mes = r.caixa!.meses[0];
-    // O fluxo do mês não pode ser a receita COM IVA menos os custos: o IVA
-    // entra e volta a sair, e tratá-lo como receita inflacionaria a caixa.
-    expect(mes.recebimentos - mes.pagamentos).toBeLessThan(r.receitaClienteMes);
-    expect(perto(mes.fluxo, r.resultadoOperacionalMes, 1)).toBe(true);
+    expect(r.ivaCobradoMes).toBeGreaterThan(0);
+
+    // ① O IVA SAI mesmo — e sai etiquetado, não diluído num total.
+    const saidasDeIVA = (r.caixa!.fluxos ?? []).filter((f) => f.tipo === "iva");
+    expect(saidasDeIVA.length).toBeGreaterThan(0);
+    expect(saidasDeIVA.every((f) => f.valor < 0)).toBe(true);
+
+    // ② E não sai no mês em que é cobrado: é esse o efeito de tesouraria
+    //    que a v1 não conseguia mostrar.
+    expect(saidasDeIVA.every((f) => f.mes > 1)).toBe(true);
+
+    // ③ Ao longo do horizonte, o que sai aproxima-se do que foi cobrado.
+    //    Não é igual: o IVA dos últimos meses só se entrega depois do fim
+    //    da projeção — e é isso mesmo que acontece na vida real.
+    const totalSaido = Math.abs(saidasDeIVA.reduce((s, f) => s + f.valor, 0));
+    const totalCobrado = r.ivaCobradoMes * contexto.procura.horizonteMeses;
+    expect(totalSaido).toBeGreaterThan(totalCobrado * 0.6);
+    expect(totalSaido).toBeLessThanOrEqual(totalCobrado + 0.01);
+  });
+
+  it("sem periodicidade determinada, o IVA não gera um calendário inventado", () => {
+    // Para um trabalhador independente o motor não determina
+    // periodicidade. A caixa NÃO pode escolher uma por ela — §53.
+    const oferta = novaOferta("produto_revenda", { nome: "A", volumeMes: 30 });
+    oferta.pricing.vendedor.regimeIVA = "normal";
+    const base = negocioCom([respondida(oferta)]);
+    const r = analisarNegocio(
+      {
+        ...base,
+        fiscal: { ...base.fiscal, enquadramento: "independente" },
+        caixa: { saldoInicial: 0, prazoRecebimentoDias: 0, prazoFornecedorDias: 0 },
+      },
+      { comCaixa: true },
+    );
+
+    expect((r.caixa!.fluxos ?? []).filter((f) => f.tipo === "iva")).toHaveLength(0);
   });
 });

@@ -160,6 +160,22 @@ export function levantarPressupostos(
     });
   }
 
+  // §51 — o que a projeção de caixa ainda não modela, dito em voz alta.
+  // Só interessa a quem liquida IVA: sem IVA cobrado, não há IVA
+  // dedutível para faltar.
+  if (contexto.caixa && a.ivaCobradoMes > 0) {
+    lista.push({
+      id: "iva-dedutivel",
+      rotulo: "IVA dedutível das compras",
+      valor: "fora da projeção de caixa",
+      origem: "default",
+      impacto: "medio",
+      resolverEm: "caixa",
+      porque:
+        "O IVA que suportas nas compras é dedutível e não está nesta projeção. Na prática entregas menos do que aqui aparece — a projeção erra para o lado seguro, de propósito.",
+    });
+  }
+
   if (!contexto.caixa) {
     lista.push({
       id: "prazo-recebimento",

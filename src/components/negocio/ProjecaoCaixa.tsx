@@ -21,7 +21,7 @@
 import { fmt } from "@/lib/format";
 import { CampoEuros, CampoNumero } from "@/components/precos/atomos";
 import { Warning } from "@/components/ui/Icons";
-import { PROJECAO_NAO_E_SALDO } from "@/lib/negocio/caixa";
+import { explicarMes, PROJECAO_NAO_E_SALDO } from "@/lib/negocio/caixa";
 import type { CaixaNegocio, ResultadoCaixa } from "@/lib/negocio/tipos";
 import { BotaoSecundario, Cartao, Metrica } from "./atomos";
 
@@ -55,6 +55,9 @@ export default function ProjecaoCaixa({
 
   const buraco = resultado.saldoMinimo < 0;
   const maiorAbs = Math.max(...resultado.meses.map((m) => Math.abs(m.saldoFim)), 1);
+  // Os cinco fluxos que mais pesam no pior mês. Mais do que cinco deixa
+  // de ser uma explicação e passa a ser um extrato.
+  const piorMes = explicarMes(resultado, resultado.mesDoSaldoMinimo).slice(0, 5);
 
   return (
     <div className="space-y-3" id="caixa">
@@ -121,7 +124,7 @@ export default function ProjecaoCaixa({
 
         {buraco ? (
           <p className="mt-3 flex items-start gap-2 rounded-2xl bg-alert-bg px-3 py-2 text-xs leading-relaxed text-alert-text">
-            <Warning size={14} className="mt-px flex-shrink-0" />
+            <Warning size={14} className="mt-px flex-shrink-0" aria-hidden />
             <span>
               Em {resultado.rotuloDoMesMinimo} a conta chega a {fmt(resultado.saldoMinimo)}. Isto não é prejuízo — é
               falta de dinheiro no momento certo. Precisas de cerca de{" "}
@@ -129,6 +132,36 @@ export default function ProjecaoCaixa({
               recebimento.
             </span>
           </p>
+        ) : null}
+
+        {/* ── PORQUÊ esse mês (§52) ───────────────────────────────────
+            Uma linha a descer não é acionável; «o buraco é o IVA do 4.º
+            trimestre mais o subsídio de férias» é. É para isto que os
+            fluxos são etiquetados. */}
+        {piorMes.length > 0 ? (
+          <div className="mt-3 rounded-2xl border border-stone-100 p-3 dark:border-stone-800">
+            <p className="eyebrow mb-2 text-stone-500 dark:text-stone-400">
+              O que pesa em {resultado.rotuloDoMesMinimo}
+            </p>
+            <dl className="space-y-1">
+              {piorMes.map((f, i) => (
+                <div
+                  key={`${f.tipo}-${f.origem}-${i}`}
+                  className="flex flex-wrap items-baseline justify-between gap-x-3"
+                >
+                  <dt className="min-w-0 text-xs text-stone-600 dark:text-stone-300">{f.origem}</dt>
+                  <dd
+                    className={`flex-shrink-0 text-xs tabular-nums ${
+                      f.valor < 0 ? "text-alert-text" : "text-brand-dark dark:text-brand-mint"
+                    }`}
+                  >
+                    {f.valor < 0 ? "−" : "+"}
+                    {fmt(Math.abs(f.valor))}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </div>
         ) : null}
 
         {/* ── A curva ────────────────────────────────────────────── */}

@@ -26,7 +26,7 @@ import { capacidadeDaEquipa, diagnosticarCapacidade, gargaloDeHoras } from "./ca
 import { detetarDuplicacoes } from "./duplicacao";
 import { levantarPressupostos } from "./pressupostos";
 import { analisarSensibilidade } from "./sensibilidade";
-import { projetarCaixa } from "./caixa";
+import { projetarCaixaDoNegocio } from "./caixa";
 import type {
   AvisoNegocio,
   BreakEvenNegocio,
@@ -430,7 +430,9 @@ export function analisarNegocio(
     capacidadeEquipaMes: equipa.horasMes,
     concentracao: diagnosticarConcentracao(a.ofertas),
     sensibilidade: opcoes.comSensibilidade ? analisarSensibilidade(contexto) : undefined,
-    caixa: opcoes.comCaixa ? projetarCaixa(contexto, a) : undefined,
+    // §53 — o calendário de IVA vem do motor de IVA, não de um limiar
+    // recodificado aqui.
+    caixa: opcoes.comCaixa ? projetarCaixaDoNegocio(contexto, a) : undefined,
 
     confianca: confiancaDe(contexto, a),
     pressupostos: levantarPressupostos(contexto, a),

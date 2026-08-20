@@ -30,6 +30,7 @@
 
 import type { ContextoPreco, ResultadoPreco, Regiao } from "@/lib/pricing/tipos";
 import type { PagamentoSubsidios, PerfilPessoalPosto } from "@/lib/payroll/custo-empregador";
+import type { FluxoCaixa } from "./fluxos";
 
 export type { ContextoPreco, ResultadoPreco };
 export type { PagamentoSubsidios, PerfilPessoalPosto };
@@ -576,6 +577,13 @@ export interface ResultadoCaixa {
   capitalAdicionalNecessario: number;
   /** Meses até o saldo ficar positivo e assim permanecer. `null` se nunca. */
   mesesAteEquilibrio: number | null;
+  /**
+   * Os fluxos que produziram estes meses, etiquetados (§52).
+   *
+   * É o que permite dizer «o buraco de março é o IVA do 4.º trimestre
+   * mais o subsídio de férias» em vez de mostrar uma linha a descer.
+   */
+  fluxos?: FluxoCaixa[];
 }
 
 // ─── 14. O resultado do negócio ────────────────────────────────────────

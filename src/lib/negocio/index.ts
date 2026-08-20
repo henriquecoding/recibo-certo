@@ -67,7 +67,32 @@ export {
 } from "./viabilidade";
 
 export { analisarSensibilidade, margemDeSeguranca, CHOQUES } from "./sensibilidade";
-export { projetarCaixa, PROJECAO_NAO_E_SALDO } from "./caixa";
+export {
+  explicarMes,
+  IVA_DEDUTIVEL_NAO_MODELADO,
+  projetarCaixa,
+  projetarCaixaDoNegocio,
+  PROJECAO_NAO_E_SALDO,
+  type OpcoesCaixa,
+} from "./caixa";
+export {
+  CALENDARIO_ENTREGAS,
+  fluxosDeArranque,
+  fluxosDeInvestimento,
+  fluxosDeIVA,
+  fluxosDePayroll,
+  fluxosDeVendas,
+  porMes,
+  type FluxoCaixa,
+  type OpcoesFluxos,
+  type TipoFluxo,
+} from "./fluxos";
+export {
+  entidadeDoNegocio,
+  periodicidadeIVA,
+  regimeDoNegocio,
+  situacaoIVADoNegocio,
+} from "./adapters/iva";
 export { levantarPressupostos, confirmados } from "./pressupostos";
 
 export {
