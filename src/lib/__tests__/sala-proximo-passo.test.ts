@@ -236,6 +236,44 @@ describe("prazos", () => {
     expect(diasAtePrazo("2026-08-16", tarde)).toBe(0);
   });
 
+  // ⚠️ ESTE É O TESTE QUE FALHAVA, E SÓ FALHAVA EM ALGUMAS MÁQUINAS.
+  //
+  // O prazo é uma data civil; o «hoje» era lido com `getDate()`, que
+  // responde no fuso da máquina. As duas escalas divergem à noite: às
+  // 22:00Z de 16 de agosto, quem estivesse em UTC+14 já era dia 17 e
+  // recebia «é hoje» sobre um prazo que ainda tinha um dia inteiro.
+  //
+  // O CI corre em UTC, e em UTC as duas escalas coincidem nesse instante.
+  // Por isso o defeito viveu meses com o teste verde — e por isso este
+  // teste não pergunta uma vez, pergunta em quatro fusos.
+  it.each([
+    ["UTC", "UTC"],
+    ["a hora de Lisboa", "Europe/Lisbon"],
+    ["o fuso mais adiantado do mundo", "Pacific/Kiritimati"],
+    ["o mais atrasado", "Pacific/Midway"],
+  ])("dá a mesma resposta com o relógio da máquina em %s", (_rotulo, tz) => {
+    const original = process.env.TZ;
+    process.env.TZ = tz;
+    try {
+      // 16 de agosto, 22:00 UTC — 23:00 em Lisboa, que está em UTC+1 no
+      // verão. Para quem vive cá ainda é dia 16, e faltam dois dias
+      // para o 18.
+      const tarde = new Date("2026-08-16T22:00:00Z");
+      expect(diasAtePrazo("2026-08-18", tarde)).toBe(2);
+      expect(diasAtePrazo("2026-08-17", tarde)).toBe(1);
+      expect(diasAtePrazo("2026-08-16", tarde)).toBe(0);
+      expect(diasAtePrazo("2026-08-15", tarde)).toBe(-1);
+
+      // E depois da meia-noite de Lisboa (00:30 do dia 17), o 17 passa a
+      // ser hoje — em qualquer máquina.
+      const madrugada = new Date("2026-08-16T23:30:00Z");
+      expect(diasAtePrazo("2026-08-17", madrugada)).toBe(0);
+    } finally {
+      if (original === undefined) delete process.env.TZ;
+      else process.env.TZ = original;
+    }
+  });
+
   it("fala como uma pessoa fala", () => {
     expect(descreverPrazo(0, true)).toBe("É para hoje.");
     expect(descreverPrazo(1, true)).toBe("É para amanhã.");

@@ -1,8 +1,24 @@
 # Plataforma de contabilistas — plano de arquitetura
 
-> Estado: em construção na branch `claude/accountant-management-platform-xvb3hy`.
-> Este documento é a fonte de verdade do desenho. Se o código divergir daqui,
-> um dos dois está errado — e é para isso que o documento existe.
+> **Estado: DESENHO INICIAL, parcialmente ultrapassado.** Atualizado pela
+> última vez enquanto a plataforma era construída na branch
+> `claude/accountant-management-platform-xvb3hy`. Descreve a intenção com
+> que as três superfícies nasceram e continua útil para isso.
+>
+> ⚠️ **Não é a fonte de verdade sobre privacidade.** Essa é
+> [`CONTRATO-DE-PRIVACIDADE.md`](./CONTRATO-DE-PRIVACIDADE.md), criado a
+> 2026-08-20. O que mudou desde este documento e não está aqui:
+>
+> - os contactos do contabilista (email, telefone, site) **saíram do
+>   perfil público** e abrem-se com a aceitação do cliente;
+> - a ficha de contactos do cliente **nasce por partilhar**;
+> - a mediação das conversas **acabou** — ver
+>   [`ESTRATEGIA-INTERMEDIACAO.md`](./ESTRATEGIA-INTERMEDIACAO.md);
+> - a fidelidade passou a **V2**, com regras versionadas e benefício
+>   pendente.
+>
+> Onde este documento e o código divergirem sobre quem vê o quê, é este
+> documento que está errado.
 
 ## 1. O que se está a construir
 

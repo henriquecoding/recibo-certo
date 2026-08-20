@@ -33,7 +33,8 @@ import {
   anuncioDeMovimento, anuncioDeTamanho, geometriaDoTamanho, tamanhosPermitidos,
 } from "@/lib/contabilistas/dashboard/apresentacao";
 import type {
-  GridPlacement, WidgetSize, WidgetType, WorkspaceLayoutV2, WorkspaceWidgetInstance,
+  GridPlacement, WidgetDensity, WidgetPresentationConfig, WidgetSize, WidgetType,
+  WorkspaceLayoutV2, WorkspaceWidgetInstance,
 } from "@/lib/contabilistas/dashboard/tipos";
 import MolduraModulo, { type AcaoDoMenu } from "./MolduraModulo";
 import CorpoDoModulo from "./widgets";
@@ -205,6 +206,26 @@ export default function GrelhaEdicao({
     [colunas, layout.items, onAlterar],
   );
 
+  /**
+   * Muda uma opção de apresentação do módulo.
+   *
+   * Passa por `onAlterar` como qualquer outra alteração, e isso é o
+   * essencial: a configuração entra no MESMO rascunho, na MESMA pilha de
+   * Desfazer e na MESMA gravação atómica do layout. Uma opção que se
+   * gravasse à parte era uma segunda escrita a competir com a revisão do
+   * layout, e a primeira das duas a chegar perdia.
+   */
+  const mudarConfig = useCallback(
+    (item: WorkspaceWidgetInstance, mudanca: WidgetPresentationConfig) => {
+      onAlterar(layout.items.map((i) =>
+        i.instanceId === item.instanceId
+          ? { ...i, config: limparConfig({ ...i.config, ...mudanca }) }
+          : i,
+      ));
+    },
+    [layout.items, onAlterar],
+  );
+
   const mudarTamanho = useCallback(
     (item: WorkspaceWidgetInstance, tamanho: WidgetSize) => {
       const alvo = geometriaDoTamanho(item.type, tamanho, item.desktop);
@@ -291,6 +312,15 @@ export default function GrelhaEdicao({
                   onSelect: () => mudarTamanho(item, t),
                   separar: idx === 0,
                 })),
+                // As opções que ESTE módulo declara suportar, e só essas.
+                // Um formulário genérico com as seis chaves ofereceria
+                // interruptores sem efeito — que é exatamente o problema
+                // que isto corrige.
+                ...opcoesDoModulo(item).map((o, idx) => ({
+                  rotulo: o.rotulo,
+                  onSelect: () => mudarConfig(item, o.mudanca),
+                  separar: idx === 0,
+                })),
                 {
                   rotulo: "Remover do painel",
                   onSelect: () => onRemover(item.instanceId),
@@ -369,18 +399,20 @@ export default function GrelhaEdicao({
                     : (comecar(item, "redimensionar") as unknown as (e: React.PointerEvent<HTMLButtonElement>) => void)
                 }
               >
-                {/* `versao` é a prop que existe só para o `memo` deixar
-                    passar a chegada de dados. Os widgets leem o broker
-                    imperativamente, e sem ela nenhuma prop mudava — um
-                    módulo acabado de acrescentar ficava vazio até se sair
-                    da edição, que é exatamente o que `acrescentar` tenta
-                    evitar ao pedir o domínio de imediato. */}
+                {/* Havia aqui uma prop `versao={broker.versao}`, que existia
+                    só para o `memo` deixar passar a chegada de dados: os
+                    widgets liam o broker durante o render e nenhuma prop
+                    mudava quando os dados chegavam.
+                    Deixou de ser precisa. Cada widget subscreve os seus
+                    domínios com `useSyncExternalStore`, e um componente que
+                    se re-renderiza a si próprio não precisa de autorização
+                    do `memo` do pai. */}
                 <CorpoMemo
                   type={item.type}
                   colSpan={item.desktop.colSpan}
                   rowSpan={item.desktop.rowSpan}
                   broker={broker}
-                  versao={broker.versao}
+                  config={item.config}
                   href={href}
                 />
               </MolduraModulo>
@@ -416,3 +448,97 @@ export default function GrelhaEdicao({
 const NOME_DO_TAMANHO: Record<WidgetSize, string> = {
   S: "pequeno", M: "médio", L: "grande", XL: "extra grande",
 };
+
+
+/* ------------------------------------------------------------------ */
+/* Opções de apresentação                                              */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Uma chave sem valor não fica no layout.
+ *
+ * `{ density: undefined }` serializa para `{}` em JSON mas conta como
+ * chave em TypeScript, e um `Object.keys` sobre isso diz que há
+ * configuração onde não há. Limpar aqui mantém a assinatura canónica do
+ * layout estável — que é o que decide se o rascunho está sujo, e portanto
+ * se sair da página faz uma pergunta.
+ */
+function limparConfig(c: WidgetPresentationConfig): WidgetPresentationConfig | undefined {
+  const saida: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(c)) if (v !== undefined) saida[k] = v;
+  return Object.keys(saida).length > 0 ? (saida as WidgetPresentationConfig) : undefined;
+}
+
+/**
+ * ⚠️ Os ciclos começam sempre em `undefined` — «sem escolha».
+ *
+ * É o que garante que dar a volta ao ciclo devolve o módulo ao
+ * comportamento automático. Sem essa entrada, quem experimentasse uma
+ * densidade nunca mais conseguia voltar atrás pelo menu.
+ *
+ * E não há `expanded` nem `full` na lista: a densidade escolhida só pode
+ * APERTAR a automática (ver `densidadeEfetiva`), e oferecer valores que
+ * seriam ignorados é oferecer um interruptor sem efeito.
+ */
+const CICLO_DENSIDADE: (WidgetDensity | undefined)[] = [undefined, "normal", "compact"];
+const CICLO_MAX: (number | undefined)[] = [undefined, 3, 5, 8];
+const CICLO_ORDEM: WidgetPresentationConfig["sort"][] = [undefined, "deadline", "alpha"];
+
+const NOME_DENSIDADE: Record<string, string> = {
+  compact: "compacta", normal: "normal", expanded: "ampla", full: "completa",
+};
+const NOME_ORDEM: Record<string, string> = {
+  deadline: "mais antigos primeiro", alpha: "alfabética",
+};
+
+/** O elemento a seguir a `atual` num ciclo, dando a volta no fim. */
+function seguinte<T>(ciclo: T[], atual: T): T {
+  const i = ciclo.findIndex((v) => v === atual);
+  return ciclo[(i + 1) % ciclo.length];
+}
+
+/**
+ * As entradas de menu que este módulo oferece.
+ *
+ * Cada uma diz o estado ATUAL e muda para o seguinte ao ser escolhida — é
+ * o que permite caber num menu de uma coluna sem abrir um formulário, e
+ * era essa a recomendação: «um painel curto de configuração, não um
+ * formulário genérico com todas as chaves».
+ *
+ * A lista sai de `MODULOS[type].opcoes`. O que o módulo não implementa
+ * não aparece aqui, e o que aparece aqui tem efeito no ecrã ao fim do
+ * mesmo clique.
+ */
+function opcoesDoModulo(
+  item: WorkspaceWidgetInstance,
+): { rotulo: string; mudanca: WidgetPresentationConfig }[] {
+  const suportadas = MODULOS[item.type].opcoes;
+  const c = item.config ?? {};
+  const saida: { rotulo: string; mudanca: WidgetPresentationConfig }[] = [];
+
+  if (suportadas.includes("density")) {
+    saida.push({
+      rotulo: `Densidade: ${c.density ? NOME_DENSIDADE[c.density] : "automática"}`,
+      mudanca: { density: seguinte(CICLO_DENSIDADE, c.density) },
+    });
+  }
+  if (suportadas.includes("maxItems")) {
+    saida.push({
+      rotulo: `Mostrar: ${c.maxItems ? `${c.maxItems} linhas` : "o que couber"}`,
+      mudanca: { maxItems: seguinte(CICLO_MAX, c.maxItems) },
+    });
+  }
+  if (suportadas.includes("showCompleted")) {
+    saida.push({
+      rotulo: c.showCompleted === false ? "Mostrar concluídos" : "Esconder concluídos",
+      mudanca: { showCompleted: c.showCompleted === false ? undefined : false },
+    });
+  }
+  if (suportadas.includes("sort")) {
+    saida.push({
+      rotulo: `Ordem: ${c.sort ? NOME_ORDEM[c.sort] : "mais recentes primeiro"}`,
+      mudanca: { sort: seguinte(CICLO_ORDEM, c.sort) },
+    });
+  }
+  return saida;
+}

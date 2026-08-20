@@ -67,11 +67,33 @@ export interface WidgetDefinition {
   colSpan: { min: number; max: number };
   rowSpan: { min: number; max: number };
   posicaoPadrao: Pick<GridPlacement, "colSpan" | "rowSpan">;
+  /**
+   * As opções de apresentação que ESTE módulo obedece.
+   *
+   * ⚠️ A lista não é decorativa: `normalizarConfig` deita fora tudo o que
+   * não estiver aqui, e o menu do módulo só oferece o que estiver aqui.
+   * É a resposta ao problema que a auditoria encontrou —
+   * `WidgetPresentationConfig` era guardado e validado para todos os
+   * módulos, e nenhum lhe obedecia. Uma opção que o módulo não implementa
+   * NÃO entra nesta lista: um interruptor sem efeito é pior do que
+   * interruptor nenhum.
+   */
+  opcoes: OpcaoDeApresentacao[];
   /** Carrega o componente só quando é preciso (§12.6). */
   lazy: boolean;
   /** Rota da superfície dedicada, para o CTA "Ver tudo". */
   rota?: string;
 }
+
+/**
+ * As chaves de `WidgetPresentationConfig` que algum módulo implementa.
+ *
+ * `periodo` e `agrupar` estão fora: continuam a ser aceites pela
+ * validação (o layout gravado pode trazê-las de uma versão anterior), mas
+ * módulo nenhum as declara, e por isso `normalizarConfig` deita-as fora.
+ * Entram aqui no dia em que houver um módulo que lhes obedeça — não antes.
+ */
+export type OpcaoDeApresentacao = "density" | "maxItems" | "showCompleted" | "sort";
 
 const D = (d: WidgetDefinition): WidgetDefinition => d;
 
@@ -82,7 +104,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "operacao", tom: "brand", formato: "timeline", prioridade: "critical",
     dominios: ["agenda"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, lazy: false, rota: "/contabilista/agenda",
+    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, opcoes: ["density", "maxItems"],
+    lazy: false, rota: "/contabilista/agenda",
   }),
   precisam_atencao: D({
     type: "precisam_atencao", tagBase: "ATN", titulo: "Precisam de atenção",
@@ -90,7 +113,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "operacao", tom: "alert", formato: "lista", prioridade: "critical",
     dominios: ["atencao"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, lazy: false,
+    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, opcoes: ["density", "maxItems"],
+    lazy: false,
   }),
   prazos_proximos: D({
     type: "prazos_proximos", tagBase: "PRZ", titulo: "Prazos próximos",
@@ -98,7 +122,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "fiscal", tom: "areia", formato: "lista", prioridade: "critical",
     dominios: ["prazos"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, lazy: false,
+    posicaoPadrao: { colSpan: 4, rowSpan: 4 }, opcoes: ["density", "maxItems"],
+    lazy: false,
   }),
   partilhas_recebidas: D({
     type: "partilhas_recebidas", tagBase: "PAR", titulo: "Partilhas recebidas",
@@ -106,7 +131,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "clientes", tom: "azul", formato: "lista", prioridade: "normal",
     dominios: ["partilhas"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/partilhas",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems", "sort"],
+    lazy: false, rota: "/contabilista/partilhas",
   }),
   simulacoes_recebidas: D({
     type: "simulacoes_recebidas", tagBase: "SIM", titulo: "Simulações recebidas",
@@ -115,7 +141,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "clientes", tom: "lilas", formato: "lista", prioridade: "normal",
     dominios: ["partilhas"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/partilhas",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems", "sort"],
+    lazy: false, rota: "/contabilista/partilhas",
   }),
   documentos_rever: D({
     type: "documentos_rever", tagBase: "DOC", titulo: "Documentos por rever",
@@ -123,7 +150,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "trabalho", tom: "rosa", formato: "lista", prioridade: "normal",
     dominios: ["documentos"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false,
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems"],
+    lazy: false,
   }),
   atividade_semana: D({
     type: "atividade_semana", tagBase: "ATV", titulo: "Atividade da semana",
@@ -131,7 +159,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "operacao", tom: "azul", formato: "grafico", prioridade: "deferred",
     dominios: ["atividade"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 6 },
-    posicaoPadrao: { colSpan: 6, rowSpan: 3 }, lazy: true,
+    posicaoPadrao: { colSpan: 6, rowSpan: 3 }, opcoes: ["density"],
+    lazy: true,
   }),
   centro_avisos: D({
     type: "centro_avisos", tagBase: "AVS", titulo: "Centro de avisos",
@@ -139,7 +168,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "operacao", tom: "areia", formato: "lista", prioridade: "normal",
     dominios: ["avisos"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "S",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 6 },
-    posicaoPadrao: { colSpan: 6, rowSpan: 3 }, lazy: false,
+    posicaoPadrao: { colSpan: 6, rowSpan: 3 }, opcoes: ["density", "maxItems"],
+    lazy: false,
   }),
   estado_trabalho: D({
     type: "estado_trabalho", tagBase: "TRB", titulo: "Estado do trabalho",
@@ -147,7 +177,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "trabalho", tom: "brand", formato: "kanban", prioridade: "normal",
     dominios: ["trabalho"], tamanhos: ["S", "M", "L", "XL"], tamanhoPadrao: "L",
     colSpan: { min: 4, max: 12 }, rowSpan: { min: 2, max: 12 },
-    posicaoPadrao: { colSpan: 12, rowSpan: 4 }, lazy: true, rota: "/contabilista/trabalho",
+    posicaoPadrao: { colSpan: 12, rowSpan: 4 }, opcoes: ["density", "maxItems", "showCompleted"],
+    lazy: true, rota: "/contabilista/trabalho",
   }),
   clientes: D({
     type: "clientes", tagBase: "CLI", titulo: "Clientes",
@@ -155,7 +186,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "clientes", tom: "azul", formato: "lista", prioridade: "normal",
     dominios: ["clientes"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/clientes",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems"],
+    lazy: false, rota: "/contabilista/clientes",
   }),
   casos: D({
     type: "casos", tagBase: "CAS", titulo: "Casos",
@@ -163,7 +195,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "trabalho", tom: "lilas", formato: "lista", prioridade: "normal",
     dominios: ["casos"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/casos",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems", "showCompleted", "sort"],
+    lazy: false, rota: "/contabilista/casos",
   }),
   fidelidade: D({
     type: "fidelidade", tagBase: "FID", titulo: "Fidelidade",
@@ -171,7 +204,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "negocio", tom: "brand", formato: "cartao", prioridade: "deferred",
     dominios: ["fidelidade"], tamanhos: ["S", "M"], tamanhoPadrao: "S",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 6 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: true, rota: "/contabilista/fidelidade",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems"],
+    lazy: true, rota: "/contabilista/fidelidade",
   }),
   progressao_comissao: D({
     type: "progressao_comissao", tagBase: "PRG", titulo: "Progressão e comissão",
@@ -180,7 +214,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "negocio", tom: "brand", formato: "cartao", prioridade: "deferred",
     dominios: ["progressao"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "S",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: true, rota: "/contabilista/progressao",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density"],
+    lazy: true, rota: "/contabilista/progressao",
   }),
   casos_em_risco: D({
     type: "casos_em_risco", tagBase: "RSK", titulo: "Casos em risco",
@@ -190,7 +225,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "trabalho", tom: "alert", prioridade: "normal", formato: "lista",
     dominios: ["casos"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/casos",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems", "sort"],
+    lazy: false, rota: "/contabilista/casos",
   }),
   comunicacoes_recentes: D({
     type: "comunicacoes_recentes", tagBase: "COM", titulo: "Comunicações recentes",
@@ -201,7 +237,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     categoria: "clientes", tom: "azul", prioridade: "normal", formato: "lista",
     dominios: ["mensagens"], tamanhos: ["S", "M", "L"], tamanhoPadrao: "M",
     colSpan: { min: 3, max: 12 }, rowSpan: { min: 2, max: 8 },
-    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, lazy: false, rota: "/contabilista/clientes",
+    posicaoPadrao: { colSpan: 4, rowSpan: 3 }, opcoes: ["density", "maxItems"],
+    lazy: false, rota: "/contabilista/clientes",
   }),
   resumo_por_cliente: D({
     type: "resumo_por_cliente", tagBase: "RES", titulo: "Resumo por cliente",
@@ -212,7 +249,8 @@ export const MODULOS: Readonly<Record<WidgetType, WidgetDefinition>> = Object.fr
     // clientes para a mesma palavra — e sobre listas truncadas.
     dominios: ["resumo_clientes", "trabalho"], tamanhos: ["M", "L", "XL"], tamanhoPadrao: "L",
     colSpan: { min: 4, max: 12 }, rowSpan: { min: 2, max: 10 },
-    posicaoPadrao: { colSpan: 8, rowSpan: 4 }, lazy: true, rota: "/contabilista/clientes",
+    posicaoPadrao: { colSpan: 8, rowSpan: 4 }, opcoes: ["density", "maxItems"],
+    lazy: true, rota: "/contabilista/clientes",
   }),
 });
 

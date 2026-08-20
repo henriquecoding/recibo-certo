@@ -33,7 +33,7 @@ import {
   COPY_CONTACTOS, IDIOMAS, checklistPerfil, completudeDoPerfil,
   percentagemDoPerfil, primeiroPorFazer, type FichaDePerfil,
 } from "@/lib/contabilistas/perfil";
-import { obterLinkedInPublico } from "@/lib/contabilistas/fonte/linkedin";
+import { obterLinkedInDaFicha } from "@/lib/contabilistas/fonte/linkedin";
 import Button from "@/components/ui/Button";
 import EsqueletoPainel from "@/components/contabilistas/EsqueletoPainel";
 import LinkedInConta from "@/components/contabilistas/LinkedInConta";
@@ -220,7 +220,7 @@ export default function PerfilPage() {
   useEffect(() => {
     if (!ficha) return;
     let vivo = true;
-    obterLinkedInPublico(ficha.userId)
+    obterLinkedInDaFicha(ficha.userId)
       .then((l) => { if (vivo) setAvatarUrl(l.avatarUrl); })
       .catch(() => { if (vivo) setAvatarUrl(null); });
     return () => { vivo = false; };
@@ -826,9 +826,13 @@ export default function PerfilPage() {
               <Texto rotulo="Site" id="site" tipo="url" valor={f.website} onChange={(v) => mudar({ website: v })} />
             </div>
 
-            {/* A frase tem de dizer a verdade sobre o esquema, e o esquema
-                trata os dois campos de maneira diferente: o email está no
-                contrato público, o telefone só sai a quem tem vínculo. */}
+            {/* A frase tem de dizer a verdade sobre o esquema, e desde
+                20260820090000 o esquema trata os três campos da mesma
+                maneira: nenhum está no contrato público, e os três saem
+                por `contactos_do_contabilista` a quem tem vínculo vivo.
+                É esta frase que a pessoa lê antes de escrever aqui o seu
+                telefone — desatualizada, é consentimento obtido com
+                informação falsa. */}
             <p className="mt-3 flex items-start gap-2 rounded-2xl bg-cream px-4 py-3 text-xs leading-relaxed text-stone-600">
               <Lock size={13} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
               {COPY_CONTACTOS}

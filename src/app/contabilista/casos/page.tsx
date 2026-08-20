@@ -3,11 +3,19 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  CASOS — o painel de quem responde
 //  ---------------------------------------------------------------------
-//  O contabilista vê a referência, o nome, o NIF e a situação. Não vê
-//  email, telefone nem morada, e isso não é uma omissão desta página: é
-//  a tabela `caso_contactos`, a que ele não chega por caminho nenhum
-//  (migração 051). Se um dia alguém acrescentar aqui um `select` distraído,
-//  não vem nada — porque não há nada para vir.
+//  O contabilista vê sempre a referência, o nome, o NIF e a situação — são
+//  identificação, e sem eles não se faz o trabalho nem se orçamenta com
+//  seriedade.
+//
+//  ⚠️ Este cabeçalho dizia que ele «não chega por caminho nenhum» a
+//  `caso_contactos`. Foi verdade até `20260818210000_fim_da_mediacao`, que
+//  abriu um caminho declarado: a política lê `casos.partilha_contactos`, e
+//  o cliente liga-a e desliga-a. Desde `20260820092000` nasce desligada.
+//
+//  Ou seja: email, telefone e morada chegam aqui SE — e enquanto — a
+//  pessoa o tiver escolhido. Não é esta página que decide isso, e um
+//  `select` distraído continua a não devolver nada quando a partilha está
+//  desligada. Ver `docs/CONTRATO-DE-PRIVACIDADE.md` §2.
 //
 //  Está dito no ecrã, e não escondido: quem responde tem de perceber que a
 //  relação vive aqui dentro, e porquê.

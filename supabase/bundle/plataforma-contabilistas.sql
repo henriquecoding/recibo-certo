@@ -6,14 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  Estas 36 migrações dependem umas das outras: a 046 usa tabelas
+--  Estas 39 migrações dependem umas das outras: a 046 usa tabelas
 --  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
 --  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
 --  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260819120000_cenario_projeto_de_negocio.sql).
+--  à última  (20260820092000_a_ficha_de_contactos_passa_a_ser_escolhida.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -12417,3 +12417,809 @@ END $$;
 ALTER TABLE public.cenarios
   ADD CONSTRAINT cenarios_tipo_check
   CHECK (tipo IN ('recibos', 'vencimento', 'empresa', 'irs', 'herancas', 'negocio'));
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260820090000_o_contrato_publico_fecha_a_tabela.sql              ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260820090000_o_contrato_publico_fecha_a_tabela.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  O PASSO SEGUINTE DA 20260815200000 — AGORA QUE O FRONTEND JÁ LÊ A VIEW
+--  ---------------------------------------------------------------------
+--  A 20260815200000 criou `contabilistas_publico` e deixou escrito, no fim
+--  do ficheiro, o SQL que fecharia a tabela. Ficou por aplicar. Onze meses
+--  de migrações depois, a política aberta continua de pé, e é isto que ela
+--  significa em produção hoje:
+--
+--    contabilistas_diretorio_publico FOR SELECT TO anon, authenticated
+--      USING (estado = 'aprovado')
+--
+--  RLS escolhe LINHAS, não colunas. Quem não tem sessão nenhuma pede a
+--  linha inteira de qualquer contabilista aprovado e recebe `telefone`,
+--  `linkedin_subject` (o `sub` do OIDC — um identificador de correlação de
+--  identidade), `pedido_id`, e tudo o que a verificação da Ordem guarda.
+--  Nenhum ecrã mostra nada disso. O diretório nunca precisou.
+--
+--  E os grants estavam pior do que a política: `anon` e `authenticated`
+--  tinham SELECT, UPDATE, REFERENCES, TRIGGER e TRUNCATE em TODAS as
+--  colunas. O que impedia um `UPDATE` anónimo não era o privilégio, era a
+--  falta de política — uma segunda tranca a segurar uma porta que estava
+--  destrancada.
+--
+--  ---------------------------------------------------------------------
+--  A REGRA DE PRODUTO QUE ESTA MIGRAÇÃO PASSA A IMPOR
+--
+--    Antes de o contabilista aceitar a pessoa como cliente, o que é
+--    público sobre ele é NOME, OCC e LINKEDIN. Email, telefone, site e
+--    qualquer outro canal direto só existem depois da aceitação.
+--
+--  O LinkedIn fica público de propósito, e não por esquecimento: é o
+--  instrumento de validação profissional que não depende de nós. Quem
+--  quiser confirmar quem está do outro lado consegue fazê-lo sem pedir
+--  autorização a ninguém. O que continua privado é a identidade TÉCNICA
+--  dessa ligação — `linkedin_subject`, claims, tokens.
+--
+--  O email e o site SAEM do contrato público. Estavam lá por uma decisão
+--  anterior, e o comentário da view dizia-o com todas as letras. A decisão
+--  mudou; o esquema muda com ela, e o editor de perfil passa a dizer a
+--  verdade nova.
+--
+--  ---------------------------------------------------------------------
+--  Forward-only. Nenhuma migração já aplicada é reescrita — o que muda
+--  muda aqui, com data posterior, e a 042 continua a ser o registo
+--  histórico do dia em que a política aberta foi criada.
+--
+--  Idempotente: aplicar duas vezes dá o mesmo resultado.
+-- ═══════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  1. O DONO DO CONTRATO PÚBLICO
+-- ═══════════════════════════════════════════════════════════════════
+--  A view corre com `security_invoker = false`: os privilégios de quem a
+--  lê são irrelevantes, valem os do DONO. É esse o mecanismo que a faz
+--  continuar a servir o diretório depois de a política pública sair.
+--
+--  Só que o dono era o `postgres`, e o `postgres` do Supabase tem
+--  BYPASSRLS. Uma view assim não tem fronteira nenhuma: se alguém lhe
+--  acrescentar amanhã um `JOIN` a uma tabela privada, RLS nenhuma o
+--  impede — nem a da tabela nova, nem a de `contabilistas`. A lista de
+--  colunas era a ÚNICA coisa entre o público e o resto da base de dados,
+--  e uma lista é um documento, não uma tranca.
+--
+--  Passa a haver um papel só para isto: sem login, sem BYPASSRLS, e com
+--  exatamente três autorizações de leitura, dadas uma a uma. Uma coluna
+--  nova numa tabela que ele não pode ler continua a não poder ser lida.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'contrato_publico') THEN
+    CREATE ROLE contrato_publico NOLOGIN;
+  END IF;
+END $$;
+
+--  Um papel sem login não é assumível por ninguém que venha da API: nem
+--  `anon`, nem `authenticated`, nem a chave de serviço. Chega-se-lhe pela
+--  view e por mais nada.
+ALTER ROLE contrato_publico NOLOGIN NOBYPASSRLS NOSUPERUSER NOCREATEDB NOCREATEROLE;
+
+COMMENT ON ROLE contrato_publico IS
+  'Dono de `contabilistas_publico`. Sem login e sem BYPASSRLS: a view lê o que as políticas deste papel deixam ler, e nada mais. Não conceder aqui nada que não seja para ser público.';
+
+GRANT USAGE ON SCHEMA public TO contrato_publico;
+
+-- ── 1.1 O que este papel pode ler ───────────────────────────────────
+--  Sem BYPASSRLS, a view passa a estar sujeita a RLS como qualquer outro
+--  leitor. Estas três políticas são o alcance total dela.
+GRANT SELECT ON public.contabilistas      TO contrato_publico;
+GRANT SELECT ON public.fidelidade_regras  TO contrato_publico;
+GRANT SELECT ON public.contabilista_stripe TO contrato_publico;
+
+DROP POLICY IF EXISTS "contabilistas_contrato_publico_le" ON public.contabilistas;
+CREATE POLICY "contabilistas_contrato_publico_le" ON public.contabilistas
+  FOR SELECT TO contrato_publico
+  USING (estado = 'aprovado');
+
+--  A regra corrente de fidelidade de um contabilista aprovado. É o que o
+--  cartão do diretório mostra: se há cartão, quantos carimbos e quanto
+--  desconto. As regras substituídas não interessam a ninguém de fora.
+DROP POLICY IF EXISTS "fidelidade_regras_contrato_publico_le" ON public.fidelidade_regras;
+CREATE POLICY "fidelidade_regras_contrato_publico_le" ON public.fidelidade_regras
+  FOR SELECT TO contrato_publico
+  USING (substituida_em IS NULL);
+
+--  ⚠️ A tabela da Stripe é privada e continua a sê-lo. Desta linha sai UM
+--  facto para a view — `charges_enabled` — e a política existe para que a
+--  view o possa ler sem ganhar acesso a mais nada. Quem vir «não recebe
+--  pagamentos» não distingue «nunca ligou» de «tem um documento por
+--  enviar», e é o pretendido: que a Stripe pediu um documento a alguém é
+--  informação privada, e das que fazem perder um cliente por uma razão
+--  que não é dele.
+DROP POLICY IF EXISTS "contabilista_stripe_contrato_publico_le" ON public.contabilista_stripe;
+CREATE POLICY "contabilista_stripe_contrato_publico_le" ON public.contabilista_stripe
+  FOR SELECT TO contrato_publico
+  USING (true);
+
+-- ═══════════════════════════════════════════════════════════════════
+--  2. A VIEW, SEM O EMAIL E SEM O SITE
+-- ═══════════════════════════════════════════════════════════════════
+--  `DROP` antes de `CREATE`, nunca `CREATE OR REPLACE`: esta definição
+--  RETIRA duas colunas do meio da lista, e o `REPLACE` só sabe acrescentar
+--  no fim — recusaria com «42P16: cannot drop columns from view». Vale
+--  para todas as definições desta série; ver a mesma nota em
+--  20260815200000, 20260815210000, 20260815230000 e 20260818054500.
+DROP VIEW IF EXISTS public.contabilistas_publico;
+CREATE VIEW public.contabilistas_publico
+WITH (security_invoker = false) AS
+SELECT
+  c.user_id,
+  c.slug,
+  c.nome,
+  -- ── Identidade verificável ────────────────────────────────────────
+  c.occ,
+  (
+    c.occ_verificado_ate IS NOT NULL
+    AND c.occ_verificado_ate > now()
+    AND c.occ_numero_confirmado IS NOT NULL
+    AND c.occ_numero_confirmado
+        = NULLIF(ltrim(regexp_replace(COALESCE(c.occ, ''), '\D', '', 'g'), '0'), '')
+  ) AS occ_verificado,
+  CASE WHEN c.occ_verificado_ate > now() THEN c.occ_verificado_metodo END AS occ_verificado_metodo,
+  CASE WHEN c.occ_verificado_ate > now() THEN c.occ_verificado_em     END AS occ_verificado_em,
+  CASE WHEN c.occ_verificado_ate > now() THEN c.occ_verificado_ate    END AS occ_verificado_ate,
+  -- ── Perfil profissional, publicado pelo próprio ───────────────────
+  --  Isto não são contactos: é o que ajuda alguém a escolher. Tirá-lo
+  --  daqui não fecharia uma fuga, fecharia o diretório.
+  c.titulo_profissional,
+  c.apresentacao_curta,
+  c.bio,
+  c.distrito,
+  c.concelho,
+  c.especialidades,
+  c.modalidades,
+  c.idiomas,
+  c.anos_experiencia,
+  c.resposta_media_horas,
+  c.perfil_blocos,
+  c.perfil_termos,
+  c.cobertura,
+  -- ── LinkedIn: público de propósito ────────────────────────────────
+  --  É a validação profissional que não depende de nós. A URL canónica
+  --  sai, e a identidade técnica da ligação (`linkedin_subject`) nunca.
+  --  ⚠️ Nenhum comentário DENTRO desta view leva ponto e vírgula, e é de
+  --  propósito. O teste que guarda a última definição da view corta o
+  --  corpo no primeiro que encontrar, e um escondido num comentário
+  --  truncava-o a meio — a asserção passava a olhar para meia view.
+  c.linkedin_url,
+  c.linkedin_avatar_url,
+  (c.linkedin_ligado_em IS NOT NULL) AS linkedin_ligado,
+  -- ── Condições de trabalho ─────────────────────────────────────────
+  c.aceita_novos_clientes,
+  c.preco_consulta_cents,
+  c.duracao_consulta_min,
+  coalesce(r.ativa, false)                                   AS fidelidade_ativa,
+  CASE WHEN coalesce(r.ativa, false) THEN r.meta         END AS fidelidade_meta,
+  CASE WHEN coalesce(r.ativa, false) THEN r.desconto_pct END AS fidelidade_desconto_pct,
+  COALESCE(s.charges_enabled, false) AS recebe_pagamentos,
+  c.criado_em
+  -- ── O que SAIU, e porquê ──────────────────────────────────────────
+  --  `email_contacto` e `website` estavam aqui por uma decisão de produto
+  --  anterior — o editor de perfil dizia, na própria página, que era isto
+  --  que aparecia no diretório. A decisão mudou: são canais diretos, e
+  --  canais diretos abrem-se com a aceitação, não com a pesquisa. Saem
+  --  por `contacto_do_contabilista`, a quem tem vínculo vivo.
+  --
+  --  `telefone`, `linkedin_subject`, `pedido_id`, `estado` e as colunas de
+  --  auditoria da verificação nunca cá estiveram e não podem cá entrar:
+  --  ver `assert_contrato_publico_contabilistas()` no fim deste ficheiro.
+FROM public.contabilistas c
+LEFT JOIN public.fidelidade_regras r
+       ON r.contabilista_id = c.user_id AND r.substituida_em IS NULL
+LEFT JOIN public.contabilista_stripe s
+       ON s.contabilista_id = c.user_id
+WHERE c.estado = 'aprovado';
+
+ALTER VIEW public.contabilistas_publico OWNER TO contrato_publico;
+
+COMMENT ON VIEW public.contabilistas_publico IS
+  'O contrato público do diretório e do perfil. Nome, OCC e LinkedIn identificam; o perfil profissional ajuda a escolher. Nenhum canal direto sai daqui — email, telefone e site saem por contacto_do_contabilista, a quem tem vínculo vivo. Acrescentar uma coluna aqui é uma decisão explícita, e assert_contrato_publico_contabilistas() recusa as que nunca podem entrar.';
+
+--  Os grants são refeitos DEPOIS da mudança de dono: o `ALTER ... OWNER`
+--  remapeia o concedente, e um grant dado antes ficaria com o `postgres`
+--  como origem.
+GRANT SELECT ON public.contabilistas_publico TO anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  3. A TABELA FECHA
+-- ═══════════════════════════════════════════════════════════════════
+DROP POLICY IF EXISTS "contabilistas_diretorio_publico" ON public.contabilistas;
+
+--  `anon` deixa de ter alguma coisa a fazer nesta tabela. Lê a view.
+REVOKE ALL ON public.contabilistas FROM anon;
+
+--  `authenticated` recomeça do zero e recebe só o que os fluxos reais
+--  precisam. SELECT continua a ser a tabela toda porque a POLÍTICA é que
+--  escolhe as linhas — `contabilistas_proprio_le` dá a linha do próprio e,
+--  à administração, todas. Um estranho autenticado recebe zero linhas.
+REVOKE ALL ON public.contabilistas FROM authenticated;
+GRANT SELECT ON public.contabilistas TO authenticated;
+
+--  O UPDATE passa a ser por coluna. Antes era a tabela inteira: com a
+--  política do próprio, um contabilista podia reescrever o seu `slug`
+--  (roubando o de outro), o `pedido_id` e o `linkedin_subject`. Estas são
+--  as colunas que o editor de perfil escreve, e mais nenhuma.
+--
+--  `occ_pedido_em` entra porque pedir verificação não é confirmá-la — é a
+--  única coluna de verificação que o próprio escreve, e o trigger
+--  `contabilistas_tranca_occ` guarda as outras oito.
+GRANT UPDATE (
+  nome, occ, bio, distrito, concelho, especialidades, modalidades,
+  email_contacto, telefone, website,
+  aceita_novos_clientes, preco_consulta_cents, duracao_consulta_min,
+  fidelidade_meta, fidelidade_desconto_pct, fidelidade_ativa,
+  titulo_profissional, apresentacao_curta, idiomas, anos_experiencia,
+  resposta_media_horas, perfil_blocos, perfil_termos, cobertura,
+  linkedin_url, occ_pedido_em
+) ON public.contabilistas TO authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  4. O CONTACTO PRIVADO PASSA A INCLUIR O SITE
+-- ═══════════════════════════════════════════════════════════════════
+--  O site saiu do contrato público na secção 2. Se ficasse só por aí,
+--  desaparecia do produto — e não é isso que se decidiu: é um canal
+--  direto, e canais diretos pertencem a quem já é cliente.
+--
+--  ⚠️ MUDA DE NOME, e não é cosmético. `contacto_do_contabilista` devolvia
+--  duas colunas; esta devolve três. Mantendo o nome e a assinatura de
+--  argumentos, o `CREATE OR REPLACE` da 20260815200000 recusaria a segunda
+--  aplicação com «42P13: cannot change return type of existing function» —
+--  e uma migração antiga não se reescreve para acomodar uma nova. Com nome
+--  novo são duas funções distintas: a antiga é largada aqui, e se alguém
+--  reaplicar o conjunto todo ela volta a nascer e volta a ser largada,
+--  sem erro e sem sobrevivência.
+--
+--  O plural também diz melhor o que isto é: não é «o contacto», são os
+--  TRÊS canais diretos, e os três abrem-se ao mesmo tempo — com a
+--  aceitação.
+DROP FUNCTION IF EXISTS public.contacto_do_contabilista(uuid);
+
+DROP FUNCTION IF EXISTS public.contactos_do_contabilista(uuid);
+CREATE FUNCTION public.contactos_do_contabilista(p_contabilista uuid)
+RETURNS TABLE (email_contacto text, telefone text, website text)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT c.email_contacto, c.telefone, c.website
+    FROM public.contabilistas c
+   WHERE c.user_id = p_contabilista
+     AND c.estado = 'aprovado'
+     AND (
+          c.user_id = (SELECT auth.uid())
+       OR public.vinculo_nao_terminado(p_contabilista, (SELECT auth.uid()))
+     );
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.contactos_do_contabilista(uuid) FROM anon, public;
+GRANT  EXECUTE ON FUNCTION public.contactos_do_contabilista(uuid) TO authenticated;
+
+COMMENT ON FUNCTION public.contactos_do_contabilista(uuid) IS
+  'Email, telefone e site do contabilista — os três canais diretos, e os três privados. Só para o próprio e para quem tem vínculo vivo (pedido pendente não conta, terminado deixa de contar). O contabilista tem de estar aprovado: uma suspensão corta o contacto no mesmo instante em que corta o diretório.';
+
+-- ═══════════════════════════════════════════════════════════════════
+--  5. A GUARDA
+-- ═══════════════════════════════════════════════════════════════════
+--  Sem isto, a correção dura até alguém precisar de um campo novo no
+--  diretório e recriar a política aberta — que é a solução óbvia para quem
+--  não leu este ficheiro. A guarda de 20260815200000 verificava uma coisa;
+--  esta verifica quatro, porque foram quatro as maneiras de o contrato se
+--  ter partido:
+--
+--    (a) uma política de SELECT aberta a `anon` na tabela;
+--    (b) um privilégio de `anon` na tabela, com ou sem política;
+--    (c) uma coluna proibida na view;
+--    (d) a view a voltar a ser dona de si mesma pelo `postgres` — o que
+--        acontece SEM AVISO se alguém a redefinir sem repor o dono, e que
+--        lhe devolveria o BYPASSRLS.
+CREATE OR REPLACE FUNCTION public.assert_contrato_publico_contabilistas()
+RETURNS void
+LANGUAGE plpgsql
+STABLE
+SET search_path = ''
+AS $$
+DECLARE
+  v_politicas text[];
+  v_colunas   text[];
+  v_dono      text;
+  --  As colunas que NUNCA podem ser públicas. Não é a lista do que está
+  --  fora da view: é a lista do que não pode entrar nela.
+  --   · os três canais diretos, que pertencem a quem já é cliente;
+  --   · os identificadores internos, que não pertencem a ninguém de fora;
+  --   · a auditoria da verificação — o selo é público, a prova não é;
+  --   · `estado`, que diria «suspenso» sobre quem a view já não devolve.
+  c_proibidas constant text[] := ARRAY[
+    'email_contacto', 'telefone', 'website',
+    'linkedin_subject', 'pedido_id', 'estado',
+    'occ_evidencia', 'occ_numero_confirmado', 'occ_verificado_por',
+    'occ_pedido_em', 'occ_recusa_motivo', 'occ_recusado_em'
+  ];
+BEGIN
+  -- (a) ────────────────────────────────────────────────────────────
+  SELECT array_agg(policyname ORDER BY policyname) INTO v_politicas
+    FROM pg_policies
+   WHERE schemaname = 'public'
+     AND tablename = 'contabilistas'
+     AND cmd IN ('SELECT', 'ALL')
+     AND ('anon'::name = ANY (roles) OR 'public'::name = ANY (roles));
+
+  IF v_politicas IS NOT NULL THEN
+    RAISE EXCEPTION
+      'contabilistas tem política de SELECT aberta a anon (%). O contrato público é a view contabilistas_publico.',
+      array_to_string(v_politicas, ', ');
+  END IF;
+
+  -- (b) ────────────────────────────────────────────────────────────
+  --  Uma política é só metade: sem privilégio, a política não chega a ser
+  --  consultada, e com privilégio basta alguém recriar a política para a
+  --  fuga voltar inteira.
+  IF has_any_column_privilege('anon', 'public.contabilistas', 'SELECT')
+     OR has_any_column_privilege('anon', 'public.contabilistas', 'UPDATE')
+     OR has_any_column_privilege('anon', 'public.contabilistas', 'INSERT') THEN
+    RAISE EXCEPTION
+      'anon tem privilégios em contabilistas. O diretório lê contabilistas_publico; a tabela não é dele.';
+  END IF;
+
+  -- (c) ────────────────────────────────────────────────────────────
+  SELECT array_agg(a.attname::text ORDER BY a.attname) INTO v_colunas
+    FROM pg_attribute a
+   WHERE a.attrelid = 'public.contabilistas_publico'::regclass
+     AND a.attnum > 0
+     AND NOT a.attisdropped
+     AND a.attname::text = ANY (c_proibidas);
+
+  IF v_colunas IS NOT NULL THEN
+    RAISE EXCEPTION
+      'contabilistas_publico expõe %. Nome, OCC e LinkedIn identificam; canais diretos e identificadores internos não são públicos.',
+      array_to_string(v_colunas, ', ');
+  END IF;
+
+  -- (d) ────────────────────────────────────────────────────────────
+  SELECT r.rolname::text INTO v_dono
+    FROM pg_class c JOIN pg_roles r ON r.oid = c.relowner
+   WHERE c.oid = 'public.contabilistas_publico'::regclass;
+
+  IF EXISTS (SELECT 1 FROM pg_roles
+              WHERE rolname = v_dono AND (rolbypassrls OR rolcanlogin)) THEN
+    RAISE EXCEPTION
+      'contabilistas_publico é de %, que tem login ou BYPASSRLS. Uma view security_invoker=false com esse dono não tem fronteira nenhuma — repõe: ALTER VIEW public.contabilistas_publico OWNER TO contrato_publico;',
+      v_dono;
+  END IF;
+END;
+$$;
+
+COMMENT ON FUNCTION public.assert_contrato_publico_contabilistas() IS
+  'Recusa as quatro maneiras de o contrato público se partir: política aberta a anon, privilégio de anon na tabela, coluna proibida na view, e dono da view com login ou BYPASSRLS. Corre no fim de cada migração que toque no contrato, e na suíte de RLS.';
+
+--  Corre agora. Se esta migração deixou alguma coisa por fechar, é aqui
+--  que ela pára — dentro da transação, sem chegar a produção.
+SELECT public.assert_contrato_publico_contabilistas();
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260820091000_a_purga_passa_pela_storage_api.sql                 ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260820091000_a_purga_passa_pela_storage_api.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  A PURGA DE ÓRFÃOS DEIXA DE MENTIR (E DEIXA DE PODER APAGAR O QUE NÃO É)
+--  ---------------------------------------------------------------------
+--  Duas coisas erradas no mesmo sítio, e a primeira estava a esconder a
+--  segunda.
+--
+--  ── (A) A PURGA NUNCA CORREU ────────────────────────────────────────
+--
+--  `purgar_anexos_orfaos` faz `DELETE FROM storage.objects`. O Supabase
+--  recusa:
+--
+--    «Direct deletion from storage tables is not allowed.
+--     Use the Storage API instead.»
+--
+--  Nos logs de produção isso repete-se todos os dias. O cron devolve 500,
+--  os bytes ficam, e a retenção prometida na página de privacidade é uma
+--  frase sem nada por trás. Um órfão nunca foi apagado — nem um.
+--
+--  ── (B) SE TIVESSE CORRIDO, TERIA APAGADO DOCUMENTOS VIVOS ──────────
+--
+--  ⚠️ Esta é a mais grave das duas, e só se vê depois de a primeira
+--  estar corrigida.
+--
+--  A definição de órfão era «objeto em `contabilista-anexos` sem linha em
+--  `contabilista_anexos`». Mas o balde não é só das mensagens: desde a
+--  051/052, os documentos dos CASOS (`caso_documentos`) e os anexos das
+--  PROPOSTAS (`proposta_anexos`) vivem no mesmo balde, em `casos/…`.
+--
+--  Nenhum deles tem linha em `contabilista_anexos`. Todos passavam no
+--  teste de «órfão» duas horas depois de serem enviados. O primeiro
+--  deploy que corrigisse só o (A) teria apagado, no dia seguinte, todos
+--  os contratos e documentos de casos da plataforma.
+--
+--  ---------------------------------------------------------------------
+--  O QUE PASSA A ACONTECER
+--
+--  A base de dados deixa de apagar bytes — não pode, e fingir que podia
+--  era o defeito. Passa a fazer o que sabe fazer: identificar candidatos,
+--  reservá-los para um executor de cada vez, e confirmar a remoção só
+--  depois de o objeto ter REALMENTE desaparecido.
+--
+--    1. `reservar_anexos_orfaos()`  → deteta, regista e reserva um lote
+--    2. a rota cron                 → `storage.remove(caminhos)`
+--    3. `fechar_purga_de_anexos()`  → confirma contra `storage.objects`
+--
+--  O passo 3 é o que impede a metadata de dizer «apagado» sobre um objeto
+--  que ainda existe: ele não acredita na rota, verifica.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  1. O REGISTO DA PURGA
+-- ═══════════════════════════════════════════════════════════════════
+--  Sem isto, a purga é uma operação sem memória: uma falha a meio não se
+--  distingue de um começo, duas execuções em paralelo pedem ao Storage
+--  para apagar as mesmas coisas, e ninguém consegue responder a «quantos
+--  ficaram para trás?» — que é a pergunta que dá o alarme.
+CREATE TABLE IF NOT EXISTS public.anexo_purgas (
+  balde         text        NOT NULL,
+  caminho       text        NOT NULL,
+  detetado_em   timestamptz NOT NULL DEFAULT now(),
+  --  A reserva é um prazo, não uma tranca. Um executor que morra a meio
+  --  não deixa o caminho preso para sempre: passado o prazo, o caminho
+  --  volta a estar disponível para a execução seguinte.
+  reservado_ate timestamptz,
+  tentativas    integer     NOT NULL DEFAULT 0,
+  removido_em   timestamptz,
+  ultimo_erro   text,
+  PRIMARY KEY (balde, caminho)
+);
+
+COMMENT ON TABLE public.anexo_purgas IS
+  'Fila de objetos órfãos por remover do Storage. A base de dados não apaga bytes — regista, reserva e confirma. `removido_em` só é escrito depois de o objeto ter desaparecido de storage.objects.';
+
+--  A fila de trabalho: por remover, não reservado, mais antigo primeiro.
+CREATE INDEX IF NOT EXISTS anexo_purgas_por_fazer_idx
+  ON public.anexo_purgas (detetado_em)
+  WHERE removido_em IS NULL;
+
+ALTER TABLE public.anexo_purgas ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.anexo_purgas FROM anon, authenticated;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  2. O QUE É, E O QUE NÃO É, UM ÓRFÃO
+-- ═══════════════════════════════════════════════════════════════════
+--  Uma função só para isto, e não uma cláusula dentro da purga: é a
+--  definição mais perigosa de todo o sistema de ficheiros, e tem de ser
+--  legível, testável e citável a partir de um sítio só.
+--
+--  Um objeto é órfão quando NENHUMA das quatro coisas o reclama:
+--   · uma mensagem (`contabilista_anexos`);
+--   · um caso (`caso_documentos`);
+--   · uma proposta (`proposta_anexos`);
+--   · uma vaga de envio ainda por fechar.
+--
+--  A vaga entra na lista porque um envio a decorrer tem objeto e ainda
+--  não tem linha. A tolerância de duas horas já o protegia, mas fazer a
+--  proteção depender de um intervalo é fazê-la depender de quem o
+--  configura.
+CREATE OR REPLACE FUNCTION public.anexo_e_orfao(p_balde text, p_caminho text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT p_balde = 'contabilista-anexos'
+     AND NOT EXISTS (SELECT 1 FROM public.contabilista_anexos a WHERE a.caminho = p_caminho)
+     AND NOT EXISTS (SELECT 1 FROM public.caso_documentos      d WHERE d.caminho = p_caminho)
+     AND NOT EXISTS (SELECT 1 FROM public.proposta_anexos      x WHERE x.caminho = p_caminho)
+     AND NOT EXISTS (SELECT 1 FROM public.anexo_vagas          v
+                      WHERE v.caminho = p_caminho AND v.usada_em IS NULL AND v.expira_em > now());
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.anexo_e_orfao(text, text) FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.anexo_e_orfao(text, text) TO service_role;
+
+COMMENT ON FUNCTION public.anexo_e_orfao(text, text) IS
+  '⚠️ A definição de órfão. O balde `contabilista-anexos` serve mensagens, casos E propostas — a versão anterior só conhecia as mensagens, e teria apagado todos os documentos de casos e contratos da plataforma. Uma tabela nova que guarde caminhos TEM de ser acrescentada aqui.';
+
+-- ═══════════════════════════════════════════════════════════════════
+--  3. DETETAR E RESERVAR
+-- ═══════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.reservar_anexos_orfaos(
+  p_idade  interval DEFAULT '2 hours',
+  p_limite integer  DEFAULT 200,
+  p_reserva interval DEFAULT '10 minutes'
+)
+RETURNS TABLE (balde text, caminho text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+--  ⚠️ `RETURNS TABLE (balde, caminho)` declara duas VARIÁVEIS PL/pgSQL com
+--  o nome de duas colunas desta tabela. Sem esta diretiva, qualquer
+--  referência não qualificada — o `ON CONFLICT (balde, caminho)` abaixo,
+--  por exemplo — falha com «column reference is ambiguous», e a função
+--  nem chega a correr.
+#variable_conflict use_column
+BEGIN
+  --  Os que já foram removidos há muito saem do registo. Guardam-se 30
+  --  dias porque são a prova de que a retenção foi cumprida.
+  DELETE FROM public.anexo_purgas
+   WHERE removido_em IS NOT NULL AND removido_em < now() - interval '30 days';
+
+  --  Detetar. `ON CONFLICT DO NOTHING` porque um caminho já em fila não
+  --  volta ao início da fila só por ainda lá estar.
+  INSERT INTO public.anexo_purgas (balde, caminho)
+  SELECT o.bucket_id, o.name
+    FROM storage.objects o
+   WHERE o.bucket_id = 'contabilista-anexos'
+     AND o.created_at < now() - p_idade
+     AND public.anexo_e_orfao(o.bucket_id, o.name)
+  ON CONFLICT (balde, caminho) DO NOTHING;
+
+  --  Reservar um lote. `SKIP LOCKED` é o que torna duas execuções
+  --  simultâneas inofensivas: a segunda salta o que a primeira já tem, em
+  --  vez de esperar por ela ou de pedir ao Storage a mesma remoção.
+  --  ⚠️ As colunas do lote são renomeadas (`l_balde`, `l_caminho`) porque
+  --  `RETURNS TABLE (balde, caminho)` declara duas VARIÁVEIS PL/pgSQL com
+  --  esses nomes. Um `lote.balde` ao lado delas dá «column reference is
+  --  ambiguous» e a função nem chega a correr.
+  RETURN QUERY
+  WITH lote AS (
+    SELECT p.balde AS l_balde, p.caminho AS l_caminho
+      FROM public.anexo_purgas p
+     WHERE p.removido_em IS NULL
+       AND (p.reservado_ate IS NULL OR p.reservado_ate < now())
+     ORDER BY p.detetado_em
+     LIMIT greatest(1, least(coalesce(p_limite, 200), 1000))
+       FOR UPDATE SKIP LOCKED
+  )
+  UPDATE public.anexo_purgas p
+     SET reservado_ate = now() + p_reserva,
+         tentativas    = p.tentativas + 1
+    FROM lote
+   WHERE p.balde = lote.l_balde AND p.caminho = lote.l_caminho
+  RETURNING p.balde, p.caminho;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.reservar_anexos_orfaos(interval, integer, interval)
+  FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.reservar_anexos_orfaos(interval, integer, interval)
+  TO service_role;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  4. CONFIRMAR — contra o Storage, não contra a palavra de quem chama
+-- ═══════════════════════════════════════════════════════════════════
+--  ⚠️ Esta função NÃO acredita no executor. Recebe os caminhos que ele
+--  diz ter mandado apagar e vai VER se o objeto desapareceu. Sem isto, um
+--  `remove()` que falha em silêncio para metade do lote deixava a
+--  metadata a afirmar «apagado» sobre bytes que continuam lá — e essa
+--  mentira é pior do que o backlog, porque ninguém a procura.
+CREATE OR REPLACE FUNCTION public.fechar_purga_de_anexos(
+  p_caminhos text[],
+  p_erro     text DEFAULT NULL
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE v_removidos integer; v_pendentes integer;
+BEGIN
+  IF p_caminhos IS NULL OR array_length(p_caminhos, 1) IS NULL THEN
+    RETURN jsonb_build_object('removidos', 0, 'pendentes', 0);
+  END IF;
+
+  UPDATE public.anexo_purgas p
+     SET removido_em   = now(),
+         reservado_ate = NULL,
+         ultimo_erro   = NULL
+   WHERE p.caminho = ANY (p_caminhos)
+     AND p.removido_em IS NULL
+     AND NOT EXISTS (
+       SELECT 1 FROM storage.objects o
+        WHERE o.bucket_id = p.balde AND o.name = p.caminho
+     );
+  GET DIAGNOSTICS v_removidos = ROW_COUNT;
+
+  --  O que sobrou continua lá. Larga-se a reserva para a execução
+  --  seguinte poder tentar, e guarda-se o motivo para o alarme ter o que
+  --  dizer.
+  UPDATE public.anexo_purgas p
+     SET reservado_ate = NULL,
+         ultimo_erro   = coalesce(p_erro, 'o objeto continuava em storage.objects')
+   WHERE p.caminho = ANY (p_caminhos)
+     AND p.removido_em IS NULL;
+  GET DIAGNOSTICS v_pendentes = ROW_COUNT;
+
+  RETURN jsonb_build_object('removidos', v_removidos, 'pendentes', v_pendentes);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.fechar_purga_de_anexos(text[], text)
+  FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.fechar_purga_de_anexos(text[], text) TO service_role;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  5. O ESTADO DA PURGA — para haver alarme, e não só logs
+-- ═══════════════════════════════════════════════════════════════════
+--  «Falhou» é um evento; «falha há seis dias e a fila cresce» é um
+--  problema. A diferença entre os dois é esta função.
+CREATE OR REPLACE FUNCTION public.estado_da_purga_de_anexos()
+RETURNS jsonb
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT jsonb_build_object(
+    'pendentes',      count(*) FILTER (WHERE removido_em IS NULL),
+    'reservados',     count(*) FILTER (WHERE removido_em IS NULL AND reservado_ate > now()),
+    'teimosos',       count(*) FILTER (WHERE removido_em IS NULL AND tentativas >= 3),
+    'mais_antigo_h',  coalesce(
+                        round(extract(epoch FROM now() - min(detetado_em)
+                          FILTER (WHERE removido_em IS NULL)) / 3600)::int, 0),
+    'removidos_24h',  count(*) FILTER (WHERE removido_em > now() - interval '24 hours')
+  )
+  FROM public.anexo_purgas;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.estado_da_purga_de_anexos() FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.estado_da_purga_de_anexos() TO service_role;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  6. A FUNÇÃO ANTIGA SAI
+-- ═══════════════════════════════════════════════════════════════════
+--  Não fica depreciada: fica FORA. Enquanto existir, é a que aparece a
+--  quem procurar «purgar órfãos» — e é a que não funciona e apagaria o
+--  que não devia.
+DROP FUNCTION IF EXISTS public.purgar_anexos_orfaos(interval);
+
+-- ═══════════════════════════════════════════════════════════════════
+--  7. O MANIFESTO DE APAGAR CONTA CONHECE OS CASOS
+-- ═══════════════════════════════════════════════════════════════════
+--  `ficheiros_do_utilizador` devolvia os anexos das mensagens e os
+--  documentos da candidatura. Os documentos dos casos e os anexos das
+--  propostas ficavam de fora — apagar a conta declarava o ficheiro
+--  apagado e os bytes ficavam no balde. A rota já usa a Storage API; o
+--  que faltava era a lista.
+CREATE OR REPLACE FUNCTION public.ficheiros_do_utilizador(p_conjuntos text[])
+RETURNS TABLE (balde text, caminho text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+STABLE
+SET search_path = ''
+AS $$
+DECLARE u uuid := auth.uid();
+BEGIN
+  IF u IS NULL THEN RETURN; END IF;
+
+  IF 'conversas' = ANY(p_conjuntos) OR 'vinculos' = ANY(p_conjuntos) THEN
+    RETURN QUERY
+      SELECT 'contabilista-anexos'::text, a.caminho
+        FROM public.contabilista_anexos a
+        JOIN public.contabilista_mensagens m ON m.id = a.mensagem_id
+        JOIN public.contabilista_vinculos v ON v.id = m.vinculo_id
+       WHERE v.cliente_id = u OR v.contabilista_id = u;
+  END IF;
+
+  IF 'casos' = ANY(p_conjuntos) THEN
+    --  Os documentos que a pessoa anexou ao caso que descreveu.
+    RETURN QUERY
+      SELECT 'contabilista-anexos'::text, d.caminho
+        FROM public.caso_documentos d
+        JOIN public.casos c ON c.id = d.caso_id
+       WHERE c.cliente_id = u;
+
+    --  E os anexos das propostas que ela escreveu, do outro lado.
+    RETURN QUERY
+      SELECT 'contabilista-anexos'::text, x.caminho
+        FROM public.proposta_anexos x
+        JOIN public.propostas p ON p.id = x.proposta_id
+       WHERE p.contabilista_id = u;
+  END IF;
+
+  IF 'candidatura' = ANY(p_conjuntos) OR 'perfil-contabilista' = ANY(p_conjuntos) THEN
+    RETURN QUERY
+      SELECT 'contabilista-documentos'::text, o.name
+        FROM storage.objects o
+       WHERE o.bucket_id = 'contabilista-documentos'
+         AND (storage.foldername(o.name))[1] = u::text;
+  END IF;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.ficheiros_do_utilizador(text[]) FROM anon, public;
+GRANT EXECUTE ON FUNCTION public.ficheiros_do_utilizador(text[]) TO authenticated, service_role;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260820092000_a_ficha_de_contactos_passa_a_ser_escolhida.sql     ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260820092000_a_ficha_de_contactos_passa_a_ser_escolhida.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  A PARTILHA DE CONTACTOS DEIXA DE NASCER LIGADA
+--  ---------------------------------------------------------------------
+--  A `20260818210000_fim_da_mediacao` criou:
+--
+--    casos.partilha_contactos boolean NOT NULL DEFAULT true
+--
+--  e justificou-o assim, no próprio ficheiro:
+--
+--    «Não é um consentimento presumido escondido: o formulário do caso
+--     mostra-o marcado, com o texto ao lado, e o cliente desmarca-o antes
+--     de submeter se não quiser.»
+--
+--  ⚠️ Esse formulário nunca teve essa caixa. `/dashboard/casos/novo` tem
+--  três passos e nenhum interruptor de contactos — a ficha inteira (email,
+--  telefone e morada) passava a estar ao alcance do contabilista no
+--  instante em que o caso lhe era encaminhado, e a pessoa só descobria
+--  isso ao abrir o detalhe do caso, depois de já ter acontecido.
+--
+--  Um consentimento presumido descrito como escolhido é pior do que um
+--  consentimento presumido assumido: ninguém vai à procura do que o
+--  comentário diz estar tratado.
+--
+--  ---------------------------------------------------------------------
+--  O QUE MUDA
+--
+--  · O valor inicial passa a ser NÃO PARTILHAR.
+--  · O formulário ganha a escolha, antes de submeter (ver
+--    `src/app/dashboard/casos/novo/page.tsx`).
+--  · A pessoa continua a poder ligar e desligar no detalhe do caso, com
+--    efeito imediato — a política lê a coluna, não uma cópia dela.
+--
+--  Escrever um contacto À MÃO numa mensagem continua a ser possível e não
+--  é tocado aqui: é uma decisão de quem escreve, no momento em que
+--  escreve. O que se corrige é a ficha ESTRUTURADA sair sozinha.
+--
+--  ---------------------------------------------------------------------
+--  ⚠️ AS LINHAS QUE JÁ EXISTEM — a decisão, e o que ficou de fora
+--
+--  Um caso que ainda NÃO foi encaminhado passa a `false`: ninguém tem os
+--  contactos, ninguém os perde, e a pessoa passa a decidir como decidiria
+--  se o caso fosse de hoje.
+--
+--  Um caso JÁ ENCAMINHADO fica como está. Do outro lado há alguém a
+--  trabalhar nele, que recebeu aqueles contactos e pode estar a usá-los
+--  agora. Cortá-los sem ninguém pedir partia trabalho a decorrer para
+--  corrigir uma escolha que já foi feita — e o cliente continua a poder
+--  desligar no detalhe do caso, que é onde a decisão dele vive.
+--
+--  Idempotente.
+-- ═══════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+ALTER TABLE public.casos
+  ALTER COLUMN partilha_contactos SET DEFAULT false;
+
+COMMENT ON COLUMN public.casos.partilha_contactos IS
+  'A ficha estruturada de contactos (email, telefone, morada) chega aos contabilistas com o caso encaminhado enquanto isto for verdadeiro. Nasce FALSO: partilhar é uma decisão, e uma decisão que ninguém tomou não é um sim. O cliente liga e desliga quando quiser, com efeito imediato.';
+
+--  Só os que ainda não saíram das mãos de quem os escreveu.
+UPDATE public.casos c
+   SET partilha_contactos = false
+ WHERE c.partilha_contactos
+   AND c.estado IN ('rascunho', 'submetido')
+   AND NOT EXISTS (
+     SELECT 1 FROM public.caso_encaminhamentos e WHERE e.caso_id = c.id
+   );
+
+COMMIT;
