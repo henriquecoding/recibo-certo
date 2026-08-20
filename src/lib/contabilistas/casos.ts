@@ -299,15 +299,23 @@ export async function submeterCaso(
 
   // ⚠️ Uma segunda chamada, e não um parâmetro de `submeter_caso`.
   //
-  // A partilha nasce desligada na coluna. Ligá-la é um ato à parte, e
-  // fica assim de propósito: passa pela MESMA função que o interruptor do
-  // detalhe do caso usa, o que significa que há um só caminho para este
-  // valor mudar — e um só sítio onde a autorização é verificada.
+  // Ligar ou desligar a partilha é um ato à parte, e fica assim de
+  // propósito: passa pela MESMA função que o interruptor do detalhe do
+  // caso usa, o que significa que há um só caminho para este valor mudar
+  // — e um só sítio onde a autorização é verificada.
   //
-  // Se esta chamada falhar, o caso fica criado e sem partilha. É a falha
-  // certa: o caso não se perde, e o estado em que fica é o mais fechado
-  // dos dois.
-  if (c.partilharContactos && r.id) await definirPartilhaDeContactos(r.id, true);
+  // ⚠️ E é chamada SEMPRE, também para desligar. Não depende do DEFAULT da
+  // coluna, e não pode depender: entre o dia em que este ecrã ganhou a
+  // caixa e o dia em que a migração `20260820092000` chega à base, o
+  // default ainda é `true`. Confiar nele nesse intervalo era desenhar uma
+  // caixa por marcar sobre uma ficha que seguia na mesma — a interface a
+  // prometer o contrário do que a base faz, que é o defeito que esta
+  // série de correções existe para acabar.
+  //
+  // Se esta chamada falhar, o caso fica criado e a interface diz-lhe o
+  // estado real quando ele o abrir: o interruptor lê a coluna, não uma
+  // cópia dela.
+  if (r.id) await definirPartilhaDeContactos(r.id, c.partilharContactos === true);
   return { id: r.id, referencia: r.referencia };
 }
 
