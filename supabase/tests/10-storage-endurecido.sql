@@ -157,23 +157,133 @@ INSERT INTO storage.objects (bucket_id, name, metadata, created_at)
 VALUES ('contabilista-anexos','eeee0000-0000-0000-0000-00000000000e/orfao',
         '{"size":900000,"mimetype":"application/pdf"}'::jsonb, now() - interval '3 hours');
 
+-- ⚠️ E DOIS QUE NÃO SÃO ÓRFÃOS, e que a definição anterior teria apagado.
+--
+-- O balde `contabilista-anexos` não é só das mensagens: desde a 051/052,
+-- os documentos dos casos e os anexos das propostas vivem lá, em `casos/…`.
+-- Nenhum deles tem linha em `contabilista_anexos` — a única tabela que a
+-- definição antiga conhecia. Ambos passavam no teste de «órfão» duas horas
+-- depois de serem enviados.
+--
+-- A purga nunca chegou a correr em produção (fazia `DELETE FROM
+-- storage.objects`, que o Supabase recusa), e foi só por isso que os
+-- contratos e os documentos de casos ainda lá estão. Corrigir a remoção
+-- sem corrigir a DEFINIÇÃO teria apagado tudo isso no dia seguinte.
+INSERT INTO public.casos
+  (id, cliente_id, referencia, nome_completo, nif, assunto, situacao, area, estado)
+VALUES ('ca50d0c0-0000-4000-8000-00000000000a',
+        'c1c1c1c1-0000-0000-0000-00000000000c',
+        'RC-2026-9501', 'Cliente do Caso', '123456789',
+        'IVA em atraso',
+        'Tenho dois trimestres de IVA por entregar e preciso de ajuda.',
+        'iva', 'submetido')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.objects (bucket_id, name, metadata, created_at)
+VALUES ('contabilista-anexos','casos/ca50d0c0-0000-4000-8000-00000000000a/1-doc',
+        '{"size":1000,"mimetype":"application/pdf"}'::jsonb, now() - interval '3 hours')
+ON CONFLICT DO NOTHING;
+INSERT INTO public.caso_documentos (caso_id, caminho, nome, bytes, tipo_mime)
+VALUES ('ca50d0c0-0000-4000-8000-00000000000a',
+        'casos/ca50d0c0-0000-4000-8000-00000000000a/1-doc',
+        'declaracao.pdf', 1000, 'application/pdf')
+ON CONFLICT DO NOTHING;
+
+-- E um envio ainda a decorrer: vaga aberta, por usar, dentro do prazo.
+INSERT INTO storage.objects (bucket_id, name, metadata, created_at)
+VALUES ('contabilista-anexos','casos/ca50d0c0-0000-4000-8000-00000000000a/2-avoar',
+        '{"size":1000,"mimetype":"application/pdf"}'::jsonb, now() - interval '3 hours')
+ON CONFLICT DO NOTHING;
+INSERT INTO public.anexo_vagas
+  (caso_id, pedida_por, caminho, ordinal, tipo_mime, bytes_max, expira_em)
+VALUES ('ca50d0c0-0000-4000-8000-00000000000a',
+        'c1c1c1c1-0000-0000-0000-00000000000c',
+        'casos/ca50d0c0-0000-4000-8000-00000000000a/2-avoar',
+        2, 'application/pdf', 1000, now() + interval '10 minutes')
+ON CONFLICT DO NOTHING;
+
+DO $$
+BEGIN
+  ASSERT public.anexo_e_orfao('contabilista-anexos',
+    'eeee0000-0000-0000-0000-00000000000e/orfao'),
+    'o objeto sem nada que o reclame devia ser órfão';
+  RAISE NOTICE '  ok  · o objeto sem dono é órfão';
+
+  ASSERT NOT public.anexo_e_orfao('contabilista-anexos',
+    'casos/ca50d0c0-0000-4000-8000-00000000000a/1-doc'),
+    '⚠️ um documento de caso VIVO foi classificado como órfão';
+  RAISE NOTICE '  ok  · um documento de caso não é órfão';
+
+  ASSERT NOT public.anexo_e_orfao('contabilista-anexos',
+    'casos/ca50d0c0-0000-4000-8000-00000000000a/2-avoar'),
+    'um envio a decorrer foi classificado como órfão';
+  RAISE NOTICE '  ok  · uma vaga aberta protege o objeto que está a subir';
+END $$;
+
+-- A reserva: deteta, regista, e entrega uma vez só.
 DO $$
 DECLARE v_n integer;
 BEGIN
-  SELECT count(*) INTO v_n FROM public.purgar_anexos_orfaos('2 hours');
-  ASSERT v_n = 1, format('devia varrer um órfão, varreu %s', v_n);
-  RAISE NOTICE '  ok  · o órfão de três horas foi varrido';
+  SELECT count(*) INTO v_n
+    FROM public.reservar_anexos_orfaos('2 hours', 200, '10 minutes');
+  ASSERT v_n = 1, format('devia reservar um órfão, reservou %s', v_n);
+  RAISE NOTICE '  ok  · o órfão de três horas foi reservado, e só ele';
 
-  SELECT count(*) INTO v_n FROM public.purgar_anexos_orfaos('2 hours');
-  ASSERT v_n = 0, 'a segunda passagem varreu alguma coisa que já não existia';
-  RAISE NOTICE '  ok  · a segunda passagem não encontra nada';
+  -- A segunda execução não o volta a entregar: está reservado, e a
+  -- reserva ainda não caiu. É isto que impede duas execuções em paralelo
+  -- de pedirem ao Storage a mesma remoção.
+  SELECT count(*) INTO v_n
+    FROM public.reservar_anexos_orfaos('2 hours', 200, '10 minutes');
+  ASSERT v_n = 0, format('a segunda execução voltou a entregar %s caminho(s)', v_n);
+  RAISE NOTICE '  ok  · a execução seguinte não repete o que está reservado';
+END $$;
+
+-- ⚠️ Fechar sem o objeto ter desaparecido NÃO escreve «removido». Sem
+-- esta garantia, a metadata afirmava «apagado» sobre bytes que ficaram —
+-- e essa mentira é pior do que o backlog, porque ninguém a procura.
+DO $$
+DECLARE r jsonb;
+BEGIN
+  r := public.fechar_purga_de_anexos(
+         ARRAY['eeee0000-0000-0000-0000-00000000000e/orfao'], 'ensaio');
+  ASSERT (r->>'removidos')::int = 0,
+    'deu por removido um objeto que ainda está em storage.objects';
+  ASSERT (r->>'pendentes')::int = 1, 'o caminho devia ter voltado à fila';
+  RAISE NOTICE '  ok  · não se dá por removido o que ainda lá está';
+
+  -- Agora sim: os bytes saem (aqui à mão; em produção, pela Storage API).
+  DELETE FROM storage.objects
+   WHERE bucket_id='contabilista-anexos'
+     AND name='eeee0000-0000-0000-0000-00000000000e/orfao';
+
+  r := public.fechar_purga_de_anexos(
+         ARRAY['eeee0000-0000-0000-0000-00000000000e/orfao'], NULL);
+  ASSERT (r->>'removidos')::int = 1, 'o objeto desapareceu e não foi dado por removido';
+  RAISE NOTICE '  ok  · desaparecido o objeto, a fila fecha o caminho';
+
+  -- Idempotente: fechar outra vez não conta duas.
+  r := public.fechar_purga_de_anexos(
+         ARRAY['eeee0000-0000-0000-0000-00000000000e/orfao'], NULL);
+  ASSERT (r->>'removidos')::int = 0, 'fechar duas vezes contou duas remoções';
+  RAISE NOTICE '  ok  · fechar duas vezes não conta duas';
 END $$;
 
 SET ROLE authenticated;
 SELECT t.entrar('c1c1c1c1-0000-0000-0000-00000000000c');
-SELECT t.recusa($$SELECT public.purgar_anexos_orfaos('2 hours')$$,
+SELECT t.recusa($$SELECT public.reservar_anexos_orfaos('2 hours', 10, '1 minute')$$,
   'varrer o armazenamento à mão');
+SELECT t.recusa($$SELECT public.fechar_purga_de_anexos(ARRAY['x'], NULL)$$,
+  'fechar a purga à mão');
 RESET ROLE;
+
+-- O cenário desta secção sai daqui. Um caso e um documento deixados para
+-- trás mudam o que os ficheiros seguintes contam, e um teste que estraga
+-- o vizinho é pior do que um teste a menos.
+SELECT t.sair();
+DELETE FROM public.casos WHERE id='ca50d0c0-0000-4000-8000-00000000000a';
+DELETE FROM storage.objects
+ WHERE bucket_id='contabilista-anexos'
+   AND name LIKE 'casos/ca50d0c0-0000-4000-8000-00000000000a/%';
 
 \echo ''
 \echo '── 59. Um ficheiro só se abre a quem pode abri-lo AGORA ────────'

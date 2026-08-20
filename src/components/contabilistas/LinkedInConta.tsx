@@ -10,7 +10,7 @@ import {
   ligarLinkedIn,
   normalizarUrlLinkedIn,
   obterEstadoLinkedIn,
-  obterLinkedInPublico,
+  obterLinkedInDaFicha,
   renovarLinkedIn,
   sincronizarLinkedIn,
 } from "@/lib/contabilistas/fonte/linkedin";
@@ -30,9 +30,12 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
     setALer(true);
     setErro(null);
     setAvatarFalhou(false);
+    // ⚠️ A FICHA, não o contrato público. A view só tem aprovados: quem
+    // está pendente ou suspenso via aqui o campo vazio sobre uma URL
+    // guardada, e bastava gravar o formulário para a apagar.
     const [estado, publico] = await Promise.all([
       obterEstadoLinkedIn(),
-      obterLinkedInPublico(contabilistaId),
+      obterLinkedInDaFicha(contabilistaId),
     ]);
 
     if (estado.erro) setErro(estado.erro);

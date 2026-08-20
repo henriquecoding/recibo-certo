@@ -32,10 +32,11 @@ import {
 import Badge from "@/components/ui/Badge";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
 import LinkedInPublico from "@/components/contabilistas/LinkedInPublico";
+import { primeiroNome } from "@/components/contabilistas/hub";
 import Marcacao from "@/components/contabilistas/Marcacao";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Calendar, Gift, Globe, Mail, MapPin, ShieldCheck, Warning,
+  Calendar, Gift, Lock, MapPin, ShieldCheck, Warning,
 } from "@/components/ui/Icons";
 
 const JANELA_DIAS = 30;
@@ -310,26 +311,24 @@ export default function PerfilPublico({ slug }: { slug: string }) {
               <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Atendimento</dt>
               <dd className="mt-0.5 capitalize text-stone-800">{cc.modalidades.join(" e ")}</dd>
             </div>
-            {cc.emailContacto && (
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Email</dt>
-                <dd className="mt-0.5 truncate">
-                  <a href={`mailto:${cc.emailContacto}`} className="inline-flex items-center gap-1.5 text-stone-800 underline underline-offset-2">
-                    <Mail size={14} aria-hidden /> {cc.emailContacto}
-                  </a>
-                </dd>
-              </div>
-            )}
-            {cc.website && (
-              <div className="min-w-0">
-                <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">Site</dt>
-                <dd className="mt-0.5 truncate">
-                  <a href={cc.website} rel="nofollow noopener" target="_blank" className="inline-flex items-center gap-1.5 text-stone-800 underline underline-offset-2">
-                    <Globe size={14} aria-hidden /> {cc.website.replace(/^https?:\/\//, "")}
-                  </a>
-                </dd>
-              </div>
-            )}
+            {/* ⚠️ AQUI ESTAVAM O EMAIL E O SITE, e saíam para quem não
+                tinha sessão nenhuma. Saíram com o contrato público novo
+                (20260820090000): um canal direto abre-se com a aceitação,
+                não com a pesquisa. Quem quiser confirmar quem está do
+                outro lado tem o OCC e o LinkedIn, logo acima — e esses
+                são públicos de propósito. */}
+            <div className="min-w-0 sm:col-span-2">
+              <dt className="text-xs font-medium uppercase tracking-wide text-stone-400">
+                Contactos
+              </dt>
+              <dd className="mt-0.5 flex items-start gap-1.5 text-stone-600">
+                <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
+                <span>
+                  Email, telefone e site ficam disponíveis quando
+                  {" "}{primeiroNome(cc.nome)} te aceitar como cliente.
+                </span>
+              </dd>
+            </div>
           </dl>
         </header>
 

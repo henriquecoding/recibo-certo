@@ -6,6 +6,8 @@
 //  comportamento certo.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { diaLocal, FUSO_PT } from "../agenda";
+
 /**
  * O que se pede a um cliente.
  *
@@ -123,10 +125,36 @@ export function pedidoPorFechar(p: PedidoCliente): boolean {
  * Conta em dias de calendário e não em múltiplos de 24 horas: «amanhã» às
  * 23h e «amanhã» às 8h são o mesmo amanhã para quem lê, e uma diferença de
  * horas dava «faltam 0 dias» a meio da tarde da véspera.
+ *
+ * ⚠️ AS DUAS DATAS TÊM DE VIR DO MESMO SÍTIO, e não vinham.
+ *
+ * O prazo é uma data CIVIL — «17 de agosto», sem hora e sem fuso. O «hoje»
+ * era lido com `getFullYear/getMonth/getDate`, que respondem no fuso da
+ * MÁQUINA. Comparar as duas é comparar duas escalas diferentes, e o erro
+ * aparece na hora em que elas divergem: às 23h de 16 de agosto em Lisboa
+ * (22:00 UTC, porque no verão Portugal está em UTC+1), a máquina em UTC
+ * ainda dizia «16» e a pessoa em Lisboa já estava no dia 17. Faltava um
+ * dia para o prazo e o cartão dizia «é hoje».
+ *
+ * O CI corre em UTC e nunca via a diferença. Foi um teste com um instante
+ * às 22:00Z que a mostrou.
+ *
+ * Agora as duas datas são chaves `AAAA-MM-DD` no MESMO fuso — o de
+ * Portugal, que é onde vivem as pessoas a quem estes prazos dizem
+ * respeito.
  */
 export function diasAtePrazo(prazo: string, agora: Date): number {
-  const [a, m, d] = prazo.slice(0, 10).split("-").map(Number);
-  const alvo = Date.UTC(a, m - 1, d);
-  const hoje = Date.UTC(agora.getFullYear(), agora.getMonth(), agora.getDate());
-  return Math.round((alvo - hoje) / 86_400_000);
+  return Math.round((diaEmMs(prazo) - diaEmMs(diaLocal(agora, FUSO_PT))) / 86_400_000);
+}
+
+/**
+ * `AAAA-MM-DD` → instante da meia-noite desse dia em UTC.
+ *
+ * Só serve para SUBTRAIR uma chave de outra. O UTC aqui não é um fuso, é
+ * uma régua: as duas datas entram na mesma, e a diferença entre elas é a
+ * mesma que seria em qualquer outra.
+ */
+function diaEmMs(chave: string): number {
+  const [a, m, d] = chave.slice(0, 10).split("-").map(Number);
+  return Date.UTC(a, m - 1, d);
 }

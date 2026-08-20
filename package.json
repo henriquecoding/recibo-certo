@@ -9,6 +9,7 @@
     "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
     "contrato:check": "node scripts/check-contrato-publico.mjs",
+    "contrato:check:producao": "node scripts/check-contrato-publico.mjs --exigir-ambiente",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",

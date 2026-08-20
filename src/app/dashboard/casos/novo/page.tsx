@@ -13,8 +13,9 @@
 //     página são uma parede, e a maior parte das desistências acontece
 //     antes do primeiro. Assim são três perguntas curtas.
 //   · O que segue e o que não segue é dito ANTES de se escrever, e não
-//     numa nota de rodapé. Quem escreve o telefone tem de saber que ele
-//     não chega ao contabilista.
+//     numa nota de rodapé. Quem escreve o telefone tem de saber, nesse
+//     momento, que ele só chega ao contabilista se a caixa por baixo for
+//     marcada — e que nasce por marcar.
 //   · O NIF é validado aqui e no servidor. Aqui para responder já; no
 //     servidor porque é lá que a garantia mora.
 // ═══════════════════════════════════════════════════════════════════════
@@ -53,6 +54,8 @@ export default function DescreverCaso() {
   const [email, setEmail] = useState(user?.email ?? "");
   const [telefone, setTelefone] = useState("");
   const [aEnviar, setAEnviar] = useState(false);
+  /** Desligado por omissão: partilhar a ficha de contactos é uma decisão. */
+  const [partilharContactos, setPartilharContactos] = useState(false);
 
   const nifOk = useMemo(() => nif.length === 0 || nifValido(nif), [nif]);
 
@@ -68,6 +71,7 @@ export default function DescreverCaso() {
       assunto, situacao, area, urgencia, nome, nif, email,
       telefone: telefone || undefined,
       orcamentoCents: orcamento ? Math.round(Number(orcamento.replace(",", ".")) * 100) : null,
+      partilharContactos,
     });
     setAEnviar(false);
     if (r.erro) { avisos.erro(r.erro); return; }
@@ -117,8 +121,9 @@ export default function DescreverCaso() {
         <ShieldCheck size={15} className="mt-0.5 shrink-0" aria-hidden />
         <span>
           Quem escolheres recebe o teu <strong>nome e NIF</strong> — precisa deles para
-          trabalhar — e os teus <strong>contactos</strong>, que podes deixar de partilhar
-          quando quiseres. A conversa é entre vocês: <strong>ninguém do Recibo Certo a lê</strong>.
+          trabalhar. Os teus <strong>contactos só seguem se disseres que sim</strong>, e
+          podes mudar de ideias a qualquer momento. A conversa é entre vocês:{" "}
+          <strong>ninguém do Recibo Certo a lê</strong>.
         </span>
       </p>
 
@@ -217,9 +222,15 @@ export default function DescreverCaso() {
                 <label htmlFor="situacao" className="mt-5 block font-display text-lg text-ink">
                   Conta-nos a situação
                 </label>
+                {/* ⚠️ Isto dizia «não escrevas aqui o teu contacto — ele não
+                    segue, e a mensagem volta para trás». Era verdade enquanto
+                    houve um gatilho a recusar o texto; esse gatilho saiu em
+                    `20260818210000_fim_da_mediacao`. A frase ficou a proibir
+                    uma coisa que já ninguém impede — e a proibição falsa era
+                    lida como garantia. */}
                 <p className="mt-1 text-xs leading-relaxed text-stone-500">
-                  Quanto mais claro fores, melhor a proposta que recebes. Não escrevas aqui o
-                  teu contacto — ele não segue, e a mensagem volta para trás.
+                  Quanto mais claro fores, melhor a proposta que recebes. O que
+                  escreveres aqui segue tal e qual para quem escolheres.
                 </p>
                 <textarea
                   id="situacao"
@@ -300,16 +311,17 @@ export default function DescreverCaso() {
                     )}
                   </div>
 
-                  {/* A partir daqui, o que NÃO segue. Separado a sério, e não
-                      por uma linha de texto no meio dos outros campos. */}
+                  {/* A partir daqui, o que só segue se a pessoa disser que
+                      sim. Separado a sério, e não por uma linha de texto no
+                      meio dos outros campos. */}
                   <div className="rounded-2xl border border-stone-200 bg-cream/50 p-4">
                     <p className="flex items-center gap-1.5 text-xs font-bold text-stone-700">
                       <Lock size={13} aria-hidden /> Como te contactam
                     </p>
                     <p className="mt-1 text-xs leading-relaxed text-stone-500">
-                      É por aqui que te avisamos, e é isto que fica visível para quem
-                      escolheres. Podes desligar essa partilha a qualquer momento no
-                      caso — e aí só falam pelas mensagens daqui.
+                      É por aqui que te avisamos. Não segue com o caso a não ser
+                      que escolhas partilhá-lo, e podes mudar de ideias a
+                      qualquer momento.
                     </p>
 
                     <label htmlFor="email" className="mt-3 block text-sm font-semibold text-stone-700">
@@ -335,6 +347,35 @@ export default function DescreverCaso() {
                       onChange={(e) => setTelefone(e.target.value.slice(0, 20))}
                       className="mt-1.5 w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm tabular-nums focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/25 sm:w-56"
                     />
+
+                    {/* ⚠️ A ESCOLHA QUE NUNCA EXISTIU.
+                        A migração que criou `partilha_contactos` escreveu, no
+                        próprio ficheiro, que «o formulário mostra-o marcado e o
+                        cliente desmarca-o antes de submeter». Este formulário
+                        não tinha caixa nenhuma: a ficha inteira seguia sozinha
+                        e a pessoa só descobria depois, no detalhe do caso.
+                        Nasce desmarcada — um sim que ninguém deu não é um sim. */}
+                    <label
+                      htmlFor="partilhar-contactos"
+                      className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-stone-200 bg-white p-3"
+                    >
+                      <input
+                        id="partilhar-contactos"
+                        type="checkbox"
+                        checked={partilharContactos}
+                        onChange={(e) => setPartilharContactos(e.target.checked)}
+                        className="mt-0.5 h-5 w-5 shrink-0 accent-brand"
+                      />
+                      <span className="min-w-0 text-sm leading-relaxed text-stone-700">
+                        Partilhar estes contactos com quem eu escolher
+                        <span className="mt-0.5 block text-xs leading-relaxed text-stone-500">
+                          Deixa-os ligar-te ou escrever-te fora daqui. Sem isto,
+                          falam contigo pelas mensagens do caso — e continuas a
+                          poder dar-lhes o teu contacto numa mensagem, se
+                          quiseres.
+                        </span>
+                      </span>
+                    </label>
                   </div>
                 </div>
               </div>

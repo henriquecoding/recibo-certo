@@ -18,6 +18,8 @@ function paraLinkedInPublico(linha: Record<string, unknown> | null | undefined):
   return {
     url: (linha.linkedin_url as string | null) ?? null,
     avatarUrl: (linha.linkedin_avatar_url as string | null) ?? null,
+    // A tabela tem a data; o contrato público tem só o facto. Aceita as
+    // duas origens porque a ficha do próprio continua a vir da tabela.
     ligadoEm: (linha.linkedin_ligado_em as string | null) ?? null,
   };
 }
@@ -64,7 +66,42 @@ export function avatarLinkedInExpirou(valor: string | null | undefined, agora = 
   }
 }
 
+/**
+ * O LinkedIn público de um contabilista, lido do CONTRATO público.
+ *
+ * ⚠️ Isto lia `from("contabilistas")` — a tabela — e era a última
+ * superfície pública a fazê-lo, apesar de o comentário logo abaixo
+ * afirmar o contrário. Enquanto a política aberta a `anon` esteve de pé,
+ * funcionou e ninguém reparou; no dia em que ela saiu, o LinkedIn do
+ * perfil público teria desaparecido sem nada falhar — a leitura devolve
+ * `null` em silêncio, e o componente tem fallback.
+ *
+ * A view não traz `linkedin_ligado_em` (uma data interna), traz
+ * `linkedin_ligado` — o facto. É o suficiente para quem lê esta função:
+ * saber que a ligação existe.
+ */
 export async function obterLinkedInPublico(contabilistaId: string): Promise<LinkedInPublico> {
+  const { data, error } = await getSupabase()
+    .from("contabilistas_publico")
+    .select("linkedin_url, linkedin_avatar_url, linkedin_ligado")
+    .eq("user_id", contabilistaId)
+    .maybeSingle();
+
+  if (error || !data) return { url: null, avatarUrl: null, ligadoEm: null };
+  return paraLinkedInPublico(data as unknown as Record<string, unknown>);
+}
+
+/**
+ * O LinkedIn da ficha PRÓPRIA, lido da tabela.
+ *
+ * O painel do contabilista não pode ler o seu LinkedIn pelo contrato
+ * público: a view só tem aprovados, e quem está pendente ou suspenso
+ * receberia `null`. O editor mostraria o campo vazio sobre uma URL que
+ * está guardada — e bastava guardar o formulário para a apagar.
+ *
+ * A política `contabilistas_proprio_le` é que autoriza esta leitura.
+ */
+export async function obterLinkedInDaFicha(contabilistaId: string): Promise<LinkedInPublico> {
   const { data, error } = await getSupabase()
     .from("contabilistas")
     .select("linkedin_url, linkedin_avatar_url, linkedin_ligado_em")

@@ -80,6 +80,21 @@ export type EstadoPedido = "pendente" | "em_analise" | "aprovado" | "recusado";
 
 // ─── Registos ──────────────────────────────────────────────────────────
 
+/**
+ * Os canais diretos de um contabilista, para quem já é cliente dele.
+ *
+ * É um tipo à parte de `Contabilista` de propósito: ter a ficha e ter os
+ * contactos são duas autorizações diferentes, e misturá-las num só objeto
+ * foi o que permitiu, durante meses, que o email saísse no diretório por
+ * arrastamento. Quem tem este objeto pediu-o e a base de dados disse que
+ * sim.
+ */
+export interface ContactosPrivados {
+  emailContacto: string | null;
+  telefone: string | null;
+  website: string | null;
+}
+
 /** Perfil público + configuração comercial de um contabilista. */
 export interface Contabilista {
   userId: string;
@@ -92,6 +107,15 @@ export interface Contabilista {
   concelho: string | null;
   especialidades: string[];
   modalidades: Modalidade[];
+  /**
+   * Os três canais diretos. ⚠️ SEMPRE `null` quando a ficha veio do
+   * contrato público — que é o caso do diretório, do perfil público e do
+   * cabeçalho do vínculo.
+   *
+   * Só estão preenchidos na ficha PRÓPRIA, lida da tabela. Quem os quiser
+   * mostrar a um cliente aceite pede-os a `contactosDoContabilista()`,
+   * que a base de dados autoriza pelo estado do vínculo.
+   */
   emailContacto: string | null;
   telefone: string | null;
   website: string | null;

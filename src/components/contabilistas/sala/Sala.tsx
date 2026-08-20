@@ -369,9 +369,14 @@ export default function Sala({
 
       <p className="flex items-start gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed text-stone-600">
         <Lock size={15} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+        {/* ⚠️ Isto dizia «o teu email e o teu telemóvel não são
+            partilhados», e deixou de ser verdade quando a mediação
+            acabou: uma mensagem pode conter um contacto, porque a pessoa
+            escreveu-o. O que se garante não é que nunca sai — é que só
+            sai por decisão de quem é dono dele. */}
         {papel === "cliente"
-          ? "O acompanhamento acontece todo aqui. O teu email e o teu telemóvel não são partilhados — o que enviares fica registado, e podes revogá-lo quando quiseres."
-          : "Esta sala mostra o que esta pessoa te enviou. Os contactos pessoais dela não são partilhados, e os recibos e simulações que ela guardou continuam só dela."}
+          ? "O acompanhamento acontece todo aqui, e a conversa é só entre vocês. Os teus contactos só chegam a quem te acompanha se fores tu a escrevê-los ou a autorizá-los. O que enviares fica registado, e podes revogá-lo quando quiseres."
+          : "Esta sala mostra o que esta pessoa te enviou. Os contactos dela só chegam cá se ela os escrever ou os autorizar, e os recibos e simulações que ela guardou continuam só dela."}
       </p>
     </div>
   );

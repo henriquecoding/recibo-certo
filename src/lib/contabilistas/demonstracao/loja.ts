@@ -3,9 +3,16 @@
 //  ---------------------------------------------------------------------
 //  Isto NÃO é uma coleção de ecrãs com números bonitos: é uma cópia das
 //  regras. Confirmar uma consulta aqui exige que ela esteja por confirmar,
-//  concluí-la exige que já tenha começado, e concluir com presença carimba
-//  o cartão pela MESMA função pura que o servidor usa (`aplicarCarimbo`).
+//  concluí-la exige que já tenha começado, e concluir com presença corre a
+//  MESMA máquina de estados da Fidelidade V2 que a UI real usa para prever
+//  o que a RPC vai fazer (`aplicarConsulta`, em `fidelidade/estados.ts`).
 //  Dar um cupão por usado gasta-o e não o devolve.
+//
+//  ⚠️ Este parágrafo dizia `aplicarCarimbo` — a V1 —, e dizia-o enquanto
+//  o código realmente corria a V1. A frase estava certa e o comportamento
+//  estava errado: a demonstração abria o cartão seguinte no instante em
+//  que o anterior se completava, coisa que o produto real recusa fazer
+//  enquanto houver um benefício por usar. Ver `carimbar()`.
 //
 //  A razão de ser assim é simples: uma demonstração que aceita tudo mente
 //  sobre o painel real. Quem a abre para validar o produto tem de bater
@@ -18,7 +25,11 @@
 //   · nenhum canal de Realtime é aberto — as escutas devolvem um adeus vazio.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { aplicarCarimbo, cupaoValido, formatarCodigoCupao, normalizarCodigoCupao, valorComDesconto } from "../fidelidade";
+import { cupaoValido, formatarCodigoCupao, normalizarCodigoCupao, valorComDesconto } from "../fidelidade";
+// ⚠️ A máquina V2, a mesma que a UI real usa para prever o que a RPC faz.
+// A demonstração corria a V1 (`aplicarCarimbo`) e por isso abria o cartão
+// seguinte cedo demais — ver `carimbar()` mais abaixo.
+import { aplicarConsulta, type Ciclo } from "../fidelidade/estados";
 import type { Excecao, RegraDisponibilidade } from "../agenda";
 import type {
   AnexoDaProposta, Caso, DocumentoDoCaso, MensagemDoCaso, NovaProposta, Proposta,
@@ -309,7 +320,7 @@ export async function decidirConsulta(
       return { erro: "Indica o valor real desta consulta antes de a dar por realizada." };
     }
     a.estado = novoEstado;
-    return { fidelidade: carimbar(a) };
+    return { fidelidade: carimbar(a, conclusao.precoCents, conclusao.cupaoId ?? null) };
   }
 
   // Cancelar.
@@ -343,80 +354,159 @@ export async function definirLocalConsulta(
   return {};
 }
 
-/** O que `carimbar_consulta` faz (migração 042), com os mesmos passos. */
-function carimbar(a: Agendamento): FidelidadeAposConsulta {
+/**
+ * O que `concluir_consulta` + `carimbar_consulta` fazem na Fidelidade V2.
+ *
+ * ⚠️ ISTO CORRIA A MÁQUINA ERRADA, e o comentário no topo deste ficheiro
+ * afirmava o contrário.
+ *
+ * Usava `aplicarCarimbo` — a V1 —, cuja resposta traz um `proximoCartao`
+ * que era inserido no INSTANTE em que o cartão se completava. O produto
+ * real faz o oposto e é a sua invariante central (§15, §20): enquanto
+ * houver um benefício por usar, não nasce ciclo nenhum. Uma consulta não
+ * pode ser ao mesmo tempo o prémio de um ciclo e o primeiro carimbo do
+ * seguinte.
+ *
+ * Havia mais três divergências pelo caminho: o `precoCents` da conclusão
+ * era validado e depois deitado fora — o desconto saía do preço fixo da
+ * ficha, e não do preço REAL daquela consulta —, e o `cupaoId` não
+ * participava de todo, por isso o resgate nunca era demonstrado.
+ *
+ * O resultado prático era o pior possível para uma demonstração: ensinava
+ * um comportamento que não acontece na conta a sério.
+ *
+ * Passa a chamar `aplicarConsulta` — a MESMA função pura que a UI real usa
+ * para prever o que a RPC vai fazer.
+ */
+function carimbar(
+  a: Agendamento,
+  precoCents: number,
+  cupaoId: string | null,
+): FidelidadeAposConsulta {
   const d = bd();
-  if (!d.ficha.fidelidadeAtiva) return { ok: false, motivo: "fidelidade_inativa" };
+  const regra = d.regrasFidelidade.find((r) => r.substituidaEm === null) ?? null;
 
-  let cartao = d.cartoes.find((c) => c.clienteId === a.clienteId && !c.completo);
-  if (!cartao) {
-    // Abre-se com a configuração DE AGORA, que fica congelada até ao fim.
-    cartao = {
-      id: novoId(),
-      contabilistaId: d.ficha.userId,
-      clienteId: a.clienteId,
-      carimbos: 0,
-      meta: d.ficha.fidelidadeMeta,
-      descontoPct: d.ficha.fidelidadeDescontoPct,
-      precoBaseCents: d.ficha.precoConsultaCents,
-      completo: false,
-    };
-    d.cartoes.push(cartao);
-  }
+  // A leitura do ciclo em curso, a partir do que a loja guarda. É esta
+  // tradução que o servidor faz em SQL, e é aqui que ela tem de ser feita
+  // uma vez só.
+  const cartao = d.cartoes.find((c) => c.clienteId === a.clienteId && !c.completo) ?? null;
+  const cupaoPorUsar = d.cupoes.find(
+    (c) => c.clienteId === a.clienteId && c.estado === "disponivel",
+  ) ?? null;
 
-  const r = aplicarCarimbo(
+  const cicloAtual: Ciclo = cartao
+    ? {
+        estado: "cartao_ativo",
+        carimbos: cartao.carimbos,
+        regra: {
+          // A regra CONGELADA no cartão, e não a corrente: mudar a regra
+          // não altera um ciclo a decorrer.
+          id: cartao.id,
+          versao: 0,
+          meta: cartao.meta,
+          descontoPct: cartao.descontoPct,
+          exigePagamento: regra?.exigePagamento ?? true,
+          ativa: true,
+        },
+      }
+    : cupaoPorUsar
+      ? {
+          estado: "beneficio_pendente",
+          carimbos: 0,
+          regra: {
+            id: cupaoPorUsar.id,
+            versao: 0,
+            meta: 0,
+            descontoPct: cupaoPorUsar.percentagem,
+            exigePagamento: regra?.exigePagamento ?? true,
+            ativa: true,
+          },
+          beneficioCodigo: cupaoPorUsar.codigo,
+        }
+      : { estado: "sem_ciclo", carimbos: 0, regra: null };
+
+  const { proximo, efeito } = aplicarConsulta(
+    cicloAtual,
     {
-      carimbos: cartao.carimbos,
-      meta: cartao.meta,
-      descontoPct: cartao.descontoPct,
-      precoConsultaCents: cartao.precoBaseCents,
+      agendamentoId: a.id,
+      // O preço REAL desta consulta. Era o da ficha.
+      precoCents,
+      compareceu: true,
+      resgataBeneficio: Boolean(cupaoId) && cupaoPorUsar?.id === cupaoId,
     },
-    {
-      meta: d.ficha.fidelidadeMeta,
-      descontoPct: d.ficha.fidelidadeDescontoPct,
-      precoConsultaCents: d.ficha.precoConsultaCents,
-    }
+    regra,
   );
 
-  cartao.carimbos = r.cartao.carimbos;
+  // ── Escrever o que o efeito diz, e nada mais ──────────────────────
+  switch (efeito.tipo) {
+    case "nada":
+      // A MESMA distinção que `carimbar_consulta` faz: sem fidelidade a
+      // pergunta não se aplica (`ok: false`); com fidelidade e sem
+      // carimbo, a operação correu e não carimbou (`ok: true`). Um ecrã
+      // que trate as duas por igual mostra um erro onde devia mostrar
+      // «esta consulta não conta».
+      return efeito.motivo === "fidelidade_inativa"
+        ? { ok: false, motivo: efeito.motivo }
+        : { ok: true, completou: false, motivo: efeito.motivo };
 
-  if (!r.completou || !r.cupao) {
-    return { ok: true, completou: false, carimbos: cartao.carimbos, meta: cartao.meta };
+    case "resgata_beneficio": {
+      if (cupaoPorUsar) {
+        cupaoPorUsar.estado = "usado";
+        cupaoPorUsar.valorBaseCents = efeito.baseCents;
+      }
+      // ⚠️ E NÃO se abre cartão nenhum aqui. O ciclo seguinte nasce na
+      // consulta A SEGUIR — é a invariante que a versão anterior violava.
+      return { ok: true, completou: false, motivo: "beneficio_usado" };
+    }
+
+    case "abre_cartao_e_carimba": {
+      d.cartoes.push({
+        id: novoId(),
+        contabilistaId: d.ficha.userId,
+        clienteId: a.clienteId,
+        carimbos: 1,
+        meta: efeito.regra.meta,
+        descontoPct: efeito.regra.descontoPct,
+        precoBaseCents: precoCents,
+        completo: false,
+      });
+      return { ok: true, completou: false, carimbos: 1, meta: efeito.regra.meta };
+    }
+
+    case "carimba": {
+      if (cartao) cartao.carimbos = efeito.carimbos;
+      return {
+        ok: true, completou: false,
+        carimbos: efeito.carimbos, meta: cartao?.meta ?? proximo.carimbos,
+      };
+    }
+
+    case "completa_e_emite_beneficio": {
+      if (cartao) {
+        cartao.carimbos = cartao.meta;
+        cartao.completo = true;
+      }
+      d.cupoes.unshift({
+        id: novoId(),
+        codigo: codigoNovo(),
+        contabilistaId: d.ficha.userId,
+        clienteId: a.clienteId,
+        percentagem: efeito.descontoPct,
+        // O desconto do resgate sai do preço da consulta em que for usado,
+        // e essa ainda não aconteceu. Guardar aqui um valor base seria
+        // congelar uma promessa sobre um preço que ninguém conhece.
+        valorBaseCents: 0,
+        estado: "disponivel",
+        expiraEm: new Date(Date.now() + 365 * 86400_000).toISOString(),
+        criadoEm: agora(),
+      });
+      return {
+        ok: true, completou: true,
+        carimbos: cartao?.meta ?? 0, meta: cartao?.meta ?? 0,
+        percentagem: efeito.descontoPct,
+      };
+    }
   }
-
-  cartao.completo = true;
-  d.cupoes.unshift({
-    id: novoId(),
-    codigo: codigoNovo(),
-    contabilistaId: d.ficha.userId,
-    clienteId: a.clienteId,
-    percentagem: r.cupao.percentagem,
-    valorBaseCents: r.cupao.valorBaseCents,
-    estado: "disponivel",
-    expiraEm: new Date(Date.now() + 365 * 86400_000).toISOString(),
-    criadoEm: agora(),
-  });
-
-  if (r.proximoCartao) {
-    d.cartoes.push({
-      id: novoId(),
-      contabilistaId: d.ficha.userId,
-      clienteId: a.clienteId,
-      carimbos: r.proximoCartao.carimbos,
-      meta: r.proximoCartao.meta,
-      descontoPct: r.proximoCartao.descontoPct,
-      precoBaseCents: r.proximoCartao.precoConsultaCents,
-      completo: false,
-    });
-  }
-
-  return {
-    ok: true,
-    completou: true,
-    carimbos: cartao.carimbos,
-    meta: cartao.meta,
-    percentagem: r.cupao.percentagem,
-  };
 }
 
 function codigoNovo(): string {

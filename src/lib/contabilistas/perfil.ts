@@ -240,14 +240,21 @@ export function copyResposta(horas: number | null): string | null {
 /**
  * O que se diz ao contabilista sobre quem vê os seus contactos.
  *
- * Tem de dizer a verdade sobre o esquema, e o esquema trata os dois
- * campos de maneira diferente: o email está no contrato público — é o
- * que aparece no diretório —, o telefone só sai por
- * `contacto_do_contabilista`, a quem tem vínculo vivo.
+ * ⚠️ Isto dizia «o email e o site aparecem no teu perfil público», e era
+ * verdade — o contrato público incluía os dois. A regra mudou e o esquema
+ * mudou com ela: os três canais saem agora por
+ * `contactos_do_contabilista`, a quem tem vínculo vivo, e nenhum deles
+ * está na view.
+ *
+ * Esta frase não é decorativa. É o que a pessoa lê ANTES de escrever o
+ * telefone num formulário, e é com base nela que decide escrevê-lo. Uma
+ * frase desatualizada aqui é um consentimento obtido com informação
+ * falsa.
  */
 export const COPY_CONTACTOS =
-  "O email e o site aparecem no teu perfil público. O telefone só é " +
-  "partilhado com clientes que já tenham acompanhamento contigo.";
+  "Nada disto aparece no teu perfil público — lá ficam o nome, o número " +
+  "de OCC e o LinkedIn. O email, o telefone e o site são partilhados com " +
+  "cada pessoa no momento em que a aceitas como cliente.";
 
 // ─── A ação que faz sentido oferecer ───────────────────────────────────
 

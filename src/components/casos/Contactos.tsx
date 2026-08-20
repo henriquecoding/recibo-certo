@@ -11,9 +11,15 @@
 //  queriam falar tinham uma parede pelo meio, e a plataforma ficava com a
 //  obrigação de ler tudo para a manter de pé.
 //
-//  Agora a decisão é de quem os contactos são. Um interruptor, ligado por
-//  omissão — descrever um caso é pedir para ser contactado —, desligável a
-//  qualquer momento, e com o efeito imediato: a política lê a coluna.
+//  Agora a decisão é de quem os contactos são. Um interruptor, DESLIGADO
+//  por omissão, ligável e desligável a qualquer momento, e com efeito
+//  imediato: a política lê a coluna, não uma cópia dela.
+//
+//  ⚠️ Nasceu ligado, e esteve assim de 18 a 20 de agosto de 2026. A
+//  justificação escrita na migração era que o formulário do caso mostrava
+//  a caixa marcada e a pessoa a desmarcava antes de submeter — só que essa
+//  caixa não existia. A ficha inteira seguia sozinha e a pessoa descobria
+//  aqui, depois. Ver `20260820092000`.
 //
 //  Dois componentes, um por lado da mesma coluna:
 //   · `PartilhaDeContactos` — o cliente decide.
@@ -70,7 +76,8 @@ export function PartilhaDeContactos({
       <p className="mt-1 text-sm leading-relaxed text-stone-500">
         Enquanto isto estiver ligado, quem estiver a tratar do teu caso vê o teu email e
         o teu telefone, e pode falar contigo por fora. Desliga quando quiseres — deixam
-        de estar ao alcance dele no instante em que desligas.
+        de estar ao alcance dele no instante em que desligas. Com isto desligado,
+        continuas a poder dar-lhe o teu contacto numa mensagem, se quiseres.
       </p>
 
       <button

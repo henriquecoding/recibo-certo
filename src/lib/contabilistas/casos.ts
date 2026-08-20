@@ -1,23 +1,36 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  O CASO — a relação passa a ser mediada
+//  O CASO — descrever uma vez, escolher a quem enviar
 //  ---------------------------------------------------------------------
-//  Até aqui o cliente escolhia um contabilista e falavam livremente.
-//  Passa a ser: descreve o caso, a plataforma intermedeia tudo o que é
-//  dito, e o contabilista responde com uma proposta — sem nunca receber
-//  os contactos.
+//  Em vez de olhar para uma lista de pessoas e adivinhar qual serve, o
+//  cliente descreve o que precisa e escolhe até três contabilistas
+//  certificados para o receberem.
 //
-//  A fronteira não é entre saber quem é a pessoa e não saber: o
-//  contabilista recebe o NOME e o NIF, porque sem eles não faz o trabalho
-//  nem orçamenta com seriedade. O que ele não recebe é o CANAL — email,
-//  telefone, morada —, que é o que lhe permitiria continuar a conversa
-//  fora daqui.
+//  ⚠️ ESTE CABEÇALHO DIZIA O CONTRÁRIO DO QUE O CÓDIGO FAZ.
 //
-//  Nada neste ficheiro decide quem vê o quê. Essas decisões vivem todas na
-//  migração 051, e é de propósito: a garantia não pode depender de um
-//  `select` que alguém aqui se lembre de não escrever. Os contactos estão
-//  numa tabela a que o contabilista não chega.
+//  Descrevia a mediação: «a plataforma intermedeia tudo o que é dito» e o
+//  contabilista responde «sem nunca receber os contactos». Isso acabou em
+//  `20260818210000_fim_da_mediacao` — as mensagens nascem entregues,
+//  ninguém as lê por nós, e a ficha de contactos pode chegar ao outro
+//  lado. Um comentário desatualizado sobre uma fronteira de privacidade é
+//  mais perigoso do que nenhum: quem o lê acredita e escreve código em
+//  cima de uma garantia que já não existe.
 //
-//  Ver `docs/ESTRATEGIA-INTERMEDIACAO.md`.
+//  O que é verdade hoje, e onde é imposto:
+//
+//   · NOME e NIF seguem sempre com o caso. São identificação, não canal:
+//     sem eles não se faz o trabalho nem se orçamenta com seriedade.
+//   · A FICHA DE CONTACTOS (email, telefone, morada) só segue se o cliente
+//     escolher partilhá-la. Nasce desligada desde `20260820092000`, e
+//     liga-se e desliga-se com efeito imediato — a política de
+//     `caso_contactos` lê a coluna, não uma cópia dela.
+//   · Um contacto ESCRITO À MÃO numa mensagem segue. É uma decisão de quem
+//     escreve, no momento em que escreve, e não é papel nosso desfazê-la.
+//
+//  Nada neste ficheiro decide quem vê o quê. Essas decisões vivem nas
+//  migrações 051 e 20260818210000, e é de propósito: a garantia não pode
+//  depender de um `select` que alguém aqui se lembre de não escrever.
+//
+//  Ver `docs/CONTRATO-DE-PRIVACIDADE.md`.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { getSupabase } from "@/lib/supabase/client";
@@ -221,6 +234,14 @@ export interface NovoCaso {
   telefone?: string;
   morada?: string;
   orcamentoCents?: number | null;
+  /**
+   * Se a ficha estruturada de contactos acompanha o caso.
+   *
+   * Omitir é NÃO partilhar. A coluna nasce falsa desde
+   * `20260820092000`, e este campo só existe para o formulário poder
+   * dizer «sim» — nunca para poder dizer «não», que é o estado inicial.
+   */
+  partilharContactos?: boolean;
 }
 
 const MOTIVO: Record<string, string> = {
@@ -274,7 +295,20 @@ export async function submeterCaso(
   if (error) return { erro: error.message };
 
   const r = (data ?? {}) as { ok?: boolean; motivo?: string; id?: string; referencia?: string };
-  return r.ok ? { id: r.id, referencia: r.referencia } : { erro: traduzir(r.motivo) };
+  if (!r.ok) return { erro: traduzir(r.motivo) };
+
+  // ⚠️ Uma segunda chamada, e não um parâmetro de `submeter_caso`.
+  //
+  // A partilha nasce desligada na coluna. Ligá-la é um ato à parte, e
+  // fica assim de propósito: passa pela MESMA função que o interruptor do
+  // detalhe do caso usa, o que significa que há um só caminho para este
+  // valor mudar — e um só sítio onde a autorização é verificada.
+  //
+  // Se esta chamada falhar, o caso fica criado e sem partilha. É a falha
+  // certa: o caso não se perde, e o estado em que fica é o mais fechado
+  // dos dois.
+  if (c.partilharContactos && r.id) await definirPartilhaDeContactos(r.id, true);
+  return { id: r.id, referencia: r.referencia };
 }
 
 /**
@@ -428,7 +462,11 @@ const paraCaso = (l: Linha): Caso => ({
   notaTriagem: (l.nota_triagem as string | null) ?? null,
   // Os casos antigos não têm a coluna; para esses, a partilha está
   // ligada — é o que a migração escreveu como omissão.
-  partilhaContactos: (l.partilha_contactos as boolean | null) ?? true,
+  // O `??` responde a «a coluna não veio nesta consulta», e a resposta
+  // segura é NÃO PARTILHAR. Estava `?? true`: uma consulta que se
+  // esquecesse da coluna desenhava o interruptor ligado sobre um caso
+  // que não estava a partilhar nada.
+  partilhaContactos: (l.partilha_contactos as boolean | null) ?? false,
   criadoEm: l.criado_em as string,
   submetidoEm: (l.submetido_em as string | null) ?? null,
 });

@@ -34,6 +34,15 @@ export async function obterLinkedInPublico(contabilistaId: string): Promise<Link
   return real.obterLinkedInPublico(contabilistaId);
 }
 
+/** O LinkedIn da própria ficha — serve o editor, e lê a tabela. */
+export async function obterLinkedInDaFicha(contabilistaId: string): Promise<LinkedInPublico> {
+  if (emDemonstracao()) {
+    const p = await (await loja()).obterLinkedInPublico();
+    return { url: p.url, avatarUrl: p.avatarUrl, ligadoEm: null };
+  }
+  return real.obterLinkedInDaFicha(contabilistaId);
+}
+
 export async function sincronizarLinkedIn(): Promise<{
   ligado: boolean; avatarUrl: string | null; erro?: string;
 }> {
