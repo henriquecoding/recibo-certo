@@ -14,5 +14,6 @@ export * from "./pricing-adapter";
 export * from "./opportunities";
 export * from "./opportunity-handoff";
 export * from "./preco-handoff";
+export * from "./routing-adapter";
 export * from "./pilots";
 export * from "./pilot-loader";

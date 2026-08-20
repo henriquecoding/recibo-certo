@@ -10,7 +10,7 @@
 - Data: `2026-08-20`.
 - Repositório: `henriquecoding/recibo-certo`.
 - Branch: `claude/business-discovery-tool-z6xihz`.
-- Versão: `2.92.0`.
+- Versão: `2.93.0`.
 - Base: MI-1 (`95b171a`, `b6fffd6`, `86b137a`), com as correções abaixo por cima.
 - Deploy manual: nenhum. Merge: nenhum.
 
@@ -74,6 +74,39 @@ explicação. Agora devolve lista vazia identificada, com cache curta.
 As 48 rotas sob `/ferramentas` não tinham marco `main`; a home e os guias
 tinham. Sem ele, um leitor de ecrã não consegue saltar navegação e breadcrumb.
 
+### 8. A ferramenta não existia sem JavaScript
+
+A rota carregava o estúdio com `ssr: false` — o padrão que o CLAUDE.md reserva
+para secções PESADAS (mapas, gráficos). Aqui o componente É a página: o HTML
+servido não continha uma única palavra dos cinco dossiers, nem para quem navega
+sem JavaScript, nem para um motor de busca, nem para a checklist editorial que
+exige conteúdo essencial renderizado no servidor.
+
+Corrigido com SSR real, não com uma cópia do texto: o instante de referência
+começa vazio e só é fixado depois da montagem, para servidor e cliente não
+discordarem sobre que horas são. Antes da montagem cada cartão mostra o estado
+honesto — «ideia por investigar» — e nomeia as fontes que serão consultadas no
+dispositivo de quem lê.
+
+### 9. A ferramenta nasceu sem medição e com CTAs escolhidos à mão
+
+A disciplina de crescimento é explícita nas duas coisas, e nenhuma existia:
+
+- **medição obrigatória em fluxos novos.** Não havia como saber se alguém chega
+  a abrir um dossier, quanto mais a provar alguma coisa. Ligada em
+  `components/negocio/medicao-descoberta.ts`, reutilizando o vocabulário do
+  catálogo — `tool_id` novo e `step_id` próprios, zero eventos inventados. Zona,
+  competências, capital e a hipótese em teste nunca saem do dispositivo: a
+  barreira de `pii.ts` recusaria valores, mas não conhece a combinação zona +
+  hipótese + data de venda, que identifica alguém num concelho pequeno.
+- **a hierarquia dos CTAs não pertence ao ecrã.** Havia dois links do mesmo peso
+  escolhidos pela página. Agora há uma ação principal (formar o preço — o passo
+  que falta para a hipótese sair de «candidata»), uma alternativa em texto, e a
+  rota comercial que `escolherRota()` devolver, via
+  `market/routing-adapter.ts`. Uma hipótese `template`, `stale` ou
+  `contradicted` sai como `fora_de_escopo` e a primeira regra do motor fecha
+  todas as rotas sozinha — mesmo com uma venda registada.
+
 ## As cinco hipóteses, ligadas a sério
 
 Treze séries, cinco operações estatísticas independentes, todas verificadas
@@ -129,8 +162,10 @@ na rede de segurança.
 - **Volta do handoff de preço**: `?h=<opportunity-id>` devolve o veredicto de
   `assessMarketEconomics` à hipótese.
 - **Saúde das fontes no ecrã**: estado, data-limite dos dados e quarentena.
-- **`npm run descobrir:e2e`**: 29 verificações × 4 combinações (360 px e
-  desktop, claro e escuro), com axe.
+- **`npm run descobrir:e2e`**: 37 verificações × 4 combinações (360 px e
+  desktop, claro e escuro), com axe — incluindo um contexto com JavaScript
+  desligado, que lê o HTML com `content()` (`evaluate` precisaria do JavaScript
+  que ali está desligado).
 
 ## Invariantes
 

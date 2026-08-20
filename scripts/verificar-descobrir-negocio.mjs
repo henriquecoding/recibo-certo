@@ -244,12 +244,28 @@ try {
       verificar("a prova registada sobrevive ao recarregamento", /Validada contigo/.test(await cartao.innerText()));
 
       // ═══ 5. A ponte para o preço leva a hipótese ════════════════
-      const paraPreco = cartao.getByRole("link", { name: /Testar preço como recibos verdes/ });
+      const paraPreco = cartao.getByRole("link", { name: /Formar o preço desta hipótese/ });
       const href = await paraPreco.getAttribute("href");
       verificar(
         "o CTA de preço leva cenário e hipótese",
         /modo=preco/.test(href ?? "") && /cenario=/.test(href ?? "") && /h=tourism-guest-operations/.test(href ?? ""),
         href ?? "(sem href)",
+      );
+
+      // ═══ 5b. A hierarquia dos CTAs não é escolhida pelo ecrã ═════
+      //  Uma ação principal, uma alternativa em texto, e a rota comercial
+      //  que `escolherRota()` devolver — nunca duas do mesmo peso.
+      const acoes = await cartao.evaluate((el) => {
+        const principais = [...el.querySelectorAll("a")].filter((a) =>
+          /rounded-full/.test(a.className) && /bg-brand/.test(a.className),
+        );
+        return { principais: principais.length, texto: el.innerText };
+      });
+      verificar("há uma só ação principal no dossier", acoes.principais === 1, String(acoes.principais));
+      verificar(
+        "a rota comercial vem do motor, com o que segue à vista",
+        !/A seguir:/.test(acoes.texto) || /Nenhum dado pessoal|Formulário mínimo|Conta e pagamento/.test(acoes.texto),
+        acoes.texto.slice(acoes.texto.indexOf("A seguir:"), acoes.texto.indexOf("A seguir:") + 200),
       );
 
       // ═══ 6. O preço que chega ao recibo é MENSAL (regressão) ════
@@ -340,6 +356,43 @@ try {
         repetido === primeira,
         `${primeira} → ${repetido}`,
       );
+
+      // ═══ 8. O conteúdo essencial existe sem JavaScript ══════════
+      //  A checklist editorial exige-o, e a rota carregava o estúdio com
+      //  `ssr: false`: o HTML servido não continha uma única palavra dos
+      //  cinco dossiers — nem para quem navega sem JavaScript, nem para
+      //  um motor de busca.
+      // `javaScriptEnabled` é opção de contexto, não de página.
+      const contextoSemJs = await navegador.newContext({ viewport, javaScriptEnabled: false });
+      const semJs = await contextoSemJs.newPage();
+      await semJs.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
+      // `evaluate` precisa de JavaScript na página — que é exatamente o
+      // que aqui está desligado. O HTML servido lê-se com `content()`.
+      const htmlSemJs = await semJs.content();
+      const textoSemJs = htmlSemJs
+        .replace(/<script[\s\S]*?<\/script>/g, " ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&#x27;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&amp;/g, "&")
+        .replace(/\s+/g, " ");
+      for (const essencial of [
+        "alojamento turístico",
+        "Entrevistar dez operadores",
+        "Teste que pode matar a ideia",
+        "Formar o preço desta hipótese",
+      ]) {
+        verificar(`sem JavaScript: «${essencial}» está no HTML`, textoSemJs.includes(essencial));
+      }
+      verificar(
+        "sem JavaScript: não promete dados que ainda não consultou",
+        !/A consultar/.test(textoSemJs) && /consultados no teu dispositivo/.test(textoSemJs),
+      );
+      verificar(
+        "sem JavaScript: nenhuma rota comercial sobre uma ideia por investigar",
+        !/A seguir:/.test(textoSemJs),
+      );
+      await contextoSemJs.close();
 
       verificar("sem erros de JavaScript", errosJS.length === 0, errosJS.slice(0, 2).join(" | "));
       await contexto.close();

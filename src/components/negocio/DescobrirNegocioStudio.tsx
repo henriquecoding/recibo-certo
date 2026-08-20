@@ -26,7 +26,10 @@ import {
   type MarketHypothesis,
   type MarketProofKind,
 } from "@/lib/negocio/market/hipoteses";
+import { sinaisDaHipotese } from "@/lib/negocio/market/routing-adapter";
+import { escolherRota } from "@/lib/routing";
 import { guardarHipotese, lerHipoteses } from "@/lib/store/hipoteses-mercado";
+import { registarProvaGuardada, useMedicaoDescoberta } from "./medicao-descoberta";
 import { ArrowRight, Check, ChevronDown, ExternalLink, Lightbulb, Plus, Spinner, Target, Trash } from "@/components/ui/Icons";
 
 const DEFAULT_PROFILE: BusinessDiscoveryProfile = {
@@ -181,6 +184,7 @@ function EvidenceBlock({
   evidence,
   gate,
   loading,
+  montado,
   region,
 }: {
   template: OpportunityTemplate;
@@ -188,6 +192,15 @@ function EvidenceBlock({
   /** O gate recalculado no browser, com zona, preço e provas locais. */
   gate: MarketEvidenceGateResult;
   loading: boolean;
+  /**
+   * O browser já assumiu o comando?
+   *
+   * No HTML servido não há consulta nenhuma a decorrer, por isso dizer «a
+   * consultar» seria falso — e ficaria assim para sempre para quem navega
+   * sem JavaScript. Antes da montagem diz-se o que é verdade: os sinais
+   * são consultados no dispositivo de quem lê.
+   */
+  montado: boolean;
   region: MarketRegion;
 }) {
   // A repartição por zona é uma regra de domínio, testada, e não um filtro
@@ -195,7 +208,7 @@ function EvidenceBlock({
   // NACIONAL — publicável e válida para o país inteiro — desaparecia para
   // quem não escolhesse uma das duas zonas mapeadas.
   const { local, nacional } = splitObservationsByRegion(evidence?.observations ?? [], region);
-  const aConsultar = loading && templateHasLiveEvidence(template);
+  const aConsultar = montado && loading && templateHasLiveEvidence(template);
   const semSinalLocal = local.length === 0 && nacional.length === 0 && (evidence?.observations.length ?? 0) > 0;
   const state = gate.state;
   const badge = semSinalLocal && state !== "user_validated" && state !== "operating"
@@ -252,11 +265,16 @@ function EvidenceBlock({
         </div>
       ) : (
         <p className="mt-2 text-xs leading-relaxed text-stone-500">
-          {aConsultar
-            ? "A verificar a fonte oficial. Nenhum número provisório é mostrado durante a consulta."
-            : semSinalLocal
-              ? "A fonte respondeu para outras zonas. Esse sinal não se transfere para a que escolheste, e não vamos fingir que sim."
-              : evidence?.note ?? "O manifesto de fontes existe, mas ainda não há observação publicável para este piloto."}
+          {!montado && templateHasLiveEvidence(template)
+            ? `Os sinais oficiais desta hipótese são consultados no teu dispositivo, não estão neste HTML. Fontes: ${template.evidencePlan
+                .filter((entry) => entry.status === "live")
+                .map((entry) => entry.source)
+                .join("; ")}.`
+            : aConsultar
+              ? "A verificar a fonte oficial. Nenhum número provisório é mostrado durante a consulta."
+              : semSinalLocal
+                ? "A fonte respondeu para outras zonas. Esse sinal não se transfere para a que escolheste, e não vamos fingir que sim."
+                : evidence?.note ?? "O manifesto de fontes existe, mas ainda não há observação publicável para este piloto."}
         </p>
       )}
 
@@ -287,6 +305,38 @@ function EvidenceBlock({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * A rota comercial — decidida pelo motor, nunca por este ecrã.
+ *
+ * `sem_parceiro` não é uma rota a desenhar: é a ausência de uma. Uma
+ * hipótese que ainda é `template`, ou que foi contrariada, cai aí sozinha
+ * pela primeira regra de `escolherRota` e não vê nada. É a guarda contra
+ * monetizar uma ideia que a própria ferramenta acabou de não sustentar.
+ */
+function ProximoPassoComercial({
+  gate,
+  profile,
+  hypothesis,
+}: {
+  gate: MarketEvidenceGateResult;
+  profile: BusinessDiscoveryProfile;
+  hypothesis?: MarketHypothesis;
+}) {
+  const rota = useMemo(
+    () => escolherRota(sinaisDaHipotese(gate, profile, hypothesis)),
+    [gate, profile, hypothesis],
+  );
+  if (rota.rota === "sem_parceiro") return null;
+
+  return (
+    <p className="mt-3 text-xs leading-relaxed text-stone-500">
+      <span className="font-semibold text-stone-700 dark:text-stone-200">A seguir: </span>
+      {rota.mensagem}{" "}
+      <span className="text-stone-400">({rota.dados})</span>
+    </p>
   );
 }
 
@@ -323,7 +373,13 @@ function ProvaLocal({
   asOf: string;
   onChange: (proximo: MarketHypothesis) => void;
 }) {
-  const [dia, setDia] = useState(() => asOf.slice(0, 10));
+  // O dia começa vazio e só é preenchido quando o instante de referência
+  // existir — no servidor ainda não existe, e um `defaultValue` diferente
+  // entre servidor e cliente quebrava a hidratação do campo.
+  const [dia, setDia] = useState("");
+  useEffect(() => {
+    setDia((atual) => atual || asOf.slice(0, 10));
+  }, [asOf]);
   const [tipo, setTipo] = useState<MarketProofKind>("interview");
   const [recebido, setRecebido] = useState(false);
   const [margem, setMargem] = useState(false);
@@ -377,7 +433,7 @@ function ProvaLocal({
           <input
             type="date"
             value={dia}
-            max={asOf.slice(0, 10)}
+            max={asOf ? asOf.slice(0, 10) : undefined}
             onChange={(event) => setDia(event.target.value)}
             className="mt-1 block h-9 w-full rounded-xl border border-stone-200 bg-white px-2.5 text-xs text-ink focus:border-brand focus:outline-none dark:border-stone-700 dark:bg-stone-950"
           />
@@ -474,9 +530,18 @@ export default function DescobrirNegocioStudio() {
   const [evidence, setEvidence] = useState<readonly MarketPilotEvidence[]>([]);
   const [loadingEvidence, setLoadingEvidence] = useState(true);
   const [hipoteses, setHipoteses] = useState<readonly MarketHypothesis[]>([]);
-  // Um instante fixo por sessão. Recalcular `Date.now()` a cada render fazia
-  // a frescura e a validade das provas mudarem por baixo do ecrã.
-  const [asOf] = useState(() => new Date().toISOString());
+  // ── O instante de referência ────────────────────────────────────
+  //  Fixo por sessão: recalcular `Date.now()` a cada render fazia a
+  //  frescura e a validade das provas mudarem por baixo do ecrã.
+  //
+  //  Começa VAZIO de propósito. O servidor e o cliente não podem
+  //  discordar sobre que horas são, e uma string vazia é a única resposta
+  //  em que concordam. Enquanto durar, `parseIsoDate` devolve `null`, o
+  //  gate não considera nenhuma observação e cada cartão mostra o dossier
+  //  com o estado honesto de «ideia por investigar» — que é exatamente o
+  //  que se sabe antes de o browser consultar o que quer que seja.
+  const [asOf, setAsOf] = useState("");
+  useEffect(() => setAsOf(new Date().toISOString()), []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -505,8 +570,41 @@ export default function DescobrirNegocioStudio() {
     [hipoteses],
   );
 
+  // O gate de cada hipótese, recalculado com zona, preço e provas locais.
+  // Vive aqui — e não dentro do cartão aberto — porque a medição precisa
+  // de ver TODAS as hipóteses, não só a que está expandida.
+  const gates = useMemo(
+    () =>
+      new Map(
+        ranked.map(({ template }) => [
+          template.id,
+          evaluateLocalMarketEvidence({
+            template,
+            evidence: evidenceByTemplate.get(template.id),
+            hypothesis: hipotesePorTemplate.get(template.id),
+            region: profile.region,
+            asOf,
+          }),
+        ]),
+      ),
+    [ranked, evidenceByTemplate, hipotesePorTemplate, profile.region, asOf],
+  );
+
+  useMedicaoDescoberta({
+    ativo: !loadingEvidence,
+    dossierAberto: expanded !== "",
+    estados: useMemo(() => [...gates.values()].map((gate) => gate.state), [gates]),
+    hipotesesComProva: hipoteses.filter((item) => item.proofs.length > 0).length,
+    hipotesesComProvaPaga: hipoteses.filter((item) =>
+      item.proofs.some((proof) => proof.kind !== "interview"),
+    ).length,
+    temPrecoConcluido: hipoteses.some((item) => item.pricing !== undefined),
+    temRequisitosRevistos: hipoteses.some((item) => item.requirementsReviewed),
+  });
+
   const guardar = (proxima: MarketHypothesis) => {
     setHipoteses(guardarHipotese({ ...proxima, region: profile.region }));
+    registarProvaGuardada();
   };
 
   const toggleStrength = (strength: BusinessStrength) =>
@@ -592,15 +690,10 @@ export default function DescobrirNegocioStudio() {
             const open = expanded === template.id;
             const pilotEvidence = evidenceByTemplate.get(template.id);
             const hipotese = hipotesePorTemplate.get(template.id);
-            // O gate volta a correr aqui — o mesmo motor, agora com a zona,
-            // o preço e as provas que só existem neste dispositivo.
-            const gate = evaluateLocalMarketEvidence({
-              template,
-              evidence: pilotEvidence,
-              hypothesis: hipotese,
-              region: profile.region,
-              asOf,
-            });
+            // O gate já correu para todas as hipóteses, acima: o mesmo
+            // motor, com a zona, o preço e as provas que só existem neste
+            // dispositivo.
+            const gate = gates.get(template.id)!;
             return (
               <article key={template.id} className="overflow-hidden rounded-4xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">
                 <button type="button" aria-expanded={open} onClick={() => setExpanded(open ? "" : template.id)} className="flex w-full items-start gap-4 p-5 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand sm:p-6">
@@ -657,6 +750,7 @@ export default function DescobrirNegocioStudio() {
                         evidence={pilotEvidence}
                         gate={gate}
                         loading={loadingEvidence}
+                        montado={asOf !== ""}
                         region={profile.region}
                       />
                       <ProvaLocal
@@ -667,16 +761,31 @@ export default function DescobrirNegocioStudio() {
                       />
                     </div>
 
-                    <div className="mt-5 flex flex-wrap gap-3 border-t border-stone-100 pt-5 dark:border-stone-800">
-                      <Link
-                        href={`/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}&h=${encodeURIComponent(template.id)}`}
-                        className="btn-shine inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card hover:shadow-lift"
-                      >
-                        Testar preço como recibos verdes <ArrowRight size={14} />
-                      </Link>
-                      <Link href={`/dashboard/negocio?o=${encodeURIComponent(template.id)}`} className="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-stone-200 px-5 text-sm font-semibold text-stone-700 hover:border-brand hover:text-brand-dark dark:border-stone-700 dark:text-stone-200">
-                        Construir no motor de empresa
-                      </Link>
+                    {/* ── Uma ação principal, uma alternativa, e a rota
+                        comercial que o motor decidir ────────────────────
+                        Havia aqui dois links do mesmo peso escolhidos por
+                        este ecrã. A hierarquia não lhe pertence: o passo
+                        seguinte da jornada é sempre formar o preço — sem
+                        ele o gate nunca sai de «candidata» — e o que for
+                        comercial vem de `escolherRota()`, com o motivo à
+                        vista e fechado sozinho quando não há resultado
+                        que o sustente. */}
+                    <div className="mt-5 border-t border-stone-100 pt-5 dark:border-stone-800">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href={`/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}&h=${encodeURIComponent(template.id)}`}
+                          className="btn-shine inline-flex min-h-[44px] items-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card hover:shadow-lift"
+                        >
+                          Formar o preço desta hipótese <ArrowRight size={14} />
+                        </Link>
+                        <Link
+                          href={`/dashboard/negocio?o=${encodeURIComponent(template.id)}`}
+                          className="inline-flex min-h-[44px] items-center text-sm font-medium text-stone-500 underline-offset-4 hover:text-brand-dark hover:underline dark:text-stone-400 dark:hover:text-brand-mint"
+                        >
+                          ou construir no estúdio de empresa
+                        </Link>
+                      </div>
+                      <ProximoPassoComercial gate={gate} profile={profile} hypothesis={hipotese} />
                     </div>
                   </div>
                 ) : null}

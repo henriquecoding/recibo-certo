@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.93.0",
+    data: "2026-08-20",
+    titulo: "A ferramenta de descoberta passa a ser legível sem JavaScript — e a sugerir uma coisa de cada vez",
+    itens: [
+      "As cinco hipóteses passam a existir no HTML da página. Antes, quem navegasse sem JavaScript — ou qualquer motor de busca — recebia uma página vazia: o cliente, o problema, o modelo de receita, os primeiros clientes e o teste que pode matar a ideia só apareciam depois de o browser correr tudo.",
+      "Sem JavaScript, a página diz a verdade sobre o que sabe: nomeia as fontes oficiais de cada hipótese e explica que os números são consultados no teu dispositivo. Não finge estar a consultar coisa nenhuma.",
+      "O dossier deixou de ter dois botões do mesmo tamanho a competir. Há uma ação principal — formar o preço, que é o passo que falta para a hipótese sair de «candidata» — e o resto vem a seguir.",
+      "O que é comercial passou a ser decidido pelo mesmo motor de encaminhamento das outras ferramentas, com o motivo à vista. Uma ideia que ainda não tem evidência, ou que o motor contrariou, deixa de ver qualquer sugestão comercial — mesmo que já tenhas registado uma venda.",
+      "Quem pensa em abrir sociedade é encaminhado para avaliação profissional; quem pensa em recibos verdes, para execução. E quem escolheu «quero comparar» não é empurrado para nenhum dos dois.",
+      "A ferramenta passou a ser medida como as outras: em que passo estás, se chegaste a ver um sinal oficial, se registaste uma prova e se a hipótese chegou a ficar sustentada. A tua zona, as tuas competências, o teu capital e a hipótese que estás a testar nunca saem do dispositivo.",
+      "As páginas de ferramentas ganharam a marca de conteúdo principal que lhes faltava. Quem usa leitor de ecrã já consegue saltar a navegação e ir direto à ferramenta.",
+    ],
+  },
+  {
     version: "2.92.0",
     data: "2026-08-20",
     titulo: "As cinco ideias passam a ter números reais — e três já cruzam duas fontes independentes",
