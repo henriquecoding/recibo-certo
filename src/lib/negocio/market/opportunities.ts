@@ -268,10 +268,17 @@ export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.free
         status: "live",
       },
       {
-        source: "BASE / TED",
+        source: "Portal BASE (IMPIC), via dados.gov.pt",
         purpose:
-          "Contar procedimentos e adjudicações por CPV, geografia e período — nunca valor anunciado como receita provável. Enquanto não estiver ligado, falta a esta hipótese o sinal de procura, e o cartão diz isso.",
-        url: "https://www.base.gov.pt/Base4/pt/",
+          "Contar contratos celebrados e procedimentos abertos à concorrência, por zona e por ano — nunca o valor anunciado como receita provável. A leitura é feita por um job agendado sobre o ficheiro anual do portal; a aplicação serve o instantâneo commitado, com a data da extração à vista.",
+        url: "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        status: "live",
+      },
+      {
+        source: "TED — Tenders Electronic Daily",
+        purpose:
+          "Acrescentar os avisos acima dos limiares europeus e a classificação por CPV, que o ficheiro anual do BASE não traz num formato utilizável. Enquanto não estiver ligado, a contagem por setor não existe e o cartão não a mostra.",
+        url: "https://ted.europa.eu/",
         status: "planned",
       },
     ],

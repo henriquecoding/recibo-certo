@@ -12,9 +12,14 @@
 //  em sítios diferentes. É essa a salvaguarda contra triangulação falsa.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { METRICAS_EM_BLOCO } from "./bulk/fontes";
 import type { EurostatDatasetManifest } from "./connectors/eurostat";
 import type { IneAnnualIndicatorManifest } from "./connectors/ine";
 import type { MarketSignalKind, MarketSourceId } from "./tipos";
+
+/** A página do conjunto de dados do Portal BASE no dados.gov.pt. */
+const BASE_CONTRACTS_DATASET_URL =
+  "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/";
 
 /** Portugal e as NUTS II de 2024, como o INE as publica neste indicador. */
 const NUTS2_2024: IneAnnualIndicatorManifest["geographyByCode"] = Object.freeze({
@@ -227,6 +232,19 @@ export type MarketPilotSeriesConnector =
       manifest: EurostatDatasetManifest;
       /** Filtros enviados ao endpoint, para não descarregar o cubo inteiro. */
       fetchFilters: Readonly<Record<string, readonly string[]>>;
+    }
+  | {
+      /**
+       * Série lida de um instantâneo commitado, não da rede.
+       *
+       * A fonte são 52 MB comprimidos com um quarto de milhão de registos:
+       * não se lê a pedido, nem numa rota que revalida de seis em seis
+       * horas. `scripts/ingerir-mercado.mjs` lê-a fora do produto e deixa
+       * as contagens no repositório; aqui só se escolhe qual delas usar.
+       */
+      connector: "bulk";
+      snapshotId: string;
+      metricId: string;
     };
 
 export interface MarketPilotSeries {
@@ -435,13 +453,43 @@ export const MARKET_PILOTS: readonly MarketPilotDefinition[] = Object.freeze([
   },
   {
     templateId: "public-tender-support",
-    datasetUrl: "https://dados.gov.pt/pt/datasets/?q=pessoal+ao+servi%C3%A7o+empresas",
+    datasetUrl: BASE_CONTRACTS_DATASET_URL,
     series: [
+      {
+        id: "tender-open-procedures",
+        label: "Procedimentos abertos à concorrência",
+        reading:
+          "Contratos de serviços e bens que a zona celebrou por procedimento publicitado — concurso público, concurso limitado, diálogo concorrencial. É por aqui que alguém de fora entra: ajuste direto, consulta prévia e chamadas ao abrigo de acordo-quadro não contam, porque nenhuma delas é uma porta aberta. Uma porta aberta também não é um cliente.",
+        sourceId: "dados-gov",
+        kind: "transactional",
+        independenceKey: "pt-public-procurement-base",
+        critical: true,
+        source: {
+          connector: "bulk",
+          snapshotId: "contratos-publicos",
+          metricId: METRICAS_EM_BLOCO.procedimentosAbertos,
+        },
+      },
+      {
+        id: "tender-service-contracts",
+        label: "Contratos de serviços e bens celebrados",
+        reading:
+          "Todos os contratos de serviços e bens da zona, incluindo os por ajuste direto. Dimensiona o volume total de compras públicas; a maior parte não passou por concurso, e por isso este número não mede oportunidade de entrada — mede o mercado que existe.",
+        sourceId: "dados-gov",
+        kind: "transactional",
+        independenceKey: "pt-public-procurement-base",
+        critical: false,
+        source: {
+          connector: "bulk",
+          snapshotId: "contratos-publicos",
+          metricId: METRICAS_EM_BLOCO.contratosDeServicos,
+        },
+      },
       {
         id: "tender-small-employers",
         label: "Pessoas ao serviço em empresas com menos de 10",
         reading:
-          "Dimensiona o universo de empresas pequenas capazes de entregar, na zona. Não conta procedimentos elegíveis — para isso falta ligar o Portal BASE, e sem ele esta hipótese não passa de sinal a investigar.",
+          "Dimensiona o universo de empresas pequenas capazes de entregar, na zona. É o lado da oferta — quantas já existem para disputar estes contratos —, e não prova que alguma delas pague por ajuda a concorrer.",
         sourceId: "ine",
         kind: "structural",
         independenceKey: "pt-integrated-business-accounts",
@@ -454,7 +502,7 @@ export const MARKET_PILOTS: readonly MarketPilotDefinition[] = Object.freeze([
         reading:
           "Renovação anual do tecido de sociedades. Uma sociedade nova é candidata a concorrer; candidatar-se não é o mesmo que precisar de quem lhe organize o dossier.",
         sourceId: "ine",
-        kind: "structural",
+        kind: "transactional",
         independenceKey: "pt-business-demography",
         critical: false,
         source: { connector: "ine", manifest: BUSINESS_BIRTHS_COMPANY_MANIFEST },

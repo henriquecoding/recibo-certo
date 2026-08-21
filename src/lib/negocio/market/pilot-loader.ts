@@ -11,6 +11,7 @@
 //  e nunca produz um número de substituição.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { obterSnapshotBulk } from "./bulk/snapshots";
 import { buildEurostatUrl, fetchEurostatDataset, normalizeEurostatDataset } from "./connectors/eurostat";
 import { buildIneIndicatorUrl, fetchIneIndicator, normalizeIneAnnualIndicator } from "./connectors/ine";
 import { evaluateMarketEvidence } from "./evidence-gate";
@@ -87,6 +88,12 @@ interface SeriesOutcome {
   rejected: number;
   sourceUrl?: string;
   failed: boolean;
+  /**
+   * Quando o instantâneo em bloco foi tirado, para as séries que não são
+   * consultadas a pedido. Sem isto, a saúde da fonte diria «consultada
+   * agora» sobre um ficheiro descarregado há três semanas.
+   */
+  extraidoEm?: string;
 }
 
 /**
@@ -170,8 +177,28 @@ async function loadSeries(
     let observations: readonly MarketObservation[];
     let parserRejected: number;
     let sourceUrl: string;
+    let extraidoEm: string | undefined;
 
-    if (definition.connector === "ine") {
+    if (definition.connector === "bulk") {
+      // Nada de rede: o instantâneo já está no repositório, assinado e com
+      // a proveniência agarrada. O que aqui se faz é escolher a métrica e
+      // submetê-la exatamente à mesma quarentena das outras — uma origem
+      // em bloco não ganha dispensa de licença, período ou checksum, e é
+      // por isso que um instantâneo por atualizar acaba `stale` sozinho.
+      const guardado = obterSnapshotBulk(definition.snapshotId);
+      if (!guardado) {
+        return { series, observations: [], rejected: 0, failed: true };
+      }
+      observations = guardado.observations.filter(
+        (observacao) => observacao.metricId === definition.metricId,
+      );
+      // As observações das outras métricas do mesmo instantâneo não são
+      // linhas rejeitadas: são de outra série. Contá-las aqui daria um
+      // aviso de qualidade a descrever uma coisa que correu bem.
+      parserRejected = 0;
+      sourceUrl = guardado.proveniencia.recurso.url;
+      extraidoEm = guardado.geradoEm;
+    } else if (definition.connector === "ine") {
       const url = buildIneIndicatorUrl(definition.manifest.indicatorCode);
       const fetched = await transport.buscar(url, series.sourceId, () =>
         fetchIneIndicator(definition.manifest.indicatorCode, transport.transporte),
@@ -208,6 +235,7 @@ async function loadSeries(
       observations: latestByGeography(report.accepted),
       rejected: parserRejected + report.quarantined.length,
       sourceUrl,
+      extraidoEm,
       failed: false,
     };
   } catch {
@@ -227,23 +255,36 @@ function healthFor(
   const failed = outcomes.some((outcome) => outcome.failed);
   const critical = outcomes.some((outcome) => outcome.series.critical);
 
+  // A extração mais recente entre as séries em bloco desta fonte. Quando
+  // existe, é ela — e não o instante do pedido — que data os dados.
+  const extraidoEm = outcomes
+    .map((outcome) => outcome.extraidoEm)
+    .filter((instante): instante is string => Boolean(instante))
+    .sort()
+    .at(-1);
+  const emBloco = extraidoEm
+    ? ` Extração em bloco de ${extraidoEm.slice(0, 10)}: o portal não é consultado a cada visita.`
+    : "";
+
   let state: MarketSourceHealthState;
   let message: string;
   if (failed && observations.length === 0) {
     state = "delayed";
-    message = "Não foi possível confirmar o dataset oficial nesta execução.";
+    message = extraidoEm
+      ? "O instantâneo desta fonte não está legível nesta versão."
+      : "Não foi possível confirmar o dataset oficial nesta execução.";
   } else if (failed) {
     state = "delayed";
     message = "Parte das séries desta fonte não respondeu; só as confirmadas são mostradas.";
   } else if (observations.length === 0) {
     state = "quarantined";
-    message = "A fonte respondeu, mas nenhuma observação atravessou a quarentena.";
+    message = `A fonte respondeu, mas nenhuma observação atravessou a quarentena.${emBloco}`;
   } else {
     state = "healthy";
     message =
-      rejected > 0
+      (rejected > 0
         ? `${rejected} linhas/células não atravessaram a quarentena e ficaram de fora.`
-        : "Dataset consultado e normalizado sem linhas rejeitadas.";
+        : "Dataset consultado e normalizado sem linhas rejeitadas.") + emBloco;
   }
 
   return {
@@ -251,8 +292,8 @@ function healthFor(
     state,
     critical,
     checkedAt,
-    lastRunAt: checkedAt,
-    lastSuccessfulRunAt: observations.length > 0 ? checkedAt : undefined,
+    lastRunAt: extraidoEm ?? checkedAt,
+    lastSuccessfulRunAt: observations.length > 0 ? (extraidoEm ?? checkedAt) : undefined,
     latestReferencePeriodEnd: observations
       .map((observation) => observation.referencePeriod.end)
       .sort()

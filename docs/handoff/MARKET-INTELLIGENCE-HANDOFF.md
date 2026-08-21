@@ -197,26 +197,56 @@ git diff --check
 # com `npm start` noutro terminal:
 npm run descobrir:e2e
 npm run negocio:e2e
+
+# ingestão em bloco — rede, ~25 s, ~52 MB. Não entra no build.
+npm run mercado:check
 ```
 
-## Próximo checkpoint recomendado — MI-3
+## MI-3 — o que foi feito
 
-1. **Portal BASE/TED.** É o que falta ao piloto de concursos: hoje só tem
-   séries estruturais e o cartão diz, corretamente, que falta um sinal de
-   procura. Contar procedimentos elegíveis por CPV e região seria o primeiro
-   sinal transacional dessa hipótese.
-2. **Um sinal de procura para o acompanhamento sénior.** Mesmo problema: as
-   duas séries que tem são estruturais. Nenhuma estatística pública mede
-   procura por acompanhamento digital pago; talvez não exista, e nesse caso a
-   resposta honesta é a prova local da própria pessoa.
-3. Job servidor que publica snapshot assinado atomicamente (`snapshot.ts` já
-   existe e está testado; falta o job).
-4. Painel interno de source health com alertas de schema e frescura.
-5. Transferir um cenário de preço completo — e não só o veredicto — entre as
+**Portal BASE ligado por ingestão em bloco.** Era o que faltava ao piloto de
+concursos, e não se resolvia com um conector normal: o ficheiro anual são 52 MB
+comprimidos que descomprimem para 273 MB, com 246 978 registos. Corre num job
+agendado (`scripts/ingerir-mercado.mjs`), fora do produto; o que fica no
+repositório são 20 contagens com a proveniência agarrada. O piloto passou de
+`signal_detected` a `candidate` — não por se ter mexido no gate, mas por passar
+a existir um sinal transacional de uma terceira operação estatística.
+
+Quatro defeitos apanhados **durante** a ingestão, todos silenciosos:
+
+| Defeito | Efeito medido | Como se soube |
+|---|---|---|
+| índice concelho→região de um-para-um | 422 contratos dos Açores contados no Algarve, porque o INE escreve `Lagoa` (Algarve) e `Lagoa (R.A.A.)` | contagem direta por região declarada, contra o ficheiro |
+| `ehConcurso` por lista de exclusão | 86 019 «procedimentos abertos» em vez de 33 825: acordos-quadro e contratação excluída entravam | distribuição dos 18 tipos de procedimento reais |
+| `tipoContrato` lido só no primeiro elemento | 4 contratos perdidos por causa da ordem dos rótulos | amostragem dos multivalorados (1 838 registos) |
+| `completeness: 1` nas regiões | afirmava cobertura total quando 15% dos contratos não trazem concelho legível | reconciliação da soma das zonas com o total nacional |
+
+A lição que se repete: **nenhum destes partia o build, os testes ou o
+type-check**. Foram todos encontrados ao confrontar o agregado com a fonte —
+somar as zonas, contar os tipos, comparar antes/depois — e não a ler código.
+
+Deliberadamente NÃO publicado: soma de `precoContratual` (o relatório mestre
+proíbe tratar valor anunciado como receita provável), quota de PME
+(`adjudicatarioPMEs` nunca vem vazio, logo «ausente» é ambíguo entre «nenhuma»
+e «não declarado») e contagem de adjudicatários únicos (aproxima-se de
+identificar empresas).
+
+## Próximo checkpoint recomendado — MI-4
+
+1. **TED.** Acrescenta os avisos acima dos limiares europeus e a classificação
+   por CPV, que o ficheiro anual do BASE não traz num formato utilizável. Sem
+   isso não há contagem por setor, e o cartão não a mostra.
+2. **Um sinal de procura para o acompanhamento sénior.** É o último piloto em
+   `signal_detected`: as duas séries que tem são estruturais. Nenhuma
+   estatística pública mede procura por acompanhamento digital pago; talvez não
+   exista, e nesse caso a resposta honesta é a prova local da própria pessoa.
+3. Painel interno de source health com alertas de schema e frescura.
+4. Transferir um cenário de preço completo — e não só o veredicto — entre as
    duas superfícies.
-6. Comparar recibos verdes/empresa a partir da mesma hipótese sem repetir inputs.
-7. Granularidade municipal onde a fonte a publique, mantendo a lista fechada
-   (nunca morada).
+5. Comparar recibos verdes/empresa a partir da mesma hipótese sem repetir inputs.
+6. Granularidade municipal onde a fonte a publique, mantendo a lista fechada
+   (nunca morada). Os contratos já trazem concelho; falta decidir se publicar a
+   esse nível ajuda a decidir ou só dá números pequenos e instáveis.
 
 ## Ficheiros principais
 
@@ -229,6 +259,9 @@ src/lib/negocio/market/            (tipos, registry, geografia, freshness,
                                     snapshot, pricing-adapter, preco-handoff,
                                     opportunities, opportunity-handoff,
                                     pilots, pilot-loader)
+src/lib/negocio/market/bulk/       (fontes, zip, json-array, contratos,
+                                    geografia-concelhos, snapshot-local,
+                                    snapshots, dados/*.json)
 src/lib/store/hipoteses-mercado.ts
 src/components/negocio/DescobrirNegocioStudio.tsx
 src/components/negocio/NegocioStudio.tsx
@@ -237,6 +270,13 @@ src/app/api/market/pilots/route.ts
 src/app/ferramentas/descobrir-negocio/
 src/app/ferramentas/layout.tsx
 scripts/verificar-descobrir-negocio.mjs
+scripts/ingerir-mercado.mjs
+scripts/anotar-novidade-mercado.mjs
+.github/workflows/mercado-ingestao.yml
 ```
+
+O instantâneo em `bulk/dados/` é **gerado**, mas é para commitar: é ele que a
+aplicação serve. Não é um cache — é a fonte, e o histórico do git é o registo de
+quando cada número mudou.
 
 Não incluir builds, caches, `node_modules` ou ficheiros temporários.

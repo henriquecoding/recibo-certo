@@ -1,8 +1,8 @@
 # Market Intelligence Engine
 
-> Estado da implementação: **MI-2 — cobertura nacional, os cinco pilotos com
-> ingestão ativa, triangulação real em três deles e prova comercial local, em
-> 2026-08-20**.
+> Estado da implementação: **MI-3 — cobertura nacional, os cinco pilotos com
+> ingestão ativa, ingestão em bloco do Portal BASE agendada, triangulação real
+> em quatro deles e prova comercial local, em 2026-08-21**.
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 
@@ -129,7 +129,7 @@ Estado revisto em 2026-08-20:
 |---|---|---|---|
 | [INE — API da Base de Dados](https://www.ine.pt/xportal/xmain?xpgid=ine_api_db&xpid=INE) | JSON por indicador | `ready` | `review_required` |
 | [BPstat — Data API](https://bpstat.bportugal.pt/data/docs) | API JSON-stat | `planned` | `review_required` |
-| [dados.gov.pt](https://dados.gov.pt/) | API/catálogo aberto | `planned` | catálogo aprovado; licença de cada recurso é separada |
+| [dados.gov.pt](https://dados.gov.pt/) | API/catálogo aberto + ficheiros em bloco | `ready` | catálogo aprovado; licença de cada recurso é separada |
 | [Eurostat](https://ec.europa.eu/eurostat/web/user-guides/data-browser/api-data-access/api-getting-started) | JSON-stat | `ready` | `approved`, com atribuição e termos específicos por recurso |
 | [IEFP](https://www.iefp.pt/estatisticas) | ODS mensal | `planned` | `review_required` |
 
@@ -172,6 +172,98 @@ no produto.**
 percorre índices de forma determinística e só publica células selecionadas por
 manifesto. O `independenceKey` pertence ao sinal: duas superfícies que derivam
 da mesma operação estatística contam uma vez.
+
+## 8.1. Fontes em bloco: o que não cabe num pedido HTTP
+
+O INE e o Eurostat respondem em JSON, em segundos, e por isso são consultados
+quando a rota revalida. O ficheiro anual de contratos públicos do Portal BASE
+são **52 MB comprimidos que descomprimem para 273 MB**, com **246 978 registos**
+só em 2025. Ler isso a pedido faria cada visita esperar meio minuto por um
+número que muda uma vez por mês.
+
+Por isso corre fora do produto, em `scripts/ingerir-mercado.mjs`, e o que fica
+no repositório são 20 contagens em
+`src/lib/negocio/market/bulk/dados/contratos-publicos.json`.
+
+```mermaid
+flowchart LR
+    A["dados.gov API<br/>resolve o recurso atual"] --> B["download<br/>+ SHA-256"]
+    B --> C["ZIP de entrada única<br/>inflate em streaming"]
+    C --> D["array JSON de topo<br/>um objeto de cada vez"]
+    D --> E["agregação por NUTS II"]
+    E --> F["validateMarketObservation<br/>o MESMO gate"]
+    F --> G["instantâneo assinado<br/>commitado no repo"]
+    G --> H["pilot-loader<br/>connector: bulk"]
+```
+
+Cinco decisões que sustentam este caminho:
+
+- **o recurso é resolvido pela API, nunca por URL fixo.** O URL do portal traz
+  o instante da publicação no caminho (`/20260816-091135-e2c09fd9/`). Fixá-lo
+  significaria descarregar para sempre a versão de agosto de 2026 — e fazê-lo
+  em silêncio, porque o pedido continua a devolver 200;
+- **o ano é derivado do calendário.** `fontesEmBloco()` pede sempre o último ano
+  civil COMPLETO. O ficheiro do ano em curso é uma contagem parcial que cresce
+  todas as semanas; publicá-la ao lado de séries anuais convidava a lê-la como
+  se fosse um ano. Em janeiro isto roda sozinho, sem ninguém editar código;
+- **memória constante.** `bulk/zip.ts` arranca o cabeçalho de 30 bytes e liga o
+  resto ao `createInflateRaw` do `zlib`; `bulk/json-array.ts` acompanha
+  profundidade de chavetas com estado de string e de escape, e entrega um
+  objeto de cada vez ao `JSON.parse`. Pico medido: 166 MB de RSS para 273 MB de
+  entrada. Nenhuma dependência nova;
+- **o `contentHash` cobre só as observações.** `retrievedAt` e `geradoEm` mudam
+  a cada execução por definição; metê-los na assinatura faria o job abrir um PR
+  todas as semanas a dizer que os números continuam iguais;
+- **as observações passam pelo mesmo `validateMarketObservation`.** Uma origem
+  em bloco não ganha dispensa de licença, período, geografia ou checksum. Um
+  instantâneo por atualizar acaba `stale` sozinho, sem código especial.
+
+### Concelho → NUTS II, derivado e não escrito à mão
+
+A fonte traz «Portugal, Setúbal, Almada»: país, distrito, concelho. Distrito
+**não é** NUTS II — Sines e Grândola são Alentejo apesar de serem do distrito
+de Setúbal; Mafra e Torres Vedras são Oeste apesar de serem do de Lisboa.
+
+O mapa deriva-se dos códigos hierárquicos do INE, onde os primeiros caracteres
+SÃO a NUTS II (`1B01503` Almada → `1B`; `1C11513` Sines → `1C`). Escrevê-lo à
+mão repetiria o erro de mapear `11A` como Grande Lisboa quando é Área
+Metropolitana do Porto.
+
+Dois casos que a primeira versão errava em silêncio:
+
+- **homónimos.** O INE escreve `Lagoa` (Algarve) e `Lagoa (R.A.A.)`; a fonte dos
+  contratos escreve as duas como «Lagoa» e diz a região à parte. Um índice de
+  um-para-um mandava **422 contratos dos Açores para o Algarve**. Agora cada
+  grafia guarda todos os candidatos e o desempate usa apenas duas inferências
+  derivadas: o distrito nomeia uma região autónoma, ou não nomeia nenhuma e
+  portanto o sítio é continental;
+- **abreviaturas.** «Vila Real Sto Antonio», «Fig. Castelo Rodrigo». A tabela
+  `GRAFIAS_ALTERNATIVAS` é ortografia, não geografia: aponta para um nome que
+  tem de existir na lista do INE, e `aliasesPendentes()` **falha o job** quando
+  deixa de existir. Recuperou 830 dos 952 contratos que se perdiam; os 122 que
+  ficam dizem «Concelho não determinado» na própria fonte.
+
+### O que se conta e o que não se conta
+
+| Decisão | Razão |
+|---|---|
+| não somar `precoContratual` | o relatório mestre proíbe tratar o valor anunciado como receita provável; «450 M€ na tua zona» convidaria exatamente a essa leitura |
+| não publicar quota de PME | `adjudicatarioPMEs` nunca aparece como lista vazia: ou traz NIFs (213 382) ou não existe (33 596). «Ausente» tanto pode ser «nenhuma PME» como «não declarado» |
+| não contar adjudicatários únicos | um NIF por zona e por ano aproxima-se de identificar empresas concretas |
+| aceitar tipos multivalorados | `tipoContrato` é sempre um array e 1 838 contratos declaram mais do que um tipo; olhar só para o primeiro deitava fora contratos pela ordem dos rótulos |
+| lista de PERMISSÃO para procedimentos abertos | a lista de exclusão contava 31 040 chamadas ao abrigo de acordo-quadro e 14 485 contratações excluídas como «abertos»: **86 019 em vez de 33 825** |
+| completude regional < 1 | 15% dos contratos não trazem concelho legível. Contam no país e em zona nenhuma; declarar completude 1 nas zonas afirmaria uma cobertura que a fonte não dá |
+
+### Atualização periódica
+
+`.github/workflows/mercado-ingestao.yml` corre à segunda-feira. Nunca faz push
+para `main`: escreve no ramo `dados/mercado-contratos` e abre um PR com a tabela
+antes/depois das contagens nacionais. A regra 9 do CLAUDE.md não abre exceções
+para dados — `scripts/anotar-novidade-mercado.mjs` sobe o patch e escreve a
+entrada do popup de Novidades a partir dos números que mudaram mesmo.
+
+Se a ingestão falhar, abre (ou comenta) uma issue com a etiqueta `dados-mercado`
+e não altera número nenhum.
 
 ## 9. Integridade e source health
 
@@ -224,22 +316,26 @@ A rota `/ferramentas/descobrir-negocio` pode existir antes de haver uma
 7. integração explícita com a Pricing Engine;
 8. cartões com fonte, geografia, período, recolha e limitações visíveis.
 
-Os cinco pilotos consultam fontes oficiais no servidor. Treze séries, cinco
-operações estatísticas independentes, todas com licença CC BY do dataset ou a
-política de reutilização do Eurostat.
+Os cinco pilotos consultam fontes oficiais. Quinze séries, seis operações
+estatísticas independentes, todas com licença CC BY do dataset, a política de
+reutilização do Eurostat ou o domínio público declarado pelo IMPIC.
 
 | Hipótese | Séries | Operações | Estado sem input do utilizador |
 |---|---|---|---|
 | Operações turísticas | ocupação-quarto + nascimentos de sociedades | 2 | `candidate` |
 | Operações digitais | intensidade digital (micro, 10–49) + nascimentos (individual, sociedade) | 2 | `candidate` |
 | Transições de casa | transações por famílias + índice de envelhecimento | 2 | `candidate` |
+| Concursos públicos | procedimentos abertos + contratos celebrados + emprego em empresas <10 + nascimentos de sociedades | 3 | `candidate` |
 | Acompanhamento sénior | competências digitais (65–74, total) + envelhecimento | 2 | `signal_detected` |
-| Concursos públicos | emprego em empresas <10 + nascimentos de sociedades | 2 | `signal_detected` |
 
-Os dois últimos ficam em `signal_detected` de propósito: nenhuma das suas séries
-é de procura ou transação. A honestidade está na falta declarada — «falta um
-sinal recente de procura ou transação» — e não numa promoção arranjada. Para o
-piloto de concursos, esse sinal é o Portal BASE, que continua por ligar.
+O último fica em `signal_detected` de propósito: nenhuma das suas séries é de
+procura ou transação. A honestidade está na falta declarada — «falta um sinal
+recente de procura ou transação» — e não numa promoção arranjada.
+
+O piloto de concursos estava no mesmo caso até o Portal BASE entrar. Não subiu
+porque se mudou o gate: subiu porque passou a existir um sinal transacional a
+sério — contratos celebrados e registados — vindo de uma operação estatística
+que não é nem o INE nem o Eurostat.
 
 `evidence_qualified` é atingível a partir de `candidate`, e só com o que a
 pessoa traz: um cenário de preço viável no motor canónico e os requisitos
@@ -268,7 +364,17 @@ npm test
 npm run build
 # com `npm start` noutro terminal:
 npm run descobrir:e2e
+
+# ingestão em bloco (rede: dados.gov + INE, ~25 s, ~52 MB)
+npm run mercado:ingerir              # reescreve o instantâneo se mudou
+npm run mercado:ingerir -- --forcar  # relê mesmo que a data do recurso não tenha mudado
+npm run mercado:check                # falha se o commitado divergir da fonte
 ```
+
+`mercado:check` **não** entra no build: descarrega dezenas de megabytes e
+depende de duas redes. O que protege o build é o `contentHash`, recalculado a
+partir das próprias observações em `negocio-market-contratos-snapshot.test.ts`
+— editar um número à mão e commitar deixa de passar despercebido.
 
 O conjunto dedicado cobre source registry, integridade, frescura, lineage,
 evidence gate, conectores INE/Eurostat, quarentena, snapshots, adapter de preço,
@@ -333,6 +439,9 @@ calcular e ninguém conseguia atingir.
 - `/api/market/pilots`: pack público agregado, cacheado, sem perfil do utilizador;
 - `/api/market/pilots`: degrada para uma lista vazia identificada em vez de 500
   quando algo falha antes da ingestão;
+- `/api/market/pilots`: as séries em bloco continuam a responder com a rede toda
+  em baixo — é o ponto de ler fora do produto, e está coberto por um teste que
+  injeta um `fetch` que só lança;
 - `/ferramentas/recibos-verdes`: incorpora o Pricing Engine e transfere a BASE
   MENSAL sem IVA (preço × unidades/mês) e a projeção anual para o cálculo
   fiscal. Passar o preço unitário para o campo mensal foi um defeito real de

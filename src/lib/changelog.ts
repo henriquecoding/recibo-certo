@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.94.0",
+    data: "2026-08-21",
+    titulo: "Os concursos públicos entraram na ferramenta de descoberta — com quase 250 mil contratos contados",
+    itens: [
+      "A hipótese de apoiar pequenas empresas a concorrer a concursos públicos passou de «sinal a investigar» a «candidata a teste». Ganhou o que lhe faltava: um sinal de transações reais, e não só de estrutura.",
+      "Passas a ver quantos contratos de serviços e bens o Estado celebrou na tua região em 2025, e quantos desses correram por procedimento aberto a qualquer interessado. São 230 709 contratos em todo o país, dos quais 33 825 por concurso.",
+      "Os dois números estão separados de propósito. O total mede o mercado que existe; só o segundo mede por onde alguém de fora consegue entrar. Ajuste direto, consulta prévia e chamadas ao abrigo de acordo-quadro não contam como porta aberta, porque não são.",
+      "O valor dos contratos não aparece em lado nenhum, e é deliberado: o montante anunciado de um contrato público não é receita provável de quem o ganha, e publicá-lo convidava exatamente a essa leitura.",
+      "Cada leitura por região diz agora que cobre 85% dos contratos, não 100%. Quinze por cento dos registos não identificam o concelho, contam no país e em região nenhuma — e a ferramenta prefere dizer isso a fingir cobertura que não tem.",
+      "Os dados são lidos uma vez por semana, fora da aplicação, a partir do ficheiro oficial do Portal BASE publicado no dados.gov.pt. A página mostra a data dessa leitura em vez de dar a entender que consultou o portal agora — e continua a mostrar os números mesmo quando as outras fontes não respondem.",
+      "Quatro das cinco hipóteses cruzam agora duas ou mais fontes independentes. A quinta continua a dizer que lhe falta um sinal de procura, porque falta mesmo.",
+    ],
+  },
+  {
     version: "2.93.0",
     data: "2026-08-20",
     titulo: "A ferramenta de descoberta passa a ser legível sem JavaScript — e a sugerir uma coisa de cada vez",

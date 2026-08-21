@@ -93,12 +93,14 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
       ] as const),
       notes: "Cobertura, formato, qualidade e frescura pertencem ao recurso, não ao portal como um todo.",
     }),
-    parserVersion: "dados-gov-catalog@0",
-    connectorStatus: "planned",
+    parserVersion: "dados-gov-catalog@1+bulk-zip-json@1",
+    connectorStatus: "ready",
     allowedUses: Object.freeze(["structural", "conjunctural", "transactional", "operational"] as const),
     limitations: Object.freeze([
       "Estar no catálogo não aprova automaticamente a licença do recurso.",
       "Metadados incompletos ou ligações quebradas ficam em quarentena.",
+      "Os recursos em bloco são lidos por um job agendado, não a pedido: o que a aplicação serve é o instantâneo commitado, com a data da extração à vista.",
+      "O valor contratual anunciado não é receita provável e não alimenta nenhum número publicado.",
     ]),
   }),
   eurostat: Object.freeze({
