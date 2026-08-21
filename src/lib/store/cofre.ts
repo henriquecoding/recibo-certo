@@ -57,6 +57,11 @@ export const DOMINIOS = {
   // um handoff que fica no browser deixa de ser uma ponte e passa a ser
   // uma cópia esquecida. Ver `store/handoff-negocio-empresa.ts`.
   "handoff-negocio-empresa": "recibocerto:handoff-negocio-empresa:v1",
+  // As hipóteses de negócio que a pessoa está a testar: entrevistas,
+  // orçamentos aceites, pilotos pagos e vendas. É a prova comercial dela e
+  // dos clientes dela — a coisa que menos pode sair do dispositivo sem uma
+  // decisão explícita. Ver `store/hipoteses-mercado.ts`.
+  "hipoteses-mercado": "recibocerto:hipoteses-mercado:v1",
 } as const;
 
 /**

@@ -1,0 +1,1046 @@
+{
+  "schemaVersion": 1,
+  "id": "contratos-publicos",
+  "geradoEm": "2026-08-21T02:29:32.832Z",
+  "transformVersion": "base-contratos-por-nuts2@1",
+  "proveniencia": {
+    "dataset": "contratos-publicos-portal-base-impic-contratos-de-2012-a-2026",
+    "paginaUrl": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+    "publicador": "IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção",
+    "licenca": "other-pd",
+    "recurso": {
+      "id": "7d0a3719-a477-4b91-ba0a-3033b13d790d",
+      "ficheiro": "Contratos2025.json",
+      "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20260816-091135-e2c09fd9/contratos2025.zip",
+      "atualizadoEm": "2026-08-16T09:11:35.437000+00:00",
+      "bytes": 54461325
+    },
+    "checksumOrigem": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79",
+    "registosLidos": 246978,
+    "contratosLocalizados": 196562,
+    "descartes": {
+      "anoDiferente": 0,
+      "tipoNaoRelevante": 16269,
+      "semConcelho": 34025,
+      "concelhoDesconhecido": 122,
+      "concelhoAmbiguo": 0
+    }
+  },
+  "observations": [
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:11",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 68418,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "11",
+        "name": "Norte",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:15",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 8486,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "15",
+        "name": "Algarve",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:19",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 30447,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "19",
+        "name": "Centro",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:1A",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 49832,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1A",
+        "name": "Grande Lisboa",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:1B",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 11156,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1B",
+        "name": "Península de Setúbal",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:1C",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 11916,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1C",
+        "name": "Alentejo",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:1D",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 10688,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1D",
+        "name": "Oeste e Vale do Tejo",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:20",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 3251,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "20",
+        "name": "Açores",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:30",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 4073,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "30",
+        "name": "Madeira",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.contracts.services:2025:PT",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.contracts.services",
+      "value": 230709,
+      "unit": "contratos",
+      "geography": {
+        "country": "PT",
+        "level": "country",
+        "code": "PT",
+        "name": "Portugal"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem de contratos celebrados. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 1,
+        "semanticMapping": "approved",
+        "flags": []
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:11",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 7021,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "11",
+        "name": "Norte",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:15",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 1653,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "15",
+        "name": "Algarve",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:19",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 3594,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "19",
+        "name": "Centro",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:1A",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 9568,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1A",
+        "name": "Grande Lisboa",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:1B",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 1439,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1B",
+        "name": "Península de Setúbal",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:1C",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 1390,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1C",
+        "name": "Alentejo",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:1D",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 1364,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "1D",
+        "name": "Oeste e Vale do Tejo",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:20",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 735,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "20",
+        "name": "Açores",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:30",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 710,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "nuts2",
+        "code": "30",
+        "name": "Madeira",
+        "classificationVersion": "NUTS 2024"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 0.851991036327148,
+        "semanticMapping": "approved",
+        "flags": [
+          "cobertura-regional-parcial"
+        ]
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    },
+    {
+      "id": "dados-gov:procurement.open_procedures:2025:PT",
+      "sourceId": "dados-gov",
+      "metricId": "procurement.open_procedures",
+      "value": 33825,
+      "unit": "procedimentos",
+      "geography": {
+        "country": "PT",
+        "level": "country",
+        "code": "PT",
+        "name": "Portugal"
+      },
+      "classifications": {
+        "keywords": [
+          "Aquisição de serviços",
+          "Aquisição de bens móveis",
+          "Locação de bens móveis"
+        ]
+      },
+      "referencePeriod": {
+        "start": "2025-01-01",
+        "end": "2025-12-31",
+        "label": "2025"
+      },
+      "publishedAt": "2026-08-16",
+      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "validUntil": "2027-12-31",
+      "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+      "transform": {
+        "id": "base-contratos-por-nuts2@1",
+        "version": "1",
+        "description": "Contagem dos mesmos contratos cujo procedimento foi publicitado e aberto a qualquer interessado — concurso público, concurso limitado por prévia qualificação, concurso de conceção e as formas simplificadas destes, diálogo concorrencial e parceria para a inovação. Ajuste direto, consulta prévia, chamadas ao abrigo de acordo-quadro e contratação excluída NÃO contam: nenhuma delas é uma porta por onde alguém de fora entra. Contratos de aquisição de serviços, de bens móveis e de locação de bens móveis, celebrados e registados no Portal BASE, com a NUTS II derivada do concelho de execução publicado pela fonte. Empreitadas e concessões ficam de fora. Um contrato sem concelho legível conta no país e em zona nenhuma, pelo que a soma das zonas é inferior ao total nacional. Não se somam valores contratuais."
+      },
+      "license": {
+        "status": "approved",
+        "scope": "dataset",
+        "identifier": "other-pd",
+        "url": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
+        "attribution": "Fonte: IMPIC - Instituto Dos Mercados Públicos, do Imobiliário e da Construção — Portal BASE, via dados.gov.pt"
+      },
+      "quality": {
+        "status": "observed",
+        "completeness": 1,
+        "semanticMapping": "approved",
+        "flags": []
+      },
+      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+    }
+  ],
+  "contentHash": "sha256:ad9097de4c91ab44ef8fe974801465e6ad990c02610f38b26ed2a7351bd2749c"
+}

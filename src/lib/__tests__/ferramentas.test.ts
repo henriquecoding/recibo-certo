@@ -337,12 +337,12 @@ describe("as quatro ferramentas que faltavam", () => {
     }
   });
 
-  it("o catálogo tem as 15 ferramentas reais do inventário", () => {
-    // 14 no levantamento original; a 15.ª é o motor de preço
-    // (`calcular-preco`). Este número sobe DE PROPÓSITO e uma ferramenta de
+  it("o catálogo tem as 16 ferramentas reais do inventário", () => {
+    // 14 no levantamento original; a 15.ª é o motor de preço e a 16.ª é o
+    // motor de descoberta (`descobrir-negocio`). Este número sobe DE PROPÓSITO e uma ferramenta de
     // cada vez: o teste existe para que ninguém acrescente uma entrada ao
     // catálogo sem reparar que está a mudar o inventário do produto.
-    expect(TOTAL_FERRAMENTAS).toBe(15);
+    expect(TOTAL_FERRAMENTAS).toBe(16);
   });
 });
 

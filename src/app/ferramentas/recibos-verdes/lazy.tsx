@@ -22,15 +22,18 @@ function Esqueleto() {
   );
 }
 
-const SimuladorIntegradoDynamic = dynamic(() => import("@/components/SimuladorIntegrado"), {
+const RecibosVerdesStudioDynamic = dynamic(
+  () => import("@/components/recibos-verdes/RecibosVerdesStudio"),
+  {
   ssr: false,
   loading: () => <Esqueleto />,
-});
+  },
+);
 
 export default function SimuladorRecibosVerdesLazy() {
   return (
     <ErrorBoundary etiqueta="o simulador de recibos verdes">
-      <SimuladorIntegradoDynamic vista="rv" />
+      <RecibosVerdesStudioDynamic />
     </ErrorBoundary>
   );
 }

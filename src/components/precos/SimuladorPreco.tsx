@@ -76,8 +76,8 @@ const INFORMATIVOS: readonly SeveridadeAviso[] = ["info"];
  * A página pública `/ferramentas/calcular-preco`. Dona do URL (`?c=`), do
  * histórico do browser e do cofre local — o comportamento de sempre.
  *
- * ── `negocio` ───────────────────────────────────────────────────────
- * Embutida no estúdio de negócio, a definir UMA oferta de várias. Aqui
+ * ── `negocio` / `recibos-verdes` ────────────────────────────────────
+ * Embutida noutro estúdio, a definir UMA oferta ou o valor de um recibo. Aqui
  * nada disso lhe pertence:
  *
  *  · o URL é do estúdio. Escrever `?c=` a partir daqui trocaria o passo
@@ -93,7 +93,7 @@ const INFORMATIVOS: readonly SeveridadeAviso[] = ["info"];
  * camadas de revelação e a memória de cálculo. É a mesma ferramenta —
  * §9/ATO 2 do relatório é explícito: «Não iframe. Não cópia. Não fork.»
  */
-export type SuperficiePreco = "standalone" | "negocio";
+export type SuperficiePreco = "standalone" | "negocio" | "recibos-verdes";
 
 export interface SimuladorPrecoProps {
   cenarioInicial?: string | null;
@@ -127,7 +127,7 @@ export default function SimuladorPreco({
   rotuloConcluir = "Adicionar esta oferta ao negócio",
   aoCancelar,
 }: SimuladorPrecoProps) {
-  const embutido = superficie === "negocio";
+  const embutido = superficie !== "standalone";
 
   // ── A intenção é ESTADO, não uma prop congelada ───────────────────
   //  Porque tem uma saída: quem entra por «já vendo» e descobre que não

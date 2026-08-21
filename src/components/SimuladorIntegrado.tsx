@@ -2958,7 +2958,19 @@ function EmpresaInputs({
 // COMPONENTE PRINCIPAL
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos" | "rv" | "empresa" } = {}) {
+export interface SimuladorIntegradoProps {
+  vista?: "ambos" | "rv" | "empresa";
+  /** Valor base sem IVA, vindo do Pricing Engine. Só inicializa o formulário. */
+  valorInicial?: number;
+  /** Projeção anual sem IVA, quando o cenário de preço declarou volume. */
+  faturacaoAnualInicial?: number;
+}
+
+export default function SimuladorIntegrado({
+  vista = "ambos",
+  valorInicial,
+  faturacaoAnualInicial,
+}: SimuladorIntegradoProps = {}) {
   // ── Modo e cenário ───────────────────────────────────────────────────────
   // `vista` (homepage): "rv" mostra só Recibos Verdes, "empresa" só Empresa
   // (com destaque próprio), escondendo o toggle e a comparação integrada —
@@ -2975,8 +2987,14 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
   const [faturacaoComIvaEmpresa, setFaturacaoComIvaEmpresa] = useState(false);
 
   // ── Valores de entrada ───────────────────────────────────────────────────
-  const [bruto, setBruto] = useState(1_500);
-  const [brutoAnual, setBrutoAnual] = useState(18_000);
+  const [bruto, setBruto] = useState(() =>
+    Number.isFinite(valorInicial) && (valorInicial ?? 0) > 0 ? valorInicial! : 1_500,
+  );
+  const [brutoAnual, setBrutoAnual] = useState(() =>
+    Number.isFinite(faturacaoAnualInicial) && (faturacaoAnualInicial ?? 0) > 0
+      ? faturacaoAnualInicial!
+      : 18_000,
+  );
 
   const [atividade, setAtividade] = useState<Atividade>(ATIVIDADE_DEFAULT);
   const [regiao, setRegiao] = useState<Regiao>("continente");
@@ -3092,6 +3110,12 @@ export default function SimuladorIntegrado({ vista = "ambos" }: { vista?: "ambos
     // No modo "Abrir Empresa" entramos direto no simulador profissional
     // (o onboarding guiado é orientado a recibos verdes).
     if (vista === "empresa") return "profissional";
+    // Quem chega com um valor já formado no Pricing Engine não é «novo
+    // aqui»: acabou de construir o preço. Mostrar-lhe o «Como queres
+    // simular?» escondia atrás de mais uma escolha o número que o ecrã
+    // anterior acabou de prometer ter transferido — e o modo guiado
+    // voltaria a pedir a faturação que ele já calculou.
+    if (Number.isFinite(valorInicial) && (valorInicial ?? 0) > 0) return "profissional";
     // Se houver um cenário de recibos verdes marcado para reabrir, entramos
     // logo no modo guiado (onde o instantâneo é hidratado).
     if (haReabertura("recibos")) return "guiado";

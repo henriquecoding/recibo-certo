@@ -168,3 +168,8 @@ export {
   novoTrabalhador,
   uid,
 } from "./fabrica";
+
+// Market Intelligence é uma camada de evidência independente. Não contém
+// taxas fiscais nem um segundo solver de preço; entrega sinais auditáveis
+// para o domínio de negócio e delega a viabilidade à Pricing Engine.
+export * from "./market";

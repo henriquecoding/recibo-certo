@@ -32,7 +32,7 @@ export default function ToolStart({ tool }: { tool: ToolDefinition }) {
           Era um `<dl>` com o ícone dentro de cada grupo. A especificação só
           deixa um `<div>` agrupar um par `dt`/`dd` se esse `div` contiver
           APENAS o par — e o ícone estava lá dentro, o que tornava a árvore
-          inválida em todas as 15 ferramentas ao mesmo tempo.
+          inválida em todas as ferramentas ao mesmo tempo.
           Uma lista de rótulo + valor diz a mesma coisa a um leitor de ecrã,
           é válida, e não obriga a mexer no aspeto. */}
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2">

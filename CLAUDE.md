@@ -84,6 +84,13 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   orquestrador `motor.ts`. NÃO duplica `fiscal-data.ts` — lê de lá.
 - `src/lib/analytics/` — ★ camada de medição: dicionário de eventos, identidade e
   atribuição, barreira de PII, DVM (North Star) e definições do painel semanal.
+- `src/lib/negocio/market/` — ★ motor de evidência de mercado: registo de fontes,
+  gate de evidência, frescura, quarentena, conectores INE/Eurostat e pilotos.
+- `src/lib/negocio/market/bulk/` — ★ ingestão de fontes que não cabem num pedido
+  HTTP (contratos públicos: 52 MB → 273 MB). O instantâneo em `bulk/dados/` é
+  gerado por `npm run mercado:ingerir` e **é para commitar** — é ele que a
+  aplicação serve. Atualizado por `.github/workflows/mercado-ingestao.yml`,
+  que abre PR e nunca faz push para `main`.
 - `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.
 - `src/lib/routing.ts` — motor de routing comercial (FIZ / contabilista / Plus /
   sem parceiro) e as fronteiras que nunca se atravessam.

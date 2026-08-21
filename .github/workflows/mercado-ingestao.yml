@@ -1,0 +1,218 @@
+name: Atualização dos dados de mercado
+
+# Descarrega o ficheiro anual de contratos públicos do dados.gov, conta o que
+# há para contar e abre um PR quando os números mudam.
+#
+# Porque é que isto não corre no build nem numa rota:
+#   · são ~52 MB comprimidos que descomprimem para 273 MB;
+#   · trazem um quarto de milhão de registos, e o que fica no repositório
+#     são 20 contagens.
+# Ler isto a pedido seria fazer cada visita esperar meio minuto por um número
+# que muda uma vez por mês. Aqui corre uma vez por semana, fora do produto.
+#
+# NUNCA faz push para `main`: escreve num ramo próprio e abre um PR, para que
+# a mudança das contagens seja revista como qualquer outra — que é o ponto de
+# commitar os números em vez de os ir buscar em runtime.
+
+on:
+  schedule:
+    # Segunda-feira, 05:40 UTC. Fora das horas em que o portal republica.
+    - cron: "40 5 * * 1"
+  workflow_dispatch:
+    inputs:
+      forcar:
+        description: "Reler o ficheiro mesmo que a data do recurso não tenha mudado"
+        type: boolean
+        default: false
+
+concurrency:
+  # RC-CI-005: um push novo cancela o run anterior do mesmo ramo/PR, para a
+  # fila nao ficar entupida com resultados que ja nao interessam a ninguem.
+  # Em `main` NAO se cancela: cada commit da linha principal tem de ficar com
+  # o seu proprio resultado registado.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  RAMO: dados/mercado-contratos
+
+jobs:
+  ingerir:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      - name: Descarregar e recontar
+        id: ingestao
+        run: |
+          set +e
+          node --max-old-space-size=2048 scripts/ingerir-mercado.mjs \
+            ${{ inputs.forcar && '--forcar' || '' }} \
+            --resumo mercado-resumo.json 2>&1 | tee mercado-registo.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Abrir issue se a ingestão falhou
+        if: steps.ingestao.outputs.exit_code != '0'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            let registo = '(sem registo)';
+            try { registo = fs.readFileSync('mercado-registo.txt', 'utf8').slice(-6000); } catch {}
+
+            const corpo = [
+              'A ingestão dos dados de mercado falhou. Nenhum número foi alterado.',
+              '',
+              'Causas prováveis, por ordem de frequência:',
+              '',
+              '- o recurso do ano deixou de ser publicado com o nome esperado;',
+              '- o INE não respondeu, e sem a lista dos 308 concelhos não há conversão para NUTS II;',
+              '- uma grafia alternativa deixou de corresponder a um concelho real;',
+              '- o ficheiro mudou de formato (deixou de ser um ZIP de entrada única, ou o JSON de topo mudou de forma).',
+              '',
+              '```',
+              registo,
+              '```',
+            ].join('\n');
+
+            const { data: abertas } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'dados-mercado',
+            });
+
+            if (abertas.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: abertas[0].number,
+                body: `Nova tentativa falhada (${new Date().toISOString().slice(0, 10)}):\n\n${corpo}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `Ingestão de dados de mercado falhou — ${new Date().toISOString().slice(0, 10)}`,
+                body: corpo,
+                labels: ['dados-mercado'],
+              });
+            }
+
+      - name: Parar aqui se falhou
+        if: steps.ingestao.outputs.exit_code != '0'
+        run: exit 1
+
+      - name: Ver se há alguma coisa para commitar
+        id: mudanca
+        run: |
+          if [ -z "$(git status --porcelain src/lib/negocio/market/bulk/dados)" ]; then
+            echo "ha=false" >> "$GITHUB_OUTPUT"
+            echo "Os números não mudaram. Nada a fazer."
+          else
+            echo "ha=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Escrever a entrada de Novidades e subir a versão
+        if: steps.mudanca.outputs.ha == 'true'
+        run: |
+          set -e
+          node scripts/anotar-novidade-mercado.mjs mercado-resumo.json
+          node scripts/check-versao.mjs --fix
+
+      - name: Confirmar que o resultado é consistente antes de o propor
+        if: steps.mudanca.outputs.ha == 'true'
+        # O instantâneo é assinado: se alguma coisa correu mal na escrita, o
+        # `contentHash` deixa de bater e isto falha aqui, e não num PR aberto.
+        run: npx vitest run src/lib/__tests__/negocio-market-bulk.test.ts src/lib/__tests__/negocio-market-contratos-snapshot.test.ts
+
+      - name: Commitar no ramo de dados
+        if: steps.mudanca.outputs.ha == 'true'
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$RAMO"
+          git add src/lib/negocio/market/bulk/dados src/lib/version.ts src/lib/changelog.ts package.json
+          git commit -m "Contratos publicos: atualizar as contagens da fonte oficial"
+          git push --force-with-lease -u origin "$RAMO"
+
+      - name: Abrir ou atualizar o PR
+        if: steps.mudanca.outputs.ha == 'true'
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
+        with:
+          script: |
+            const fs = require('fs');
+            const ramo = process.env.RAMO;
+            const resumo = JSON.parse(fs.readFileSync('mercado-resumo.json', 'utf8'));
+
+            const linhas = ['## O que mudou', ''];
+            for (const alteracao of resumo.alteracoes) {
+              linhas.push(`### ${alteracao.id} — período ${alteracao.periodo ?? '?'}`);
+              linhas.push('');
+              linhas.push('| Métrica | Antes | Depois |');
+              linhas.push('| --- | ---: | ---: |');
+              for (const n of alteracao.nacionais) {
+                linhas.push(`| ${n.metricId} (Portugal) | ${n.antes ?? '—'} | ${n.depois} |`);
+              }
+              linhas.push('');
+              linhas.push(`${alteracao.zonasComMudanca} leitura(s) por região mudaram de valor.`);
+              linhas.push('');
+              linhas.push(`Fonte: ${alteracao.paginaUrl}`);
+              linhas.push('');
+            }
+            linhas.push('## O que rever');
+            linhas.push('');
+            linhas.push('- As contagens nacionais movem-se pouco entre extrações: uma variação grande é sinal de que a fonte mudou de forma, não de que houve mais contratos.');
+            linhas.push('- Nenhum valor monetário entra nestes números. Contam-se contratos e procedimentos.');
+            linhas.push('- A entrada do popup de Novidades foi escrita a partir destes mesmos números.');
+            linhas.push('');
+            linhas.push('Gerado por `.github/workflows/mercado-ingestao.yml`.');
+            const corpo = linhas.join('\n');
+
+            const { data: abertos } = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              head: `${context.repo.owner}:${ramo}`,
+            });
+
+            if (abertos.length > 0) {
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: abertos[0].number,
+                body: corpo,
+              });
+              core.notice(`PR #${abertos[0].number} atualizado.`);
+              return;
+            }
+
+            const { data: criado } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: 'Contratos públicos: atualizar as contagens da fonte oficial',
+              head: ramo,
+              base: context.payload.repository.default_branch,
+              body: corpo,
+            });
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: criado.number,
+              labels: ['dados-mercado'],
+            });
+            core.notice(`PR #${criado.number} aberto.`);

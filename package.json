@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.89.1",
+  "version": "2.94.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -11,6 +11,7 @@
     "contrato:check": "node scripts/check-contrato-publico.mjs",
     "contrato:check:producao": "node scripts/check-contrato-publico.mjs --exigir-ambiente",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
+    "descobrir:e2e": "node scripts/verificar-descobrir-negocio.mjs",
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
     "docs:build": "python3 scripts/compor-documento.py",
@@ -35,6 +36,7 @@
     "guias:year-rollover": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:year-rollover\"",
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
+    "market:check": "vitest run src/lib/__tests__/negocio-market-*.test.ts",
     "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
     "novidades:gen": "node scripts/gen-novidades.mjs",
