@@ -105,6 +105,19 @@ desfazê-la. Existiu um gatilho que recusava esse texto; saiu em
 `20260818210000_fim_da_mediacao`, e com ele saiu a obrigação de lermos
 tudo para o manter de pé.
 
+⚠️ Essa migração ficou pelo caminho em produção: os quatro gatilhos
+(`contabilista_mensagens`, `contabilista_vinculos`, `partilhas`,
+`pedido_cliente`) continuaram vivos e a recusar mensagens até 2026-08-21,
+com esta página a dizer o contrário. Fechado por
+`20260821022535_o_fim_da_mediacao_chega_a_producao.sql`, e guardado por
+duas provas que correm sozinhas: a secção 07 de
+`supabase/tests/completo/02-contrato-publico-de-contactos.sql` (que
+insere mesmo uma mensagem com um número de telefone) e
+`scripts/check-supabase.mjs`, que passou a perguntar «reaplicando as
+migrações por ordem, este objeto fica de pé?» em vez de «alguma migração
+cria este objeto?» — era esta segunda pergunta que dava o defeito por
+explicado.
+
 **Ficha estruturada** (`caso_contactos`: email, telefone, morada). Só
 chega aos contabilistas com o caso encaminhado enquanto
 `casos.partilha_contactos` for verdadeiro. Nasce **falso** desde

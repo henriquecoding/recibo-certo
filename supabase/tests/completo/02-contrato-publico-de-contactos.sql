@@ -396,3 +396,47 @@ SELECT t.eq(
   0, 'desfeito o ensaio, a view verdadeira continua sem o email');
 SELECT t.eq((SELECT nome FROM public.contabilistas_publico WHERE slug='ana-fronteira'),
   'Ana Fronteira', 'e continua a servir o diretório');
+
+
+\echo ''
+\echo '── 07. A mediação saiu, e tem de continuar fora ────────────────'
+
+--  ⚠️ ESTA SECÇÃO NASCEU DE UM DEFEITO EM PRODUÇÃO, não de uma ideia.
+--
+--  A `20260818210000_fim_da_mediacao` larga quatro gatilhos que recusavam
+--  texto parecido com um contacto. A 2026-08-21, em produção, os quatro
+--  continuavam vivos e ativos: dessa migração tinha ficado tudo aplicado
+--  menos o fim. Quem escrevesse o próprio número de telefone numa mensagem
+--  ao contabilista levava um erro da base que nenhum ecrã trata, porque os
+--  ecrãs foram escritos depois de a regra ter saído.
+--
+--  O `check-supabase.mjs` não apanhou isso porque perguntava «alguma
+--  migração cria este objeto?» — e alguma cria: a `20260816150000`. A
+--  pergunta certa é «reaplicando as migrações por ordem, este objeto fica
+--  de pé?», e aqui a base É construída por ordem. Fechado também do lado
+--  do verificador, mas esta é a prova que corre sem credenciais nenhumas.
+
+SELECT t.eq(
+  (SELECT count(*)::int FROM pg_trigger g JOIN pg_proc p ON p.oid = g.tgfoid
+    WHERE NOT g.tgisinternal AND p.proname = 'rejeitar_contacto_externo'),
+  0, 'nenhum gatilho recusa contactos escritos no texto');
+
+SELECT t.eq(
+  (SELECT count(*)::int FROM pg_proc
+    WHERE pronamespace = 'public'::regnamespace
+      AND proname IN ('rejeitar_contacto_externo', 'texto_parece_contacto_externo',
+                      'rever_mensagem', 'encaminhar_caso', 'libertar_documento')),
+  0, 'as funções da mediação e da triagem manual não existem');
+
+--  E a prova que interessa, que é a da pessoa: a mensagem passa.
+BEGIN;
+INSERT INTO public.contabilista_mensagens (vinculo_id, autor_id, corpo)
+VALUES ('11110000-0000-4000-8000-000000000004',
+        'c1000000-0000-4000-8000-000000000004',
+        'Podes ligar-me para o 912345678 ou escrever para ana@exemplo.pt.');
+SELECT t.eq(
+  (SELECT count(*)::int FROM public.contabilista_mensagens
+    WHERE vinculo_id = '11110000-0000-4000-8000-000000000004'
+      AND corpo LIKE '%912345678%'),
+  1, 'escrever o próprio contacto numa mensagem é decisão de quem escreve');
+ROLLBACK;

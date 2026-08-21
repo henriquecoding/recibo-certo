@@ -13,10 +13,26 @@
 //   · não havia `config.toml`, e portanto nada dizia a que projeto isto
 //     pertence.
 //
-//  A pergunta que importa, e a que este script responde: **existe algum
-//  objeto na base que nenhuma migração deste repositório cria?** Se
-//  existir, reconstruir a base a partir do repositório dá um esquema
-//  diferente do real — e ninguém dá por isso até precisar.
+//  A pergunta que importa, e a que este script responde: **reconstruindo
+//  a base a partir deste repositório, ficava com os objetos que ela tem?**
+//  Se não ficava, o repositório deixou de descrever o real — e ninguém dá
+//  por isso até precisar.
+//
+//  ⚠️ A PERGUNTA ERA OUTRA, E ERA A ERRADA
+//  ---------------------------------------
+//  Até 2026-08-21 isto perguntava «alguma migração CRIA este objeto?».
+//  Passava sempre que houvesse um `CREATE` em algum lado — mesmo que uma
+//  migração POSTERIOR o largasse. E foi por essa fresta que passou o
+//  defeito da `20260818210000_fim_da_mediacao`: ela larga quatro gatilhos
+//  que recusavam contactos no texto, em produção os quatro continuavam
+//  vivos, e este verificador dava-os por explicados porque a
+//  `20260816150000` os cria.
+//
+//  Agora a pergunta é a de reaplicar: percorrem-se as migrações POR ORDEM
+//  e vale a ÚLTIMA coisa que cada uma diz sobre o objeto. Se a última for
+//  um `DROP`, o objeto não devia lá estar — e o alarme é esse, não a
+//  ausência de origem. E os gatilhos entram na comparação: o defeito
+//  acima era um gatilho, e gatilhos não estavam a ser perguntados.
 //
 //  ── Como correr ─────────────────────────────────────────────────────
 //    SUPABASE_DB_URL=postgresql://... node scripts/check-supabase.mjs
@@ -106,9 +122,10 @@ const url = process.env.SUPABASE_DB_URL?.trim();
 
 if (!url) {
   avisos.push(
-    "Sem SUPABASE_DB_URL não se compara com a base. Os objetos que existem " +
-      "lá e não têm origem aqui ficaram POR VERIFICAR — não confundas isso " +
-      "com não existirem.",
+    "Sem SUPABASE_DB_URL não se compara com a base. Ficou POR VERIFICAR se " +
+      "reaplicar estas migrações por ordem daria os objetos que a base tem — " +
+      "e é aí que mora a deriva, tanto o que lá está a mais como o que uma " +
+      "migração já largou e continua vivo. Não confundas isso com estar bem.",
   );
 } else {
   // `psql` e não o pacote `pg`, de propósito: o arreio de RLS já depende
@@ -125,7 +142,13 @@ if (!url) {
     SELECT p.proname
       FROM pg_proc p
      WHERE p.pronamespace = 'public'::regnamespace
-       AND p.oid NOT IN (SELECT objid FROM ext)`;
+       AND p.oid NOT IN (SELECT objid FROM ext)
+    UNION
+    --  Os gatilhos, que faltavam aqui. O defeito de 2026-08-21 era um.
+    SELECT g.tgname
+      FROM pg_trigger g JOIN pg_class c ON c.oid = g.tgrelid
+     WHERE NOT g.tgisinternal AND c.relnamespace = 'public'::regnamespace
+       AND g.oid NOT IN (SELECT objid FROM ext)`;
 
   let objetos = null;
   try {
@@ -144,29 +167,72 @@ if (!url) {
   }
 
   if (objetos) {
-    const sql = migracoes
-      .map((f) => readFileSync(join(DIR_MIGRACOES, f), "utf8"))
-      .join("\n");
+    //  Por ORDEM, e uma de cada vez: o que importa não é se alguma
+    //  migração menciona o objeto, é o que sobra depois de todas correrem.
+    const porOrdem = migracoes.map((f) => readFileSync(join(DIR_MIGRACOES, f), "utf8"));
 
-    const orfaos = objetos.filter(
-      (nome) =>
-        // Maiúsculas e minúsculas: metade das migrações antigas está em
-        // minúsculas, e um `grep` sensível dava quatro falsos positivos na
-        // primeira vez que isto correu.
-        !new RegExp(
-          `(table|view|function)\\s+(if not exists\\s+)?(public\\.)?${nome}\\b`,
-          "i",
-        ).test(sql),
-    );
+    const TIPOS = "table|view|materialized\\s+view|function|trigger";
 
-    if (orfaos.length > 0) {
+    /**
+     * A última coisa que o repositório diz sobre um objeto: "cria",
+     * "larga", ou nada. Maiúsculas e minúsculas são indiferentes — metade
+     * das migrações antigas está em minúsculas, e um `grep` sensível dava
+     * quatro falsos positivos na primeira vez que isto correu.
+     */
+    function ultimaPalavra(nome) {
+      const cria = new RegExp(
+        `create\\s+(or\\s+replace\\s+)?(${TIPOS})\\s+(if\\s+not\\s+exists\\s+)?(public\\.)?${nome}\\b`,
+        "gi",
+      );
+      const larga = new RegExp(
+        `drop\\s+(${TIPOS})\\s+(if\\s+exists\\s+)?(public\\.)?${nome}\\b`,
+        "gi",
+      );
+
+      let veredicto = null;
+      for (const sql of porOrdem) {
+        // Dentro do mesmo ficheiro vale a posição: o idioma
+        // `DROP TRIGGER IF EXISTS x; CREATE TRIGGER x` é criar, não largar.
+        let ultimo = -1;
+        for (const m of sql.matchAll(cria)) {
+          if (m.index > ultimo) { ultimo = m.index; veredicto = "cria"; }
+        }
+        for (const m of sql.matchAll(larga)) {
+          if (m.index > ultimo) { ultimo = m.index; veredicto = "larga"; }
+        }
+      }
+      return veredicto;
+    }
+
+    const semOrigem = [];
+    const largados = [];
+    for (const nome of objetos) {
+      const v = ultimaPalavra(nome);
+      if (v === null) semOrigem.push(nome);
+      else if (v === "larga") largados.push(nome);
+    }
+
+    if (semOrigem.length > 0) {
       problemas.push(
-        `${orfaos.length} objeto(s) existem na base e nenhuma migração os cria: ` +
-          `${orfaos.join(", ")}. Reconstruir a base a partir deste repositório ` +
+        `${semOrigem.length} objeto(s) existem na base e nenhuma migração os cria: ` +
+          `${semOrigem.join(", ")}. Reconstruir a base a partir deste repositório ` +
           "daria um esquema diferente do real.",
       );
-    } else {
-      oks.push(`os ${objetos.length} objetos da base têm origem numa migração`);
+    }
+
+    if (largados.length > 0) {
+      problemas.push(
+        `${largados.length} objeto(s) existem na base e a última migração que fala ` +
+          `deles LARGA-OS: ${largados.join(", ")}. Uma migração ficou pelo caminho — ` +
+          "a base tem coisas que o repositório já deu por saídas, e o código foi " +
+          "escrito a contar com a saída delas.",
+      );
+    }
+
+    if (semOrigem.length === 0 && largados.length === 0) {
+      oks.push(
+        `reaplicando as migrações por ordem, os ${objetos.length} objetos da base ficam de pé`,
+      );
     }
   }
 }

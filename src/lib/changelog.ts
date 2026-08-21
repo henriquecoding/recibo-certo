@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.89.1",
+    data: "2026-08-21",
+    titulo: "Escrever o teu contacto numa mensagem deixa de dar erro",
+    itens: [
+      "Se escrevesses o teu número de telefone ou o teu email numa mensagem ao contabilista — ou num convite de ligação, na nota de uma partilha, ou num pedido — a mensagem não seguia. Aparecia um erro a dizer que os contactos pessoais não se partilham aqui. Essa regra tinha sido retirada há dias, mas só no lado da aplicação: na base de dados continuava de pé, e é ela que decide. Agora saiu dos dois lados.",
+      "O que muda para ti: o que escreves numa mensagem é decisão tua, no momento em que a escreves. O que continua a não sair sozinho é a tua ficha de contactos num caso — essa só segue se marcares a caixa, e podes desmarcá-la quando quiseres.",
+    ],
+  },
+  {
     version: "2.89.0",
     data: "2026-08-20",
     titulo: "O contacto de um contabilista deixa de ser público, e passa a ser teu quando ele te aceita",
