@@ -275,14 +275,24 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
     expect(r.fidelidade?.carimbos).toBe(antes + 1);
   });
 
-  it("completar o cartão emite um cupão e abre outro", async () => {
+  // ⚠️ ESTE TESTE AFIRMAVA O CONTRÁRIO DO PRODUTO.
+  //
+  // Chamava-se «completar o cartão emite um cupão e abre outro», e
+  // exigia `cartoesAbertos(...).length === 1` logo a seguir a completar.
+  // A demonstração corria a máquina V1 e cumpria-o; o produto real
+  // recusa-o. A invariante central da Fidelidade V2 (§15, §20) é que não
+  // coexistem um benefício por usar e um cartão novo a acumular.
+  //
+  // Um teste verde sobre o comportamento errado é pior do que teste
+  // nenhum: foi ele que manteve a divergência viva.
+  it("completar o cartão emite o benefício e NÃO abre o ciclo seguinte", async () => {
     const estado = loja.semearPara(new Date());
     const cartao = estado.cartoes[0];
     cartao.carimbos = cartao.meta - 1;
     const cupoesAntes = estado.cupoes.length;
 
-    estado.agendamentos.push({
-      id: "teste-completa",
+    const injetar = (id: string) => estado.agendamentos.push({
+      id,
       contabilistaId: estado.ficha.userId,
       clienteId: cartao.clienteId,
       inicio: new Date(Date.now() - 3600_000).toISOString(),
@@ -294,11 +304,63 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
       criadoEm: new Date().toISOString(),
     });
 
+    injetar("teste-completa");
     const r = await loja.decidirConsulta("teste-completa", "realizada", undefined, { precoCents: 6500 });
     expect(r.fidelidade?.completou).toBe(true);
     // A percentagem é a CONGELADA no cartão, não a da ficha de agora.
     expect(r.fidelidade?.percentagem).toBe(cartao.descontoPct);
     expect((await loja.meusCupoes()).length).toBe(cupoesAntes + 1);
+    expect((await loja.cartoesAbertos(cartao.clienteId)).length).toBe(0);
+
+    // E enquanto o benefício estiver por usar, a consulta seguinte não
+    // abre ciclo nenhum — diz porquê, e não é um erro.
+    injetar("teste-depois-do-beneficio");
+    const seguinte = await loja.decidirConsulta(
+      "teste-depois-do-beneficio", "realizada", undefined, { precoCents: 6500 });
+    expect(seguinte.fidelidade?.ok).toBe(true);
+    expect(seguinte.fidelidade?.motivo).toBe("beneficio_pendente");
+    expect((await loja.cartoesAbertos(cartao.clienteId)).length).toBe(0);
+  });
+
+  it("resgatar o benefício fecha o ciclo, e só a consulta a seguir abre o próximo", async () => {
+    const estado = loja.semearPara(new Date());
+    const cartao = estado.cartoes[0];
+    cartao.carimbos = cartao.meta - 1;
+
+    const injetar = (id: string) => estado.agendamentos.push({
+      id,
+      contabilistaId: estado.ficha.userId,
+      clienteId: cartao.clienteId,
+      inicio: new Date(Date.now() - 3600_000).toISOString(),
+      fim: new Date(Date.now() - 1800_000).toISOString(),
+      estado: "confirmado",
+      modalidade: "online",
+      assunto: null,
+      localOuLigacao: null, localLat: null, localLng: null,
+      criadoEm: new Date().toISOString(),
+    });
+
+    injetar("resgate-completa");
+    await loja.decidirConsulta("resgate-completa", "realizada", undefined, { precoCents: 6500 });
+    const cupao = (await loja.meusCupoes()).find((c) => c.estado === "disponivel");
+    expect(cupao).toBeDefined();
+
+    // O resgate encerra o ciclo anterior e — de propósito — não carimba o
+    // seguinte: uma consulta não é ao mesmo tempo o prémio de um ciclo e
+    // o primeiro passo do próximo.
+    injetar("resgate-usa");
+    const usa = await loja.decidirConsulta(
+      "resgate-usa", "realizada", undefined, { precoCents: 8000, cupaoId: cupao!.id });
+    expect(usa.fidelidade?.motivo).toBe("beneficio_usado");
+    expect((await loja.cartoesAbertos(cartao.clienteId)).length).toBe(0);
+    expect((await loja.meusCupoes()).find((c) => c.id === cupao!.id)?.estado).toBe("usado");
+
+    // Agora sim: a consulta a seguir abre o ciclo novo, com a regra mais
+    // recente.
+    injetar("resgate-abre-novo");
+    const novo = await loja.decidirConsulta(
+      "resgate-abre-novo", "realizada", undefined, { precoCents: 8000 });
+    expect(novo.fidelidade?.carimbos).toBe(1);
     expect((await loja.cartoesAbertos(cartao.clienteId)).length).toBe(1);
   });
 
@@ -336,7 +398,13 @@ describe("a loja de demonstração aplica as regras do servidor", () => {
 
   it("com o cartão desligado, uma consulta realizada não carimba", async () => {
     const estado = loja.semearPara(new Date());
-    estado.ficha.fidelidadeAtiva = false;
+    // ⚠️ A regra, e não a coluna espelho da ficha. Na Fidelidade V2 quem
+    // manda é `fidelidade_regras.ativa`; `contabilistas.fidelidade_ativa`
+    // é um reflexo dela. Este teste mexia no reflexo, e por isso continuava
+    // verde mesmo que a regra ficasse ligada.
+    await loja.publicarRegra({ meta: 5, descontoPct: 10, ativa: false, exigePagamento: true });
+    estado.cartoes.length = 0;
+    estado.cupoes.length = 0;
     estado.agendamentos.push({
       id: "teste-sem-cartao",
       contabilistaId: estado.ficha.userId,

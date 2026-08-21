@@ -178,10 +178,27 @@ describe("RC-CASO-UI-003 · o que acontece aos dados é dito antes", () => {
     expect(aviso, "o aviso tem de vir antes dos campos").toBeLessThan(primeiroCampo);
   });
 
-  it("os contactos estão visualmente separados, e dizem que se podem desligar", () => {
+  it("os contactos estão separados, e a partilha é uma caixa que nasce por marcar", () => {
     const fonte = ler(FORMULARIO);
     expect(fonte).toContain("Como te contactam");
-    expect(fonte.replace(/\s+/g, " ")).toMatch(/podes desligar essa partilha/i);
+
+    // ⚠️ ISTO PEDIA A FRASE ERRADA, e por isso guardava o defeito.
+    //
+    // Exigia «podes desligar essa partilha» — a promessa de que a ficha
+    // já ia a caminho e a pessoa a podia travar DEPOIS. Era essa a
+    // implementação: `partilha_contactos` nascia `true` e não havia caixa
+    // nenhuma neste formulário, ao contrário do que a migração dizia.
+    //
+    // O que se guarda agora é o oposto: a escolha existe, está aqui, e
+    // nasce por marcar.
+    const nu = fonte.replace(/\s+/g, " ");
+    expect(nu).toMatch(/Partilhar estes contactos com quem eu escolher/i);
+    expect(nu).toMatch(/só seguem se disseres que sim/i);
+    expect(fonte, "a caixa tem de nascer desmarcada").toContain(
+      "useState(false);",
+    );
+    expect(fonte).toContain('id="partilhar-contactos"');
+    expect(fonte, "a escolha tem de chegar ao servidor").toContain("partilharContactos,");
   });
 
   it("a conversa deixou de prometer revisão — porque deixou de a haver", () => {

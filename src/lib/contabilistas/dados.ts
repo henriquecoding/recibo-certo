@@ -14,7 +14,7 @@
 
 import { getSupabase } from "@/lib/supabase/client";
 import type {
-  Agendamento, Contabilista, EstadoAgendamento, EstadoVinculo,
+  Agendamento, Contabilista, ContactosPrivados, EstadoAgendamento, EstadoVinculo,
   Modalidade, Partilha, TipoPartilha, Vinculo,
 } from "./tipos";
 import type { Excecao, RegraDisponibilidade } from "./agenda";
@@ -112,25 +112,34 @@ const CAMPOS_DA_FICHA =
 /**
  * O contrato público é uma VIEW, não a tabela.
  *
- * A política do diretório dá a `anon` a linha inteira de `contabilistas` —
- * escolhe linhas, não colunas. Hoje isso publica `linkedin_subject` (o
- * identificador OIDC), `pedido_id` e o telefone, que ecrã nenhum mostra.
- * Amanhã publica qualquer coluna nova: a Progressão desenhada para esta
- * plataforma tem XP, patamar comprado e créditos, e uma delas aqui seria a
- * comissão de toda a gente à vista.
+ * A tabela está fechada a `anon` desde
+ * `20260820165708_o_contrato_publico_fecha_a_tabela.sql`: nem política,
+ * nem privilégio. Antes disso, uma política dava a linha INTEIRA a quem
+ * não tinha sessão nenhuma — escolhia linhas, não colunas — e saíam o
+ * telefone, o `linkedin_subject` (o identificador OIDC) e o `pedido_id`.
  *
- * `contabilistas_publico` diz as colunas uma a uma. Ver a migração
- * `20260815200000_contrato_publico_contabilistas.sql`.
+ * `contabilistas_publico` diz as colunas uma a uma, e uma coluna nova em
+ * `contabilistas` já não nasce pública.
  */
 const VISTA_PUBLICA = "contabilistas_publico";
 
-/** O telefone não vem na view; sai por `contacto_do_contabilista`. */
+/**
+ * Nenhum canal direto vem da view — os três saem por
+ * `contactos_do_contabilista`, a quem tem vínculo vivo.
+ *
+ * Forçá-los a `null` aqui não é defensivo por hábito: o tipo
+ * `Contabilista` é o mesmo para a ficha própria (que os tem) e para a
+ * pública (que não), e sem isto um `undefined` da view lia-se como «não
+ * preenchido» em vez de «não é teu».
+ */
 function paraContabilistaPublico(l: Linha): Contabilista {
   return paraContabilista({
     ...l,
     // A view só contém linhas aprovadas — é a sua cláusula WHERE.
     estado: "aprovado",
+    email_contacto: null,
     telefone: null,
+    website: null,
   });
 }
 
@@ -318,25 +327,39 @@ export async function meuVinculo(clienteId: string): Promise<
 }
 
 /**
- * Email e telefone do contabilista, para quem tem vínculo vivo.
+ * Os três canais diretos do contabilista, para quem tem vínculo vivo.
  *
- * O telefone não vem no contrato público — nenhum ecrã do diretório o
- * mostra, e publicá-lo seria dá-lo a quem o recolhe sem o dar a quem o
- * procura. Quem tem relação pede-o por aqui.
+ * Email, telefone e site não estão no contrato público, e a razão é a
+ * mesma para os três: um canal direto abre-se com a aceitação, não com a
+ * pesquisa. Publicá-los seria dá-los a quem os recolhe em massa sem os
+ * dar a quem os procura.
+ *
+ * Devolve `null` quando não há relação — e é a base de dados que o
+ * decide, não este ficheiro: a função exige vínculo vivo (`ativo` ou
+ * `pausado`) e o contabilista aprovado. Um pedido pendente não conta, um
+ * vínculo terminado deixa de contar, e uma suspensão corta no instante.
  */
-export async function contactoDoContabilista(
+export async function contactosDoContabilista(
   contabilistaId: string
-): Promise<{ emailContacto: string | null; telefone: string | null } | null> {
+): Promise<ContactosPrivados | null> {
   const { data, error } = await getSupabase()
-    .rpc("contacto_do_contabilista", { p_contabilista: contabilistaId });
+    .rpc("contactos_do_contabilista", { p_contabilista: contabilistaId });
   if (error) return null;
 
   const [linha] = (data ?? []) as unknown as Linha[];
   if (!linha) return null;
-  return {
+
+  const contactos: ContactosPrivados = {
     emailContacto: (linha.email_contacto as string | null) ?? null,
     telefone: (linha.telefone as string | null) ?? null,
+    website: (linha.website as string | null) ?? null,
   };
+  // Uma linha com os três campos vazios diz «tens acesso e ele não
+  // preencheu nada». Para quem chama é a mesma coisa que não haver
+  // contacto, e devolver o objeto obrigava cada ecrã a repetir esta
+  // verificação para não desenhar um bloco vazio.
+  const algum = contactos.emailContacto ?? contactos.telefone ?? contactos.website;
+  return algum ? contactos : null;
 }
 
 /** O cliente corrige o nome por que quer ser tratado, sem terminar nada. */

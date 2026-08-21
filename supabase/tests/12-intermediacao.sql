@@ -454,10 +454,17 @@ RESET ROLE;
 SELECT t.conta($$SELECT count(*) FROM public.caso_documentos
   WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' AND libertado_em IS NOT NULL$$, 1,
   'o documento nasce ENTREGUE, e não à espera de ninguém');
+-- ⚠️ Filtrado pelo caso, e não `LIMIT 1` sobre a tabela toda. Enquanto
+-- este era o único caso com documentos, dava no mesmo; no dia em que
+-- outro ficheiro da suíte deixou um documento seu para trás, este
+-- `LIMIT 1` passou a apanhar o documento errado e a asserção seguinte
+-- acusava o `anexo_legivel` de recusar o que ele não tinha recusado.
 SELECT set_config('t.caminho_doc',
-  (SELECT caminho FROM public.caso_documentos LIMIT 1), false);
+  (SELECT caminho FROM public.caso_documentos
+    WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' LIMIT 1), false);
 SELECT set_config('t.doc_id',
-  (SELECT id::text FROM public.caso_documentos LIMIT 1), false);
+  (SELECT id::text FROM public.caso_documentos
+    WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe' LIMIT 1), false);
 
 \echo ''
 \echo '── 71. Entregue ao anexar, e retirável por quem o anexou ───────'
@@ -468,7 +475,8 @@ SELECT t.rpc_ok($$SELECT public.enviar_caso_a_contabilista(
   'o cliente entrega o caso novo');
 
 SELECT t.entrar('11111111-1111-1111-1111-111111111111');
-SELECT t.conta($$SELECT count(*) FROM public.caso_documentos$$, 1,
+SELECT t.conta($$SELECT count(*) FROM public.caso_documentos
+  WHERE caso_id='cafe0000-0000-0000-0000-00000000cafe'$$, 1,
   'o contabilista vê o documento sem esperar por aprovação nenhuma');
 SELECT t.rpc_ok($$SELECT public.anexo_legivel(
   current_setting('t.caminho_doc'))$$, 'e consegue descarregá-lo');

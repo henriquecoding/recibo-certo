@@ -29,7 +29,7 @@
 > | Conversa | Mediada: cada mensagem submetida, revista, aprovada | **Direta.** Nasce entregue |
 > | Quem lê | A administração lê tudo | **Ninguém.** Zero linhas para um `select` de administrador |
 > | Exceção | — | Uma mensagem **denunciada** por quem está no caso |
-> | Contactos | Nunca chegam ao contabilista | Do cliente para dar, num interruptor revogável |
+> | Contactos | Nunca chegam ao contabilista | Do cliente para dar, num interruptor revogável que **nasce desligado** (ver `20260820165820`) |
 > | Documentos | Libertados pela triagem | Entregues ao anexar; retiráveis por quem os anexou |
 >
 > ### O que se manteve, e vale a pena não voltar a discutir
@@ -47,6 +47,17 @@
 > testes adversariais em `supabase/tests/12-intermediacao.sql` provam as
 > garantias novas — incluindo que `rever_mensagem` e `encaminhar_caso`
 > deixaram de existir.
+>
+> ### ⚠️ Onde está a regra de hoje
+>
+> **Neste documento, não.** A partir daqui é tudo história. Quem quiser
+> saber quem vê o quê — hoje — lê
+> [`CONTRATO-DE-PRIVACIDADE.md`](./CONTRATO-DE-PRIVACIDADE.md), que é a
+> única fonte da regra em vigor e diz onde cada fronteira é imposta.
+>
+> Esta separação foi feita a 2026-08-20, depois de uma auditoria encontrar
+> a mesma pergunta respondida de quatro maneiras diferentes — na
+> interface, na base de dados, nos comentários do código e aqui.
 
 ---
 

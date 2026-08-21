@@ -68,11 +68,19 @@ MIGRACOES=($(ls "$RAIZ"/supabase/migrations/*.sql \
 # A `fim_da_mediacao` entra no fim, e a ordem não é decorativa: ela DESFAZ
 # a fronteira de contacto e a revisão de mensagens que as anteriores
 # montaram. Aplicada antes delas, seria desfeita por elas.
+#
+# A `a_purga_passa_pela_storage_api` entra por ser exercida pelo teste 10 —
+# e por ser a correção de um defeito que só um teste consegue guardar: a
+# definição de órfão passou a conhecer os documentos de casos e os anexos
+# de propostas, que vivem no MESMO balde das mensagens e que a definição
+# anterior teria apagado duas horas depois de serem enviados. Depende só
+# de 048 (vagas) e 051 (casos e propostas), ambas aqui.
 MIGRACOES+=(
   "$RAIZ/supabase/migrations/20260816150000_fronteira_de_contacto.sql"
   "$RAIZ/supabase/migrations/20260816160000_sala_de_acompanhamento.sql"
   "$RAIZ/supabase/migrations/20260817120000_local_verificado_da_consulta.sql"
   "$RAIZ/supabase/migrations/20260818210000_fim_da_mediacao.sql"
+  "$RAIZ/supabase/migrations/20260820165802_a_purga_passa_pela_storage_api.sql"
 )
 
 if [ ${#MIGRACOES[@]} -eq 0 ]; then

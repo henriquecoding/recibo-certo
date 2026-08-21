@@ -1,0 +1,109 @@
+name: Contrato público (produção)
+
+# ═══════════════════════════════════════════════════════════════════════
+#  A FRONTEIRA DE CONTACTO, PERGUNTADA À BASE DE DADOS QUE SERVE O SITE
+#  ---------------------------------------------------------------------
+#  Havia testes sobre o contrato público. Eram todos de texto: liam o SQL
+#  das migrações e o TypeScript do frontend. Passavam todos.
+#
+#  E ao lado deles, durante meses, a política `contabilistas_diretorio_
+#  publico` deu a `anon` a LINHA INTEIRA de qualquer contabilista aprovado
+#  — telefone, `linkedin_subject`, `pedido_id`. As migrações estavam
+#  certas; a base de dados viva é que tinha ficado para trás.
+#
+#  Um teste contra ficheiros não apanha uma deriva da base de dados. Só se
+#  apanha perguntando à base de dados, com a chave anónima, pelo mesmo
+#  caminho que o browser usa — que é o que este workflow faz.
+#
+#  ⚠️ CORRE COM `--exigir-ambiente`. Sem as variáveis, FALHA em vez de
+#  saltar. Um verificador que salta em silêncio no sítio onde é obrigatório
+#  é indistinguível de um verificador que passa, e foi assim que o
+#  bloqueador acima sobreviveu a CI verde.
+#
+#  Não corre em PRs: o que ele verifica é produção, e produção não muda
+#  com um PR. Corre à hora e a pedido, e abre uma issue quando falha.
+# ═══════════════════════════════════════════════════════════════════════
+
+on:
+  schedule:
+    # Todos os dias às 06:00 UTC. Uma fuga de contactos não espera um mês.
+    - cron: "0 6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+      - "src/lib/contabilistas/diretorio.ts"
+      - "scripts/check-contrato-publico.mjs"
+  workflow_dispatch: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  contrato:
+    name: A tabela está fechada e a view continua a servir
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+
+      - name: Verificar o contrato público contra produção
+        id: check
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          set +e
+          node scripts/check-contrato-publico.mjs --exigir-ambiente
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+        continue-on-error: true
+
+      - name: Abrir issue quando a fronteira cede
+        if: steps.check.outputs.exit_code != '0'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7
+        with:
+          script: |
+            const titulo = "Contrato público: a fronteira de contacto cedeu";
+            const abertas = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: "open", labels: "seguranca",
+            });
+            if (abertas.data.some((i) => i.title === titulo)) return;
+
+            await github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: titulo,
+              labels: ["seguranca"],
+              body: [
+                "`scripts/check-contrato-publico.mjs` falhou contra produção.",
+                "",
+                "Uma de três coisas aconteceu:",
+                "",
+                "1. **A tabela `contabilistas` voltou a ser legível por `anon`** —",
+                "   telefone, `linkedin_subject` e `pedido_id` de toda a gente",
+                "   aprovada saem num pedido HTTP sem sessão. É o bloqueador P0.1",
+                "   da auditoria de 2026-08-20 a repetir-se.",
+                "2. **Um canal direto voltou à view pública** — email, telefone ou",
+                "   site. Abrem-se com a aceitação, não com a pesquisa.",
+                "3. **O diretório perdeu nome, OCC ou LinkedIn** — e nesse caso",
+                "   está em baixo para qualquer visitante.",
+                "",
+                "O registo do job diz qual. Ver a migração",
+                "`20260820165708_o_contrato_publico_fecha_a_tabela.sql` e a função",
+                "`assert_contrato_publico_contabilistas()`.",
+              ].join("\n"),
+            });
+
+      - name: Falhar o workflow
+        if: steps.check.outputs.exit_code != '0'
+        run: exit 1

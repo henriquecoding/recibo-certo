@@ -511,11 +511,24 @@ export default function PrivacidadePage() {
           <strong className="text-stone-700 dark:text-stone-200">
             Os teus contactos são teus para dar.
           </strong>{" "}
-          Quando descreves um caso, o email e o telefone que deixas ficam visíveis para o
-          contabilista que escolheres, para que ele possa falar contigo também por fora.
-          É um interruptor no caso, que desligas quando quiseres — e no instante em que o
-          desligas, ele deixa de os alcançar. Antes desta data, esses contactos nunca
-          chegavam ao contabilista; a mudança é deliberada, e a decisão passou a ser tua.
+          Quando descreves um caso, o email e o telefone que deixas servem para te
+          avisarmos a ti. Não seguem para o contabilista a não ser que marques
+          essa opção — nasce por marcar —, e mesmo depois de a marcares podes
+          voltar atrás: é um interruptor no caso, e no instante em que o desligas
+          ele deixa de os alcançar. Escrever um contacto numa mensagem é outra
+          coisa, e essa decisão é tua no momento em que a escreves.
+        </p>
+
+        <p>
+          <strong className="text-stone-700 dark:text-stone-200">
+            E os contactos DELE, ao contrário.
+          </strong>{" "}
+          No diretório e no perfil público de um contabilista aparecem o nome, o
+          número de inscrição na Ordem e a ligação ao LinkedIn — o suficiente
+          para confirmares quem é sem nos pedires autorização. O email, o
+          telefone e o site dele só te aparecem depois de ele te aceitar como
+          cliente. Não é uma regra da interface: fora dessa relação, a base de
+          dados não os devolve a ninguém.
         </p>
 
         <p>

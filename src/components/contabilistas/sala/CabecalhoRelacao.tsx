@@ -18,6 +18,11 @@
 //  antes: o vínculo continua a não guardar contacto nenhum, mas o canal
 //  deixou de ser fechado. Os contactos existem no caso, e chegam cá se — e
 //  enquanto — o cliente os partilhar. Ver `20260818210000_fim_da_mediacao`.
+//
+//  E no fim entram os canais diretos DO CONTABILISTA, que é o outro
+//  sentido e a outra decisão: email, telefone e site saíram do perfil
+//  público em `20260820165708` e passaram a abrir-se aqui, com a
+//  aceitação. Quem decide se este bloco aparece é a base de dados.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { Contabilista } from "@/lib/contabilistas/tipos";
@@ -26,6 +31,8 @@ import { estadoOcc } from "@/lib/contabilistas/diretorio";
 import { ROTULO_VINCULO } from "@/lib/contabilistas/vinculo";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import ContactosDoContabilista from "./ContactosDoContabilista";
+import { primeiroNome } from "@/components/contabilistas/hub";
 import { ShieldCheck } from "@/components/ui/Icons";
 
 /**
@@ -93,6 +100,12 @@ export default function CabecalhoRelacao({
           </Button>
         )}
       </div>
+
+      {/* O que se ganha ao ser aceite. Quem não tem vínculo vivo não vê
+          bloco nenhum — e não é este componente que o decide: a RPC
+          `contactos_do_contabilista` não devolve nada, e sem dados não há
+          nada para desenhar. */}
+      <ContactosDoContabilista contabilistaId={cc.userId} nome={primeiroNome(cc.nome)} />
     </header>
   );
 }

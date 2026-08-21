@@ -36,7 +36,7 @@ import {
   MENSAGEM_DA_GRAVACAO, mensagemDaGravacao, mensagemDaVista,
 } from "@/lib/contabilistas/dashboard/mensagens";
 import { erroQueImpedeGravar } from "@/lib/contabilistas/dashboard/validacao";
-import { MODULOS } from "@/lib/contabilistas/dashboard/modulos";
+import { MODULOS, dominiosNecessarios } from "@/lib/contabilistas/dashboard/modulos";
 import { VISTAS_POR_OMISSAO, layoutDaOmissao } from "@/lib/contabilistas/dashboard/omissao";
 import type {
   WidgetType, WorkspaceLayoutV2, WorkspaceView, WorkspaceWidgetInstance,
@@ -83,9 +83,13 @@ export default function Workspace({
 
   // Um broker por sessão de painel: é o que garante uma leitura por
   // domínio mesmo com três widgets a pedir a mesma fonte.
+  //
+  // ⚠️ A raiz NÃO subscreve o broker. Subscrevia, e incrementava um
+  // contador sempre que qualquer um dos treze domínios mudava — treze
+  // renders da árvore inteira por abertura do painel, com até 24 módulos
+  // dentro. Cada widget passa a subscrever só o que consome
+  // (`usarDominio`/`usarDominios`, em `broker.ts`).
   const broker = useMemo(() => new Broker(contabilistaId), [contabilistaId]);
-  const [, forcar] = useState(0);
-  useEffect(() => broker.subscrever(() => forcar((n) => n + 1)), [broker]);
 
   useEffect(() => {
     let vivo = true;
@@ -101,6 +105,47 @@ export default function Workspace({
 
   const ativa = vistas?.find((v) => v.id === ativaId) ?? null;
   const layout = edicao && draft ? draft : ativa?.layout ?? null;
+
+  /**
+   * A política de frescura do painel.
+   *
+   * ⚠️ Não havia nenhuma. Depois do primeiro carregamento, os dados
+   * ficavam como estavam até alguém carregar em «Atualizar este módulo»
+   * ou remontar a página. Um painel deixado aberto de manhã mostrava, à
+   * tarde, a agenda da manhã — sem nada no ecrã a dizê-lo.
+   *
+   * Três gatilhos, e nenhum deles é um temporizador:
+   *
+   *  · voltar ao separador — é quando a pessoa vai OLHAR para os números,
+   *    e portanto quando importa que estejam certos;
+   *  · voltar a ter rede — o que falhou offline tem de poder recuperar;
+   *  · e, nos dois casos, só o que passou do prazo é relido (TTL por
+   *    domínio, em `broker.ts`).
+   *
+   * Um `setInterval` foi deliberadamente excluído: pedir de trinta em
+   * trinta segundos a um painel que ninguém está a ver gasta plano e
+   * bateria para nada. O que interessa é o instante em que se volta.
+   */
+  useEffect(() => {
+    if (!layout) return;
+    const dominios = dominiosNecessarios(layout.items);
+    if (dominios.length === 0) return;
+
+    const rever = () => { void broker.revalidarSeVelho(dominios); };
+    const aoMudarVisibilidade = () => {
+      if (document.visibilityState === "visible") rever();
+    };
+
+    document.addEventListener("visibilitychange", aoMudarVisibilidade);
+    window.addEventListener("online", rever);
+    return () => {
+      document.removeEventListener("visibilitychange", aoMudarVisibilidade);
+      window.removeEventListener("online", rever);
+    };
+    // A lista de módulos é o que decide os domínios. Compará-la por
+    // identidade re-instalaria os ouvintes a cada render do rascunho.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [broker, layout?.items.map((i) => `${i.type}:${i.hidden ? 0 : 1}`).join(",")]);
 
   /**
    * A guarda do rascunho por gravar.
