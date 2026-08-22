@@ -184,6 +184,49 @@ try {
         /Compatibilidade \d+%/.test(entrada) && /afinidade contigo/i.test(entrada),
       );
 
+      // ═══ 1b. A escada de quatro passos existe no ecrã ════════════
+      //  Vivia só na medição: a pessoa via cartões e nada que dissesse
+      //  que abrir um dossier é o primeiro de quatro passos.
+      verificar(
+        "os quatro passos estão à vista",
+        /Perfil/.test(entrada) && /Mercado/.test(entrada) && /Preço/.test(entrada) && /Teste real/.test(entrada),
+      );
+
+      // ═══ 1c. O catálogo é maior do que os cinco pilotos ══════════
+      const cartoes = await pagina.locator("article").count();
+      verificar("há mais do que cinco hipóteses no catálogo", cartoes >= 6, `${cartoes} cartões`);
+      const verMais = pagina.getByRole("button", { name: /Ver mais \d+ hipóteses/ });
+      verificar("as restantes hipóteses abrem a pedido", (await verMais.count()) > 0);
+      if ((await verMais.count()) > 0) {
+        await verMais.click();
+        await pagina.waitForTimeout(400);
+        const depois = await pagina.locator("article").count();
+        verificar("«ver mais» revela o resto do catálogo", depois > cartoes, `${cartoes} → ${depois}`);
+        await semOverflow(pagina, "descoberta: catálogo aberto");
+      }
+
+      // ═══ 1d. O empate é publicado, não escondido ═════════════════
+      //  O ecrã antigo numerava 1, 2, 3, 4 quatro cartões com o mesmo
+      //  valor — uma hierarquia que o modelo não tinha produzido.
+      const empate = await pagina.evaluate(() => {
+        const cartoes = [...document.querySelectorAll("article")].map((el) => el.innerText);
+        const scores = cartoes
+          .map((texto) => texto.match(/(\d+)\.ª · Compatibilidade (\d+)%/))
+          .filter(Boolean)
+          .map((m) => ({ rank: Number(m[1]), score: Number(m[2]), empatada: /empatada com mais/.test(m.input) }));
+        const porScore = new Map();
+        for (const linha of scores) {
+          porScore.set(linha.score, [...(porScore.get(linha.score) ?? []), linha]);
+        }
+        // Score igual ⇒ posição igual. E quando há mais do que uma, diz-se.
+        for (const linhas of porScore.values()) {
+          if (new Set(linhas.map((l) => l.rank)).size !== 1) return "rank diverge com score igual";
+          if (linhas.length > 1 && !linhas.every((l) => l.empatada)) return "empate não anunciado";
+        }
+        return scores.length > 0 ? "" : "nenhuma posição legível";
+      });
+      verificar("posições iguais para scores iguais, e o empate é dito", empate === "", empate);
+
       // ═══ 2. O contexto NACIONAL não desaparece (regressão) ═══════
       //  Este é o defeito que o checkpoint anterior trouxe: sem zona
       //  fixada, o valor de Portugal era descartado por um filtro contra
@@ -199,7 +242,10 @@ try {
       verificar("a saúde da fonte chega ao ecrã", /Fonte INE:/.test(texto));
 
       // ═══ 3. Escolher uma zona traz o sinal REGIONAL ══════════════
-      await pagina.getByRole("button", { name: "Grande Lisboa", exact: true }).click();
+      //  A zona é um `select` de lista fechada — dez NUTS II não cabem em
+      //  chips a 360 px, e uma lista fechada continua a ser a garantia de
+      //  que não se recolhe morada nem código postal.
+      await pagina.selectOption("#zona-descoberta", "grande-lisboa");
       await pagina.waitForTimeout(600);
       cartao = await abrirCartaoTurismo(pagina);
       texto = await cartao.innerText();
@@ -242,6 +288,15 @@ try {
       await fecharOverlays(pagina);
       cartao = await abrirCartaoTurismo(pagina);
       verificar("a prova registada sobrevive ao recarregamento", /Validada contigo/.test(await cartao.innerText()));
+
+      // ═══ 4b. O rótulo do estado vem do gate, uma só vez ═════════
+      //  Havia dois vocabulários para os mesmos oito estados: o do
+      //  domínio e outro escrito à mão no estúdio, que era o que as
+      //  pessoas liam. Sete dos oito diferiam.
+      const corpoComEstado = await pagina.evaluate(() => document.body.innerText);
+      for (const antigo of ["Sinal oficial encontrado", "Evidência qualificada", "Dados a atualizar", "Ideia possível"]) {
+        verificar(`o rótulo antigo «${antigo}» desapareceu do ecrã`, !corpoComEstado.includes(antigo));
+      }
 
       // ═══ 5. A ponte para o preço leva a hipótese ════════════════
       const paraPreco = cartao.getByRole("link", { name: /Formar o preço desta hipótese/ });

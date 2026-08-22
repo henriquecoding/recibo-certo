@@ -1,8 +1,9 @@
 # Market Intelligence Engine
 
-> Estado da implementação: **MI-3 — cobertura nacional, os cinco pilotos com
-> ingestão ativa, ingestão em bloco do Portal BASE agendada, triangulação real
-> em quatro deles e prova comercial local, em 2026-08-21**.
+> Estado da implementação: **MI-4 — catálogo de 24 hipóteses com Founder Fit
+> v2, cinco pilotos com ingestão ativa, ingestão em bloco do Portal BASE
+> agendada, triangulação real em quatro deles e prova comercial local, em
+> 2026-08-22**.
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 
@@ -46,16 +47,64 @@ em conjunto com a evidência externa, permite subir o estado da hipótese.
 
 | Estado | Linguagem da interface | Condição resumida |
 |---|---|---|
-| `template` | Ideia possível | catálogo sem evidência utilizável |
+| `template` | Ideia por investigar | catálogo sem evidência utilizável |
 | `signal_detected` | Sinal a investigar | pelo menos um sinal saudável |
-| `candidate` | Candidata para teste | sinais independentes; economia ou operação por validar |
-| `evidence_qualified` | Oportunidade sustentada por dados | gate completo atravessado |
-| `user_validated` | Validada no seu mercado | orçamento aceite, pré-venda, piloto pago ou venda atual |
-| `operating` | Negócio em operação | repetição, contribuição positiva e recebimento observados |
+| `candidate` | Candidata a teste | sinais independentes; economia ou operação por validar |
+| `evidence_qualified` | Sustentada por dados | gate completo atravessado |
+| `user_validated` | Validada contigo | orçamento aceite, pré-venda, piloto pago ou venda atual |
+| `operating` | Em operação | repetição, contribuição positiva e recebimento observados |
 | `stale` | Precisa de nova validação | fonte crítica ou prova do utilizador perdeu validade |
 | `contradicted` | Hipótese contrariada | requisito bloqueado, economia inviável ou contradição decisiva |
 
 Um piloto pago isolado sobe para `user_validated`, não para `operating`.
+
+### 3.1. O rótulo vive num sítio só
+
+`MARKET_STATE_LABELS`, em `evidence-gate.ts`, é a única fonte do texto de cada
+estado; `gate.label` é o que a interface mostra. A interface escolhe cores por
+estado (`ESTILO_ESTADO`) e nunca palavras — havia dois vocabulários para os
+mesmos oito estados, discordavam em sete deles, e era o do ecrã que as pessoas
+liam.
+
+## 3-B. Founder Fit v2 — compatibilidade pessoal, com a conta à vista
+
+`calculateOpportunityFit` devolve, além do score, a REPARTIÇÃO por dimensão
+(`breakdown`) e a versão da fórmula (`MARKET_FIT_FORMULA_VERSION`,
+`founder-fit@2`). Os pesos: entrega 20, capital 20, recorrência 15,
+competências 25, estrutura 10, zona 10.
+
+Duas mudanças face à v1, ambas medidas contra as 25 920 combinações de perfil:
+
+- **As competências repartem-se por ordem declarada.** O teto antigo,
+  `min(25, n × 12,5)`, saturava aos dois acertos — acertar em três de três
+  valia o mesmo que acertar em dois de três — e tratava todas as competências
+  como iguais. A tabela `STRENGTH_WEIGHTS` reparte os 25 pontos pela ordem em
+  que o template as declara (a primeira pesa mais). A escala passou de 17 para
+  71 valores distintos.
+- **O empate é publicado.** `rankOpportunityTemplates` devolve `rank`
+  PARTILHADO e `tiedWith`. Antes, 70,1 % dos perfis viam a ordem do topo
+  decidida por `localeCompare` do título, apresentada com um número de posição.
+
+`fitDimensionIsInert(dimension)` e `strengthsUsedInCatalogue()` derivam do
+catálogo: uma pergunta que não consegue separar nada di-lo no ecrã, e uma
+competência que nenhuma hipótese reconhece deixa de ser oferecida. As duas
+corrigem-se sozinhas quando o catálogo mudar.
+
+`breakTiesWithEvidence` usa o estado do gate SÓ para desfazer empates de score.
+Ordenar por evidência em primeiro lugar fixaria no topo, para toda a gente, as
+cinco hipóteses com séries ligadas — recriando dentro de um catálogo maior o
+defeito que ele veio corrigir.
+
+### Regras de admissão de uma hipótese nova
+
+Testadas em `negocio-market-fit-audit.test.ts`, que percorre a grelha completa:
+
+1. Nenhuma assinatura de fit igual a outra já existente.
+2. Distância de pelo menos dois eixos face à hipótese mais próxima.
+3. Toda a hipótese chega a primeiro em pelo menos um perfil (nenhuma dominada).
+4. Nenhuma das seis dimensões do formulário pode ficar inerte.
+5. Toda a competência oferecida é reconhecida por alguma hipótese.
+6. `evidenceNote` obrigatório, e sem entradas `live` sem piloto que as leia.
 
 ## 4. Evidence gate mínimo
 
@@ -316,9 +365,19 @@ A rota `/ferramentas/descobrir-negocio` pode existir antes de haver uma
 7. integração explícita com a Pricing Engine;
 8. cartões com fonte, geografia, período, recolha e limitações visíveis.
 
-Os cinco pilotos consultam fontes oficiais. Quinze séries, seis operações
-estatísticas independentes, todas com licença CC BY do dataset, a política de
-reutilização do Eurostat ou o domínio público declarado pelo IMPIC.
+Cinco das vinte e quatro hipóteses do catálogo têm piloto com ingestão ativa.
+Quinze séries, oito chaves de independência estatística distintas (contadas em
+`pilots.ts`: `pt-tourism-accommodation-survey`, `pt-business-demography`,
+`eu-ict-usage-enterprises-survey`, `eu-ict-usage-households-survey`,
+`pt-population-estimates`, `pt-housing-transactions`,
+`pt-integrated-business-accounts` e `pt-public-procurement-base`), todas com
+licença CC BY do dataset, a política de reutilização do Eurostat ou o domínio
+público declarado pelo IMPIC.
+
+As outras dezanove entram no catálogo sem série ligada e dizem-no: cada uma
+declara em `evidenceNote` que fonte falta e porquê, `templateHasLiveEvidence()`
+devolve `false`, e o gate mantém-nas em `template` — o que fecha, pela primeira
+regra de `escolherRota()`, qualquer passo comercial por cima delas.
 
 | Hipótese | Séries | Operações | Estado sem input do utilizador |
 |---|---|---|---|

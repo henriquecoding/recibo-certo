@@ -1049,3 +1049,57 @@ export function Logo({ small = false }: { small?: boolean }): ReactNode {
     </div>
   );
 }
+
+// ── Setores do catálogo de oportunidades ──────────────────────────────
+//  Cada hipótese do motor de descoberta declara o seu ícone pelo nome. Um
+//  catálogo de vinte e quatro dossiers com o mesmo pictograma em todos
+//  não é uma lista — é um bloco de texto. Estes cinco são os que faltavam
+//  para nenhum setor ter de emprestar o símbolo de outro.
+
+export function Leaf({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M4 20c0-8 5.5-13 16-13 0 10.5-5 16-13 16-1.5 0-3-.4-3-3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4.5 19.5C8 16 12 13 17 11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function PawPrint({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <ellipse cx="6.5" cy="9" rx="2" ry="2.6" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="10.8" cy="5.8" rx="2" ry="2.6" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="16" cy="7.2" rx="2" ry="2.6" stroke="currentColor" strokeWidth="1.6" />
+      <ellipse cx="19.4" cy="11.6" rx="1.8" ry="2.3" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M12.4 12.2c2.6 0 4.8 2 5.2 4.3.3 1.9-1.2 3.5-3.1 3.5-.9 0-1.5-.3-2.1-.3-.6 0-1.2.3-2.1.3-1.9 0-3.4-1.6-3.1-3.5.4-2.3 2.6-4.3 5.2-4.3z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Wrench({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M15.5 3a5.5 5.5 0 00-5.1 7.6L3.6 17.4a2 2 0 102.8 2.8l6.8-6.8A5.5 5.5 0 0019.9 5.4l-2.7 2.7-2.4-.5-.5-2.4 2.7-2.7A5.6 5.6 0 0015.5 3z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function Plug({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M9 2v5M15 2v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+      <path d="M6.5 7h11v3.5a5.5 5.5 0 01-11 0V7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M12 16v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function ChefHat({ size = 18, className }: IconProps) {
+  return (
+    <svg {...svgProps(size, className)}>
+      <path d="M6 14.5A4 4 0 015 6.8a4.2 4.2 0 017.1-2.3A4.2 4.2 0 0119 6.8a4 4 0 01-1 7.7v.5H6v-.5z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <path d="M6 18h12v2.2a.8.8 0 01-.8.8H6.8a.8.8 0 01-.8-.8V18z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}

@@ -16,16 +16,31 @@ import type {
   MarketUserValidation,
 } from "./tipos";
 
-const LABELS: Readonly<Record<MarketOpportunityState, string>> = Object.freeze({
-  template: "Ideia possível",
+/**
+ * O rótulo de cada estado. UM só sítio, de propósito.
+ *
+ * Havia dois vocabulários para os mesmos oito estados: este, documentado
+ * na arquitetura, e outro escrito à mão dentro do estúdio — que era o que
+ * as pessoas liam. Sete dos oito diferiam, e `gate.label` era calculado em
+ * todas as avaliações sem nunca chegar a um ecrã. O pior caso era
+ * `signal_detected`: aqui dizia «sinal a investigar» e no ecrã «sinal
+ * oficial encontrado», que soa a conclusão e não a pista.
+ *
+ * O rótulo pertence ao domínio; a cor pertence ao ecrã. A interface
+ * escolhe classes CSS por estado e lê o texto daqui.
+ */
+export const MARKET_STATE_LABELS: Readonly<Record<MarketOpportunityState, string>> = Object.freeze({
+  template: "Ideia por investigar",
   signal_detected: "Sinal a investigar",
-  candidate: "Candidata para teste",
-  evidence_qualified: "Oportunidade sustentada por dados",
-  user_validated: "Validada no seu mercado",
-  operating: "Negócio em operação",
+  candidate: "Candidata a teste",
+  evidence_qualified: "Sustentada por dados",
+  user_validated: "Validada contigo",
+  operating: "Em operação",
   stale: "Precisa de nova validação",
   contradicted: "Hipótese contrariada",
 });
+
+const LABELS = MARKET_STATE_LABELS;
 
 const BLOCKING_SOURCE_STATES: readonly MarketSourceHealthState[] = Object.freeze([
   "stale",
