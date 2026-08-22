@@ -69,6 +69,48 @@ jobs:
       - name: Auditoria de dependências (0 vulnerabilidades altas)
         run: npm audit --audit-level=high
 
+  # ── O que build, testes e type-check não apanham ────────────────────
+  #  `verificar-descobrir-negocio.mjs` foi escrito precisamente para os
+  #  defeitos que vivem no ecrã: a leitura NACIONAL filtrada contra `null`
+  #  e a desaparecer com a página a dizer «falta sinal na tua zona»; o
+  #  preço de UMA unidade escrito no campo do recibo MENSAL. Nenhum dos
+  #  dois partia o build, os testes ou o type-check — e o script criado
+  #  para os apanhar não corria em CI nenhum, o que protegia exatamente
+  #  ninguém.
+  #
+  #  Sem filtro de caminhos, pela mesma razão que o job acima não o tem:
+  #  uma alteração num componente partilhado parte a ferramenta tão bem
+  #  como uma alteração dentro dela.
+  descoberta-e2e:
+    name: Motor de descoberta — fim a fim
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+
+      # Arranca em segundo plano e espera pela porta. Sem `wait-on`: um
+      # ciclo curto de `curl` evita mais uma dependência só para isto.
+      - name: Arrancar o artefacto de produção
+        run: |
+          npm start &
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/ >/dev/null && exit 0
+            sleep 2
+          done
+          echo "o servidor não respondeu em 120 s" && exit 1
+
+      - name: Descoberta — 360 px e desktop, claro e escuro, com axe
+        run: npm run descobrir:e2e
+
+      - name: Estúdio de empresa — fim a fim
+        run: npm run negocio:e2e
+
   documentos:
     name: Documentos — normas e tipografia
     runs-on: ubuntu-latest

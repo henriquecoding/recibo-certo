@@ -86,6 +86,13 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   atribuição, barreira de PII, DVM (North Star) e definições do painel semanal.
 - `src/lib/negocio/market/` — ★ motor de evidência de mercado: registo de fontes,
   gate de evidência, frescura, quarentena, conectores INE/Eurostat e pilotos.
+- `src/lib/negocio/market/catalogo-oportunidades.ts` — ★ as 24 hipóteses curadas
+  do motor de descoberta. Regras de admissão (assinatura única, dois eixos de
+  distância, `evidenceNote` obrigatório) testadas em
+  `negocio-market-fit-audit.test.ts` (`npm run market:fit-audit`).
+- `src/lib/negocio/market/opportunities.ts` — ★ Founder Fit v2: repartição do
+  score por dimensão, empate publicado (`rank` partilhado + `tiedWith`) e
+  deteção de perguntas inertes derivada do catálogo.
 - `src/lib/negocio/market/bulk/` — ★ ingestão de fontes que não cabem num pedido
   HTTP (contratos públicos: 52 MB → 273 MB). O instantâneo em `bulk/dados/` é
   gerado por `npm run mercado:ingerir` e **é para commitar** — é ele que a

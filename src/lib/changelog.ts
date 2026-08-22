@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.95.0",
+    data: "2026-08-22",
+    titulo: "A ferramenta de descoberta passa de cinco hipóteses para vinte e quatro — e deixa de dar a mesma resposta a toda a gente",
+    itens: [
+      "O catálogo cresceu de cinco para vinte e quatro hipóteses, em oito áreas: turismo, micro e pequenas empresas, pessoas e famílias, casa e património, técnico e manutenção, digital e conteúdo, território e proximidade, alimentar e produção.",
+      "As perguntas passaram a servir para alguma coisa. «Estrutura» e «zona» não alteravam o resultado em nenhuma das 25 920 maneiras possíveis de responder ao formulário — eram duas perguntas inertes com o mesmo peso visual das outras. Agora há hipóteses que só fazem sentido em empresa, outras que só fazem sentido a recibos verdes, e outras que dependem mesmo de estares nos Açores, na Madeira, no Alentejo ou no Douro.",
+      "«Resolver problemas técnicos» era um botão morto: não existia em hipótese nenhuma e selecioná-lo não mudava rigorosamente nada. Passou a haver seis hipóteses que o pedem — reparação de equipamento, instalação de carregamento elétrico, manutenção preventiva, tecnologia doméstica, eficiência energética e migração de dados.",
+      "Cada hipótese diz agora de que competências precisa por ordem de importância, e a primeira pesa mais do que a última. Antes, acertar em três de três valia o mesmo que acertar em duas de três, e a escala tinha dezassete valores possíveis para tudo. Agora tem setenta e um.",
+      "Quando duas hipóteses empatam, o cartão diz que empataram. Antes eram numeradas 1, 2, 3, 4 — uma hierarquia que o cálculo não tinha produzido: em sete de cada dez sessões, a ordem do topo era decidida por ordem alfabética do título.",
+      "O dossier que abre sozinho passou a ser o primeiro da tua lista. Abria o primeiro do ficheiro, que no arranque estava classificado em terceiro: a página abria o número 3 e numerava-o «3».",
+      "O ecrã foi reorganizado em três colunas — o teu contexto, as sugestões, e a hipótese em foco com «porque encaixa contigo», «o que o mercado mostra» e o próximo teste. As duas primeiras coisas estão em caixas separadas de propósito: a percentagem vem só do que respondeste, o estado vem só do que uma fonte oficial publicou, e continuam a nunca ser somadas.",
+      "Passas a ver a escada de quatro passos que a ferramenta sempre teve por dentro e nunca mostrou: perfil, mercado, preço, teste real.",
+      "Uma falha de rede deixou de ser confundida com ausência de mercado. Quando a consulta às fontes não chega lá, a página diz que foi a consulta que falhou — e dá um botão para tentar de novo, em vez de obrigar a recarregar.",
+      "Os estados das hipóteses passaram a ter um vocabulário só. Havia dois, e discordavam em sete dos oito estados: o mesmo estado dizia «sinal a investigar» num sítio e «sinal oficial encontrado» no outro, que soa a conclusão e não a pista.",
+      "Dezanove das vinte e quatro hipóteses ainda não têm fontes ligadas, e cada uma diz qual falta e porquê. Enquanto isso não mudar, ficam em «ideia por investigar» e não abrem passo comercial nenhum — que é o que é verdade.",
+    ],
+  },
+  {
     version: "2.94.0",
     data: "2026-08-21",
     titulo: "Os concursos públicos entraram na ferramenta de descoberta — com quase 250 mil contratos contados",

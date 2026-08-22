@@ -1,8 +1,41 @@
-import type { CenarioInicial } from "@/lib/pricing";
+// ═══════════════════════════════════════════════════════════════════════
+//  FOUNDER FIT — compatibilidade pessoal, e só isso
+//  ---------------------------------------------------------------------
+//  Este módulo responde a UMA pergunta: «isto cabe na vida desta pessoa?».
+//  Não responde a «há mercado para isto» — essa vive no gate de evidência,
+//  com fontes, período de referência e licença. As duas nunca se somam.
+//
+//  ── O QUE MUDOU NA VERSÃO 2 DA FÓRMULA, E PORQUÊ ───────────────────
+//  A auditoria de agosto de 2026 percorreu as 25 920 combinações de perfil
+//  contra o catálogo de cinco hipóteses e mediu o que a ferramenta era
+//  realmente capaz de responder: 29 ordenações distintas e 7 conjuntos de
+//  top-3. Setenta por cento dos perfis viam um EMPATE no primeiro lugar,
+//  desfeito em silêncio por ordem alfabética do título; uma das cinco
+//  hipóteses nunca chegava a primeiro para ninguém, em perfil nenhum.
+//
+//  Nada disso se resolvia mexendo em pesos — a informação não estava lá.
+//  Resolve-se em três frentes, e as três estão neste ficheiro:
+//
+//   1. `rankOpportunityTemplates` publica o empate (`rank` partilhado e
+//      `tiedWith`) em vez de o esconder atrás de um número de posição;
+//   2. `calculateOpportunityFit` devolve a REPARTIÇÃO do score, para que
+//      um «88 %» possa ser decomposto no ecrã em vez de ser um veredicto;
+//   3. `fitDimensionIsInert` deriva do catálogo — e não de uma lista à
+//      mão — que perguntas do formulário não conseguem separar nada, para
+//      a interface o poder dizer em vez de fingir que todas contam.
+//
+//  O catálogo em si vive em `catalogo-oportunidades.ts`.
+// ═══════════════════════════════════════════════════════════════════════
+
 import { marketRegionLabel, type MarketRegion } from "./geografia";
+import {
+  OPPORTUNITY_TEMPLATES,
+  type OpportunityTemplate,
+} from "./catalogo-oportunidades";
 import type {
   MarketEvidenceGateResult,
   MarketObservation,
+  MarketOpportunityState,
   MarketSemanticMappingStatus,
   MarketSignalKind,
   MarketSourceHealth,
@@ -15,6 +48,15 @@ export type RecurrencePreference = "pontual" | "recorrente" | "indiferente";
 export type BusinessStrength = "comercial" | "digital" | "operacoes" | "cuidado" | "tecnico";
 
 export type { MarketRegion } from "./geografia";
+export {
+  OPPORTUNITY_TEMPLATES,
+  OPPORTUNITY_SECTORS,
+  OPPORTUNITY_CATALOGUE_REVIEWED_AT,
+  opportunitySectorLabel,
+  type OpportunityIconName,
+  type OpportunitySector,
+  type OpportunityTemplate,
+} from "./catalogo-oportunidades";
 
 export interface BusinessDiscoveryProfile {
   structure: BusinessStructurePreference;
@@ -25,38 +67,25 @@ export interface BusinessDiscoveryProfile {
   region: MarketRegion;
 }
 
-export interface OpportunityTemplate {
-  id: string;
-  title: string;
-  promise: string;
-  customer: string;
-  problem: string;
-  delivery: readonly DeliveryPreference[];
-  /**
-   * Onde o MODELO faz sentido — nunca onde temos dados.
-   *
-   * Confundir as duas coisas foi um erro real: o piloto turístico esteve
-   * limitado a duas NUTS II só porque o manifesto começou por mapear duas,
-   * e quem escolhia outra zona era penalizado na compatibilidade por uma
-   * limitação nossa. `portugal` significa «investigável em qualquer zona»;
-   * a diferença entre regiões passa a vir do valor observado, não daqui.
-   */
-  regions: readonly MarketRegion[];
-  capital: CapitalBand;
-  recurrence: Exclude<RecurrencePreference, "indiferente">;
-  strengths: readonly BusinessStrength[];
-  structures: readonly Exclude<BusinessStructurePreference, "por-decidir">[];
-  pricingScenario: CenarioInicial;
-  revenueModel: string;
-  firstCustomerPath: readonly string[];
-  criticalRequirements: readonly string[];
-  falsificationTest: string;
-  evidencePlan: readonly {
-    source: string;
-    purpose: string;
-    url: string;
-    status: "live" | "planned" | "license-review";
-  }[];
+/** As seis perguntas que o Founder Fit lê. Nenhuma outra entra no score. */
+export type FitDimension =
+  | "delivery"
+  | "capital"
+  | "recurrence"
+  | "strengths"
+  | "structure"
+  | "region";
+
+export interface FitContribution {
+  dimension: FitDimension;
+  earned: number;
+  max: number;
+  /** Verdadeiro quando esta dimensão não separa nada no catálogo atual. */
+  inert: boolean;
+  /** A frase que já era produzida, agora agarrada à sua dimensão. */
+  note: string;
+  /** A dimensão contribuiu com o máximo? Serve o ecrã, não a aritmética. */
+  matched: boolean;
 }
 
 export interface OpportunityFit {
@@ -65,7 +94,20 @@ export interface OpportunityFit {
   label: "forte" | "possivel" | "fraca";
   reasons: readonly string[];
   tensions: readonly string[];
+  /** A repartição, para auditoria, testes e explicação no ecrã. */
+  breakdown: readonly FitContribution[];
+  /** Versão da fórmula, para snapshots e deteção de deriva. */
+  formulaVersion: string;
 }
+
+/**
+ * Sobe quando a aritmética do fit mudar de significado.
+ *
+ * Não é decoração: um snapshot de repartições congelado contra `@1` deixa
+ * de valer quando os pesos mudam, e é preferível que o teste diga isso
+ * pelo nome a que alguém compare números de fórmulas diferentes.
+ */
+export const MARKET_FIT_FORMULA_VERSION = "founder-fit@2";
 
 export interface MarketObservationSummary {
   id: string;
@@ -108,226 +150,23 @@ export interface MarketPilotEvidence {
   note?: string;
 }
 
-export const OPPORTUNITY_TEMPLATES: readonly OpportunityTemplate[] = Object.freeze([
-  {
-    id: "tourism-guest-operations",
-    title: "Operações locais para alojamento turístico",
-    promise: "Check-ins, apoio multilingue, reposições e coordenação de ocorrências para pequenos operadores.",
-    customer: "Alojamentos independentes e pequenos gestores sem equipa própria permanente.",
-    problem: "A ocupação cria picos operacionais que não justificam contratar uma equipa a tempo inteiro.",
-    delivery: ["local", "hibrido"],
-    regions: ["portugal"],
-    capital: "ate-500",
-    recurrence: "recorrente",
-    strengths: ["operacoes", "comercial"],
-    structures: ["recibos-verdes", "empresa"],
-    pricingScenario: "servico",
-    revenueModel: "Avença por unidade alojamento + preço por intervenção fora do pacote.",
-    firstCustomerPath: [
-      "Escolher uma microzona alcançável em 20–30 minutos.",
-      "Entrevistar dez operadores sobre ocorrências e horários reais.",
-      "Vender um piloto pago de 30 dias com limites explícitos.",
-    ],
-    criticalRequirements: ["Disponibilidade e raio de deslocação", "Seguro adequado", "Proteção de dados e acesso a imóveis"],
-    falsificationTest:
-      "Abandonar ou redesenhar se dez operadores não relatarem ocorrências repetidas ou se nenhum aceitar um piloto pago dentro do preço sustentável.",
-    evidencePlan: [
-      {
-        source: "INE — ocupação-quarto",
-        purpose: "Observar intensidade e geografia da atividade turística.",
-        url: "https://dados.gov.pt/datasets/taxa-de-ocupacao-quarto-nos-estabelecimentos-de-alojamento-turistico",
-        status: "live",
-      },
-      {
-        source: "INE — Demografia das empresas (0014098)",
-        purpose:
-          "Contar sociedades constituídas por ano na zona. É uma operação estatística diferente do inquérito à hotelaria, por isso triangula a sério.",
-        url: "https://www.ine.pt/xurl/indx/0014098/PT",
-        status: "live",
-      },
-      {
-        source: "Validação do utilizador",
-        purpose: "Provar dor operacional e disposição a pagar no microterritório.",
-        url: "https://www.recibocerto.pt/ferramentas/descobrir-negocio",
-        status: "planned",
-      },
-    ],
-  },
-  {
-    id: "sme-digital-operations",
-    title: "Instalação de operações digitais para microempresas",
-    promise: "Organizar pedidos, CRM leve, propostas, cobranças e automações simples sem vender uma transformação abstrata.",
-    customer: "Micro e pequenas empresas com processos dispersos por WhatsApp, email e folhas de cálculo.",
-    problem: "Ferramentas existem, mas a adoção falha quando ninguém traduz o processo e acompanha a equipa.",
-    delivery: ["remoto", "hibrido"],
-    regions: ["portugal"],
-    capital: "ate-500",
-    recurrence: "recorrente",
-    strengths: ["digital", "operacoes", "comercial"],
-    structures: ["recibos-verdes", "empresa"],
-    pricingScenario: "projeto",
-    revenueModel: "Diagnóstico pago + implementação por projeto + manutenção mensal opcional.",
-    firstCustomerPath: [
-      "Escolher um único setor e um processo caro e repetitivo.",
-      "Mapear o processo de cinco empresas sem propor software.",
-      "Vender uma implementação curta com métrica antes/depois.",
-    ],
-    criticalRequirements: ["RGPD e acessos mínimos", "Capacidade de suporte", "Âmbito técnico e responsabilidade contratual"],
-    falsificationTest:
-      "Rejeitar a hipótese se o processo não consumir tempo mensurável ou se cinco decisores não pagarem sequer pelo diagnóstico.",
-    evidencePlan: [
-      {
-        source: "Eurostat — Digital Intensity Index (isoc_e_dii)",
-        purpose:
-          "Comparar microempresas com pequenas empresas na mesma medida. A distância entre classes é o défice a investigar, não a compra de consultoria.",
-        url: "https://ec.europa.eu/eurostat/databrowser/view/isoc_e_dii/default/table?lang=en",
-        status: "live",
-      },
-      {
-        source: "INE — Demografia das empresas (0014098)",
-        purpose:
-          "Contar empresas individuais e sociedades nascidas por ano na zona: é o momento em que um negócio monta processos do zero.",
-        url: "https://www.ine.pt/xurl/indx/0014098/PT",
-        status: "live",
-      },
-      {
-        source: "INE — utilização de TIC nas empresas",
-        purpose: "Confirmar o contexto português e a adoção recente de IA.",
-        url: "https://www.ine.pt/xportal/xmain?DESTAQUESdest_boui=707461582&DESTAQUESmodo=2&xpgid=ine_destaques&xpid=INE",
-        status: "license-review",
-      },
-    ],
-  },
-  {
-    id: "senior-digital-concierge",
-    title: "Acompanhamento digital presencial para seniores e famílias",
-    promise: "Ajuda acompanhada em serviços digitais, segurança básica e organização — sem guardar credenciais.",
-    customer: "Famílias que apoiam pessoas com baixa confiança digital e querem uma presença local de confiança.",
-    problem: "A disponibilidade de serviços digitais não elimina barreiras de uso, confiança e segurança.",
-    delivery: ["local", "hibrido"],
-    regions: ["portugal"],
-    capital: "ate-500",
-    recurrence: "recorrente",
-    strengths: ["cuidado", "operacoes"],
-    structures: ["recibos-verdes", "empresa"],
-    pricingScenario: "servico_hora",
-    revenueModel: "Sessão avulsa, pack familiar ou acompanhamento mensal com limites de responsabilidade.",
-    firstCustomerPath: [
-      "Entrevistar familiares pagadores, não presumir que o utilizador final compra.",
-      "Definir tarefas permitidas e proibidas antes do primeiro serviço.",
-      "Testar três sessões pagas com acompanhamento e checklist de segurança.",
-    ],
-    criticalRequirements: ["Nunca custodiar passwords ou códigos", "Seguro e limites de atuação", "Protocolo contra fraude e abuso"],
-    falsificationTest:
-      "Parar se as famílias não aceitarem pagar pelo acompanhamento ou se a responsabilidade necessária exceder o seguro e o âmbito do serviço.",
-    evidencePlan: [
-      {
-        source: "Eurostat — competências digitais (isoc_sk_dskl_i21)",
-        purpose:
-          "Medir o défice dos 65–74 anos contra a população total. Um défice é barreira de uso, não procura paga — quem paga costuma ser a família.",
-        url: "https://ec.europa.eu/eurostat/databrowser/view/isoc_sk_dskl_i21/default/table?lang=en",
-        status: "live",
-      },
-      {
-        source: "INE — Índice de envelhecimento (0012909)",
-        purpose:
-          "Dimensionar quantas pessoas na zona podem precisar de acompanhamento. Estimativas anuais da população: operação distinta do inquérito europeu às famílias.",
-        url: "https://www.ine.pt/xurl/indx/0012909/PT",
-        status: "live",
-      },
-    ],
-  },
-  {
-    id: "public-tender-support",
-    title: "Radar e preparação operacional de concursos para pequenas empresas",
-    promise: "Filtrar oportunidades públicas, organizar requisitos e prazos e preparar um dossier — sem substituir apoio jurídico.",
-    customer: "Pequenas empresas capazes de entregar, mas sem rotina para acompanhar procedimentos.",
-    problem: "A informação é pública, porém a triagem e a preparação documental consomem tempo e falham por processo.",
-    delivery: ["remoto", "hibrido"],
-    regions: ["portugal"],
-    capital: "ate-500",
-    recurrence: "recorrente",
-    strengths: ["operacoes", "comercial", "digital"],
-    structures: ["recibos-verdes", "empresa"],
-    pricingScenario: "servico",
-    revenueModel: "Avença de monitorização + fee fixo por dossier; nunca comissão que crie conflito sem revisão jurídica.",
-    firstCustomerPath: [
-      "Escolher dois códigos CPV e uma região.",
-      "Medir quantos avisos realmente elegíveis surgem em 30 dias.",
-      "Vender uma triagem paga antes de automatizar o radar.",
-    ],
-    criticalRequirements: ["Limite entre apoio administrativo e jurídico", "Confidencialidade", "Rastreio de prazos e versões"],
-    falsificationTest:
-      "Rejeitar o nicho se não houver procedimentos elegíveis recorrentes ou se as empresas não valorizarem a poupança de tempo acima do preço sustentável.",
-    evidencePlan: [
-      {
-        source: "INE — Sistema de contas integradas das empresas (0014044)",
-        purpose:
-          "Dimensionar o universo de empresas pequenas capazes de entregar, por zona.",
-        url: "https://www.ine.pt/xurl/indx/0014044/PT",
-        status: "live",
-      },
-      {
-        source: "Portal BASE (IMPIC), via dados.gov.pt",
-        purpose:
-          "Contar contratos celebrados e procedimentos abertos à concorrência, por zona e por ano — nunca o valor anunciado como receita provável. A leitura é feita por um job agendado sobre o ficheiro anual do portal; a aplicação serve o instantâneo commitado, com a data da extração à vista.",
-        url: "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
-        status: "live",
-      },
-      {
-        source: "TED — Tenders Electronic Daily",
-        purpose:
-          "Acrescentar os avisos acima dos limiares europeus e a classificação por CPV, que o ficheiro anual do BASE não traz num formato utilizável. Enquanto não estiver ligado, a contagem por setor não existe e o cartão não a mostra.",
-        url: "https://ted.europa.eu/",
-        status: "planned",
-      },
-    ],
-  },
-  {
-    id: "home-transition-operations",
-    title: "Coordenação de transições de casa",
-    promise: "Inventário, pedidos de orçamento, calendarização e acompanhamento de mudanças, heranças ou redução de casa.",
-    customer: "Famílias sem tempo local para coordenar múltiplos prestadores e decisões.",
-    problem: "Uma transição rara concentra dezenas de tarefas, mas o cliente não precisa de mais um prestador isolado.",
-    delivery: ["local", "hibrido"],
-    regions: ["portugal"],
-    capital: "500-3000",
-    recurrence: "pontual",
-    strengths: ["operacoes", "cuidado", "comercial"],
-    structures: ["recibos-verdes", "empresa"],
-    pricingScenario: "projeto",
-    revenueModel: "Diagnóstico e plano pagos + coordenação por projeto; fornecedores faturam diretamente ao cliente.",
-    firstCustomerPath: [
-      "Escolher uma transição concreta e uma área geográfica curta.",
-      "Entrevistar profissionais que já recebem pedidos desorganizados.",
-      "Vender um diagnóstico, antes de assumir toda a coordenação.",
-    ],
-    criticalRequirements: ["Seguro e responsabilidade", "Independência na escolha de fornecedores", "Regras para bens, chaves e dados pessoais"],
-    falsificationTest:
-      "Parar se o cliente preferir contratar diretamente ou se o custo de aquisição exceder a margem do projeto em três testes consecutivos.",
-    evidencePlan: [
-      {
-        source: "INE — Transações de alojamentos familiares (0012787)",
-        purpose:
-          "Contar casas transacionadas por famílias, por zona e por ano. É o evento que cria a transição — e o sinal mais próximo de procura que existe publicado.",
-        url: "https://www.ine.pt/xurl/indx/0012787/PT",
-        status: "live",
-      },
-      {
-        source: "INE — Índice de envelhecimento (0012909)",
-        purpose:
-          "Contexto das transições ligadas a herança e a redução de casa, sem inferir intenção de contratar.",
-        url: "https://www.ine.pt/xurl/indx/0012909/PT",
-        status: "live",
-      },
-    ],
-  },
-] as const);
-
 const CAPITAL_RANK: Readonly<Record<CapitalBand, number>> = {
   "ate-500": 0,
   "500-3000": 1,
   "mais-3000": 2,
+};
+
+/** Faixa de capital em símbolo, para o cartão não gastar uma linha nisso. */
+export const CAPITAL_SYMBOL: Readonly<Record<CapitalBand, string>> = {
+  "ate-500": "€",
+  "500-3000": "€€",
+  "mais-3000": "€€€",
+};
+
+export const CAPITAL_LABEL: Readonly<Record<CapitalBand, string>> = {
+  "ate-500": "até 500 €",
+  "500-3000": "500 a 3 000 €",
+  "mais-3000": "mais de 3 000 €",
 };
 
 // ── Rótulos: os enums NÃO são texto de interface ──────────────────────
@@ -341,9 +180,21 @@ const DELIVERY_LABEL: Readonly<Record<DeliveryPreference, string>> = {
   hibrido: "híbrido",
 };
 
+/** O mesmo, capitalizado, para as etiquetas curtas do cartão. */
+export const DELIVERY_CHIP: Readonly<Record<DeliveryPreference, string>> = {
+  local: "Presencial",
+  remoto: "Remoto",
+  hibrido: "Híbrido",
+};
+
 const RECURRENCE_LABEL: Readonly<Record<Exclude<RecurrencePreference, "indiferente">, string>> = {
   pontual: "por projeto pontual",
   recorrente: "recorrente",
+};
+
+export const RECURRENCE_CHIP: Readonly<Record<Exclude<RecurrencePreference, "indiferente">, string>> = {
+  pontual: "Pontual",
+  recorrente: "Recorrente",
 };
 
 const STRENGTH_LABEL: Readonly<Record<BusinessStrength, string>> = {
@@ -354,9 +205,24 @@ const STRENGTH_LABEL: Readonly<Record<BusinessStrength, string>> = {
   tecnico: "a tua resolução de problemas técnicos",
 };
 
+/** O rótulo curto que a interface oferece. Vive aqui, ao lado do resto. */
+export const STRENGTH_CHIP: Readonly<Record<BusinessStrength, string>> = {
+  comercial: "Vender e criar relações",
+  digital: "Ferramentas digitais",
+  operacoes: "Organizar e executar",
+  cuidado: "Acompanhar pessoas",
+  tecnico: "Resolver problemas técnicos",
+};
+
 const STRUCTURE_LABEL: Readonly<Record<Exclude<BusinessStructurePreference, "por-decidir">, string>> = {
   "recibos-verdes": "recibos verdes",
   empresa: "empresa",
+};
+
+export const STRUCTURE_CHIP: Readonly<Record<BusinessStructurePreference, string>> = {
+  "recibos-verdes": "Recibos verdes",
+  empresa: "Empresa",
+  "por-decidir": "Ainda a decidir",
 };
 
 /** Junta com «e» antes do último, como se escreve em português. */
@@ -365,85 +231,277 @@ function enumerar(itens: readonly string[]): string {
   return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  O QUE O CATÁLOGO CONSEGUE SEPARAR
+//  ---------------------------------------------------------------------
+//  Derivado, nunca escrito à mão. Acrescentar uma hipótese que só faça
+//  sentido em empresa liga a dimensão «estrutura» sozinha, e a interface
+//  deixa de precisar de saber disto. Foi assim que se descobriu que duas
+//  das seis perguntas do formulário não podiam alterar o resultado.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** A assinatura de um template numa dimensão do fit. */
+export function fitDimensionSignature(
+  template: OpportunityTemplate,
+  dimension: FitDimension,
+): string {
+  switch (dimension) {
+    case "delivery":
+      return [...template.delivery].sort().join("/");
+    case "capital":
+      return template.capital;
+    case "recurrence":
+      return template.recurrence;
+    case "strengths":
+      // A ORDEM conta, e por isso não se ordena aqui. `strengths` está
+      // escrito por importância — a primeira é o que o trabalho pede
+      // mesmo — e a repartição dos 25 pontos segue essa ordem. Duas
+      // hipóteses com o mesmo conjunto por ordem diferente pontuam
+      // diferente, logo são de facto distinguíveis.
+      return template.strengths.join(">");
+    case "structure":
+      return [...template.structures].sort().join("/");
+    case "region":
+      return [...template.regions].sort().join("/");
+  }
+}
+
+export const FIT_DIMENSIONS: readonly FitDimension[] = Object.freeze([
+  "delivery",
+  "capital",
+  "recurrence",
+  "strengths",
+  "structure",
+  "region",
+] as const);
+
+/** A assinatura completa. Dois templates com a mesma são o mesmo template. */
+export function fitSignature(template: OpportunityTemplate): string {
+  return FIT_DIMENSIONS.map((dimension) => fitDimensionSignature(template, dimension)).join("|");
+}
+
+/** Em quantas dimensões do fit dois templates discordam. */
+export function fitSignatureDistance(
+  left: OpportunityTemplate,
+  right: OpportunityTemplate,
+): number {
+  return FIT_DIMENSIONS.filter(
+    (dimension) =>
+      fitDimensionSignature(left, dimension) !== fitDimensionSignature(right, dimension),
+  ).length;
+}
+
+/**
+ * Esta dimensão consegue, no catálogo atual, separar alguma coisa?
+ *
+ * Uma pergunta que não pode alterar o resultado não deve ser feita com o
+ * mesmo peso visual das outras — e a correção não é manipular o score, é
+ * a interface dizer para que serve a resposta.
+ *
+ * Memoizado por catálogo: `calculateOpportunityFit` chama-o seis vezes por
+ * par (perfil, hipótese), e a auditoria percorre 25 920 perfis contra o
+ * catálogo inteiro. Sem cache, uma pergunta barata passava a percorrer o
+ * catálogo umas dezenas de milhões de vezes.
+ */
+const INERT_CACHE = new WeakMap<object, Map<FitDimension, boolean>>();
+
+export function fitDimensionIsInert(
+  dimension: FitDimension,
+  catalogue: readonly OpportunityTemplate[] = OPPORTUNITY_TEMPLATES,
+): boolean {
+  const cache = INERT_CACHE.get(catalogue) ?? new Map<FitDimension, boolean>();
+  INERT_CACHE.set(catalogue, cache);
+  const guardado = cache.get(dimension);
+  if (guardado !== undefined) return guardado;
+
+  const inerte =
+    new Set(catalogue.map((template) => fitDimensionSignature(template, dimension))).size <= 1;
+  cache.set(dimension, inerte);
+  return inerte;
+}
+
+/**
+ * Competências que algum template do catálogo reconhece.
+ *
+ * A interface oferecia cinco e o catálogo usava quatro: «resolver
+ * problemas técnicos» era um botão que não fazia absolutamente nada em
+ * nenhum dos 25 920 perfis. Isto impede a recaída por construção — a
+ * mesma disciplina que `templateHasLiveEvidence()` já aplica à evidência.
+ */
+export function strengthsUsedInCatalogue(
+  catalogue: readonly OpportunityTemplate[] = OPPORTUNITY_TEMPLATES,
+): ReadonlySet<BusinessStrength> {
+  return new Set(catalogue.flatMap((template) => template.strengths));
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O CÁLCULO
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Como se repartem os 25 pontos das competências, por ordem declarada.
+ *
+ * Somam sempre 25, e a primeira competência pesa mais do que a última —
+ * porque o catálogo escreve `strengths` por importância e não por acaso.
+ * O efeito lateral que interessa: a escala passa a ter muitos mais valores
+ * distintos, e duas hipóteses que pedem as mesmas competências por ordem
+ * diferente deixam de ser indistinguíveis.
+ */
+const STRENGTH_WEIGHTS: Readonly<Record<number, readonly number[]>> = Object.freeze({
+  0: [],
+  1: [25],
+  2: [15, 10],
+  3: [11, 8, 6],
+  4: [9, 7, 5, 4],
+  5: [7, 6, 5, 4, 3],
+});
+
 /** Compatibilidade pessoal, deliberadamente separada da evidência de mercado. */
 export function calculateOpportunityFit(
   template: OpportunityTemplate,
   profile: BusinessDiscoveryProfile,
+  catalogue: readonly OpportunityTemplate[] = OPPORTUNITY_TEMPLATES,
 ): OpportunityFit {
-  let score = 0;
   const reasons: string[] = [];
   const tensions: string[] = [];
+  const breakdown: FitContribution[] = [];
 
+  const registar = (
+    dimension: FitDimension,
+    earned: number,
+    max: number,
+    note: string,
+    matched: boolean,
+  ) => {
+    breakdown.push({
+      dimension,
+      earned,
+      max,
+      inert: fitDimensionIsInert(dimension, catalogue),
+      note,
+      matched,
+    });
+  };
+
+  // ── Modo de trabalho ──────────────────────────────────────────────
   if (template.delivery.includes(profile.delivery)) {
-    score += 20;
-    reasons.push(`Funciona em modelo ${DELIVERY_LABEL[profile.delivery]}.`);
+    const nota = `Funciona em modelo ${DELIVERY_LABEL[profile.delivery]}.`;
+    reasons.push(nota);
+    registar("delivery", 20, 20, nota, true);
   } else {
-    tensions.push(
-      `O modelo pede trabalho ${template.delivery.map((item) => DELIVERY_LABEL[item]).join(" ou ")}, não ${DELIVERY_LABEL[profile.delivery]}.`,
-    );
+    const nota = `O modelo pede trabalho ${template.delivery
+      .map((item) => DELIVERY_LABEL[item])
+      .join(" ou ")}, não ${DELIVERY_LABEL[profile.delivery]}.`;
+    tensions.push(nota);
+    registar("delivery", 0, 20, nota, false);
   }
 
+  // ── Capital ───────────────────────────────────────────────────────
   if (CAPITAL_RANK[template.capital] <= CAPITAL_RANK[profile.capital]) {
-    score += 20;
-    reasons.push("Cabe na faixa de capital escolhida.");
+    const nota = "Cabe na faixa de capital escolhida.";
+    reasons.push(nota);
+    registar("capital", 20, 20, nota, true);
   } else {
-    tensions.push("Pode exigir mais capital inicial do que declaraste.");
+    const nota = `Pede tipicamente ${CAPITAL_LABEL[template.capital]} para arrancar — mais do que declaraste.`;
+    tensions.push(nota);
+    registar("capital", 0, 20, nota, false);
   }
 
+  // ── Recorrência ───────────────────────────────────────────────────
   if (profile.recurrence === "indiferente" || profile.recurrence === template.recurrence) {
-    score += 15;
-    reasons.push(`O modelo de receita é ${RECURRENCE_LABEL[template.recurrence]}.`);
+    const nota = `O modelo de receita é ${RECURRENCE_LABEL[template.recurrence]}.`;
+    reasons.push(nota);
+    registar("recurrence", 15, 15, nota, true);
   } else {
-    tensions.push(`A receita tende a ser ${RECURRENCE_LABEL[template.recurrence]}.`);
+    const nota = `A receita tende a ser ${RECURRENCE_LABEL[template.recurrence]}.`;
+    tensions.push(nota);
+    registar("recurrence", 0, 15, nota, false);
   }
 
-  const matchingStrengths = template.strengths.filter((strength) => profile.strengths.includes(strength));
-  const strengthScore = Math.min(25, matchingStrengths.length * 12.5);
-  score += strengthScore;
+  // ── Competências ──────────────────────────────────────────────────
+  //  Os 25 pontos repartem-se pelas competências que o template DECLARA,
+  //  por ordem de importância. Duas correções de uma vez:
+  //
+  //   · o teto antigo — `min(25, n × 12,5)` — saturava aos dois acertos:
+  //     acertar em três de três valia o mesmo que acertar em dois de três;
+  //   · e tratava todas as competências como iguais, quando o catálogo já
+  //     as escreve por ordem («este trabalho é sobretudo organizar; ser
+  //     comercial ajuda»). Ignorar essa ordem deitava fora informação que
+  //     já lá estava, e produzia empates onde havia diferença real.
+  const matchingStrengths = template.strengths.filter((strength) =>
+    profile.strengths.includes(strength),
+  );
+  const pesos = STRENGTH_WEIGHTS[template.strengths.length] ?? [];
+  const strengthScore = template.strengths.reduce(
+    (total, strength, indice) =>
+      profile.strengths.includes(strength) ? total + (pesos[indice] ?? 0) : total,
+    0,
+  );
   if (matchingStrengths.length) {
-    reasons.push(`Aproveita ${enumerar(matchingStrengths.map((item) => STRENGTH_LABEL[item]))}.`);
+    const nota = `Aproveita ${enumerar(matchingStrengths.map((item) => STRENGTH_LABEL[item]))}.`;
+    reasons.push(nota);
+    registar(
+      "strengths",
+      strengthScore,
+      25,
+      nota,
+      matchingStrengths.length === template.strengths.length,
+    );
   } else {
-    tensions.push("Não coincide ainda com as competências que selecionaste.");
+    const nota = `Pede sobretudo ${enumerar(
+      template.strengths.map((item) => STRENGTH_LABEL[item]),
+    )} — e isso não está no que selecionaste.`;
+    tensions.push(nota);
+    registar("strengths", 0, 25, nota, false);
   }
 
+  // ── Estrutura ─────────────────────────────────────────────────────
   if (profile.structure === "por-decidir" || template.structures.includes(profile.structure)) {
-    score += 10;
-    reasons.push(
+    const nota =
       profile.structure === "por-decidir"
         ? "Pode ser testado antes de decidir a estrutura."
-        : `Pode arrancar em ${STRUCTURE_LABEL[profile.structure]}.`,
-    );
+        : `Pode arrancar em ${STRUCTURE_LABEL[profile.structure]}.`;
+    reasons.push(nota);
+    registar("structure", 10, 10, nota, true);
   } else {
-    tensions.push("A estrutura preferida não é a indicada para este piloto.");
+    const nota = `Este modelo pede ${enumerar(
+      template.structures.map((item) => STRUCTURE_LABEL[item]),
+    )}, e não ${STRUCTURE_LABEL[profile.structure]}.`;
+    tensions.push(nota);
+    registar("structure", 0, 10, nota, false);
   }
 
-  // A zona só pode PENALIZAR quando o modelo depende mesmo de estar noutro
-  // sítio. Não saber ainda onde testar não é uma incompatibilidade — e a
-  // falta de dados nossos sobre uma região nunca foi razão para baixar a
-  // compatibilidade de ninguém.
+  // ── Zona ──────────────────────────────────────────────────────────
+  //  A zona só pode PENALIZAR quando o modelo depende mesmo de estar
+  //  noutro sítio. Não saber ainda onde testar não é uma
+  //  incompatibilidade — e a falta de dados NOSSOS sobre uma região nunca
+  //  foi razão para baixar a compatibilidade de ninguém.
   const nacional = template.regions.includes("portugal");
   if (nacional || profile.region === "portugal" || template.regions.includes(profile.region)) {
-    score += 10;
-    reasons.push(
-      nacional
-        ? "O modelo pode ser investigado em qualquer zona do país."
-        : profile.region === "portugal"
-          ? "Podes escolher a zona depois de veres os sinais."
-          : `Funciona na zona escolhida (${marketRegionLabel(profile.region)}).`,
-    );
+    const nota = nacional
+      ? "O modelo pode ser investigado em qualquer zona do país."
+      : profile.region === "portugal"
+        ? `Depende de estar em ${enumerar(template.regions.map(marketRegionLabel))} — podes fixar a zona depois.`
+        : `Funciona na zona escolhida (${marketRegionLabel(profile.region)}).`;
+    reasons.push(nota);
+    registar("region", 10, 10, nota, true);
   } else {
-    tensions.push(
-      `Este modelo depende de ${template.regions.map(marketRegionLabel).join(" ou ")}, não de ${marketRegionLabel(profile.region)}.`,
-    );
+    const nota = `Este modelo depende de ${enumerar(
+      template.regions.map(marketRegionLabel),
+    )}, não de ${marketRegionLabel(profile.region)}.`;
+    tensions.push(nota);
+    registar("region", 0, 10, nota, false);
   }
 
-  const rounded = Math.round(score);
+  const rounded = Math.round(breakdown.reduce((total, item) => total + item.earned, 0));
   return {
     templateId: template.id,
     score: rounded,
-    label: rounded >= 75 ? "forte" : rounded >= 50 ? "possivel" : "fraca",
+    label: rounded >= 80 ? "forte" : rounded >= 55 ? "possivel" : "fraca",
     reasons,
     tensions,
+    breakdown,
+    formulaVersion: MARKET_FIT_FORMULA_VERSION,
   };
 }
 
@@ -459,9 +517,96 @@ export function templateHasLiveEvidence(template: OpportunityTemplate): boolean 
   return template.evidencePlan.some((entry) => entry.status === "live");
 }
 
-export function rankOpportunityTemplates(profile: BusinessDiscoveryProfile) {
-  return OPPORTUNITY_TEMPLATES.map((template) => ({
-    template,
-    fit: calculateOpportunityFit(template, profile),
-  })).sort((left, right) => right.fit.score - left.fit.score || left.template.title.localeCompare(right.template.title));
+export interface RankedOpportunity {
+  template: OpportunityTemplate;
+  fit: OpportunityFit;
+  /** Posição PARTILHADA: dois scores iguais recebem o mesmo `rank`. */
+  rank: number;
+  /** Quantas hipóteses partilham este `rank`. 1 = posição exclusiva. */
+  tiedWith: number;
+}
+
+/**
+ * A ordem continua determinística — o desempate por título é conservado
+ * para a lista não dançar entre renders. O que muda é que a posição deixa
+ * de mentir: quatro hipóteses com o mesmo score são todas «1.ª», e o ecrã
+ * passa a ter a informação para o dizer.
+ *
+ * O catálogo é injetável para a auditoria poder correr contra conjuntos
+ * sintéticos sem monkey-patching de um módulo congelado.
+ */
+export function rankOpportunityTemplates(
+  profile: BusinessDiscoveryProfile,
+  catalogue: readonly OpportunityTemplate[] = OPPORTUNITY_TEMPLATES,
+): readonly RankedOpportunity[] {
+  const scored = catalogue
+    .map((template) => ({ template, fit: calculateOpportunityFit(template, profile, catalogue) }))
+    .sort(
+      (left, right) =>
+        right.fit.score - left.fit.score ||
+        left.template.title.localeCompare(right.template.title, "pt-PT"),
+    );
+
+  const quantosPorScore = new Map<number, number>();
+  for (const item of scored) {
+    quantosPorScore.set(item.fit.score, (quantosPorScore.get(item.fit.score) ?? 0) + 1);
+  }
+
+  let rank = 0;
+  let scoreAnterior: number | null = null;
+  return scored.map((item, indice) => {
+    if (item.fit.score !== scoreAnterior) {
+      rank = indice + 1;
+      scoreAnterior = item.fit.score;
+    }
+    return { ...item, rank, tiedWith: quantosPorScore.get(item.fit.score) ?? 1 };
+  });
+}
+
+/**
+ * O desempate por evidência — e porque NÃO é a ordem principal.
+ *
+ * A tentação era ordenar primeiro pelo estado do gate e só depois pelo
+ * fit: «primeiro o que tem evidência, depois o que te encaixa». Numa
+ * carteira em que todas as hipóteses têm séries ligadas, isso seria a
+ * ordem certa. Neste catálogo, cinco das vinte e quatro têm ingestão
+ * ativa — e ordenar por evidência fixaria essas cinco no topo para toda a
+ * gente, independentemente do que a pessoa responder. Seria recriar,
+ * dentro de um catálogo maior, exatamente o defeito que ele veio corrigir.
+ *
+ * Por isso a evidência entra onde é inequivocamente melhor do que a
+ * alternativa: a desfazer empates. Um terço dos perfis produz empate no
+ * primeiro lugar, e desfazê-lo por ordem alfabética do título é a única
+ * escolha pior do que desfazê-lo por quem tem números publicados.
+ *
+ * Somar as duas coisas num «score mágico» continua fora de questão: fit é
+ * preferência declarada, evidência é observação externa, e um número
+ * único apagaria a distinção que é a tese inteira da ferramenta.
+ *
+ * O estado do gate só existe no browser (depende da zona, do preço e das
+ * provas locais), por isso entra como argumento em vez de ser lido aqui.
+ */
+const EVIDENCE_ORDER: Readonly<Record<MarketOpportunityState, number>> = {
+  contradicted: 0,
+  template: 1,
+  stale: 2,
+  signal_detected: 3,
+  candidate: 4,
+  evidence_qualified: 5,
+  user_validated: 6,
+  operating: 7,
+};
+
+export function breakTiesWithEvidence(
+  ranked: readonly RankedOpportunity[],
+  stateOf: (templateId: string) => MarketOpportunityState | undefined,
+): readonly RankedOpportunity[] {
+  return [...ranked].sort((left, right) => {
+    if (left.fit.score !== right.fit.score) return right.fit.score - left.fit.score;
+    const esquerda = EVIDENCE_ORDER[stateOf(left.template.id) ?? "template"];
+    const direita = EVIDENCE_ORDER[stateOf(right.template.id) ?? "template"];
+    return (
+      direita - esquerda || left.template.title.localeCompare(right.template.title, "pt-PT")
+    );
+  });
 }

@@ -190,21 +190,80 @@ describe("market: descoberta e pilotos", () => {
     }
   });
 
-  it("ordena de forma determinística e conserva os cinco dossiers", () => {
+  it("ordena de forma determinística e publica o empate em vez de o esconder", () => {
     const first = rankOpportunityTemplates(localOperator);
     const second = rankOpportunityTemplates(localOperator);
     expect(first).toEqual(second);
-    expect(first).toHaveLength(5);
+    expect(first).toHaveLength(OPPORTUNITY_TEMPLATES.length);
     expect(first[0]?.template.id).toBe("tourism-guest-operations");
+
+    // `rank` é PARTILHADO: duas hipóteses com o mesmo score recebem a
+    // mesma posição, e `tiedWith` diz quantas são. Antes disto, o ecrã
+    // numerava 1, 2, 3, 4 quatro cartões com o mesmo valor — uma
+    // hierarquia que o modelo não tinha produzido.
+    for (const item of first) {
+      const mesmoScore = first.filter((outro) => outro.fit.score === item.fit.score);
+      expect(item.tiedWith).toBe(mesmoScore.length);
+      expect(new Set(mesmoScore.map((outro) => outro.rank)).size).toBe(1);
+    }
+    // A posição nunca salta para trás nem repete fora de um empate.
+    expect(first[0]?.rank).toBe(1);
   });
 
   it("cada piloto com ingestão ativa é declarado nos dados, não num id na UI", () => {
     const comPilot = new Set(MARKET_PILOTS.map((pilot) => pilot.templateId));
     for (const template of OPPORTUNITY_TEMPLATES) {
-      expect(templateHasLiveEvidence(template)).toBe(comPilot.has(template.id));
+      expect(templateHasLiveEvidence(template), template.id).toBe(comPilot.has(template.id));
     }
-    // Os cinco dossiers têm ingestão: nenhum ficou só como texto editorial.
-    expect(comPilot.size).toBe(OPPORTUNITY_TEMPLATES.length);
+    // Todo o piloto declarado tem dossier no catálogo — um manifesto órfão
+    // seria uma consulta a uma fonte oficial que ninguém chega a ver.
+    const ids = new Set(OPPORTUNITY_TEMPLATES.map((template) => template.id));
+    for (const templateId of comPilot) expect(ids.has(templateId), templateId).toBe(true);
+  });
+
+  it("uma hipótese sem ingestão diz porquê, em vez de fingir que tem", () => {
+    // O catálogo cresceu de cinco para vinte e quatro hipóteses e só cinco
+    // têm séries ligadas. Isso é aceitável — o que não é aceitável é o
+    // silêncio: cada dossier sem ingestão tem de declarar o que existe e
+    // o que falta, e o gate mantém-no em «ideia por investigar».
+    const comPilot = new Set(MARKET_PILOTS.map((pilot) => pilot.templateId));
+    for (const template of OPPORTUNITY_TEMPLATES) {
+      expect(template.evidenceNote.trim().length, template.id).toBeGreaterThan(60);
+      if (comPilot.has(template.id)) continue;
+      expect(
+        template.evidencePlan.every((entry) => entry.status !== "live"),
+        `${template.id} anuncia uma fonte «live» sem piloto que a leia`,
+      ).toBe(true);
+      // Sem série ligada não há observação, logo o gate não pode sair de
+      // «ideia por investigar» — e nenhuma rota comercial abre por cima.
+      const gate = evaluateLocalMarketEvidence({
+        template,
+        region: "grande-lisboa",
+        asOf: "2026-08-22T10:00:00Z",
+      });
+      expect(gate.state, template.id).toBe("template");
+    }
+  });
+
+  it("todo o dossier do catálogo está completo o suficiente para decidir", () => {
+    for (const template of OPPORTUNITY_TEMPLATES) {
+      expect(template.promise.trim().length, template.id).toBeGreaterThan(30);
+      expect(template.customer.trim().length, template.id).toBeGreaterThan(30);
+      expect(template.problem.trim().length, template.id).toBeGreaterThan(40);
+      expect(template.revenueModel.trim().length, template.id).toBeGreaterThan(40);
+      expect(template.falsificationTest.trim().length, template.id).toBeGreaterThan(60);
+      expect(template.firstCustomerPath.length, template.id).toBeGreaterThanOrEqual(3);
+      expect(template.criticalRequirements.length, template.id).toBeGreaterThanOrEqual(2);
+      expect(template.evidencePlan.length, template.id).toBeGreaterThanOrEqual(1);
+      expect(template.strengths.length, template.id).toBeGreaterThanOrEqual(1);
+      expect(template.regions.length, template.id).toBeGreaterThanOrEqual(1);
+      expect(template.structures.length, template.id).toBeGreaterThanOrEqual(1);
+    }
+    // Ids únicos: dois dossiers com o mesmo id partilhariam hipótese
+    // guardada, cenário de preço e handoff para o estúdio de empresa.
+    expect(new Set(OPPORTUNITY_TEMPLATES.map((template) => template.id)).size).toBe(
+      OPPORTUNITY_TEMPLATES.length,
+    );
   });
 
   it("cada série declara a operação estatística que a torna independente", () => {
