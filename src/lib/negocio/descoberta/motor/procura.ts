@@ -9,14 +9,18 @@
 //  mercado — e essa é a leitura mais provável, porque mercados com
 //  procura tendem a ter quem os sirva.
 //
-//  O motor de mercado deste repositório tem hoje ZERO sinais de oferta e
-//  ZERO de concorrência: quinze séries, todas de procura, transação ou
-//  estrutura. Sem um termo da subtração, a lacuna não é calculável — e a
-//  resposta correta é `desconhecida`, com a pergunta em falta escrita.
+//  O motor de mercado deste repositório continua sem sinais de oferta.
+//  Não por falta de fontes que contem operadores — o RNAL conta 111 mil
+//  alojamentos locais por região — mas porque nenhuma delas conta os
+//  operadores DESTAS hipóteses. Todas as hipóteses do produto são
+//  serviços prestados a alguém; o RNAL conta esse alguém. Lê-lo como
+//  oferta seria contar os clientes como rivais.
 //
-//  Isto é deliberado e não é um defeito por corrigir aqui: fabricar uma
-//  contagem de concorrentes seria exatamente a alucinação que o ponto 32
-//  proíbe.
+//  Sem um termo da subtração, a lacuna não é calculável — e a resposta
+//  correta é `desconhecida`, com a pergunta em falta escrita. Fabricar
+//  uma contagem de concorrentes seria exatamente a alucinação que o
+//  ponto 32 proíbe; reetiquetar uma contagem de clientes seria a mesma
+//  alucinação com melhor disfarce.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { splitObservationsByRegion } from "@/lib/negocio/market/geografia";
@@ -90,11 +94,28 @@ export function avaliarProcura({ candidato, evidencePorTemplate }: EntradaProcur
     "Não há sinal de oferta nem de concorrência para este problema. Sem os dois termos, a lacuna não é calculável — e ausência de concorrentes não é o mesmo que oportunidade.";
 
   if (temProcura && temOferta) {
-    // O ramo existe e está testado, mas hoje é inalcançável: nenhuma
-    // série do motor produz `supply` ou `competition`. Fica escrito para
-    // quando o RNAL entrar, e para o teste poder exercitá-lo.
-    leitura = "procura-com-pouca-oferta";
-    nota = "Há sinal de procura e sinal de oferta: a lacuna é calculável e está descrita em baixo.";
+    // ── Ter os dois sinais NÃO é ter a lacuna ────────────────────────
+    //  Este ramo dizia «procura com pouca oferta» assim que existisse um
+    //  sinal de cada — e era inalcançável, por isso ninguém reparou. O
+    //  dia em que uma série `supply` entrasse, qualquer hipótese com
+    //  procura ganhava 90 em 100 na lacuna sem que nada tivesse sido
+    //  comparado. Era um 90 de borla à espera de acontecer.
+    //
+    //  Para saber se a oferta é pouca ou muita é preciso compará-la com
+    //  a procura na MESMA base: operadores por habitante, por cliente
+    //  possível, por euro gasto. Duas séries com unidades diferentes —
+    //  uma taxa de ocupação e uma contagem de empresas — não se subtraem.
+    //  Enquanto essa base não estiver declarada, a resposta é a mesma que
+    //  quando não havia sinal nenhum: não sabemos.
+    leitura = "desconhecida";
+    nota =
+      "Há sinal de procura e sinal de oferta, mas medidos em unidades que não se comparam. Saber se a oferta é pouca ou muita exige pôr as duas na mesma base — e enquanto isso não estiver feito, dizer «há lacuna» seria uma conclusão sem conta nenhuma por trás.";
+    lacunas.push({
+      pergunta: "Quantos operadores existem por cada cliente possível nesta zona?",
+      tipo: "concorrencia",
+      motivo:
+        "Os dois sinais existem mas não estão na mesma base. Falta a série que os torne comparáveis — por habitante, por alojamento ou por empresa da zona.",
+    });
   } else if (temProcura) {
     leitura = "desconhecida";
     nota =

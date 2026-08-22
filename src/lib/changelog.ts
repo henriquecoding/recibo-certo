@@ -16,6 +16,28 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.2",
+    data: "2026-08-22",
+    titulo: "Uma pergunta que a ferramenta ia começar a responder mal — e deixou de poder",
+    itens: [
+      "A ferramenta de descoberta tinha um cálculo escondido à espera de acontecer: bastava entrar a primeira fonte que contasse operadores para qualquer hipótese com procura receber 90 em 100 na «lacuna de oferta», sem que nada tivesse sido comparado. Uma taxa de ocupação e uma contagem de empresas não se subtraem. Deixou de dar essa nota: quando os dois sinais existem mas não estão na mesma base, a resposta volta a ser «não sabemos», com a pergunta que falta escrita.",
+      "Foi investigado o Registo Nacional de Alojamento Local para ser essa primeira fonte. O acesso está feito e verificado — 111 512 alojamentos, sete regiões — mas as séries ficaram por ligar, e as duas razões estão escritas no código.",
+      "A primeira é a licença: nem o serviço do Turismo de Portugal nem a entrada oficial no dados.gov.pt dizem em que termos os dados podem ser reutilizados. A regra da casa é a mesma de sempre — sem licença confirmada, o número não é publicado.",
+      "A segunda é mais interessante e sobrevive à primeira: para quem quer prestar serviço a alojamentos locais, os 44 818 alojamentos do Algarve não são a concorrência — são a lista de clientes possíveis. Contá-los como oferta dizia a quem procura negócio que o mercado já está cheio, no preciso momento em que lhe estávamos a mostrar os clientes.",
+      "A contagem, quando for ligada, é feita do lado da fonte. O registo tem nome, morada e coordenadas de cada alojamento; o que atravessa a rede são sete números, não cento e onze mil linhas de dados de pessoas.",
+    ],
+  },
+  {
+    version: "2.96.1",
+    data: "2026-08-22",
+    titulo: "O cartão de mercado deixou de conseguir bloquear a publicação do site",
+    itens: [
+      "Os números de mercado vêm do INE, do Eurostat e do portal de dados abertos. Estavam a ser pedidos no momento em que o site é compilado — o que significava que uma tarde má do lado deles impedia qualquer atualização de sair, mesmo que nada tivesse a ver com mercado.",
+      "Passam a ser pedidos quando alguém abre a página, não quando o site é construído. O que se vê é o mesmo e continua guardado seis horas; deixa é de haver uma publicação à espera de um servidor de terceiros.",
+      "A consulta às fontes ganhou um tempo máximo. Se passar disso, o que faltou aparece como «à espera de confirmação» em vez de deixar a página a carregar — como sempre foi a regra: nunca mostrar um número que não veio de lado nenhum.",
+    ],
+  },
+  {
     version: "2.96.0",
     data: "2026-08-22",
     titulo: "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",

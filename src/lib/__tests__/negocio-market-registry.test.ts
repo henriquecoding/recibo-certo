@@ -41,6 +41,7 @@ describe("market: source registry", () => {
       "dados-gov",
       "eurostat",
       "iefp",
+      "turismo-portugal",
     ]);
     for (const source of sources) expect(validateMarketSourceDefinition(source)).toEqual([]);
   });

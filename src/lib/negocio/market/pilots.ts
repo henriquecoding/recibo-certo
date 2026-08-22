@@ -15,6 +15,7 @@
 import { METRICAS_EM_BLOCO } from "./bulk/fontes";
 import type { EurostatDatasetManifest } from "./connectors/eurostat";
 import type { IneAnnualIndicatorManifest } from "./connectors/ine";
+import type { RnalManifest } from "./connectors/rnal";
 import type { MarketSignalKind, MarketSourceId } from "./tipos";
 
 /** A página do conjunto de dados do Portal BASE no dados.gov.pt. */
@@ -225,6 +226,105 @@ export const DIGITAL_SKILLS_TOTAL_MANIFEST = digitalSkills(
   "IND_TOTAL",
 );
 
+// ── RNAL — pronto, e parado à porta da licença ──────────────────────
+//
+// O conector está escrito, testado e verificado contra o serviço a
+// funcionar: 111 512 alojamentos locais, sete NUTS II, zero linhas em
+// quarentena. O que falta não é código — é uma licença.
+//
+// Verificado a 2026-08-22, em duas autoridades independentes:
+//  · o serviço ArcGIS não declara licença nem `copyrightText`;
+//  · a entrada oficial no dados.gov.pt («Estabelecimentos de Alojamento
+//    Local», publicada pelo Turismo de Portugal, I.P.) declara
+//    `license: notspecified`.
+//
+// Com a fonte em `review_required` e sem licença de série ou dataset
+// aprovada, `validateMarketObservation` põe TODAS as observações em
+// quarentena — e faz bem. Ligar as séries assim não punha um número no
+// ecrã: punha um aviso de «4 linhas não atravessaram a quarentena» no
+// cartão do turismo, para sempre. Pior do que não as ter.
+//
+// Por isso os manifestos ficam declarados e as séries ficam por ligar.
+// No dia em que o Turismo de Portugal confirmar os termos por escrito,
+// acrescenta-se `datasetLicense` — como as séries do INE já fazem — e as
+// séries entram no piloto sem mais nada mudar. O teste
+// `negocio-market-rnal.test.ts` guarda exatamente esta condição.
+//
+// A camada publica o nome da NUTS II, não o código. A tabela abaixo é a
+// ponte, e é EXAUSTIVA para o que a fonte cobre: um nome que não esteja
+// aqui vai para quarentena, porque significa que a nomenclatura mudou ou
+// que a cobertura mudou — e nenhuma das duas coisas pode desaparecer numa
+// contagem silenciosamente diferente.
+//
+// Não há Açores nem Madeira: o RNAL nacional é do continente, e as duas
+// regiões autónomas mantêm registos próprios. A ausência de linhas nessas
+// regiões NÃO é ausência de alojamento local — é ausência de fonte, e é
+// por isso que nenhuma hipótese açoriana ou madeirense pode receber sinal
+// de oferta a partir daqui.
+const NUTS2_RNAL: RnalManifest["geographyByName"] = Object.freeze({
+  Norte: { level: "nuts2", code: "11", classificationVersion: "NUTS 2024" },
+  Algarve: { level: "nuts2", code: "15", classificationVersion: "NUTS 2024" },
+  Centro: { level: "nuts2", code: "19", classificationVersion: "NUTS 2024" },
+  "Grande Lisboa": { level: "nuts2", code: "1A", classificationVersion: "NUTS 2024" },
+  "Península de Setúbal": { level: "nuts2", code: "1B", classificationVersion: "NUTS 2024" },
+  Alentejo: { level: "nuts2", code: "1C", classificationVersion: "NUTS 2024" },
+  "Oeste e Vale do Tejo": { level: "nuts2", code: "1D", classificationVersion: "NUTS 2024" },
+} as const);
+
+/** O RNAL como página pública, para quem quiser conferir a contagem. */
+export const RNAL_DATASET_URL = "https://registos.turismodeportugal.pt/HomePage/RNAL";
+
+const RNAL_METODOLOGIA =
+  "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer/6";
+
+/**
+ * Quantos alojamentos locais estão INSCRITOS, por região.
+ *
+ * É o stock de oferta — quantos operadores existem, não quanto vendem. A
+ * validade é curta de propósito: o registo é atualizado diariamente e uma
+ * contagem de há um mês já não descreve o mercado de hoje.
+ */
+export const RNAL_STOCK_MANIFEST: RnalManifest = {
+  metricId: "tourism.local_accommodation.registered",
+  unit: "alojamentos registados",
+  janela: "instantaneo",
+  groupByField: "NUTSII",
+  maxReferenceAgeDays: 30,
+  geographyByName: NUTS2_RNAL,
+  // `observed` e não `estimated`: é uma contagem de registos administrativos,
+  // não uma amostra nem uma projeção. O que a contagem NÃO garante — que o
+  // alojamento esteja em funcionamento — está declarado nas limitações da
+  // fonte, não escondido num estado de qualidade mais fraco.
+  observationStatus: "observed",
+  semanticMapping: "approved",
+  methodologyRef: RNAL_METODOLOGIA,
+  classifications: { cae: ["I55201"] },
+};
+
+/**
+ * Quantos alojamentos locais se INSCREVERAM no último ano civil fechado.
+ *
+ * É o fluxo, não o stock: diz se a oferta ainda está a crescer na região.
+ * O piso de credibilidade existe porque o campo tem preenchimento a
+ * 1900-01-01 em linhas cuja data real ninguém publicou.
+ */
+export const RNAL_NOVOS_MANIFEST: RnalManifest = {
+  metricId: "tourism.local_accommodation.new_registrations",
+  unit: "novos registos por ano",
+  janela: "ultimo-ano-civil-completo",
+  groupByField: "NUTSII",
+  dateField: "DataRegisto",
+  dataMinimaCredivel: "1990-01-01",
+  // Um ano civil fechado continua a descrever o ritmo de entrada durante o
+  // ano seguinte inteiro; a partir daí já fechou outro e este envelheceu.
+  maxReferenceAgeDays: 450,
+  geographyByName: NUTS2_RNAL,
+  observationStatus: "observed",
+  semanticMapping: "approved",
+  methodologyRef: RNAL_METODOLOGIA,
+  classifications: { cae: ["I55201"] },
+};
+
 export type MarketPilotSeriesConnector =
   | { connector: "ine"; manifest: IneAnnualIndicatorManifest }
   | {
@@ -233,6 +333,7 @@ export type MarketPilotSeriesConnector =
       /** Filtros enviados ao endpoint, para não descarregar o cubo inteiro. */
       fetchFilters: Readonly<Record<string, readonly string[]>>;
     }
+  | { connector: "rnal"; manifest: RnalManifest }
   | {
       /**
        * Série lida de um instantâneo commitado, não da rede.
@@ -262,7 +363,19 @@ export interface MarketPilotSeries {
    *  · `transactional`— conta eventos reais registados que criam a
    *                     necessidade (uma empresa que nasce, uma casa que
    *                     muda de mãos);
-   *  · `structural`   — stock, composição ou capacidade do universo.
+   *  · `structural`   — stock, composição ou capacidade do universo;
+   *  · `supply`       — quantos operadores JÁ SERVEM esta hipótese.
+   *
+   * `supply` é a leitura mais fácil de errar, e o erro é caro. A pergunta
+   * que decide não é «isto conta operadores?» mas «operadores de QUÊ?»:
+   * uma contagem de alojamentos locais é oferta para quem quer abrir um
+   * alojamento e é PROCURA para quem quer limpá-los. Contar clientes como
+   * rivais dizia a alguém que o mercado está cheio no preciso momento em
+   * que lhe estávamos a mostrar a lista de clientes.
+   *
+   * Por isso o `kind` pertence ao par (série, piloto) e não à série: o
+   * mesmo manifesto pode entrar em dois pilotos com leituras diferentes,
+   * e é o piloto que declara qual.
    *
    * Nenhum deles prova disposição a pagar. É por isso que nenhum destes
    * sinais, sozinho ou acompanhado, chega a `user_validated`.
