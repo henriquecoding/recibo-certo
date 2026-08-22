@@ -17,6 +17,12 @@ import { buildIneIndicatorUrl, fetchIneIndicator, normalizeIneAnnualIndicator } 
 import { evaluateMarketEvidence } from "./evidence-gate";
 import { classifyObservationFreshness } from "./freshness";
 import { MARKET_PILOTS, type MarketPilotDefinition, type MarketPilotSeries } from "./pilots";
+import {
+  buildRnalStatisticsUrl,
+  fetchRnalStatistics,
+  normalizeRnalStatistics,
+  resolverPeriodo,
+} from "./connectors/rnal";
 import { quarantineMarketObservations } from "./quarantine";
 import type { MarketPilotEvidence, MarketObservationSummary } from "./opportunities";
 import type {
@@ -239,6 +245,21 @@ async function loadSeries(
       observations = normalized.observations;
       // `outOfScope` fica de fora da contagem de propósito: são as
       // geografias que o manifesto nunca pediu, não linhas rejeitadas.
+      parserRejected = normalized.quarantined.length;
+      sourceUrl = fetched.sourceUrl;
+    } else if (definition.connector === "rnal") {
+      // A chave de deduplicação é o URL, e o URL do RNAL já leva a janela
+      // resolvida lá dentro — stock e novos registos são pedidos
+      // diferentes e não se atropelam no cache do transporte.
+      const url = buildRnalStatisticsUrl(
+        definition.manifest,
+        resolverPeriodo(definition.manifest, checkedAt),
+      );
+      const fetched = await transport.buscar(url, series.sourceId, () =>
+        fetchRnalStatistics(definition.manifest, transport.transporte),
+      );
+      const normalized = normalizeRnalStatistics(fetched, definition.manifest);
+      observations = normalized.observations;
       parserRejected = normalized.quarantined.length;
       sourceUrl = fetched.sourceUrl;
     } else {

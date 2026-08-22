@@ -160,6 +160,39 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
       "Alterações de folhas/colunas ficam em quarentena.",
     ]),
   }),
+  "turismo-portugal": Object.freeze({
+    id: "turismo-portugal",
+    publisher: "Turismo de Portugal, I.P.",
+    access: "api",
+    canonicalUrl:
+      "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer/6",
+    documentationUrl: "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer",
+    license: Object.freeze({
+      status: "review_required",
+      url: "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer",
+      attribution: "Fonte: Registo Nacional de Alojamento Local (RNAL) — Turismo de Portugal, I.P.",
+      storagePolicy:
+        "Guardar apenas contagens agregadas por NUTS II. O registo é nominativo — nome, morada e coordenadas de cada unidade — e nada disso pode sair da fonte.",
+      reviewNote:
+        "Verificado a 2026-08-22: o serviço identifica-se como «Open Data» nas palavras-chave e responde sem autenticação, mas não declara licença nem texto de direitos (`copyrightText` vazio), e a entrada correspondente no catálogo DCAT traz `license` vazia e `rights: None`. Falta confirmação escrita dos termos de reutilização comercial.",
+    }),
+    expectedCadence: "daily",
+    coverage: Object.freeze({
+      countries: Object.freeze(["PT"] as const),
+      geographicLevels: Object.freeze(["nuts2", "nuts3", "municipality"] as const),
+      notes:
+        "Só Portugal continental: o RNAL nacional não inclui os Açores nem a Madeira, que mantêm registos próprios. Uma série desta fonte nunca pode ser lida como cobertura do país inteiro.",
+    }),
+    parserVersion: "arcgis-rest-statistics@1",
+    connectorStatus: "ready",
+    allowedUses: Object.freeze(["structural", "conjunctural", "transactional"] as const),
+    limitations: Object.freeze([
+      "Conta REGISTOS, não unidades em operação: um alojamento cancelado pode continuar inscrito.",
+      "A data de registo tem valores de preenchimento (o mínimo publicado é 1900-01-01); janelas temporais têm de os excluir.",
+      "Stock de oferta não é intensidade de concorrência: mede quantos existem, não quanto vendem.",
+      "Sem Açores nem Madeira — a ausência de linhas nessas regiões não significa ausência de oferta.",
+    ]),
+  }),
 });
 
 export interface MarketSourceDefinitionIssue {
