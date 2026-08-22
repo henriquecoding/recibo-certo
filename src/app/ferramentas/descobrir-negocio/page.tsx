@@ -3,6 +3,7 @@ import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import { MARKET_PILOTS, OPPORTUNITY_TEMPLATES } from "@/lib/negocio/market";
 import DescobrirNegocioLazy from "./lazy";
+import ExplorarMercado from "./ExplorarMercado";
 
 const TOOL = porId("descobrir-negocio")!;
 
@@ -23,8 +24,10 @@ export default function DescobrirNegocioPage() {
   return (
     <ToolShell
       tool={TOOL}
-      subtitulo={`Não é uma lista de ideias nem um ranking inventado. ${TOTAL_HIPOTESES} hipóteses curadas, ordenadas pelo que cabe na tua vida e separadas da evidência oficial datada — com o que ainda falta provar dito à cara.`}
+      subtitulo="Diz o que sabes fazer, o que tens e o que não queres. O motor compõe hipóteses a partir disso — não escolhe de uma lista — e diz o que descartou, com que evidência conta e o que ainda falta saber."
       contexto={
+        <div className="space-y-10">
+        <ExplorarMercado />
         <div className="grid gap-5 lg:grid-cols-2">
           <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
             <h2 className="font-display text-xl font-semibold text-ink">Como o motor evita falsas oportunidades</h2>
@@ -55,6 +58,7 @@ export default function DescobrirNegocioPage() {
               duas hipóteses empatam, o cartão diz que empataram em vez de as numerar como se não tivessem.
             </p>
           </section>
+        </div>
         </div>
       }
     >

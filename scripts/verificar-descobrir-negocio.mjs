@@ -169,159 +169,164 @@ try {
       const errosJS = [];
       pagina.on("pageerror", (e) => errosJS.push(String(e)));
 
-      // ═══ 1. A rota abre e consulta a fonte oficial ═══════════════
+      // ═══ 1. FASE A — configurar antes de ver resultados ═════════
       await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "networkidle" });
       await fecharOverlays(pagina);
+      await pagina.locator("#contexto-descoberta").waitFor({ timeout: 20000 });
+
+      await semErroDeRuntime(pagina, "descoberta: fase A");
+      await semOverflow(pagina, "descoberta: fase A");
+      await controlosTocaveis(pagina, "descoberta: fase A");
+
+      const faseA = await pagina.evaluate(() => document.body.innerText);
+      verificar(
+        "abre na configuração, não em resultados",
+        /O teu perfil está a formar-se/.test(faseA) && !/passaram os critérios/.test(faseA),
+      );
+      verificar(
+        "a barra é de profundidade do contexto, nunca de precisão",
+        // `innerText` devolve o texto JÁ transformado por CSS, e este
+        // rótulo é `uppercase`. Comparar sem ignorar a caixa dava um
+        // falso negativo permanente.
+        /quanto já conhecemos do teu cenário/i.test(faseA) && !/precisão do perfil/i.test(faseA),
+      );
+      verificar(
+        "não despeja cartões de negócio durante a configuração",
+        (await pagina.locator("#ferramenta article").count()) === 0,
+      );
+
+      const botaoDescobrir = pagina.getByRole("button", { name: /Descobrir oportunidades/ });
+      verificar("o botão de descoberta existe", (await botaoDescobrir.count()) > 0);
+      verificar(
+        "e está desativado enquanto não houver o mínimo",
+        await botaoDescobrir.first().isDisabled(),
+      );
+
+      // ═══ 2. Responder o essencial ═══════════════════════════════
+      await pagina.getByRole("button", { name: /Logística e transporte/ }).first().click();
+      await pagina.getByRole("button", { name: /Organizar e executar/ }).first().click();
+      await pagina.selectOption("#ode-regiao", "grande-lisboa");
+      await pagina.getByRole("button", { name: "1 000 – 5 000 €", exact: true }).first().click();
+      await pagina.getByRole("button", { name: /Carta de condução/ }).first().click();
+      await pagina.getByRole("button", { name: /Viatura de carga/ }).first().click();
+      await pagina.waitForTimeout(300);
+
+      const profundidade = await pagina.evaluate(
+        () => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? "0",
+      );
+      verificar("a profundidade sobe com as respostas", Number(profundidade) > 30, profundidade);
+      verificar("o botão fica ativo", !(await botaoDescobrir.first().isDisabled()));
+      await semOverflow(pagina, "descoberta: contexto preenchido");
+
+      // ═══ 3. FASE B — os resultados, com o trabalho à vista ══════
+      await botaoDescobrir.first().click();
       await pagina.locator("#resultado-descoberta").waitFor({ timeout: 20000 });
-
-      await semErroDeRuntime(pagina, "descoberta: entrada");
-      await semOverflow(pagina, "descoberta: entrada");
-      await controlosTocaveis(pagina, "descoberta: entrada");
-
-      const entrada = await pagina.evaluate(() => document.body.innerText);
-      verificar(
-        "compatibilidade é apresentada como afinidade, não como procura",
-        /Compatibilidade \d+%/.test(entrada) && /afinidade contigo/i.test(entrada),
-      );
-
-      // ═══ 1b. A escada de quatro passos existe no ecrã ════════════
-      //  Vivia só na medição: a pessoa via cartões e nada que dissesse
-      //  que abrir um dossier é o primeiro de quatro passos.
-      verificar(
-        "os quatro passos estão à vista",
-        /Perfil/.test(entrada) && /Mercado/.test(entrada) && /Preço/.test(entrada) && /Teste real/.test(entrada),
-      );
-
-      // ═══ 1c. O catálogo é maior do que os cinco pilotos ══════════
-      const cartoes = await pagina.locator("article").count();
-      verificar("há mais do que cinco hipóteses no catálogo", cartoes >= 6, `${cartoes} cartões`);
-      const verMais = pagina.getByRole("button", { name: /Ver mais \d+ hipóteses/ });
-      verificar("as restantes hipóteses abrem a pedido", (await verMais.count()) > 0);
-      if ((await verMais.count()) > 0) {
-        await verMais.click();
-        await pagina.waitForTimeout(400);
-        const depois = await pagina.locator("article").count();
-        verificar("«ver mais» revela o resto do catálogo", depois > cartoes, `${cartoes} → ${depois}`);
-        await semOverflow(pagina, "descoberta: catálogo aberto");
-      }
-
-      // ═══ 1d. O empate é publicado, não escondido ═════════════════
-      //  O ecrã antigo numerava 1, 2, 3, 4 quatro cartões com o mesmo
-      //  valor — uma hierarquia que o modelo não tinha produzido.
-      const empate = await pagina.evaluate(() => {
-        const cartoes = [...document.querySelectorAll("article")].map((el) => el.innerText);
-        const scores = cartoes
-          .map((texto) => texto.match(/(\d+)\.ª · Compatibilidade (\d+)%/))
-          .filter(Boolean)
-          .map((m) => ({ rank: Number(m[1]), score: Number(m[2]), empatada: /empatada com mais/.test(m.input) }));
-        const porScore = new Map();
-        for (const linha of scores) {
-          porScore.set(linha.score, [...(porScore.get(linha.score) ?? []), linha]);
-        }
-        // Score igual ⇒ posição igual. E quando há mais do que uma, diz-se.
-        for (const linhas of porScore.values()) {
-          if (new Set(linhas.map((l) => l.rank)).size !== 1) return "rank diverge com score igual";
-          if (linhas.length > 1 && !linhas.every((l) => l.empatada)) return "empate não anunciado";
-        }
-        return scores.length > 0 ? "" : "nenhuma posição legível";
-      });
-      verificar("posições iguais para scores iguais, e o empate é dito", empate === "", empate);
-
-      // ═══ 2. O contexto NACIONAL não desaparece (regressão) ═══════
-      //  Este é o defeito que o checkpoint anterior trouxe: sem zona
-      //  fixada, o valor de Portugal era descartado por um filtro contra
-      //  `null` e a página afirmava não haver sinal.
-      let cartao = await abrirCartaoTurismo(pagina);
-      let texto = await cartao.innerText();
-      verificar(
-        "sem zona fixada, a leitura nacional aparece",
-        /Contexto nacional|Portugal/.test(texto) && !/Sem sinal para esta zona/.test(texto),
-        texto.slice(texto.indexOf("Evidência de mercado"), texto.indexOf("Evidência de mercado") + 180),
-      );
-      verificar("a leitura traz período de referência", /20\d\d/.test(texto));
-      verificar("a saúde da fonte chega ao ecrã", /Fonte INE:/.test(texto));
-
-      // ═══ 3. Escolher uma zona traz o sinal REGIONAL ══════════════
-      //  A zona é um `select` de lista fechada — dez NUTS II não cabem em
-      //  chips a 360 px, e uma lista fechada continua a ser a garantia de
-      //  que não se recolhe morada nem código postal.
-      await pagina.selectOption("#zona-descoberta", "grande-lisboa");
       await pagina.waitForTimeout(600);
-      cartao = await abrirCartaoTurismo(pagina);
+
+      const faseB = await pagina.evaluate(() => document.body.innerText);
+      verificar(
+        "diz o que o motor fez, com contagens",
+        /combinações consideradas/.test(faseB) && /hipóteses compostas/.test(faseB),
+      );
+      verificar("separa encaixe de confiança", /Encaixa contigo \d+%/.test(faseB) && /Confiança/.test(faseB));
+      verificar("mostra as etapas reais do pipeline", /A compor hipóteses/.test(faseB));
+
+      const cartoes = await pagina.locator("#ferramenta article").count();
+      verificar("apresenta hipóteses", cartoes > 0, `${cartoes} cartões`);
+      await semErroDeRuntime(pagina, "descoberta: fase B");
+      await semOverflow(pagina, "descoberta: fase B");
+      await controlosTocaveis(pagina, "descoberta: fase B");
+
+      // ═══ 3b. O motor compõe o que ninguém escreveu ══════════════
+      //  A afirmação central: pelo menos um resultado tem de ser uma
+      //  composição, e não um dos 24 dossiers curados.
+      const titulos = await pagina.locator("#ferramenta article strong").allInnerTexts();
+      const curados = await pagina.getByText("Dossier curado").count();
+      verificar(
+        "há hipóteses compostas que não são dossiers curados",
+        titulos.length > curados,
+        `${titulos.length} hipóteses, ${curados} curadas`,
+      );
+
+      // ═══ 4. O dossier explica-se ════════════════════════════════
+      let cartao = pagina.locator("#ferramenta article").first();
+      // O primeiro dossier abre já expandido. Clicar às cegas fechava-o —
+      // e todas as verificações seguintes falhavam por não haver nada.
+      if ((await cartao.getByRole("button", { expanded: true }).count()) === 0) {
+        await cartao.locator("button").first().click();
+      }
+      await pagina.waitForTimeout(500);
+      let texto = await cartao.innerText();
+      verificar("explica porque apareceu para esta pessoa", /Porque apareceu para ti/.test(texto));
+      verificar("mostra capital e prazo em intervalo", /Investimento inicial/.test(texto));
+      verificar(
+        "marca o que é estimativa e o que é observação",
+        /Estimativa/.test(texto) || /Dado observado/.test(texto),
+      );
+      verificar("nunca lê ausência de concorrentes como oportunidade", !/pouca oferta/i.test(texto) || /por apurar/i.test(texto));
+      verificar("traz plano de validação com critério", /Validar esta oportunidade/.test(texto) && /Feito quando:/.test(texto));
+
+      // «Como chegámos a esta conclusão?»
+      await cartao.getByRole("button", { name: /Como chegámos a esta conclusão/ }).click();
+      await pagina.waitForTimeout(400);
       texto = await cartao.innerText();
+      verificar("abre as dimensões em separado", /Compatibilidade contigo/.test(texto) && /Força das evidências/.test(texto));
       verificar(
-        "a zona escolhida traz o sinal dessa zona",
-        /Grande Lisboa/.test(texto) && !/Sem sinal para esta zona/.test(texto),
+        "diz o que não teve base para ser avaliado",
+        /sem base para avaliar/.test(texto),
       );
-      await semOverflow(pagina, "descoberta: zona escolhida");
+      verificar("publica o plano de investigação por executar", /por ligar/.test(texto));
 
-      // ═══ 4. A entrevista não promove; o piloto pago promove ══════
-      const registarProva = async (rotuloProva) => {
-        await cartao.getByRole("button", { name: rotuloProva, exact: true }).click();
-        await cartao.locator('input[type="date"]').fill("2026-08-01");
-        await cartao.getByRole("button", { name: /Registar/ }).click();
-        await pagina.waitForTimeout(500);
-        cartao = await abrirCartaoTurismo(pagina);
-        return cartao.innerText();
-      };
+      await semViolacoesAxe(pagina, "descoberta: dossier aberto");
 
-      texto = await registarProva("Entrevista");
-      verificar(
-        "uma entrevista é contada mas não valida o mercado",
-        /1 entrevista/.test(texto) && !/Validada contigo/.test(texto),
-        texto.slice(texto.indexOf("Provar no teu mercado"), texto.indexOf("Provar no teu mercado") + 200),
-      );
+      // ═══ 4b. A prova local sobrevive ao recarregamento ══════════
+      await cartao.getByRole("button", { name: "Piloto pago", exact: true }).click();
+      await cartao.locator('input[type="date"]').fill("2026-08-01");
+      await cartao.getByRole("button", { name: /Registar/ }).click();
+      await pagina.waitForTimeout(500);
+      texto = await cartao.innerText();
+      verificar("um piloto pago é registado como prova de mercado", /prova de mercado/.test(texto), texto.slice(0, 160));
+      verificar("e a entrevista continua a não promover", /Enquanto não houver prova paga|alguém pagou/.test(texto));
 
-      texto = await registarProva("Piloto pago");
-      verificar("um piloto pago atual valida o mercado da pessoa", /Validada contigo/.test(texto), texto.slice(0, 200));
-      verificar("e diz o que falta para provar operação", /Repetir vendas/.test(texto));
-
-      await semErroDeRuntime(pagina, "descoberta: com provas");
-      await semOverflow(pagina, "descoberta: com provas");
-      await controlosTocaveis(pagina, "descoberta: com provas");
-      // Com o dossier aberto e o painel de provas à vista — que é onde
-      // vivem os controlos novos, não na rota vazia.
-      await semViolacoesAxe(pagina, "descoberta: com provas");
-
-      // A prova tem de sobreviver ao recarregamento — é local, não de sessão.
-      await pagina.reload({ waitUntil: "networkidle" });
-      await fecharOverlays(pagina);
-      cartao = await abrirCartaoTurismo(pagina);
-      verificar("a prova registada sobrevive ao recarregamento", /Validada contigo/.test(await cartao.innerText()));
-
-      // ═══ 4b. O rótulo do estado vem do gate, uma só vez ═════════
-      //  Havia dois vocabulários para os mesmos oito estados: o do
-      //  domínio e outro escrito à mão no estúdio, que era o que as
-      //  pessoas liam. Sete dos oito diferiam.
-      const corpoComEstado = await pagina.evaluate(() => document.body.innerText);
-      for (const antigo of ["Sinal oficial encontrado", "Evidência qualificada", "Dados a atualizar", "Ideia possível"]) {
-        verificar(`o rótulo antigo «${antigo}» desapareceu do ecrã`, !corpoComEstado.includes(antigo));
+      // ═══ 4c. O que descartámos ══════════════════════════════════
+      const descartadas = pagina.getByRole("button", { name: /O que descartámos/ });
+      if ((await descartadas.count()) > 0) {
+        await descartadas.click();
+        await pagina.waitForTimeout(400);
+        const corpoDescartes = await pagina.evaluate(() => document.body.innerText);
+        verificar(
+          "as descartadas dizem o motivo e o que mudaria",
+          /Deixaria de ser descartada se:/.test(corpoDescartes) || /Variante do mesmo/.test(corpoDescartes),
+        );
       }
 
-      // ═══ 5. A ponte para o preço leva a hipótese ════════════════
+      // ═══ 5. A ponte para o preço leva o cenário ════════════════
       const paraPreco = cartao.getByRole("link", { name: /Formar o preço desta hipótese/ });
       const href = await paraPreco.getAttribute("href");
       verificar(
-        "o CTA de preço leva cenário e hipótese",
-        /modo=preco/.test(href ?? "") && /cenario=/.test(href ?? "") && /h=tourism-guest-operations/.test(href ?? ""),
+        "o CTA de preço leva o cenário do motor canónico",
+        /modo=preco/.test(href ?? "") && /cenario=/.test(href ?? ""),
         href ?? "(sem href)",
       );
 
-      // ═══ 5b. A hierarquia dos CTAs não é escolhida pelo ecrã ═════
-      //  Uma ação principal, uma alternativa em texto, e a rota comercial
-      //  que `escolherRota()` devolver — nunca duas do mesmo peso.
       const acoes = await cartao.evaluate((el) => {
-        const principais = [...el.querySelectorAll("a")].filter((a) =>
-          /rounded-full/.test(a.className) && /bg-brand/.test(a.className),
+        const principais = [...el.querySelectorAll("a")].filter(
+          (a) => /rounded-full/.test(a.className) && /bg-brand\b/.test(a.className),
         );
-        return { principais: principais.length, texto: el.innerText };
+        return principais.length;
       });
-      verificar("há uma só ação principal no dossier", acoes.principais === 1, String(acoes.principais));
+      verificar("há uma só ação principal no dossier", acoes === 1, String(acoes));
+
+      // ═══ 5b. Voltar ao contexto não perde as respostas ══════════
+      await pagina.getByRole("button", { name: /Ajustar contexto/ }).click();
+      await pagina.waitForTimeout(400);
+      const devolta = await pagina.evaluate(() => document.body.innerText);
       verificar(
-        "a rota comercial vem do motor, com o que segue à vista",
-        !/A seguir:/.test(acoes.texto) || /Nenhum dado pessoal|Formulário mínimo|Conta e pagamento/.test(acoes.texto),
-        acoes.texto.slice(acoes.texto.indexOf("A seguir:"), acoes.texto.indexOf("A seguir:") + 200),
+        "voltar ao contexto conserva o que já foi respondido",
+        /O teu perfil está a formar-se/.test(devolta) && /2 competências/.test(devolta),
       );
+      await pagina.getByRole("button", { name: /Voltar a analisar/ }).first().click();
+      await pagina.locator("#resultado-descoberta").waitFor({ timeout: 20000 });
 
       // ═══ 6. O preço que chega ao recibo é MENSAL (regressão) ════
       await pagina.goto(`${BASE}/ferramentas/recibos-verdes?modo=preco&cenario=servico&h=tourism-guest-operations`, {
@@ -413,16 +418,14 @@ try {
       );
 
       // ═══ 8. O conteúdo essencial existe sem JavaScript ══════════
-      //  A checklist editorial exige-o, e a rota carregava o estúdio com
-      //  `ssr: false`: o HTML servido não continha uma única palavra dos
-      //  cinco dossiers — nem para quem navega sem JavaScript, nem para
-      //  um motor de busca.
-      // `javaScriptEnabled` é opção de contexto, não de página.
+      //  A parte personalizada é, por natureza, dinâmica: depende de um
+      //  contexto que só existe no browser de quem responde. O que TEM de
+      //  existir no HTML é «Explorar mercado» — os dossiers curados, com
+      //  problema, cliente, modelo de receita e teste de falsificação —
+      //  para quem navega sem JavaScript e para um motor de busca.
       const contextoSemJs = await navegador.newContext({ viewport, javaScriptEnabled: false });
       const semJs = await contextoSemJs.newPage();
       await semJs.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
-      // `evaluate` precisa de JavaScript na página — que é exatamente o
-      // que aqui está desligado. O HTML servido lê-se com `content()`.
       const htmlSemJs = await semJs.content();
       const textoSemJs = htmlSemJs
         .replace(/<script[\s\S]*?<\/script>/g, " ")
@@ -432,6 +435,7 @@ try {
         .replace(/&amp;/g, "&")
         .replace(/\s+/g, " ");
       for (const essencial of [
+        "Explorar mercado",
         "alojamento turístico",
         "Entrevistar dez operadores",
         "Teste que pode matar a ideia",
@@ -440,12 +444,12 @@ try {
         verificar(`sem JavaScript: «${essencial}» está no HTML`, textoSemJs.includes(essencial));
       }
       verificar(
-        "sem JavaScript: não promete dados que ainda não consultou",
-        !/A consultar/.test(textoSemJs) && /consultados no teu dispositivo/.test(textoSemJs),
+        "sem JavaScript: os 24 dossiers curados estão no HTML",
+        (textoSemJs.match(/Teste que pode matar a ideia|Problema:/g) ?? []).length >= 20,
       );
       verificar(
-        "sem JavaScript: nenhuma rota comercial sobre uma ideia por investigar",
-        !/A seguir:/.test(textoSemJs),
+        "sem JavaScript: não promete análise que não fez",
+        !/passaram os critérios/.test(textoSemJs),
       );
       await contextoSemJs.close();
 

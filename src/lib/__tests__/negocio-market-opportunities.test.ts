@@ -107,7 +107,7 @@ function responderPorUrl(mapa: Readonly<Record<string, unknown>>) {
 
 describe("market: descoberta e pilotos", () => {
   it("liga o dossier ao estúdio de empresa por um id público curado", () => {
-    const discovery = readFileSync("src/components/negocio/DescobrirNegocioStudio.tsx", "utf8");
+    const discovery = readFileSync("src/components/negocio/descoberta/Dossier.tsx", "utf8");
     const dashboard = readFileSync("src/app/dashboard/negocio/page.tsx", "utf8");
     const studio = readFileSync("src/components/negocio/NegocioStudio.tsx", "utf8");
 

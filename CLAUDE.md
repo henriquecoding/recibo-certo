@@ -86,9 +86,22 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   atribuição, barreira de PII, DVM (North Star) e definições do painel semanal.
 - `src/lib/negocio/market/` — ★ motor de evidência de mercado: registo de fontes,
   gate de evidência, frescura, quarentena, conectores INE/Eurostat e pilotos.
-- `src/lib/negocio/market/catalogo-oportunidades.ts` — ★ as 24 hipóteses curadas
-  do motor de descoberta. Regras de admissão (assinatura única, dois eixos de
-  distância, `evidenceNote` obrigatório) testadas em
+- `src/lib/negocio/descoberta/` — ★★ **Opportunity Discovery Engine**. O motor
+  deixou de escolher de uma lista: compõe hipóteses (problema × modelo de receita
+  × entrega × zona) a partir de um grafo de competências, capacidades e
+  problemas. `contexto/` (o perfil profundo), `conhecimento/` (o grafo, com
+  `assertGrafoIntegro()` a falhar o build em arestas partidas), `motor/`
+  (geração, restrições que ELIMINAM, viabilidade em intervalos, regulação,
+  procura/oferta, risco, scoring de dez dimensões, confiança separada do fit,
+  stress test, diversidade, explicação, plano de validação, query planner e o
+  pipeline com telemetria real) e `historico/`. Ver
+  `docs/architecture/opportunity-discovery-engine.md`.
+  **Regra absoluta:** nenhum número chega ao ecrã sem `Proveniencia` — observado,
+  estimativa, cálculo ou hipótese. Não há caminho no tipo para o evitar.
+- `src/lib/negocio/market/catalogo-oportunidades.ts` — ★ as 24 hipóteses curadas.
+  Deixaram de ser o universo de respostas e passaram a ser SEEDS do grafo
+  (`descoberta/conhecimento/seeds.ts`): copy de referência, ponte para a
+  evidência dos pilotos e padrão de comparação. Regras de admissão testadas em
   `negocio-market-fit-audit.test.ts` (`npm run market:fit-audit`).
 - `src/lib/negocio/market/opportunities.ts` — ★ Founder Fit v2: repartição do
   score por dimensão, empate publicado (`rank` partilhado + `tiedWith`) e
