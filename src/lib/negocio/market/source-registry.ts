@@ -174,7 +174,7 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
       storagePolicy:
         "Guardar apenas contagens agregadas por NUTS II. O registo é nominativo — nome, morada e coordenadas de cada unidade — e nada disso pode sair da fonte.",
       reviewNote:
-        "Verificado a 2026-08-22: o serviço identifica-se como «Open Data» nas palavras-chave e responde sem autenticação, mas não declara licença nem texto de direitos (`copyrightText` vazio), e a entrada correspondente no catálogo DCAT traz `license` vazia e `rights: None`. Falta confirmação escrita dos termos de reutilização comercial.",
+        "A FONTE fica por rever de propósito, e não por falta de investigação. Verificado a 2026-08-22 em quatro autoridades independentes — serviço ArcGIS (sem `copyrightText`), item que o publica (sem `licenseInfo`), catálogo DCAT do portal oficial (`license` vazia nos 53 conjuntos) e dados.gov.pt (`notspecified`) — o Turismo de Portugal não emitiu licença nenhuma. Sem licença emitida aplica-se o regime geral da Lei n.º 26/2016 (red. Lei n.º 68/2021), que autoriza a reutilização comercial (art. 19.º/1), gratuitamente para documentos na Internet (art. 23.º/3-a). MAS o RNAL em bruto é NOMINATIVO, e o art. 20.º/c só permite reutilizar documentos nominativos quando anonimizados sem possibilidade de reversão. Por isso a fonte inteira NÃO é aprovada: só as leituras que agregam do lado do servidor levam licença própria (`datasetLicense` em `pilots.ts`). Uma série futura que leia linhas individuais não herda essa licença e fica retida — que é o comportamento certo.",
     }),
     expectedCadence: "daily",
     coverage: Object.freeze({

@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.4",
+    data: "2026-08-22",
+    titulo: "Já sabes quantos alojamentos locais há na tua zona — e é a lei que o permite dizer",
+    itens: [
+      "A ferramenta de descoberta passou a mostrar quantos alojamentos locais estão registados em cada região: 44 818 no Algarve, 23 267 no Norte, 18 121 na Grande Lisboa, 111 512 no continente inteiro. Mais as inscrições novas do último ano fechado, que dizem se esse universo ainda está a crescer ou se já estabilizou.",
+      "Para quem quer prestar serviço a alojamentos — limpezas, check-ins, gestão de reservas — isto é a dimensão da lista de clientes possíveis na zona. Não é a concorrência, e a ferramenta diz isso: contar os teus futuros clientes como se fossem rivais seria dizer-te que o mercado está cheio no momento em que te estávamos a mostrar quem te pode contratar.",
+      "É a primeira leitura da ferramenta que conta coisas reais na tua região, em vez de publicar uma percentagem nacional.",
+      "O Turismo de Portugal publica estes dados sem declarar em que termos podem ser usados. Fomos ver a lei: a Lei n.º 26/2016, com as alterações de 2021, permite reutilizar documentos administrativos para fins comerciais e de forma gratuita quando estão disponíveis na Internet. A base legal fica escrita, com os artigos, tal como já acontece com os dados fiscais.",
+      "Há uma condição na lei que dá jeito: registos com dados de pessoas só podem ser reutilizados se forem agregados sem possibilidade de volta atrás. É exatamente como a ferramenta os lê — pede a contagem por região ao servidor da fonte e recebe sete números, nunca as cento e onze mil linhas com nomes e moradas.",
+    ],
+  },
+  {
     version: "2.96.3",
     data: "2026-08-22",
     titulo: "O Registo Nacional de Alojamento Local entrou na ferramenta — e diz o que está à espera",

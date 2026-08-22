@@ -128,14 +128,43 @@ describe("RNAL: normalização fail-closed", () => {
 });
 
 describe("RNAL: a licença trava a publicação, não a ferramenta", () => {
-  it("a fonte está por rever e diz o que falta", () => {
+  it("a FONTE continua por rever, porque o RNAL em bruto é nominativo", () => {
+    // O art. 20.º, al. c) só permite reutilizar documentos nominativos
+    // quando anonimizados sem possibilidade de reversão. O registo em
+    // bruto não está: tem nome, morada e coordenadas. Aprovar a fonte
+    // inteira dava licença a uma série futura que lesse linhas.
     const fonte = getMarketSource("turismo-portugal");
     expect(fonte?.license.status).toBe("review_required");
     expect(fonte?.license.reviewNote).toMatch(/2026-08-22/);
+    expect(fonte?.license.reviewNote).toMatch(/nominativo/i);
   });
 
-  it("enquanto a licença não for aprovada, nenhuma observação é publicável", async () => {
+  it("a leitura agregada é publicável, e cita a base legal que a autoriza", async () => {
     const { normalizado } = await ler(RNAL_STOCK_MANIFEST);
+    expect(normalizado.observations.length).toBeGreaterThan(0);
+
+    for (const observacao of normalizado.observations) {
+      const resultado = validateMarketObservation(observacao, { asOf: AGORA, expiringWithinDays: 45 });
+      expect(resultado.publishable, observacao.id).toBe(true);
+
+      // A licença é do DATASET, não da fonte: é a agregação por NUTS II
+      // que a torna lícita, e uma série que não agregue não a herda.
+      expect(observacao.license.status).toBe("approved");
+      expect(observacao.license.scope).toBe("dataset");
+      expect(observacao.license.identifier).toMatch(/Lei n\.º 26\/2016/);
+      expect(observacao.license.identifier).toMatch(/20\.º\/c/);
+      // Art. 19.º, n.º 5: mencionar sempre a fonte.
+      expect(observacao.license.attribution).toMatch(/Turismo de Portugal/);
+      // ... e a data da última atualização, que viaja na observação.
+      expect(observacao.retrievedAt).toBe(AGORA);
+    }
+  });
+
+  it("um manifesto SEM licença de dataset continua retido", async () => {
+    // O guarda que sobrevive à decisão: a autorização está agarrada à
+    // leitura agregada, não à fonte. Tirá-la volta a reter tudo.
+    const semLicenca: RnalManifest = { ...RNAL_STOCK_MANIFEST, datasetLicense: undefined };
+    const { normalizado } = await ler(semLicenca);
     for (const observacao of normalizado.observations) {
       const resultado = validateMarketObservation(observacao, { asOf: AGORA, expiringWithinDays: 45 });
       expect(resultado.publishable, observacao.id).toBe(false);
@@ -175,6 +204,44 @@ describe("RNAL: a licença trava a publicação, não a ferramenta", () => {
   });
 
   it("uma fonte retida por licença diz que é a licença, não que os dados vieram mal", async () => {
+    // O mecanismo continua a existir e a guardar: exercitado com uma
+    // leitura sem licença de dataset, que é o que uma série futura não
+    // agregada seria.
+    const semLicenca: RnalManifest = { ...RNAL_STOCK_MANIFEST, datasetLicense: undefined };
+    const [piloto] = await loadPilotMarketEvidence({
+      fetchImpl: responder(AGREGADO),
+      now: () => AGORA,
+      pilots: [
+        {
+          templateId: "tourism-guest-operations",
+          datasetUrl: "https://dadosabertos.turismodeportugal.pt/",
+          series: [
+            {
+              id: "rnal-sem-licenca",
+              label: "Leitura sem licença de dataset",
+              reading:
+                "Existe só para exercitar o guarda: uma leitura desta fonte que não traga licença própria tem de ficar retida.",
+              sourceId: "turismo-portugal",
+              kind: "demand",
+              independenceKey: "pt-rnal-registry",
+              critical: false,
+              source: { connector: "rnal", manifest: semLicenca },
+            },
+          ],
+        },
+      ],
+    });
+
+    const saude = piloto.sourceHealth.find((item) => item.sourceId === "turismo-portugal");
+    // `quarantined` lê-se como «os dados vieram mal». Não vieram.
+    expect(saude?.state).toBe("license_review");
+    expect(saude?.message).toMatch(/os dados estão íntegros/);
+    expect(piloto.note).toMatch(/licença de reutilização/);
+    expect(piloto.note).not.toMatch(/não atravessaram a quarentena/);
+    expect(piloto.observations).toHaveLength(0);
+  });
+
+  it("as leituras reais do piloto de turismo são publicadas", async () => {
     const [piloto] = await loadPilotMarketEvidence({
       fetchImpl: responder(AGREGADO),
       now: () => AGORA,
@@ -190,15 +257,9 @@ describe("RNAL: a licença trava a publicação, não a ferramenta", () => {
     });
 
     const saude = piloto.sourceHealth.find((item) => item.sourceId === "turismo-portugal");
-    // `quarantined` lê-se como «os dados vieram mal». Não vieram.
-    expect(saude?.state).toBe("license_review");
-    expect(saude?.state).not.toBe("quarantined");
-    expect(saude?.message).toMatch(/os dados estão íntegros/);
-    expect(piloto.note).toMatch(/licença de reutilização/);
-    expect(piloto.note).not.toMatch(/não atravessaram a quarentena/);
-
-    // E continua a não publicar número nenhum. Dizer porquê não é publicar.
-    expect(piloto.observations).toHaveLength(0);
+    expect(saude?.state).toBe("healthy");
+    expect(piloto.observations.length).toBeGreaterThan(0);
+    expect(piloto.observations.every((o) => o.license.status === "approved")).toBe(true);
   });
 
   it("os manifestos ficam prontos, para a ligação ser uma linha e não um projeto", () => {

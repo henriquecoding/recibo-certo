@@ -315,25 +315,36 @@ describe("market: descoberta e pilotos", () => {
       pilots: pilotoTurismo,
     });
 
-    expect(pilot.observations.every((item) => item.license.identifier === "CC BY 4.0")).toBe(true);
+    // Cada observação publica com a licença da SUA série, não com a da
+    // fonte: as do INE com a CC BY do dataset, as do RNAL com o regime
+    // legal que autoriza a leitura agregada. O que nenhuma pode é
+    // publicar sem prova de licença própria.
+    expect(
+      pilot.observations.every(
+        (item) => item.license.status === "approved" && item.license.scope === "dataset",
+      ),
+    ).toBe(true);
+    const doIne = pilot.observations.filter((item) => item.sourceId === "ine");
+    expect(doIne.length).toBeGreaterThan(0);
+    expect(doIne.every((item) => item.license.identifier === "CC BY 4.0")).toBe(true);
     const ocupacao = pilot.observations.filter((item) => item.seriesId === "tourism-occupancy");
     const nascimentos = pilot.observations.filter((item) => item.seriesId === "tourism-new-companies");
     expect(ocupacao).toHaveLength(4);
     expect(nascimentos).toHaveLength(2);
     // Duas séries do mesmo indicador nunca se somam: o `metricId` separa-as.
-    expect(new Set(pilot.observations.map((item) => item.metricId)).size).toBe(2);
+    // Quatro métricas: ocupação, nascimentos, stock do RNAL e novos do RNAL.
+    expect(new Set(pilot.observations.map((item) => item.metricId)).size).toBe(4);
 
     // A ocupação vem do inquérito à hotelaria; os nascimentos, da demografia
     // das empresas. São operações diferentes, logo a triangulação é real.
-    expect(new Set(pilot.observations.map((item) => item.independenceKey)).size).toBe(2);
+    // Três operações estatísticas distintas: o inquérito à hotelaria, a
+    // demografia das empresas e o registo administrativo do RNAL.
+    expect(new Set(pilot.observations.map((item) => item.independenceKey)).size).toBe(3);
     expect(pilot.gate.state).toBe("candidate");
     expect(pilot.gate.missing).not.toContain("Duas fontes independentes e saudáveis.");
 
     // Nem concelhos nem NUTS I contam como rejeição: nunca foram pedidos.
-    // O que sobra na nota é o RNAL, e a nota tem de dizer que está retido
-    // por licença — não que os dados vieram mal.
-    expect(pilot.note).not.toMatch(/não atravessaram a quarentena/);
-    expect(pilot.note).toMatch(/licença de reutilização/);
+    expect(pilot.note).toBeUndefined();
   });
 
   it("com preço viável e requisitos conhecidos, a hipótese chega a sustentada por dados", async () => {

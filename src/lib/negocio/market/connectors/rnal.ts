@@ -36,6 +36,7 @@ import { getMarketSource } from "../source-registry";
 import type {
   GeographyRef,
   MarketObservation,
+  MarketObservationLicense,
   MarketObservationStatus,
   MarketSemanticMappingStatus,
 } from "../tipos";
@@ -100,6 +101,16 @@ export interface RnalManifest {
   semanticMapping: MarketSemanticMappingStatus;
   methodologyRef?: string;
   classifications?: MarketObservation["classifications"];
+  /**
+   * A licença desta leitura concreta — não da fonte inteira.
+   *
+   * É a distinção que o artigo 20.º, al. c) obriga a fazer. O RNAL em
+   * bruto é nominativo e NÃO é reutilizável; esta leitura é, porque o
+   * que dela sai são contagens por NUTS II, irreversivelmente agregadas.
+   * A licença pertence por isso ao manifesto que agrega, e uma série
+   * futura que não agregue não a herda.
+   */
+  datasetLicense?: MarketObservationLicense;
 }
 
 export interface RnalStatisticRow {
@@ -392,7 +403,7 @@ export function normalizeRnalStatistics(
             ? `Contagem de registos por ${manifest.groupByField}, agregada pelo serviço de origem.`
             : `Contagem de registos com ${manifest.dateField} em ${fetched.periodo.label}, agregada pelo serviço de origem.`,
       },
-      license: {
+      license: manifest.datasetLicense ?? {
         status: source.license.status,
         scope: "source",
         identifier: source.license.identifier,

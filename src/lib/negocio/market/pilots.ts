@@ -16,7 +16,7 @@ import { METRICAS_EM_BLOCO } from "./bulk/fontes";
 import type { EurostatDatasetManifest } from "./connectors/eurostat";
 import type { IneAnnualIndicatorManifest } from "./connectors/ine";
 import type { RnalManifest } from "./connectors/rnal";
-import type { MarketSignalKind, MarketSourceId } from "./tipos";
+import type { MarketObservationLicense, MarketSignalKind, MarketSourceId } from "./tipos";
 
 /** A página do conjunto de dados do Portal BASE no dados.gov.pt. */
 const BASE_CONTRACTS_DATASET_URL =
@@ -280,6 +280,50 @@ const NUTS2_RNAL: RnalManifest["geographyByName"] = Object.freeze({
 /** O RNAL como página pública, para quem quiser conferir a contagem. */
 export const RNAL_DATASET_URL = "https://registos.turismodeportugal.pt/HomePage/RNAL";
 
+/**
+ * A base legal desta leitura. Verificada no texto consolidado, não de cor.
+ *
+ * O Turismo de Portugal publica o RNAL como dados abertos e NÃO emitiu
+ * licença nenhuma — verificado a 2026-08-22 no serviço, no item que o
+ * publica, no catálogo DCAT do portal oficial e no dados.gov.pt. Sem
+ * licença emitida, aplica-se o regime geral, e é ele que autoriza:
+ *
+ *  · Artigo 19.º, n.º 1 — os documentos administrativos de acesso
+ *    autorizado «podem ser reutilizados para fins COMERCIAIS ou não
+ *    comerciais, salvo o disposto em contrário na presente lei ou em
+ *    legislação específica».
+ *
+ *  · Artigo 23.º, n.º 1 — só é preciso licença quando a entidade decide
+ *    subordinar a autorização a condições próprias. O Turismo de Portugal
+ *    não o fez: a ausência de licença não é proibição, é o regime geral.
+ *
+ *  · Artigo 23.º, n.º 3, al. a) — a reutilização de documentos
+ *    disponibilizados através da Internet é GRATUITA.
+ *
+ * E é o artigo 20.º, al. c) que explica porque é que esta licença
+ * pertence ao MANIFESTO e não à fonte. Documentos nominativos só podem
+ * ser reutilizados «quando os dados pessoais possam ser anonimizados sem
+ * possibilidade de reversão». O RNAL em bruto é nominativo — nome,
+ * morada e coordenadas de 111 mil alojamentos — e por isso a fonte
+ * continua em `review_required`. O que estes dois manifestos leem são
+ * contagens por NUTS II agregadas PELO SERVIDOR DA FONTE: de 44 818 não
+ * há caminho de volta a ninguém. A agregação que se fez por privacidade
+ * é exatamente a condição que a lei exige para a reutilização ser lícita.
+ *
+ * Falta cumprir o artigo 19.º, n.º 5: não desvirtuar o sentido e
+ * «mencionar sempre as fontes, bem como a data da última atualização».
+ * A atribuição abaixo trata da fonte; a data viaja em cada observação
+ * (`retrievedAt` e `referencePeriod`) e chega ao ecrã na proveniência.
+ */
+const RNAL_LICENCA: MarketObservationLicense = Object.freeze({
+  status: "approved",
+  scope: "dataset",
+  identifier: "Lei n.º 26/2016, arts. 19.º/1, 20.º/c e 23.º/3-a (red. Lei n.º 68/2021)",
+  url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2016-106603618",
+  attribution:
+    "Fonte: Registo Nacional de Alojamento Local (RNAL) — Turismo de Portugal, I.P. Contagens agregadas por NUTS II.",
+});
+
 const RNAL_METODOLOGIA =
   "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer/6";
 
@@ -295,7 +339,12 @@ export const RNAL_STOCK_MANIFEST: RnalManifest = {
   unit: "alojamentos registados",
   janela: "instantaneo",
   groupByField: "NUTSII",
-  maxReferenceAgeDays: 30,
+  // Noventa dias, e não trinta. O registo é lido ao vivo a cada consulta,
+  // por isso a validade só protege contra um cache preso; com trinta,
+  // caía sempre dentro da janela de «a expirar» (45 dias) e o cartão
+  // avisava para sempre sobre uma leitura tirada nesse instante. O stock
+  // move-se ~8% ao ano: em noventa dias continua a descrever o mercado.
+  maxReferenceAgeDays: 90,
   geographyByName: NUTS2_RNAL,
   // `observed` e não `estimated`: é uma contagem de registos administrativos,
   // não uma amostra nem uma projeção. O que a contagem NÃO garante — que o
@@ -305,6 +354,7 @@ export const RNAL_STOCK_MANIFEST: RnalManifest = {
   semanticMapping: "approved",
   methodologyRef: RNAL_METODOLOGIA,
   classifications: { cae: ["I55201"] },
+  datasetLicense: RNAL_LICENCA,
 };
 
 /**
@@ -329,6 +379,7 @@ export const RNAL_NOVOS_MANIFEST: RnalManifest = {
   semanticMapping: "approved",
   methodologyRef: RNAL_METODOLOGIA,
   classifications: { cae: ["I55201"] },
+  datasetLicense: RNAL_LICENCA,
 };
 
 export type MarketPilotSeriesConnector =
