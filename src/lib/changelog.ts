@@ -16,6 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.0",
+    data: "2026-08-22",
+    titulo: "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",
+    itens: [
+      "Até agora a pergunta era «das ideias que conhecemos, quais combinam contigo?», e o universo de respostas era literalmente o tamanho de uma lista. Agora a pergunta é outra: que problemas económicos é que alguém com as tuas competências, os teus meios, na tua zona e com as tuas restrições consegue atacar.",
+      "As hipóteses passam a ser compostas, não escolhidas. O motor cruza problema, modelo de receita, forma de entrega e zona a partir de um grafo de competências, capacidades e problemas — e a maior parte do que devolve não está escrita em lado nenhum. Uma pessoa com carrinha e experiência de logística recebe coisas que nenhum catálogo teria previsto para ela.",
+      "A ferramenta passou a ter duas fases. Primeiro constróis o contexto inteiro; só depois vês resultados. Antes, a configuração desaparecia por baixo dos cartões e era preciso passar por cima deles para acabar de responder.",
+      "O contexto ficou muito mais fundo: competências com nível e experiência, meios que já tens, capital, tempo, prazo até à primeira receita, equipa, preferências, tolerância ao risco por dimensão — e o que não queres ou não podes fazer. Em três níveis, para quem quer cinco decisões e para quem quer precisão.",
+      "As restrições passaram a eliminar. Dizer «não tenho carro» deixa de mostrar rotas de entregas em nono lugar: deixa de as mostrar. E o que foi recusado aparece numa lista à parte, com o motivo e com o que teria de mudar.",
+      "Cada hipótese explica porque apareceu para ti, citando as tuas respostas. Não é «92% compatível» — é «isto aparece porque declaraste logística, tens carta e operas na Península de Setúbal».",
+      "O score deixou de ser um número. São dez dimensões avaliadas em separado — compatibilidade, procura, lacuna de oferta, economia, exequibilidade, regulação, risco, geografia, força das evidências e atualidade — com os pesos escritos e a conta à vista. Uma dimensão sem base para ser avaliada vale «não sabemos», nunca zero.",
+      "Compatibilidade, potencial de mercado e confiança da análise passam a viajar separadas. Uma hipótese pode encaixar muito contigo e ter confiança baixa, e isso é informação — não é contradição.",
+      "Antes de promover uma hipótese, o motor tenta destruí-la: a procura é forte? existem concorrentes invisíveis? o preço suporta os custos? é sazonal? consegues mesmo entrar? As objeções que ficam de pé aparecem no dossier.",
+      "Ausência de concorrentes deixou de poder ser lida como oportunidade. Sem sinal de oferta, o motor diz que não sabe se o mercado já está servido — em vez de tratar o silêncio como espaço livre.",
+      "Nenhum número aparece sem dizer o que é: dado observado, estimativa, cálculo ou hipótese. Os intervalos de capital são intervalos, e dizem que são estruturais e não preços observados no teu mercado.",
+      "Cada oportunidade traz um plano de validação a 7, 30 e 90 dias, com o critério que diz quando cada passo está mesmo feito. E podes registar ali mesmo entrevistas, orçamentos aceites e pilotos pagos — incluindo em hipóteses que ninguém escreveu.",
+      "Ganhaste um comparador de duas a quatro hipóteses, um «e se?» que volta a correr o motor com uma variável mudada, e a comparação com a tua análise anterior. O teu perfil só é guardado se carregares em guardar.",
+      "Os 24 dossiers curados continuam lá, agora como referência: são a secção «Explorar mercado», legível sem JavaScript, e servem de padrão de comparação ao que o motor compõe.",
+    ],
+  },
+  {
     version: "2.95.0",
     data: "2026-08-22",
     titulo: "A ferramenta de descoberta passa de cinco hipóteses para vinte e quatro — e deixa de dar a mesma resposta a toda a gente",

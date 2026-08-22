@@ -4,6 +4,13 @@
 > v2, cinco pilotos com ingestão ativa, ingestão em bloco do Portal BASE
 > agendada, triangulação real em quatro deles e prova comercial local, em
 > 2026-08-22**.
+> **Nota de âmbito (2026-08-22):** este documento descreve o motor de
+> EVIDÊNCIA — fontes, gates, licenças, frescura, geografia. Quem decide que
+> hipóteses existem passou a ser o
+> [Opportunity Discovery Engine](./opportunity-discovery-engine.md), que consome
+> este e não o substitui. O catálogo de 24 dossiers descrito aqui continua a
+> existir, agora como seeds desse motor.
+>
 > Este documento é a especificação executável resumida. O handoff operacional
 > vive em [`docs/handoff/MARKET-INTELLIGENCE-HANDOFF.md`](../handoff/MARKET-INTELLIGENCE-HANDOFF.md).
 

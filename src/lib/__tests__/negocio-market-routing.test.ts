@@ -89,13 +89,13 @@ describe("descoberta: a hierarquia dos CTAs não pertence ao ecrã", () => {
     expect(sinais.enquadramento).toBe("desconhecido");
   });
 
-  it("o ecrã não inventa CTAs: a rota vem sempre de escolherRota", () => {
-    const studio = readFileSync("src/components/negocio/DescobrirNegocioStudio.tsx", "utf8");
-    expect(studio).toContain("escolherRota(sinaisDaHipotese(");
-    expect(studio).toContain('if (rota.rota === "sem_parceiro") return null;');
-    // Uma só ação principal: a segunda passou a ligação de texto.
-    const principais = studio.match(/btn-shine/g) ?? [];
-    expect(principais).toHaveLength(1);
+  it("o dossier tem uma só ação principal", () => {
+    // A hierarquia dos CTA não pertence ao ecrã. O passo seguinte da
+    // jornada é sempre formar o preço — sem ele o gate nunca sai de
+    // «candidata» — e tudo o resto é ligação de texto.
+    const dossier = readFileSync("src/components/negocio/descoberta/Dossier.tsx", "utf8");
+    expect(dossier.match(/btn-shine/g) ?? []).toHaveLength(1);
+    expect(dossier).toContain("Formar o preço desta hipótese");
   });
 });
 
@@ -118,9 +118,9 @@ describe("descoberta: a medição existe e não leva nada privado", () => {
     }
   });
 
-  it("o estúdio liga mesmo a medição", () => {
-    const studio = readFileSync("src/components/negocio/DescobrirNegocioStudio.tsx", "utf8");
-    expect(studio).toContain("useMedicaoDescoberta({");
-    expect(studio).toContain("registarProvaGuardada()");
+  it("o motor liga mesmo a medição", () => {
+    const app = readFileSync("src/components/negocio/descoberta/DescobrirNegocioApp.tsx", "utf8");
+    expect(app).toContain("useMedicaoDescoberta({");
+    expect(app).toContain("registarProvaGuardada()");
   });
 });

@@ -62,6 +62,17 @@ export const DOMINIOS = {
   // dos clientes dela — a coisa que menos pode sair do dispositivo sem uma
   // decisão explícita. Ver `store/hipoteses-mercado.ts`.
   "hipoteses-mercado": "recibocerto:hipoteses-mercado:v1",
+  // O perfil de empreendedor do motor de descoberta: zona, competências,
+  // ativos, capital, restrições e tolerância ao risco. É, em conjunto, a
+  // coisa mais identificadora que este produto sabe sobre alguém — e por
+  // isso só é escrito depois de a pessoa carregar em «Guardar o meu
+  // perfil», nunca em silêncio. Ver `store/perfil-descoberta.ts`.
+  "perfil-descoberta": "recibocerto:perfil-descoberta:v1",
+  // Os instantâneos das análises anteriores, para poder responder a «o
+  // que mudou desde a última vez?». Guardam pontuação e composição, NUNCA
+  // o contexto — comparar duas análises não pode obrigar a conservar o
+  // perfil. Ver `store/perfil-descoberta.ts`.
+  "instantaneos-descoberta": "recibocerto:instantaneos-descoberta:v1",
 } as const;
 
 /**

@@ -2,33 +2,29 @@
 
 // ═══════════════════════════════════════════════════════════════════════
 //  ── PORQUE ISTO NÃO É `ssr: false` ─────────────────────────────────
-//  Era, e custava à página todo o conteúdo dela.
+//  O conteúdo essencial desta rota — os dossiers curados, com problema,
+//  cliente, modelo de receita, requisitos e teste de falsificação — é
+//  renderizado no SERVIDOR, em `ExplorarMercado`. Está no HTML para quem
+//  navega sem JavaScript, para um motor de busca e para o programa de
+//  autoridade.
 //
-//  A regra do CLAUDE.md aplica-se a secções PESADAS — mapas, gráficos —
-//  que ninguém precisa de ler sem JavaScript. Aqui o componente É a
-//  página: os cinco dossiers, o cliente, o problema, o modelo de receita,
-//  os requisitos e o teste que pode matar a ideia. Com `ssr: false` o
-//  HTML servido não continha uma única palavra disso — nem para quem
-//  navega sem JavaScript, nem para um motor de busca, nem para o programa
-//  de autoridade que exige conteúdo essencial renderizado no servidor.
-//
-//  O componente é seguro no servidor por construção: tudo o que depende
-//  do browser — cofre local, consulta ao pack de mercado, `crypto` —
-//  acontece em efeitos ou em handlers. O instante de referência começa
-//  vazio e só é fixado depois da montagem, para o servidor e o cliente
-//  não discordarem sobre que horas são.
+//  O que vive aqui é a parte que, por natureza, não pode ser
+//  pré-renderizada: um motor que compõe hipóteses a partir de um contexto
+//  que só existe no browser de quem responde. Não há HTML possível para
+//  isso — e fingir que há seria devolver a mesma lista a toda a gente,
+//  que é o defeito que este trabalho veio corrigir.
 //
 //  O `ErrorBoundary` fica: uma falha na hidratação não pode deixar a
 //  página em branco.
 // ═══════════════════════════════════════════════════════════════════════
 
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import DescobrirNegocioStudio from "@/components/negocio/DescobrirNegocioStudio";
+import DescobrirNegocioApp from "@/components/negocio/descoberta/DescobrirNegocioApp";
 
 export default function DescobrirNegocioLazy() {
   return (
     <ErrorBoundary etiqueta="o motor de oportunidades">
-      <DescobrirNegocioStudio />
+      <DescobrirNegocioApp />
     </ErrorBoundary>
   );
 }
