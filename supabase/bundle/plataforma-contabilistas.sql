@@ -10157,12 +10157,22 @@ ALTER TABLE public.notificacoes ADD CONSTRAINT notificacoes_tipo_check CHECK (ti
 
 -- Uma morada que muda na véspera é precisamente o que faz alguém aparecer
 -- na porta errada. Entra na lista curta do que justifica um email.
+--
+-- ⚠️ A etiqueta do dólar é `$func$` e não `$$` de propósito: aplicada por um
+-- runner que separa instruções por `$$`, esta declaração é engolida em
+-- silêncio no meio das outras — a migração diz que correu e a função fica
+-- com o corpo antigo. Aconteceu, e só se viu porque o valor foi conferido
+-- na base a seguir. Uma etiqueta com nome não colide com nada.
+--
+-- O `SET search_path` vem do mesmo sítio que o resto do painel: o corpo não
+-- referencia nome nenhum — compara um texto com literais — por isso fixá-lo
+-- não muda o significado e tira a dependência de quem chama (lint 0011).
 CREATE OR REPLACE FUNCTION public.aviso_merece_email(p_tipo text) RETURNS boolean
-LANGUAGE sql IMMUTABLE AS $$
+LANGUAGE sql IMMUTABLE SET search_path = '' AS $func$
   SELECT p_tipo IN ('vinculo_pedido', 'vinculo_aceite', 'consulta_pedida',
                     'consulta_confirmada', 'consulta_cancelada', 'cupao_ganho',
                     'candidatura_decidida', 'consulta_local_mudou')
-$$;
+$func$;
 
 CREATE OR REPLACE FUNCTION public.definir_local_consulta(
   p_agendamento uuid,
