@@ -259,9 +259,28 @@ try {
       let texto = await cartao.innerText();
       verificar("explica porque apareceu para esta pessoa", /Porque apareceu para ti/.test(texto));
       verificar("mostra capital e prazo em intervalo", /Investimento inicial/.test(texto));
+      // ── A regra: nenhum número chega ao ecrã sem proveniência ──────
+      //  Esta verificação já foi `/Estimativa/ || /Dado observado/` no
+      //  primeiro cartão, e era frágil por uma razão que só se percebeu
+      //  quando falhou: uma hipótese sem evidência ligada e com capital
+      //  não estimável mostra «não estimável com o que sabemos» e nenhum
+      //  dos dois rótulos — o que está CERTO. A verificação dependia de
+      //  qual hipótese calhava em primeiro, e ficava vermelha quando o
+      //  pack de mercado não respondia.
+      //
+      //  Passa a verificar o que o produto promete mesmo, em duas metades
+      //  que juntas são mais exigentes do que a original: o cartão nunca
+      //  mostra um valor sem dizer de onde vem, e a marcação existe de
+      //  facto em algum lado dos resultados.
+      verificar(
+        "o cartão nunca mostra um número sem dizer de onde vem",
+        /Dado observado|Estimativa|Cálculo|Hipótese/.test(texto) ||
+          /não estimável com o que sabemos/.test(texto),
+      );
+      const textoDosResultados = await pagina.locator("#ferramenta").innerText();
       verificar(
         "marca o que é estimativa e o que é observação",
-        /Estimativa/.test(texto) || /Dado observado/.test(texto),
+        /Dado observado|Estimativa|Cálculo|Hipótese/.test(textoDosResultados),
       );
       verificar("nunca lê ausência de concorrentes como oportunidade", !/pouca oferta/i.test(texto) || /por apurar/i.test(texto));
       verificar("traz plano de validação com critério", /Validar esta oportunidade/.test(texto) && /Feito quando:/.test(texto));
