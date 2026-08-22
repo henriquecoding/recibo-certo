@@ -1,7 +1,26 @@
 import { NextResponse } from "next/server";
 import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
 
-export const revalidate = 21_600;
+/**
+ * Esta rota fala com o INE, o Eurostat e o portal de dados abertos. Isso é
+ * trabalho de tempo de pedido, não de tempo de compilação.
+ *
+ * Com `revalidate` ao nível do segmento, o Next prerenderizava-a durante o
+ * `next build`: nove séries do INE em fila, três tentativas cada, e uma
+ * build que rebentava aos sessenta segundos quando a fonte estava lenta —
+ * a compilação inteira dependia de um servidor de terceiros estar bem
+ * disposto naquele minuto.
+ *
+ * O cache não desaparece, só muda de sítio. Continua em dois:
+ *  - a borda guarda a RESPOSTA seis horas (`Cache-Control` abaixo);
+ *  - o Data Cache do Next guarda cada PEDIDO à fonte outras seis
+ *    (`next: { revalidate }` no `fetch`), que sobrevive a `force-dynamic`
+ *    por ser configuração explícita por pedido.
+ */
+export const dynamic = "force-dynamic";
+
+/** Seis horas: o passo destas séries mede-se em meses, não em minutos. */
+const TTL_SEGUNDOS = 21_600;
 
 /** Uma fonte que não respondeu não pode ficar seis horas colada à borda. */
 const CACHE_SAUDAVEL = "public, s-maxage=21600, stale-while-revalidate=86400";
@@ -19,12 +38,12 @@ const CACHE_DEGRADADO = "public, s-maxage=300, stale-while-revalidate=3600";
  */
 export async function GET() {
   const fetchImpl = ((input: RequestInfo | URL, init?: RequestInit) =>
-    fetch(input, { ...init, next: { revalidate } })) as typeof fetch;
+    fetch(input, { ...init, next: { revalidate: TTL_SEGUNDOS } })) as typeof fetch;
 
   try {
     const pilots = await loadPilotMarketEvidence({ fetchImpl });
 
-    // Uma build pode apanhar o INE sob carga e prerenderizar um pack com
+    // Uma execução pode apanhar o INE sob carga e montar um pack com
     // metade das séries em falta. Guardar isso durante seis horas fazia um
     // problema de trinta segundos durar uma tarde: quando alguma fonte
     // ficou por confirmar, a borda volta a tentar dentro de minutos.

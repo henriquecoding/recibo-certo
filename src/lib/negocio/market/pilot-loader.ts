@@ -32,6 +32,20 @@ const EXPIRING_WITHIN_DAYS = 45;
 const FETCH_TIMEOUT_MS = 8_000;
 
 /**
+ * Teto para a execução INTEIRA, não para cada pedido.
+ *
+ * O INE alimenta nove séries e elas são servidas em fila para não o
+ * inundar. Com três tentativas de oito segundos cada, uma fonte lenta
+ * custava perto de quatro minutos — mais do que qualquer função tem para
+ * viver, e mais do que ninguém espera por um cartão de contexto.
+ *
+ * Passado o prazo, o que faltava não fica pendurado: falha, e o gate de
+ * evidência diz `delayed` em vez de inventar um número. Meia dúzia de
+ * cartões honestos vale mais do que um pack completo que nunca chega.
+ */
+const ORCAMENTO_TOTAL_MS = 25_000;
+
+/**
  * Uma leitura por geografia: a mais recente.
  *
  * Chaveia por geografia porque cada série já tem um `metricId` próprio —
@@ -111,10 +125,20 @@ class MarketTransport {
   private readonly emCurso = new Map<string, Promise<unknown>>();
   private readonly filaPorFonte = new Map<string, Promise<unknown>>();
 
+  /**
+   * O prazo da execução. Nasce aqui — uma vez, com o transporte — e não a
+   * cada pedido: um orçamento que se renova a cada chamada não é orçamento
+   * nenhum. Quem passa `signal` fica com o seu, que é o que os testes e os
+   * chamadores com cancelamento próprio precisam.
+   */
+  private readonly prazo: AbortSignal;
+
   constructor(
     private readonly checkedAt: string,
     private readonly options: LoadPilotEvidenceOptions,
-  ) {}
+  ) {
+    this.prazo = options.signal ?? AbortSignal.timeout(ORCAMENTO_TOTAL_MS);
+  }
 
   /**
    * Serializa por fonte e repete em falha transitória.
@@ -131,6 +155,10 @@ class MarketTransport {
     const tentar = async (): Promise<T> => {
       let ultimo: unknown;
       for (let ronda = 0; ronda < 3; ronda += 1) {
+        // Gasto o prazo, insistir é só atrasar a resposta: as tentativas
+        // que restam abortavam de imediato, mas a espera entre elas ainda
+        // se pagava, série a série, até ao fim da fila.
+        if (this.prazo.aborted) throw ultimo ?? this.prazo.reason;
         try {
           return await tarefa();
         } catch (erro) {
@@ -162,7 +190,11 @@ class MarketTransport {
     return {
       fetchImpl: this.options.fetchImpl,
       now: () => this.checkedAt,
-      signal: this.options.signal ?? AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      // Os dois relógios ao mesmo tempo: nenhum pedido pode ficar oito
+      // segundos parado, e nenhuma fila pode passar do orçamento da
+      // execução. Só um deles não chegava — o primeiro deixava a fila
+      // crescer sem fim, o segundo deixava um pedido só comê-la toda.
+      signal: AbortSignal.any([this.prazo, AbortSignal.timeout(FETCH_TIMEOUT_MS)]),
     };
   }
 }

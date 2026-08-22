@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.1",
+    data: "2026-08-22",
+    titulo: "O cartão de mercado deixou de conseguir bloquear a publicação do site",
+    itens: [
+      "Os números de mercado vêm do INE, do Eurostat e do portal de dados abertos. Estavam a ser pedidos no momento em que o site é compilado — o que significava que uma tarde má do lado deles impedia qualquer atualização de sair, mesmo que nada tivesse a ver com mercado.",
+      "Passam a ser pedidos quando alguém abre a página, não quando o site é construído. O que se vê é o mesmo e continua guardado seis horas; deixa é de haver uma publicação à espera de um servidor de terceiros.",
+      "A consulta às fontes ganhou um tempo máximo. Se passar disso, o que faltou aparece como «à espera de confirmação» em vez de deixar a página a carregar — como sempre foi a regra: nunca mostrar um número que não veio de lado nenhum.",
+    ],
+  },
+  {
     version: "2.96.0",
     data: "2026-08-22",
     titulo: "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",
