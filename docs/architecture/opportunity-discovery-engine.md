@@ -80,7 +80,9 @@ carregassem no mesmo chip.
   receita: isso vivia noutra ferramenta e só depois de escolher.
 - **Sem risco.** Nem financeiro, nem regulatório, nem de sazonalidade.
 - **Sem lacuna.** Zero sinais de `supply` e `competition` — logo, nenhuma
-  análise de procura menos oferta era possível.
+  análise de procura menos oferta era possível. Pior: o ramo que tratava o
+  caso «há sinal dos dois» dava 90 em 100 à lacuna sem comparar nada, à
+  espera da primeira série de oferta que entrasse.
 - **Fase única.** Configuração e resultados no mesmo ecrã, com a configuração a
   sair de vista assim que a lista crescia.
 
@@ -207,11 +209,63 @@ declarar.
   e a interface mostra-o como «o que falta investigar». Executá-lo exige uma
   integração de pesquisa que este repositório não tem, e improvisá-la com um
   LLM violaria a regra 12.
+- **O RNAL está ligado e a publicar.** O Registo Nacional de Alojamento Local
+  do Turismo de Portugal entrou como fonte: 111 512 alojamentos no continente,
+  por NUTS II, mais as inscrições do último ano civil fechado. É a primeira
+  leitura do motor que CONTA ENTIDADES numa região em vez de publicar uma taxa,
+  e dá à hipótese de turismo a dimensão do universo de clientes possíveis na
+  zona de quem pergunta.
+
+  **A base legal, verificada no texto consolidado.** O Turismo de Portugal
+  publica o RNAL como dados abertos e não emitiu licença nenhuma — verificado a
+  2026-08-22 em quatro autoridades independentes (serviço ArcGIS sem
+  `copyrightText`, item sem `licenseInfo`, catálogo DCAT do portal oficial com
+  `license: ""` nos 53 conjuntos, dados.gov.pt com `notspecified`). Sem licença
+  emitida aplica-se o regime geral da Lei n.º 26/2016, na redação da Lei n.º
+  68/2021 (que transpõe a Diretiva (UE) 2019/1024):
+
+  - **art. 19.º, n.º 1** — documentos administrativos de acesso autorizado
+    «podem ser reutilizados para fins comerciais ou não comerciais»;
+  - **art. 23.º, n.º 1** — só é exigível licença quando a entidade decide
+    subordinar a autorização a condições próprias; não o fez;
+  - **art. 23.º, n.º 3, al. a)** — a reutilização de documentos disponibilizados
+    através da Internet é gratuita;
+  - **art. 19.º, n.º 5** — condições: não desvirtuar o sentido e mencionar
+    sempre a fonte e a data da última atualização.
+
+  **Porque é que a licença está no manifesto e não na fonte.** O art. 20.º,
+  al. c) só permite reutilizar documentos nominativos «quando os dados pessoais
+  possam ser anonimizados sem possibilidade de reversão». O RNAL em bruto é
+  nominativo — nome, morada e coordenadas de 111 mil alojamentos — por isso a
+  FONTE fica em `review_required`. O que estes manifestos leem são contagens
+  agregadas pelo servidor da fonte (`groupByFieldsForStatistics`): de 44 818 não
+  há caminho de volta a ninguém. A agregação feita por privacidade é exatamente
+  a condição que a lei exige para a reutilização ser lícita — e uma série futura
+  que leia linhas individuais não herda a licença e fica retida.
+
+- **`license_review` deixou de ser um estado morto.** Estava declarado no tipo e
+  nunca era produzido: uma fonte com números impecáveis e termos por declarar
+  caía em `quarantined`, cuja mensagem se lê como «os dados vieram mal». São
+  agora dois estados com duas mensagens, e a nota do cartão deixou de somar
+  leituras retidas à contagem de linhas rejeitadas. O mecanismo continua vivo e
+  testado — é o que retém qualquer leitura desta fonte que não agregue.
+
 - **Sinais de oferta e concorrência continuam a zero.** O motor sabe raciocinar
   sobre lacuna e distingue «pouca oferta com procura» de «pouca oferta sem
-  procura» — mas, sem uma série de `supply`, a resposta honesta é «não
-  sabemos», e é isso que aparece. O RNAL do Turismo de Portugal é o próximo
-  candidato e está registado no plano.
+  procura» — mas, sem uma série de `supply`, a resposta honesta é «não sabemos».
+
+  E o RNAL não é essa série, apesar de contar operadores. Todas as hipóteses do
+  produto são serviços prestados a alguém, e o RNAL conta esse alguém: para
+  «operações locais para alojamento turístico», os 44 818 alojamentos do Algarve
+  não são a concorrência — são a lista de clientes possíveis. Classificá-los
+  como `supply` diria a quem procura negócio que o mercado já está servido,
+  contando os futuros clientes dela como rivais. O mesmo número seria oferta
+  para quem quisesse ABRIR um alojamento local, e essa hipótese não existe no
+  produto. Daí a regra: **o `kind` pertence ao par (série, piloto), não à
+  série.** Uma fonte de oferta a sério tem de contar operadores DA hipótese —
+  empresas de limpeza, de co-anfitrião, de gestão de reservas por zona — e
+  nenhuma fonte pública portuguesa o faz hoje.
+
 - **Granularidade geográfica.** A evidência desce a NUTS II; o contexto aceita
   distrito e raio. Onde o dado não existe ao nível pedido, a interface diz que
   está a mostrar o nível acima em vez de fingir precisão local.

@@ -15,7 +15,8 @@
 import { METRICAS_EM_BLOCO } from "./bulk/fontes";
 import type { EurostatDatasetManifest } from "./connectors/eurostat";
 import type { IneAnnualIndicatorManifest } from "./connectors/ine";
-import type { MarketSignalKind, MarketSourceId } from "./tipos";
+import type { RnalManifest } from "./connectors/rnal";
+import type { MarketObservationLicense, MarketSignalKind, MarketSourceId } from "./tipos";
 
 /** A página do conjunto de dados do Portal BASE no dados.gov.pt. */
 const BASE_CONTRACTS_DATASET_URL =
@@ -225,6 +226,162 @@ export const DIGITAL_SKILLS_TOTAL_MANIFEST = digitalSkills(
   "IND_TOTAL",
 );
 
+// ── RNAL — ligado, a contar, e retido à porta da licença ────────────
+//
+// O conector está escrito, testado e verificado contra o serviço a
+// funcionar: 111 512 alojamentos locais, sete NUTS II, zero linhas em
+// quarentena de dados. O que falta não é código — é uma licença.
+//
+// Verificado a 2026-08-22 em QUATRO autoridades independentes, todas a
+// dizerem o mesmo:
+//  · o serviço ArcGIS não declara licença nem `copyrightText`;
+//  · o item ArcGIS que o publica não tem `licenseInfo` nem
+//    `accessInformation`;
+//  · o catálogo DCAT do portal oficial de dados abertos do Turismo de
+//    Portugal declara `license: ""` e `rights: null` — nos 53 conjuntos,
+//    não só neste;
+//  · a entrada no dados.gov.pt («Estabelecimentos de Alojamento Local»,
+//    publicada pelo próprio Turismo de Portugal) declara
+//    `license: notspecified`.
+//
+// As séries FICAM LIGADAS na mesma, e é essa a diferença. Com a fonte em
+// `review_required`, `validateMarketObservation` retém as observações — e
+// faz bem, nada se publica sem licença. Mas a fonte passa a declarar-se
+// em `license_review` em vez de `quarantined`, ou seja: «os dados estão
+// íntegros, o que falta é a papelada». Quem lê o cartão fica a saber que
+// a contagem existe, de onde vem e o que a está a segurar, em vez de
+// nunca ter sabido que ela existia.
+//
+// No dia em que o Turismo de Portugal confirmar os termos por escrito,
+// acrescenta-se `datasetLicense` aqui — como as séries do INE já fazem —
+// e os números aparecem sem mais nada mudar.
+//
+// A camada publica o nome da NUTS II, não o código. A tabela abaixo é a
+// ponte, e é EXAUSTIVA para o que a fonte cobre: um nome que não esteja
+// aqui vai para quarentena, porque significa que a nomenclatura mudou ou
+// que a cobertura mudou — e nenhuma das duas coisas pode desaparecer numa
+// contagem silenciosamente diferente.
+//
+// Não há Açores nem Madeira: o RNAL nacional é do continente, e as duas
+// regiões autónomas mantêm registos próprios. A ausência de linhas nessas
+// regiões NÃO é ausência de alojamento local — é ausência de fonte, e é
+// por isso que nenhuma hipótese açoriana ou madeirense pode receber sinal
+// de oferta a partir daqui.
+const NUTS2_RNAL: RnalManifest["geographyByName"] = Object.freeze({
+  Norte: { level: "nuts2", code: "11", classificationVersion: "NUTS 2024" },
+  Algarve: { level: "nuts2", code: "15", classificationVersion: "NUTS 2024" },
+  Centro: { level: "nuts2", code: "19", classificationVersion: "NUTS 2024" },
+  "Grande Lisboa": { level: "nuts2", code: "1A", classificationVersion: "NUTS 2024" },
+  "Península de Setúbal": { level: "nuts2", code: "1B", classificationVersion: "NUTS 2024" },
+  Alentejo: { level: "nuts2", code: "1C", classificationVersion: "NUTS 2024" },
+  "Oeste e Vale do Tejo": { level: "nuts2", code: "1D", classificationVersion: "NUTS 2024" },
+} as const);
+
+/** O RNAL como página pública, para quem quiser conferir a contagem. */
+export const RNAL_DATASET_URL = "https://registos.turismodeportugal.pt/HomePage/RNAL";
+
+/**
+ * A base legal desta leitura. Verificada no texto consolidado, não de cor.
+ *
+ * O Turismo de Portugal publica o RNAL como dados abertos e NÃO emitiu
+ * licença nenhuma — verificado a 2026-08-22 no serviço, no item que o
+ * publica, no catálogo DCAT do portal oficial e no dados.gov.pt. Sem
+ * licença emitida, aplica-se o regime geral, e é ele que autoriza:
+ *
+ *  · Artigo 19.º, n.º 1 — os documentos administrativos de acesso
+ *    autorizado «podem ser reutilizados para fins COMERCIAIS ou não
+ *    comerciais, salvo o disposto em contrário na presente lei ou em
+ *    legislação específica».
+ *
+ *  · Artigo 23.º, n.º 1 — só é preciso licença quando a entidade decide
+ *    subordinar a autorização a condições próprias. O Turismo de Portugal
+ *    não o fez: a ausência de licença não é proibição, é o regime geral.
+ *
+ *  · Artigo 23.º, n.º 3, al. a) — a reutilização de documentos
+ *    disponibilizados através da Internet é GRATUITA.
+ *
+ * E é o artigo 20.º, al. c) que explica porque é que esta licença
+ * pertence ao MANIFESTO e não à fonte. Documentos nominativos só podem
+ * ser reutilizados «quando os dados pessoais possam ser anonimizados sem
+ * possibilidade de reversão». O RNAL em bruto é nominativo — nome,
+ * morada e coordenadas de 111 mil alojamentos — e por isso a fonte
+ * continua em `review_required`. O que estes dois manifestos leem são
+ * contagens por NUTS II agregadas PELO SERVIDOR DA FONTE: de 44 818 não
+ * há caminho de volta a ninguém. A agregação que se fez por privacidade
+ * é exatamente a condição que a lei exige para a reutilização ser lícita.
+ *
+ * Falta cumprir o artigo 19.º, n.º 5: não desvirtuar o sentido e
+ * «mencionar sempre as fontes, bem como a data da última atualização».
+ * A atribuição abaixo trata da fonte; a data viaja em cada observação
+ * (`retrievedAt` e `referencePeriod`) e chega ao ecrã na proveniência.
+ */
+const RNAL_LICENCA: MarketObservationLicense = Object.freeze({
+  status: "approved",
+  scope: "dataset",
+  identifier: "Lei n.º 26/2016, arts. 19.º/1, 20.º/c e 23.º/3-a (red. Lei n.º 68/2021)",
+  url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2016-106603618",
+  attribution:
+    "Fonte: Registo Nacional de Alojamento Local (RNAL) — Turismo de Portugal, I.P. Contagens agregadas por NUTS II.",
+});
+
+const RNAL_METODOLOGIA =
+  "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer/6";
+
+/**
+ * Quantos alojamentos locais estão INSCRITOS, por região.
+ *
+ * É o stock de oferta — quantos operadores existem, não quanto vendem. A
+ * validade é curta de propósito: o registo é atualizado diariamente e uma
+ * contagem de há um mês já não descreve o mercado de hoje.
+ */
+export const RNAL_STOCK_MANIFEST: RnalManifest = {
+  metricId: "tourism.local_accommodation.registered",
+  unit: "alojamentos registados",
+  janela: "instantaneo",
+  groupByField: "NUTSII",
+  // Noventa dias, e não trinta. O registo é lido ao vivo a cada consulta,
+  // por isso a validade só protege contra um cache preso; com trinta,
+  // caía sempre dentro da janela de «a expirar» (45 dias) e o cartão
+  // avisava para sempre sobre uma leitura tirada nesse instante. O stock
+  // move-se ~8% ao ano: em noventa dias continua a descrever o mercado.
+  maxReferenceAgeDays: 90,
+  geographyByName: NUTS2_RNAL,
+  // `observed` e não `estimated`: é uma contagem de registos administrativos,
+  // não uma amostra nem uma projeção. O que a contagem NÃO garante — que o
+  // alojamento esteja em funcionamento — está declarado nas limitações da
+  // fonte, não escondido num estado de qualidade mais fraco.
+  observationStatus: "observed",
+  semanticMapping: "approved",
+  methodologyRef: RNAL_METODOLOGIA,
+  classifications: { cae: ["I55201"] },
+  datasetLicense: RNAL_LICENCA,
+};
+
+/**
+ * Quantos alojamentos locais se INSCREVERAM no último ano civil fechado.
+ *
+ * É o fluxo, não o stock: diz se a oferta ainda está a crescer na região.
+ * O piso de credibilidade existe porque o campo tem preenchimento a
+ * 1900-01-01 em linhas cuja data real ninguém publicou.
+ */
+export const RNAL_NOVOS_MANIFEST: RnalManifest = {
+  metricId: "tourism.local_accommodation.new_registrations",
+  unit: "novos registos por ano",
+  janela: "ultimo-ano-civil-completo",
+  groupByField: "NUTSII",
+  dateField: "DataRegisto",
+  dataMinimaCredivel: "1990-01-01",
+  // Um ano civil fechado continua a descrever o ritmo de entrada durante o
+  // ano seguinte inteiro; a partir daí já fechou outro e este envelheceu.
+  maxReferenceAgeDays: 450,
+  geographyByName: NUTS2_RNAL,
+  observationStatus: "observed",
+  semanticMapping: "approved",
+  methodologyRef: RNAL_METODOLOGIA,
+  classifications: { cae: ["I55201"] },
+  datasetLicense: RNAL_LICENCA,
+};
+
 export type MarketPilotSeriesConnector =
   | { connector: "ine"; manifest: IneAnnualIndicatorManifest }
   | {
@@ -233,6 +390,7 @@ export type MarketPilotSeriesConnector =
       /** Filtros enviados ao endpoint, para não descarregar o cubo inteiro. */
       fetchFilters: Readonly<Record<string, readonly string[]>>;
     }
+  | { connector: "rnal"; manifest: RnalManifest }
   | {
       /**
        * Série lida de um instantâneo commitado, não da rede.
@@ -262,7 +420,19 @@ export interface MarketPilotSeries {
    *  · `transactional`— conta eventos reais registados que criam a
    *                     necessidade (uma empresa que nasce, uma casa que
    *                     muda de mãos);
-   *  · `structural`   — stock, composição ou capacidade do universo.
+   *  · `structural`   — stock, composição ou capacidade do universo;
+   *  · `supply`       — quantos operadores JÁ SERVEM esta hipótese.
+   *
+   * `supply` é a leitura mais fácil de errar, e o erro é caro. A pergunta
+   * que decide não é «isto conta operadores?» mas «operadores de QUÊ?»:
+   * uma contagem de alojamentos locais é oferta para quem quer abrir um
+   * alojamento e é PROCURA para quem quer limpá-los. Contar clientes como
+   * rivais dizia a alguém que o mercado está cheio no preciso momento em
+   * que lhe estávamos a mostrar a lista de clientes.
+   *
+   * Por isso o `kind` pertence ao par (série, piloto) e não à série: o
+   * mesmo manifesto pode entrar em dois pilotos com leituras diferentes,
+   * e é o piloto que declara qual.
    *
    * Nenhum deles prova disposição a pagar. É por isso que nenhum destes
    * sinais, sozinho ou acompanhado, chega a `user_validated`.
@@ -307,6 +477,47 @@ export const MARKET_PILOTS: readonly MarketPilotDefinition[] = Object.freeze([
         independenceKey: "pt-business-demography",
         critical: false,
         source: { connector: "ine", manifest: BUSINESS_BIRTHS_COMPANY_MANIFEST },
+      },
+      {
+        id: "tourism-al-stock",
+        label: "Alojamentos locais registados na zona",
+        // ── Porque é `demand` e não `supply` ────────────────────────
+        //  A tentação era classificar isto como oferta: é uma contagem de
+        //  operadores, e o motor não tem nenhuma. Mas a hipótese aqui é
+        //  PRESTAR SERVIÇO a alojamentos locais — limpezas, check-ins,
+        //  gestão de reservas. Nessa hipótese os 44 818 alojamentos do
+        //  Algarve não são a concorrência: são a lista de clientes
+        //  possíveis. Lê-los como oferta dizia a quem procura negócio que
+        //  o mercado já está servido, contando os futuros clientes dela
+        //  como se fossem rivais — a inferência falsa mais cara que este
+        //  ficheiro podia produzir.
+        //
+        //  O mesmo número seria oferta para quem quisesse ABRIR um
+        //  alojamento local. Essa hipótese não existe no produto, e o dia
+        //  em que existir declara este manifesto outra vez, com o `kind`
+        //  que essa leitura exigir. O `kind` é da leitura, não da série.
+        reading:
+          "Conta os alojamentos locais inscritos no registo nacional. Para quem presta serviço a alojamentos, é a dimensão do universo de clientes possíveis na zona — não é a concorrência, e não diz quantos desses alojamentos contratam apoio externo nem quanto pagam. Conta registos, não unidades em funcionamento. Só o continente: os Açores e a Madeira têm registos próprios.",
+        sourceId: "turismo-portugal",
+        kind: "demand",
+        independenceKey: "pt-rnal-registry",
+        // Não crítica, e é deliberado: enquanto a licença não estiver
+        // confirmada esta série não publica número nenhum, e uma série
+        // crítica retida impediria a hipótese de turismo de qualificar —
+        // ou seja, acrescentar uma fonte pioraria o cartão.
+        critical: false,
+        source: { connector: "rnal", manifest: RNAL_STOCK_MANIFEST },
+      },
+      {
+        id: "tourism-al-new",
+        label: "Alojamentos locais inscritos no último ano fechado",
+        reading:
+          "Conta as inscrições novas do último ano civil completo. Serve para distinguir um universo de clientes que ainda está a crescer de um que já estabilizou; uma inscrição não é uma abertura, e os cancelamentos não são descontados.",
+        sourceId: "turismo-portugal",
+        kind: "transactional",
+        independenceKey: "pt-rnal-registry",
+        critical: false,
+        source: { connector: "rnal", manifest: RNAL_NOVOS_MANIFEST },
       },
     ],
   },

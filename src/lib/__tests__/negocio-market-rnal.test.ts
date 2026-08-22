@@ -1,0 +1,272 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  CONECTOR RNAL — o que ele conta, e porque ainda não é publicado
+// ═══════════════════════════════════════════════════════════════════════
+
+import { describe, it, expect, vi } from "vitest";
+import {
+  buildRnalStatisticsUrl,
+  fetchRnalStatistics,
+  normalizeRnalStatistics,
+  parseRnalStatistics,
+  resolverPeriodo,
+  RnalConnectorError,
+  type RnalManifest,
+} from "@/lib/negocio/market/connectors/rnal";
+import { RNAL_STOCK_MANIFEST, RNAL_NOVOS_MANIFEST, MARKET_PILOTS } from "@/lib/negocio/market/pilots";
+import { getMarketSource } from "@/lib/negocio/market/source-registry";
+import { validateMarketObservation } from "@/lib/negocio/market/integridade";
+import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
+
+const AGORA = "2026-08-22T09:00:00.000Z";
+
+const AGREGADO = {
+  features: [
+    { attributes: { NUTSII: "Algarve", total: 44818 } },
+    { attributes: { NUTSII: "Norte", total: 23267 } },
+    { attributes: { NUTSII: "Grande Lisboa", total: 18121 } },
+  ],
+};
+
+function responder(corpo: unknown, status = 200) {
+  return vi.fn(async () => new Response(JSON.stringify(corpo), { status })) as unknown as typeof fetch;
+}
+
+async function ler(manifest: RnalManifest, corpo: unknown = AGREGADO) {
+  const fetched = await fetchRnalStatistics(manifest, { fetchImpl: responder(corpo), now: () => AGORA });
+  return { fetched, normalizado: normalizeRnalStatistics(fetched, manifest) };
+}
+
+describe("RNAL: a contagem é feita na fonte", () => {
+  it("pede um agregado, nunca as linhas", async () => {
+    const url = buildRnalStatisticsUrl(RNAL_STOCK_MANIFEST, resolverPeriodo(RNAL_STOCK_MANIFEST, AGORA));
+    const parametros = new URL(url).searchParams;
+
+    // O registo é NOMINATIVO: nome, morada e coordenadas de 111 mil
+    // alojamentos. O conector nunca pode ter um caminho que os traga.
+    expect(parametros.get("groupByFieldsForStatistics")).toBe("NUTSII");
+    expect(parametros.get("outStatistics")).toContain('"statisticType":"count"');
+    expect(parametros.get("returnGeometry")).toBe("false");
+    expect(url).not.toContain("outFields");
+    expect(url).not.toContain("resultRecordCount");
+  });
+
+  it("recorta a janela do último ano civil FECHADO, nunca o ano a meio", () => {
+    const periodo = resolverPeriodo(RNAL_NOVOS_MANIFEST, AGORA);
+    expect(periodo.label).toBe("2025");
+    const where = new URL(
+      buildRnalStatisticsUrl(RNAL_NOVOS_MANIFEST, periodo),
+    ).searchParams.get("where");
+    expect(where).toBe("DataRegisto >= DATE '2025-01-01' AND DataRegisto < DATE '2026-01-01'");
+  });
+
+  it("o instantâneo declara-se instantâneo, sem fingir período de referência", () => {
+    const periodo = resolverPeriodo(RNAL_STOCK_MANIFEST, AGORA);
+    expect(periodo).toEqual({ start: "2026-08-22", end: "2026-08-22", label: "2026-08-22" });
+  });
+});
+
+describe("RNAL: normalização fail-closed", () => {
+  it("traduz cada nome NUTS 2024 para o código que o resto do produto usa", async () => {
+    const { normalizado } = await ler(RNAL_STOCK_MANIFEST);
+    expect(normalizado.observations.map((o) => [o.geography.code, o.value])).toEqual([
+      ["11", 23267],
+      ["15", 44818],
+      ["1A", 18121],
+    ]);
+    expect(normalizado.observations.every((o) => o.geography.classificationVersion === "NUTS 2024")).toBe(true);
+    expect(normalizado.quarantined).toHaveLength(0);
+  });
+
+  it("põe em quarentena um nome que não conhece, em vez de o ignorar", async () => {
+    // Se o Turismo de Portugal renomear uma região ou passar a incluir os
+    // Açores, isso NÃO pode desaparecer numa contagem silenciosamente
+    // diferente: tem de aparecer.
+    const { normalizado } = await ler(RNAL_STOCK_MANIFEST, {
+      features: [
+        { attributes: { NUTSII: "Algarve", total: 44818 } },
+        { attributes: { NUTSII: "Região Autónoma dos Açores", total: 900 } },
+      ],
+    });
+    expect(normalizado.observations).toHaveLength(1);
+    expect(normalizado.quarantined).toEqual([
+      expect.objectContaining({ regiao: "Região Autónoma dos Açores", reason: "unmapped-geography" }),
+    ]);
+  });
+
+  it("um erro do serviço não é lido como zero alojamentos", () => {
+    // O ArcGIS devolve HTTP 200 com o erro no corpo. Sem a guarda, uma
+    // falha do servidor virava a contagem mais baixa possível.
+    expect(() =>
+      parseRnalStatistics({ error: { message: "Unable to complete operation." } }, "NUTSII"),
+    ).toThrow(RnalConnectorError);
+  });
+
+  it("recusa uma contagem que não seja um inteiro não negativo", () => {
+    expect(() =>
+      parseRnalStatistics({ features: [{ attributes: { NUTSII: "Norte", total: "23267" } }] }, "NUTSII"),
+    ).toThrow(RnalConnectorError);
+  });
+
+  it("recusa uma resposta sem o campo de agregação — é mudança de esquema", () => {
+    expect(() =>
+      parseRnalStatistics({ features: [{ attributes: { REGIAO: "Norte", total: 1 } }] }, "NUTSII"),
+    ).toThrow(/esquema da camada mudou/);
+  });
+
+  it("assina o conteúdo recebido e agarra a assinatura a cada observação", async () => {
+    const { fetched, normalizado } = await ler(RNAL_STOCK_MANIFEST);
+    expect(fetched.checksum).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(normalizado.observations.every((o) => o.checksum === fetched.checksum)).toBe(true);
+  });
+
+  it("uma janela datada sem campo de data é manifesto inválido, não um pedido a adivinhar", () => {
+    const partido: RnalManifest = { ...RNAL_NOVOS_MANIFEST, dateField: undefined };
+    expect(() => buildRnalStatisticsUrl(partido, resolverPeriodo(partido, AGORA))).toThrow(
+      RnalConnectorError,
+    );
+  });
+});
+
+describe("RNAL: a licença trava a publicação, não a ferramenta", () => {
+  it("a FONTE continua por rever, porque o RNAL em bruto é nominativo", () => {
+    // O art. 20.º, al. c) só permite reutilizar documentos nominativos
+    // quando anonimizados sem possibilidade de reversão. O registo em
+    // bruto não está: tem nome, morada e coordenadas. Aprovar a fonte
+    // inteira dava licença a uma série futura que lesse linhas.
+    const fonte = getMarketSource("turismo-portugal");
+    expect(fonte?.license.status).toBe("review_required");
+    expect(fonte?.license.reviewNote).toMatch(/2026-08-22/);
+    expect(fonte?.license.reviewNote).toMatch(/nominativo/i);
+  });
+
+  it("a leitura agregada é publicável, e cita a base legal que a autoriza", async () => {
+    const { normalizado } = await ler(RNAL_STOCK_MANIFEST);
+    expect(normalizado.observations.length).toBeGreaterThan(0);
+
+    for (const observacao of normalizado.observations) {
+      const resultado = validateMarketObservation(observacao, { asOf: AGORA, expiringWithinDays: 45 });
+      expect(resultado.publishable, observacao.id).toBe(true);
+
+      // A licença é do DATASET, não da fonte: é a agregação por NUTS II
+      // que a torna lícita, e uma série que não agregue não a herda.
+      expect(observacao.license.status).toBe("approved");
+      expect(observacao.license.scope).toBe("dataset");
+      expect(observacao.license.identifier).toMatch(/Lei n\.º 26\/2016/);
+      expect(observacao.license.identifier).toMatch(/20\.º\/c/);
+      // Art. 19.º, n.º 5: mencionar sempre a fonte.
+      expect(observacao.license.attribution).toMatch(/Turismo de Portugal/);
+      // ... e a data da última atualização, que viaja na observação.
+      expect(observacao.retrievedAt).toBe(AGORA);
+    }
+  });
+
+  it("um manifesto SEM licença de dataset continua retido", async () => {
+    // O guarda que sobrevive à decisão: a autorização está agarrada à
+    // leitura agregada, não à fonte. Tirá-la volta a reter tudo.
+    const semLicenca: RnalManifest = { ...RNAL_STOCK_MANIFEST, datasetLicense: undefined };
+    const { normalizado } = await ler(semLicenca);
+    for (const observacao of normalizado.observations) {
+      const resultado = validateMarketObservation(observacao, { asOf: AGORA, expiringWithinDays: 45 });
+      expect(resultado.publishable, observacao.id).toBe(false);
+      expect(resultado.issues.some((problema) => problema.code === "license-review")).toBe(true);
+    }
+  });
+
+  it("as séries estão ligadas — o que está retido é a publicação, não a capacidade", () => {
+    // A fonte fica LIGADA de propósito. Retirá-la escondia que a
+    // contagem existe; mantê-la mostra que existe, de onde vem e o que a
+    // está a segurar. O que a licença trava é o número aparecer, não o
+    // motor saber contá-lo.
+    const daFonte = MARKET_PILOTS.flatMap((piloto) => piloto.series).filter(
+      (serie) => serie.sourceId === "turismo-portugal",
+    );
+    expect(daFonte.map((serie) => serie.id)).toEqual(["tourism-al-stock", "tourism-al-new"]);
+
+    // Nenhuma delas pode ser crítica enquanto a licença não estiver
+    // confirmada: uma série crítica retida impediria a hipótese de
+    // turismo de qualificar, e acrescentar uma fonte pioraria o cartão.
+    const fonte = getMarketSource("turismo-portugal");
+    if (fonte?.license.status !== "approved") {
+      expect(daFonte.every((serie) => !serie.critical)).toBe(true);
+    }
+  });
+
+  it("o stock conta clientes possíveis, não concorrentes", () => {
+    // A inferência falsa mais cara que este ficheiro podia produzir: para
+    // quem presta serviço a alojamentos locais, os 44 818 alojamentos do
+    // Algarve são a lista de clientes, não a concorrência.
+    const stock = MARKET_PILOTS.flatMap((piloto) => piloto.series).find(
+      (serie) => serie.id === "tourism-al-stock",
+    );
+    expect(stock?.kind).toBe("demand");
+    expect(stock?.kind).not.toBe("supply");
+    expect(stock?.reading).toMatch(/não é a concorrência/);
+  });
+
+  it("uma fonte retida por licença diz que é a licença, não que os dados vieram mal", async () => {
+    // O mecanismo continua a existir e a guardar: exercitado com uma
+    // leitura sem licença de dataset, que é o que uma série futura não
+    // agregada seria.
+    const semLicenca: RnalManifest = { ...RNAL_STOCK_MANIFEST, datasetLicense: undefined };
+    const [piloto] = await loadPilotMarketEvidence({
+      fetchImpl: responder(AGREGADO),
+      now: () => AGORA,
+      pilots: [
+        {
+          templateId: "tourism-guest-operations",
+          datasetUrl: "https://dadosabertos.turismodeportugal.pt/",
+          series: [
+            {
+              id: "rnal-sem-licenca",
+              label: "Leitura sem licença de dataset",
+              reading:
+                "Existe só para exercitar o guarda: uma leitura desta fonte que não traga licença própria tem de ficar retida.",
+              sourceId: "turismo-portugal",
+              kind: "demand",
+              independenceKey: "pt-rnal-registry",
+              critical: false,
+              source: { connector: "rnal", manifest: semLicenca },
+            },
+          ],
+        },
+      ],
+    });
+
+    const saude = piloto.sourceHealth.find((item) => item.sourceId === "turismo-portugal");
+    // `quarantined` lê-se como «os dados vieram mal». Não vieram.
+    expect(saude?.state).toBe("license_review");
+    expect(saude?.message).toMatch(/os dados estão íntegros/);
+    expect(piloto.note).toMatch(/licença de reutilização/);
+    expect(piloto.note).not.toMatch(/não atravessaram a quarentena/);
+    expect(piloto.observations).toHaveLength(0);
+  });
+
+  it("as leituras reais do piloto de turismo são publicadas", async () => {
+    const [piloto] = await loadPilotMarketEvidence({
+      fetchImpl: responder(AGREGADO),
+      now: () => AGORA,
+      pilots: [
+        {
+          templateId: "tourism-guest-operations",
+          datasetUrl: "https://dadosabertos.turismodeportugal.pt/",
+          series: MARKET_PILOTS.flatMap((p) => p.series).filter(
+            (serie) => serie.id === "tourism-al-stock",
+          ),
+        },
+      ],
+    });
+
+    const saude = piloto.sourceHealth.find((item) => item.sourceId === "turismo-portugal");
+    expect(saude?.state).toBe("healthy");
+    expect(piloto.observations.length).toBeGreaterThan(0);
+    expect(piloto.observations.every((o) => o.license.status === "approved")).toBe(true);
+  });
+
+  it("os manifestos ficam prontos, para a ligação ser uma linha e não um projeto", () => {
+    expect(RNAL_STOCK_MANIFEST.metricId).toBe("tourism.local_accommodation.registered");
+    expect(RNAL_NOVOS_MANIFEST.metricId).toBe("tourism.local_accommodation.new_registrations");
+    // Metricids diferentes: um stock e um fluxo nunca se somam.
+    expect(RNAL_STOCK_MANIFEST.metricId).not.toBe(RNAL_NOVOS_MANIFEST.metricId);
+    expect(RNAL_STOCK_MANIFEST.unit).not.toBe(RNAL_NOVOS_MANIFEST.unit);
+  });
+});

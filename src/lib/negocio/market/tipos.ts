@@ -10,7 +10,13 @@
 //  `freshness.ts` e `integridade.ts`; o tipo, sozinho, não a pode provar.
 // ═══════════════════════════════════════════════════════════════════════
 
-export type MarketSourceId = "ine" | "bpstat" | "dados-gov" | "eurostat" | "iefp";
+export type MarketSourceId =
+  | "ine"
+  | "bpstat"
+  | "dados-gov"
+  | "eurostat"
+  | "iefp"
+  | "turismo-portugal";
 
 export type MarketAccessMode = "api" | "file" | "rss" | "manual" | "licensed";
 

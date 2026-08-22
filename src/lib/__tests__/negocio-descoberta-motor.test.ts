@@ -11,6 +11,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import {
   CONTEXTO_INICIAL,
   descobrir,
@@ -266,6 +267,24 @@ describe("descoberta: incerteza à vista, e nunca escondida", () => {
         }
       }
     }
+  });
+
+  it("ter sinal de procura E de oferta ainda não é ter a lacuna", () => {
+    // Este ramo dava «procura com pouca oferta» — 90 em 100 — assim que
+    // existisse um sinal de cada, sem comparar coisa nenhuma. Era
+    // inalcançável, e por isso ninguém reparou: a primeira série de
+    // oferta a entrar distribuía noventas de borla.
+    //
+    // Uma taxa de ocupação e uma contagem de operadores não se subtraem.
+    // Sem base comum declarada, a resposta é a mesma que sem sinal
+    // nenhum: não sabemos.
+    const fonte = readFileSync("src/lib/negocio/descoberta/motor/procura.ts", "utf8");
+    const ramo = fonte.slice(
+      fonte.indexOf("if (temProcura && temOferta)"),
+      fonte.indexOf("} else if (temProcura)"),
+    );
+    expect(ramo).toContain('leitura = "desconhecida"');
+    expect(ramo).not.toContain('leitura = "procura-com-pouca-oferta"');
   });
 
   it("uma dimensão sem base vale `null`, nunca zero", () => {

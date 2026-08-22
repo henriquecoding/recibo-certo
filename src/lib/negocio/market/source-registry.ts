@@ -160,6 +160,39 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
       "Alterações de folhas/colunas ficam em quarentena.",
     ]),
   }),
+  "turismo-portugal": Object.freeze({
+    id: "turismo-portugal",
+    publisher: "Turismo de Portugal, I.P.",
+    access: "api",
+    canonicalUrl:
+      "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer/6",
+    documentationUrl: "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer",
+    license: Object.freeze({
+      status: "review_required",
+      url: "https://geo.turismodeportugal.pt/server/rest/services/TDP/OpenData_AL/MapServer",
+      attribution: "Fonte: Registo Nacional de Alojamento Local (RNAL) — Turismo de Portugal, I.P.",
+      storagePolicy:
+        "Guardar apenas contagens agregadas por NUTS II. O registo é nominativo — nome, morada e coordenadas de cada unidade — e nada disso pode sair da fonte.",
+      reviewNote:
+        "A FONTE fica por rever de propósito, e não por falta de investigação. Verificado a 2026-08-22 em quatro autoridades independentes — serviço ArcGIS (sem `copyrightText`), item que o publica (sem `licenseInfo`), catálogo DCAT do portal oficial (`license` vazia nos 53 conjuntos) e dados.gov.pt (`notspecified`) — o Turismo de Portugal não emitiu licença nenhuma. Sem licença emitida aplica-se o regime geral da Lei n.º 26/2016 (red. Lei n.º 68/2021), que autoriza a reutilização comercial (art. 19.º/1), gratuitamente para documentos na Internet (art. 23.º/3-a). MAS o RNAL em bruto é NOMINATIVO, e o art. 20.º/c só permite reutilizar documentos nominativos quando anonimizados sem possibilidade de reversão. Por isso a fonte inteira NÃO é aprovada: só as leituras que agregam do lado do servidor levam licença própria (`datasetLicense` em `pilots.ts`). Uma série futura que leia linhas individuais não herda essa licença e fica retida — que é o comportamento certo.",
+    }),
+    expectedCadence: "daily",
+    coverage: Object.freeze({
+      countries: Object.freeze(["PT"] as const),
+      geographicLevels: Object.freeze(["nuts2", "nuts3", "municipality"] as const),
+      notes:
+        "Só Portugal continental: o RNAL nacional não inclui os Açores nem a Madeira, que mantêm registos próprios. Uma série desta fonte nunca pode ser lida como cobertura do país inteiro.",
+    }),
+    parserVersion: "arcgis-rest-statistics@1",
+    connectorStatus: "ready",
+    allowedUses: Object.freeze(["structural", "conjunctural", "transactional"] as const),
+    limitations: Object.freeze([
+      "Conta REGISTOS, não unidades em operação: um alojamento cancelado pode continuar inscrito.",
+      "A data de registo tem valores de preenchimento (o mínimo publicado é 1900-01-01); janelas temporais têm de os excluir.",
+      "Stock de oferta não é intensidade de concorrência: mede quantos existem, não quanto vendem.",
+      "Sem Açores nem Madeira — a ausência de linhas nessas regiões não significa ausência de oferta.",
+    ]),
+  }),
 });
 
 export interface MarketSourceDefinitionIssue {

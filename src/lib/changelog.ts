@@ -16,6 +16,52 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.4",
+    data: "2026-08-22",
+    titulo: "Já sabes quantos alojamentos locais há na tua zona — e é a lei que o permite dizer",
+    itens: [
+      "A ferramenta de descoberta passou a mostrar quantos alojamentos locais estão registados em cada região: 44 818 no Algarve, 23 267 no Norte, 18 121 na Grande Lisboa, 111 512 no continente inteiro. Mais as inscrições novas do último ano fechado, que dizem se esse universo ainda está a crescer ou se já estabilizou.",
+      "Para quem quer prestar serviço a alojamentos — limpezas, check-ins, gestão de reservas — isto é a dimensão da lista de clientes possíveis na zona. Não é a concorrência, e a ferramenta diz isso: contar os teus futuros clientes como se fossem rivais seria dizer-te que o mercado está cheio no momento em que te estávamos a mostrar quem te pode contratar.",
+      "É a primeira leitura da ferramenta que conta coisas reais na tua região, em vez de publicar uma percentagem nacional.",
+      "O Turismo de Portugal publica estes dados sem declarar em que termos podem ser usados. Fomos ver a lei: a Lei n.º 26/2016, com as alterações de 2021, permite reutilizar documentos administrativos para fins comerciais e de forma gratuita quando estão disponíveis na Internet. A base legal fica escrita, com os artigos, tal como já acontece com os dados fiscais.",
+      "Há uma condição na lei que dá jeito: registos com dados de pessoas só podem ser reutilizados se forem agregados sem possibilidade de volta atrás. É exatamente como a ferramenta os lê — pede a contagem por região ao servidor da fonte e recebe sete números, nunca as cento e onze mil linhas com nomes e moradas.",
+    ],
+  },
+  {
+    version: "2.96.3",
+    data: "2026-08-22",
+    titulo: "O Registo Nacional de Alojamento Local entrou na ferramenta — e diz o que está à espera",
+    itens: [
+      "A ferramenta passou a contar os alojamentos locais registados em cada região, a partir do registo nacional do Turismo de Portugal: 111 512 no continente, dos 44 818 do Algarve aos 4 831 da Península de Setúbal. Para quem quer prestar serviço a alojamentos — limpezas, check-ins, gestão de reservas — isto é a dimensão do universo de clientes possíveis na zona.",
+      "Os números ainda não aparecem, e a ferramenta diz porquê em vez de os esconder. Nem o serviço do Turismo de Portugal, nem o item que o publica, nem o catálogo do portal oficial de dados abertos, nem a entrada no dados.gov.pt declaram em que termos os dados podem ser reutilizados. Sem isso, a regra da casa mantém-se: não se publica.",
+      "Antes, uma fonte nesta situação aparecia como «nenhuma observação atravessou a quarentena» — que se lê como dados corrompidos. Passou a dizer o que é verdade: as leituras estão prontas e íntegras, o que falta é a licença. São coisas diferentes e agora distinguem-se.",
+      "A contagem é feita do lado da fonte. O registo tem nome, morada e coordenadas de cada alojamento; o que atravessa a rede são sete números por consulta, não cento e onze mil linhas de dados de pessoas.",
+      "Se o Turismo de Portugal renomear uma região ou passar a incluir os Açores e a Madeira, isso aparece como aviso em vez de desaparecer numa contagem silenciosamente diferente.",
+    ],
+  },
+  {
+    version: "2.96.2",
+    data: "2026-08-22",
+    titulo: "Uma pergunta que a ferramenta ia começar a responder mal — e deixou de poder",
+    itens: [
+      "A ferramenta de descoberta tinha um cálculo escondido à espera de acontecer: bastava entrar a primeira fonte que contasse operadores para qualquer hipótese com procura receber 90 em 100 na «lacuna de oferta», sem que nada tivesse sido comparado. Uma taxa de ocupação e uma contagem de empresas não se subtraem. Deixou de dar essa nota: quando os dois sinais existem mas não estão na mesma base, a resposta volta a ser «não sabemos», com a pergunta que falta escrita.",
+      "Foi investigado o Registo Nacional de Alojamento Local para ser essa primeira fonte. O acesso está feito e verificado — 111 512 alojamentos, sete regiões — mas as séries ficaram por ligar, e as duas razões estão escritas no código.",
+      "A primeira é a licença: nem o serviço do Turismo de Portugal nem a entrada oficial no dados.gov.pt dizem em que termos os dados podem ser reutilizados. A regra da casa é a mesma de sempre — sem licença confirmada, o número não é publicado.",
+      "A segunda é mais interessante e sobrevive à primeira: para quem quer prestar serviço a alojamentos locais, os 44 818 alojamentos do Algarve não são a concorrência — são a lista de clientes possíveis. Contá-los como oferta dizia a quem procura negócio que o mercado já está cheio, no preciso momento em que lhe estávamos a mostrar os clientes.",
+      "A contagem, quando for ligada, é feita do lado da fonte. O registo tem nome, morada e coordenadas de cada alojamento; o que atravessa a rede são sete números, não cento e onze mil linhas de dados de pessoas.",
+    ],
+  },
+  {
+    version: "2.96.1",
+    data: "2026-08-22",
+    titulo: "O cartão de mercado deixou de conseguir bloquear a publicação do site",
+    itens: [
+      "Os números de mercado vêm do INE, do Eurostat e do portal de dados abertos. Estavam a ser pedidos no momento em que o site é compilado — o que significava que uma tarde má do lado deles impedia qualquer atualização de sair, mesmo que nada tivesse a ver com mercado.",
+      "Passam a ser pedidos quando alguém abre a página, não quando o site é construído. O que se vê é o mesmo e continua guardado seis horas; deixa é de haver uma publicação à espera de um servidor de terceiros.",
+      "A consulta às fontes ganhou um tempo máximo. Se passar disso, o que faltou aparece como «à espera de confirmação» em vez de deixar a página a carregar — como sempre foi a regra: nunca mostrar um número que não veio de lado nenhum.",
+    ],
+  },
+  {
     version: "2.96.0",
     data: "2026-08-22",
     titulo: "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",
