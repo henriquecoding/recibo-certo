@@ -214,32 +214,38 @@ declarar.
   procura» — mas, sem uma série de `supply`, a resposta honesta é «não
   sabemos», e é isso que aparece.
 
-  O RNAL do Turismo de Portugal foi investigado a fundo e o conector está
-  escrito, testado e verificado ao vivo (`connectors/rnal.ts`: 111 512
-  alojamentos locais, sete NUTS II, contagem feita do lado da fonte porque o
-  registo é nominativo). Ficou por ligar por duas razões, e as duas importam:
+  O RNAL do Turismo de Portugal foi investigado a fundo, o conector está
+  escrito e verificado ao vivo (`connectors/rnal.ts`: 111 512 alojamentos
+  locais, sete NUTS II, contagem feita do lado da fonte porque o registo é
+  nominativo) e **as séries estão ligadas ao piloto de turismo**. O que não
+  aparece são os números, e por duas razões distintas:
 
-  1. **A licença não existe.** Verificado a 2026-08-22 em duas autoridades
-     independentes: o serviço ArcGIS não declara licença nem `copyrightText`,
-     e a entrada oficial no dados.gov.pt («Estabelecimentos de Alojamento
-     Local», do próprio Turismo de Portugal) declara `license: notspecified`.
-     Com a fonte em `review_required` e sem licença de série aprovada,
-     `validateMarketObservation` põe todas as observações em quarentena — e
-     faz bem. Ligar as séries assim não punha um número no ecrã: punha um
-     aviso permanente de quarentena no cartão do turismo.
-  2. **Não seria oferta.** Esta é a razão mais interessante, e sobreviveria à
-     licença. Todas as hipóteses do produto são serviços prestados a alguém.
-     Para «operações locais para alojamento turístico», os 44 818 alojamentos
-     do Algarve não são a concorrência — são a lista de clientes possíveis.
-     Classificá-los como `supply` diria a quem procura negócio que o mercado
-     já está servido, contando os futuros clientes dela como rivais. O mesmo
-     número seria oferta para quem quisesse ABRIR um alojamento local, e essa
-     hipótese não existe no produto.
+  1. **A licença não existe.** Verificado a 2026-08-22 em quatro autoridades
+     independentes, todas a dizer o mesmo: o serviço ArcGIS não declara licença
+     nem `copyrightText`; o item que o publica não tem `licenseInfo` nem
+     `accessInformation`; o catálogo DCAT do portal oficial de dados abertos do
+     Turismo de Portugal declara `license: ""` e `rights: null` nos 53
+     conjuntos; e a entrada no dados.gov.pt declara `license: notspecified`.
+     Com a fonte em `review_required`, `validateMarketObservation` retém as
+     observações — e faz bem.
+  2. **Não seria oferta.** Esta razão sobrevive à licença. Todas as hipóteses
+     do produto são serviços prestados a alguém. Para «operações locais para
+     alojamento turístico», os 44 818 alojamentos do Algarve não são a
+     concorrência — são a lista de clientes possíveis. Classificá-los como
+     `supply` diria a quem procura negócio que o mercado já está servido,
+     contando os futuros clientes dela como rivais. O mesmo número seria oferta
+     para quem quisesse ABRIR um alojamento local, e essa hipótese não existe
+     no produto. Daí a regra: **o `kind` pertence ao par (série, piloto), não à
+     série.**
 
-  Daí a regra que ficou escrita em `pilots.ts`: **o `kind` pertence ao par
-  (série, piloto), não à série.** Uma fonte de oferta a sério tem de contar
-  operadores DA hipótese — empresas de limpeza, de co-anfitrião, de gestão de
-  reservas por zona — e nenhuma fonte pública portuguesa o faz hoje.
+  A série fica ligada mesmo assim, e a diferença está no que a interface diz.
+  `license_review` era um estado declarado no tipo e nunca produzido: uma fonte
+  com números impecáveis e termos por declarar caía em `quarantined`, cuja
+  mensagem se lê como «os dados vieram mal». Agora o cartão diz «14 leituras
+  estão prontas mas retidas até a licença de reutilização da fonte estar
+  confirmada» — a capacidade fica visível, o número continua retido, e
+  confirmar os termos é acrescentar `datasetLicense` num sítio só.
+
 - **Granularidade geográfica.** A evidência desce a NUTS II; o contexto aceita
   distrito e raio. Onde o dado não existe ao nível pedido, a interface diz que
   está a mostrar o nível acima em vez de fingir precisão local.

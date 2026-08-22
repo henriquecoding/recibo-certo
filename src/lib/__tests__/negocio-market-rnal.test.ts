@@ -15,6 +15,7 @@ import {
 import { RNAL_STOCK_MANIFEST, RNAL_NOVOS_MANIFEST, MARKET_PILOTS } from "@/lib/negocio/market/pilots";
 import { getMarketSource } from "@/lib/negocio/market/source-registry";
 import { validateMarketObservation } from "@/lib/negocio/market/integridade";
+import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
 
 const AGORA = "2026-08-22T09:00:00.000Z";
 
@@ -126,7 +127,7 @@ describe("RNAL: normalização fail-closed", () => {
   });
 });
 
-describe("RNAL: a licença é o que trava a publicação", () => {
+describe("RNAL: a licença trava a publicação, não a ferramenta", () => {
   it("a fonte está por rever e diz o que falta", () => {
     const fonte = getMarketSource("turismo-portugal");
     expect(fonte?.license.status).toBe("review_required");
@@ -142,20 +143,62 @@ describe("RNAL: a licença é o que trava a publicação", () => {
     }
   });
 
-  it("por isso nenhum piloto usa esta fonte — ligá-la só produzia avisos de quarentena", () => {
-    // Este é o guarda da decisão, não uma proibição permanente: no dia em
-    // que o Turismo de Portugal confirmar os termos, acrescenta-se a
-    // licença de dataset (como as séries do INE já têm), este teste passa
-    // a exigir isso mesmo, e as séries entram no piloto.
-    const series = MARKET_PILOTS.flatMap((piloto) => piloto.series);
-    const daFonte = series.filter((serie) => serie.sourceId === "turismo-portugal");
-    const fonte = getMarketSource("turismo-portugal");
+  it("as séries estão ligadas — o que está retido é a publicação, não a capacidade", () => {
+    // A fonte fica LIGADA de propósito. Retirá-la escondia que a
+    // contagem existe; mantê-la mostra que existe, de onde vem e o que a
+    // está a segurar. O que a licença trava é o número aparecer, não o
+    // motor saber contá-lo.
+    const daFonte = MARKET_PILOTS.flatMap((piloto) => piloto.series).filter(
+      (serie) => serie.sourceId === "turismo-portugal",
+    );
+    expect(daFonte.map((serie) => serie.id)).toEqual(["tourism-al-stock", "tourism-al-new"]);
 
-    if (fonte?.license.status === "approved") {
-      expect(daFonte.length).toBeGreaterThan(0);
-    } else {
-      expect(daFonte).toHaveLength(0);
+    // Nenhuma delas pode ser crítica enquanto a licença não estiver
+    // confirmada: uma série crítica retida impediria a hipótese de
+    // turismo de qualificar, e acrescentar uma fonte pioraria o cartão.
+    const fonte = getMarketSource("turismo-portugal");
+    if (fonte?.license.status !== "approved") {
+      expect(daFonte.every((serie) => !serie.critical)).toBe(true);
     }
+  });
+
+  it("o stock conta clientes possíveis, não concorrentes", () => {
+    // A inferência falsa mais cara que este ficheiro podia produzir: para
+    // quem presta serviço a alojamentos locais, os 44 818 alojamentos do
+    // Algarve são a lista de clientes, não a concorrência.
+    const stock = MARKET_PILOTS.flatMap((piloto) => piloto.series).find(
+      (serie) => serie.id === "tourism-al-stock",
+    );
+    expect(stock?.kind).toBe("demand");
+    expect(stock?.kind).not.toBe("supply");
+    expect(stock?.reading).toMatch(/não é a concorrência/);
+  });
+
+  it("uma fonte retida por licença diz que é a licença, não que os dados vieram mal", async () => {
+    const [piloto] = await loadPilotMarketEvidence({
+      fetchImpl: responder(AGREGADO),
+      now: () => AGORA,
+      pilots: [
+        {
+          templateId: "tourism-guest-operations",
+          datasetUrl: "https://dadosabertos.turismodeportugal.pt/",
+          series: MARKET_PILOTS.flatMap((p) => p.series).filter(
+            (serie) => serie.id === "tourism-al-stock",
+          ),
+        },
+      ],
+    });
+
+    const saude = piloto.sourceHealth.find((item) => item.sourceId === "turismo-portugal");
+    // `quarantined` lê-se como «os dados vieram mal». Não vieram.
+    expect(saude?.state).toBe("license_review");
+    expect(saude?.state).not.toBe("quarantined");
+    expect(saude?.message).toMatch(/os dados estão íntegros/);
+    expect(piloto.note).toMatch(/licença de reutilização/);
+    expect(piloto.note).not.toMatch(/não atravessaram a quarentena/);
+
+    // E continua a não publicar número nenhum. Dizer porquê não é publicar.
+    expect(piloto.observations).toHaveLength(0);
   });
 
   it("os manifestos ficam prontos, para a ligação ser uma linha e não um projeto", () => {

@@ -114,6 +114,16 @@ interface SeriesOutcome {
    * agora» sobre um ficheiro descarregado há três semanas.
    */
   extraidoEm?: string;
+  /**
+   * Observações retidas por LICENÇA, e não por defeito no dado.
+   *
+   * São coisas diferentes e a interface não as podia distinguir: uma
+   * leitura impecável, cuja fonte ainda não declarou termos de
+   * reutilização, aparecia como «nenhuma observação atravessou a
+   * quarentena» — que se lê como dado corrompido. É o contrário: o dado
+   * está bom e é a papelada que falta.
+   */
+  retidasPorLicenca: number;
 }
 
 /**
@@ -225,7 +235,7 @@ async function loadSeries(
       // por isso que um instantâneo por atualizar acaba `stale` sozinho.
       const guardado = obterSnapshotBulk(definition.snapshotId);
       if (!guardado) {
-        return { series, observations: [], rejected: 0, failed: true };
+        return { series, observations: [], rejected: 0, retidasPorLicenca: 0, failed: true };
       }
       observations = guardado.observations.filter(
         (observacao) => observacao.metricId === definition.metricId,
@@ -283,10 +293,21 @@ async function loadSeries(
       expiringWithinDays: EXPIRING_WITHIN_DAYS,
     });
 
+    // Retida por licença é a que SÓ tem problemas de licença. Uma
+    // observação com um período inválido E licença por rever continua a
+    // ser um defeito de dados; dizer «é só a licença» aí seria esconder
+    // o resto.
+    const retidasPorLicenca = report.quarantined.filter((item) =>
+      item.issues.every(
+        (problema) => problema.code === "license-review" || problema.severity !== "error",
+      ),
+    ).length;
+
     return {
       series,
       observations: latestByGeography(report.accepted),
       rejected: parserRejected + report.quarantined.length,
+      retidasPorLicenca,
       sourceUrl,
       extraidoEm,
       failed: false,
@@ -294,7 +315,7 @@ async function loadSeries(
   } catch {
     // O erro técnico pertence aos logs do servidor. Este objeto sai por uma
     // API pública e não pode revelar endpoints, stack ou schema interno.
-    return { series, observations: [], rejected: 0, failed: true };
+    return { series, observations: [], rejected: 0, retidasPorLicenca: 0, failed: true };
   }
 }
 
@@ -305,6 +326,10 @@ function healthFor(
 ): MarketSourceHealth {
   const observations = outcomes.flatMap((outcome) => outcome.observations);
   const rejected = outcomes.reduce((total, outcome) => total + outcome.rejected, 0);
+  const retidasPorLicenca = outcomes.reduce(
+    (total, outcome) => total + outcome.retidasPorLicenca,
+    0,
+  );
   const failed = outcomes.some((outcome) => outcome.failed);
   const critical = outcomes.some((outcome) => outcome.series.critical);
 
@@ -329,6 +354,20 @@ function healthFor(
   } else if (failed) {
     state = "delayed";
     message = "Parte das séries desta fonte não respondeu; só as confirmadas são mostradas.";
+  } else if (observations.length === 0 && retidasPorLicenca > 0) {
+    // ── Retido por licença ≠ dado corrompido ─────────────────────────
+    //  `license_review` sempre existiu no tipo e nunca era produzido: uma
+    //  fonte cujos números estão impecáveis mas cujos termos de
+    //  reutilização ainda não foram declarados caía em `quarantined`,
+    //  cuja mensagem se lê como «os dados vieram mal». Não vieram: o que
+    //  falta é papelada, e quem lê o cartão merece saber qual das duas é.
+    //
+    //  Continua a ser bloqueante para o gate — nada se publica sem
+    //  licença — mas passa a ser bloqueante DIZENDO PORQUÊ.
+    state = "license_review";
+    message = `A fonte respondeu e os dados estão íntegros, mas ${retidasPorLicenca} ${
+      retidasPorLicenca === 1 ? "leitura ficou retida" : "leituras ficaram retidas"
+    } por a licença de reutilização ainda não estar confirmada.${emBloco}`;
   } else if (observations.length === 0) {
     state = "quarantined";
     message = `A fonte respondeu, mas nenhuma observação atravessou a quarentena.${emBloco}`;
@@ -403,12 +442,30 @@ async function loadPilot(
   });
 
   const failedSeries = outcomes.filter((outcome) => outcome.failed);
-  const rejected = outcomes.reduce((total, outcome) => total + outcome.rejected, 0);
-  const note = failedSeries.length
-    ? "A fonte oficial não respondeu ou mudou de contrato. Nenhum valor de fallback foi usado."
-    : rejected > 0
-      ? `${rejected} linhas/células não atravessaram a quarentena e ficaram de fora.`
-      : undefined;
+  const retidasPorLicenca = outcomes.reduce(
+    (total, outcome) => total + outcome.retidasPorLicenca,
+    0,
+  );
+  // As retidas por licença saem da contagem de rejeitadas: não foram
+  // rejeitadas por nada que lhes esteja errado. Somá-las fazia o cartão
+  // dizer «14 linhas não atravessaram a quarentena» sobre catorze
+  // contagens perfeitas cujo único problema é um papel por assinar.
+  const rejected =
+    outcomes.reduce((total, outcome) => total + outcome.rejected, 0) - retidasPorLicenca;
+
+  const partes: string[] = [];
+  if (failedSeries.length) {
+    partes.push("A fonte oficial não respondeu ou mudou de contrato. Nenhum valor de fallback foi usado.");
+  }
+  if (rejected > 0) {
+    partes.push(`${rejected} linhas/células não atravessaram a quarentena e ficaram de fora.`);
+  }
+  if (retidasPorLicenca > 0) {
+    partes.push(
+      `${retidasPorLicenca} ${retidasPorLicenca === 1 ? "leitura está pronta mas retida" : "leituras estão prontas mas retidas"} até a licença de reutilização da fonte estar confirmada.`,
+    );
+  }
+  const note = partes.length ? partes.join(" ") : undefined;
 
   return {
     templateId: pilot.templateId,

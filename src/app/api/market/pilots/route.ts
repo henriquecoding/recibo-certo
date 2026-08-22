@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
+import type { MarketSourceHealthState } from "@/lib/negocio/market/tipos";
 
 /**
  * Esta rota fala com o INE, o Eurostat e o portal de dados abertos. Isso é
@@ -27,6 +28,19 @@ const CACHE_SAUDAVEL = "public, s-maxage=21600, stale-while-revalidate=86400";
 const CACHE_DEGRADADO = "public, s-maxage=300, stale-while-revalidate=3600";
 
 /**
+ * Os estados que uma nova tentativa pode resolver — e só esses.
+ *
+ * `license_review` e `disabled` ficam de fora de propósito: não são
+ * falhas de execução, são decisões. Repetir o pedido não as muda.
+ */
+const ESTADOS_TRANSITORIOS: readonly MarketSourceHealthState[] = [
+  "delayed",
+  "stale",
+  "schema_changed",
+  "quarantined",
+];
+
+/**
  * O pack público de mercado. Não recebe nem devolve nada do perfil de quem
  * pergunta: o browser pede o mesmo objeto para toda a gente.
  *
@@ -47,8 +61,15 @@ export async function GET() {
     // metade das séries em falta. Guardar isso durante seis horas fazia um
     // problema de trinta segundos durar uma tarde: quando alguma fonte
     // ficou por confirmar, a borda volta a tentar dentro de minutos.
+    //
+    // Mas nem toda a não-saúde é transitória. Uma fonte retida por
+    // licença por confirmar está no mesmo estado hoje e daqui a um mês —
+    // tratá-la como falha punha a borda a repetir o pedido de cinco em
+    // cinco minutos, para sempre, à espera de uma coisa que só muda
+    // quando alguém assinar um papel. Só os estados que uma nova tentativa
+    // pode mesmo resolver encurtam o cache.
     const degradado = pilots.some((pilot) =>
-      pilot.sourceHealth.some((health) => health.state !== "healthy"),
+      pilot.sourceHealth.some((health) => ESTADOS_TRANSITORIOS.includes(health.state)),
     );
 
     return NextResponse.json(

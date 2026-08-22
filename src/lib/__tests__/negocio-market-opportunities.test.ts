@@ -96,6 +96,31 @@ const INE_NASCIMENTOS = [
  * existe — e a esconder que o conector rejeita, e bem, um payload cujo
  * `IndicadorCod` não corresponde ao manifesto.
  */
+/**
+ * O RNAL responde já agregado: uma linha por NUTS II, contada na fonte.
+ * O fixture imita isso — nunca linhas individuais, que é registo
+ * nominativo e não passa pelo conector nem em teste.
+ */
+const RNAL_AGREGADO = {
+  features: [
+    { attributes: { NUTSII: "Grande Lisboa", total: 18121 } },
+    { attributes: { NUTSII: "Algarve", total: 44818 } },
+  ],
+};
+
+const RNAL_NOVOS = {
+  features: [
+    { attributes: { NUTSII: "Grande Lisboa", total: 634 } },
+    { attributes: { NUTSII: "Algarve", total: 3513 } },
+  ],
+};
+
+/** As duas leituras do RNAL distinguem-se pela cláusula `where` no URL. */
+const RNAL_POR_JANELA = Object.freeze({
+  DataRegisto: RNAL_NOVOS,
+  "where=1%3D1": RNAL_AGREGADO,
+});
+
 function responderPorUrl(mapa: Readonly<Record<string, unknown>>) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
@@ -283,7 +308,7 @@ describe("market: descoberta e pilotos", () => {
   });
 
   it("consulta o INE, publica apenas o dataset licenciado e triangula com outra operação", async () => {
-    const fetchImpl = responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS });
+    const fetchImpl = responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS, ...RNAL_POR_JANELA });
     const [pilot] = await loadPilotMarketEvidence({
       fetchImpl,
       now: () => "2026-08-20T10:00:00Z",
@@ -305,14 +330,17 @@ describe("market: descoberta e pilotos", () => {
     expect(pilot.gate.missing).not.toContain("Duas fontes independentes e saudáveis.");
 
     // Nem concelhos nem NUTS I contam como rejeição: nunca foram pedidos.
-    expect(pilot.note).toBeUndefined();
+    // O que sobra na nota é o RNAL, e a nota tem de dizer que está retido
+    // por licença — não que os dados vieram mal.
+    expect(pilot.note).not.toMatch(/não atravessaram a quarentena/);
+    expect(pilot.note).toMatch(/licença de reutilização/);
   });
 
   it("com preço viável e requisitos conhecidos, a hipótese chega a sustentada por dados", async () => {
     // O que o servidor NÃO pode decidir sozinho: preço e requisitos são de
     // quem decide. Este é o único caminho até `evidence_qualified`.
     const [pilot] = await loadPilotMarketEvidence({
-      fetchImpl: responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS }),
+      fetchImpl: responderPorUrl({ "0013314": INE_TURISMO, "0014098": INE_NASCIMENTOS, ...RNAL_POR_JANELA }),
       now: () => "2026-08-20T10:00:00Z",
       pilots: pilotoTurismo,
     });
@@ -375,6 +403,9 @@ describe("market: descoberta e pilotos", () => {
       "0013314": INE_TURISMO,
       "0014098": INE_NASCIMENTOS,
       isoc_e_dii: EUROSTAT_DII,
+      // As duas séries do RNAL partilham o endpoint e distinguem-se pela
+      // janela: têm de continuar a ser dois URLs, não um pedido repetido.
+      ...RNAL_POR_JANELA,
     });
     await loadPilotMarketEvidence({
       fetchImpl,

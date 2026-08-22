@@ -226,29 +226,35 @@ export const DIGITAL_SKILLS_TOTAL_MANIFEST = digitalSkills(
   "IND_TOTAL",
 );
 
-// ── RNAL — pronto, e parado à porta da licença ──────────────────────
+// ── RNAL — ligado, a contar, e retido à porta da licença ────────────
 //
 // O conector está escrito, testado e verificado contra o serviço a
 // funcionar: 111 512 alojamentos locais, sete NUTS II, zero linhas em
-// quarentena. O que falta não é código — é uma licença.
+// quarentena de dados. O que falta não é código — é uma licença.
 //
-// Verificado a 2026-08-22, em duas autoridades independentes:
+// Verificado a 2026-08-22 em QUATRO autoridades independentes, todas a
+// dizerem o mesmo:
 //  · o serviço ArcGIS não declara licença nem `copyrightText`;
-//  · a entrada oficial no dados.gov.pt («Estabelecimentos de Alojamento
-//    Local», publicada pelo Turismo de Portugal, I.P.) declara
+//  · o item ArcGIS que o publica não tem `licenseInfo` nem
+//    `accessInformation`;
+//  · o catálogo DCAT do portal oficial de dados abertos do Turismo de
+//    Portugal declara `license: ""` e `rights: null` — nos 53 conjuntos,
+//    não só neste;
+//  · a entrada no dados.gov.pt («Estabelecimentos de Alojamento Local»,
+//    publicada pelo próprio Turismo de Portugal) declara
 //    `license: notspecified`.
 //
-// Com a fonte em `review_required` e sem licença de série ou dataset
-// aprovada, `validateMarketObservation` põe TODAS as observações em
-// quarentena — e faz bem. Ligar as séries assim não punha um número no
-// ecrã: punha um aviso de «4 linhas não atravessaram a quarentena» no
-// cartão do turismo, para sempre. Pior do que não as ter.
+// As séries FICAM LIGADAS na mesma, e é essa a diferença. Com a fonte em
+// `review_required`, `validateMarketObservation` retém as observações — e
+// faz bem, nada se publica sem licença. Mas a fonte passa a declarar-se
+// em `license_review` em vez de `quarantined`, ou seja: «os dados estão
+// íntegros, o que falta é a papelada». Quem lê o cartão fica a saber que
+// a contagem existe, de onde vem e o que a está a segurar, em vez de
+// nunca ter sabido que ela existia.
 //
-// Por isso os manifestos ficam declarados e as séries ficam por ligar.
 // No dia em que o Turismo de Portugal confirmar os termos por escrito,
-// acrescenta-se `datasetLicense` — como as séries do INE já fazem — e as
-// séries entram no piloto sem mais nada mudar. O teste
-// `negocio-market-rnal.test.ts` guarda exatamente esta condição.
+// acrescenta-se `datasetLicense` aqui — como as séries do INE já fazem —
+// e os números aparecem sem mais nada mudar.
 //
 // A camada publica o nome da NUTS II, não o código. A tabela abaixo é a
 // ponte, e é EXAUSTIVA para o que a fonte cobre: um nome que não esteja
@@ -420,6 +426,47 @@ export const MARKET_PILOTS: readonly MarketPilotDefinition[] = Object.freeze([
         independenceKey: "pt-business-demography",
         critical: false,
         source: { connector: "ine", manifest: BUSINESS_BIRTHS_COMPANY_MANIFEST },
+      },
+      {
+        id: "tourism-al-stock",
+        label: "Alojamentos locais registados na zona",
+        // ── Porque é `demand` e não `supply` ────────────────────────
+        //  A tentação era classificar isto como oferta: é uma contagem de
+        //  operadores, e o motor não tem nenhuma. Mas a hipótese aqui é
+        //  PRESTAR SERVIÇO a alojamentos locais — limpezas, check-ins,
+        //  gestão de reservas. Nessa hipótese os 44 818 alojamentos do
+        //  Algarve não são a concorrência: são a lista de clientes
+        //  possíveis. Lê-los como oferta dizia a quem procura negócio que
+        //  o mercado já está servido, contando os futuros clientes dela
+        //  como se fossem rivais — a inferência falsa mais cara que este
+        //  ficheiro podia produzir.
+        //
+        //  O mesmo número seria oferta para quem quisesse ABRIR um
+        //  alojamento local. Essa hipótese não existe no produto, e o dia
+        //  em que existir declara este manifesto outra vez, com o `kind`
+        //  que essa leitura exigir. O `kind` é da leitura, não da série.
+        reading:
+          "Conta os alojamentos locais inscritos no registo nacional. Para quem presta serviço a alojamentos, é a dimensão do universo de clientes possíveis na zona — não é a concorrência, e não diz quantos desses alojamentos contratam apoio externo nem quanto pagam. Conta registos, não unidades em funcionamento. Só o continente: os Açores e a Madeira têm registos próprios.",
+        sourceId: "turismo-portugal",
+        kind: "demand",
+        independenceKey: "pt-rnal-registry",
+        // Não crítica, e é deliberado: enquanto a licença não estiver
+        // confirmada esta série não publica número nenhum, e uma série
+        // crítica retida impediria a hipótese de turismo de qualificar —
+        // ou seja, acrescentar uma fonte pioraria o cartão.
+        critical: false,
+        source: { connector: "rnal", manifest: RNAL_STOCK_MANIFEST },
+      },
+      {
+        id: "tourism-al-new",
+        label: "Alojamentos locais inscritos no último ano fechado",
+        reading:
+          "Conta as inscrições novas do último ano civil completo. Serve para distinguir um universo de clientes que ainda está a crescer de um que já estabilizou; uma inscrição não é uma abertura, e os cancelamentos não são descontados.",
+        sourceId: "turismo-portugal",
+        kind: "transactional",
+        independenceKey: "pt-rnal-registry",
+        critical: false,
+        source: { connector: "rnal", manifest: RNAL_NOVOS_MANIFEST },
       },
     ],
   },

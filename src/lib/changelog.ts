@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.96.3",
+    data: "2026-08-22",
+    titulo: "O Registo Nacional de Alojamento Local entrou na ferramenta — e diz o que está à espera",
+    itens: [
+      "A ferramenta passou a contar os alojamentos locais registados em cada região, a partir do registo nacional do Turismo de Portugal: 111 512 no continente, dos 44 818 do Algarve aos 4 831 da Península de Setúbal. Para quem quer prestar serviço a alojamentos — limpezas, check-ins, gestão de reservas — isto é a dimensão do universo de clientes possíveis na zona.",
+      "Os números ainda não aparecem, e a ferramenta diz porquê em vez de os esconder. Nem o serviço do Turismo de Portugal, nem o item que o publica, nem o catálogo do portal oficial de dados abertos, nem a entrada no dados.gov.pt declaram em que termos os dados podem ser reutilizados. Sem isso, a regra da casa mantém-se: não se publica.",
+      "Antes, uma fonte nesta situação aparecia como «nenhuma observação atravessou a quarentena» — que se lê como dados corrompidos. Passou a dizer o que é verdade: as leituras estão prontas e íntegras, o que falta é a licença. São coisas diferentes e agora distinguem-se.",
+      "A contagem é feita do lado da fonte. O registo tem nome, morada e coordenadas de cada alojamento; o que atravessa a rede são sete números por consulta, não cento e onze mil linhas de dados de pessoas.",
+      "Se o Turismo de Portugal renomear uma região ou passar a incluir os Açores e a Madeira, isso aparece como aviso em vez de desaparecer numa contagem silenciosamente diferente.",
+    ],
+  },
+  {
     version: "2.96.2",
     data: "2026-08-22",
     titulo: "Uma pergunta que a ferramenta ia começar a responder mal — e deixou de poder",
