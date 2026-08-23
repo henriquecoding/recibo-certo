@@ -35,13 +35,15 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ O ESTADO ACTIVO SÃO TRÊS SINAIS, E `aria-current` COMANDA-OS         │
+//  │ O ESTADO ACTIVO SÃO TRÊS SINAIS, E NENHUM DELES É SÓ COR             │
 //  │                                                                     │
-//  │ Lavagem de fundo, cor e um anel. Três, porque um deles sozinho é     │
-//  │ cor — e cor sozinha falha para uma parte das pessoas e em qualquer   │
-//  │ impressão. E é o `aria-current="page"` que a CSS lê, não uma classe: │
-//  │ assim o DOM carrega o estado para a tecnologia de apoio e a pintura  │
-//  │ segue-o, em vez de serem duas verdades a manter à mão.                │
+//  │ Relevo (o segmento activo levanta-se da bandeja com fundo branco e   │
+//  │ sombra), contraste de fundo, e o ícone na cor da marca. Cor sozinha  │
+//  │ falha para uma parte das pessoas e em qualquer impressão.             │
+//  │                                                                     │
+//  │ E é o `aria-current="page"` que carrega o estado para a tecnologia   │
+//  │ de apoio; a pintura segue-o, em vez de serem duas verdades a manter  │
+//  │ à mão.                                                                │
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -69,79 +71,87 @@ import { medirNavegacao } from "@/lib/busca/medicao";
  * │ lugares dividem 360 px e ele é mesmo necessário.                       │
  * └───────────────────────────────────────────────────────────────────────┘
  */
+/*
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ ISTO É O CONTROLO SEGMENTADO DO PRODUTO — E ESTAVA ESTICADO            │
+ * │                                                                       │
+ * │ O idioma já existe e vive em `negocio/descoberta/Configurador.tsx`,    │
+ * │ no seletor «Essencial · Personalizar · Avançado»:                      │
+ * │                                                                       │
+ * │     bandeja   inline-flex rounded-full bg-stone-100 p-1                │
+ * │     item      min-h-[38px] rounded-full px-3.5 text-[12px] font-bold   │
+ * │     activo    bg-white text-ink shadow-card                            │
+ * │                                                                       │
+ * │ A versão anterior desta barra pegou nessa forma e mudou-lhe as três    │
+ * │ coisas que a fazem funcionar: pôs a bandeja BRANCA e com contorno      │
+ * │ (deixa de haver fundo de onde o activo se levante), ESTICOU-A à        │
+ * │ largura toda com `flex-1` nos itens (a 1440 px isso são ~80 px de ar   │
+ * │ entre rótulos, e uma bandeja só comunica agrupamento enquanto os itens │
+ * │ estiverem juntos) e marcou o activo com uma lavagem verde SEM relevo   │
+ * │ — pastilha dentro de pastilha, mesma forma e mesmo material nos dois   │
+ * │ níveis.                                                                │
+ * │                                                                       │
+ * │ Volta ao idioma da casa. O activo levanta-se: fundo branco e sombra    │
+ * │ sobre a bandeja cinzenta. São três sinais — relevo, contraste de       │
+ * │ fundo e o ícone na cor da marca — e nenhum deles é só cor.              │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
 const ITEM =
-  "focus-marca relative flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-2 text-sm font-medium no-underline transition-colors";
+  "focus-marca inline-flex min-h-[38px] items-center gap-2 whitespace-nowrap rounded-full px-3.5 text-[12px] font-semibold transition-colors";
 
-const INATIVO =
-  "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200";
+const INATIVO = "text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200";
 
-/* A bolha do activo: fundo + cor + anel. O anel é `inset` para não somar
-   largura e desalinhar os vizinhos quando o pilar aceso muda. */
-const ATIVO =
-  "bg-brand-light text-brand-dark ring-1 ring-inset ring-brand/70 dark:bg-brand/15 dark:text-brand dark:ring-brand/60";
+/* Relevo + fundo + ícone na marca. O `descobrir-negocio` usa `text-ink` no
+   activo e é o que se segue: a cor da marca entra pelo ícone, não pelo
+   rótulo, para o activo não competir com o botão de acção da linha de cima. */
+const ATIVO = "bg-white text-ink shadow-card dark:bg-stone-950 dark:text-stone-100";
 
 export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: () => void; menuAberto: boolean }) {
   const pathname = usePathname();
   const aceso = hrefAtivo(pathname);
 
   return (
-    /* ┌─────────────────────────────────────────────────────────────────┐
-       │ A LARGURA DA LINHA — porque as três linhas têm de ter uma aresta  │
-       │                                                                   │
-       │ Houve uma versão em que a cápsula e a barra tinham 704 px e a      │
-       │ primeira linha ocupava o contentor todo. Num ecrã largo isso dava  │
-       │ um «T»: a linha de cima com 1390 px e as duas de baixo com 870,    │
-       │ nada a alinhar com nada. O desequilíbrio não estava no             │
-       │ espaçamento — estava em duas das três linhas não pertencerem à     │
-       │ mesma grelha.                                                      │
-       │                                                                   │
-       │ As três ocupam agora a largura do contentor, e os seis lugares     │
-       │ repartem-na (`flex-1`) em vez de se encostarem ao meio. É a razão  │
-       │ de o rótulo ir centrado dentro do lugar: cada um é uma coluna de   │
-       │ largura igual, não uma etiqueta encostada a um ícone.               │
-       └─────────────────────────────────────────────────────────────────┘ */
-    <nav
-      aria-label="Principal"
-      className="rc-capsula flex w-full items-center gap-0.5 p-1.5"
-    >
-      {PILARES.map((pilar) => {
-        const Icon = iconeDe(pilar.icone);
-        const ativo = aceso === pilar.href;
-        return (
-          <Link
-            key={pilar.id}
-            href={pilar.href}
-            aria-label={pilar.label}
-            aria-current={ativo ? "page" : undefined}
-            onClick={() => medirNavegacao(pilar.id, "secretaria")}
-            className={`${ITEM} ${ativo ? ATIVO : INATIVO}`}
-          >
-            <Icon size={17} className="flex-shrink-0" />
-            <span>{pilar.label}</span>
-          </Link>
-        );
-      })}
+    <nav aria-label="Principal" className="flex w-full items-center justify-between gap-4">
+      {/* A bandeja é `inline-flex`: tem a largura do que leva dentro, e é
+          isso que a faz ler como UM controlo. A linha continua a ter a
+          largura do contentor — o que ficou de fora foi o esticão. */}
+      <div className="inline-flex max-w-full items-center gap-1 rounded-full bg-stone-100 p-1 dark:bg-stone-800">
+        {PILARES.map((pilar) => {
+          const Icon = iconeDe(pilar.icone);
+          const ativo = aceso === pilar.href;
+          return (
+            <Link
+              key={pilar.id}
+              href={pilar.href}
+              aria-label={pilar.label}
+              aria-current={ativo ? "page" : undefined}
+              onClick={() => medirNavegacao(pilar.id, "secretaria")}
+              className={`${ITEM} ${ativo ? ATIVO : INATIVO}`}
+            >
+              <Icon
+                size={15}
+                className={`flex-shrink-0 ${ativo ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
+              />
+              <span>{pilar.label}</span>
+            </Link>
+          );
+        })}
+      </div>
 
-      {/* A régua separa o que é destino do que é «há mais». Sem ela, «Menu»
-          lê-se como o sexto pilar. */}
-      <span aria-hidden className="mx-1 h-6 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
-
-      {/* `data-menu-gatilho` é o mesmo contrato que a pesquisa já tem em
-          `data-busca-gatilho`: um nome para esta superfície, para quem a
-          procura de fora não ter de adivinhar por posição no DOM.
-          `aria-haspopup="dialog"` sozinho não chega — há outros botões no
-          produto que abrem diálogos, e o primeiro do documento nem sempre é
-          este. */}
+      {/* «Menu» não é o sexto pilar: está fora da bandeja, na ponta oposta,
+          e tem a forma de um controlo com contorno e não a de um segmento.
+          Estava lá dentro, separado por uma régua, e uma régua é um sinal
+          fraco de mais para dizer «isto é de outra natureza». */}
       <button
         type="button"
         data-menu-gatilho="secretaria"
         aria-haspopup="dialog"
         aria-expanded={menuAberto}
         onClick={aoAbrirMenu}
-        className={`${ITEM} ${INATIVO}`}
+        className="focus-marca inline-flex min-h-[38px] flex-shrink-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-3.5 text-[12px] font-semibold text-stone-600 transition-colors hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:text-brand"
       >
-        <MenuIcon size={17} className="flex-shrink-0" />
-        <span>Menu</span>
+        <MenuIcon size={15} className="flex-shrink-0 text-stone-400 dark:text-stone-500" />
+        Menu
       </button>
     </nav>
   );

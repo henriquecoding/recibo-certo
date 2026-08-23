@@ -36,8 +36,17 @@ import { SECOES_TOPO, hrefAtivo } from "@/lib/navegacao";
 import { abrirFeedback } from "@/components/feedback/abrir";
 import { medirNavegacao } from "@/lib/busca/medicao";
 
+/*
+ * O rank não vem do TAMANHO — vem do peso e do contentor.
+ *
+ * A navegação por baixo tem o mesmo corpo de letra (12 px) e está em
+ * negrito, dentro de uma bandeja, com o activo em relevo. Estes são 12 px
+ * de peso normal, sem contentor nenhum. Um pixel de diferença de tamanho
+ * entre os dois níveis não se lê; a diferença de peso e de superfície lê-se
+ * de relance.
+ */
 const BASE =
-  "focus-marca flex min-h-[36px] items-center whitespace-nowrap rounded-lg px-2.5 text-[13px] no-underline transition-colors";
+  "focus-marca flex min-h-[36px] items-center whitespace-nowrap rounded-lg px-2.5 text-[12px] no-underline transition-colors";
 
 export default function BarraSecoes() {
   const pathname = usePathname();

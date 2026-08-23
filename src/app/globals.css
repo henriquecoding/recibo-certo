@@ -62,7 +62,7 @@
        linha inteira do cabeçalho e o painel ocupa a barra — ver o
        quadro em `.rc-dock-painel`.)
      ══════════════════════════════════════════════════════════════════ */
-  --rc-header-linha: 64px;
+  --rc-header-linha: 60px;
   --rc-linha-nav: 52px;
   --rc-linha-busca: 56px;
   --rc-header-alto: calc(var(--rc-header-linha) + var(--rc-linha-nav) + var(--rc-linha-busca));
@@ -227,64 +227,72 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   A CÁPSULA DA NAVEGAÇÃO
+   O MATERIAL DO CABEÇALHO
 
    ┌──────────────────────────────────────────────────────────────────┐
-   │ O MATERIAL É VIDRO, E O SÓLIDO VEM PRIMEIRO                       │
+   │ O VIDRO ESTAVA NO SÍTIO ERRADO                                    │
    │                                                                  │
-   │ A ordem não é estilística. `backdrop-filter` falha em silêncio    │
-   │ onde não é suportado — e o que fica, se a regra do vidro tiver    │
-   │ escrito o fundo, é uma cápsula translúcida com o texto da página  │
-   │ a ler-se por trás dos rótulos. Por isso: o fundo OPACO é a regra  │
-   │ base, o vidro só é promovido dentro do `@supports`, e             │
-   │ `prefers-reduced-transparency` volta a desligá-lo.                │
+   │ Esteve na bandeja da navegação, e ali era um desenho de vidro: a  │
+   │ bandeja vive DENTRO de um cabeçalho opaco, portanto não passa     │
+   │ conteúdo nenhum por baixo dela. Desfocar um fundo liso custa      │
+   │ trabalho ao compositor em cada frame para não se ver nada.        │
    │                                                                  │
-   │ Três estados, três regras, e nenhum deles depende de o browser    │
-   │ fazer o que se espera.                                            │
+   │ A superfície por baixo da qual a página passa é o CABEÇALHO. É    │
+   │ ele que leva o material — e a bandeja volta a ser o que é no      │
+   │ resto do produto: uma caixa cinzenta opaca de onde o segmento     │
+   │ activo se levanta (ver `negocio/descoberta/Configurador.tsx`).     │
    └──────────────────────────────────────────────────────────────────┘
 
    ┌──────────────────────────────────────────────────────────────────┐
-   │ E É `sticky`, PORQUE SENÃO O VIDRO É UM DESENHO DE VIDRO          │
+   │ O SÓLIDO VEM PRIMEIRO, E A ORDEM NÃO É ESTILÍSTICA                │
    │                                                                  │
-   │ Um material translúcido só é material se passar conteúdo por      │
-   │ baixo dele. Numa cápsula que rola com a página, o desfoque        │
-   │ processa um fundo liso em todos os frames para não se ver nada —  │
-   │ custo sem efeito. Aqui a cápsula vive dentro do cabeçalho fixo,   │
-   │ que é o que garante essa condição.                                 │
+   │ `backdrop-filter` falha em silêncio onde não é suportado. Se a    │
+   │ regra do vidro escrever o fundo, o que fica nesses browsers é um  │
+   │ cabeçalho translúcido com o texto da página a ler-se por trás dos │
+   │ rótulos. Por isso: o fundo OPACO é a regra base, o vidro só é     │
+   │ promovido dentro do `@supports`, e                                │
+   │ `prefers-reduced-transparency` volta a desligá-lo.                │
+   │                                                                  │
+   │ Isto já vinha escrito em classes utilitárias (`bg-white/70        │
+   │ backdrop-blur-xl`) que não tinham nem o sólido primeiro nem a     │
+   │ preferência do sistema — o efeito estava lá e a disciplina não.   │
    └──────────────────────────────────────────────────────────────────┘
    ════════════════════════════════════════════════════════════════════ */
 :root {
-  --rc-capsula-fundo: #ffffff;
-  --rc-capsula-borda: rgb(231 229 228 / 0.85);
-  --rc-capsula-brilho: rgb(255 255 255 / 0.85);
+  --rc-cabecalho-fundo: #ffffff;
+  --rc-cabecalho-borda: rgb(231 229 228 / 0.7);
 }
 
 .dark {
-  --rc-capsula-fundo: #1c1917;
-  --rc-capsula-borda: #292524;
-  --rc-capsula-brilho: rgb(255 255 255 / 0.06);
+  --rc-cabecalho-fundo: #0c0a09;
+  --rc-cabecalho-borda: #292524;
 }
 
-.rc-capsula {
-  background: var(--rc-capsula-fundo);
-  border: 1px solid var(--rc-capsula-borda);
-  border-radius: 999px;
+.rc-cabecalho {
+  background: var(--rc-cabecalho-fundo);
+  border-bottom: 1px solid transparent;
+}
+
+/* Rolado é o estado em que passa conteúdo por baixo: ganha a régua e uma
+   sombra de um pixel. A altura não muda — ver o quadro em `Nav.tsx`. */
+.rc-cabecalho[data-opaco="true"] {
+  border-bottom-color: var(--rc-cabecalho-borda);
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .rc-capsula {
-    background: color-mix(in srgb, var(--rc-capsula-fundo) 66%, transparent);
-    -webkit-backdrop-filter: blur(14px) saturate(1.05);
-    backdrop-filter: blur(14px) saturate(1.05);
-    box-shadow: inset 0 1px 0 var(--rc-capsula-brilho);
+  .rc-cabecalho {
+    background: color-mix(in srgb, var(--rc-cabecalho-fundo) 78%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.05);
+    backdrop-filter: blur(16px) saturate(1.05);
   }
 }
 
 /* A preferência do sistema ganha ao efeito — e tem de repor o fundo opaco,
-   não apenas apagar o desfoque: sem o fundo, o que sobra é a cor a 66%. */
+   não apenas apagar o desfoque: sem o fundo, o que sobra é a cor a 78%. */
 @media (prefers-reduced-transparency: reduce) {
-  .rc-capsula {
-    background: var(--rc-capsula-fundo);
+  .rc-cabecalho {
+    background: var(--rc-cabecalho-fundo);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

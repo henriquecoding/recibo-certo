@@ -135,19 +135,12 @@ export default function Nav() {
           aninhados no mesmo documento dariam dois marcos com o mesmo nome a um
           leitor de ecrã — e o de fora não tem destino nenhum, só geometria. */}
       <header
-        className={`fixed inset-x-0 top-0 z-50 hidden h-[var(--rc-header-alto)] border-b transition-[background-color,border-color,box-shadow] duration-300 lg:block ${
-          opaco
-            ? /**
-               * Rolado é o estado em que passa conteúdo por baixo — e é por
-               * isso que aqui não há `backdrop-blur`. Desfocar obriga o
-               * compositor a reprocessar toda a faixa por trás do cabeçalho em
-               * cada frame, e a 100% de opacidade não se distingue de um fundo
-               * sólido: trocava-se um efeito que não se vê por um custo que se
-               * sente.
-               */
-              "border-stone-200/70 bg-white shadow-sm dark:border-stone-800 dark:bg-stone-950"
-            : "border-transparent bg-white/70 backdrop-blur-xl dark:bg-stone-950/70"
-        }`}
+        data-opaco={opaco}
+        /* O material vive em `.rc-cabecalho` (globals.css) e não em classes
+           utilitárias: o vidro precisa de sólido primeiro, de promoção por
+           `@supports` e de respeitar `prefers-reduced-transparency`, e isso
+           não cabe numa classe do Tailwind. */
+        className="rc-cabecalho fixed inset-x-0 top-0 z-50 hidden h-[var(--rc-header-alto)] transition-[background-color,border-color,box-shadow] duration-300 lg:block"
       >
         {/**
          * ┌───────────────────────────────────────────────────────────────────┐
@@ -221,7 +214,7 @@ export default function Nav() {
           </div>
 
           {/* ── Linha 2 — a cápsula dos cinco pilares ──────────────────── */}
-          <div className="row-start-2 flex min-w-0">
+          <div className="row-start-2 flex min-w-0 items-center">
             <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
           </div>
 

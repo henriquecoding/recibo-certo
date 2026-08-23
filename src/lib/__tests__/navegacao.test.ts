@@ -129,14 +129,28 @@ describe("navegacao:barra-de-seccoes", () => {
     expect(SECOES_TOPO.map((s) => s.href)).not.toContain("/ferramentas");
   });
 
-  it("é um nível ABAIXO da cápsula, e o desenho di-lo", () => {
-    // Duas filas de ligações com o mesmo peso seriam duas navegações
-    // principais — o problema que a reestruturação foi resolver. A barra é
-    // texto pequeno sem pastilha; a cápsula tem ícone, forma e a cor da
-    // marca. Se um dia alguém lhes der o mesmo tratamento, isto reprova.
-    expect(SECBAR).toContain("text-[13px]");
-    expect(SECBAR).not.toContain("rc-capsula");
-    expect(CAPSULA).toContain("rc-capsula");
+  it("é um nível ABAIXO da navegação, e o desenho di-lo", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ O RANK NÃO VEM DO TAMANHO — VEM DO PESO E DO CONTENTOR         │
+    // │                                                               │
+    // │ As duas filas têm o mesmo corpo de letra. O que as separa é a  │
+    // │ navegação estar em negrito, dentro de uma bandeja, com o       │
+    // │ activo em relevo, e esta ser texto de peso normal sem          │
+    // │ contentor nenhum. Um pixel de diferença de tamanho não se lê;  │
+    // │ isto lê-se de relance.                                         │
+    // │                                                               │
+    // │ Duas filas de ligações com o mesmo tratamento seriam duas      │
+    // │ navegações principais — o problema que a reestruturação foi    │
+    // │ resolver. Se alguém lhes der o mesmo peso, isto reprova.        │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(SECBAR).toContain("text-[12px]");
+    expect(SECBAR).not.toContain("font-semibold\"");
+    // A bandeja e o relevo do segmento activo são da navegação, não daqui.
+    expect(SECBAR).not.toContain("bg-stone-100 p-1");
+    expect(SECBAR).not.toContain("shadow-card");
+    expect(CAPSULA).toContain("rounded-full bg-stone-100 p-1");
+    expect(CAPSULA).toContain("text-[12px] font-semibold");
+    expect(CAPSULA).toContain("shadow-card");
   });
 
   it("«Sugestões» é uma acção e não finge ser um destino", () => {
@@ -280,41 +294,58 @@ describe("navegacao:acessibilidade", () => {
   });
 });
 
-describe("navegacao:material-da-capsula", () => {
-  const iBase = CSS.indexOf(".rc-capsula {");
+describe("navegacao:material-do-cabecalho", () => {
+  const iBase = CSS.indexOf(".rc-cabecalho {");
   const iSupports = CSS.indexOf("@supports ((backdrop-filter: blur(1px))");
   const iReduzida = CSS.indexOf("@media (prefers-reduced-transparency: reduce)");
 
-  it("o fundo SÓLIDO é a regra base, e o vidro só é promovido depois", () => {
+  it("o vidro está no CABEÇALHO, e não na bandeja da navegação", () => {
     // ┌───────────────────────────────────────────────────────────────┐
-    // │ A ORDEM NÃO É ESTILÍSTICA                                      │
+    // │ ESTEVE NA BANDEJA, E ALI ERA UM DESENHO DE VIDRO               │
     // │                                                               │
-    // │ `backdrop-filter` falha em silêncio onde não é suportado. Se a │
-    // │ regra do vidro escrever o fundo, o que fica nesses browsers é  │
-    // │ uma cápsula translúcida com o texto da página a ler-se por     │
-    // │ trás dos rótulos. O sólido primeiro é o que garante que o pior │
-    // │ caso é «sem efeito», e nunca «ilegível».                        │
+    // │ A bandeja vive DENTRO de um cabeçalho opaco: não passa         │
+    // │ conteúdo nenhum por baixo dela, portanto o desfoque custava    │
+    // │ trabalho ao compositor em cada frame para não se ver nada. A   │
+    // │ superfície por baixo da qual a página passa é o cabeçalho.     │
+    // │                                                               │
+    // │ E a bandeja volta a ser o que é no resto do produto: uma caixa │
+    // │ cinzenta OPACA de onde o segmento activo se levanta — o mesmo  │
+    // │ idioma de `negocio/descoberta/Configurador.tsx`.                │
     // └───────────────────────────────────────────────────────────────┘
     expect(iBase).toBeGreaterThan(-1);
+    expect(NAV).toContain("rc-cabecalho");
+    expect(semComentarios(CAPSULA)).not.toContain("backdrop");
+    expect(semComentarios(CAPSULA)).not.toContain("rc-cabecalho");
+  });
+
+  it("o fundo SÓLIDO é a regra base, e o vidro só é promovido depois", () => {
+    // `backdrop-filter` falha em silêncio onde não é suportado. Se a regra
+    // do vidro escrever o fundo, o que fica nesses browsers é um cabeçalho
+    // translúcido com o texto da página a ler-se por trás dos rótulos. O
+    // sólido primeiro garante que o pior caso é «sem efeito», nunca
+    // «ilegível». Isto já esteve escrito em classes utilitárias
+    // (`bg-white/70 backdrop-blur-xl`) que não tinham nem uma coisa nem
+    // outra: o efeito estava lá e a disciplina não.
     expect(iSupports).toBeGreaterThan(iBase);
     const base = CSS.slice(iBase, iSupports);
-    expect(base).toContain("background: var(--rc-capsula-fundo)");
+    expect(base).toContain("background: var(--rc-cabecalho-fundo)");
+    expect(semComentarios(NAV)).not.toContain("backdrop-blur");
   });
 
   it("a preferência do sistema desliga o vidro E repõe o fundo opaco", () => {
-    // Apagar só o desfoque deixaria a cor a 66% — ou seja, o problema que
-    // a preferência existe para evitar, com um passo a menos.
+    // Apagar só o desfoque deixaria a cor a 78% — ou seja, o problema que a
+    // preferência existe para evitar, com um passo a menos.
     expect(iReduzida).toBeGreaterThan(iSupports);
     const bloco = CSS.slice(iReduzida, iReduzida + 400);
-    expect(bloco).toContain(".rc-capsula");
+    expect(bloco).toContain(".rc-cabecalho");
     expect(bloco).toContain("backdrop-filter: none");
-    expect(bloco).toContain("background: var(--rc-capsula-fundo)");
+    expect(bloco).toContain("background: var(--rc-cabecalho-fundo)");
   });
 
   it("o material tem tokens para os dois temas", () => {
     // Um hexadecimal escrito à mão aqui parte o modo claro ou o escuro na
     // primeira afinação — e em silêncio, porque nada falha.
-    expect(CSS).toContain("--rc-capsula-fundo");
-    expect(CSS).toMatch(/\.dark\s*\{[^}]*--rc-capsula-fundo/);
+    expect(CSS).toContain("--rc-cabecalho-fundo");
+    expect(CSS).toMatch(/\.dark\s*\{[^}]*--rc-cabecalho-fundo/);
   });
 });

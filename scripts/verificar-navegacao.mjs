@@ -259,7 +259,23 @@ for (const vp of VIEWPORTS) {
       } else ok(`${vp.nome}px: Escape devolve o foco ao lançador`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.waitForTimeout(500);
-      if (!capsula.classes.includes("rc-capsula")) mal(`${vp.nome}px: cápsula sem a classe do material`);
+      // A bandeja é OPACA e do tamanho do conteúdo — é isso que a faz ler
+      // como um controlo só. Esticada a toda a largura, com `flex-1` nos
+      // itens, ficavam ~80 px de ar entre rótulos e o agrupamento que uma
+      // bandeja existe para comunicar desaparecia.
+      const bandeja = await page.evaluate(() => {
+        const t = document.querySelector('nav[aria-label="Principal"] > div');
+        if (!t) return null;
+        const linha = document.querySelector('nav[aria-label="Principal"]').getBoundingClientRect();
+        const r = t.getBoundingClientRect();
+        return { largura: Math.round(r.width), linha: Math.round(linha.width), classes: t.className };
+      });
+      if (!bandeja) mal(`${vp.nome}px: bandeja da navegação ausente`);
+      else if (!bandeja.classes.includes("bg-stone-100")) {
+        mal(`${vp.nome}px: a bandeja perdeu o fundo recuado`);
+      } else if (bandeja.largura >= bandeja.linha - 40) {
+        mal(`${vp.nome}px: a bandeja está esticada (${bandeja.largura} de ${bandeja.linha})`);
+      } else ok(`${vp.nome}px: bandeja agrupada, ${bandeja.largura}px numa linha de ${bandeja.linha}`);
       for (const i of capsula.itens) {
         if (!i.visivel) mal(`${vp.nome}px: item «${i.nome}» invisível`);
         if (!i.alturaOk) mal(`${vp.nome}px: item «${i.nome}» abaixo de 36px de alvo`);
