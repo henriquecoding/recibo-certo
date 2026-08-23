@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/Icons";
 import { Chip } from "./atomos";
 import Dossier from "./Dossier";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 /**
  * Uma etapa contada na unidade em que ela conta.
@@ -590,6 +591,11 @@ export default function Resultados({
           tua geografia e para a tua execução.
         </p>
       </aside>
+
+      {/* O motor compõe hipóteses; a forma jurídica, o enquadramento e as
+          obrigações de cada uma são conversa de contabilista. Aqui já há
+          hipóteses no ecrã — é o momento em que a pergunta se faz. */}
+      <ContabilistasNoResultado />
     </div>
   );
 }

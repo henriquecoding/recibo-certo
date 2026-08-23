@@ -50,6 +50,7 @@ import {
   type EstadoPreenchimento,
   type ResultadoPreco,
 } from "@/lib/pricing";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const PERFIL: Record<string, string> = {
   ti: "Trabalhador independente",
@@ -77,6 +78,7 @@ export default function ConclusaoPreco({
   const confortavel = resultado.faixa.ancoras.find((a) => a.chave === "confortavel");
 
   return (
+    <>
     <ResultadoExplicado
       titulo="O preço que as tuas contas aguentam"
       valor={fmt(resultado.pvp)}
@@ -123,6 +125,12 @@ export default function ConclusaoPreco({
     >
       {children}
     </ResultadoExplicado>
+
+    {/* Fora do cartão do resultado e logo a seguir a ele: um preço que não
+        fecha, um limiar de isenção de IVA à porta ou uma sociedade a
+        considerar são exatamente os casos que se levam a alguém. */}
+    <ContabilistasNoResultado />
+    </>
   );
 }
 

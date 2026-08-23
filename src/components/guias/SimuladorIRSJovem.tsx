@@ -8,6 +8,7 @@ import { irsProgressivo } from "@/lib/fiscal";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const ISENCAO_POR_ANO = IRS_JOVEM.isencaoPorAno.value;
 const ANOS_DADOS = Object.entries(ISENCAO_POR_ANO).map(([k, v]) => ({
@@ -116,6 +117,9 @@ export function SimuladorIRSJovem() {
           </p>
         </div>
       </m.div>
+
+      {/* Com rendimento a zero não há poupança que valha uma conversa. */}
+      <ContabilistasNoResultado pronto={rendimento > 0} />
     </div>
   );
 }

@@ -33,6 +33,7 @@ import { sinaisDoNegocio } from "@/lib/negocio/adapters/routing";
 import { EXPLICACAO_CONFIANCA } from "@/lib/negocio/viabilidade";
 import { FERRAMENTA_NEGOCIO } from "./medicao";
 import type { ContextoNegocio, ResultadoNegocio } from "@/lib/negocio/tipos";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const PERFIL: Record<string, string> = {
   nao_sei: "Forma jurídica ainda por decidir",
@@ -132,6 +133,7 @@ export default function ConclusaoNegocio({
     : undefined;
 
   return (
+    <>
     <ResultadoExplicado
       titulo={
         negocio.resultadoOperacionalMes >= 0
@@ -172,5 +174,10 @@ export default function ConclusaoNegocio({
       // ninguém pode perder. O que decide fica aberto.
       provaRecolhida
     />
+
+    {/* Abrir um negócio é a decisão desta página, e é das poucas em que a
+        conversa com um contabilista muda mesmo a forma jurídica. */}
+    <ContabilistasNoResultado />
+    </>
   );
 }

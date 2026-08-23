@@ -10,6 +10,7 @@ import { getSupabase } from "@/lib/supabase/client";
 import { ResultadoAuditoria } from "@/components/dependente/ResultadoAuditoria";
 import { ShieldCheck, Mail } from "@/components/ui/Icons";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const MAX_DEPENDENTES = 20;
 const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
@@ -170,6 +171,11 @@ export function AuditoriaRecibo() {
           )}
         </div>
       )}
+
+      {/* Só depois de submeter: antes disso não há auditoria, e um recibo
+          com um desconto errado é precisamente o caso em que vale a pena
+          falar com alguém. */}
+      <ContabilistasNoResultado pronto={submetido} />
     </div>
   );
 }

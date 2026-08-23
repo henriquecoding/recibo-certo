@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import MapaRegioesLazy from "@/components/mapa/MapaRegioesLazy";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const TOOL = porId("mapa-contabilistas")!;
 
@@ -54,6 +55,10 @@ export default function MapaContabilistasPage() {
       }
     >
       <MapaRegioesLazy contexto="contabilistas" />
+
+      {/* O mapa responde a «quanto custa». Isto responde a «quem» — que é
+          a pergunta a seguir, e a única desta página que tem nomes. */}
+      <ContabilistasNoResultado />
     </ToolShell>
   );
 }

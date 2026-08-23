@@ -37,7 +37,7 @@ const CAMADA_DE_DADOS = "src/lib/contabilistas/diretorio.ts";
 const SUPERFICIE = [
   "src/app/contabilistas/page.tsx",
   "src/app/contabilistas/DiretorioCliente.tsx",
-  "src/app/contabilistas/ContabilistaCard.tsx",
+  "src/components/diretorio/ContabilistaCard.tsx",
   "src/app/contabilistas/DiretorioFinder.tsx",
   "src/app/contabilistas/DiretorioFiltros.tsx",
   "src/app/contabilistas/DiretorioComoFunciona.tsx",
@@ -87,7 +87,7 @@ describe("a fronteira pública do diretório", () => {
 describe("a fotografia continua a passar pelo proxy", () => {
   it("o cartão recebe um sim/não, não a URL assinada do LinkedIn", () => {
     const dados = ler(CAMADA_DE_DADOS);
-    const cartao = ler("src/app/contabilistas/ContabilistaCard.tsx");
+    const cartao = ler("src/components/diretorio/ContabilistaCard.tsx");
 
     // A URL entra na camada de dados (é o que responde «há foto?») e morre
     // lá: o que segue para o componente é `avatarDisponivel`.
@@ -98,7 +98,7 @@ describe("a fotografia continua a passar pelo proxy", () => {
   });
 
   it("o cartão não desenha uma imagem por sua conta", () => {
-    const cartao = ler("src/app/contabilistas/ContabilistaCard.tsx");
+    const cartao = ler("src/components/diretorio/ContabilistaCard.tsx");
 
     expect(cartao).toContain("AvatarContabilista");
     expect(cartao).not.toMatch(/<img\b/);
@@ -115,7 +115,7 @@ describe("a fotografia continua a passar pelo proxy", () => {
 describe("uma página, um punhado de pedidos", () => {
   it("não há uma leitura por cartão", () => {
     const cliente = ler("src/app/contabilistas/DiretorioCliente.tsx");
-    const cartao = ler("src/app/contabilistas/ContabilistaCard.tsx");
+    const cartao = ler("src/components/diretorio/ContabilistaCard.tsx");
 
     // O cartão é apresentação pura: não lê nada, nem LinkedIn nem agenda.
     expect(cartao).not.toContain("lerDiretorio");
@@ -153,7 +153,7 @@ describe("o que o diretório não pode prometer", () => {
   });
 
   it("não transforma um número escrito no formulário em selo verificado", () => {
-    const cartao = ler("src/app/contabilistas/ContabilistaCard.tsx");
+    const cartao = ler("src/components/diretorio/ContabilistaCard.tsx");
     const perfil = ler("src/app/contabilistas/[slug]/PerfilPublico.tsx");
 
     // Nenhum dos dois monta a frase à mão: ambos chamam a mesma função,

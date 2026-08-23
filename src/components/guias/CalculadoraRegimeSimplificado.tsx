@@ -18,6 +18,7 @@ import Badge from "@/components/ui/Badge";
 import ActivityCombobox from "@/components/ui/ActivityCombobox";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 // Limiar abaixo do qual a dedução específica cobre automaticamente a regra dos 15%.
 // = DEDUCAO_ESPECIFICA_CATB / 0,15 (Art. 31.º CIRS). Para 2026 = 4 587,09 / 0,15 ≈ 30 580 €.
@@ -196,6 +197,8 @@ export function CalculadoraRegimeSimplificado({ comPlanoFiz = false }: { comPlan
           Seleciona uma atividade para ver os resultados
         </div>
       )}
+
+      <ContabilistasNoResultado pronto={Boolean(atividade) && bruto > 0} />
     </div>
   );
 }

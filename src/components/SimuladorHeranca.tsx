@@ -24,6 +24,7 @@ import {
 import {
   IS_TRANSMISSAO_GRATUITA, IS_DOACAO_IMOVEL, IS_DOACAO_MINIMO_ISENTO, PRAZO_MODELO1_MESES,
 } from "@/lib/fiscal-data";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const ModoGuiadoHeranca = dynamic(() => import("@/components/simulador/ModoGuiadoHeranca"), {
   ssr: false,
@@ -475,6 +476,10 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
           <Scale size={13} /> Guardar cenários (área pessoal) <ArrowRight size={13} />
         </Link>
       </div>
+
+      {/* Uma partilha só existe quando há património para partilhar. Com o
+          acervo a zero, o simulador ainda não respondeu a nada. */}
+      <ContabilistasNoResultado pronto={r.meacao.herancaBruta > 0} />
     </div>
   );
 }

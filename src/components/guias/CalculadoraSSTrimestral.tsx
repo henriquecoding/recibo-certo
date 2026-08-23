@@ -14,6 +14,7 @@ import { gerarPrazos } from "@/lib/prazos";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 export function CalculadoraSSTrimestral() {
   const [mes1, setMes1] = useState(2000);
@@ -144,6 +145,12 @@ export function CalculadoraSSTrimestral() {
           </span>
         </div>
       )}
+
+      {/* Só com faturação declarada: uma contribuição de zero euros não é
+          uma pergunta que se leve a um contabilista. Fora de uma
+          ferramenta (esta calculadora também vive em `/guias/seguranca-social`)
+          não há necessidade no contexto e isto não desenha nada. */}
+      <ContabilistasNoResultado pronto={media > 0} />
     </div>
   );
 }

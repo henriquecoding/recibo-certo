@@ -24,6 +24,7 @@ import {
   CONSENTIMENTO_VERSAO, ROTULO_PARTILHA, TEXTO_CONSENTIMENTO,
   sanitizarConteudoPartilha,
 } from "@/lib/contabilistas/vinculo";
+import { guardarBagagem } from "@/lib/contabilistas/bagagem";
 import { registar } from "@/lib/analytics/cliente";
 import Button from "@/components/ui/Button";
 import { Briefcase, Check, Close, Lock, Warning } from "@/components/ui/Icons";
@@ -40,15 +41,60 @@ interface Props {
   titulo?: string;
   /** `discreto` para dentro de um cartão de resultado já cheio de ações. */
   variante?: "cartao" | "discreto";
+  /**
+   * Guardar este resultado como «bagagem» — o que a pessoa leva consigo se
+   * sair daqui à procura de um contabilista.
+   *
+   * Ligado por omissão: qualquer ferramenta que já saiba montar um conteúdo
+   * partilhável passa, sem mais código, a alimentar o «levar a minha
+   * simulação» do fim da página. Desliga-se em superfícies que mostram
+   * dados de OUTRA pessoa — no painel do contabilista, a bagagem do
+   * dispositivo é a do próprio profissional e não a do cliente que ele
+   * está a ver.
+   *
+   * ⚠️ Isto NÃO é uma partilha. Escreve no `localStorage` deste
+   * dispositivo, já filtrado pela lista branca. Ver `bagagem.ts`.
+   */
+  guardarComoBagagem?: boolean;
+  /** Abrir a folha de envio logo à entrada — a chegada com bagagem ao perfil. */
+  abrirDeImediato?: boolean;
 }
+
+/**
+ * Quanto tempo sem alterações antes de a bagagem ser escrita.
+ *
+ * Um simulador recalcula a cada tecla. Sem esta espera, escrever «1 500 €»
+ * dava cinco escritas no `localStorage` — e a última é a única que
+ * interessa.
+ */
+const ESPERA_BAGAGEM_MS = 800;
 
 export default function EnviarAoContabilista({
   tipo, conteudo, toolId, titulo, variante = "cartao",
+  guardarComoBagagem = true, abrirDeImediato = false,
 }: Props) {
   const { user, carregado, disponivel } = useAuth();
   const [cc, setCc] = useState<Contabilista | null>(null);
   const [ativo, setAtivo] = useState(false);
-  const [aberto, setAberto] = useState(false);
+  const [aberto, setAberto] = useState(abrirDeImediato);
+
+  // ── A bagagem ────────────────────────────────────────────────────────
+  //  Escrita aqui, e não em cada ferramenta: quem já sabe montar um
+  //  conteúdo partilhável já fez o trabalho todo, e pedir-lhe a mesma coisa
+  //  outra vez era a forma garantida de metade das ferramentas ficar de
+  //  fora. Nada disto sai do dispositivo — ver `bagagem.ts`.
+  //
+  //  A dependência é a FORMA serializada e não o objeto: um `conteudo`
+  //  literal muda de identidade a cada render mesmo quando os valores são
+  //  os mesmos, e o efeito corria em ciclo.
+  const impressao = JSON.stringify(conteudo ?? null);
+  useEffect(() => {
+    if (!guardarComoBagagem) return;
+    const t = setTimeout(() => {
+      guardarBagagem({ toolId, tipo, titulo, conteudo: JSON.parse(impressao) as unknown });
+    }, ESPERA_BAGAGEM_MS);
+    return () => clearTimeout(t);
+  }, [guardarComoBagagem, impressao, toolId, tipo, titulo]);
 
   useEffect(() => {
     if (!carregado || !user || !disponivel) return;

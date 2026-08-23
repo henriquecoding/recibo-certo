@@ -130,6 +130,7 @@ import {
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -3047,6 +3048,12 @@ export default function ModoGuiadoEmpresa({
         <div className="mt-6 lg:hidden">
           <PainelResumoEmpresa resultado={resultado} distribuirDividendos={distribuirDividendos} />
         </div>
+
+        {/* Só nos dois passos finais — resultado e «o que fazer a seguir».
+            Uma sociedade em contabilidade organizada não é opcional: quem
+            chega aqui vai precisar de um contabilista, e o sítio de o dizer
+            é com o IRC estimado à frente. */}
+        <ContabilistasNoResultado pronto={passo === "resultado" || passo === "aseguir"} />
       </div>
 
       <GuardarCenarioDialog

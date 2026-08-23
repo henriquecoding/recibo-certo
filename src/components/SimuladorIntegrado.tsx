@@ -221,6 +221,7 @@ import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA as calcularSituacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import type { CategoriaSimuladorRV } from "@/lib/fiscal-data";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 // ── Fluxos guiados carregados sob procura ────────────────────────────────────
 // O simulador abre com o seletor "Como queres simular?" (OnboardingGate). Os
@@ -7496,6 +7497,12 @@ export default function SimuladorIntegrado({
           </>
         )}
       </div>
+
+      {/* FORA do cartão da calculadora, logo abaixo dele.
+          Esta calculadora também é a da homepage; lá não há necessidade
+          declarada no contexto e isto não desenha nada. Dentro da
+          ferramenta desenha, e só com faturação introduzida. */}
+      <ContabilistasNoResultado pronto={resultRecibo.bruto > 0} />
     </div>
   );
 }
