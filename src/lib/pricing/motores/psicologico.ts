@@ -17,6 +17,7 @@
 
 import { TERMINACOES_PSICOLOGICAS } from "../regras";
 import { cent, dividir, num } from "../numeros";
+import type { ConversorPreco } from "./iva";
 
 export interface SugestaoPsicologica {
   pvp: number;
@@ -27,7 +28,8 @@ export interface SugestaoPsicologica {
 
 export interface EntradaPsicologico {
   pvp: number;
-  taxaIVA: number;
+  /** Líquido ↔ PVP com o regime lá dentro. */
+  conversor: ConversorPreco;
   /** `lucro(precoLiquido)` — injetado para não duplicar a equação. */
   lucroAoPrecoLiquido: (precoLiquido: number) => number;
   /** Quantas sugestões devolver. */
@@ -65,12 +67,11 @@ export function sugerirPrecosPsicologicos(e: EntradaPsicologico): SugestaoPsicol
   }
 
   const limite = e.maximo ?? 4;
-  const t = num(e.taxaIVA);
 
   return [...candidatos]
     .filter((v) => v > 0 && Math.abs(v - pvp) / pvp <= 0.2)
     .map((valor) => {
-      const liquido = dividir(valor, 1 + t, valor);
+      const liquido = e.conversor.paraLiquido(valor);
       const lucro = e.lucroAoPrecoLiquido(liquido);
       return {
         pvp: valor,

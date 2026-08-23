@@ -818,7 +818,7 @@ describe("objetivo invertido", () => {
       c.volume = { unidadesMes: 100 };
       c.custos.fixos = [{ id: "f", rotulo: "Fixos", mensal: 500 }];
     });
-    const objetivo = precoParaGanhar(ctx, 2000, false);
+    const objetivo = precoParaGanhar(ctx, 2000);
     expect(objetivo.ok).toBe(true);
 
     const verificacao = precificar({
@@ -844,7 +844,7 @@ describe("objetivo invertido", () => {
       };
       c.volume = { unidadesMes: 100 };
     });
-    const r = precoParaGanhar(ctx, 2000, true);
+    const r = precoParaGanhar(ctx, 2000);
     expect(r.ok).toBe(true);
     expect(r.faturacaoMensalNecessaria!).toBeGreaterThan(2000 * 1.5);
   });
@@ -864,7 +864,7 @@ describe("objetivo invertido", () => {
       c.volume = { unidadesMes: 100 };
     });
     for (const alvo of [800, 2000]) {
-      const r = precoParaGanhar(ctx, alvo, true);
+      const r = precoParaGanhar(ctx, alvo);
       expect(r.ok).toBe(true);
       const verificacao = precificar({
         ...ctx,
@@ -886,7 +886,7 @@ describe("objetivo invertido", () => {
       };
       c.volume = { unidadesMes: 100 };
     });
-    const r = unidadesParaGanhar(ctx, 48, 800, true);
+    const r = unidadesParaGanhar(ctx, 48, 800);
     expect(r.ok).toBe(true);
     const aoPreco = precificar({ ...ctx, objetivo: { modo: "preco_fixo", valor: 48, valorEhPVP: true } });
     const necessarias = 800 / aoPreco.margem.lucroUnidade;
@@ -899,14 +899,14 @@ describe("objetivo invertido", () => {
     const ctx = ctxSimples((c) => {
       c.custos.fixos = [{ id: "f", rotulo: "Fixos", mensal: 600 }];
     });
-    const r = unidadesParaGanhar(ctx, 30, 1000, false);
+    const r = unidadesParaGanhar(ctx, 30, 1000);
     expect(r.ok).toBe(true);
     expect(Number.isInteger(r.unidadesNecessarias)).toBe(true);
     expect(r.unidadesNecessarias!).toBeGreaterThan(0);
   });
 
   it("a um preço abaixo do custo, nenhum volume salva — e a engine di-lo", () => {
-    const r = unidadesParaGanhar(ctxSimples(), 5, 1000, false);
+    const r = unidadesParaGanhar(ctxSimples(), 5, 1000);
     expect(r.ok).toBe(false);
     expect(r.motivo).toContain("não cobre");
   });
@@ -1971,7 +1971,7 @@ describe("auditoria · o IVA que sai é o que se entrega, não o que se liquida"
     expect(proximo(r.tesouraria!.ivaMensal, r.precoLiquido * r.taxaIVA * 50, 0.5)).toBe(true);
   });
 
-  it("no regime da margem o IVA está CONTIDO na margem — t/(1+t), não t", () => {
+  it("no regime da margem o IVA incide na margem, e as duas formas legais batem", () => {
     const c = contextoBase();
     c.vendedor = { tipo: "empresa", regimeIVA: "margem", regiao: "continente" };
     c.custos = { direto: { valor: 100, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
@@ -1979,9 +1979,18 @@ describe("auditoria · o IVA que sai é o que se entrega, não o que se liquida"
     c.objetivo = { modo: "margem", percentagem: 0.3 };
     const r = precificar(c);
 
-    const margemUnitaria = r.precoLiquido - 100;
-    const esperado = (margemUnitaria * r.taxaIVA) / (1 + r.taxaIVA);
-    expect(proximo(r.tesouraria!.ivaMensal / 10, esperado, 0.01)).toBe(true);
+    // `precoLiquido` é a RECEITA do vendedor, já sem o imposto — logo `t`
+    // sobre a margem líquida. A forma da lei, `t/(1+t)` sobre a margem
+    // BRUTA, tem de dar exatamente o mesmo: é a mesma margem, medida antes
+    // e depois de lá estar o imposto.
+    const margemLiquida = r.precoLiquido - 100;
+    const margemBruta = r.pvp - 100;
+    const porDentro = margemLiquida * r.taxaIVA;
+    const daLei = (margemBruta * r.taxaIVA) / (1 + r.taxaIVA);
+
+    expect(proximo(porDentro, daLei, 0.005)).toBe(true);
+    expect(proximo(r.iva, porDentro, 0.01)).toBe(true);
+    expect(proximo(r.tesouraria!.ivaMensal / 10, porDentro, 0.01)).toBe(true);
   });
 
   it("o regime da margem avisa que o preço ainda não o modela", () => {
@@ -2039,5 +2048,163 @@ describe("auditoria · a caixa conta todas as comissões e nenhum imposto duas v
     expect(comCanal.fiscal.irsPorUnidade).toBeLessThan(
       comCanal.precoLiquido * comCanal.fiscal.irsFracao,
     );
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUDITORIA · SEGUNDA VOLTA — o que tinha ficado por resolver
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("auditoria · regime da margem (DL 199/96) formado a sério", () => {
+  const ctxSegundaMao = (custo: number, margem = 0.3): ContextoPreco => {
+    const c = contextoBase();
+    c.vendedor = { tipo: "empresa", regimeIVA: "margem", regiao: "continente" };
+    c.produto = { natureza: "bem", escalaoVenda: "normal" };
+    c.canal = { canal: "loja_fisica", cliente: "consumidor" };
+    c.custos = { direto: { valor: custo, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 10 };
+    c.objetivo = { modo: "margem", percentagem: margem };
+    return c;
+  };
+
+  it("o cliente NÃO paga IVA sobre o preço todo — só sobre a margem", () => {
+    // O defeito: `PVP = P × 1,23` num bem em segunda mão. Com 142,86 € de
+    // receita pretendida sobre um bem comprado a 100 €, o cliente via
+    // 175,71 € em vez de 152,71 € — 23 € a mais, que é o preço a que se
+    // perde a venda.
+    const r = precificar(ctxSegundaMao(100));
+    expect(r.pvp).toBeLessThan(r.precoLiquido * (1 + r.taxaIVA));
+    expect(proximo(r.precoLiquido, 142.86)).toBe(true);
+    expect(proximo(r.pvp, 152.71)).toBe(true);
+  });
+
+  it("invariante 1 continua de pé: PVP = líquido + IVA", () => {
+    for (const custo of [0.01, 50, 100, 900]) {
+      const r = precificar(ctxSegundaMao(custo));
+      expect(proximo(r.pvp, r.precoLiquido + r.iva, 0.005)).toBe(true);
+    }
+  });
+
+  it("o IVA é a taxa sobre a margem, e zero quando não há margem", () => {
+    const r = precificar(ctxSegundaMao(100));
+    expect(proximo(r.iva, (r.precoLiquido - 100) * r.taxaIVA, 0.01)).toBe(true);
+
+    // Vender ao custo (ou abaixo) não gera imposto — nem o devolve.
+    const aoCusto = precificar(
+      (() => {
+        const c = ctxSegundaMao(100);
+        c.objetivo = { modo: "preco_fixo", valor: 80, valorEhPVP: true };
+        return c;
+      })(),
+    );
+    expect(aoCusto.iva).toBe(0);
+    expect(aoCusto.pvp).toBeGreaterThan(0);
+  });
+
+  it("a conversão PVP ↔ líquido é invertível nos dois sentidos", () => {
+    const base = precificar(ctxSegundaMao(100));
+    const aoMesmoPVP = precificar(
+      (() => {
+        const c = ctxSegundaMao(100);
+        c.objetivo = { modo: "preco_fixo", valor: base.pvp, valorEhPVP: true };
+        return c;
+      })(),
+    );
+    // Ao cêntimo: reinverter um PVP já arredondado custa, no máximo, um.
+    expect(proximo(aoMesmoPVP.precoLiquido, base.precoLiquido)).toBe(true);
+  });
+
+  it("a comissão do canal incide no total da fatura, não num PVP inexistente", () => {
+    // No regime da margem o total faturado é P(1+t) − Cₐ·t. Cobrar comissão
+    // sobre P(1+t) seria cobrá-la sobre um IVA que a fatura não tem.
+    const semCanal = precificar(ctxSegundaMao(100));
+    const comCanal = precificar(
+      (() => {
+        const c = ctxSegundaMao(100);
+        c.canal = { canal: "marketplace", cliente: "consumidor", comissaoPercentagem: 0.15 };
+        return c;
+      })(),
+    );
+    expect(comCanal.precoLiquido).toBeGreaterThan(semCanal.precoLiquido);
+
+    // A comissão que sai é 15% do que o cliente paga — não do PVP fictício.
+    const comissao = comCanal.pvp * 0.15;
+    expect(proximo(comCanal.caixa.entraNaConta, comCanal.pvp - comissao, 0.02)).toBe(true);
+  });
+
+  it("com `ajusteBruto = 0` o solver colapsa nas equações de sempre", () => {
+    const semAjuste: EntradaSolver = {
+      custosEuros: 10,
+      fixosTransacao: 0.3,
+      fracaoLiquido: 0.1,
+      fracaoBruto: 0.15,
+      taxaIVA: IVA_NORMAL,
+    };
+    const comZero: EntradaSolver = { ...semAjuste, ajusteBruto: 0 };
+    expect(precoPorMargem(comZero, 0.3).precoLiquido).toBe(
+      precoPorMargem(semAjuste, 0.3).precoLiquido,
+    );
+  });
+
+  it("o aviso explica o regime em vez de o desculpar", () => {
+    const a = precificar(ctxSegundaMao(100)).avisos.find(
+      (x) => x.id === "regime-margem-confirmar-enquadramento",
+    )!;
+    expect(a.severidade).toBe("atencao");
+    expect(a.fonte).toMatch(/199\/96/);
+    expect(a.texto).toMatch(/contabilista/);
+  });
+});
+
+describe("auditoria · as comissões são despesa dedutível em organizada", () => {
+  const ctxCanal = (comissao: number): ContextoPreco => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "normal",
+      regiao: "continente",
+      atividade: "vendas",
+      faturacaoAnualPrevista: 40000,
+      regimeContabilidade: "organizada",
+      anoAtividade: 3,
+    };
+    c.produto = { natureza: "bem", escalaoVenda: "normal" };
+    c.canal =
+      comissao > 0
+        ? { canal: "marketplace", cliente: "consumidor", comissaoPercentagem: comissao }
+        : { canal: "loja_online", cliente: "consumidor" };
+    // Coerente com os 40 000 € declarados: 1 200 unidades/ano a ~33 € de
+    // receita. Um custo que estoirasse a faturação punha o negócio em
+    // prejuízo e a marginal a zero — o que testaria outra coisa.
+    c.custos = { direto: { valor: 8, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 100 };
+    c.objetivo = { modo: "margem", percentagem: 0.3 };
+    return c;
+  };
+
+  it("uma comissão de 20% baixa a taxa marginal de IRS que forma o preço", () => {
+    // O defeito: `despesasAnuais` só somava custos e fixos. Num TI a faturar
+    // 40 000 € com 20% de marketplace, faltavam ~8 000 € de despesa — e a
+    // marginal saltava de 24,1% para 31,1%, mais de sete pontos.
+    const sem = precificar(ctxCanal(0));
+    const com = precificar(ctxCanal(0.2));
+    expect(com.fiscal.irsBase).toBe("lucro");
+    expect(com.fiscal.irsFracao).toBeLessThan(sem.fiscal.irsFracao);
+  });
+
+  it("no regime simplificado nada disto muda — as despesas não abatem lá", () => {
+    const simplificado = (comissao: number) => {
+      const c = ctxCanal(comissao);
+      c.vendedor.regimeContabilidade = "simplificado";
+      return precificar(c);
+    };
+    expect(simplificado(0.2).fiscal.irsFracao).toBe(simplificado(0).fiscal.irsFracao);
+  });
+
+  it("a segunda passagem é determinística: o mesmo contexto dá o mesmo preço", () => {
+    const a = precificar(ctxCanal(0.2));
+    const b = precificar(ctxCanal(0.2));
+    expect(a.precoLiquido).toBe(b.precoLiquido);
+    expect(a.fiscal.irsFracao).toBe(b.fiscal.irsFracao);
   });
 });

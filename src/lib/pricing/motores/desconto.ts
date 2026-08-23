@@ -20,10 +20,13 @@
 
 import type { ModeloDesconto, ResultadoDesconto } from "../tipos";
 import { custosVariaveisAoPreco, lucroAoPreco, pisoAbsoluto, type EntradaSolver } from "./preco";
+import type { ConversorPreco } from "./iva";
 import { dividir, fracao, num, unidades } from "../numeros";
 
 export interface EntradaDesconto {
   solver: EntradaSolver;
+  /** Líquido ↔ PVP com o regime lá dentro. */
+  conversor: ConversorPreco;
   precoLiquido: number;
   pvp: number;
   fixosPorUnidade: number;
@@ -33,11 +36,13 @@ export interface EntradaDesconto {
 
 export function calcularDesconto(e: EntradaDesconto): ResultadoDesconto {
   const d = fracao(e.desconto?.percentagem ?? 0, 0, 0.99);
-  const t = fracao(e.solver.taxaIVA, 0, 1);
 
   const pvpOriginal = num(e.pvp);
   const pvpComDesconto = pvpOriginal * (1 - d);
-  const precoLiquidoComDesconto = dividir(pvpComDesconto, 1 + t, pvpComDesconto);
+  // O desconto anuncia-se sobre o que o cliente paga; a receita que dele
+  // sobra é o que o conversor disser — no regime da margem, descer o preço
+  // desce também o IVA, porque a margem tributável encolheu.
+  const precoLiquidoComDesconto = e.conversor.paraLiquido(pvpComDesconto);
 
   const lucroAntes = lucroAoPreco(e.solver, num(e.precoLiquido)) - num(e.fixosPorUnidade);
   const lucroDepois = lucroAoPreco(e.solver, precoLiquidoComDesconto) - num(e.fixosPorUnidade);

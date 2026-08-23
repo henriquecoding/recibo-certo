@@ -31,7 +31,7 @@ import type {
 import { cent, dividir, fracao, naoNegativo, num } from "./numeros";
 import { calcularCustos } from "./motores/custos";
 import { calcularComissoes } from "./motores/comissoes";
-import { ivaAEntregar, liquidoDe, pvpDe, situacaoIVAPreco } from "./motores/iva";
+import { conversorDe, ivaAEntregar, situacaoIVAPreco, type ConversorPreco } from "./motores/iva";
 import { fiscalidadeVendedor, fracoesFiscais } from "./motores/fiscal-ti";
 import {
   custosVariaveisAoPreco,
@@ -102,116 +102,192 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   //
   //  Não incluem o custo do tempo: o trabalho do próprio não é uma despesa
   //  dedutível de categoria B, é o rendimento que se está a apurar.
-  const despesasAnuais = (custos.diretoAjustado + custos.variaveisFixos + custos.devolucoes) * q * 12 + fixosMensaisTotais * 12;
-
-  const { ssFracao, irsFracao, irsSobreLucro } = fracoesFiscais(contexto.vendedor, {
-    despesasAnuais,
-  });
-
-  // ── 5. Tempo (serviços) ────────────────────────────────────────────
-  //  `fracaoFiscal` serve APENAS o `valorHoraFaturado` — o número que
-  //  responde a «quanto tenho de cobrar por hora» e que a interface mostra.
-  //  O custo que alimenta o solver é o valor/hora LÍQUIDO: os impostos são
-  //  repostos uma só vez, lá dentro. Entram aqui os dois IRS possíveis
-  //  porque exatamente um deles é diferente de zero, e em qualquer dos
-  //  regimes é o IRS que vai comer este rendimento.
-  const tempo = calcularTempo({
-    tempo: contexto.tempo,
-    custosFixosAnuais: fixosMensaisTotais * 12,
-    fracaoFiscal: ssFracao + irsFracao + irsSobreLucro,
-  });
-
-  //  O custo do tempo SOMA-SE ao custo direto, não o substitui.
   //
-  //  Substituí-lo era um defeito com consequência absurda: uma sessão de
-  //  fotografia com 5 € de impressões passava de 243,53 € para 10,96 €,
-  //  porque declarar um custo apagava as cinco horas de trabalho. Um
-  //  serviço com materiais tem as duas coisas, e o cliente paga as duas.
-  const custoTempo = tempo ? naoNegativo(tempo.custoTempoPorUnidade) : 0;
-  const custoDiretoFinal = custos.diretoAjustado + custoTempo;
+  //  Incluem as taxas fixas por transação — despesa da atividade como
+  //  qualquer outra. As comissões PERCENTUAIS não cabem aqui porque
+  //  dependem do preço, que ainda não existe: entram na segunda passagem,
+  //  logo abaixo.
+  const despesasSemComissoes =
+    (custos.diretoAjustado + custos.variaveisFixos + custos.devolucoes + comissoes.fixos) * q * 12 +
+    fixosMensaisTotais * 12;
 
-  // ...mas o tempo NÃO é despesa dedutível: o trabalho do próprio é o
-  // rendimento que se está a apurar, não um custo da atividade. A mesma
-  // linha que `despesasAnuais` acima já respeita.
-  const custoDiretoDedutivel = custos.diretoAjustado;
+  //  O conversor líquido ↔ PVP, com o regime lá dentro. Toda a engine passa
+  //  a converter por aqui: no regime da margem o cliente NÃO paga P(1+t),
+  //  e um `× 1,23` escrito à mão em cada ficheiro era um sítio a mais para
+  //  discordarem sobre quanto ele paga.
+  const conversor = conversorDe(iva, custos.diretoAjustado);
 
-  // ── 6. Montar a equação ────────────────────────────────────────────
-  const solver: EntradaSolver = {
-    custosEuros: custoDiretoFinal + custos.variaveisFixos,
-    fixosTransacao: comissoes.fixos,
-    fracaoLiquido: comissoes.sobreLiquido + ssFracao + irsFracao,
-    fracaoBruto: comissoes.sobreBruto,
-    taxaIVA: iva.taxaVenda,
-    // Só a contabilidade organizada põe aqui alguma coisa. No simplificado o
-    // IRS já vive em `fracaoLiquido`, porque lá incide mesmo sobre a
-    // faturação. Os dois nunca são preenchidos ao mesmo tempo.
-    fracaoSobreLucro: irsSobreLucro,
-    custosDedutiveis: custoDiretoDedutivel + custos.variaveisFixos,
-  };
-
-  // Ao resolver para uma margem/markup, os custos fixos por unidade têm de
-  // estar dentro da base — senão a «margem de 35%» é margem de contribuição
-  // disfarçada, e o negócio dá prejuízo com a margem em dia.
-  const solverComFixos: EntradaSolver = {
-    ...solver,
-    custosEuros: solver.custosEuros + fixosPorUnidade,
-    // A renda, o software e a contabilidade são despesa dedutível como
-    // qualquer outra — ao contrário do tempo do próprio.
-    custosDedutiveis: (solver.custosDedutiveis ?? 0) + fixosPorUnidade,
-  };
-
-  // ── 7. Resolver o preço ────────────────────────────────────────────
   const objetivo = contexto.objetivo ?? { modo: "margem", percentagem: 0.3 };
   const folga = fracao(objetivo.folgaConfortavel ?? FOLGA_CONFORTAVEL_PADRAO, 0, 0.5);
 
-  let saida: SaidaSolver;
-  let margemAlvo = 0;
+  /**
+   * Uma passagem completa: das despesas dedutíveis assumidas até ao preço.
+   *
+   * Existe como função porque tem de correr DUAS vezes em contabilidade
+   * organizada — ver `refinar`, mais abaixo.
+   */
+  const correr = (despesasAnuais: number) => {
+    const { ssFracao, irsFracao, irsSobreLucro } = fracoesFiscais(contexto.vendedor, {
+      despesasAnuais,
+    });
 
-  switch (objetivo.modo) {
-    case "markup": {
-      const k = Math.max(0, num(objetivo.percentagem));
-      saida = precoPorMarkup(solverComFixos, k);
-      margemAlvo = margemDeMarkup(k);
-      break;
+    // ── 5. Tempo (serviços) ──────────────────────────────────────────
+    //  `fracaoFiscal` serve APENAS o `valorHoraFaturado` — o número que
+    //  responde a «quanto tenho de cobrar por hora» e que a interface
+    //  mostra. O custo que alimenta o solver é o valor/hora LÍQUIDO: os
+    //  impostos são repostos uma só vez, lá dentro. Entram aqui os dois IRS
+    //  possíveis porque exatamente um deles é diferente de zero, e em
+    //  qualquer dos regimes é o IRS que vai comer este rendimento.
+    const tempo = calcularTempo({
+      tempo: contexto.tempo,
+      custosFixosAnuais: fixosMensaisTotais * 12,
+      fracaoFiscal: ssFracao + irsFracao + irsSobreLucro,
+    });
+
+    //  O custo do tempo SOMA-SE ao custo direto, não o substitui.
+    //
+    //  Substituí-lo era um defeito com consequência absurda: uma sessão de
+    //  fotografia com 5 € de impressões passava de 243,53 € para 10,96 €,
+    //  porque declarar um custo apagava as cinco horas de trabalho. Um
+    //  serviço com materiais tem as duas coisas, e o cliente paga as duas.
+    const custoTempo = tempo ? naoNegativo(tempo.custoTempoPorUnidade) : 0;
+    const custoDiretoFinal = custos.diretoAjustado + custoTempo;
+
+    // ── 6. Montar a equação ──────────────────────────────────────────
+    const solver: EntradaSolver = {
+      custosEuros: custoDiretoFinal + custos.variaveisFixos,
+      fixosTransacao: comissoes.fixos,
+      fracaoLiquido: comissoes.sobreLiquido + ssFracao + irsFracao,
+      fracaoBruto: comissoes.sobreBruto,
+      taxaIVA: iva.taxaVenda,
+      // A comissão do canal é cobrada sobre o TOTAL DA FATURA. No regime da
+      // margem esse total é P(1+t) − Cₐ·t, não P(1+t): o marketplace não
+      // cobra comissão sobre um IVA que não está lá.
+      ajusteBruto: iva.regimeMargem ? custos.diretoAjustado * iva.taxaVenda : 0,
+      // Só a contabilidade organizada põe aqui alguma coisa. No simplificado
+      // o IRS já vive em `fracaoLiquido`, porque lá incide mesmo sobre a
+      // faturação. Os dois nunca são preenchidos ao mesmo tempo.
+      fracaoSobreLucro: irsSobreLucro,
+      // O tempo do próprio NÃO é despesa dedutível: é o rendimento que se
+      // está a apurar. A mesma linha que `despesasSemComissoes` respeita.
+      custosDedutiveis: custos.diretoAjustado + custos.variaveisFixos,
+    };
+
+    // Ao resolver para uma margem/markup, os custos fixos por unidade têm de
+    // estar dentro da base — senão a «margem de 35%» é margem de contribuição
+    // disfarçada, e o negócio dá prejuízo com a margem em dia.
+    const solverComFixos: EntradaSolver = {
+      ...solver,
+      custosEuros: solver.custosEuros + fixosPorUnidade,
+      // A renda, o software e a contabilidade são despesa dedutível como
+      // qualquer outra — ao contrário do tempo do próprio.
+      custosDedutiveis: (solver.custosDedutiveis ?? 0) + fixosPorUnidade,
+    };
+
+    // ── 7. Resolver o preço ──────────────────────────────────────────
+    let saida: SaidaSolver;
+    let margemAlvo = 0;
+
+    switch (objetivo.modo) {
+      case "markup": {
+        const k = Math.max(0, num(objetivo.percentagem));
+        saida = precoPorMarkup(solverComFixos, k);
+        margemAlvo = margemDeMarkup(k);
+        break;
+      }
+      case "lucro_unidade": {
+        saida = precoPorLucroUnidade(solverComFixos, naoNegativo(objetivo.valor));
+        margemAlvo = saida.ok ? dividir(naoNegativo(objetivo.valor), saida.precoLiquido) : 0;
+        break;
+      }
+      case "lucro_mensal": {
+        const alvoUnidade = q > 0 ? dividir(naoNegativo(objetivo.valor), q) : 0;
+        saida = precoPorLucroUnidade(solverComFixos, alvoUnidade);
+        margemAlvo = saida.ok ? dividir(alvoUnidade, saida.precoLiquido) : 0;
+        break;
+      }
+      case "preco_fixo": {
+        const introduzido = naoNegativo(objetivo.valor);
+        const liquido = objetivo.valorEhPVP ? conversor.paraLiquido(introduzido) : introduzido;
+        saida = {
+          ok: liquido > 0,
+          precoLiquido: liquido,
+          denominador: 1,
+          // Do solver, para não haver uma segunda versão da mesma conta: a
+          // cópia à mão que aqui estava esquecia τ e dava uma fração
+          // disponível otimista a quem está em contabilidade organizada.
+          fracaoDisponivel: fracaoDisponivel(solver),
+          motivo: liquido > 0 ? undefined : "dados_insuficientes",
+        };
+        margemAlvo = liquido > 0 ? dividir(lucroAoPreco(solverComFixos, liquido), liquido) : 0;
+        break;
+      }
+      case "margem":
+      default: {
+        const m = fracao(objetivo.percentagem ?? 0.3, -1, 0.95);
+        saida = precoPorMargem(solverComFixos, m);
+        margemAlvo = m;
+        break;
+      }
     }
-    case "lucro_unidade": {
-      saida = precoPorLucroUnidade(solverComFixos, naoNegativo(objetivo.valor));
-      margemAlvo = saida.ok ? dividir(naoNegativo(objetivo.valor), saida.precoLiquido) : 0;
-      break;
-    }
-    case "lucro_mensal": {
-      const alvoUnidade = q > 0 ? dividir(naoNegativo(objetivo.valor), q) : 0;
-      saida = precoPorLucroUnidade(solverComFixos, alvoUnidade);
-      margemAlvo = saida.ok ? dividir(alvoUnidade, saida.precoLiquido) : 0;
-      break;
-    }
-    case "preco_fixo": {
-      const introduzido = naoNegativo(objetivo.valor);
-      const liquido = objetivo.valorEhPVP ? liquidoDe(introduzido, iva.taxaVenda) : introduzido;
-      saida = {
-        ok: liquido > 0,
-        precoLiquido: liquido,
-        denominador: 1,
-        // Do solver, para não haver uma segunda versão da mesma conta: a
-        // cópia à mão que aqui estava esquecia τ e dava uma fração
-        // disponível otimista a quem está em contabilidade organizada.
-        fracaoDisponivel: fracaoDisponivel(solver),
-        motivo: liquido > 0 ? undefined : "dados_insuficientes",
-      };
-      margemAlvo = liquido > 0 ? dividir(lucroAoPreco(solverComFixos, liquido), liquido) : 0;
-      break;
-    }
-    case "margem":
-    default: {
-      const m = fracao(objetivo.percentagem ?? 0.3, -1, 0.95);
-      saida = precoPorMargem(solverComFixos, m);
-      margemAlvo = m;
-      break;
+
+    return {
+      despesasAnuais,
+      ssFracao,
+      irsFracao,
+      irsSobreLucro,
+      tempo,
+      custoDiretoFinal,
+      solver,
+      solverComFixos,
+      saida,
+      margemAlvo,
+    };
+  };
+
+  // ── 4-bis. A segunda passagem: as comissões TAMBÉM são despesa ─────
+  //
+  //  Em contabilidade organizada o IRS incide sobre receita − despesas, e
+  //  a comissão do canal é despesa como a renda. Deixá-la de fora não é um
+  //  arredondamento: num TI a faturar 40 000 € com 20% de marketplace, são
+  //  8 000 € de despesa desaparecida, e a taxa marginal de IRS que forma o
+  //  preço salta de 24,1% para 31,1% — mais de sete pontos. Com salário
+  //  por cima, de 34,9% para 43,1%.
+  //
+  //  A comissão depende do preço e o preço depende dela, mas isto NÃO é a
+  //  circularidade que o solver resolve em forma fechada: o IRS marginal é
+  //  uma derivada com degraus, não uma fração. Resolve-se com uma segunda
+  //  passagem — a primeira dá o preço com que medir as comissões, a
+  //  segunda usa-as. Só corre em ORGANIZADA, porque é o único regime em
+  //  que estas despesas mudam alguma coisa; nos outros `fracoesFiscais`
+  //  ignora-as e uma segunda passagem seria trabalho por nada.
+  let passagem = correr(despesasSemComissoes);
+
+  if (contexto.vendedor.regimeContabilidade === "organizada" && q > 0 && passagem.saida.ok) {
+    const p0 = passagem.saida.precoLiquido;
+    const comissoesPercentuaisAno =
+      (comissoes.sobreBruto * conversor.paraPVP(p0) + comissoes.sobreLiquido * p0) * q * 12;
+
+    if (comissoesPercentuaisAno > 0.5) {
+      passagem = correr(despesasSemComissoes + comissoesPercentuaisAno);
     }
   }
 
+  const {
+    despesasAnuais,
+    ssFracao,
+    irsFracao,
+    irsSobreLucro,
+    tempo,
+    custoDiretoFinal,
+    solver,
+    solverComFixos,
+    saida,
+  } = passagem;
+  let { margemAlvo } = passagem;
+
   const precoLiquido = saida.ok ? saida.precoLiquido : 0;
-  const pvp = pvpDe(precoLiquido, iva.taxaVenda);
+  const pvp = conversor.paraPVP(precoLiquido);
 
   // ── 8. Custos avaliados ao preço ───────────────────────────────────
   const variaveisTotais = custosVariaveisAoPreco(solver, precoLiquido);
@@ -264,7 +340,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const faixa = calcularFaixa({
     solver,
     solverComFixos,
-    fixosPorUnidade,
+    conversor,
     margemAlvo,
     folga,
     precoRecomendado: precoLiquido,
@@ -332,6 +408,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     contexto.desconto && contexto.desconto.percentagem > 0 && saida.ok
       ? calcularDesconto({
           solver,
+          conversor,
           precoLiquido,
           pvp,
           fixosPorUnidade,
@@ -358,7 +435,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const veredicto = contexto.precoPensado
     ? avaliarPrecoPensado({
         precoPensadoPVP: num(contexto.precoPensado),
-        taxaIVA: iva.taxaVenda,
+        conversor,
         solverComFixos,
         faixa,
       })
@@ -512,12 +589,12 @@ function textoImpossivel(saida: SaidaSolver, margemAlvo: number): string {
 
 function avaliarPrecoPensado(e: {
   precoPensadoPVP: number;
-  taxaIVA: number;
+  conversor: ConversorPreco;
   /** O solver que resolveu o preço — fixos e escudo fiscal por dentro. */
   solverComFixos: EntradaSolver;
   faixa: ResultadoPreco["faixa"];
 }): VeredictoPreco {
-  const liquido = liquidoDe(e.precoPensadoPVP, e.taxaIVA);
+  const liquido = e.conversor.paraLiquido(e.precoPensadoPVP);
   const lucro = lucroAoPreco(e.solverComFixos, liquido);
   const margem = liquido > 0 ? dividir(lucro, liquido) : 0;
 

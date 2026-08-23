@@ -68,7 +68,13 @@ export default function ChromeMobileTopo() {
           flutuantes — e no tablet a marca ficava recuada 64 px em relação ao
           título que lhe fica logo por baixo. O chrome em fluxo alinha-se com
           o CONTEÚDO; o chrome flutuante alinha-se consigo próprio. */}
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 sm:px-6">
+      {/* `max-[359px]:px-3` — abaixo dos 360 px que o projeto assume como
+          chão, a marca mais o botão não cabem nos 288 px de conteúdo e o
+          documento ganhava 2 px de scroll horizontal em TODAS as páginas.
+          Oito pixels de folga resolvem-no onde o problema existe, e a
+          variante para-nos aos 359: aos 360 e acima o alinhamento com o
+          conteúdo (`px-4`) fica exatamente como estava. */}
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-2 px-4 max-[359px]:px-3 sm:px-6">
         <Link
           href="/"
           aria-label="ReciboCerto — início"

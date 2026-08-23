@@ -35,17 +35,20 @@ import { cent, dividir, fracao, naoNegativo, num, unidades } from "../numeros";
 /**
  * «Quero ganhar X por mês — quanto tenho de cobrar?»
  *
- * ⚠️ `liquidoPessoal` não tem efeito e está a caminho de sair da assinatura.
- * Quem decide a leitura de X é `vendedor.tipo`, não este parâmetro: para um
- * trabalhador independente a SS e o IRS já estão no `v` do solver, logo o
- * lucro resolvido É líquido; para uma sociedade não há SS nem IRS no `v`,
- * logo é lucro operacional. As duas interpretações que a flag prometia
- * distinguir são a mesma conta vista de dois enquadramentos diferentes.
+ * X lê-se sempre como o dinheiro que a pessoa quer ver — e quem decide o que
+ * isso significa é `vendedor.tipo`, não uma opção: num trabalhador
+ * independente a SS e o IRS já estão no `v` do solver, logo o lucro resolvido
+ * É líquido; numa sociedade não há SS nem IRS no `v`, logo é lucro
+ * operacional, e a conversão até ao bolso do dono vive em `sociedade.ts`.
+ *
+ * Houve aqui um parâmetro `liquidoPessoal` a prometer escolher entre as duas
+ * leituras. Não escolhia nada — nunca foi lido —, e uma opção que não faz
+ * nada é pior do que nenhuma: quem a passasse ficava convencido de ter
+ * mudado a conta.
  */
 export function precoParaGanhar(
   contexto: ContextoPreco,
   ganhoMensal: number,
-  liquidoPessoal = true,
 ): ResultadoObjetivo {
   const explicacao: LinhaExplicacao[] = [];
   const alvo = naoNegativo(ganhoMensal);
@@ -115,13 +118,12 @@ export function precoParaGanhar(
 /**
  * «Consigo cobrar Y — quantas vendas preciso para ganhar X?»
  *
- * `liquidoPessoal` é inerte aqui pela mesma razão que em `precoParaGanhar`.
+ * X lê-se como em `precoParaGanhar`, e pela mesma razão não tem opção.
  */
 export function unidadesParaGanhar(
   contexto: ContextoPreco,
   pvpPraticado: number,
   ganhoMensal: number,
-  liquidoPessoal = true,
 ): ResultadoObjetivo {
   const explicacao: LinhaExplicacao[] = [];
   const preco = naoNegativo(pvpPraticado);
@@ -216,6 +218,9 @@ export function lucroAoPVP(
   taxaIVA: number,
   fixosPorUnidade: number,
 ): { lucro: number; margem: number; contribuicao: number } {
+  // Sem regime da margem à vista: quem tem um conversor deve convertê-lo
+  // antes de chamar isto. Fica a conversão simples porque é o caso de 99%
+  // dos chamadores e não há aqui contexto para saber o custo de aquisição.
   const liquido = dividir(num(pvp), 1 + fracao(taxaIVA, 0, 1), num(pvp));
   const lucro = lucroAoPreco(solver, liquido) - num(fixosPorUnidade);
   return {

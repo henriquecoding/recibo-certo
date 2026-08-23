@@ -37,6 +37,7 @@ const URL_CIVA_53 =
 const URL_CIRS_31 =
   "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs31.aspx";
 const URL_SS = "https://www.seg-social.pt";
+const URL_DL_199_96 = "https://diariodarepublica.pt/dr/detalhe/decreto-lei/199-1996-435847";
 
 export interface EntradaExplicacao {
   contexto: ContextoPreco;
@@ -69,9 +70,17 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
       valor: cent(e.pvp - p),
       percentagem: e.situacaoIVA.taxaVenda,
       confianca: "oficial",
-      fonte: `Art. 18.º CIVA — ${e.situacaoIVA.escalaoVenda}, ${rotuloRegiao(e.contexto.vendedor.regiao)}`,
-      fonteUrl: URL_CIVA_18,
-      nota: "Não é teu: é cobrado ao cliente e entregue ao Estado.",
+      fonte: e.situacaoIVA.regimeMargem
+        ? "DL n.º 199/96 — o imposto incide sobre a margem, não sobre o preço"
+        : `Art. 18.º CIVA — ${e.situacaoIVA.escalaoVenda}, ${rotuloRegiao(e.contexto.vendedor.regiao)}`,
+      fonteUrl: e.situacaoIVA.regimeMargem ? URL_DL_199_96 : URL_CIVA_18,
+      nota: e.situacaoIVA.regimeMargem
+        ? `Não é teu: está contido no preço e é entregue ao Estado. Incide só sobre a diferença entre os ${cent(
+            e.custos.diretoAjustado,
+          )
+            .toFixed(2)
+            .replace(".", ",")} € que pagaste pelo bem e o que recebes por ele — e por isso a fatura não o mostra à parte.`
+        : "Não é teu: é cobrado ao cliente e entregue ao Estado.",
     });
   } else {
     linhas.push({

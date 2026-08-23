@@ -84,6 +84,19 @@ export interface EntradaSolver {
    */
   fracaoSobreLucro?: number;
   /**
+   * Euros em que o valor FATURADO ao cliente fica ABAIXO de `P(1+t)` — a
+   * base sobre a qual `fracaoBruto` é cobrada.
+   *
+   * Existe por causa do regime da margem (DL 199/96): aí o IVA incide só
+   * sobre `P − Cₐ`, logo o total da fatura é `P(1+t) − Cₐ·t`, e a comissão
+   * do marketplace é cobrada sobre esse total — não sobre um PVP que
+   * ninguém paga. `ajusteBruto = Cₐ·t`.
+   *
+   * Omisso ou zero, a base da comissão é `P(1+t)` e tudo se reduz às
+   * equações de sempre.
+   */
+  ajusteBruto?: number;
+  /**
    * A parte de `custosEuros` que é DESPESA DEDUTÍVEL. Só ela recebe o
    * escudo fiscal de τ.
    *
@@ -137,20 +150,33 @@ function fracaoLucro(entrada: EntradaSolver): number {
 }
 
 /**
+ * A comissão que NÃO se cobra por o faturado ficar abaixo de `P(1+t)`.
+ * Constante em euros, logo entra no numerador, não no denominador — e leva
+ * o escudo fiscal ao contrário: menos comissão é menos despesa dedutível,
+ * portanto mais imposto.
+ */
+function creditoDoAjusteBruto(entrada: EntradaSolver): number {
+  const a = naoNegativo(entrada.ajusteBruto);
+  if (a === 0) return 0;
+  const g = fracao(entrada.fracaoBruto, 0, 5);
+  return g * a * (1 - fracaoLucro(entrada));
+}
+
+/**
  * Base de custo depois do escudo fiscal. Cada euro de despesa DEDUTÍVEL
  * poupa τ de imposto; o que não é dedutível (o tempo do próprio) entra
  * inteiro.
  *
- *   base = (C + f) − τ·(Cd + f)
+ *   base = (C + f) − τ·(Cd + f) − g·A·(1 − τ)
  *
- * Com τ = 0 é a soma de sempre; com Cd = C é `(C + f)(1 − τ)`.
+ * Com τ = 0 e A = 0 é a soma de sempre; com Cd = C é `(C + f)(1 − τ)`.
  */
 function baseCusto(entrada: EntradaSolver): number {
   const c = num(entrada.custosEuros);
   const f = num(entrada.fixosTransacao);
   // As taxas por transação são sempre despesa da atividade.
   const dedutiveis = Math.min(c, naoNegativo(entrada.custosDedutiveis ?? c)) + f;
-  return c + f - fracaoLucro(entrada) * dedutiveis;
+  return c + f - fracaoLucro(entrada) * dedutiveis - creditoDoAjusteBruto(entrada);
 }
 
 /** Preço a partir de uma margem pretendida sobre o preço líquido. */
