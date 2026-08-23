@@ -110,10 +110,17 @@ describe("negocio:sem-fonte-propria", () => {
         // iniciativa. Apanhou um contador de tentativas e ia continuar a
         // apanhar quem escrevesse português normal.
         //
-        // `const iva = 0.23`, `taxaIvaNormal`, `TAXA_IVA` continuam todos
-        // a ser apanhados — que é o que esta guarda existe para impedir.
+        // O ramo em MAIÚSCULAS tinha exatamente o mesmo defeito, e ficou
+        // por corrigir: `[A-Z0-9_]*IVA[A-Z0-9_]*` casa `TENTATIVAS_PADRAO`,
+        // porque «TENTAT-IVA-S» contém a palavra. Passou a exigir que a
+        // palavra-chave seja um SEGMENTO inteiro do SNAKE_CASE — entre
+        // sublinhados ou nos extremos.
+        //
+        // `const iva = 0.23`, `taxaIvaNormal`, `TAXA_IVA`, `IVA_NORMAL`,
+        // `COEF_SERVICOS` e `TSU_TRABALHADOR` continuam todos a ser
+        // apanhados — que é o que esta guarda existe para impedir.
         if (
-          /(?:const|let)\s+(?:[A-Z0-9_]*(?:TAXA|IVA|IRS|IRC|TSU|SS_|DERRAMA|COEF)[A-Z0-9_]*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
+          /(?:const|let)\s+(?:(?:[A-Z0-9]+_)*(?:TAXA|IVA|IRS|IRC|TSU|SS|DERRAMA|COEF)(?:_[A-Z0-9]+)*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
             semComentario,
           )
         ) {
@@ -126,7 +133,7 @@ describe("negocio:sem-fonte-propria", () => {
     // apanhar. Sem isto, afinar o padrão para calar um falso positivo
     // podia esvaziá-lo sem ninguém dar por nada.
     const apanha = (linha: string) =>
-      /(?:const|let)\s+(?:[A-Z0-9_]*(?:TAXA|IVA|IRS|IRC|TSU|SS_|DERRAMA|COEF)[A-Z0-9_]*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
+      /(?:const|let)\s+(?:(?:[A-Z0-9]+_)*(?:TAXA|IVA|IRS|IRC|TSU|SS|DERRAMA|COEF)(?:_[A-Z0-9]+)*|(?:taxa|iva|irs|irc|tsu|derrama|coef)\w*|[a-z]\w*(?:Taxa|Iva|Irs|Irc|Tsu|Derrama|Coef)\w*)\s*=\s*[\d.]/.test(
         linha,
       );
     for (const real of [
@@ -136,6 +143,11 @@ describe("negocio:sem-fonte-propria", () => {
       "const iva = 0.23",
       "const COEF_SERVICOS = 0.75",
       "let derramaMunicipal = 1.5",
+      "const IVA = 0.23",
+      "const TSU_TRABALHADOR = 0.11",
+      "const TAXA_IVA_2026 = 0.23",
+      "const PRECO_SS_BASE = 1.2",
+      "const IRC_NORMAL = 0.21",
     ]) {
       expect(apanha(real), `devia apanhar: ${real}`).toBe(true);
     }
@@ -144,6 +156,12 @@ describe("negocio:sem-fonte-propria", () => {
       "const tentativa = 0",
       "const alternativa = 2",
       "const iniciativa = 1",
+      // Português normal em SNAKE_CASE: «TENTAT-IVA-S», «ALTERNAT-IVA-S»,
+      // «INICIAT-IVA-S». Foi um destes que expôs o defeito.
+      "const TENTATIVAS_PADRAO = 2",
+      "const ALTERNATIVAS_MAX = 3",
+      "const INICIATIVAS = 4",
+      "const CONCORRENCIA_PADRAO = 3",
     ]) {
       expect(apanha(inocente), `não devia apanhar: ${inocente}`).toBe(false);
     }

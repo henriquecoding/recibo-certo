@@ -16,6 +16,58 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.101.0",
+    data: "2026-08-23",
+    titulo: "Uma hipótese que não consegues executar deixa de valer 67 em 100",
+    itens: [
+      "A pontuação de cada hipótese era uma média das dez dimensões que o motor avalia. Numa média, um valor mau é diluído pelos bons — e há valores maus que não devem ser diluíveis por nada.",
+      "Medido: uma hipótese que a pessoa não conseguia executar de todo — encaixe zero — valia 67 em 100, porque as outras nove dimensões a puxavam para o meio da lista. Uma sem sinal nenhum de mercado valia 59. Uma que não cabia no capital nem no prazo, 56.",
+      "As dez dimensões passaram a agrupar-se em três eixos — mercado, encaixe contigo, viabilidade — combinados por média geométrica em vez de aritmética. Os mesmos casos passam a valer 23, 12 e 30.",
+      "A meio da escala as duas contas concordam, e acima dela a nova chega a dar alguns pontos a mais. Não é uma calibração para baixo: é uma correção nos extremos, que é onde a média estava errada e onde uma recomendação errada custa mais caro.",
+      "O que continua igual: o que não se sabe não penaliza. Não declarares capital não transforma uma boa hipótese numa má — a dimensão sai da conta em vez de entrar como zero, e a ausência aparece na confiança, que é onde se lê.",
+    ],
+  },
+  {
+    version: "2.100.0",
+    data: "2026-08-23",
+    titulo: "Quatro vezes mais hipóteses passam a ter dados oficiais por trás",
+    itens: [
+      "A ferramenta tinha uma ponte desligada. Cada problema que o motor conhece já dizia, internamente, que estatísticas oficiais o medem — e esse campo só era usado para escrever o plano de investigação. A evidência de verdade chegava por outro caminho: só as hipóteses que coincidiam com um dos cinco dossiers com dados ligados recebiam números.",
+      "O resultado era o motor a contradizer-se: o plano dizia «esta fonte está ligada» e o cartão ao lado não mostrava leitura nenhuma. Medido em 713 hipóteses, 16% tinham sinal de procura.",
+      "Ligada a ponte, são 61%. Uma hipótese composta que ninguém escreveu passa a receber as séries que medem o problema que ataca — ocupação hoteleira, casas transacionadas, índice de envelhecimento, competências digitais, contratos públicos.",
+      "Com a leitura de oferta que entrou na versão anterior, 94% das hipóteses têm agora contagem de concorrentes, e 13% chegam a uma leitura de lacuna a sério — «procura com oferta instalada» ou «procura com pouca oferta» —, coisa que antes era estruturalmente impossível.",
+      "Três problemas declaravam estatísticas e declaravam-se, ao mesmo tempo, não mensuráveis por fonte pública. Não era descuido: a ocupação hoteleira não mede se um produtor tem tempo para o lado comercial. Esses sinais ficam no plano de investigação e fora da evidência — o motor não anexa um número a fingir que mede o que não mede.",
+      "Um sinal mal escrito deixaria de trazer dados sem dar erro nenhum. Passou a haver uma verificação que recusa qualquer sinal que não corresponda a uma série publicada.",
+    ],
+  },
+  {
+    version: "2.99.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta passou a saber quantos concorrentes já existem na tua zona",
+    itens: [
+      "Até hoje, a leitura de mercado acabava sempre em «lacuna por apurar». Não era preguiça: faltava metade da conta. A ferramenta sabia ler procura e não sabia ler oferta — e sem os dois termos, dizer que há uma lacuna seria uma conclusão sem conta nenhuma por trás.",
+      "Passou a ler. Cada hipótese diz agora em que divisão da CAE um operador dela se inscreveria, e a ferramenta vai buscar ao INE quantas empresas existem nessa atividade, na tua região: são 2 706 empresas de limpeza e manutenção de edifícios no Algarve, 501 no Alentejo, 4 447 no Norte.",
+      "O número sozinho engana — o Norte tem nove vezes mais empresas do que o Alentejo e também tem sete vezes mais gente. Por isso a comparação é feita por dez mil habitantes: 46,8 no Algarve contra uma mediana nacional de 11,6. É aí que se vê que o Algarve está saturado e o Alentejo não.",
+      "Quando há procura publicada E a oferta é densa, a ferramenta diz «procura com oferta instalada»: entrar ali é entrar num mercado servido. Quando a oferta é rala, diz que é o melhor sinal que consegue dar com dados oficiais — e avisa que continua a não provar que alguém paga.",
+      "Quando só há oferta e não há procura, continua a dizer que não sabe. Pouca concorrência tanto pode ser espaço por ocupar como mercado que não existe, e confundir as duas é o erro mais caro de quem escolhe um negócio.",
+      "As divisões da CAE são largas — a que conta as limpezas conta também a jardinagem. A ferramenta diz isso em vez de o esconder, e transforma-o numa pergunta a investigar: quantas dessas empresas fazem mesmo isto?",
+      "Dados do INE: empresas por região e atividade (Sistema de contas integradas das empresas, 2023) e população residente (estimativas anuais, 2025). Licença CC BY 4.0, lidos em tempo real e nunca inventados: se a fonte falhar, a leitura desaparece em vez de aparecer um número plausível.",
+    ],
+  },
+  {
+    version: "2.98.0",
+    data: "2026-08-23",
+    titulo: "«Zero hipóteses» passou a dizer porquê — e a resolver-se com um clique",
+    itens: [
+      "Havia um beco sem saída na ferramenta de descobrir negócio, e era grande: doze das vinte e duas competências, escolhidas sozinhas, devolviam zero hipóteses. Um programador que escolhesse «Programação» e mais nada via «0 hipóteses passaram os critérios» e a indicação para abrir um painel que nesse ecrã nem existe.",
+      "A causa: quinze das vinte e cinco capacidades do motor precisam de uma ferramenta declarada, e dez delas precisam de um computador ou de uma caixa de ferramentas — coisas que quase toda a gente tem e ninguém se lembra de declarar. O motor sempre soube o que faltava; simplesmente não o dizia.",
+      "Agora diz, e resolve: «Computador de trabalho destranca construir e manter software — 1 hipótese», com um botão «Tenho isto» que declara o meio e volta a correr o motor. O número prometido é contado a correr o motor com esse meio, não estimado — é exatamente o que aparece a seguir.",
+      "Quando uma capacidade precisa de dois meios (uma intervenção elétrica precisa de ferramentas E de equipamento técnico), o motor pede os dois juntos em vez de prometer que um deles chega.",
+      "Há competências que reforçam outras e não sustentam um negócio sozinhas — as línguas são o caso. Zero hipóteses é a resposta certa; o que faltava era dizê-lo. Passou a dizer: «Línguas estrangeiras reforça, mas não sustenta sozinha».",
+      "E quando foram mesmo as tuas recusas a eliminar tudo, é isso que aparece — com o caminho para ver o que caiu e porquê.",
+    ],
+  },
+  {
     version: "2.97.1",
     data: "2026-08-23",
     titulo: "Filtros a sério para escolher o que sabes fazer",

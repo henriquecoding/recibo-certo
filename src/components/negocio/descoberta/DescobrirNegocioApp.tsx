@@ -20,8 +20,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+import type { PackOferta } from "@/lib/negocio/market/oferta";
 import {
   CONTEXTO_INICIAL,
+  type AtivoId,
   type OpportunityContext,
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { descobrir, type ResultadoDescoberta } from "@/lib/negocio/descoberta/motor/pipeline";
@@ -56,6 +58,7 @@ export default function DescobrirNegocioApp() {
   const [contexto, setContexto] = useState<OpportunityContext>(CONTEXTO_INICIAL);
   const [resultado, setResultado] = useState<ResultadoDescoberta | null>(null);
   const [evidencia, setEvidencia] = useState<readonly MarketPilotEvidence[]>([]);
+  const [oferta, setOferta] = useState<PackOferta | undefined>(undefined);
   const [aConsultar, setAConsultar] = useState(true);
   const [aAnalisar, setAAnalisar] = useState(false);
   const [hipoteses, setHipoteses] = useState<readonly MarketHypothesis[]>([]);
@@ -83,6 +86,25 @@ export default function DescobrirNegocioApp() {
     return () => controlador.abort();
   }, []);
 
+  // ── O pack de OFERTA, também uma vez por sessão ───────────────────
+  //  Independente do de pilotos de propósito: são eixos diferentes e
+  //  falham de maneiras diferentes. Se a oferta não vier, o motor corre
+  //  na mesma e volta a dizer «lacuna por apurar» — que é o que dizia
+  //  antes de esta fonte existir.
+  useEffect(() => {
+    const controlador = new AbortController();
+    fetch("/api/market/oferta", { signal: controlador.signal, headers: { Accept: "application/json" } })
+      .then((resposta) => {
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+        return resposta.json() as Promise<PackOferta>;
+      })
+      .then((payload) => {
+        setOferta(Array.isArray(payload?.divisoes) && payload.divisoes.length > 0 ? payload : undefined);
+      })
+      .catch(() => setOferta(undefined));
+    return () => controlador.abort();
+  }, []);
+
   // ── O que já está guardado, lido depois da montagem ───────────────
   useEffect(() => {
     const guardado = lerPerfilGuardado();
@@ -94,9 +116,8 @@ export default function DescobrirNegocioApp() {
   }, []);
 
   const correr = useCallback(
-    (paraContexto: OpportunityContext) =>
-      descobrir(paraContexto, { evidencia, limite: 10 }),
-    [evidencia],
+    (paraContexto: OpportunityContext) => descobrir(paraContexto, { evidencia, oferta, limite: 10 }),
+    [evidencia, oferta],
   );
 
   const analisar = useCallback(
@@ -136,6 +157,21 @@ export default function DescobrirNegocioApp() {
     const cenario = CENARIOS_WHATIF.find((item) => item.id === cenarioId);
     if (!cenario) return;
     const proximo = cenario.aplicar(contexto);
+    setContexto(proximo);
+    setPerfilGuardado(false);
+    analisar(proximo);
+  };
+
+  // ── Declarar um meio a partir do resultado vazio ──────────────────
+  //  O motor diz «declara "Computador de trabalho" e abres 1 hipótese».
+  //  A pessoa não devia ter de voltar atrás, encontrar a secção certa e
+  //  procurar a pastilha: carrega, o meio entra no contexto e o motor
+  //  corre outra vez. O perfil deixa de estar guardado, como em qualquer
+  //  outra alteração ao contexto.
+  const declararMeios = (ativos: readonly AtivoId[]) => {
+    const novos = ativos.filter((id) => !contexto.ativos.includes(id));
+    if (novos.length === 0) return;
+    const proximo = { ...contexto, ativos: [...contexto.ativos, ...novos] };
     setContexto(proximo);
     setPerfilGuardado(false);
     analisar(proximo);
@@ -202,6 +238,7 @@ export default function DescobrirNegocioApp() {
         efeitosWhatIf={efeitosWhatIf}
         onAplicarWhatIf={aplicarWhatIf}
         diferenca={diferenca}
+        onDeclararMeios={declararMeios}
       />
     );
   }

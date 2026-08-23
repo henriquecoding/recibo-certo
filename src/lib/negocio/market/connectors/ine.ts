@@ -62,6 +62,8 @@ export interface IneFetchResult {
 
 export interface IneFetchOptions {
   language?: IneLanguage;
+  /** Filtros pedidos ao servidor. Ver `IneDimensionQuery`. */
+  dimensions?: Partial<IneDimensionQuery>;
   fetchImpl?: typeof fetch;
   now?: () => string;
   signal?: AbortSignal;
@@ -134,9 +136,32 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Filtros de dimensão pedidos ao SERVIDOR, não filtrados aqui.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO PRECISOU DE EXISTIR                                     │
+ * │                                                                    │
+ * │ Até aqui o conector trazia o indicador inteiro e filtrava em casa. │
+ * │ Funciona para séries com uma dimensão geográfica e pouco mais.     │
+ * │ Não funciona para «Empresas por NUTS 2024 e divisão CAE»: são 99   │
+ * │ divisões × 3 741 geografias, dezenas de megabytes, para ler dez    │
+ * │ números.                                                            │
+ * │                                                                    │
+ * │ A API do INE aceita `Dim1`/`Dim2`/`Dim3` com valores separados por │
+ * │ vírgula e devolve só o que se pede — a mesma consulta passa de     │
+ * │ ~20 MB para 1,2 KB. Medido, não estimado.                          │
+ * │                                                                    │
+ * │ Os valores vão codificados: um código de categoria com `&` ou `=`  │
+ * │ escaparia da dimensão e mudava a consulta em silêncio.             │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export type IneDimensionQuery = Readonly<Record<`Dim${1 | 2 | 3 | 4 | 5}`, readonly string[]>>;
+
 export function buildIneIndicatorUrl(
   indicatorCode: string,
   language: IneLanguage = "PT",
+  dimensions?: Partial<IneDimensionQuery>,
 ): string {
   if (!INDICATOR_CODE.test(indicatorCode)) {
     throw new IneConnectorError(
@@ -151,6 +176,10 @@ export function buildIneIndicatorUrl(
   const url = new URL(source.canonicalUrl);
   url.searchParams.set("op", "2");
   url.searchParams.set("varcd", indicatorCode);
+  for (const [dimensao, valores] of Object.entries(dimensions ?? {})) {
+    if (!valores || valores.length === 0) continue;
+    url.searchParams.set(dimensao, valores.join(","));
+  }
   url.searchParams.set("lang", language);
   return url.toString();
 }
@@ -217,7 +246,7 @@ export async function fetchIneIndicator(
   indicatorCode: string,
   options: IneFetchOptions = {},
 ): Promise<IneFetchResult> {
-  const sourceUrl = buildIneIndicatorUrl(indicatorCode, options.language);
+  const sourceUrl = buildIneIndicatorUrl(indicatorCode, options.language, options.dimensions);
   const response = await (options.fetchImpl ?? fetch)(sourceUrl, {
     method: "GET",
     headers: { Accept: "application/json" },

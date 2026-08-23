@@ -23,15 +23,23 @@ import {
 } from "@/lib/negocio/descoberta/motor/diversidade";
 import { descreverZona, ROTULO_ENTREGA } from "@/lib/negocio/descoberta/motor/gerador";
 import { ROTULO_CONFIANCA } from "@/lib/negocio/descoberta/motor/confianca";
-import { ROTULO_ETAPA, resumoDoTrabalho, type ResultadoDescoberta } from "@/lib/negocio/descoberta/motor/pipeline";
+import {
+  ROTULO_ETAPA,
+  resumoDoTrabalho,
+  type BloqueioPorMeio,
+  type DiagnosticoVazio,
+  type ResultadoDescoberta,
+} from "@/lib/negocio/descoberta/motor/pipeline";
 import { formatarIntervalo } from "@/lib/negocio/descoberta/proveniencia";
 import type { OpportunityCandidate } from "@/lib/negocio/descoberta/motor/tipos";
+import type { AtivoId } from "@/lib/negocio/descoberta/contexto/tipos";
 import type { MarketHypothesis } from "@/lib/negocio/market/hipoteses";
 import type { EfeitoWhatIf } from "@/lib/negocio/descoberta/motor/whatif";
 import type { DiferencaAnalise } from "@/lib/negocio/descoberta/historico/instantaneos";
 import { resumoDaDiferenca } from "@/lib/negocio/descoberta/historico/instantaneos";
 import {
   ArrowLeft,
+  ArrowRight,
   BarChart2,
   Check,
   ChevronDown,
@@ -71,6 +79,8 @@ export interface ResultadosProps {
   efeitosWhatIf: readonly EfeitoWhatIf[];
   onAplicarWhatIf: (cenarioId: string) => void;
   diferenca: DiferencaAnalise | null;
+  /** Declarar meios em falta e voltar a correr. Ver `SaidaDoVazio`. */
+  onDeclararMeios: (ativos: readonly AtivoId[]) => void;
 }
 
 export default function Resultados({
@@ -85,6 +95,7 @@ export default function Resultados({
   efeitosWhatIf,
   onAplicarWhatIf,
   diferenca,
+  onDeclararMeios,
 }: ResultadosProps) {
   const [aberto, setAberto] = useState<string>(resultado.candidatos[0]?.id ?? "");
   const [verDescartadas, setVerDescartadas] = useState(false);
@@ -291,10 +302,20 @@ export default function Resultados({
         })}
 
         {visiveis.length === 0 ? (
-          <p className="rounded-4xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500 dark:border-stone-700">
-            Nada passou os critérios com este contexto. Abre «o que descartámos» — o motor diz o que
-            recusou e o que teria de mudar.
-          </p>
+          resultado.candidatos.length === 0 ? (
+            <SaidaDoVazio
+              bloqueios={resultado.bloqueiosPorMeio}
+              diagnostico={resultado.diagnosticoVazio}
+              descartadas={resultado.descartados.length}
+              onDeclararMeios={onDeclararMeios}
+              onVerDescartadas={() => setVerDescartadas(true)}
+              onVoltar={onVoltar}
+            />
+          ) : (
+            <p className="rounded-4xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500 dark:border-stone-700">
+              Nenhuma hipótese corresponde a este ângulo de leitura. Volta a «Todos» para as ver.
+            </p>
+          )
         ) : null}
       </section>
 
@@ -532,5 +553,159 @@ function Comparador({
         </table>
       </div>
     </section>
+  );
+}
+
+/**
+ * A saída de um resultado vazio.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ O QUE ESTAVA AQUI, E PORQUE ERA PIOR DO QUE NADA                    │
+ * │                                                                    │
+ * │ «Nada passou os critérios com este contexto. Abre "o que           │
+ * │ descartámos" — o motor diz o que recusou e o que teria de mudar.»  │
+ * │                                                                    │
+ * │ Três problemas de uma vez. Primeiro, na causa mais comum (um meio  │
+ * │ por declarar) não houve descarte nenhum, portanto esse painel NÃO  │
+ * │ EXISTE no ecrã — a frase mandava a pessoa a um sítio que não está  │
+ * │ lá. Segundo, dava a mesma resposta a três causas diferentes.       │
+ * │ Terceiro, e pior: o motor sabia exatamente o que faltava e ficava  │
+ * │ calado.                                                            │
+ * │                                                                    │
+ * │ Agora cada causa tem a sua frase e a sua saída, e a saída é um     │
+ * │ botão que resolve — não um conselho.                               │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+function SaidaDoVazio({
+  bloqueios,
+  diagnostico,
+  descartadas,
+  onDeclararMeios,
+  onVerDescartadas,
+  onVoltar,
+}: {
+  bloqueios: readonly BloqueioPorMeio[];
+  diagnostico: DiagnosticoVazio | null;
+  descartadas: number;
+  onDeclararMeios: (ativos: readonly AtivoId[]) => void;
+  onVerDescartadas: () => void;
+  onVoltar: () => void;
+}) {
+  const listar = (rotulos: readonly string[]) =>
+    rotulos.length === 1
+      ? `«${rotulos[0]}»`
+      : `${rotulos.slice(0, -1).map((item) => `«${item}»`).join(", ")} e «${rotulos[rotulos.length - 1]}»`;
+
+  return (
+    <div className="rounded-4xl border border-dashed border-stone-200 p-5 dark:border-stone-700 sm:p-6">
+      {bloqueios.length > 0 ? (
+        <>
+          <h3 className="font-display text-base font-semibold text-ink">
+            Falta declarar o que usas para trabalhar
+          </h3>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-stone-500">
+            O motor sabe o que farias com o que sabes fazer — mas cada uma dessas coisas precisa de
+            uma ferramenta, e o teu perfil não declara nenhuma. Não é uma pergunta de despiste: um
+            computador ou uma caixa de ferramentas mudam mesmo o que é possível.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {bloqueios.slice(0, 3).map((bloqueio) => (
+              <li
+                key={bloqueio.ativos.join("+")}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-900"
+              >
+                <span className="min-w-0 flex-1 text-[12px] leading-snug text-stone-600 dark:text-stone-300">
+                  <strong className="font-semibold text-stone-700 dark:text-stone-200">
+                    {listar(bloqueio.rotulos)}
+                  </strong>{" "}
+                  {bloqueio.rotulos.length === 1 ? "destranca" : "destrancam"}{" "}
+                  {bloqueio.capacidades.join(", ").toLocaleLowerCase("pt-PT")} —{" "}
+                  <strong className="font-semibold text-brand-dark dark:text-brand-mint">
+                    {bloqueio.hipotesesQueAbriria}{" "}
+                    {bloqueio.hipotesesQueAbriria === 1 ? "hipótese" : "hipóteses"}
+                  </strong>
+                  .
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onDeclararMeios(bloqueio.ativos)}
+                  className="inline-flex min-h-[38px] flex-none items-center gap-1.5 rounded-full bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  {bloqueio.ativos.length === 1 ? "Tenho isto" : "Tenho estes"} <ArrowRight size={13} />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2.5 text-[11px] leading-snug text-stone-500">
+            O número ao lado de cada meio é contado a correr o motor com ele — é o que vais ver,
+            não uma estimativa.
+          </p>
+        </>
+      ) : diagnostico?.tipo === "competencia-de-apoio" ? (
+        <>
+          <h3 className="font-display text-base font-semibold text-ink">
+            {listar(diagnostico.competencias)} reforça, mas não sustenta sozinha
+          </h3>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-stone-500">
+            No grafo do motor, isto aparece sempre como competência que <em>ajuda</em> noutra coisa —
+            nunca como a competência de que um negócio precisa para existir. Falar línguas melhora
+            um serviço a turistas; não é, por si, o serviço. Acrescenta o que farias por dinheiro
+            amanhã e isto passa a pesar a favor.
+          </p>
+          <button
+            type="button"
+            onClick={onVoltar}
+            className="mt-3 inline-flex min-h-[42px] items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            Acrescentar o que sabes fazer <ArrowRight size={14} />
+          </button>
+        </>
+      ) : diagnostico?.tipo === "restricoes" ? (
+        <>
+          <h3 className="font-display text-base font-semibold text-ink">
+            As tuas recusas eliminaram tudo o que havia
+          </h3>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-stone-500">
+            O motor compôs hipóteses e as recusas que declaraste apagaram{" "}
+            {diagnostico.quantas === 1 ? "a única" : `as ${diagnostico.quantas}`}. Isso é o que as
+            recusas fazem — eliminam em vez de ordenar. Vê o que caiu e porquê antes de mexer nelas.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={onVerDescartadas}
+              className="inline-flex min-h-[42px] items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Ver o que foi descartado <ArrowRight size={14} />
+            </button>
+            <button
+              type="button"
+              onClick={onVoltar}
+              className="inline-flex min-h-[42px] items-center gap-1.5 rounded-full border border-stone-200 px-4 text-[13px] font-semibold text-stone-600 hover:border-brand/60 hover:text-brand-dark dark:border-stone-700 dark:text-stone-300"
+            >
+              Rever as recusas
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <h3 className="font-display text-base font-semibold text-ink">
+            Não compusemos nada com este contexto
+          </h3>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-stone-500">
+            E preferimos dizê-lo a devolver uma lista genérica. O grafo do motor não chegou a
+            nenhum problema a partir do que declaraste — acrescenta uma competência, um meio ou
+            alarga a zona{descartadas > 0 ? ", ou vê o que foi descartado" : ""}.
+          </p>
+          <button
+            type="button"
+            onClick={onVoltar}
+            className="mt-3 inline-flex min-h-[42px] items-center gap-2 rounded-full bg-brand px-5 text-[13px] font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+          >
+            Ajustar o contexto <ArrowRight size={14} />
+          </button>
+        </>
+      )}
+    </div>
   );
 }
