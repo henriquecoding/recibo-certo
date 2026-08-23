@@ -43,16 +43,18 @@
 //  o mesmo critério do `ChromeMobile` e do `BotaoTopo`.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Logo, ArrowRight } from "@/components/ui/Icons";
-import ThemeToggle from "@/components/ui/ThemeToggle";
+import { Logo, ArrowRight, Menu as MenuIcon } from "@/components/ui/Icons";
+import MenuCompleto from "@/components/navegacao/MenuCompleto";
 import { useAuth } from "@/lib/supabase/auth";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
 
 export default function ChromeMobileTopo() {
   const pathname = usePathname();
   const { user, disponivel, abrirModal } = useAuth();
+  const [menuAberto, setMenuAberto] = useState(false);
 
   // O mesmo sinal que tira a barra e o dock do caminho durante uma pergunta.
   // Sem isto, o chrome de baixo desaparecia e este ficava — com «Começar» ao
@@ -84,7 +86,33 @@ export default function ChromeMobileTopo() {
         </Link>
 
         <div className="flex flex-shrink-0 items-center gap-1.5">
-          <ThemeToggle />
+          {/* ┌───────────────────────────────────────────────────────────┐
+              │ O TEMA SAI DAQUI E O «MENU» ENTRA — E É UMA TROCA, NÃO    │
+              │ UMA PERDA                                                 │
+              │                                                           │
+              │ A 360 px esta linha tem 328 px úteis, e a marca mais a    │
+              │ acção já ocupam ~300. Não cabem os dois: medido, o tema   │
+              │ (36 px) mais o menu (36 px) mais os intervalos punham a   │
+              │ linha em ~350 px, ou seja, scroll horizontal em TODAS as  │
+              │ páginas — que é inegociável neste projeto.                 │
+              │                                                           │
+              │ Entra o menu porque é agora o único caminho para os       │
+              │ guias, o quiz, os planos, os contabilistas e a conta: a   │
+              │ barra de baixo passou a ser os cinco pilares. O tema      │
+              │ passa para o CABEÇALHO da folha — visível no instante em  │
+              │ que ela abre, sem rolar nada. Um toque a mais, zero       │
+              │ procura.                                                  │
+              └───────────────────────────────────────────────────────────┘ */}
+          <button
+            type="button"
+            aria-haspopup="dialog"
+            aria-expanded={menuAberto}
+            onClick={() => setMenuAberto(true)}
+            className="focus-marca flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-800 dark:border-stone-700 dark:hover:border-stone-600 dark:hover:text-stone-200"
+          >
+            <MenuIcon size={18} />
+            <span className="sr-only">Menu</span>
+          </button>
 
           {/* A mesma acção do cabeçalho de secretária, com a mesma regra:
               quem tem sessão vai para o painel; quem não tem começa. O
@@ -118,6 +146,10 @@ export default function ChromeMobileTopo() {
           )}
         </div>
       </div>
+
+      {/* A MESMA folha que a cápsula do computador abre — um componente,
+          duas geometrias. Ver o quadro em `MenuCompleto.tsx`. */}
+      <MenuCompleto aberto={menuAberto} aoFechar={() => setMenuAberto(false)} superficie="movel" />
     </div>
   );
 }

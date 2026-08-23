@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { NAV_PRINCIPAL } from "@/components/nav-config";
+import { MENU_GRUPOS, PILARES } from "@/lib/navegacao";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O CHROME DO TELEMÓVEL — o contrato das três superfícies
@@ -10,9 +10,9 @@ import { NAV_PRINCIPAL } from "@/components/nav-config";
 //  Abaixo de `lg` o cabeçalho não existe: o que existe são três peças que
 //  têm de continuar a encaixar umas nas outras.
 //
-//      ChromeMobileTopo   marca · tema · acção (em fluxo, no topo)
+//      ChromeMobileTopo   marca · menu · acção (em fluxo, no topo)
 //      busca/DockMovel    a pesquisa (fixa, acima da barra)
-//      ChromeMobile       os cinco destinos (fixa, no fundo)
+//      ChromeMobile       os cinco pilares (fixa, no fundo)
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ PORQUE ISTO SE VERIFICA LENDO A FONTE                                │
@@ -50,55 +50,88 @@ const CSS = ler("app", "globals.css");
 const LAYOUT = ler("app", "layout.tsx");
 
 describe("chrome-movel:barra", () => {
-  /** Os cinco `id` dos lugares, pela ordem em que aparecem na fonte. */
-  const slots = [...CHROME.matchAll(/\{\s*tipo:\s*"(?:link|acao)",\s*id:\s*"([a-z]+)"/g)].map((m) => m[1]);
+  it("os lugares DERIVAM da fonte única — não são uma segunda lista", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ ESTE É O TESTE QUE ANTES NÃO EXISTIA, E ERA O DEFEITO           │
+    // │                                                               │
+    // │ A barra tinha «Início · Guias · Quiz · Contabilistas · Conta»  │
+    // │ escrito à mão aqui, e a de secretária tinha «Simular · Guias · │
+    // │ Quiz · Planos · Contabilistas» escrito à mão noutro ficheiro.  │
+    // │ Divergiam em DOIS dos cinco lugares e nada dava erro: davam    │
+    // │ apenas duas respostas diferentes a «onde posso ir?», conforme  │
+    // │ o ecrã.                                                        │
+    // │                                                               │
+    // │ Agora a lista está num sítio só (`lib/navegacao.ts`) e as duas │
+    // │ superfícies leem-na. Verificar a DERIVAÇÃO — e não os rótulos  │
+    // │ — é o que impede alguém de repor a lista à mão «só desta vez». │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(CHROME).toContain('from "@/lib/navegacao"');
+    expect(CHROME).toContain("PILARES.map(");
+    // Nenhum destino escrito à mão nesta barra.
+    expect(semComentarios(CHROME).match(/href:\s*"\//g) ?? []).toHaveLength(0);
+  });
 
-  it("são exactamente cinco lugares, nesta ordem", () => {
-    // Seis lugares põem os alvos abaixo do mínimo de toque em 360 px e os
-    // rótulos deixam de caber; quatro desperdiçam a linha. E a ORDEM é o
-    // contrato: quem aprendeu onde está «Guias» acerta-lhe sem olhar, e
-    // trocar as posições desfaz isso sem aviso nenhum.
-    expect(slots).toEqual(["inicio", "guias", "quiz", "contabilistas", "conta"]);
+  it("são exactamente cinco lugares, e a ordem é a da fonte", () => {
+    // Seis lugares põem os rótulos abaixo do que cabe em 360 px; quatro
+    // desperdiçam a linha. E a ORDEM é o contrato: quem aprendeu onde está
+    // «Recibos» acerta-lhe sem olhar, e trocar as posições desfaz isso sem
+    // aviso nenhum. Por isso o número vive na fonte e não aqui.
+    expect(PILARES).toHaveLength(5);
+    expect(PILARES.map((p) => p.id)).toEqual(["descobrir", "preco", "recibos", "salario", "empresa"]);
   });
 
   it("«Pesquisar» não é um dos lugares — a pesquisa é o dock", () => {
     // Repô-la aqui seria repor o erro de nível que a mudança corrigiu: a
-    // pesquisa não é um destino ao lado de «Guias», é como se chega a todos.
-    expect(slots).not.toContain("pesquisar");
+    // pesquisa não é um destino ao lado dos pilares, é como se chega a todos.
+    expect(PILARES.map((p) => p.id)).not.toContain("pesquisar");
     expect(CHROME).not.toContain("EVENTO_BUSCA_ABRIR");
+    expect(CHROME).toContain("<DockMovel />");
   });
 
-  it("o destino de «Contabilistas» é o mesmo da barra de secretária", () => {
-    // Duas barras a apontar para rotas diferentes com o mesmo nome é o
-    // defeito que só se descobre quando uma das duas deixa de acender.
-    const doDesktop = NAV_PRINCIPAL.find((i) => i.label === "Contabilistas");
-    expect(doDesktop?.href).toBe("/contabilistas");
-    expect(CHROME).toContain('href: "/contabilistas"');
+  it("cada lugar tem ícone E texto — nunca só o pictograma", () => {
+    // Cinco ícones sem rótulo são cinco adivinhas, num sítio onde a pessoa
+    // tem de acertar à primeira com o polegar.
+    expect(CHROME).toContain("iconeDe(slot.icone)");
+    expect(CHROME).toContain("{slot.label}");
   });
 
-  it("«Contabilistas» aparece UMA vez no chrome — a barra, não a folha", () => {
-    // Estava dentro da secção «Mais» da folha de «Conta». Mantê-lo nos dois
-    // sítios daria dois caminhos para o mesmo destino na mesma superfície.
-    // Contam-se DESTINOS (`href`), não menções: os quadros de comentário
-    // falam da rota e não são caminhos que alguém possa carregar.
-    expect(CHROME.match(/href[:=]\s*"\/contabilistas"/g) ?? []).toHaveLength(1);
+  it("o nome acessível é o COMPLETO, mesmo onde se vê o curto", () => {
+    // O que um leitor de ecrã anuncia não pode depender da largura do ecrã:
+    // «Recibos» na barra, «Recibos verdes» para quem ouve.
+    expect(CHROME).toContain("aria-label={slot.nomeCompleto}");
+    expect(CHROME).toContain("nomeCompleto: p.label");
+    expect(CHROME).toContain("label: p.curto");
   });
 
-  it("o rótulo activo compara a rota exacta ou um segmento abaixo", () => {
-    // Com um `startsWith` cru, `/contabilista` (o painel, no singular) e
-    // `/contabilistas` (o directório) partilham o começo — e bastava uma
-    // rota nova cair dentro do nome de outra para acender o lugar errado.
+  it("a folha de navegação já NÃO vive nesta barra", () => {
+    // «Conta» era o quinto lugar e abria uma folha com tudo o resto. Os
+    // cinco lugares passaram a ser cinco destinos de trabalho, e a folha
+    // subiu para o `ChromeMobileTopo` — que é a MESMA que a cápsula do
+    // computador abre. Deixá-la aqui também daria duas folhas iguais.
+    // `semComentarios` porque o quadro no topo do ficheiro CITA o nome da
+    // folha para explicar para onde ela foi — e apagar a explicação seria
+    // exactamente a saída errada. Ver a nota no topo deste ficheiro.
+    expect(semComentarios(CHROME)).not.toContain("SuperficieModal");
+    expect(semComentarios(CHROME)).not.toContain("MenuCompleto");
+    expect(TOPO).toContain("<MenuCompleto");
+  });
+
+  it("o lugar activo compara a rota exacta ou um segmento abaixo", () => {
+    // Com um `startsWith` cru, bastava uma rota nova cair dentro do nome de
+    // outra para acender o lugar errado. É a mesma regra que a cápsula de
+    // secretária aplica em `destinoAtivo`.
     expect(CHROME).toContain("pathname.startsWith(`${href}/`)");
+    expect(CHROME).toContain('aria-current={on ? "page" : undefined}');
   });
 
   it("carregar no separador onde já se está leva ao princípio da página", () => {
     // Uma `<Link>` para a rota actual não faz nada — o Next não navega e por
-    // isso também não repõe o scroll. Quem estava no fim do quiz e carregava
-    // em «Quiz» ficava no fim, sem sinal nenhum de que tinha tocado.
+    // isso também não repõe o scroll. Quem estava no fim da página e
+    // carregava no separador aceso ficava no fim, sem sinal nenhum de que
+    // tinha tocado.
     expect(CHROME).toContain("const naRotaExacta = pathname === slot.href");
     expect(CHROME).toContain("window.scrollTo({ top: 0");
-    // A rota EXACTA, e não o prefixo que acende o separador: em
-    // `/contabilistas/joao` o toque tem de continuar a levar ao directório.
+    // A rota EXACTA, e não o prefixo que acende o separador.
     expect(CHROME).not.toContain("naRotaExacta = on");
     // E o `behavior` explícito passa à frente do `prefers-reduced-motion` do
     // CSS, portanto a decisão tem de ser tomada aqui também.
@@ -107,35 +140,66 @@ describe("chrome-movel:barra", () => {
 
   it("nenhum lugar impede a barra de encolher abaixo do conteúdo", () => {
     // `min-w-0` com `flex-1` é o que reparte os cinco lugares em partes
-    // iguais seja qual for o rótulo. Sem ele, «Contabilistas» — uma palavra
-    // sem espaços, logo indivisível — decidia a largura dos cinco e a barra
-    // ficava mais larga do que o ecrã: overflow horizontal, que é
-    // inegociável neste projecto.
+    // iguais seja qual for o rótulo. Sem ele, um rótulo sem espaços — logo
+    // indivisível — decidia a largura dos cinco e a barra ficava mais larga
+    // do que o ecrã: overflow horizontal, que é inegociável neste projecto.
     expect(CHROME).toContain("min-w-0 flex-1");
     expect(CHROME).not.toContain("min-w-[3.25rem]");
   });
 });
 
-describe("chrome-movel:folha-de-conta", () => {
-  /** As secções da folha, pela ordem em que são renderizadas. */
-  const seccoes = [...CHROME.matchAll(/<SeccaoMenu titulo="([^"]+)"/g)].map((m) => m[1]);
+describe("chrome-movel:folha-de-navegacao", () => {
+  const MENU = ler("components", "navegacao", "MenuCompleto.tsx");
+  const NAV = ler("components", "Nav.tsx");
 
-  it("«Conta e apoio» vem primeiro, antes das ferramentas e dos guias", () => {
-    // Estavam no fim, numa secção chamada «Mais», depois de nove ferramentas
-    // e quatro páginas — dois ecrãs de rolagem numa folha de 88 dvh. São as
-    // duas coisas que respondem a «e eu, aqui?»: o que estou a pagar e como
-    // falo com alguém. Pertencem ao lado de «Entrar» e «Começar grátis».
-    expect(seccoes).toEqual(["Conta e apoio", "Ferramentas", "Aprender"]);
-    expect(CHROME).not.toContain('titulo="Mais"');
+  it("é UM componente para os dois ecrãs, e não dois com o mesmo conteúdo", () => {
+    // A pesquisa já teve duas superfícies com o mesmo nome e duas
+    // identidades a divergir; custou uma reescrita. A folha nasce ao
+    // contrário: o mesmo componente, montado pelo cabeçalho de secretária e
+    // pelo topo do telemóvel. O que muda é geometria.
+    expect(NAV).toContain("<MenuCompleto");
+    expect(TOPO).toContain("<MenuCompleto");
+    expect(MENU).toContain('superficie: "secretaria" | "movel"');
   });
 
-  it("«Planos» e o feedback vivem nessa primeira secção", () => {
-    const primeira = CHROME.slice(
-      CHROME.indexOf('<SeccaoMenu titulo="Conta e apoio">'),
-      CHROME.indexOf('<SeccaoMenu titulo="Ferramentas">'),
-    );
-    expect(primeira).toContain("PLANOS");
-    expect(primeira).toContain("abrirFeedback");
+  it("os destinos vêm da fonte única — nenhum está escrito na folha", () => {
+    expect(MENU).toContain("MENU_GRUPOS.map(");
+    // O que não pode estar escrito à mão são os DESTINOS. As rotas literais
+    // que sobram na folha são de outra natureza — a marca (`/`) e o painel
+    // (`/dashboard`), que é uma acção de conta e não uma entrada de
+    // navegação. Se um dia uma delas passar a ser destino, esta asserção
+    // apanha a duplicação: o mesmo sítio alcançável por dois caminhos na
+    // mesma superfície é o defeito, não a conveniência.
+    const destinos = new Set(MENU_GRUPOS.flatMap((g) => g.entradas).map((e) => e.href));
+    const literais = (semComentarios(MENU).match(/href="(\/[^"]*)"/g) ?? [])
+      .map((m) => m.slice(6, -1))
+      .filter((href) => destinos.has(href));
+    expect(literais, `destinos escritos à mão na folha: ${literais.join(", ")}`).toHaveLength(0);
+  });
+
+  it("é folha inferior no telemóvel e o corpo é que rola", () => {
+    // Regra 5b do CLAUDE.md: modal = folha inferior, corpo `min-h-0
+    // overflow-y-auto` dentro de `max-h-[90dvh]`, e área segura respeitada.
+    expect(MENU).toContain("max-h-[90dvh]");
+    expect(MENU).toContain("min-h-0 flex-1 overflow-y-auto");
+    expect(MENU).toContain("env(safe-area-inset-bottom)");
+    expect(MENU).toContain("rounded-t-4xl");
+  });
+
+  it("pede a vaga do coordenador uma vez, dentro da própria folha", () => {
+    // É `aria-modal`, logo não pode coexistir com o consentimento, com a
+    // pesquisa nem com o modal de conta. Pedir a vaga dentro do componente
+    // — e não em cada um dos dois gatilhos — é o que garante que a regra é
+    // a mesma nas duas superfícies sem ninguém ter de se lembrar dela.
+    expect(MENU).toContain('useOverlay("menu"');
+    expect(NAV).not.toContain('useOverlay("menu"');
+    expect(TOPO).not.toContain('useOverlay("menu"');
+  });
+
+  it("a conta vem primeiro, antes dos destinos", () => {
+    // É a pergunta «e eu, aqui?»: o que estou a pagar e como entro.
+    // Estavam no fim de dois ecrãs de rolagem, numa secção chamada «Mais».
+    expect(MENU.indexOf("Começar grátis")).toBeLessThan(MENU.indexOf("MENU_GRUPOS.map("));
   });
 });
 
@@ -300,10 +364,34 @@ describe("chrome-movel:topo", () => {
     expect(CHROME).not.toContain('"quiz-playing"');
   });
 
-  it("não repete a entrada de conta, que é um dos cinco lugares", () => {
-    // No computador há `MenuConta` porque não há barra em baixo. Aqui há —
-    // e «Conta» é o quinto lugar. Repeti-lo em cima daria duas entradas
-    // para o mesmo sítio no mesmo ecrã.
+  it("não repete a entrada de conta — a folha é que a tem", () => {
+    // No computador há `MenuConta` ao lado da cápsula. Aqui a conta vive
+    // dentro da folha que o botão «Menu» abre. Montar também o `MenuConta`
+    // daria duas entradas para o mesmo sítio no mesmo ecrã.
     expect(TOPO).not.toContain("MenuConta");
+    expect(TOPO).toContain('aria-haspopup="dialog"');
+  });
+
+  it("o tema saiu daqui e passou para o cabeçalho da folha", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ E FOI MEDIDO, NÃO ARBITRADO                                    │
+    // │                                                               │
+    // │ A 360 px esta linha tem 328 px úteis, e a marca (~149) mais a  │
+    // │ acção (~109) mais os intervalos já ocupam ~300. O tema (36 px) │
+    // │ e o botão do menu (36 px) não cabem os dois — a soma dava      │
+    // │ ~350 px, ou seja, scroll horizontal em TODAS as páginas, que é │
+    // │ inegociável neste projecto.                                    │
+    // │                                                               │
+    // │ Entra o menu, porque passou a ser o único caminho para os      │
+    // │ guias, o quiz, os planos, os contabilistas e a conta. O tema   │
+    // │ vai para o CABEÇALHO da folha — visível no instante em que ela │
+    // │ abre, sem rolar nada. Um toque a mais, zero procura. Pô-lo no  │
+    // │ FIM da folha seria a troca má, e é a que este teste impede.    │
+    // └───────────────────────────────────────────────────────────────┘
+    const MENU = ler("components", "navegacao", "MenuCompleto.tsx");
+    expect(TOPO).not.toContain("ThemeToggle");
+    expect(MENU).toContain("<ThemeToggle />");
+    // No CABEÇALHO da folha: antes do corpo que rola.
+    expect(MENU.indexOf("<ThemeToggle />")).toBeLessThan(MENU.indexOf("min-h-0 flex-1 overflow-y-auto"));
   });
 });

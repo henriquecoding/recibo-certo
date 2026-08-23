@@ -143,11 +143,13 @@ const abrirPainel = async (page) => {
   await page.waitForTimeout(700);
   await abrirPainel(page);
 
-  const abas = page.locator('nav[data-compacto] a[href="/guias"]').first();
-  reg("com a pesquisa aberta e a página rolada, as abas continuam visíveis", await abas.isVisible());
+  // Um PILAR e já não «Guias»: a barra passou a ser os cinco pilares e os
+  // guias vivem na folha do menu (ver `lib/navegacao.ts`).
+  const abas = page.locator('header[data-compacto] a[href="/ferramentas/recibos-verdes"]').first();
+  reg("com a pesquisa aberta e a página rolada, os pilares continuam visíveis", await abas.isVisible());
 
   const sobreposto = await page.evaluate(() => {
-    const aba = document.querySelector('nav[data-compacto] a[href="/guias"]');
+    const aba = document.querySelector('header[data-compacto] a[href="/ferramentas/recibos-verdes"]');
     const painel = document.querySelector('[data-busca-painel="aberto"]');
     if (!aba || !painel) return null;
     const a = aba.getBoundingClientRect();
@@ -242,9 +244,9 @@ const abrirPainel = async (page) => {
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
-  await page.locator('nav[data-compacto] a[href="/guias"]').first().click();
+  await page.locator('header[data-compacto] a[href="/ferramentas/recibos-verdes"]').first().click();
   await page.waitForTimeout(1800);
-  reg("clicar na navegação com o painel aberto navega", page.url().includes("/guias"));
+  reg("clicar na navegação com o painel aberto navega", page.url().includes("/ferramentas/recibos-verdes"));
 
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
@@ -282,13 +284,29 @@ const abrirPainel = async (page) => {
 
   await page.locator('[data-busca-gatilho="movel"]').click();
   await page.waitForTimeout(1200);
-  reg("um só diálogo modal", (await page.locator('[aria-modal="true"]').count()) === 1);
+  /* ┌───────────────────────────────────────────────────────────────────┐
+     │ ESTAS DUAS ASSERÇÕES ESTAVAM A MEDIR UMA SUPERFÍCIE QUE JÁ NÃO     │
+     │ EXISTE — e estavam vermelhas desde `66331f0`                       │
+     │                                                                   │
+     │ Nessa altura a pesquisa do telemóvel deixou de ser um             │
+     │ `SuperficieModal` (véu, foco preso, scroll bloqueado) e passou a   │
+     │ ser o MESMO painel ancorado do computador. Um painel ancorado é    │
+     │ uma REGIÃO, não um diálogo: a página continua legível e clicável   │
+     │ por trás, portanto declarar `aria-modal="true"` seria mentir ao    │
+     │ leitor de ecrã, e pôr o fundo `inert` seria cumprir uma promessa   │
+     │ que ninguém fez. Está explicado em `PainelPesquisa.tsx` e pinado   │
+     │ em `chrome-movel.test.ts`.                                         │
+     │                                                                   │
+     │ O script ficou para trás — foi tocado pela última vez em `8534e4b` │
+     │ que é o commit IMEDIATAMENTE ANTERIOR. Passa a medir o contrato    │
+     │ que a superfície tem hoje, e não o que ela tinha antes.            │
+     └───────────────────────────────────────────────────────────────────┘ */
+  reg("é uma região de pesquisa e NÃO um diálogo", (await page.locator('[aria-modal="true"]').count()) === 0);
+  reg("com o papel de pesquisa declarado", (await page.locator('[role="search"]').count()) >= 1);
   reg("o foco vai ao campo", (await page.evaluate(() => document.activeElement?.id)) === "rc-busca-movel");
   reg(
-    "o fundo fica inert",
-    await page.evaluate(() =>
-      [...document.body.children].filter((n) => !n.hasAttribute("data-overlay-modal")).every((n) => n.hasAttribute("inert")),
-    ),
+    "o fundo NÃO fica inert — a página continua a existir por trás",
+    await page.evaluate(() => ![...document.body.children].some((n) => n.hasAttribute("inert"))),
   );
 
   await page.locator("#rc-busca-movel").fill("iva");
@@ -302,10 +320,7 @@ const abrirPainel = async (page) => {
     "o foco volta ao botão Pesquisar",
     (await page.evaluate(() => document.activeElement?.getAttribute("data-busca-gatilho"))) === "movel",
   );
-  reg(
-    "o inert é levantado",
-    await page.evaluate(() => ![...document.body.children].some((n) => n.hasAttribute("inert"))),
-  );
+  reg("e o painel fecha", (await page.locator('[data-busca-painel="aberto"]').count()) === 0);
   await ctx.close();
 }
 
@@ -475,7 +490,7 @@ for (const tema of [null, "dark"]) {
 
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForTimeout(1500);
-  await analisar("cabeçalho", ["nav[data-compacto]"]);
+  await analisar("cabeçalho", ["header[data-compacto]"]);
 
   await abrirPainel(page);
   await page.locator("#rc-header-busca").fill("iva");

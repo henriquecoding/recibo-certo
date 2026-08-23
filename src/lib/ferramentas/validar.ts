@@ -180,6 +180,44 @@ export function validarCatalogoFerramentas(
     erros.push("A grelha da homepage tem de ter a mesma contagem em todos os perfis — senão a secção salta de altura na troca.");
   }
 
+  // ── A superfície «homepage» tem de dizer a verdade, nos dois sentidos ─
+  //
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ ERA UMA ETIQUETA DECORATIVA, E DUAS FERRAMENTAS PAGARAM POR ISSO   │
+  // │                                                                   │
+  // │ `surfaces` é lido pelo hub, pela pesquisa e pelo sitemap. A        │
+  // │ entrada «homepage» não era lida por NADA: quem decide o que a      │
+  // │ homepage mostra é a curadoria em `homepage.ts`, e as duas listas   │
+  // │ nunca foram confrontadas. O resultado foi que o motor de preço e   │
+  // │ o de descoberta de negócio declararam estar na homepage desde que  │
+  // │ nasceram e nunca lá estiveram — sem um erro, sem um aviso.         │
+  // │                                                                   │
+  // │ A verificação é nos DOIS sentidos de propósito. Só num deles, a    │
+  // │ etiqueta continuava a poder ficar para trás: uma ferramenta        │
+  // │ acrescentada à curadoria sem actualizar `surfaces` deixaria o      │
+  // │ catálogo a dizer que ela não está num sítio onde está.             │
+  // └───────────────────────────────────────────────────────────────────┘
+  const naCuradoria = new Set<string>([
+    ...Object.values(DESTAQUE_POR_PERFIL),
+    ...Object.values(ORDEM_POR_PERFIL).flat(),
+  ]);
+  for (const f of catalogo) {
+    const declara = f.surfaces.includes("homepage");
+    const esta = naCuradoria.has(f.id);
+    if (declara && !esta) {
+      erros.push(
+        `${f.id} declara \`surfaces: "homepage"\` e não está na curadoria da homepage ` +
+          "(`homepage.ts`). Ou entra na curadoria, ou tira a superfície.",
+      );
+    }
+    if (esta && !declara) {
+      erros.push(
+        `${f.id} está na curadoria da homepage e não declara \`surfaces: "homepage"\`. ` +
+          "O catálogo ficaria a negar um sítio onde a ferramenta aparece.",
+      );
+    }
+  }
+
   return erros;
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.109.0",
+  "version": "2.110.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -44,6 +44,7 @@
     "mercado:ingerir": "node --max-old-space-size=2048 scripts/ingerir-mercado.mjs",
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
+    "navegacao:e2e": "node scripts/verificar-navegacao.mjs",
     "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
     "novidades:gen": "node scripts/gen-novidades.mjs",

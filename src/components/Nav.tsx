@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { m } from "motion/react";
 import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
 import { Logo, ArrowRight } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
-import { NAV_PRINCIPAL, navAtivo } from "@/components/nav-config";
-import { medirNavegacao } from "@/lib/busca/medicao";
+import CapsulaNav from "@/components/navegacao/CapsulaNav";
+import MenuCompleto from "@/components/navegacao/MenuCompleto";
 import { useBuscaAberta } from "@/components/busca/motor";
 
 /**
@@ -44,6 +43,7 @@ import { useBuscaAberta } from "@/components/busca/motor";
 export default function Nav() {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
+  const [menuAberto, setMenuAberto] = useState(false);
   const buscaAberta = useBuscaAberta();
 
   /**
@@ -56,8 +56,8 @@ export default function Nav() {
    * │                                                                     │
    * │ A razão é que a navegação VIVE na linha que desaparece ao compactar  │
    * │ (`group-data-[compacto=true]:hidden`). Com o cabeçalho compacto e o  │
-   * │ painel aberto, o resultado era: as abas Simular/Guias/Quiz/Planos    │
-   * │ sumiam, e o painel — que tem 44 rem, muito mais largo do que a barra │
+   * │ painel aberto, o resultado era: os pilares sumiam da cápsula, e o    │
+   * │ painel — que tem 44 rem, muito mais largo do que a barra             │
    * │ encolhida — ficava por cima da faixa onde elas deviam estar. Quem    │
    * │ abria a pesquisa perdia a navegação do site enquanto pesquisava.     │
    * │                                                                     │
@@ -71,7 +71,15 @@ export default function Nav() {
    * │ conteúdo tapado contra a navegação inteira inacessível.              │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  const compacto = rolado && !buscaAberta;
+  /**
+   * O MENU entra nesta conta pela mesma razão que a pesquisa, e por uma a
+   * mais: o botão que o abre VIVE na linha que desaparece ao compactar.
+   * Com o cabeçalho encolhido, abrir o menu desmontava o próprio gatilho —
+   * e a `SuperficieModal` devolve o foco ao elemento que estava activo à
+   * abertura. Fechar deixava o foco no `<body>`, ou seja, quem navega por
+   * teclado recomeçava a tabulação no topo do documento.
+   */
+  const compacto = rolado && !buscaAberta && !menuAberto;
 
   /**
    * O FUNDO não segue a densidade — segue o scroll, e só ele.
@@ -85,7 +93,6 @@ export default function Nav() {
   const opaco = rolado;
 
   const [avatarUrl, setAvatarUrl] = useState("");
-  const pathname = usePathname();
   const sentinela = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,9 +134,6 @@ export default function Nav() {
     return () => observador.disconnect();
   }, []);
 
-  // Um só item aceso, decidido de uma vez — ver o quadro em `nav-config.tsx`.
-  const aceso = navAtivo(pathname);
-
   return (
     <>
       {/* Espaçador em fluxo — só no desktop. No telemóvel o cabeçalho vive em
@@ -139,9 +143,12 @@ export default function Nav() {
         <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
       </div>
 
-      <nav
+      {/* `<header>` e já não `<nav>`: o marco de navegação passou a ser a
+          cápsula, que é quem tem os destinos. Dois `<nav aria-label="Principal">`
+          aninhados no mesmo documento dariam dois marcos com o mesmo nome a um
+          leitor de ecrã — e o de fora não tem destino nenhum, só geometria. */}
+      <header
         data-compacto={compacto}
-        aria-label="Principal"
         className={`group fixed inset-x-0 top-0 z-50 hidden border-b transition-[height,background-color,border-color,box-shadow] duration-300 lg:block ${
           compacto ? "h-[var(--rc-header-linha)]" : "h-[var(--rc-header-linha)] lg:h-[var(--rc-header-alto)]"
         } ${
@@ -171,7 +178,12 @@ export default function Nav() {
          * │ linha; nunca desliza para o lado.                                  │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(14rem,1fr)_minmax(0,26rem)_minmax(14rem,1fr)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-4 px-6 xl:max-w-6xl xl:grid-cols-[minmax(16rem,1fr)_minmax(0,26rem)_minmax(16rem,1fr)]">
+        {/* As colunas laterais deixaram de ter um mínimo em `rem` e passaram
+            a `auto`: com seis lugares, a cápsula é o elemento que decide a
+            largura da linha, e um mínimo de 14 rem de cada lado espremia-a a
+            1024 px até os rótulos partirem. `minmax(0,auto)` deixa a marca e
+            as acções ocuparem o que precisam — nem mais. */}
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-3 px-6 xl:max-w-6xl xl:gap-x-4">
           <Link
             href="/"
             aria-label="ReciboCerto — início"
@@ -180,36 +192,12 @@ export default function Nav() {
             <Logo />
           </Link>
 
-          {/* Recolhe ao rolar — ver o quadro em `nav-config.tsx`. */}
-          <ul className="col-start-2 row-start-1 flex items-center gap-0.5 justify-self-center group-data-[compacto=true]:hidden">
-            {NAV_PRINCIPAL.map((item) => {
-              const ativo = aceso?.href === item.href;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    // `page` e não `true`: o item aceso É a página onde se
-                    // está, e é isso que um leitor de ecrã tem de anunciar.
-                    aria-current={ativo ? "page" : undefined}
-                    onClick={() => medirNavegacao(item.href, "secretaria")}
-                    className={`focus-marca relative flex min-h-[40px] items-center whitespace-nowrap rounded-xl px-3 text-sm font-medium no-underline transition-colors ${
-                      ativo
-                        ? "text-stone-900 dark:text-stone-100"
-                        : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
-                    }`}
-                  >
-                    {item.label}
-                    {/* O traço marca a ROTA; o rato marca com fundo. Dois
-                        sinais de natureza diferente para não haver dois
-                        itens a parecerem activos ao mesmo tempo. */}
-                    {ativo && (
-                      <span aria-hidden className="absolute inset-x-3 -bottom-0.5 h-0.5 rounded-full bg-brand" />
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
+          {/* Recolhe ao rolar — a cápsula vive na linha que desaparece ao
+              compactar, e é por isso que abrir o menu ou a pesquisa devolve
+              o cabeçalho ao estado alto (ver o quadro em `compacto`). */}
+          <div className="col-start-2 row-start-1 flex min-w-0 justify-center justify-self-center group-data-[compacto=true]:hidden">
+            <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
+          </div>
 
           {/**
            * A barra: linha 2 a atravessar a grelha quando o cabeçalho está
@@ -250,7 +238,11 @@ export default function Nav() {
             </m.div>
           </div>
         </div>
-      </nav>
+      </header>
+
+      {/* A folha é a MESMA do telemóvel — um componente, duas geometrias.
+          Ver o quadro em `MenuCompleto.tsx`. */}
+      <MenuCompleto aberto={menuAberto} aoFechar={() => setMenuAberto(false)} superficie="secretaria" />
     </>
   );
 }

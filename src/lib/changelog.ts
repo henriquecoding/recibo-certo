@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.110.0",
+    data: "2026-08-23",
+    titulo: "A navegação passou a contar uma história, e passou a ser a mesma nos dois ecrãs",
+    itens: [
+      "Havia duas navegações e não concordavam uma com a outra. No computador a barra dizia «Simular · Guias · Quiz · Planos · Contabilistas»; no telemóvel dizia «Início · Guias · Quiz · Contabilistas · Conta». Duas listas, dois ficheiros, e nada que as obrigasse a bater certo — ou seja, duas respostas diferentes a «onde posso ir?», conforme o ecrã. Passa a haver uma lista só, e um teste que reprova a alteração quando uma das superfícies deixar de a refletir.",
+      "A barra deixou de perguntar «quem és» e passa a perguntar «em que ponto estás»: Descobrir · Preço · Recibos verdes · Salário · Empresa. É a ordem por que as coisas acontecem — que negócio testar, quanto cobrar, quanto fica de cada recibo, quanto fica do salário, e se compensa uma empresa. Cada um é uma página a sério, com endereço próprio, que se pode partilhar e abrir noutro separador.",
+      "Os dois motores que estavam enterrados entram por aí: o de formação de preço e o de descoberta de negócio. Estavam declarados como fazendo parte da página inicial desde que nasceram e nunca lá apareceram — a declaração não era lida por lado nenhum. Agora aparecem, na barra e na página inicial, e o build falha se a declaração e a realidade voltarem a divergir.",
+      "Guias, Quiz, Planos, Contabilistas e a conta passam para um «Menu» — a mesma folha no computador e no telemóvel, com a navegação toda em colunas. Nada se perdeu: continuam no rodapé e na pesquisa, que tem largura inteira e está a um clique.",
+      "A barra ganhou forma de cápsula, com o sítio onde estás numa bolha. O material é translúcido onde o browser o suporta, sólido onde não suporta, e volta a sólido para quem pediu menos transparência no sistema — por esta ordem, para o pior caso ser «sem efeito» e nunca «ilegível».",
+      "Correção que só se via a olhar: a folha do menu ficava meio ecrã à direita no computador, com a última coluna cortada. A animação de entrada estava a desfazer a centragem.",
+      "Correção na página inicial: em «Por conta de outrem» e «Abrir empresa» mostravam-se menos ferramentas do que nos outros dois perfis, e a secção saltava de altura ao trocar de perfil.",
+    ],
+  },
+  {
     version: "2.109.0",
     data: "2026-08-23",
     titulo: "Para onde o mercado andou, a incerteza desenhada, e a ficha em papel",

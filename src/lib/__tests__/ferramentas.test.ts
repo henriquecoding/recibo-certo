@@ -148,7 +148,7 @@ describe("catálogo de ferramentas: superfícies derivadas", () => {
 
   it("a contagem apresentada deriva do catálogo e exclui guias e quiz", () => {
     expect(TOTAL_FERRAMENTAS).toBe(FERRAMENTAS_ATIVAS.length);
-    const nav = lerFonte("src/components/nav-config.tsx");
+    const nav = lerFonte("src/lib/navegacao.ts");
     expect(nav, "a contagem da navegação não pode ser um número escrito à mão")
       .toContain("TOTAL_FERRAMENTAS");
     // Nenhuma ferramenta do catálogo pode ser um guia ou o quiz.

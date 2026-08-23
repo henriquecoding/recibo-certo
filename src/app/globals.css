@@ -154,6 +154,108 @@
 }
 
 /* ════════════════════════════════════════════════════════════════════
+   A FOLHA DO MENU, CENTRADA NO COMPUTADOR
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ `-translate-x-1/2` NÃO SOBREVIVE A UMA ANIMAÇÃO DE ENTRADA        │
+   │                                                                  │
+   │ A folha entra com `motion` a escrever `transform: translateY(…)`. │
+   │ Uma classe de centragem que também escreve em `transform` é       │
+   │ simplesmente substituída — e o resultado não é um erro: é uma     │
+   │ folha meio ecrã à direita, com a última coluna cortada. Foi       │
+   │ exactamente o que aconteceu, e só se vê olhando.                   │
+   │                                                                  │
+   │ É o mesmo problema que o painel da pesquisa já tinha resolvido    │
+   │ (ver `.rc-dock-painel` mais abaixo) e a cura é a mesma: centrar   │
+   │ por POSIÇÃO, `left: calc(50% - largura/2)`, que não compõe com    │
+   │ transformação nenhuma. A largura entra duas vezes na conta, por   │
+   │ isso vive numa variável — escrita à mão nos dois sítios, bastava  │
+   │ afinar uma para a folha ficar descentrada por metade da           │
+   │ diferença, e em silêncio.                                         │
+   │                                                                  │
+   │ Abaixo de `lg` não há regra nenhuma aqui: a folha é inferior, de  │
+   │ margem a margem, e as classes de base do componente bastam.       │
+   └──────────────────────────────────────────────────────────────────┘
+   ════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .rc-menu-folha {
+    --rc-menu-w: min(64rem, calc(100vw - 4rem));
+
+    inset-inline: auto;
+    left: calc(50% - var(--rc-menu-w) / 2);
+    top: 5.5rem;
+    bottom: auto;
+    width: var(--rc-menu-w);
+    /* `dvh` e não `vh`: no browser a barra de endereço mente sobre a altura. */
+    max-height: min(34rem, calc(100dvh - 8rem));
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   A CÁPSULA DA NAVEGAÇÃO
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ O MATERIAL É VIDRO, E O SÓLIDO VEM PRIMEIRO                       │
+   │                                                                  │
+   │ A ordem não é estilística. `backdrop-filter` falha em silêncio    │
+   │ onde não é suportado — e o que fica, se a regra do vidro tiver    │
+   │ escrito o fundo, é uma cápsula translúcida com o texto da página  │
+   │ a ler-se por trás dos rótulos. Por isso: o fundo OPACO é a regra  │
+   │ base, o vidro só é promovido dentro do `@supports`, e             │
+   │ `prefers-reduced-transparency` volta a desligá-lo.                │
+   │                                                                  │
+   │ Três estados, três regras, e nenhum deles depende de o browser    │
+   │ fazer o que se espera.                                            │
+   └──────────────────────────────────────────────────────────────────┘
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ E É `sticky`, PORQUE SENÃO O VIDRO É UM DESENHO DE VIDRO          │
+   │                                                                  │
+   │ Um material translúcido só é material se passar conteúdo por      │
+   │ baixo dele. Numa cápsula que rola com a página, o desfoque        │
+   │ processa um fundo liso em todos os frames para não se ver nada —  │
+   │ custo sem efeito. Aqui a cápsula vive dentro do cabeçalho fixo,   │
+   │ que é o que garante essa condição.                                 │
+   └──────────────────────────────────────────────────────────────────┘
+   ════════════════════════════════════════════════════════════════════ */
+:root {
+  --rc-capsula-fundo: #ffffff;
+  --rc-capsula-borda: rgb(231 229 228 / 0.85);
+  --rc-capsula-brilho: rgb(255 255 255 / 0.85);
+}
+
+.dark {
+  --rc-capsula-fundo: #1c1917;
+  --rc-capsula-borda: #292524;
+  --rc-capsula-brilho: rgb(255 255 255 / 0.06);
+}
+
+.rc-capsula {
+  background: var(--rc-capsula-fundo);
+  border: 1px solid var(--rc-capsula-borda);
+  border-radius: 999px;
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .rc-capsula {
+    background: color-mix(in srgb, var(--rc-capsula-fundo) 66%, transparent);
+    -webkit-backdrop-filter: blur(14px) saturate(1.05);
+    backdrop-filter: blur(14px) saturate(1.05);
+    box-shadow: inset 0 1px 0 var(--rc-capsula-brilho);
+  }
+}
+
+/* A preferência do sistema ganha ao efeito — e tem de repor o fundo opaco,
+   não apenas apagar o desfoque: sem o fundo, o que sobra é a cor a 66%. */
+@media (prefers-reduced-transparency: reduce) {
+  .rc-capsula {
+    background: var(--rc-capsula-fundo);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
    O FOCO VISÍVEL DO CABEÇALHO E DA PESQUISA
 
    ┌──────────────────────────────────────────────────────────────────┐

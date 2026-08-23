@@ -219,8 +219,18 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
   // Fila de ferramentas: quando o destaque é a demo do IRS, a grelha inclui a
   // ferramenta-chave do perfil (e nunca duplica o próprio IRS).
   const ferramentasFila = (comDemo ? [destaque, ...restantes] : restantes)
-    .filter((f) => f.id !== "simulador-irs")
-    .slice(0, 4);
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ O FILTRO SÓ SE APLICA ONDE O DESTAQUE É A DEMO DO IRS            │
+    // │                                                                 │
+    // │ Era incondicional, e nos perfis SEM demo isso tirava o cartão do │
+    // │ simulador de IRS por nada: não havia nenhuma demo com que ele    │
+    // │ pudesse duplicar. «Dependente» e «Empresa» mostravam três        │
+    // │ ferramentas onde os outros dois mostravam quatro — e a secção    │
+    // │ saltava de altura na troca de perfil, que é exactamente o que a  │
+    // │ contagem constante em `homepage.ts` existe para impedir.          │
+    // └─────────────────────────────────────────────────────────────────┘
+    .filter((f) => !comDemo || f.id !== "simulador-irs")
+    .slice(0, 6);
 
   const guias = guiasPorPerfil(perfil).slice(0, 3);
 
