@@ -4,8 +4,8 @@
 // componentes grandes ficarem legíveis e para o estilo não divergir entre
 // a fase de configuração e a de resultados.
 
-import type { ComponentType, ReactNode } from "react";
-import { Check, ChevronDown, Plus } from "@/components/ui/Icons";
+import { useId, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { Check, ChevronDown, Close, Filter, Plus, Search } from "@/components/ui/Icons";
 
 export function Chip({ children, tom = "neutro" }: { children: ReactNode; tom?: "neutro" | "marca" | "aviso" | "risco" }) {
   const cor = {
@@ -316,5 +316,318 @@ export function Seccao({
         {children}
       </div>
     </section>
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════
+//  LISTA FILTRÁVEL — a mesma gramática de filtros do hub de ferramentas
+//  ---------------------------------------------------------------------
+//  Agrupar em categorias resolveu a leitura. Não resolveu a procura: com
+//  vinte e duas competências, catorze meios e quinze recusas, quem sabe o
+//  que quer continua a percorrer tudo com os olhos.
+//
+//  Isto é o mesmo sistema que o `/ferramentas` já tinha, e de propósito —
+//  duas gramáticas de filtro no mesmo site é uma a mais:
+//
+//   · pesquisa com limpar, que ignora acentos e procura também na
+//     descrição («bricolage» encontra «Instalações elétricas»);
+//   · filtro de estado — tudo · escolhidas · por escolher;
+//   · painel «Filtros» com as categorias, cada uma com a sua contagem, em
+//     escolha MÚLTIPLA (o hub é única; aqui somar duas famílias é o caso
+//     normal de quem sabe fazer duas coisas diferentes);
+//   · contador de filtros ativos no botão, contagem de resultados
+//     anunciada (`aria-live`) e «Limpar filtros»;
+//   · estado vazio que explica e oferece a saída.
+//
+//  ── O QUE NUNCA SE FILTRA PARA FORA ────────────────────────────────
+//  Uma escolha JÁ FEITA não desaparece por causa de um filtro. Filtrar é
+//  para procurar, não para desfazer: se a pessoa filtrasse por «técnica»
+//  e a competência que declarou noutra família saísse do ecrã, ficava com
+//  um perfil que já não consegue ver nem corrigir — e o contador do
+//  painel lateral a discordar do que está à vista. As escolhidas fora do
+//  filtro aparecem num grupo próprio, marcado como tal.
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface OpcaoFiltravel {
+  id: string;
+  rotulo: string;
+  nota: string;
+  /** A categoria a que pertence — família do grafo ou grupo do questionário. */
+  grupo: string;
+}
+
+/** Sem acentos e em minúsculas: quem escreve «eletrica» procura «elétrica». */
+export const semAcentos = (texto: string) =>
+  texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+const chipFiltro = (ativo: boolean) =>
+  `inline-flex min-h-[36px] items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
+    ativo
+      ? "border-brand bg-brand text-white"
+      : "border-stone-200 bg-white text-stone-600 hover:border-brand/60 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300"
+  }`;
+
+export function ListaFiltravel({
+  nome,
+  singular,
+  plural: pluralRotulo,
+  opcoes,
+  grupos,
+  escolhidas,
+  onAlternar,
+  descricoes = false,
+  intro,
+}: {
+  /** Identificador estável — dá os `id` dos controlos e o âmbito dos testes. */
+  nome: string;
+  singular: string;
+  plural: string;
+  opcoes: readonly OpcaoFiltravel[];
+  grupos: readonly { id: string; rotulo: string }[];
+  escolhidas: ReadonlySet<string>;
+  onAlternar: (id: string) => void;
+  /** Mostrar a descrição de cada opção (interruptor global do configurador). */
+  descricoes?: boolean;
+  intro?: ReactNode;
+}) {
+  const [procura, setProcura] = useState("");
+  const [estado, setEstado] = useState<"tudo" | "escolhidas" | "por-escolher">("tudo");
+  const [categorias, setCategorias] = useState<ReadonlySet<string>>(() => new Set<string>());
+  const [painelAberto, setPainelAberto] = useState(false);
+  const idBase = useId().replace(/:/g, "");
+
+  const consulta = semAcentos(procura.trim());
+  const nEscolhidas = useMemo(
+    () => opcoes.filter((item) => escolhidas.has(item.id)).length,
+    [opcoes, escolhidas],
+  );
+
+  const encontradas = useMemo(
+    () =>
+      opcoes.filter(
+        (item) =>
+          (consulta.length === 0 ||
+            semAcentos(item.rotulo).includes(consulta) ||
+            semAcentos(item.nota).includes(consulta)) &&
+          (estado === "tudo" ||
+            (estado === "escolhidas" ? escolhidas.has(item.id) : !escolhidas.has(item.id))) &&
+          (categorias.size === 0 || categorias.has(item.grupo)),
+      ),
+    [opcoes, consulta, estado, categorias, escolhidas],
+  );
+
+  // As escolhidas que o filtro deixou de fora — visíveis, e ditas como tal.
+  const escondidas = useMemo(
+    () => opcoes.filter((item) => escolhidas.has(item.id) && !encontradas.includes(item)),
+    [opcoes, escolhidas, encontradas],
+  );
+
+  const nFiltros = (consulta.length > 0 ? 1 : 0) + (estado !== "tudo" ? 1 : 0) + categorias.size;
+
+  const limpar = () => {
+    setProcura("");
+    setEstado("tudo");
+    setCategorias(new Set<string>());
+  };
+
+  const alternarCategoria = (id: string) =>
+    setCategorias((anterior) => {
+      const proximo = new Set(anterior);
+      if (proximo.has(id)) proximo.delete(id);
+      else proximo.add(id);
+      return proximo;
+    });
+
+  const desenharGrupo = (grupo: { id: string; rotulo: string }) => {
+    const desta = encontradas.filter((item) => item.grupo === grupo.id);
+    if (desta.length === 0) return null;
+    return (
+      <GrupoEscolhas
+        key={grupo.id}
+        rotulo={grupo.rotulo}
+        escolhidas={desta.filter((item) => escolhidas.has(item.id)).length}
+        detalhado={descricoes}
+      >
+        {desta.map((item) => (
+          <EscolhaChip
+            key={item.id}
+            ativo={escolhidas.has(item.id)}
+            onClick={() => onAlternar(item.id)}
+            rotulo={item.rotulo}
+            nota={descricoes ? item.nota : undefined}
+          />
+        ))}
+      </GrupoEscolhas>
+    );
+  };
+
+  return (
+    <div data-lista={nome}>
+      {intro}
+
+      {/* ── Pesquisa ─────────────────────────────────────────────── */}
+      <label htmlFor={`${idBase}-procura`} className="sr-only">
+        Procurar {pluralRotulo}
+      </label>
+      <div className="relative">
+        <Search
+          size={14}
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
+        />
+        <input
+          id={`${idBase}-procura`}
+          type="search"
+          value={procura}
+          onChange={(evento) => setProcura(evento.target.value)}
+          onKeyDown={(evento) => {
+            if (evento.key === "Escape" && procura) {
+              evento.preventDefault();
+              setProcura("");
+            }
+          }}
+          placeholder={`Procurar entre ${opcoes.length} ${pluralRotulo}…`}
+          aria-describedby={`${idBase}-contagem`}
+          className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-10 text-[12px] text-ink placeholder:text-stone-400 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+        />
+        {procura ? (
+          <button
+            type="button"
+            onClick={() => setProcura("")}
+            aria-label={`Limpar a procura em ${pluralRotulo}`}
+            className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-stone-800"
+          >
+            <Close size={14} />
+          </button>
+        ) : null}
+      </div>
+
+      {/* ── Estado + porta dos filtros por categoria ─────────────── */}
+      <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label={`Filtrar ${pluralRotulo}`}>
+        {(
+          [
+            ["tudo", "Tudo"],
+            ["escolhidas", `Escolhidas${nEscolhidas > 0 ? ` (${nEscolhidas})` : ""}`],
+            ["por-escolher", "Por escolher"],
+          ] as const
+        ).map(([valor, rotulo]) => (
+          <button
+            key={valor}
+            type="button"
+            aria-pressed={estado === valor}
+            onClick={() => setEstado(valor)}
+            className={chipFiltro(estado === valor)}
+          >
+            {rotulo}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setPainelAberto((anterior) => !anterior)}
+          aria-expanded={painelAberto}
+          aria-controls={`${idBase}-categorias`}
+          className={chipFiltro(false)}
+        >
+          <Filter size={13} />
+          Categorias
+          {categorias.size > 0 ? (
+            <span className="rounded-full bg-brand px-1.5 text-[10px] font-bold tabular-nums text-white">
+              {categorias.size}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      <div
+        id={`${idBase}-categorias`}
+        hidden={!painelAberto}
+        className="mt-2 rounded-2xl border border-stone-100 bg-cream/70 p-3 dark:border-stone-800 dark:bg-stone-950/40"
+      >
+        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-stone-500">
+          Categorias — podes somar mais do que uma
+        </p>
+        <div className="flex flex-wrap gap-1.5">
+          {grupos.map((grupo) => {
+            const total = opcoes.filter((item) => item.grupo === grupo.id).length;
+            return (
+              <button
+                key={grupo.id}
+                type="button"
+                aria-pressed={categorias.has(grupo.id)}
+                onClick={() => alternarCategoria(grupo.id)}
+                className={chipFiltro(categorias.has(grupo.id))}
+              >
+                {grupo.rotulo} <span className="font-normal tabular-nums opacity-60">{total}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Contagem anunciada + limpar ──────────────────────────── */}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <p id={`${idBase}-contagem`} aria-live="polite" className="text-[11px] text-stone-500">
+          {nFiltros === 0
+            ? `${opcoes.length} ${pluralRotulo}`
+            : `${encontradas.length} de ${opcoes.length} ${encontradas.length === 1 ? singular : pluralRotulo}`}
+        </p>
+        {nFiltros > 0 ? (
+          <button
+            type="button"
+            onClick={limpar}
+            className="inline-flex min-h-[36px] items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-brand-dark transition-colors hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-brand-mint dark:hover:bg-brand/10"
+          >
+            <Close size={12} /> Limpar filtros
+          </button>
+        ) : null}
+      </div>
+
+      {/* ── As opções, por categoria ─────────────────────────────── */}
+      <div className="mt-3 space-y-3">
+        {grupos.map(desenharGrupo)}
+
+        {encontradas.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-stone-200 px-3 py-5 text-center dark:border-stone-700">
+            <p className="text-[12px] font-semibold text-stone-700 dark:text-stone-200">
+              Nada corresponde a esta procura.
+            </p>
+            <p className="mx-auto mt-1 max-w-sm text-[11px] leading-snug text-stone-500">
+              As {opcoes.length} {pluralRotulo} são largas de propósito — procura a mais próxima do
+              que fazes, ou limpa os filtros.
+            </p>
+            <button
+              type="button"
+              onClick={limpar}
+              className="mt-2.5 inline-flex min-h-[38px] items-center gap-1.5 rounded-full bg-brand px-4 text-[12px] font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+            >
+              Limpar filtros <Close size={12} />
+            </button>
+          </div>
+        ) : null}
+
+        {escondidas.length > 0 ? (
+          <div className="rounded-2xl border border-brand/25 bg-brand-light/40 p-2.5 dark:border-brand/25 dark:bg-brand/10">
+            <GrupoEscolhas
+              rotulo={`Já escolheste, fora deste filtro (${escondidas.length})`}
+              escolhidas={escondidas.length}
+              detalhado={descricoes}
+            >
+              {escondidas.map((item) => (
+                <EscolhaChip
+                  key={item.id}
+                  ativo
+                  onClick={() => onAlternar(item.id)}
+                  rotulo={item.rotulo}
+                  nota={descricoes ? item.nota : undefined}
+                />
+              ))}
+            </GrupoEscolhas>
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 }

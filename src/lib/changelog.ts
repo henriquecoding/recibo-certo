@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.97.1",
+    data: "2026-08-23",
+    titulo: "Filtros a sério para escolher o que sabes fazer",
+    itens: [
+      "As competências, os meios e as recusas ganharam o mesmo sistema de filtros que o hub de ferramentas já tinha: procura que ignora acentos e olha também para a descrição («eletrica» encontra «Instalações elétricas»; «bricolage» também), filtro por estado — tudo, escolhidas, por escolher — e um painel de categorias em que podes somar mais do que uma, cada uma com a sua contagem.",
+      "O botão de categorias diz quantas estão ativas, a contagem de resultados é anunciada a quem usa leitor de ecrã, há «limpar filtros» e o estado vazio explica-se em vez de deixar um espaço em branco.",
+      "Uma escolha que já fizeste nunca desaparece por causa de um filtro: aparece num grupo próprio, marcado como «já escolheste, fora deste filtro». Filtrar é para procurar, não para desfazer.",
+      "Saíram da página os dois blocos sobre o relatório das 72 ideias e sobre quantas hipóteses têm dados oficiais ligados. Eram notas de bastidores: dizem alguma coisa a quem construiu a ferramenta, nada a quem chega para descobrir um negócio.",
+    ],
+  },
+  {
     version: "2.97.0",
     data: "2026-08-23",
     titulo: "A ferramenta de descobrir negócio deixou de ser um muro de texto",
