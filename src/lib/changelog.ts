@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.97.1",
+    data: "2026-08-23",
+    titulo: "Filtros a sério para escolher o que sabes fazer",
+    itens: [
+      "As competências, os meios e as recusas ganharam o mesmo sistema de filtros que o hub de ferramentas já tinha: procura que ignora acentos e olha também para a descrição («eletrica» encontra «Instalações elétricas»; «bricolage» também), filtro por estado — tudo, escolhidas, por escolher — e um painel de categorias em que podes somar mais do que uma, cada uma com a sua contagem.",
+      "O botão de categorias diz quantas estão ativas, a contagem de resultados é anunciada a quem usa leitor de ecrã, há «limpar filtros» e o estado vazio explica-se em vez de deixar um espaço em branco.",
+      "Uma escolha que já fizeste nunca desaparece por causa de um filtro: aparece num grupo próprio, marcado como «já escolheste, fora deste filtro». Filtrar é para procurar, não para desfazer.",
+      "Saíram da página os dois blocos sobre o relatório das 72 ideias e sobre quantas hipóteses têm dados oficiais ligados. Eram notas de bastidores: dizem alguma coisa a quem construiu a ferramenta, nada a quem chega para descobrir um negócio.",
+    ],
+  },
+  {
     version: "2.97.0",
     data: "2026-08-23",
     titulo: "A ferramenta de descobrir negócio deixou de ser um muro de texto",
@@ -24,10 +35,7 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "As escolhas passaram a pastilhas de uma linha. As descrições não desapareceram: estão no interruptor «Mostrar descrições», e valem para as competências, para os meios que já tens e para o que recusas.",
       "Os catorze meios e as quinze recusas também ficaram por categoria — mobilidade, equipamento, espaço, já do negócio; estrutura, esforço, contacto com clientes, horários, setores.",
       "Cada secção fecha, e fechada diz num resumo o que já lá está («Lisboa · só online», «até 5 000 € · 3 meios»). Há um «fechar todas as secções» para arrumar de uma vez. À entrada continua tudo aberto: nada fica escondido de quem chega pela primeira vez.",
-      "Um sistema de filtros a sério, o mesmo que o hub de ferramentas já tinha, agora nas competências, nos meios e nas recusas: procura que ignora acentos e olha também para a descrição («eletrica» encontra «Instalações elétricas», «bricolage» também); filtro por estado — tudo, escolhidas, por escolher; e um painel de categorias em que podes somar mais do que uma, cada uma com a sua contagem.",
-      "O botão de categorias diz quantas estão ativas, a contagem de resultados é anunciada a quem usa leitor de ecrã, há «limpar filtros» e o estado vazio explica-se em vez de deixar um espaço em branco.",
-      "Uma escolha que já fizeste nunca desaparece por causa de um filtro: aparece num grupo próprio, marcado como «já escolheste, fora deste filtro». Filtrar é para procurar, não para desfazer.",
-      "Saíram da página os dois blocos que falavam do relatório das 72 ideias e da contagem de hipóteses com dados oficiais ligados. Eram notas de bastidores — dizem alguma coisa a quem construiu a ferramenta, nada a quem chega para descobrir um negócio.",
+      "Uma caixa de procura para as competências, que ignora acentos — escrever «eletrica» encontra «Instalações elétricas».",
       "O nível de cada competência deixou de abrir por baixo da escolha e passou a uma lista à parte, só com as que escolheste.",
       "No painel lateral, «o que mais mudaria o resultado» deixou de ser um aviso para ler e passou a ser um atalho: carregas na linha e a ferramenta abre a secção certa — e abre sozinha o nível de perguntas onde essa resposta vive.",
     ],
