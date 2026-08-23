@@ -296,11 +296,23 @@ for (const vp of VIEWPORTS) {
   }
 
   // O menu abre, tem os destinos e fecha com Escape devolvendo o foco.
-  const gatilho = vp.width >= 1024
-    ? 'nav[aria-label="Principal"] button[aria-haspopup="dialog"]'
-    : 'button[aria-haspopup="dialog"]';
-  const g = await page.$(gatilho);
-  if (!g) mal(`${vp.nome}px: gatilho do menu ausente`);
+  //
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ PELO NOME, E NÃO PELA POSIÇÃO NO DOM                               │
+  // │                                                                   │
+  // │ `button[aria-haspopup="dialog"]` parecia bastar e não bastava, por │
+  // │ duas razões que só apareceram a correr: as duas superfícies estão  │
+  // │ SEMPRE montadas (uma é `hidden lg:block`, a outra `lg:hidden`),    │
+  // │ portanto o primeiro do documento pode ser o invisível; e há outros │
+  // │ botões no produto que abrem diálogos — na homepage, o «Como        │
+  // │ funciona» do hero vem antes. O teste clicava-o e depois queixava-  │
+  // │ -se de que o menu não tinha os destinos.                            │
+  // │                                                                   │
+  // │ `data-menu-gatilho` é o mesmo contrato que a pesquisa já tem.       │
+  // └───────────────────────────────────────────────────────────────────┘
+  const gatilho = `[data-menu-gatilho="${vp.width >= 1024 ? "secretaria" : "movel"}"]`;
+  const g = page.locator(gatilho);
+  if ((await g.count()) === 0) mal(`${vp.nome}px: gatilho do menu ausente`);
   else {
     await g.click();
     await page.waitForTimeout(450);

@@ -41,7 +41,7 @@ const MENU = ler("components", "navegacao", "MenuCompleto.tsx");
 const FILA = ler("components", "navegacao", "FilaPilares.tsx");
 const SECBAR = ler("components", "navegacao", "BarraSecoes.tsx");
 const CHROME = ler("components", "ChromeMobile.tsx");
-const TOPO = ler("components", "ChromeMobileTopo.tsx");
+const MARCA = ler("components", "ChromeMobileMarca.tsx");
 const NAV = ler("components", "Nav.tsx");
 const RODAPE = ler("components", "Footer.tsx");
 const CSS = ler("app", "globals.css");
@@ -263,10 +263,20 @@ describe("navegacao:acessibilidade", () => {
   });
 
   it("o gatilho do menu declara que abre um diálogo, nas duas superfícies", () => {
-    for (const [nome, fonte] of [["cápsula", CAPSULA], ["topo do telemóvel", TOPO]] as const) {
+    for (const [nome, fonte] of [["cápsula", CAPSULA], ["linha da marca do telemóvel", MARCA]] as const) {
       expect(fonte, `${nome}: gatilho sem aria-haspopup`).toContain('aria-haspopup="dialog"');
       expect(fonte, `${nome}: gatilho sem aria-expanded`).toContain("aria-expanded=");
     }
+  });
+
+  it("cada gatilho do menu tem nome próprio, e não só o papel", () => {
+    // `aria-haspopup="dialog"` diz o que o botão FAZ, não qual dos dois é.
+    // As duas superfícies estão sempre montadas e há outros botões no
+    // produto que abrem diálogos — na homepage o «Como funciona» do hero
+    // vem antes destes no documento. É o mesmo contrato que a pesquisa já
+    // tem em `data-busca-gatilho`.
+    expect(CAPSULA).toContain('data-menu-gatilho="secretaria"');
+    expect(MARCA).toContain('data-menu-gatilho="movel"');
   });
 });
 

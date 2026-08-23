@@ -7,12 +7,12 @@ import { MENU_GRUPOS, PILARES } from "@/lib/navegacao";
 // ═══════════════════════════════════════════════════════════════════════
 //  O CHROME DO TELEMÓVEL — o contrato das três superfícies
 //  ---------------------------------------------------------------------
-//  Abaixo de `lg` o cabeçalho não existe: o que existe são três peças que
-//  têm de continuar a encaixar umas nas outras.
+//  Abaixo de `lg` o cabeçalho não existe: o que existe são três peças,
+//  todas no fundo do ecrã, que têm de continuar a encaixar umas nas outras.
 //
-//      ChromeMobileTopo   marca · menu · acção (em fluxo, no topo)
-//      busca/DockMovel    a pesquisa (fixa, acima da barra)
-//      ChromeMobile       os cinco pilares (fixa, no fundo)
+//      busca/DockMovel      a pesquisa           (fixa, acima da barra)
+//      ChromeMobile         os cinco pilares     (fixa, no fundo)
+//      ChromeMobileMarca    marca · menu · acção (última linha da barra)
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ PORQUE ISTO SE VERIFICA LENDO A FONTE                                │
@@ -42,7 +42,7 @@ const semComentarios = (fonte: string) =>
   fonte.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
 const CHROME = ler("components", "ChromeMobile.tsx");
-const TOPO = ler("components", "ChromeMobileTopo.tsx");
+const MARCA = ler("components", "ChromeMobileMarca.tsx");
 const DOCK = ler("components", "busca", "DockMovel.tsx");
 const BUSCA_GLOBAL = ler("components", "busca", "BuscaGlobal.tsx");
 const BOTAO_TOPO = ler("components", "ui", "BotaoTopo.tsx");
@@ -106,14 +106,14 @@ describe("chrome-movel:barra", () => {
   it("a folha de navegação já NÃO vive nesta barra", () => {
     // «Conta» era o quinto lugar e abria uma folha com tudo o resto. Os
     // cinco lugares passaram a ser cinco destinos de trabalho, e a folha
-    // subiu para o `ChromeMobileTopo` — que é a MESMA que a cápsula do
+    // é a terceira linha desta barra — que é a MESMA que a cápsula do
     // computador abre. Deixá-la aqui também daria duas folhas iguais.
     // `semComentarios` porque o quadro no topo do ficheiro CITA o nome da
     // folha para explicar para onde ela foi — e apagar a explicação seria
     // exactamente a saída errada. Ver a nota no topo deste ficheiro.
     expect(semComentarios(CHROME)).not.toContain("SuperficieModal");
     expect(semComentarios(CHROME)).not.toContain("MenuCompleto");
-    expect(TOPO).toContain("<MenuCompleto");
+    expect(MARCA).toContain("<MenuCompleto");
   });
 
   it("o lugar activo compara a rota exacta ou um segmento abaixo", () => {
@@ -158,7 +158,7 @@ describe("chrome-movel:folha-de-navegacao", () => {
     // contrário: o mesmo componente, montado pelo cabeçalho de secretária e
     // pelo topo do telemóvel. O que muda é geometria.
     expect(NAV).toContain("<MenuCompleto");
-    expect(TOPO).toContain("<MenuCompleto");
+    expect(MARCA).toContain("<MenuCompleto");
     expect(MENU).toContain('superficie: "secretaria" | "movel"');
   });
 
@@ -193,7 +193,7 @@ describe("chrome-movel:folha-de-navegacao", () => {
     // a mesma nas duas superfícies sem ninguém ter de se lembrar dela.
     expect(MENU).toContain('useOverlay("menu"');
     expect(NAV).not.toContain('useOverlay("menu"');
-    expect(TOPO).not.toContain('useOverlay("menu"');
+    expect(MARCA).not.toContain('useOverlay("menu"');
   });
 
   it("a conta vem primeiro, antes dos destinos", () => {
@@ -326,34 +326,54 @@ describe("chrome-movel:geometria", () => {
   });
 });
 
-describe("chrome-movel:topo", () => {
-  it("vive em fluxo e é montado antes do conteúdo", () => {
-    // Fixá-lo somaria 56 px de moldura permanente aos ~120 px do chrome de
-    // baixo — 28% de um ecrã de 640 px gastos em navegação. Em fluxo custa
-    // uma vez, no topo do documento, e zero enquanto se lê. É também por
-    // isso que é montado ANTES do `{children}` e não ao lado do
-    // `ChromeMobile`, que é o último elemento do corpo.
-    expect(TOPO).not.toMatch(/\bfixed\b/);
-    expect(TOPO).not.toMatch(/\bsticky\b/);
-    expect(LAYOUT.indexOf("<ChromeMobileTopo />")).toBeGreaterThan(-1);
-    expect(LAYOUT.indexOf("<ChromeMobileTopo />")).toBeLessThan(LAYOUT.indexOf("{children}"));
+describe("chrome-movel:linha-da-marca", () => {
+  it("vive no FUNDO, dentro da barra, e já não em fluxo no topo", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ ESTEVE NO TOPO POR UMA RAZÃO BOA, E A RAZÃO MUDOU              │
+    // │                                                               │
+    // │ Fixá-la no topo somaria 56 px de moldura permanente aos ~120   │
+    // │ do chrome de baixo — duas molduras, em duas pontas do ecrã.    │
+    // │ Em fluxo custava uma vez e zero enquanto se lia, e era o       │
+    // │ compromisso certo enquanto ela era uma superfície SEPARADA.    │
+    // │                                                               │
+    // │ Deixou de ser: é a terceira linha da mesma barra de baixo.     │
+    // │ Não há duas molduras — há uma, com três linhas, toda na zona   │
+    // │ do polegar. O custo está no token `--rc-barra-h` e no          │
+    // │ espaçador, que é quem o reserva.                                │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(MARCA).not.toMatch(/\bfixed\b/);
+    expect(MARCA).not.toMatch(/\bsticky\b/);
+    // Não é montada pelo layout: é filha da barra, e a barra é o último
+    // elemento do corpo.
+    // `semComentarios` porque o quadro do `layout.tsx` CITA o ficheiro para
+    // explicar para onde a linha foi — apagar a explicação seria a saída
+    // errada. Ver a nota no topo deste ficheiro.
+    expect(semComentarios(LAYOUT)).not.toContain("ChromeMobileTopo");
+    expect(semComentarios(LAYOUT)).not.toContain("ChromeMobileMarca");
+    expect(LAYOUT.indexOf("<ChromeMobile />")).toBeGreaterThan(LAYOUT.indexOf("{children}"));
+    expect(CHROME).toContain("<ChromeMobileMarca />");
+    // E vem DEPOIS dos cinco pilares na fonte: a ordem do DOM é a ordem
+    // visual, que é o que um leitor de ecrã e o `Tab` seguem.
+    expect(CHROME.indexOf('aria-label="Navegação"')).toBeLessThan(CHROME.indexOf("<ChromeMobileMarca />"));
   });
 
-  it("desaparece onde há cabeçalho de secretária e chrome próprio", () => {
+  it("herda as guardas de rota da barra em vez de as repetir", () => {
     // A partir de `lg` manda o `Nav.tsx`; no /dashboard e no /admin manda o
-    // chrome dessas áreas. Dois cabeçalhos ao mesmo tempo é o defeito.
-    expect(TOPO).toContain("lg:hidden");
-    expect(TOPO).toContain('pathname.startsWith("/dashboard")');
-    expect(TOPO).toContain('pathname.startsWith("/admin")');
+    // chrome dessas áreas; durante uma pergunta do quiz sai tudo do
+    // caminho. Com a linha montada pelo `layout.tsx` a decisão estava
+    // escrita duas vezes — bastava acrescentar uma rota a uma das listas
+    // para elas divergirem. Agora quem decide é o pai, uma vez.
+    expect(CHROME).toContain("lg:hidden");
+    expect(CHROME).toContain('pathname.startsWith("/dashboard")');
+    expect(CHROME).toContain('pathname.startsWith("/admin")');
+    expect(CHROME).toContain("useQuizAJogar");
+    expect(MARCA).not.toContain('pathname.startsWith("/dashboard")');
+    expect(MARCA).not.toContain("useQuizAJogar");
   });
 
-  it("sai do caminho durante uma pergunta do quiz, como o resto do chrome", () => {
-    // O de baixo já saía; este ficava, com «Começar» ao lado de uma pergunta
-    // a contar tempo. Os dois leem agora o mesmo sinal, e o quiz — que o
-    // emite — importa a constante em vez de reescrever a classe à mão.
+  it("o quiz e a barra leem o mesmo sinal", () => {
     const QUIZ = ler("components", "quiz-fiscal", "QuizFiscalApp.tsx");
     for (const [nome, fonte] of [
-      ["ChromeMobileTopo", TOPO],
       ["ChromeMobile", CHROME],
       ["QuizFiscalApp", QUIZ],
     ] as const) {
@@ -368,30 +388,28 @@ describe("chrome-movel:topo", () => {
     // No computador há `MenuConta` ao lado da cápsula. Aqui a conta vive
     // dentro da folha que o botão «Menu» abre. Montar também o `MenuConta`
     // daria duas entradas para o mesmo sítio no mesmo ecrã.
-    expect(TOPO).not.toContain("MenuConta");
-    expect(TOPO).toContain('aria-haspopup="dialog"');
+    expect(MARCA).not.toContain("MenuConta");
+    expect(MARCA).toContain('aria-haspopup="dialog"');
   });
 
-  it("o tema saiu daqui e passou para o cabeçalho da folha", () => {
+  it("o tema não está aqui — está no cabeçalho da folha", () => {
     // ┌───────────────────────────────────────────────────────────────┐
     // │ E FOI MEDIDO, NÃO ARBITRADO                                    │
     // │                                                               │
-    // │ A 360 px esta linha tem 328 px úteis, e a marca (~149) mais a  │
-    // │ acção (~109) mais os intervalos já ocupam ~300. O tema (36 px) │
-    // │ e o botão do menu (36 px) não cabem os dois — a soma dava      │
-    // │ ~350 px, ou seja, scroll horizontal em TODAS as páginas, que é │
-    // │ inegociável neste projecto.                                    │
+    // │ A 360 px esta linha tem ~330 px úteis, e a marca mais a acção  │
+    // │ já ocupam ~280. O tema (36 px) e o botão do menu (36 px) não   │
+    // │ cabem os dois — a soma dava scroll horizontal em TODAS as      │
+    // │ páginas, que é inegociável neste projecto.                     │
     // │                                                               │
-    // │ Entra o menu, porque passou a ser o único caminho para os      │
-    // │ guias, o quiz, os planos, os contabilistas e a conta. O tema   │
-    // │ vai para o CABEÇALHO da folha — visível no instante em que ela │
-    // │ abre, sem rolar nada. Um toque a mais, zero procura. Pô-lo no  │
-    // │ FIM da folha seria a troca má, e é a que este teste impede.    │
+    // │ Entra o menu, porque é o único caminho para os guias, o quiz,  │
+    // │ os planos, os contabilistas e a conta. O tema vai para o       │
+    // │ CABEÇALHO da folha — visível no instante em que ela abre, sem  │
+    // │ rolar nada. Um toque a mais, zero procura. Pô-lo no FIM da     │
+    // │ folha seria a troca má, e é a que este teste impede.            │
     // └───────────────────────────────────────────────────────────────┘
     const MENU = ler("components", "navegacao", "MenuCompleto.tsx");
-    expect(TOPO).not.toContain("ThemeToggle");
+    expect(MARCA).not.toContain("ThemeToggle");
     expect(MENU).toContain("<ThemeToggle />");
-    // No CABEÇALHO da folha: antes do corpo que rola.
     expect(MENU.indexOf("<ThemeToggle />")).toBeLessThan(MENU.indexOf("min-h-0 flex-1 overflow-y-auto"));
   });
 });

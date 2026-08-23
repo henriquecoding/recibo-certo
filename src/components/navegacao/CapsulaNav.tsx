@@ -126,8 +126,15 @@ export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: (
           lê-se como o sexto pilar. */}
       <span aria-hidden className="mx-1 h-6 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
 
+      {/* `data-menu-gatilho` é o mesmo contrato que a pesquisa já tem em
+          `data-busca-gatilho`: um nome para esta superfície, para quem a
+          procura de fora não ter de adivinhar por posição no DOM.
+          `aria-haspopup="dialog"` sozinho não chega — há outros botões no
+          produto que abrem diálogos, e o primeiro do documento nem sempre é
+          este. */}
       <button
         type="button"
+        data-menu-gatilho="secretaria"
         aria-haspopup="dialog"
         aria-expanded={menuAberto}
         onClick={aoAbrirMenu}

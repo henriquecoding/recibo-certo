@@ -3,11 +3,13 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  O CHROME INFERIOR — telemóvel e tablet (< lg)
 //  ---------------------------------------------------------------------
-//  Duas superfícies empilhadas no fundo do ecrã: o dock de pesquisa
-//  (`busca/DockMovel.tsx`) e, colada ao fundo, esta barra de navegação. A
-//  marca, o tema, o menu completo e a acção vivem no `ChromeMobileTopo`,
-//  em fluxo no topo da página. Nada disto aparece no /dashboard nem no
-//  /admin, que têm chrome próprio.
+//  TODO o chrome do telemóvel vive aqui, no fundo do ecrã, em três linhas:
+//  o dock de pesquisa (`busca/DockMovel.tsx`), os cinco pilares e — colada
+//  ao fundo — a marca com o menu e a acção (`ChromeMobileMarca.tsx`). A
+//  última já foi uma barra em fluxo no TOPO da página, e repartia o chrome
+//  por duas pontas do ecrã: o polegar trabalha em baixo e a identidade e a
+//  acção estavam a um scroll de distância. Nada disto aparece no /dashboard
+//  nem no /admin, que têm chrome próprio.
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ OS CINCO LUGARES SÃO OS CINCO PILARES — E JÁ NÃO CINCO SECÇÕES       │
@@ -56,6 +58,7 @@ import { useReducedMotion } from "motion/react";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES } from "@/lib/navegacao";
 import { DockMovel } from "@/components/busca/DockMovel";
+import ChromeMobileMarca from "@/components/ChromeMobileMarca";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
 
@@ -131,9 +134,14 @@ export default function ChromeMobile() {
           `--rc-barra-h` descreve a partir de `md`, e um 16 px fixo aqui
           tornava o token uma aproximação num tablet com indicador no fundo. */}
       <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {/* Uma superfície, DUAS linhas: os cinco pilares e, colada ao fundo,
+            a marca com o menu e a acção. Uma só caixa e não duas fixas — o
+            fundo, o contorno, o desfoque e a área segura são tratados uma
+            vez, e no tablet a coisa toda flutua como um cartão só. */}
+        <div className="mx-auto border-t border-stone-100 bg-cream/95 pb-[var(--rc-barra-fundo)] backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 md:max-w-[40rem] md:rounded-2xl md:border md:shadow-float">
         <nav
           aria-label="Navegação"
-          className="mx-auto flex items-stretch justify-between gap-0.5 border-t border-stone-100 bg-cream/95 px-1 pb-[max(0.375rem,env(safe-area-inset-bottom))] pt-1.5 backdrop-blur-xl dark:border-stone-800 dark:bg-stone-950/95 md:max-w-[40rem] md:gap-1 md:rounded-2xl md:border md:px-2 md:pb-1.5 md:shadow-float"
+          className="flex items-stretch justify-between gap-0.5 px-1 pt-1.5 md:gap-1 md:px-2"
         >
           {SLOTS.map((slot) => {
             const on = ativo(slot.href);
@@ -214,6 +222,14 @@ export default function ChromeMobile() {
             );
           })}
         </nav>
+
+        {/* A terceira linha. Já foi uma barra em fluxo no topo da página —
+            ver o quadro em `ChromeMobileMarca.tsx`. É filha desta caixa e
+            não é montada no `layout.tsx`, e é também por isso que já não
+            traz guardas de rota próprias: as deste componente valem para
+            as três linhas. */}
+        <ChromeMobileMarca />
+        </div>
       </div>
     </>
   );
