@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
   "id": "procura-nuts2",
-  "geradoEm": "2026-08-23T15:31:51.787Z",
+  "geradoEm": "2026-08-23T18:12:15.292Z",
   "granularidade": "nuts2+pais",
   "semObservacoes": [],
   "pilotos": [
     {
       "templateId": "tourism-guest-operations",
-      "checkedAt": "2026-08-23T15:31:48.710Z",
+      "checkedAt": "2026-08-23T18:12:01.015Z",
       "gate": {
         "state": "candidate",
         "label": "Candidata a teste",
@@ -54,7 +54,7 @@
           "turismo-portugal:tourism.local_accommodation.new_registrations:2025:1C",
           "turismo-portugal:tourism.local_accommodation.new_registrations:2025:1D"
         ],
-        "evaluatedAt": "2026-08-23T15:31:48.710Z"
+        "evaluatedAt": "2026-08-23T18:12:01.015Z"
       },
       "observations": [
         {
@@ -74,7 +74,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -109,7 +109,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -144,7 +144,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -179,7 +179,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -214,7 +214,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -249,7 +249,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -284,7 +284,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -319,7 +319,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -354,7 +354,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -388,7 +388,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-07-02",
           "sourceId": "ine",
           "license": {
@@ -423,7 +423,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -458,7 +458,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -493,7 +493,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -528,7 +528,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -563,7 +563,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -598,7 +598,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -633,7 +633,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -668,7 +668,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -703,7 +703,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -737,7 +737,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -772,7 +772,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -807,7 +807,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -842,7 +842,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -877,7 +877,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -912,7 +912,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -947,7 +947,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -982,7 +982,7 @@
             "end": "2026-08-23",
             "label": "2026-08-23"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-11-21",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1017,7 +1017,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1052,7 +1052,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1087,7 +1087,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1122,7 +1122,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1157,7 +1157,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1192,7 +1192,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1227,7 +1227,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-03-26",
           "sourceId": "turismo-portugal",
           "license": {
@@ -1251,9 +1251,9 @@
           "sourceId": "ine",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2025-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         },
@@ -1261,9 +1261,9 @@
           "sourceId": "turismo-portugal",
           "state": "healthy",
           "critical": false,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2026-08-23",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         }
@@ -1273,7 +1273,7 @@
     },
     {
       "templateId": "sme-digital-operations",
-      "checkedAt": "2026-08-23T15:31:48.710Z",
+      "checkedAt": "2026-08-23T18:12:01.015Z",
       "gate": {
         "state": "candidate",
         "label": "Candidata a teste",
@@ -1308,7 +1308,7 @@
           "ine:business.births.company:2024:30",
           "ine:business.births.company:2024:PT"
         ],
-        "evaluatedAt": "2026-08-23T15:31:48.710Z"
+        "evaluatedAt": "2026-08-23T18:12:01.015Z"
       },
       "observations": [
         {
@@ -1327,7 +1327,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "eurostat",
           "license": {
@@ -1361,7 +1361,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "eurostat",
           "license": {
@@ -1396,7 +1396,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1431,7 +1431,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1466,7 +1466,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1501,7 +1501,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1536,7 +1536,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1571,7 +1571,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1606,7 +1606,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1641,7 +1641,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1676,7 +1676,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1710,7 +1710,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1745,7 +1745,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1780,7 +1780,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1815,7 +1815,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1850,7 +1850,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1885,7 +1885,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1920,7 +1920,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1955,7 +1955,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -1990,7 +1990,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -2025,7 +2025,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -2059,7 +2059,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -2083,9 +2083,9 @@
           "sourceId": "eurostat",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2024-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         },
@@ -2093,9 +2093,9 @@
           "sourceId": "ine",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2024-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         }
@@ -2105,7 +2105,7 @@
     },
     {
       "templateId": "senior-digital-concierge",
-      "checkedAt": "2026-08-23T15:31:48.710Z",
+      "checkedAt": "2026-08-23T18:12:01.015Z",
       "gate": {
         "state": "signal_detected",
         "label": "Sinal a investigar",
@@ -2131,7 +2131,7 @@
           "ine:population.ageing_index:2025:30",
           "ine:population.ageing_index:2025:PT"
         ],
-        "evaluatedAt": "2026-08-23T15:31:48.710Z"
+        "evaluatedAt": "2026-08-23T18:12:01.015Z"
       },
       "observations": [
         {
@@ -2150,7 +2150,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2028-12-31",
           "sourceId": "eurostat",
           "license": {
@@ -2184,7 +2184,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2028-12-31",
           "sourceId": "eurostat",
           "license": {
@@ -2219,7 +2219,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2254,7 +2254,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2289,7 +2289,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2324,7 +2324,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2359,7 +2359,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2394,7 +2394,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2429,7 +2429,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2464,7 +2464,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2499,7 +2499,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2533,7 +2533,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -2557,9 +2557,9 @@
           "sourceId": "eurostat",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2025-12-31",
           "message": "2 linhas/células não atravessaram a quarentena e ficaram de fora."
         },
@@ -2567,9 +2567,9 @@
           "sourceId": "ine",
           "state": "healthy",
           "critical": false,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2025-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         }
@@ -2580,7 +2580,7 @@
     },
     {
       "templateId": "public-tender-support",
-      "checkedAt": "2026-08-23T15:31:48.710Z",
+      "checkedAt": "2026-08-23T18:12:01.015Z",
       "gate": {
         "state": "candidate",
         "label": "Candidata a teste",
@@ -2633,7 +2633,7 @@
           "ine:business.births.company:2024:30",
           "ine:business.births.company:2024:PT"
         ],
-        "evaluatedAt": "2026-08-23T15:31:48.710Z"
+        "evaluatedAt": "2026-08-23T18:12:01.015Z"
       },
       "observations": [
         {
@@ -3351,7 +3351,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3386,7 +3386,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3421,7 +3421,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3456,7 +3456,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3491,7 +3491,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3526,7 +3526,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3561,7 +3561,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3596,7 +3596,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3631,7 +3631,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3665,7 +3665,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3700,7 +3700,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3735,7 +3735,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3770,7 +3770,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3805,7 +3805,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3840,7 +3840,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3875,7 +3875,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3910,7 +3910,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3945,7 +3945,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -3980,7 +3980,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -4014,7 +4014,7 @@
             "end": "2024-12-31",
             "label": "2024"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2026-12-31",
           "sourceId": "ine",
           "license": {
@@ -4038,7 +4038,7 @@
           "sourceId": "dados-gov",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
           "lastRunAt": "2026-08-21T02:29:32.832Z",
           "lastSuccessfulRunAt": "2026-08-21T02:29:32.832Z",
           "latestReferencePeriodEnd": "2025-12-31",
@@ -4048,9 +4048,9 @@
           "sourceId": "ine",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2024-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         }
@@ -4060,7 +4060,7 @@
     },
     {
       "templateId": "home-transition-operations",
-      "checkedAt": "2026-08-23T15:31:48.710Z",
+      "checkedAt": "2026-08-23T18:12:01.015Z",
       "gate": {
         "state": "candidate",
         "label": "Candidata a teste",
@@ -4093,7 +4093,7 @@
           "ine:population.ageing_index:2025:30",
           "ine:population.ageing_index:2025:PT"
         ],
-        "evaluatedAt": "2026-08-23T15:31:48.710Z"
+        "evaluatedAt": "2026-08-23T18:12:01.015Z"
       },
       "observations": [
         {
@@ -4113,7 +4113,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4148,7 +4148,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4183,7 +4183,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4218,7 +4218,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4253,7 +4253,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4288,7 +4288,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4323,7 +4323,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4358,7 +4358,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4393,7 +4393,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4427,7 +4427,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4462,7 +4462,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4497,7 +4497,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4532,7 +4532,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4567,7 +4567,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4602,7 +4602,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4637,7 +4637,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4672,7 +4672,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4707,7 +4707,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4742,7 +4742,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4776,7 +4776,7 @@
             "end": "2025-12-31",
             "label": "2025"
           },
-          "retrievedAt": "2026-08-23T15:31:48.710Z",
+          "retrievedAt": "2026-08-23T18:12:01.015Z",
           "validUntil": "2027-12-31",
           "sourceId": "ine",
           "license": {
@@ -4800,9 +4800,9 @@
           "sourceId": "ine",
           "state": "healthy",
           "critical": true,
-          "checkedAt": "2026-08-23T15:31:48.710Z",
-          "lastRunAt": "2026-08-23T15:31:48.710Z",
-          "lastSuccessfulRunAt": "2026-08-23T15:31:48.710Z",
+          "checkedAt": "2026-08-23T18:12:01.015Z",
+          "lastRunAt": "2026-08-23T18:12:01.015Z",
+          "lastSuccessfulRunAt": "2026-08-23T18:12:01.015Z",
           "latestReferencePeriodEnd": "2025-12-31",
           "message": "Dataset consultado e normalizado sem linhas rejeitadas."
         }
@@ -4811,5 +4811,367 @@
       "datasetUrl": "https://dados.gov.pt/pt/datasets/?q=transa%C3%A7%C3%B5es+de+alojamentos+familiares"
     }
   ],
-  "contentHash": "sha256:aafa1e2761727dabb2ae14003b871dfbae9ae5f971ecc2617a150b18f372ba3a"
+  "tendencias": [
+    {
+      "seriesId": "home-transactions",
+      "seriesLabel": "Casas transacionadas por famílias",
+      "indicador": "0012787",
+      "unidade": "transações",
+      "periodoAnterior": "2024",
+      "periodoAtual": "2025",
+      "porGeografia": {
+        "11": {
+          "anterior": 39898,
+          "atual": 44529,
+          "variacaoPct": 11.6
+        },
+        "15": {
+          "anterior": 9493,
+          "atual": 10659,
+          "variacaoPct": 12.3
+        },
+        "19": {
+          "anterior": 22083,
+          "atual": 24730,
+          "variacaoPct": 12
+        },
+        "20": {
+          "anterior": 2332,
+          "atual": 2394,
+          "variacaoPct": 2.7
+        },
+        "30": {
+          "anterior": 2967,
+          "atual": 2705,
+          "variacaoPct": -8.8
+        },
+        "1C": {
+          "anterior": 6782,
+          "atual": 7764,
+          "variacaoPct": 14.5
+        },
+        "1D": {
+          "anterior": 12559,
+          "atual": 14153,
+          "variacaoPct": 12.7
+        },
+        "1B": {
+          "anterior": 13243,
+          "atual": 14826,
+          "variacaoPct": 12
+        },
+        "1A": {
+          "anterior": 25183,
+          "atual": 26872,
+          "variacaoPct": 6.7
+        },
+        "PT": {
+          "anterior": 134540,
+          "atual": 148632,
+          "variacaoPct": 10.5
+        }
+      }
+    },
+    {
+      "seriesId": "sme-new-companies",
+      "seriesLabel": "Sociedades nascidas na zona",
+      "indicador": "0014098",
+      "unidade": "empresas",
+      "periodoAnterior": "2023",
+      "periodoAtual": "2024",
+      "porGeografia": {
+        "11": {
+          "anterior": 14028,
+          "atual": 14109,
+          "variacaoPct": 0.6
+        },
+        "15": {
+          "anterior": 2766,
+          "atual": 2565,
+          "variacaoPct": -7.3
+        },
+        "19": {
+          "anterior": 4934,
+          "atual": 5191,
+          "variacaoPct": 5.2
+        },
+        "20": {
+          "anterior": 495,
+          "atual": 618,
+          "variacaoPct": 24.8
+        },
+        "30": {
+          "anterior": 1258,
+          "atual": 1317,
+          "variacaoPct": 4.7
+        },
+        "1C": {
+          "anterior": 1668,
+          "atual": 1804,
+          "variacaoPct": 8.2
+        },
+        "1D": {
+          "anterior": 2701,
+          "atual": 2738,
+          "variacaoPct": 1.4
+        },
+        "1B": {
+          "anterior": 3525,
+          "atual": 3290,
+          "variacaoPct": -6.7
+        },
+        "1A": {
+          "anterior": 14422,
+          "atual": 12836,
+          "variacaoPct": -11
+        },
+        "PT": {
+          "anterior": 45797,
+          "atual": 44468,
+          "variacaoPct": -2.9
+        }
+      }
+    },
+    {
+      "seriesId": "sme-new-sole-traders",
+      "seriesLabel": "Empresas individuais nascidas na zona",
+      "indicador": "0014098",
+      "unidade": "empresas",
+      "periodoAnterior": "2023",
+      "periodoAtual": "2024",
+      "porGeografia": {
+        "11": {
+          "anterior": 62076,
+          "atual": 64268,
+          "variacaoPct": 3.5
+        },
+        "15": {
+          "anterior": 14437,
+          "atual": 13060,
+          "variacaoPct": -9.5
+        },
+        "19": {
+          "anterior": 25992,
+          "atual": 26042,
+          "variacaoPct": 0.2
+        },
+        "20": {
+          "anterior": 3829,
+          "atual": 3740,
+          "variacaoPct": -2.3
+        },
+        "30": {
+          "anterior": 4112,
+          "atual": 4140,
+          "variacaoPct": 0.7
+        },
+        "1C": {
+          "anterior": 7341,
+          "atual": 7383,
+          "variacaoPct": 0.6
+        },
+        "1D": {
+          "anterior": 12778,
+          "atual": 12982,
+          "variacaoPct": 1.6
+        },
+        "1B": {
+          "anterior": 16980,
+          "atual": 16595,
+          "variacaoPct": -2.3
+        },
+        "1A": {
+          "anterior": 52265,
+          "atual": 52823,
+          "variacaoPct": 1.1
+        },
+        "PT": {
+          "anterior": 199810,
+          "atual": 201033,
+          "variacaoPct": 0.6
+        }
+      }
+    },
+    {
+      "seriesId": "tender-new-companies",
+      "seriesLabel": "Sociedades nascidas na zona",
+      "indicador": "0014098",
+      "unidade": "empresas",
+      "periodoAnterior": "2023",
+      "periodoAtual": "2024",
+      "porGeografia": {
+        "11": {
+          "anterior": 14028,
+          "atual": 14109,
+          "variacaoPct": 0.6
+        },
+        "15": {
+          "anterior": 2766,
+          "atual": 2565,
+          "variacaoPct": -7.3
+        },
+        "19": {
+          "anterior": 4934,
+          "atual": 5191,
+          "variacaoPct": 5.2
+        },
+        "20": {
+          "anterior": 495,
+          "atual": 618,
+          "variacaoPct": 24.8
+        },
+        "30": {
+          "anterior": 1258,
+          "atual": 1317,
+          "variacaoPct": 4.7
+        },
+        "1C": {
+          "anterior": 1668,
+          "atual": 1804,
+          "variacaoPct": 8.2
+        },
+        "1D": {
+          "anterior": 2701,
+          "atual": 2738,
+          "variacaoPct": 1.4
+        },
+        "1B": {
+          "anterior": 3525,
+          "atual": 3290,
+          "variacaoPct": -6.7
+        },
+        "1A": {
+          "anterior": 14422,
+          "atual": 12836,
+          "variacaoPct": -11
+        },
+        "PT": {
+          "anterior": 45797,
+          "atual": 44468,
+          "variacaoPct": -2.9
+        }
+      }
+    },
+    {
+      "seriesId": "tourism-new-companies",
+      "seriesLabel": "Sociedades nascidas na zona",
+      "indicador": "0014098",
+      "unidade": "empresas",
+      "periodoAnterior": "2023",
+      "periodoAtual": "2024",
+      "porGeografia": {
+        "11": {
+          "anterior": 14028,
+          "atual": 14109,
+          "variacaoPct": 0.6
+        },
+        "15": {
+          "anterior": 2766,
+          "atual": 2565,
+          "variacaoPct": -7.3
+        },
+        "19": {
+          "anterior": 4934,
+          "atual": 5191,
+          "variacaoPct": 5.2
+        },
+        "20": {
+          "anterior": 495,
+          "atual": 618,
+          "variacaoPct": 24.8
+        },
+        "30": {
+          "anterior": 1258,
+          "atual": 1317,
+          "variacaoPct": 4.7
+        },
+        "1C": {
+          "anterior": 1668,
+          "atual": 1804,
+          "variacaoPct": 8.2
+        },
+        "1D": {
+          "anterior": 2701,
+          "atual": 2738,
+          "variacaoPct": 1.4
+        },
+        "1B": {
+          "anterior": 3525,
+          "atual": 3290,
+          "variacaoPct": -6.7
+        },
+        "1A": {
+          "anterior": 14422,
+          "atual": 12836,
+          "variacaoPct": -11
+        },
+        "PT": {
+          "anterior": 45797,
+          "atual": 44468,
+          "variacaoPct": -2.9
+        }
+      }
+    },
+    {
+      "seriesId": "tourism-occupancy",
+      "seriesLabel": "Ocupação-quarto na hotelaria",
+      "indicador": "0013314",
+      "unidade": "%",
+      "periodoAnterior": "2024",
+      "periodoAtual": "2025",
+      "porGeografia": {
+        "11": {
+          "anterior": 60,
+          "atual": 60.4,
+          "variacaoPct": 0.7
+        },
+        "15": {
+          "anterior": 60.9,
+          "atual": 60.8,
+          "variacaoPct": -0.2
+        },
+        "19": {
+          "anterior": 46,
+          "atual": 46.8,
+          "variacaoPct": 1.7
+        },
+        "20": {
+          "anterior": 60.5,
+          "atual": 59.3,
+          "variacaoPct": -2
+        },
+        "30": {
+          "anterior": 79.4,
+          "atual": 81.5,
+          "variacaoPct": 2.6
+        },
+        "1D": {
+          "anterior": 46.7,
+          "atual": 47.4,
+          "variacaoPct": 1.5
+        },
+        "1C": {
+          "anterior": 48.2,
+          "atual": 50.9,
+          "variacaoPct": 5.6
+        },
+        "PT": {
+          "anterior": 62.6,
+          "atual": 63.2,
+          "variacaoPct": 1
+        },
+        "1B": {
+          "anterior": 64.1,
+          "atual": 64.9,
+          "variacaoPct": 1.2
+        },
+        "1A": {
+          "anterior": 72.8,
+          "atual": 73.1,
+          "variacaoPct": 0.4
+        }
+      }
+    }
+  ],
+  "contentHash": "sha256:3345f92c68b079fbedc04733de301f546f39c813b062ff80952f5aac2a3c1fda"
 }

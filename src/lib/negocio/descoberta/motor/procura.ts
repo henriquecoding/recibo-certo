@@ -36,7 +36,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { effectiveReferenceAgeDays } from "@/lib/negocio/market/freshness";
-import { marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
+import { MARKET_REGIONS, marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
 import {
   lacunaPorConcelho,
   lerLacuna,
@@ -49,13 +49,14 @@ import {
   type PackOferta,
 } from "@/lib/negocio/market/oferta";
 import { MATRIZ_CONCELHOS } from "@/lib/negocio/market/oferta-concelhos";
+import { tendenciaDe } from "@/lib/negocio/market/procura-nuts2";
 import { CONCEITO_POR_CAPACIDADE } from "../conhecimento/dados/ontologia";
 import type { MarketObservationSummary, MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
 import type { Evidencia, LacunaDeEvidencia } from "../proveniencia";
 import type { CandidatoBruto } from "./gerador";
 import { agregarIntensidade, lerIntensidade } from "./intensidade";
-import type { AvaliacaoProcura, LeituraDeLacuna } from "./tipos";
+import type { AvaliacaoProcura, LeituraDeLacuna, TendenciaLida } from "./tipos";
 
 /** Traduz uma observação do pack público numa evidência do motor. */
 function comoEvidencia(observacao: MarketObservationSummary, local: boolean): Evidencia {
@@ -640,7 +641,47 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
     // `lacunaPorConcelho`, incluindo a razão por que vem sempre com os
     // dois extremos e nunca como um ranking de oportunidade.
     escalaDeLacuna: escalaDoCandidato(candidato, oferta),
+    tendencias: tendenciasDoCandidato(candidato),
   };
+}
+
+/**
+ * O que as séries desta hipótese fizeram no último período.
+ *
+ * Só as séries que o problema declara — as mesmas que alimentam a
+ * intensidade. Uma tendência de uma série que não descreve este problema
+ * seria contexto disfarçado de sinal.
+ *
+ * O limiar de 1 % separa «estável» de movimento: abaixo disso, a
+ * variação está dentro do que uma revisão estatística costuma mexer, e
+ * desenhar uma seta seria dar direção ao ruído.
+ */
+function tendenciasDoCandidato(candidato: CandidatoBruto): readonly TendenciaLida[] {
+  const codigo = MARKET_REGIONS.find((item) => item.id === candidato.regiao)?.nutsCode ?? null;
+  const lidas: TendenciaLida[] = [];
+  for (const seriesId of candidato.problema.sinais) {
+    const encontrada = tendenciaDe(seriesId, codigo);
+    if (!encontrada) continue;
+    const { tendencia, variacao, nacional } = encontrada;
+    lidas.push({
+      seriesId: tendencia.seriesId,
+      seriesLabel: tendencia.seriesLabel,
+      unidade: tendencia.unidade,
+      periodoAnterior: tendencia.periodoAnterior,
+      periodoAtual: tendencia.periodoAtual,
+      anterior: variacao.anterior,
+      atual: variacao.atual,
+      variacaoPct: variacao.variacaoPct,
+      nacional,
+      direcao:
+        Math.abs(variacao.variacaoPct) < 1
+          ? "estavel"
+          : variacao.variacaoPct > 0
+            ? "subiu"
+            : "desceu",
+    });
+  }
+  return lidas;
 }
 
 /** A escala ao concelho, quando os dois termos do quociente existem. */

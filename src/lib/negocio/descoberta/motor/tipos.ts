@@ -161,6 +161,35 @@ export interface AvaliacaoProcura {
    * extremo ao lado. Ver `lacunaPorConcelho`.
    */
   escalaDeLacuna: EscalaDeLacuna | null;
+  /**
+   * Para onde as séries desta hipótese se moveram no último período.
+   *
+   * «A ocupação está nos 63 %» não diz se o mercado está a abrir ou a
+   * fechar, e essas são decisões opostas para quem vai investir. Isto
+   * responde à outra pergunta.
+   *
+   * Vem SEMPRE do instantâneo commitado, mesmo com observações frescas:
+   * a API do INE devolve um período por pedido, e dois períodos custam
+   * duas chamadas mais os metadados — trabalho de job, não de pedido. A
+   * ficha mostra a data, porque é essa a idade desta leitura.
+   */
+  tendencias: readonly TendenciaLida[];
+}
+
+/** Uma série e o que ela fez entre os dois últimos períodos publicados. */
+export interface TendenciaLida {
+  seriesId: string;
+  seriesLabel: string;
+  unidade: string;
+  periodoAnterior: string;
+  periodoAtual: string;
+  anterior: number;
+  atual: number;
+  variacaoPct: number;
+  /** `true` quando a leitura é do país por não haver a da zona. */
+  nacional: boolean;
+  /** A direção, já decidida aqui para o ecrã não a recalcular. */
+  direcao: "subiu" | "desceu" | "estavel";
 }
 
 // ── VIABILIDADE ──────────────────────────────────────────────────────

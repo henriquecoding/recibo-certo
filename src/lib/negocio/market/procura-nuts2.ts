@@ -29,6 +29,24 @@
 import bruto from "./bulk/dados/procura-nuts2.json";
 import type { MarketPilotEvidence } from "./opportunities";
 
+export interface VariacaoDaSerie {
+  anterior: number;
+  atual: number;
+  /** Variação percentual entre os dois períodos, uma casa decimal. */
+  variacaoPct: number;
+}
+
+export interface TendenciaDaSerie {
+  seriesId: string;
+  seriesLabel: string;
+  indicador: string;
+  unidade: string;
+  periodoAnterior: string;
+  periodoAtual: string;
+  /** Código NUTS 2024, ou `PT`. */
+  porGeografia: Readonly<Record<string, VariacaoDaSerie>>;
+}
+
 export interface InstantaneoProcura {
   schemaVersion: 1;
   id: "procura-nuts2";
@@ -39,6 +57,16 @@ export interface InstantaneoProcura {
   /** Pilotos que vieram sem uma única leitura. Declarados, não escondidos. */
   semObservacoes: readonly string[];
   pilotos: readonly MarketPilotEvidence[];
+  /**
+   * A variação entre os dois últimos períodos, por série e geografia.
+   *
+   * Vem SEMPRE do instantâneo, mesmo quando as observações são frescas:
+   * a API do INE devolve um período por pedido, e os dois períodos
+   * precisam de duas chamadas mais a leitura dos metadados — trabalho de
+   * job, não de pedido. Quem a mostrar tem de dizer a data do
+   * instantâneo, porque é essa a idade desta leitura.
+   */
+  tendencias: readonly TendenciaDaSerie[];
   contentHash: string;
 }
 
@@ -88,7 +116,47 @@ function valida(documento: unknown): InstantaneoProcura | null {
   );
   if (total === 0) return null;
 
+  // As tendências são OPCIONAIS: um instantâneo sem elas continua a valer
+  // — perde a direção, não perde as leituras. Uma tendência malformada,
+  // essa, sai inteira, porque uma seta errada é pior do que seta nenhuma.
+  const tendencias = alvo.tendencias;
+  if (tendencias !== undefined) {
+    if (!Array.isArray(tendencias)) return null;
+    for (const item of tendencias) {
+      if (typeof item !== "object" || item === null) return null;
+      const t = item as Record<string, unknown>;
+      if (typeof t.seriesId !== "string" || typeof t.periodoAtual !== "string") return null;
+      if (typeof t.porGeografia !== "object" || t.porGeografia === null) return null;
+      for (const variacao of Object.values(t.porGeografia as Record<string, unknown>)) {
+        const v = variacao as Record<string, unknown>;
+        if (typeof v?.anterior !== "number" || typeof v?.atual !== "number") return null;
+        if (typeof v?.variacaoPct !== "number" || !Number.isFinite(v.variacaoPct)) return null;
+      }
+    }
+  }
+
   return documento as unknown as InstantaneoProcura;
+}
+
+/**
+ * A tendência de uma série na geografia pedida, com recuo ao país.
+ *
+ * O recuo é declarado por quem lê: a leitura nacional é uma leitura
+ * diferente da regional, e chamar-lhe «a tendência aqui» seria dizer que
+ * o país e a zona se movem juntos, que é precisamente o que não sabemos.
+ */
+export function tendenciaDe(
+  seriesId: string,
+  codigoGeografia: string | null,
+): { tendencia: TendenciaDaSerie; variacao: VariacaoDaSerie; nacional: boolean } | null {
+  const tendencia = PROCURA_COMMITADA?.tendencias?.find((item) => item.seriesId === seriesId);
+  if (!tendencia) return null;
+  if (codigoGeografia) {
+    const local = tendencia.porGeografia[codigoGeografia];
+    if (local) return { tendencia, variacao: local, nacional: false };
+  }
+  const nacional = tendencia.porGeografia.PT;
+  return nacional ? { tendencia, variacao: nacional, nacional: true } : null;
 }
 
 /** O instantâneo validado, ou `null`. Avaliado uma vez à carga do módulo. */

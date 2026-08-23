@@ -1162,4 +1162,40 @@ html.dark .dark\:text-brand-mint {
     font-size: 10px;
     color: #555;
   }
+
+  /* ── UMA HIPÓTESE POR FOLHA ─────────────────────────────────────
+     O motor de descoberta apresenta até dez hipóteses. Imprimir a
+     página inteira dava dez fichas e nenhuma delas era a que a pessoa
+     quis levar. Quando `imprimirFicha()` marca um cartão, todos os
+     outros saem — e sai uma ficha com os números e a proveniência
+     colada a cada um, que é o que se leva a um contabilista.
+
+     Sem a classe no `body`, nada disto se aplica: imprimir a página
+     por Ctrl+P continua a fazer o que sempre fez. */
+  body.a-imprimir-ficha article:not([data-ficha-a-imprimir]) {
+    display: none !important;
+  }
+
+  /* O que rodeia a lista — filtros, comparador, ângulos de leitura —
+     não pertence a uma ficha de uma hipótese só. */
+  body.a-imprimir-ficha [data-fora-da-ficha] {
+    display: none !important;
+  }
+
+  /* Um `<details>` aberto por script continua a ter o triângulo do
+     browser, que em papel é ruído sem função. */
+  body.a-imprimir-ficha summary {
+    list-style: none;
+  }
+
+  body.a-imprimir-ficha summary::-webkit-details-marker {
+    display: none;
+  }
+
+  /* A ficha é longa e as secções internas partem-se melhor do que o
+     cartão inteiro: `break-inside: avoid` num `article` de duas folhas
+     empurra tudo para a segunda e deixa a primeira em branco. */
+  body.a-imprimir-ficha article[data-ficha-a-imprimir] {
+    break-inside: auto;
+  }
 }

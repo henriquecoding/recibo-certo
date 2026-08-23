@@ -14,7 +14,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatarIntervalo, ROTULO_ORIGEM } from "@/lib/negocio/descoberta/proveniencia";
 import { descreverZona, ROTULO_ENTREGA } from "@/lib/negocio/descoberta/motor/gerador";
 import { EXPLICACAO_DIMENSAO, ROTULO_DIMENSAO } from "@/lib/negocio/descoberta/motor/scoring";
@@ -29,15 +29,19 @@ import {
   ArrowRight,
   BookOpen,
   Check,
+  ChevronDown,
+  ChevronUp,
+  Export,
   ExternalLink,
   Gauge,
   Info,
+  Minus,
   Scale,
   Search,
   ShieldCheck,
   Warning,
 } from "@/components/ui/Icons";
-import { Chip, LinhaDimensao } from "./atomos";
+import { BarraDeIntervalo, Chip, LinhaDimensao } from "./atomos";
 import ProvaLocal from "./ProvaLocal";
 
 const DIMENSOES: readonly (keyof OpportunityScore)[] = [
@@ -68,9 +72,54 @@ export default function Dossier({
 }) {
   const [comoChegamos, setComoChegamos] = useState(false);
   const objecoesQueProcedem = candidato.objecoes.filter((item) => item.procede);
+  const ficha = useRef<HTMLDivElement>(null);
+
+  /**
+   * Imprime só ESTA ficha.
+   *
+   * Três coisas têm de acontecer antes de chamar `print()`, e nenhuma é
+   * cosmética:
+   *
+   *  1. marcar o cartão, para a CSS esconder os outros — sem isto sairiam
+   *     dez hipóteses e o papel deixava de ser uma ficha;
+   *  2. abrir os `<details>` fechados, porque o browser não imprime o que
+   *     está colapsado e a escala aos concelhos ficaria de fora;
+   *  3. abrir «como chegámos a esta conclusão», que é justamente a parte
+   *     que dá valor a levar isto a alguém.
+   *
+   * O estado é reposto no `afterprint`, e também quando o utilizador
+   * cancela a caixa de impressão — que é o mesmo evento.
+   */
+  const imprimirFicha = () => {
+    const alvo = ficha.current?.closest("article") ?? ficha.current;
+    if (!alvo) return;
+
+    setComoChegamos(true);
+    const reabrir: HTMLDetailsElement[] = [];
+    for (const item of alvo.querySelectorAll("details")) {
+      if (!item.open) {
+        item.open = true;
+        reabrir.push(item);
+      }
+    }
+    alvo.setAttribute("data-ficha-a-imprimir", "");
+    document.body.classList.add("a-imprimir-ficha");
+
+    const limpar = () => {
+      alvo.removeAttribute("data-ficha-a-imprimir");
+      document.body.classList.remove("a-imprimir-ficha");
+      for (const item of reabrir) item.open = false;
+      window.removeEventListener("afterprint", limpar);
+    };
+    window.addEventListener("afterprint", limpar);
+
+    // Um quadro para o React aplicar `comoChegamos` antes de o browser
+    // tirar a fotografia da página.
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
+  };
 
   return (
-    <div className="border-t border-stone-100 px-4 pb-5 pt-4 dark:border-stone-800 sm:px-5">
+    <div ref={ficha} className="border-t border-stone-100 px-4 pb-5 pt-4 dark:border-stone-800 sm:px-5">
       {/* ── Porque apareceu para mim ─────────────────────────────── */}
       <div className="rounded-3xl border border-brand-light bg-brand-light/30 p-4 dark:border-brand/20 dark:bg-brand/10">
         <p className="text-xs font-semibold text-brand-deep dark:text-brand-mint">Porque apareceu para ti</p>
@@ -446,7 +495,18 @@ export default function Dossier({
                 As dimensões sem base para serem avaliadas ficam de fora da média — não valem zero.
                 Zero seria uma afirmação sobre o mercado; ausência é uma afirmação sobre nós.
               </p>
-              <p className="mt-2 text-[11px] leading-snug text-stone-500">
+              {/* A mesma barra do cartão, aqui em largura cheia: é o
+                  painel «como chegámos a esta conclusão», e é onde o
+                  intervalo merece o espaço. */}
+              <span className="mt-2 block">
+                <BarraDeIntervalo
+                  min={candidato.intervaloPontuacao.min}
+                  ponto={candidato.intervaloPontuacao.ponto}
+                  max={candidato.intervaloPontuacao.max}
+                  fechado={candidato.intervaloPontuacao.fechado}
+                />
+              </span>
+              <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
                 <strong className="font-semibold text-stone-700 dark:text-stone-200">
                   Pontuação {candidato.pontuacaoGlobal}
                   {candidato.intervaloPontuacao.fechado
@@ -485,6 +545,67 @@ export default function Dossier({
                   Um número solto não diz nada: 62 % de ocupação é bom ou mau consoante o resto do país. O
                   motor só pontua a procura quando tem contra o que a ler — e quando não tem, diz que não
                   tem em vez de contar quantas leituras encontrou.
+                </p>
+              </div>
+            ) : null}
+
+            {/* ── PARA ONDE ISTO SE MOVEU ──────────────────────────────
+                «É alto?» e «está a subir?» são perguntas diferentes, e o
+                motor só respondia à primeira. Um mercado nos 63 % a subir
+                e um nos 63 % a cair são decisões opostas.
+
+                A tendência vem sempre do instantâneo, mesmo quando as
+                leituras acima são frescas: a API do INE devolve um
+                período por pedido, e dois períodos custam duas chamadas —
+                trabalho de job, não de pedido. A data está à vista. */}
+            {candidato.procura.tendencias.length > 0 ? (
+              <div className="border-t border-stone-200/70 pt-3 dark:border-stone-800">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                  Para onde se moveu no último período
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {candidato.procura.tendencias.map((tendencia) => {
+                    const Seta =
+                      tendencia.direcao === "subiu"
+                        ? ChevronUp
+                        : tendencia.direcao === "desceu"
+                          ? ChevronDown
+                          : Minus;
+                    // A cor diz a DIREÇÃO, nunca se é bom ou mau: mais
+                    // transações de casas é procura para quem faz
+                    // mudanças e concorrência para quem já as faz. O
+                    // motor não sabe de que lado a pessoa está.
+                    return (
+                      <li key={tendencia.seriesId} className="text-[11px] leading-snug">
+                        <span className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-stone-700 dark:text-stone-200">
+                            {tendencia.seriesLabel}
+                          </span>
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-1.5 py-0.5 font-semibold tabular-nums text-stone-600 dark:bg-stone-800 dark:text-stone-300">
+                            <Seta size={11} aria-hidden="true" />
+                            {tendencia.direcao === "estavel"
+                              ? "estável"
+                              : `${tendencia.variacaoPct > 0 ? "+" : ""}${tendencia.variacaoPct.toLocaleString("pt-PT", { maximumFractionDigits: 1 })} %`}
+                          </span>
+                        </span>
+                        <span
+                          data-numero="tendencia"
+                          data-proveniencia="observado"
+                          className="mt-0.5 block text-stone-500"
+                        >
+                          {tendencia.anterior.toLocaleString("pt-PT", { maximumFractionDigits: 1 })} →{" "}
+                          {tendencia.atual.toLocaleString("pt-PT", { maximumFractionDigits: 1 })}{" "}
+                          {tendencia.unidade} · {tendencia.periodoAnterior} para {tendencia.periodoAtual} ·{" "}
+                          {tendencia.nacional ? "leitura do país" : "leitura da tua zona"}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-2 text-[11px] leading-snug text-stone-400">
+                  A direção não diz se é bom ou mau — mais transações de casas são procura para quem faz
+                  mudanças e concorrência para quem já as faz. Diz para onde o mercado andou entre as duas
+                  últimas edições publicadas.
                 </p>
               </div>
             ) : null}
@@ -579,9 +700,27 @@ export default function Dossier({
           {guardada ? <Check size={13} /> : null}
           {guardada ? "Guardada neste dispositivo" : "Guardar esta hipótese"}
         </button>
+        {/* ── LEVAR A FICHA PARA FORA DO DISPOSITIVO ────────────────
+            É a única saída compatível com `privacy: "local-only"`: o
+            browser imprime, e nada é enviado para lado nenhum. Sai UMA
+            hipótese por folha — as outras são escondidas na CSS de
+            impressão — com os números e a proveniência colada a cada um,
+            que é o que se leva a um contabilista ou ao banco.
+
+            `<button>` e não `<a>`, e sem `bg-brand`: a ação principal do
+            dossier continua a ser uma só. */}
+        <button
+          type="button"
+          data-print="hide"
+          onClick={imprimirFicha}
+          className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-stone-200 px-4 text-[12px] font-semibold text-stone-600 hover:border-brand/60 hover:text-brand-dark dark:border-stone-700 dark:text-stone-300"
+        >
+          <Export size={13} /> Imprimir ou guardar em PDF
+        </button>
         {candidato.seedTemplateId ? (
           <Link
             href={`/dashboard/negocio?o=${encodeURIComponent(candidato.seedTemplateId)}`}
+            data-print="hide"
             className="inline-flex min-h-[44px] items-center text-[12px] font-medium text-stone-500 underline-offset-4 hover:text-brand-dark hover:underline dark:text-stone-400 dark:hover:text-brand-mint"
           >
             ou construir no estúdio de empresa

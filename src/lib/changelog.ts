@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.109.0",
+    data: "2026-08-23",
+    titulo: "Para onde o mercado andou, a incerteza desenhada, e a ficha em papel",
+    itens: [
+      "A ferramenta dizia «a ocupação está nos 63 %» e ficava por aí. Faltava a outra metade: 63 % a subir e 63 % a descer são decisões opostas. Cada hipótese passa a mostrar para onde as suas séries se moveram entre as duas últimas edições publicadas — com os dois valores, os dois períodos e a variação. Nos dados de agora: transações de casas +10,5 %, sociedades nascidas −2,9 %, ocupação hoteleira +1,0 %.",
+      "A direção não diz se é bom ou mau, e a ficha diz isso: mais transações de casas são procura para quem faz mudanças e concorrência para quem já as faz. O motor não sabe de que lado estás.",
+      "A pontuação deixou de ser só um texto. Passa a ter uma barra: a faixa mostra o que ainda não foi possível avaliar, o traço mostra a melhor estimativa. Quando conseguimos avaliar tudo, a faixa desaparece e fica só o traço. Quem usa leitor de ecrã ouve a mesma coisa por palavras — a orientação oficial sobre comunicar incerteza é que a forma visual e a narrativa se completam, não se substituem.",
+      "«Imprimir ou guardar em PDF» em cada hipótese. Sai uma ficha só daquela — as outras são escondidas —, com os números e a origem de cada um colada ao lado, e as secções dobráveis abertas. É o que se leva a um contabilista ou ao banco, e nada sai do teu dispositivo: é o browser a imprimir.",
+    ],
+  },
+  {
     version: "2.108.0",
     data: "2026-08-23",
     titulo: "A ferramenta já sabia onde há menos concorrência — só nunca tinha dito",

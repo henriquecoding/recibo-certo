@@ -74,14 +74,161 @@ async function carregarLoader() {
     resolve: { alias: { "@": join(RAIZ, "src") } },
   });
   const modulo = await servidor.ssrLoadModule("/src/lib/negocio/market/pilot-loader.ts");
-  return { loadPilotMarketEvidence: modulo.loadPilotMarketEvidence, fechar: () => servidor.close() };
+  const pilotos = await servidor.ssrLoadModule("/src/lib/negocio/market/pilots.ts");
+  return {
+    loadPilotMarketEvidence: modulo.loadPilotMarketEvidence,
+    MARKET_PILOTS: pilotos.MARKET_PILOTS,
+    fechar: () => servidor.close(),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A TENDÊNCIA — a pergunta que «é alto?» não responde
+//  ---------------------------------------------------------------------
+//  Todas as leituras do motor são um instante. «A ocupação está nos 56 %»
+//  não diz se o mercado está a abrir ou a fechar, e essas são decisões
+//  opostas para quem vai investir.
+//
+//  ── PORQUE ISTO CORRE AQUI E NÃO NO PEDIDO ─────────────────────────
+//  Medido: a API do INE devolve UM período por pedido. Para ter dois é
+//  preciso nomeá-los em `Dim1`, e para saber como se chamam é preciso ler
+//  primeiro o `pindicaMeta`. São dois pedidos por indicador — aceitável
+//  num job semanal, inaceitável no caminho de quem abre a página, que é
+//  a lição que `oferta.ts` já aprendeu duas vezes.
+//
+//  Os manifestos são LIDOS de `pilots.ts`, nunca repetidos aqui: os
+//  filtros de dimensão e as geografias válidas têm de ser os mesmos que
+//  o conector usa, ou a tendência descreveria outra série.
+// ═══════════════════════════════════════════════════════════════════════
+
+const META = (indicador) =>
+  `https://www.ine.pt/ine/json_indicador/pindicaMeta.jsp?varcd=${indicador}&lang=PT`;
+
+async function pedirJson(endereco, segundos = 90) {
+  const resposta = await fetch(endereco, {
+    headers: { Accept: "application/json" },
+    signal: AbortSignal.timeout(segundos * 1000),
+  });
+  if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+  return resposta.json();
+}
+
+/** Os dois períodos mais recentes de um indicador, pelos códigos do INE. */
+async function doisUltimosPeriodos(indicador) {
+  const corpo = await pedirJson(META(indicador));
+  const bloco = corpo?.[0]?.Dimensoes?.Categoria_Dim?.[0];
+  if (!bloco) return null;
+  const codigos = [];
+  for (const chave of Object.keys(bloco)) {
+    if (!chave.includes("Num1")) continue;
+    const valor = bloco[chave];
+    const registo = Array.isArray(valor) ? valor[0] : valor;
+    if (registo?.categ_cod) codigos.push(String(registo.categ_cod));
+  }
+  // Os códigos do INE ordenam-se lexicograficamente dentro da mesma
+  // periodicidade (S7A2024 < S7A2025), que é o caso de todas estas séries.
+  codigos.sort();
+  return codigos.length >= 2 ? codigos.slice(-2) : null;
+}
+
+/**
+ * A variação entre os dois últimos períodos, por geografia.
+ *
+ * Devolve `null` — nunca zero — quando não há dois períodos comparáveis.
+ * Zero seria «não mudou», que é uma afirmação sobre o mercado.
+ */
+async function tendenciaDaSerie(serie) {
+  const manifesto = serie.source.manifest;
+  const periodos = await doisUltimosPeriodos(manifesto.indicatorCode);
+  if (!periodos) return null;
+
+  const extra = Object.entries(manifesto.dimensionFilters ?? {})
+    .map(([dim, valores]) => `&${dim.replace("dim_", "Dim")}=${valores.join(",")}`)
+    .join("");
+  const endereco =
+    `https://www.ine.pt/ine/json_indicador/pindica.jsp?op=2&varcd=${manifesto.indicatorCode}` +
+    `&Dim1=${periodos.join(",")}${extra}&lang=PT`;
+
+  const corpo = await pedirJson(endereco, 120);
+  const dados = corpo?.[0]?.Dados;
+  if (!dados) return null;
+
+  const rotulos = Object.keys(dados).sort();
+  if (rotulos.length < 2) return null;
+  const [antes, agora] = [rotulos[rotulos.length - 2], rotulos[rotulos.length - 1]];
+
+  const numero = (valor) => {
+    if (valor === null || valor === undefined || valor === "") return null;
+    const convertido = Number(String(valor).replace(",", "."));
+    return Number.isFinite(convertido) ? convertido : null;
+  };
+
+  const permitidas = new Set(Object.keys(manifesto.geographyByCode ?? {}));
+  const ler = (rotulo) => {
+    const mapa = new Map();
+    for (const linha of dados[rotulo] ?? []) {
+      if (!permitidas.has(linha.geocod)) continue;
+      const valor = numero(linha.valor);
+      if (valor !== null) mapa.set(linha.geocod, valor);
+    }
+    return mapa;
+  };
+
+  const anteriores = ler(antes);
+  const atuais = ler(agora);
+  const porGeografia = {};
+  for (const [codigo, atual] of atuais) {
+    const anterior = anteriores.get(codigo);
+    if (anterior === undefined || anterior === 0) continue;
+    porGeografia[codigo] = {
+      anterior,
+      atual,
+      variacaoPct: Math.round(((atual - anterior) / Math.abs(anterior)) * 1000) / 10,
+    };
+  }
+  if (Object.keys(porGeografia).length === 0) return null;
+
+  return {
+    seriesId: serie.id,
+    seriesLabel: serie.label,
+    indicador: manifesto.indicatorCode,
+    unidade: manifesto.unit,
+    periodoAnterior: antes,
+    periodoAtual: agora,
+    porGeografia,
+  };
+}
+
+/** As tendências de todas as séries de PROCURA servidas pelo INE. */
+async function colherTendencias(pilotosDefinidos) {
+  const vistas = new Set();
+  const saida = [];
+  for (const piloto of pilotosDefinidos) {
+    for (const serie of piloto.series) {
+      if (serie.source?.connector !== "ine") continue;
+      if (serie.kind !== "demand" && serie.kind !== "transactional") continue;
+      if (vistas.has(serie.id)) continue;
+      vistas.add(serie.id);
+      try {
+        const tendencia = await tendenciaDaSerie(serie);
+        if (tendencia) saida.push(tendencia);
+      } catch (erro) {
+        // Uma série sem tendência não estraga as outras nem o instantâneo:
+        // o campo é opcional em toda a cadeia, e a ausência declara-se.
+        console.warn(`  · sem tendência para ${serie.id}: ${String(erro).slice(0, 80)}`);
+      }
+    }
+  }
+  return saida.sort((a, b) => a.seriesId.localeCompare(b.seriesId));
 }
 
 async function construir() {
-  const { loadPilotMarketEvidence, fechar } = await carregarLoader();
+  const { loadPilotMarketEvidence, MARKET_PILOTS, fechar } = await carregarLoader();
   let pilotos;
+  let tendencias = [];
   try {
     pilotos = await loadPilotMarketEvidence({});
+    tendencias = await colherTendencias(MARKET_PILOTS);
   } finally {
     await fechar();
   }
@@ -111,6 +258,15 @@ async function construir() {
     /** Pilotos que vieram sem uma única leitura. Declarados, não escondidos. */
     semObservacoes: vazios.map((item) => item.templateId).sort(),
     pilotos,
+    /**
+     * A variação entre os dois últimos períodos, por série e geografia.
+     *
+     * Separada dos pilotos de propósito: é uma leitura DIFERENTE, colhida
+     * por outro caminho (dois períodos nomeados em `Dim1`), e misturá-la
+     * nas observações faria parecer que o conector a devolve — não
+     * devolve, devolve um período de cada vez.
+     */
+    tendencias,
   };
 
   // O hash cobre os DADOS e não `geradoEm`: sem isto o job commitava a
@@ -150,7 +306,7 @@ if (conferir) {
 } else {
   writeFileSync(DESTINO, serializado, "utf8");
   console.log(
-    `✓ procura-nuts2.json escrito — ${documento.pilotos.length} pilotos · ${contarObs(documento)} observações · ${(serializado.length / 1024).toFixed(1)} KB${
+    `✓ procura-nuts2.json escrito — ${documento.pilotos.length} pilotos · ${contarObs(documento)} observações · ${documento.tendencias.length} tendências · ${(serializado.length / 1024).toFixed(1)} KB${
       documento.semObservacoes.length > 0 ? ` · sem leituras: ${documento.semObservacoes.join(", ")}` : ""
     }`,
   );

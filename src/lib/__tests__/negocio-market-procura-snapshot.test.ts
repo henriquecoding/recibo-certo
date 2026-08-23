@@ -10,7 +10,7 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import bruto from "@/lib/negocio/market/bulk/dados/procura-nuts2.json";
-import { comInstantaneoPorBaixo, PROCURA_COMMITADA } from "@/lib/negocio/market/procura-nuts2";
+import { comInstantaneoPorBaixo, PROCURA_COMMITADA, tendenciaDe } from "@/lib/negocio/market/procura-nuts2";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 
 describe("procura commitada · o ficheiro é o que o gerador escreveu", () => {
@@ -126,5 +126,57 @@ describe("procura commitada · o ao vivo ganha, o instantâneo só preenche", ()
     const servido = pilotos.find((item) => item.templateId === guardado.templateId)!;
     expect(servido.checkedAt).toBe(guardado.checkedAt);
     expect(servido.observations[0]?.retrievedAt).toBe(guardado.observations[0]?.retrievedAt);
+  });
+});
+
+describe("procura commitada · a tendência", () => {
+  it("traz séries com dois períodos e as dez geografias", () => {
+    const tendencias = PROCURA_COMMITADA!.tendencias ?? [];
+    expect(tendencias.length).toBeGreaterThan(0);
+    for (const t of tendencias) {
+      // Dois períodos distintos, ou não há variação nenhuma a calcular.
+      expect(t.periodoAnterior).not.toBe(t.periodoAtual);
+      expect(t.periodoAnterior < t.periodoAtual, t.seriesId).toBe(true);
+      expect(Object.keys(t.porGeografia).length).toBeGreaterThan(1);
+    }
+  });
+
+  it("a variação percentual bate com os dois valores", () => {
+    // Uma percentagem que não venha dos números ao lado é um número
+    // inventado com ar de cálculo — e esta ficha mostra os três.
+    for (const t of PROCURA_COMMITADA!.tendencias ?? []) {
+      for (const [codigo, v] of Object.entries(t.porGeografia)) {
+        const esperado = Math.round(((v.atual - v.anterior) / Math.abs(v.anterior)) * 1000) / 10;
+        expect(v.variacaoPct, `${t.seriesId}/${codigo}`).toBeCloseTo(esperado, 6);
+      }
+    }
+  });
+
+  it("as séries com tendência são de procura, nunca estruturais", () => {
+    // Uma tendência de índice de envelhecimento não descreve o movimento
+    // de um mercado; descreve demografia. Só entram demand/transactional.
+    const idsComTendencia = new Set((PROCURA_COMMITADA!.tendencias ?? []).map((t) => t.seriesId));
+    const kindPorSerie = new Map<string, string>();
+    for (const p of PROCURA_COMMITADA!.pilotos) {
+      for (const o of p.observations) kindPorSerie.set(o.seriesId, String(o.kind));
+    }
+    for (const id of idsComTendencia) {
+      const kind = kindPorSerie.get(id);
+      if (kind) expect(["demand", "transactional"], id).toContain(kind);
+    }
+  });
+
+  it("`tendenciaDe` prefere a zona e recua ao país declarando-o", () => {
+    const t = (PROCURA_COMMITADA!.tendencias ?? [])[0];
+    if (!t) return;
+    const local = tendenciaDe(t.seriesId, "11");
+    if (t.porGeografia["11"]) {
+      expect(local?.nacional).toBe(false);
+      expect(local?.variacao.atual).toBe(t.porGeografia["11"].atual);
+    }
+    // Uma geografia que a série não cobre recua ao país, e diz que recuou.
+    const recuo = tendenciaDe(t.seriesId, "ZZ");
+    expect(recuo?.nacional).toBe(true);
+    expect(tendenciaDe("serie-que-nao-existe", "11")).toBeNull();
   });
 });

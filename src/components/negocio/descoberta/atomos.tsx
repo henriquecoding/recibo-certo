@@ -96,6 +96,71 @@ export function BarraProfundidade({ percentagem }: { percentagem: number }) {
   );
 }
 
+/**
+ * O intervalo da pontuação, desenhado.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE UMA BARRA E NÃO SÓ «Entre 69 e 82»                           │
+ * │                                                                    │
+ * │ A orientação da Government Analysis Function e do ONS sobre        │
+ * │ comunicar incerteza é explícita: intervalos, faixas de densidade e │
+ * │ curvas comunicam melhor do que descrições textuais — e qualquer    │
+ * │ delas é melhor do que não comunicar. O texto fica na mesma, porque │
+ * │ a mesma orientação diz que a forma narrativa é o que torna isto    │
+ * │ acessível a quem não lê intervalos.                                 │
+ * │                                                                    │
+ * │ Por isso: a faixa mostra o que não sabemos, o traço mostra a       │
+ * │ melhor estimativa, e o `aria-label` diz as três coisas por         │
+ * │ palavras, para quem usa leitor de ecrã receber a mesma informação  │
+ * │ e não uma barra muda.                                               │
+ * └────────────────────────────────────────────────────────────────────┘
+ *
+ * Quando o intervalo fecha, a faixa colapsa e fica só o traço — que é a
+ * recompensa visível por termos conseguido avaliar tudo.
+ */
+export function BarraDeIntervalo({
+  min,
+  ponto,
+  max,
+  fechado,
+}: {
+  min: number;
+  ponto: number;
+  max: number;
+  fechado: boolean;
+}) {
+  const limitar = (valor: number) => Math.max(0, Math.min(100, valor));
+  const inicio = limitar(Math.min(min, ponto));
+  const fim = limitar(Math.max(max, ponto));
+  const largura = Math.max(fim - inicio, 0);
+
+  const descricao = fechado
+    ? `Pontuação ${ponto} em 100, sem margem por apurar.`
+    : `Pontuação entre ${min} e ${max} em 100, com melhor estimativa ${ponto}. A faixa é o que ainda não foi possível avaliar.`;
+
+  return (
+    <span role="img" aria-label={descricao} className="block">
+      <span
+        aria-hidden="true"
+        className="relative block h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800"
+      >
+        {/* A faixa do que não sabemos. Sem ela, o traço sozinho mentiria. */}
+        {!fechado && largura > 0 ? (
+          <span
+            className="absolute inset-y-0 rounded-full bg-brand-light dark:bg-brand/25"
+            style={{ left: `${inicio}%`, width: `${largura}%` }}
+          />
+        ) : null}
+        {/* A melhor estimativa. 2 px de traço, preso dentro da barra. */}
+        <span
+          className="absolute inset-y-0 w-0.5 rounded-full bg-brand"
+          style={{ left: `calc(${limitar(ponto)}% - 1px)` }}
+        />
+      </span>
+    </span>
+  );
+}
+
 /** Uma linha de barra para uma dimensão do score. `null` = não avaliada. */
 export function LinhaDimensao({
   rotulo,

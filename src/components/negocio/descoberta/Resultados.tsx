@@ -52,7 +52,7 @@ import {
   Trash,
   Zap,
 } from "@/components/ui/Icons";
-import { Chip } from "./atomos";
+import { BarraDeIntervalo, Chip } from "./atomos";
 import Dossier from "./Dossier";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
@@ -304,7 +304,10 @@ export default function Resultados({
 
       {/* ══ Porque a ordem não é só a pontuação ═════════════════ */}
       {ordemFoiDiversificada && anguloAtivo === "todos" ? (
-        <p className="flex items-start gap-1.5 rounded-3xl border border-stone-100 bg-stone-50 px-4 py-2.5 text-[11px] leading-snug text-stone-500 dark:border-stone-800 dark:bg-stone-900/50">
+        <p
+          data-fora-da-ficha
+          className="flex items-start gap-1.5 rounded-3xl border border-stone-100 bg-stone-50 px-4 py-2.5 text-[11px] leading-snug text-stone-500 dark:border-stone-800 dark:bg-stone-900/50"
+        >
           <BarChart2 size={12} className="mt-0.5 flex-none text-brand" />
           <span>
             <strong className="font-semibold text-stone-700 dark:text-stone-200">
@@ -385,6 +388,19 @@ export default function Resultados({
                     Quando a cobertura é total o intervalo colapsa e
                     passa a haver um número só — que é a recompensa por
                     ter respondido a tudo. */}
+                {/* A barra antes do texto: a orientação do ONS é que a
+                    forma visual comunica a incerteza melhor do que a
+                    descrição, e que as duas juntas são o que a torna
+                    acessível. Largura fixa para não empurrar o texto em
+                    ecrã estreito. */}
+                <span className="w-14 flex-none sm:w-20">
+                  <BarraDeIntervalo
+                    min={candidato.intervaloPontuacao.min}
+                    ponto={candidato.intervaloPontuacao.ponto}
+                    max={candidato.intervaloPontuacao.max}
+                    fechado={candidato.intervaloPontuacao.fechado}
+                  />
+                </span>
                 <span className="text-[11px] text-stone-400">
                   {candidato.intervaloPontuacao.fechado ? (
                     <>
@@ -664,6 +680,7 @@ function Comparador({
 
   return (
     <section
+      data-fora-da-ficha
       aria-labelledby="comparador-descoberta"
       className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5"
     >
