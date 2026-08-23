@@ -97,7 +97,16 @@ import {
   Search,
   Wallet,
 } from "@/components/ui/Icons";
-import { BarraProfundidade, Campo, Chip, EscolhaChip, GrupoEscolhas, Opcao, Seccao } from "./atomos";
+import {
+  BarraProfundidade,
+  Campo,
+  Chip,
+  EscolhaChip,
+  ListaFiltravel,
+  Opcao,
+  Seccao,
+  type OpcaoFiltravel,
+} from "./atomos";
 
 const NIVEIS_COMPETENCIA: readonly { id: NivelCompetencia; rotulo: string }[] = [
   { id: "basico", rotulo: "Básico" },
@@ -132,12 +141,24 @@ const DIMENSOES_RISCO: readonly DimensaoRisco[] = [
 /** As secções dobráveis, por ordem de aparecimento. */
 type SeccaoId = SeccaoConfigurador;
 
-/** Sem acentos e em minúsculas: quem escreve «eletrica» procura «elétrica». */
-const chave = (texto: string) =>
-  texto
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+// As três listas grandes, na forma que o filtro entende. Fora do
+// componente porque são constantes: recalcular isto a cada tecla escrita
+// na caixa de procura seria trabalho por nada.
+const COMPETENCIAS_FILTRAVEIS: readonly OpcaoFiltravel[] = COMPETENCIAS_OFERECIDAS.map(
+  (item) => ({ id: item.id, rotulo: item.rotulo, nota: item.descricao, grupo: item.familia }),
+);
+const ATIVOS_FILTRAVEIS: readonly OpcaoFiltravel[] = ATIVOS.map((item) => ({
+  id: item.id,
+  rotulo: item.rotulo,
+  nota: item.nota,
+  grupo: item.grupo,
+}));
+const RESTRICOES_FILTRAVEIS: readonly OpcaoFiltravel[] = RESTRICOES.map((item) => ({
+  id: item.id,
+  rotulo: item.rotulo,
+  nota: item.nota,
+  grupo: item.grupo,
+}));
 
 const plural = (quantidade: number, singular: string, muitos: string) =>
   `${quantidade} ${quantidade === 1 ? singular : muitos}`;
@@ -164,7 +185,6 @@ export default function Configurador({
   // registar em lado nenhum.
   const [fechadas, setFechadas] = useState<ReadonlySet<SeccaoId>>(() => new Set<SeccaoId>());
   const [descricoes, setDescricoes] = useState(false);
-  const [procura, setProcura] = useState("");
 
   const profundidade = useMemo(() => profundidadeDoContexto(contexto), [contexto]);
 
@@ -237,20 +257,15 @@ export default function Configurador({
     }, 90);
   };
 
-  // ── As competências, agrupadas e pesquisáveis ─────────────────────
+  // ── As competências escolhidas ────────────────────────────────────
   const selecionadas = useMemo(
     () => new Set(contexto.competencias.map((item) => item.id)),
     [contexto.competencias],
   );
-  const consulta = chave(procura.trim());
-  const encontradas = useMemo(
-    () =>
-      consulta.length === 0
-        ? COMPETENCIAS_OFERECIDAS
-        : COMPETENCIAS_OFERECIDAS.filter(
-            (item) => chave(item.rotulo).includes(consulta) || chave(item.descricao).includes(consulta),
-          ),
-    [consulta],
+  const ativosEscolhidos = useMemo(() => new Set<string>(contexto.ativos), [contexto.ativos]);
+  const restricoesEscolhidas = useMemo(
+    () => new Set<string>(contexto.restricoes),
+    [contexto.restricoes],
   );
   const escolhidasEmOrdem = useMemo(
     () => COMPETENCIAS_OFERECIDAS.filter((item) => selecionadas.has(item.id)),
@@ -355,54 +370,16 @@ export default function Configurador({
             que farias por dinheiro amanhã, não o que gostavas de aprender.
           </p>
 
-          <label htmlFor="ode-procura" className="sr-only">
-            Procurar competência
-          </label>
-          <div className="relative mb-3">
-            <Search
-              size={14}
-              className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
-            />
-            <input
-              id="ode-procura"
-              type="search"
-              value={procura}
-              onChange={(evento) => setProcura(evento.target.value)}
-              placeholder="Procurar entre as 22 competências…"
-              className="h-10 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-[12px] text-ink placeholder:text-stone-400 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-            />
-          </div>
-
-          <div className="space-y-3">
-            {FAMILIAS_COMPETENCIA.map((familia) => {
-              const desta = encontradas.filter((item) => item.familia === familia.id);
-              if (desta.length === 0) return null;
-              return (
-                <GrupoEscolhas
-                  key={familia.id}
-                  rotulo={familia.rotulo}
-                  escolhidas={desta.filter((item) => selecionadas.has(item.id)).length}
-                  detalhado={descricoes}
-                >
-                  {desta.map((competencia) => (
-                    <EscolhaChip
-                      key={competencia.id}
-                      ativo={selecionadas.has(competencia.id)}
-                      onClick={() => alternarCompetencia(competencia.id)}
-                      rotulo={competencia.rotulo}
-                      nota={descricoes ? competencia.descricao : undefined}
-                    />
-                  ))}
-                </GrupoEscolhas>
-              );
-            })}
-            {encontradas.length === 0 ? (
-              <p className="rounded-xl bg-stone-50 px-3 py-4 text-center text-[12px] text-stone-500 dark:bg-stone-800/50">
-                Nada com «{procura.trim()}». O motor trabalha com {COMPETENCIAS_OFERECIDAS.length}{" "}
-                competências largas de propósito — procura a mais próxima do que fazes.
-              </p>
-            ) : null}
-          </div>
+          <ListaFiltravel
+            nome="competencias"
+            singular="competência"
+            plural="competências"
+            opcoes={COMPETENCIAS_FILTRAVEIS}
+            grupos={FAMILIAS_COMPETENCIA}
+            escolhidas={selecionadas}
+            onAlternar={alternarCompetencia}
+            descricoes={descricoes}
+          />
 
           {/* O nível de cada uma, só das que foram escolhidas. Inline em
               cada pastilha partia a grelha e voltava a encher a secção. */}
@@ -603,34 +580,21 @@ export default function Configurador({
 
           <div className="mt-4">
             <Campo rotulo="Meios que já tens">
-              <p className="mb-2 text-[11px] leading-snug text-stone-500">
-                Uma carrinha ou um terreno abrem hipóteses que não existem sem eles.
-              </p>
-              <div className="space-y-3">
-                {GRUPOS_ATIVOS.map((grupo) => {
-                  const deste = ATIVOS.filter((ativo) => ativo.grupo === grupo.id);
-                  return (
-                    <GrupoEscolhas
-                      key={grupo.id}
-                      rotulo={grupo.rotulo}
-                      escolhidas={deste.filter((ativo) => contexto.ativos.includes(ativo.id)).length}
-                      detalhado={descricoes}
-                    >
-                      {deste.map((ativo) => (
-                        <EscolhaChip
-                          key={ativo.id}
-                          ativo={contexto.ativos.includes(ativo.id)}
-                          onClick={() =>
-                            alterar({ ativos: alternarLista(contexto.ativos, ativo.id as AtivoId) })
-                          }
-                          rotulo={ativo.rotulo}
-                          nota={descricoes ? ativo.nota : undefined}
-                        />
-                      ))}
-                    </GrupoEscolhas>
-                  );
-                })}
-              </div>
+              <ListaFiltravel
+                nome="meios"
+                singular="meio"
+                plural="meios"
+                opcoes={ATIVOS_FILTRAVEIS}
+                grupos={GRUPOS_ATIVOS}
+                escolhidas={ativosEscolhidos}
+                onAlternar={(id) => alterar({ ativos: alternarLista(contexto.ativos, id as AtivoId) })}
+                descricoes={descricoes}
+                intro={
+                  <p className="mb-2 text-[11px] leading-snug text-stone-500">
+                    Uma carrinha ou um terreno abrem hipóteses que não existem sem eles.
+                  </p>
+                }
+              />
             </Campo>
           </div>
 
@@ -851,33 +815,18 @@ export default function Configurador({
               <strong className="font-semibold text-stone-700 dark:text-stone-200">eliminam</strong>. O
               motor passa a recusar em vez de ordenar, e diz-te o que recusou e porquê.
             </p>
-            <div className="space-y-3">
-              {GRUPOS_RESTRICOES.map((grupo) => {
-                const desta = RESTRICOES.filter((restricao) => restricao.grupo === grupo.id);
-                return (
-                  <GrupoEscolhas
-                    key={grupo.id}
-                    rotulo={grupo.rotulo}
-                    escolhidas={desta.filter((item) => contexto.restricoes.includes(item.id)).length}
-                    detalhado={descricoes}
-                  >
-                    {desta.map((restricao) => (
-                      <EscolhaChip
-                        key={restricao.id}
-                        ativo={contexto.restricoes.includes(restricao.id)}
-                        onClick={() =>
-                          alterar({
-                            restricoes: alternarLista(contexto.restricoes, restricao.id as RestricaoId),
-                          })
-                        }
-                        rotulo={restricao.rotulo}
-                        nota={descricoes ? restricao.nota : undefined}
-                      />
-                    ))}
-                  </GrupoEscolhas>
-                );
-              })}
-            </div>
+            <ListaFiltravel
+              nome="limites"
+              singular="recusa"
+              plural="recusas"
+              opcoes={RESTRICOES_FILTRAVEIS}
+              grupos={GRUPOS_RESTRICOES}
+              escolhidas={restricoesEscolhidas}
+              onAlternar={(id) =>
+                alterar({ restricoes: alternarLista(contexto.restricoes, id as RestricaoId) })
+              }
+              descricoes={descricoes}
+            />
           </Seccao>
         ) : null}
 
