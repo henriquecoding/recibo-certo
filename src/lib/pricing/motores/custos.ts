@@ -27,7 +27,7 @@
 
 import type { ModeloCustos, ModeloProducao, Regiao } from "../tipos";
 import { cent, dividir, fracao, naoNegativo, num } from "../numeros";
-import { custoRelevante, ivaNaoDedutivel } from "./iva";
+import { custoRelevante, ivaDedutivel, ivaNaoDedutivel } from "./iva";
 
 export interface ResultadoCustos {
   /** Custo direto por unidade, já com IVA resolvido, escalão e desperdício. */
@@ -38,6 +38,12 @@ export interface ResultadoCustos {
   diretoIntroduzido: number;
   /** IVA que fica preso no custo por não ser dedutível. */
   ivaPresoNoCusto: number;
+  /**
+   * IVA suportado na compra que É dedutível, por unidade. Não entra no
+   * custo (quem deduz já tem o custo sem IVA) — entra na TESOURARIA, onde
+   * abate ao IVA liquidado antes de se entregar o saldo ao Estado.
+   */
+  ivaDedutivel: number;
   /** Acréscimo em euros causado pelo desperdício. */
   custoDoDesperdicio: number;
   /** Euros por unidade que não dependem do preço. */
@@ -151,21 +157,36 @@ export function calcularCustos(input: {
       ? producaoRes.total
       : custoPorEscalao(diretoRelevanteBruto, custos.escaloes, q);
 
+  // As duas faces do mesmo IVA de compra: o que fica preso no custo (quem
+  // não deduz) e o que se recupera na declaração periódica (quem deduz).
+  const porUnidadeDasMaterias = (
+    imposto: (v: ModeloCustos["direto"]) => number,
+  ): number =>
+    (producao?.materias ?? []).reduce(
+      (soma, m) =>
+        soma + dividir(imposto(m.custoLote), Math.max(1, naoNegativo(m.unidadesPorLote, 1))),
+      0,
+    );
+
   const ivaPresoNoCusto =
     producaoRes.total > 0
-      ? (producao?.materias ?? []).reduce(
-          (soma, m) =>
-            soma +
-            dividir(
-              ivaNaoDedutivel(m.custoLote, regiao, deduzIVA),
-              Math.max(1, naoNegativo(m.unidadesPorLote, 1)),
-            ),
-          0,
-        )
+      ? porUnidadeDasMaterias((v) => ivaNaoDedutivel(v, regiao, deduzIVA))
       : ivaNaoDedutivel(custos.direto, regiao, deduzIVA);
 
+  // Escala com o desperdício pela mesma razão que o custo: o IVA suportado
+  // é o das unidades COMPRADAS, não o das vendidas.
+  const wDesperdicio = fracao(custos.desperdicio, 0, 0.95);
+  const ivaDedutivelBase =
+    producaoRes.total > 0
+      ? porUnidadeDasMaterias((v) => ivaDedutivel(v, regiao, deduzIVA))
+      : ivaDedutivel(custos.direto, regiao, deduzIVA);
+  const ivaDedutivelPorUnidade =
+    wDesperdicio > 0
+      ? dividir(ivaDedutivelBase, 1 - wDesperdicio, ivaDedutivelBase)
+      : ivaDedutivelBase;
+
   // ── 2. Desperdício: divide, não multiplica ─────────────────────────
-  const w = fracao(custos.desperdicio, 0, 0.95);
+  const w = wDesperdicio;
   const diretoAjustado = w > 0 ? dividir(diretoBase, 1 - w, diretoBase) : diretoBase;
   const custoDoDesperdicio = diretoAjustado - diretoBase;
 
@@ -228,6 +249,7 @@ export function calcularCustos(input: {
     diretoBase,
     diretoIntroduzido,
     ivaPresoNoCusto,
+    ivaDedutivel: ivaDedutivelPorUnidade,
     custoDoDesperdicio,
     variaveisFixos: variaveisFixos + devolucoes,
     variaveisDetalhe: producaoRes.detalhe.length > 0

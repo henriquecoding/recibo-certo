@@ -6,6 +6,7 @@ import {
   compararCenarios,
   precoParaGanhar,
   unidadesParaGanhar,
+  resultadoAoPreco,
   margemDeMarkup,
   markupDeMargem,
   validarRegrasPricing,
@@ -1763,5 +1764,280 @@ describe("R9 · regiões autónomas — o IRS regional entra mesmo no preço", (
       }),
     );
     expect(r.avisos.some((a) => a.id === "irs-regiao-autonoma")).toBe(false);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUDITORIA — nove defeitos encontrados a ler o motor de ponta a ponta
+//
+//  Todos passaram despercebidos à matriz acima porque ela testa cada peça
+//  no seu caso limpo: serviços SEM materiais, serviços SEM contas fixas,
+//  regime simplificado SEM τ, canais SEM afiliado. Os defeitos viviam
+//  precisamente nas combinações — que é onde vivem os clientes reais.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("auditoria · o custo do tempo soma-se ao material, não o substitui", () => {
+  const ctxComTempo = (material: number): ContextoPreco => {
+    const c = cenarioPorChave("servico").contexto();
+    c.vendedor.faturacaoAnualPrevista = 30000;
+    c.custos.direto = { valor: material, incluiIVA: false, escalao: "normal" };
+    return c;
+  };
+
+  it("declarar um material NÃO apaga as horas de trabalho", () => {
+    // O defeito: `custoDiretoFinal` escolhia UM dos dois. Uma sessão com
+    // 5 € de impressões passava de 243,53 € para 10,96 € — o preço caía
+    // 96% por se ter declarado um custo.
+    const semMaterial = precificar(ctxComTempo(0));
+    const comMaterial = precificar(ctxComTempo(5));
+
+    expect(comMaterial.precoLiquido).toBeGreaterThan(semMaterial.precoLiquido);
+    expect(comMaterial.custo.direto).toBeGreaterThan(semMaterial.custo.direto);
+  });
+
+  it("o custo direto de um serviço com material é tempo + material", () => {
+    const semMaterial = precificar(ctxComTempo(0));
+    const comMaterial = precificar(ctxComTempo(5));
+    expect(proximo(comMaterial.custo.direto, semMaterial.custo.direto + 5, 0.01)).toBe(true);
+  });
+
+  it("a memória de cálculo mostra as duas linhas, não uma", () => {
+    const r = precificar(ctxComTempo(5));
+    const rotulos = r.explicacao.map((l) => l.rotulo);
+    expect(rotulos.some((x) => x.startsWith("Custo do teu tempo"))).toBe(true);
+    expect(rotulos).toContain("Custo direto");
+  });
+
+  it("invariante 4, agora também para serviços: mais custo nunca dá mais lucro", () => {
+    const barato = precificar(
+      (() => {
+        const c = ctxComTempo(5);
+        c.objetivo = { modo: "preco_fixo", valor: 400, valorEhPVP: true };
+        return c;
+      })(),
+    );
+    const caro = precificar(
+      (() => {
+        const c = ctxComTempo(25);
+        c.objetivo = { modo: "preco_fixo", valor: 400, valorEhPVP: true };
+        return c;
+      })(),
+    );
+    expect(caro.margem.lucroUnidade).toBeLessThan(barato.margem.lucroUnidade);
+  });
+});
+
+describe("auditoria · as contas fixas entram uma vez, não duas", () => {
+  const ctxProjeto = (fixoMensal: number): ContextoPreco => {
+    const c = cenarioPorChave("servico").contexto();
+    c.vendedor.faturacaoAnualPrevista = 30000;
+    c.tempo!.rendimentoAnualPretendido = 24000;
+    c.tempo!.horasPorUnidade = 8;
+    c.volume = { unidadesMes: 10 };
+    c.custos.fixos = fixoMensal > 0 ? [{ id: "contab", rotulo: "Contabilidade", mensal: fixoMensal }] : [];
+    return c;
+  };
+
+  it("o valor/hora que alimenta o solver não carrega a estrutura", () => {
+    // O defeito: `calcularTempo` somava os custos fixos anuais ao
+    // valor/hora E o motor voltava a somá-los como `fixosPorUnidade`.
+    // 600 €/mês apareciam como 55,81 € dentro do custo do tempo e como
+    // 60 € de fixos por unidade — 23% de base de custo inventada.
+    const sem = precificar(ctxProjeto(0));
+    const com = precificar(ctxProjeto(600));
+
+    expect(proximo(com.custo.direto, sem.custo.direto, 0.01)).toBe(true);
+    expect(proximo(com.custo.fixosPorUnidade, 60, 0.01)).toBe(true);
+  });
+
+  it("a base de custo cresce exatamente o que a estrutura vale", () => {
+    const sem = precificar(ctxProjeto(0));
+    const com = precificar(ctxProjeto(600));
+    const baseSem = sem.custo.direto + sem.custo.fixosPorUnidade;
+    const baseCom = com.custo.direto + com.custo.fixosPorUnidade;
+    expect(proximo(baseCom - baseSem, 60, 0.01)).toBe(true);
+  });
+
+  it("sem volume para as repartir, as contas fixas ficam de fora — e diz-se", () => {
+    const c = ctxProjeto(800);
+    c.volume = { unidadesMes: 0 };
+    const r = precificar(c);
+    const aviso = r.avisos.find((a) => a.id === "fixos-sem-volume");
+    expect(aviso).toBeDefined();
+    expect(aviso!.severidade).toBe("atencao");
+  });
+});
+
+describe("auditoria · a margem entregue é a margem pedida, também em organizada", () => {
+  const ctxOrganizada = (): ContextoPreco => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "normal",
+      regiao: "continente",
+      atividade: "art151",
+      faturacaoAnualPrevista: 40000,
+      regimeContabilidade: "organizada",
+      anoAtividade: 3,
+    };
+    c.produto = { natureza: "servico", escalaoVenda: "normal" };
+    c.canal = { canal: "venda_direta", cliente: "consumidor" };
+    c.custos = {
+      direto: { valor: 20, incluiIVA: false, escalao: "normal" },
+      variaveis: [],
+      fixos: [{ id: "renda", rotulo: "Renda", mensal: 1000 }],
+    };
+    c.volume = { unidadesMes: 100 };
+    c.objetivo = { modo: "margem", percentagem: 0.35 };
+    return c;
+  };
+
+  it("35% pedidos são 35% entregues, com custos fixos e escudo fiscal", () => {
+    // O defeito: a margem era medida como «contribuição − fixos», o que
+    // perdia o escudo fiscal dos custos fixos (τ·fixos). Pedir 35%
+    // devolvia 33,2% a quem está em contabilidade organizada.
+    const r = precificar(ctxOrganizada());
+    expect(r.fiscal.irsBase).toBe("lucro");
+    expect(proximo(r.margem.margem, 0.35, 0.0005)).toBe(true);
+  });
+
+  it("a âncora «recomendado» tem a margem que o objetivo pediu", () => {
+    const r = precificar(ctxOrganizada());
+    const rec = r.faixa.ancoras.find((a) => a.chave === "recomendado")!;
+    expect(proximo(rec.margem, 0.35, 0.0005)).toBe(true);
+    expect(proximo(rec.precoLiquido, r.precoLiquido, 0.01)).toBe(true);
+  });
+
+  it("a âncora «confortável» é a folga declarada, não um salto", () => {
+    const r = precificar(ctxOrganizada());
+    const conf = r.faixa.ancoras.find((a) => a.chave === "confortavel")!;
+    expect(proximo(conf.margem, 0.45, 0.0005)).toBe(true);
+  });
+
+  it("com markup, a folga continua a ser 10 pontos sobre a margem ENTREGUE", () => {
+    // O defeito: a âncora usava `margemDeMarkup(k)`, que ignora comissões
+    // e impostos. Um markup de 50% num serviço dava «confortável» a
+    // 1 026,55 € contra 523,06 € de recomendado — o dobro do preço.
+    const c = cenarioPorChave("servico").contexto();
+    c.vendedor.faturacaoAnualPrevista = 30000;
+    c.objetivo = { modo: "markup", percentagem: 0.5 };
+    const r = precificar(c);
+
+    const conf = r.faixa.ancoras.find((a) => a.chave === "confortavel")!;
+    expect(proximo(conf.margem, r.margem.margem + 0.1, 0.0005)).toBe(true);
+    expect(conf.precoLiquido).toBeLessThan(r.precoLiquido * 1.5);
+  });
+});
+
+describe("auditoria · o IVA que sai é o que se entrega, não o que se liquida", () => {
+  const ctxRevenda = (): ContextoPreco => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "normal",
+      regiao: "continente",
+      atividade: "vendas",
+      faturacaoAnualPrevista: 60000,
+    };
+    c.produto = { natureza: "bem", escalaoVenda: "normal" };
+    c.canal = { canal: "loja_online", cliente: "consumidor" };
+    c.custos = { direto: { valor: 100, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 50 };
+    c.objetivo = { modo: "margem", percentagem: 0.25 };
+    return c;
+  };
+
+  it("a reserva de IVA abate o IVA dedutível das compras", () => {
+    // O defeito: `ivaAEntregar` devolvia P × t no regime normal. Este caso
+    // mandava reservar 1 682 €/mês onde saem 532 € — mais do triplo.
+    const r = precificar(ctxRevenda());
+    const liquidado = r.precoLiquido * r.taxaIVA;
+    const dedutivel = 100 * r.taxaIVA;
+    const esperado = (liquidado - dedutivel) * 50;
+
+    expect(r.tesouraria).not.toBeNull();
+    expect(proximo(r.tesouraria!.ivaMensal, esperado, 0.5)).toBe(true);
+    expect(r.tesouraria!.ivaMensal).toBeLessThan(liquidado * 50);
+  });
+
+  it("quem NÃO deduz continua a entregar o IVA todo", () => {
+    const c = ctxRevenda();
+    c.vendedor.regimeIVA = "normal";
+    c.custos.direto = { valor: 0, incluiIVA: false, escalao: "normal" };
+    c.tempo = undefined;
+    c.custos.variaveis = [{ id: "emb", rotulo: "Embalagem", porUnidade: 100 }];
+    const r = precificar(c);
+    // Sem IVA dedutível declarado, o saldo é o liquidado inteiro.
+    expect(proximo(r.tesouraria!.ivaMensal, r.precoLiquido * r.taxaIVA * 50, 0.5)).toBe(true);
+  });
+
+  it("no regime da margem o IVA está CONTIDO na margem — t/(1+t), não t", () => {
+    const c = contextoBase();
+    c.vendedor = { tipo: "empresa", regimeIVA: "margem", regiao: "continente" };
+    c.custos = { direto: { valor: 100, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 10 };
+    c.objetivo = { modo: "margem", percentagem: 0.3 };
+    const r = precificar(c);
+
+    const margemUnitaria = r.precoLiquido - 100;
+    const esperado = (margemUnitaria * r.taxaIVA) / (1 + r.taxaIVA);
+    expect(proximo(r.tesouraria!.ivaMensal / 10, esperado, 0.01)).toBe(true);
+  });
+
+  it("o regime da margem avisa que o preço ainda não o modela", () => {
+    const c = contextoBase();
+    c.vendedor = { tipo: "empresa", regimeIVA: "margem", regiao: "continente" };
+    c.custos = { direto: { valor: 100, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
+    const aviso = precificar(c).avisos.find((a) => a.id === "regime-margem-confirmar-enquadramento");
+    expect(aviso).toBeDefined();
+    expect(aviso!.severidade).toBe("atencao");
+    expect(aviso!.fonte).toMatch(/199\/96/);
+  });
+});
+
+describe("auditoria · a caixa conta todas as comissões e nenhum imposto duas vezes", () => {
+  it("a comissão de afiliado sai da conta, como qualquer outra", () => {
+    // O defeito: `entraNaConta` subtraía só a fração sobre o BRUTO. Um
+    // afiliado a 20% desaparecia da caixa e o ecrã dizia que ficavam
+    // 20,00 € onde ficam 16,00 €.
+    const r = precificar(
+      ctxSimples((c) => {
+        c.canal = { canal: "loja_online", cliente: "consumidor", afiliadoPercentagem: 0.2 };
+        c.objetivo = { modo: "margem", percentagem: 0.3 };
+      }),
+    );
+    const afiliado = r.precoLiquido * 0.2;
+    expect(proximo(r.caixa.entraNaConta, r.pvp - afiliado, 0.01)).toBe(true);
+  });
+
+  it("`resultadoAoPreco` não volta a descontar SS e IRS", () => {
+    // O defeito: multiplicava o lucro por (1 − SS − IRS), impostos que o
+    // solver já tinha descontado. O «líquido pessoal» saía a 66% do real.
+    const c = cenarioPorChave("servico").contexto();
+    c.vendedor.faturacaoAnualPrevista = 30000;
+    const r = resultadoAoPreco(c, 600);
+    expect(r.liquidoPessoalMensal).toBe(r.lucroMensal);
+  });
+
+  it("em organizada, o IRS em euros abate as comissões ao lucro tributável", () => {
+    const comCanal = precificar(
+      ctxSimples((c) => {
+        c.vendedor = {
+          tipo: "ti",
+          regimeIVA: "normal",
+          regiao: "continente",
+          atividade: "vendas",
+          faturacaoAnualPrevista: 40000,
+          regimeContabilidade: "organizada",
+        };
+        c.canal = { canal: "marketplace", cliente: "consumidor", comissaoPercentagem: 0.2 };
+      }),
+    );
+    expect(comCanal.fiscal.irsBase).toBe("lucro");
+    // O IRS incide sobre o que sobra depois da comissão — logo, é menor do
+    // que a taxa aplicada ao preço inteiro.
+    expect(comCanal.fiscal.irsPorUnidade).toBeLessThan(
+      comCanal.precoLiquido * comCanal.fiscal.irsFracao,
+    );
   });
 });

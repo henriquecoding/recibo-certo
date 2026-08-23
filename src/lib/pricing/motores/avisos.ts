@@ -165,6 +165,40 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
     });
   }
 
+  // ── Regime da margem: o que a engine ainda NÃO põe dentro do preço ──
+  //  Declarar a inexatidão em vez de a esconder. No DL 199/96 o IVA está
+  //  CONTIDO na margem — não se acrescenta ao preço —, e o solver ainda o
+  //  trata como taxa por cima. A tesouraria já usa a fórmula certa
+  //  (t/(1+t) sobre a margem); a formação do preço não, e enquanto for
+  //  assim tem de estar dito.
+  if (e.situacaoIVA.regimeMargem) {
+    avisos.push({
+      id: "regime-margem-confirmar-enquadramento",
+      severidade: "atencao",
+      titulo: "O regime da margem exige enquadramento próprio",
+      texto:
+        "Neste regime o IVA incide sobre a diferença entre o que pagaste e o que vais receber — e está CONTIDO nessa margem, não acrescentado ao preço. Aqui o preço ainda é formado como se o IVA fosse por cima: usa-o como ponto de partida e confirma o enquadramento com o teu contabilista antes de o afixar.",
+      fonte: "DL n.º 199/96 — regime especial de tributação da margem",
+      fonteUrl: "https://diariodarepublica.pt/dr/detalhe/decreto-lei/199-1996-435847",
+    });
+  }
+
+  // ── Contas fixas declaradas sem volume para as repartir ────────────
+  //  Sem unidades por mês não há por onde dividir a renda, e ela cai fora
+  //  do preço inteira. O número deixa de estar errado por pouco: fica
+  //  otimista pelo valor todo da estrutura. Dizê-lo é a única saída
+  //  honesta — inventar um volume seria pior.
+  if (e.custos.fixosMensais > 0 && e.unidadesMes <= 0) {
+    avisos.push({
+      id: "fixos-sem-volume",
+      severidade: "atencao",
+      titulo: "As tuas contas fixas ficaram de fora deste preço",
+      texto: `Declaraste ${eur(
+        e.custos.fixosMensais,
+      )} por mês de custos fixos, mas não disseste quantas vendas esperas — e sem isso não há por onde os repartir. O preço acima cobre o que cada venda custa, não a tua estrutura. Indica o volume mensal e ele passa a cobrir as duas coisas.`,
+    });
+  }
+
   // ── Ato isolado: nunca isento, por muito baixo que seja ────────────
   //  O erro que este aviso existe para evitar: «é só um trabalho pequeno,
   //  não chego aos 15 000 €, logo não levo IVA». O Art. 53.º n.º 6 a)

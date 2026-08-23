@@ -338,6 +338,25 @@ export function ivaNaoDedutivel(entrada: ValorComIVA, regiao: Regiao, deduz: boo
     : valor * taxaCompra;
 }
 
+/**
+ * O IVA suportado na compra que é RECUPERÁVEL — o outro lado de
+ * `ivaNaoDedutivel`.
+ *
+ * Não muda o custo (quem deduz já tem o custo na base tributável), mas muda
+ * a TESOURARIA: é isto que se abate ao IVA liquidado antes de entregar o
+ * saldo ao Estado. Ignorá-lo faz a ferramenta mandar reservar o IVA todo
+ * das vendas, que pode ser várias vezes o que a pessoa deve mesmo.
+ */
+export function ivaDedutivel(entrada: ValorComIVA, regiao: Regiao, deduz: boolean): number {
+  if (!deduz) return 0;
+  const valor = naoNegativo(entrada?.valor);
+  if (valor === 0) return 0;
+  const taxaCompra = taxaDe(regiao, entrada.escalao);
+  return entrada.incluiIVA
+    ? valor - dividir(valor, 1 + taxaCompra, valor)
+    : valor * taxaCompra;
+}
+
 /** PVP a partir do preço líquido. */
 export const pvpDe = (precoLiquido: number, taxa: number): number =>
   num(precoLiquido) * (1 + fracao(taxa, 0, 1));
@@ -347,20 +366,34 @@ export const liquidoDe = (pvp: number, taxa: number): number =>
   dividir(num(pvp), 1 + fracao(taxa, 0, 1), num(pvp));
 
 /**
- * IVA a entregar ao Estado por unidade vendida.
+ * IVA a ENTREGAR ao Estado por unidade vendida. Não é o IVA liquidado: é o
+ * saldo, já abatido do IVA dedutível suportado nas compras (Art. 19.º e
+ * 22.º do CIVA). É este o número que sai da conta.
  *
- * No regime da margem incide só sobre a diferença — e nunca sobre uma
- * margem negativa, porque não há IVA a devolver por vender com prejuízo.
+ * A diferença não é cosmética. Um revendedor no regime normal que compre a
+ * 100 € e venda a 146 € liquida 33,64 € e deduz 23,00 €: entrega 10,64 €.
+ * Reservar os 33,64 € é reservar mais do triplo do devido — o mesmo tipo de
+ * erro que reservar a menos, e igualmente capaz de estragar um mês.
+ *
+ * Nunca devolve negativo: uma posição credora é real (reporte ou pedido de
+ * reembolso), mas não é dinheiro a sair, e é isso que esta função responde.
  */
 export function ivaAEntregar(
   precoLiquido: number,
-  custoDireto: number,
+  custoAquisicao: number,
   situacao: SituacaoIVAPreco,
+  ivaDedutivelPorUnidade = 0,
 ): number {
   if (!situacao.liquida) return 0;
+
   if (situacao.regimeMargem) {
-    const margem = Math.max(0, num(precoLiquido) - num(custoDireto));
-    return margem * situacao.taxaVenda;
+    // DL 199/96: a base é a margem, e o IVA está CONTIDO nela — não se
+    // acrescenta por cima. Por isso t/(1+t) e não t. À taxa normal são
+    // 18,70% da margem, não 23%.
+    const margem = Math.max(0, num(precoLiquido) - num(custoAquisicao));
+    return dividir(margem * situacao.taxaVenda, 1 + situacao.taxaVenda);
   }
-  return num(precoLiquido) * situacao.taxaVenda;
+
+  const liquidado = num(precoLiquido) * situacao.taxaVenda;
+  return Math.max(0, liquidado - naoNegativo(ivaDedutivelPorUnidade));
 }

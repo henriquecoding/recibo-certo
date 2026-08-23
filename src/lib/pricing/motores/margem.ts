@@ -35,8 +35,16 @@ export interface EntradaMargem {
   precoLiquido: number;
   /** Todos os custos variáveis, já avaliados ao preço. */
   custosVariaveis: number;
-  /** Quota de custos fixos atribuída a esta unidade. */
-  fixosPorUnidade: number;
+  /**
+   * Lucro por unidade, calculado pelo MESMO solver que resolveu o preço.
+   *
+   * Chega já feito em vez de ser derivado aqui como «contribuição − fixos»
+   * porque essa subtração perde o escudo fiscal dos custos fixos: em
+   * contabilidade organizada eles são despesa dedutível, o solver aplica-lhes
+   * τ, e recalculá-los sem ele fazia o ecrã mostrar 33,2% de margem a quem
+   * tinha pedido 35%.
+   */
+  lucroUnidade: number;
   /** Base de custo sobre a qual o markup se mede. */
   baseMarkup: number;
   unidadesMes: number;
@@ -55,11 +63,10 @@ export interface SaidaMargem {
 export function calcularMargem(e: EntradaMargem): SaidaMargem {
   const p = num(e.precoLiquido);
   const cv = num(e.custosVariaveis);
-  const cf = num(e.fixosPorUnidade);
   const q = Math.max(0, num(e.unidadesMes));
 
   const contribuicaoUnidade = p - cv;
-  const lucroUnidade = contribuicaoUnidade - cf;
+  const lucroUnidade = num(e.lucroUnidade);
 
   return {
     lucroUnidade,

@@ -27,10 +27,21 @@ import { lucroAoPreco } from "./preco";
 import { cent, dividir, fracao, num } from "../numeros";
 
 export interface EntradaFaixa {
+  /** Só os custos variáveis — é este que define o piso absoluto. */
   solver: EntradaSolver;
+  /**
+   * O MESMO solver com que o orquestrador resolveu o preço: custos fixos
+   * por unidade por dentro, e por dentro também do escudo fiscal quando o
+   * regime é de contabilidade organizada.
+   *
+   * Vem de fora em vez de ser remontado aqui porque a cópia local esquecia
+   * `custosDedutiveis`, e a âncora «confortável» passava a ser calculada
+   * com uma equação diferente da que produziu o preço recomendado ao lado.
+   */
+  solverComFixos: EntradaSolver;
   /** Quota de custos fixos por unidade ao volume esperado. */
   fixosPorUnidade: number;
-  /** Margem pretendida (fração). */
+  /** Margem que o preço recomendado ENTREGA (fração). */
   margemAlvo: number;
   /** Folga adicional para a âncora «confortável», em pontos de margem. */
   folga: number;
@@ -44,10 +55,9 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
   const t = fracao(e.solver.taxaIVA, 0, 1);
   const ancoras: AncoraPreco[] = [];
 
+  // Medida com o solver dos fixos — o mesmo com que o preço foi resolvido.
   const margemEm = (precoLiquido: number): number =>
-    precoLiquido > 0
-      ? dividir(lucroAoPreco(e.solver, precoLiquido) - num(e.fixosPorUnidade), precoLiquido)
-      : 0;
+    precoLiquido > 0 ? dividir(lucroAoPreco(e.solverComFixos, precoLiquido), precoLiquido) : 0;
 
   // ── Piso e mínimo sustentável ──────────────────────────────────────
   //  O piso é a margem de contribuição zero; o mínimo sustentável é o
@@ -59,10 +69,7 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
   //  cobertos» logo por cima de «cobre tudo» — e a primeira reação de quem
   //  lê é que uma delas está errada. Quando coincidem, há uma linha só.
   const piso = precoPorMargem(e.solver, 0);
-  const solverComFixos: EntradaSolver = {
-    ...e.solver,
-    custosEuros: num(e.solver.custosEuros) + num(e.fixosPorUnidade),
-  };
+  const solverComFixos = e.solverComFixos;
   const minimo = precoPorMargem(solverComFixos, 0);
   const coincidem =
     piso.ok && minimo.ok && Math.abs(minimo.precoLiquido - piso.precoLiquido) < 0.005;
@@ -123,7 +130,7 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
   const psicologicos = sugerirPrecosPsicologicos({
     pvp: pvpDe(recomendado, t),
     taxaIVA: t,
-    lucroAoPrecoLiquido: (p) => lucroAoPreco(e.solver, p) - num(e.fixosPorUnidade),
+    lucroAoPrecoLiquido: (p) => lucroAoPreco(solverComFixos, p),
   });
 
   return {
