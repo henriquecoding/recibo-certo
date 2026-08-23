@@ -158,6 +158,26 @@ export const REGULACOES: readonly Regulacao[] = Object.freeze([
     severidade: 1,
     proveniencia: { origem: "observado", fonte: "DGC — Direção-Geral do Consumidor", url: "https://www.consumidor.gov.pt/", limitacao: "O prazo e as exceções dependem do tipo de bem ou serviço." },
   },
+  {
+    id: "titulo-exercicio-fisico",
+    rotulo: "Título Profissional de Técnico de Exercício Físico",
+    exigencia:
+      "Orientar exercício físico em instalações de fitness exige título profissional válido, emitido pelo IPDJ. A lei declara nulo o contrato celebrado sem ele, e o título caduca ao fim de cinco anos.",
+    // `null` e não `true`: a Lei n.º 39/2012 tem por âmbito as instalações
+    // desportivas que prestam serviços de manutenção da condição física.
+    // Treinar alguém ao ar livre ou em casa cai numa zona que depende do
+    // formato concreto — e afirmar «obrigatório sempre» seria tão errado
+    // como omitir a exigência.
+    obrigatorio: null,
+    severidade: 3,
+    proveniencia: {
+      origem: "observado",
+      fonte: "IPDJ — Título Profissional de Técnico de Exercício Físico (Lei n.º 39/2012, de 28 de agosto)",
+      url: "https://ipdj.gov.pt/tecnico-de-exercicio-fisico",
+      limitacao:
+        "O âmbito da lei são as instalações desportivas de fitness. Para treino fora delas, confirmar a aplicabilidade antes de vender.",
+    },
+  },
 ] as const);
 
 export const REGULACAO_POR_ID = new Map(REGULACOES.map((item) => [item.id, item]));

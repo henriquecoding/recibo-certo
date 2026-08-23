@@ -281,6 +281,8 @@ export default function DescobrirNegocioApp() {
         </p>
       ) : null}
       <Configurador
+        evidencia={evidencia}
+        oferta={oferta}
         contexto={contexto}
         onChange={(proximo) => {
           setContexto(proximo);

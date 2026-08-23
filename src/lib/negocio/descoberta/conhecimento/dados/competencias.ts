@@ -27,6 +27,32 @@ export const COMPETENCIAS: readonly Competencia[] = Object.freeze([
   { id: "agricultura", rotulo: "Trabalho agrícola", familia: "manual", descricao: "Cultivo, criação ou gestão de terreno produtivo." },
   { id: "linguas", rotulo: "Línguas estrangeiras", familia: "comercial", descricao: "Falar com clientes que não falam português." },
   { id: "burocracia", rotulo: "Papelada e requisitos formais", familia: "operacional", descricao: "Ler regulamentos, cruzar prazos e montar dossiers completos." },
+
+  // ── SEIS QUE FALTAVAM, E PORQUE FALTAVAM ────────────────────────────
+  //  As vinte e duas primeiras cobriam bem o que o grafo sabia atacar —
+  //  medido, vinte delas geram hipóteses sozinhas. O que faltava não era
+  //  ligação, era COBERTURA: sete das ocupações independentes mais comuns
+  //  em Portugal não tinham onde ser declaradas.
+  //
+  //  Duas delas estavam escondidas dentro de outras, e isso custava
+  //  precisão a sério:
+  //   · a jardinagem vivia dentro de «limpeza», e a própria ontologia já
+  //     avisava que a divisão 81 junta limpeza de edifícios COM plantação
+  //     e manutenção de jardins — separá-las é a mesma divisão da CAE
+  //     lida com duas intenções diferentes;
+  //   · a fotografia vivia dentro de «design», que é outra coisa: quem
+  //     fotografa produto não faz necessariamente identidade visual.
+  //
+  //  Cada uma destas seis tem capacidade própria em `capacidades.ts` e
+  //  problema que a use em `problemas.ts` — o grafo recusa-se a arrancar
+  //  com uma competência que nenhuma capacidade usa, e é essa asserção
+  //  que impede isto de virar uma lista de botões mortos.
+  { id: "jardinagem", rotulo: "Jardins e espaços verdes", familia: "manual", descricao: "Podar, cortar, plantar e manter terreno — com a máquina certa e no tempo certo do ano." },
+  { id: "estetica", rotulo: "Estética e cuidados de imagem", familia: "cuidado", descricao: "Cabelo, unhas ou estética, com prática real em pessoas que não são conhecidas." },
+  { id: "treino", rotulo: "Treino e atividade física", familia: "cuidado", descricao: "Orientar exercício a outras pessoas. Em ginásio exige título profissional — ver a hipótese." },
+  { id: "costura", rotulo: "Costura e arranjos de roupa", familia: "manual", descricao: "Máquina, medidas e acabamento que aguenta lavagens." },
+  { id: "fotografia", rotulo: "Fotografia e vídeo", familia: "criativa", descricao: "Fotografar ou filmar para vender — produto, espaço ou pessoas, com luz tratada." },
+  { id: "marketing", rotulo: "Marketing e presença digital", familia: "comercial", descricao: "Pôr um negócio a aparecer a quem procura, e medir se apareceu." },
 ] as const);
 
 export const COMPETENCIA_POR_ID = new Map(COMPETENCIAS.map((item) => [item.id, item]));

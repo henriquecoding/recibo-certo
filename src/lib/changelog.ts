@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.110.0",
+    data: "2026-08-23",
+    titulo: "Cada resposta passa a dizer o que muda — com o número medido na hora",
+    itens: [
+      "«Onde vais operar» parecia não fazer nada. Fomos medir, e a verdade é mais estranha: fazia tudo, e não dizia nada. Fixar a zona liga a leitura de procura em quatro hipóteses; escolher o concelho liga a leitura de concorrência; declarar o território muda a pontuação. E o alcance — o mais enganador — troca a forma de entrega de todas as hipóteses, de presencial para híbrido, deixando os mesmos títulos no ecrã.",
+      "Agora cada campo diz o que muda, e o número não é escrito à mão: a ferramenta corre a análise com a resposta posta e com ela tirada, e conta a diferença. Quando um campo não muda nada no teu caso, diz isso também — poupa-te uma decisão que não paga.",
+      "No topo da secção aparece a resposta que mais muda a tua análise. Se a pergunta viver num nível que ainda não abriste, tocar leva-te lá.",
+      "O raio deixou de dizer «deixa vazio se não for relevante» — decisão que ninguém consegue tomar sem saber para que serve. Passa a dizer quando pesa: trabalho presencial em território pouco denso.",
+      "Seis competências novas: jardins e espaços verdes, estética e cuidados de imagem, treino e atividade física, costura e arranjos de roupa, fotografia e vídeo, marketing e presença digital. Duas delas estavam escondidas dentro de outras — a jardinagem dentro da limpeza e a fotografia dentro do design — e separá-las dá leituras mais precisas.",
+      "Cada uma traz consigo o que precisa para ir a algum lado: capacidade própria, atividade económica correspondente e problemas reais que resolve. Verificado uma a uma — nenhuma é um botão que não leva a lado nenhum.",
+      "Quem orienta exercício físico passa a ver o Título Profissional de Técnico de Exercício Físico na análise, com a lei e o IPDJ à vista. É uma barreira de meses, e aparecer só depois de alguém decidir avançar seria tarde.",
+    ],
+  },
+  {
     version: "2.109.0",
     data: "2026-08-23",
     titulo: "Para onde o mercado andou, a incerteza desenhada, e a ficha em papel",

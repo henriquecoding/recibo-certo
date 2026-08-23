@@ -80,6 +80,9 @@ import type {
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
 import { concelhosDaRegiao } from "@/lib/negocio/market/concelhos";
+import { impactoDaLocalizacao, type EfeitoDeCampo } from "@/lib/negocio/descoberta/motor/impacto-local";
+import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+import type { PackOferta } from "@/lib/negocio/market/oferta";
 import { ROTULO_RISCO } from "@/lib/negocio/descoberta/motor/risco";
 import {
   ArrowRight,
@@ -87,6 +90,7 @@ import {
   Check,
   ChevronDown,
   Clock,
+  Crosshair,
   Eye,
   EyeOff,
   Lock,
@@ -102,6 +106,7 @@ import {
   BarraProfundidade,
   Campo,
   Chip,
+  EfeitoMedido,
   EscolhaChip,
   ListaFiltravel,
   Opcao,
@@ -172,6 +177,16 @@ export interface ConfiguradorProps {
   onRepor: () => void;
   /** Já houve uma análise? Muda o texto do botão, não o comportamento. */
   jaAnalisou: boolean;
+  /**
+   * As mesmas entradas que a análise usa.
+   *
+   * O painel de «o que esta resposta muda» corre o motor a sério para
+   * medir o efeito de cada campo. Se corresse com evidência diferente da
+   * da análise, prometeria uma coisa e entregaria outra — que é
+   * exatamente o defeito que ele existe para corrigir.
+   */
+  evidencia?: readonly MarketPilotEvidence[];
+  oferta?: PackOferta;
 }
 
 export default function Configurador({
@@ -180,6 +195,8 @@ export default function Configurador({
   onDescobrir,
   onRepor,
   jaAnalisou,
+  evidencia,
+  oferta,
 }: ConfiguradorProps) {
   const [nivel, setNivel] = useState<NivelConfiguracao>("essencial");
   // Guarda-se o que está FECHADO, não o que está aberto: assim uma secção
@@ -197,6 +214,30 @@ export default function Configurador({
     () => concelhosDaRegiao(contexto.localizacao.regiao),
     [contexto.localizacao.regiao],
   );
+
+  // ── O QUE CADA RESPOSTA DE LOCALIZAÇÃO MUDA, MEDIDO ─────────────────
+  //  Corre o motor até dezasseis vezes (32–88 ms medidos). Memorizado
+  //  pelo contexto: sem isto correria a cada tecla escrita na procura de
+  //  competências, que é trabalho por nada.
+  //
+  //  Envolvido em `try` porque este painel é um LUXO: se rebentar, a
+  //  secção tem de continuar a funcionar como funcionava. Uma explicação
+  //  do que muda nunca pode impedir alguém de responder.
+  const impacto = useMemo(() => {
+    try {
+      return impactoDaLocalizacao({
+        contexto,
+        evidencia,
+        oferta,
+        concelhoParaTeste: concelhosDisponiveis[0]?.codigo,
+      });
+    } catch {
+      return null;
+    }
+  }, [contexto, evidencia, oferta, concelhosDisponiveis]);
+
+  const efeito = (campo: EfeitoDeCampo["campo"]) =>
+    impacto?.efeitos.find((item) => item.campo === campo) ?? null;
 
   const alterar = (parcial: Partial<OpportunityContext>) => onChange({ ...contexto, ...parcial });
 
@@ -472,6 +513,50 @@ export default function Configurador({
 
         {/* ── 2. Onde estás ───────────────────────────────────── */}
         <Seccao titulo="Onde vais operar" icone={MapPin} {...props("local")}>
+          {/* ── O QUE FALTA E QUANTO PAGA ─────────────────────────────
+              Medido a correr o motor, não escrito à mão. A queixa que
+              deu origem a isto — «parece que não altera em nada» —
+              estava meia certa: o motor altera tudo, e a interface não
+              dizia nada. Agora diz, com o número. */}
+          {impacto?.proximoPasso ? (
+            (() => {
+              // O campo pode viver num nível que ainda não está aberto —
+              // apontar para «território» com o território escondido
+              // seria mandar alguém a um sítio que não existe no ecrã.
+              // `irPara` já sabe abrir o nível e a secção certos; aqui
+              // só se decide se é preciso.
+              const passo = impacto.proximoPasso;
+              const campoId = passo.campo === "zona" ? "regiao" : passo.campo;
+              const destino = ONDE_SE_RESPONDE[campoId];
+              const escondido = destino ? !mostrar(destino.nivel) : false;
+              const conteudo = (
+                <>
+                  <Crosshair size={13} className="mt-0.5 flex-none" />
+                  <span className="min-w-0">
+                    <strong className="font-semibold">
+                      A resposta que mais muda a tua análise: {passo.rotulo.toLowerCase()}.
+                    </strong>{" "}
+                    {passo.frase}
+                    {escondido ? " Toca para abrir esta pergunta." : ""}
+                  </span>
+                </>
+              );
+              const classe =
+                "mb-3 flex w-full items-start gap-2 rounded-2xl border border-brand/25 bg-brand-light/50 px-3 py-2 text-left text-[11px] leading-snug text-brand-deep dark:border-brand/25 dark:bg-brand/10 dark:text-brand-mint";
+              return escondido ? (
+                <button
+                  type="button"
+                  onClick={() => irPara(campoId)}
+                  className={`${classe} min-h-[44px] transition-colors hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/15`}
+                >
+                  {conteudo}
+                </button>
+              ) : (
+                <p className={classe}>{conteudo}</p>
+              );
+            })()
+          ) : null}
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label
@@ -503,9 +588,15 @@ export default function Configurador({
                   </option>
                 ))}
               </select>
-              <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                Decide que leituras oficiais são da tua zona e quais entram como contexto nacional.
-              </p>
+              {efeito("zona") ? (
+                <EfeitoMedido peso={efeito("zona")!.peso} respondido={efeito("zona")!.respondido}>
+                  {efeito("zona")!.frase}
+                </EfeitoMedido>
+              ) : (
+                <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
+                  Decide que leituras oficiais são da tua zona e quais entram como contexto nacional.
+                </p>
+              )}
 
               {/* ── O concelho, quando a região já foi escolhida ──────
                   «Que negócio abrir» varia ao concelho: nos dados que o
@@ -551,19 +642,20 @@ export default function Configurador({
                       conhecida em 9 % das hipóteses sem concelho e em
                       77 % com ele. Dizer «opcional» sem dizer isto é
                       esconder o preço da escolha. */}
-                  {contexto.localizacao.concelho ? (
-                    <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                      A contagem de concorrentes passa a comparar-se entre os 308 concelhos em vez das nove
-                      regiões. Continua a não ser morada — é uma escolha de uma lista, e não sai daqui.
-                    </p>
+                  {/* O número é desta análise, não uma média de todas:
+                      «dá leitura de concorrência a 4 hipóteses» conta as
+                      hipóteses que ESTA pessoa tem à frente. */}
+                  {efeito("concelho") ? (
+                    <EfeitoMedido
+                      peso={efeito("concelho")!.peso}
+                      respondido={efeito("concelho")!.respondido}
+                    >
+                      {efeito("concelho")!.frase}
+                    </EfeitoMedido>
                   ) : (
                     <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                      <span className="font-semibold text-stone-700 dark:text-stone-200">
-                        Sem concelho, a maioria das hipóteses fica sem leitura de concorrência.
-                      </span>{" "}
-                      Com ele, essa leitura existe em cerca de três em cada quatro — a densidade de operadores
-                      compara-se entre os 308 concelhos em vez das nove regiões. Continua a não ser morada: é
-                      uma escolha de uma lista, e não sai daqui.
+                      A densidade de operadores passa a comparar-se entre os 308 concelhos em vez das nove
+                      regiões. Continua a não ser morada: é uma lista, e não sai do teu dispositivo.
                     </p>
                   )}
                 </div>
@@ -588,6 +680,15 @@ export default function Configurador({
                   </Opcao>
                 ))}
               </div>
+              {/* O controlo mais mal contado dos cinco: o motor não
+                  apaga a hipótese incompatível, RECOMPÕE-A — presencial
+                  passa a híbrida. Os títulos ficam iguais e o trabalho
+                  por trás não é o mesmo, e ninguém o dizia. */}
+              {efeito("alcance") ? (
+                <EfeitoMedido peso={efeito("alcance")!.peso} respondido>
+                  {efeito("alcance")!.frase}
+                </EfeitoMedido>
+              ) : null}
             </Campo>
           </div>
 
@@ -618,8 +719,21 @@ export default function Configurador({
                     </Opcao>
                   ))}
                 </div>
+                {efeito("territorio") ? (
+                  <EfeitoMedido
+                    peso={efeito("territorio")!.peso}
+                    respondido={efeito("territorio")!.respondido}
+                  >
+                    {efeito("territorio")!.frase}
+                  </EfeitoMedido>
+                ) : null}
               </Campo>
-              <Campo rotulo="Raio que aceitas percorrer" nota="Deixa vazio se não for relevante.">
+              {/* «Deixa vazio se não for relevante» punha a decisão de
+                  relevância em cima de quem não pode sabê-la. O motor
+                  sabe: o raio só pesa em trabalho presencial e território
+                  pouco denso, e agora di-lo — inclusive quando a resposta
+                  é «aqui não muda nada», que poupa uma decisão. */}
+              <Campo rotulo="Raio que aceitas percorrer">
                 <div className="flex flex-wrap gap-1.5">
                   {[10, 25, 40, 80].map((km) => (
                     <Opcao
@@ -638,6 +752,11 @@ export default function Configurador({
                     </Opcao>
                   ))}
                 </div>
+                {efeito("raio") ? (
+                  <EfeitoMedido peso={efeito("raio")!.peso} respondido={efeito("raio")!.respondido}>
+                    {efeito("raio")!.frase}
+                  </EfeitoMedido>
+                ) : null}
               </Campo>
             </div>
           ) : null}

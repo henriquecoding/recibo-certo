@@ -288,6 +288,78 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
     esforcoFisico: true,
     presencial: true,
   },
+
+  // ── AS SEIS QUE ACOMPANHAM AS COMPETÊNCIAS NOVAS ────────────────────
+  //  Cada uma existe porque uma competência nova precisa de ponte até um
+  //  problema. O grafo verifica as duas pontas: uma capacidade sem
+  //  problema que a use não é alcançável pelo motor, e falha o build.
+  {
+    id: "tratar-espacos-verdes",
+    rotulo: "Manter jardins e terreno",
+    descricao: "Cortar, podar e limpar terreno com regularidade, incluindo o que a lei obriga antes do verão.",
+    competenciasNecessarias: ["jardinagem"],
+    competenciasUteis: ["logistica", "organizacao"],
+    // Sem forma de levar máquina ao terreno não há serviço nenhum.
+    ativosNecessarios: ["ferramentas"],
+    ativosUteis: ["veiculo-carga", "veiculo-ligeiro", "carta-conducao"],
+    esforcoFisico: true,
+    presencial: true,
+  },
+  {
+    id: "cuidar-da-imagem",
+    rotulo: "Tratar do cabelo, unhas e estética",
+    descricao: "Serviço de imagem feito a uma pessoa de cada vez, com material próprio e higiene garantida.",
+    competenciasNecessarias: ["estetica"],
+    competenciasUteis: ["atendimento", "cuidar"],
+    ativosNecessarios: ["ferramentas"],
+    ativosUteis: ["veiculo-ligeiro", "carta-conducao", "espaco-comercial"],
+    esforcoFisico: true,
+    presencial: true,
+  },
+  {
+    id: "orientar-treino",
+    rotulo: "Orientar exercício físico",
+    descricao: "Acompanhar quem treina, com plano e correção. Em instalação de fitness exige título profissional.",
+    competenciasNecessarias: ["treino"],
+    competenciasUteis: ["cuidar", "ensinar"],
+    ativosNecessarios: [],
+    ativosUteis: ["ferramentas", "veiculo-ligeiro", "espaco-comercial"],
+    esforcoFisico: true,
+    presencial: true,
+  },
+  {
+    id: "arranjar-texteis",
+    rotulo: "Arranjar e adaptar roupa",
+    descricao: "Bainhas, ajustes, reparações e transformações que devolvem uma peça ao uso.",
+    competenciasNecessarias: ["costura"],
+    competenciasUteis: ["organizacao", "atendimento"],
+    ativosNecessarios: ["ferramentas"],
+    ativosUteis: ["espaco-comercial"],
+    esforcoFisico: false,
+    presencial: false,
+  },
+  {
+    id: "registar-em-imagem",
+    rotulo: "Fotografar e filmar para vender",
+    descricao: "Produzir imagem que serve para vender — produto, espaço ou serviço —, tratada e pronta a publicar.",
+    competenciasNecessarias: ["fotografia"],
+    competenciasUteis: ["design", "escrita"],
+    ativosNecessarios: ["camara-video"],
+    ativosUteis: ["computador", "veiculo-ligeiro"],
+    esforcoFisico: false,
+    presencial: true,
+  },
+  {
+    id: "atrair-clientes",
+    rotulo: "Pôr um negócio a aparecer",
+    descricao: "Presença, anúncios e conteúdo com objetivo declarado — e a medição que diz se resultou.",
+    competenciasNecessarias: ["marketing"],
+    competenciasUteis: ["escrita", "design", "vendas", "dados"],
+    ativosNecessarios: ["computador"],
+    ativosUteis: [],
+    esforcoFisico: false,
+    presencial: false,
+  },
 ] as const);
 
 export const CAPACIDADE_POR_ID = new Map(CAPACIDADES.map((item) => [item.id, item]));
