@@ -318,6 +318,32 @@ lista em `usableObservationIds` não entram na evidência nem no score.
   empresas de limpeza, de co-anfitrião, de gestão de reservas por zona — e
   nenhuma fonte pública portuguesa o faz hoje.
 
-- **Granularidade geográfica.** A evidência desce a NUTS II; o contexto aceita
-  distrito e raio. Onde o dado não existe ao nível pedido, a interface diz que
-  está a mostrar o nível acima em vez de fingir precisão local.
+- **Granularidade geográfica: desceu ao concelho.** A leitura de oferta compara
+  agora entre os **308 concelhos**, e não entre as nove NUTS II. Os dois
+  indicadores que o motor usa sempre publicaram a esse nível — era a ferramenta
+  que pedia menos. A diferença é grande e mede-se: nas empresas de limpeza por
+  dez mil habitantes, Lisboa tem 8,3 e Mafra 23,8, e as duas eram a mesma célula.
+
+  Não vem de uma chamada a quente. O indicador devolve 19,7 MB quando se pedem
+  todos os níveis (as 3 394 freguesias são 91 % disso) e a API rebenta com 308
+  códigos no pedido — medido, `ORA-06502`. Corre em `scripts/gen-oferta-concelhos.mjs`,
+  o instantâneo de 23 KB fica commitado e é ele que a aplicação serve. A matriz
+  vai INTEIRA para o browser porque a zona de quem pergunta nunca sai do
+  dispositivo: o servidor não pode filtrar por um concelho que não conhece.
+
+- **A lacuna passou a ser uma subtração.** Cada `Problema` declara
+  `baseDeClientes` — as divisões da CAE onde os clientes estão, ou os
+  residentes, ou `nao-contavel` com a razão escrita. Com ela, `lerLacuna`
+  produz **operadores por mil clientes**: o quociente de localização, com o
+  denominador que o problema declara em vez de um genérico.
+
+  O denominador decide a conclusão. Empresas de limpeza, Albufeira contra
+  Lisboa: por dez mil habitantes são 52,4 contra 8,3, o que faz Albufeira
+  parecer seis vezes mais servida; por mil alojamentos — que é o cliente real
+  desta hipótese — são 135 contra 89, e a diferença encolhe para 1,5×.
+  Albufeira tem clientes a mais, não operadores a mais. São conclusões opostas
+  a partir dos mesmos números, e a errada é a que usa o denominador errado.
+
+  É também o que torna a lacuna calculável fora dos cinco dossiers com piloto:
+  a contagem de clientes JÁ É o indicador de procura que distingue «pouca
+  oferta porque há espaço» de «pouca oferta porque não há mercado».

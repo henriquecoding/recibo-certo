@@ -23,6 +23,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { marketRegionLabel, type MarketRegion } from "@/lib/negocio/market/geografia";
+import { CONCELHO_POR_CODIGO } from "@/lib/negocio/market/concelhos";
 import type { OpportunityContext } from "../contexto/tipos";
 import {
   capacidadesAlcancadas,
@@ -42,6 +43,15 @@ export interface CandidatoBruto {
   modelo: ModeloReceita;
   entrega: FormaEntrega;
   regiao: MarketRegion;
+  /**
+   * O concelho da pessoa, quando declarado E dentro da zona proposta.
+   *
+   * A condição não é decorativa: um problema regional pode ser proposto
+   * numa zona diferente daquela onde a pessoa está, e ler a oferta do
+   * concelho dela para uma hipótese proposta noutra região daria um
+   * número verdadeiro sobre o território errado.
+   */
+  concelho?: string;
   capacidades: readonly CapacidadeAlcancada[];
   /** A capacidade que mais pesa nesta composição. Decide o título. */
   dominante: Capacidade;
@@ -112,6 +122,26 @@ function zonaDoCandidato(problema: Problema, contexto: OpportunityContext): Mark
   if (nacional) return regiao;
   if (regiao === "portugal") return "portugal";
   return problema.regioes.includes(regiao) ? regiao : null;
+}
+
+/**
+ * O concelho declarado, se a zona proposta o contiver.
+ *
+ * Devolve `undefined` — e não o concelho à mesma — quando a hipótese é
+ * proposta noutra região: um número verdadeiro sobre o território errado
+ * é pior do que nenhum número, porque não se distingue de uma leitura
+ * boa. É a mesma regra que `splitObservationsByRegion` aplica às
+ * observações, aplicada à geografia da pessoa.
+ */
+function concelhoDaZona(
+  contexto: OpportunityContext,
+  regiao: MarketRegion,
+): string | undefined {
+  const codigo = contexto.localizacao.concelho;
+  if (codigo === undefined) return undefined;
+  const concelho = CONCELHO_POR_CODIGO.get(codigo);
+  if (!concelho) return undefined;
+  return concelho.regiao === regiao ? codigo : undefined;
 }
 
 export interface OpcoesGeracao {
@@ -193,6 +223,9 @@ export function generateCandidates(
           modelo,
           entrega,
           regiao,
+          // Só quando o concelho declarado pertence à zona proposta —
+          // senão a leitura de oferta descreveria outro território.
+          concelho: concelhoDaZona(contexto, regiao),
           capacidades,
           dominante,
           seedTemplateId: curado?.template.id,

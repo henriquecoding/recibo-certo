@@ -178,7 +178,10 @@ export default function Dossier({
                   ) : null}
                   <span className="text-[12px] font-medium text-stone-700 dark:text-stone-200">{evidencia.afirmacao}</span>
                 </p>
-                <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                <p
+                  data-proveniencia={evidencia.proveniencia.origem}
+                  className="mt-0.5 text-[11px] leading-snug text-stone-500"
+                >
                   {ROTULO_ORIGEM[evidencia.proveniencia.origem]} · {evidencia.proveniencia.fonte}
                   {evidencia.proveniencia.periodo ? ` · ${evidencia.proveniencia.periodo}` : ""}
                   {evidencia.proveniencia.geografia ? ` · ${evidencia.proveniencia.geografia}` : ""}
@@ -499,6 +502,17 @@ export default function Dossier({
   );
 }
 
+/**
+ * Um número do dossier, com a origem colada a ele.
+ *
+ * `data-numero` e `data-proveniencia` não são decoração de teste: são a
+ * única forma de a verificação de ponta a ponta afirmar a regra de ouro
+ * — nenhum número chega ao ecrã sem dizer de onde vem — sem a ler do
+ * texto. O rótulo é `uppercase`, e `innerText` devolve o texto JÁ
+ * transformado por CSS; procurá-lo por palavras acaba a acertar em
+ * «hipóteses» no meio de uma frase e a verificação passa a não verificar
+ * nada. O atributo diz a origem em dados, e não em prosa.
+ */
 function Numero({
   rotulo,
   valor,
@@ -509,14 +523,20 @@ function Numero({
   origem?: "observado" | "estimativa" | "calculo" | "hipotese";
 }) {
   return (
-    <div className="rounded-2xl bg-white p-2.5 dark:bg-stone-900">
+    <div data-numero={rotulo} className="rounded-2xl bg-white p-2.5 dark:bg-stone-900">
       <p className="text-[11px] font-medium text-stone-500">{rotulo}</p>
       {valor === null ? (
-        <p className="mt-0.5 text-[12px] italic text-stone-400">não estimável com o que sabemos</p>
+        <p data-numero-ausente="" className="mt-0.5 text-[12px] italic text-stone-400">
+          não estimável com o que sabemos
+        </p>
       ) : (
         <>
           <p className="mt-0.5 text-sm font-semibold tabular-nums text-ink">{valor}</p>
-          {origem ? <p className="mt-0.5 text-[10px] uppercase tracking-wide text-stone-400">{ROTULO_ORIGEM[origem]}</p> : null}
+          {origem ? (
+            <p data-proveniencia={origem} className="mt-0.5 text-[10px] uppercase tracking-wide text-stone-400">
+              {ROTULO_ORIGEM[origem]}
+            </p>
+          ) : null}
         </>
       )}
     </div>

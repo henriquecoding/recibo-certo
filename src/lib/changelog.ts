@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.105.0",
+    version: "2.106.0",
     data: "2026-08-23",
     titulo: "No fim de cada simulação, alguém que trabalha com aquilo",
     itens: [
@@ -26,6 +26,20 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Quem já tem contabilista não vê alternativas: vê o dele, e o caminho para lhe enviar o que acabou de calcular.",
       "«Levar a minha simulação»: ao seguir um perfil a partir de uma ferramenta, o resultado vai contigo e o contabilista pode continuar de onde estavas. Fica guardado só no teu dispositivo, expira em três dias, e nada segue para ninguém antes de veres os campos exatos e confirmares.",
       "Os cartões só carregam quando te aproximas deles — nenhuma ferramenta ficou mais lenta por causa disto.",
+    ],
+  },
+  {
+    version: "2.105.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta deixou de tratar Lisboa e Mafra como o mesmo sítio",
+    itens: [
+      "A contagem de concorrentes comparava nove regiões. «Que negócio abrir» não varia por região — varia por concelho, e a diferença é enorme: em empresas de limpeza por dez mil habitantes, Lisboa tem 8,3 e Mafra 23,8. Eram a mesma célula. Loulé tem 84,5 e Espinho 5,9.",
+      "Passou a comparar entre os 308 concelhos. Há um seletor novo em «Onde vais operar», opcional, e continua a não ser morada: é uma lista fechada, escolhida no teu dispositivo, que não sai daqui — a comparação com os outros 307 concelhos é feita no teu browser, não num servidor nosso.",
+      "Mais importante do que a escala: mudou o denominador. Até aqui a ferramenta contava operadores por HABITANTE. Para quem presta serviço a alojamento turístico, o cliente não é o habitante — é o alojamento. Em Albufeira há 52,4 empresas de limpeza por dez mil habitantes contra 8,3 em Lisboa, o que a faz parecer seis vezes mais servida; por mil alojamentos são 135 contra 89. Albufeira tem clientes a mais, não operadores a mais. São conclusões opostas a partir dos mesmos números.",
+      "Cada problema passou a declarar quem paga em unidades contáveis — as atividades onde estão os clientes, ou os residentes. Onde não é contável, diz-se porquê em vez de se usar um número parecido: os visitantes de uma cidade não são residentes nem empresas, e nenhuma fonte os conta por concelho.",
+      "Isso torna a leitura de lacuna calculável muito para além dos cinco dossiers com dados ligados, que era o limite anterior. A contagem de clientes é, ela própria, o indicador de procura que distingue «pouca oferta porque há espaço» de «pouca oferta porque não há mercado».",
+      "Um mercado na média deixou de ser dito «por apurar». Estar no meio da distribuição é uma leitura — nem espaço por ocupar, nem mercado cheio — e passou a contar como tal em vez de sair da conta como se não soubéssemos nada.",
+      "Os números vêm de um ficheiro que fica guardado no próprio projeto e é atualizado por um processo semanal, não de um pedido ao INE a cada visita. Efeito colateral bem-vindo: se o INE estiver em baixo, a leitura ao concelho continua a funcionar.",
     ],
   },
   {

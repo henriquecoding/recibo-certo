@@ -77,7 +77,7 @@ const pack = (over: Partial<PackOferta> = {}): PackOferta => ({
 
 describe("oferta: a conta bate certo", () => {
   it("a densidade é operadores por dez mil habitantes", () => {
-    const leitura = lerOferta(pack(), ["81"], "algarve");
+    const leitura = lerOferta(pack(), ["81"], { tipo: "regiao", regiao: "algarve" });
     expect(leitura).not.toBeNull();
     // 2 706 / 578 032 × 10 000 = 46,81…
     expect(leitura!.aqui.porDezMil).toBeCloseTo((2706 / 578032) * 10_000, 6);
@@ -86,15 +86,15 @@ describe("oferta: a conta bate certo", () => {
   });
 
   it("o Algarve destaca-se e o Alentejo não — e é isso que o z diz", () => {
-    const algarve = lerOferta(pack(), ["81"], "algarve")!;
-    const alentejo = lerOferta(pack(), ["81"], "alentejo")!;
+    const algarve = lerOferta(pack(), ["81"], { tipo: "regiao", regiao: "algarve" })!;
+    const alentejo = lerOferta(pack(), ["81"], { tipo: "regiao", regiao: "alentejo" })!;
     expect(algarve.z).toBeGreaterThan(2);
     expect(Math.abs(alentejo.z)).toBeLessThan(0.75);
     expect(algarve.aqui.porDezMil).toBeGreaterThan(alentejo.aqui.porDezMil);
   });
 
   it("a mediana é a das regiões comparadas, não a média nem o total nacional", () => {
-    const leitura = lerOferta(pack(), ["81"], "norte")!;
+    const leitura = lerOferta(pack(), ["81"], { tipo: "regiao", regiao: "norte" })!;
     const densidades = Object.keys(EMPRESAS_81)
       .map((codigo) => (EMPRESAS_81[codigo]! / POPULACAO[codigo]!) * 10_000)
       .sort((a, b) => a - b);
@@ -108,8 +108,8 @@ describe("oferta: a conta bate certo", () => {
         { divisao: "43", designacao: "B", contagens: contagens({ ...EMPRESAS_81 }) },
       ],
     });
-    const uma = lerOferta(comDuas, ["81"], "algarve")!;
-    const duas = lerOferta(comDuas, ["81", "43"], "algarve")!;
+    const uma = lerOferta(comDuas, ["81"], { tipo: "regiao", regiao: "algarve" })!;
+    const duas = lerOferta(comDuas, ["81", "43"], { tipo: "regiao", regiao: "algarve" })!;
     expect(duas.aqui.operadores).toBe(uma.aqui.operadores * 2);
     // Dobrar os dois lados não muda a posição relativa: o z é o mesmo.
     expect(duas.z).toBeCloseTo(uma.z, 9);
@@ -118,7 +118,7 @@ describe("oferta: a conta bate certo", () => {
 
 describe("oferta: recusa-se a concluir sem base", () => {
   it("sem população não há leitura — um número de empresas sozinho não diz nada", () => {
-    expect(lerOferta(pack({ populacao: [] }), ["81"], "algarve")).toBeNull();
+    expect(lerOferta(pack({ populacao: [] }), ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("uma divisão que não veio não conta como zero empresas", () => {
@@ -128,19 +128,19 @@ describe("oferta: recusa-se a concluir sem base", () => {
       divisoes: [{ divisao: "81", designacao: "A", contagens: [], falha: "HTTP 503" }],
       emFalta: ["81"],
     });
-    expect(lerOferta(semDados, ["81"], "algarve")).toBeNull();
+    expect(lerOferta(semDados, ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("uma divisão que a ontologia pede e o pack não traz devolve `null`", () => {
-    expect(lerOferta(pack(), ["62"], "algarve")).toBeNull();
+    expect(lerOferta(pack(), ["62"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("sem divisão nenhuma não há leitura", () => {
-    expect(lerOferta(pack(), [], "algarve")).toBeNull();
+    expect(lerOferta(pack(), [], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("«todo o país» não é uma zona comparável consigo própria", () => {
-    expect(lerOferta(pack(), ["81"], "portugal")).toBeNull();
+    expect(lerOferta(pack(), ["81"], { tipo: "regiao", regiao: "portugal" })).toBeNull();
   });
 
   it("menos de cinco regiões não sustentam uma comparação", () => {
@@ -154,7 +154,7 @@ describe("oferta: recusa-se a concluir sem base", () => {
       ],
       populacao: contagens({ "11": 1000, "15": 1000, "19": 1000, "1A": 1000 }, "2025"),
     });
-    expect(lerOferta(poucas, ["81"], "algarve")).toBeNull();
+    expect(lerOferta(poucas, ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("regiões todas iguais não produzem um z — produzem uma divisão por zero", () => {
@@ -164,14 +164,14 @@ describe("oferta: recusa-se a concluir sem base", () => {
       divisoes: [{ divisao: "81", designacao: "A", contagens: contagens(iguais) }],
       populacao: contagens(populacaoIgual, "2025"),
     });
-    expect(lerOferta(plano, ["81"], "algarve")).toBeNull();
+    expect(lerOferta(plano, ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 
   it("uma população zero não entra na conta em vez de a rebentar", () => {
     const comZero = pack({
       populacao: contagens({ ...POPULACAO, "30": 0 }, "2025"),
     });
-    const leitura = lerOferta(comZero, ["81"], "algarve");
+    const leitura = lerOferta(comZero, ["81"], { tipo: "regiao", regiao: "algarve" });
     expect(leitura).not.toBeNull();
     expect(leitura!.regioesComparadas).toBe(8);
     expect(Number.isFinite(leitura!.z)).toBe(true);
@@ -333,6 +333,59 @@ describe("oferta: a cadência dos pedidos", () => {
     }
     // E nada disto produz uma leitura: zero empresas nunca vira «mercado
     // livre», que é a conclusão mais cara que este módulo podia publicar.
-    expect(lerOferta(pack, ["81"], "algarve")).toBeNull();
+    expect(lerOferta(pack, ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
+});
+
+describe("oferta: o orçamento total é da carga, não de cada indicador", () => {
+  // ┌────────────────────────────────────────────────────────────────────┐
+  // │ O QUE ISTO APANHOU, E COMO                                          │
+  // │                                                                    │
+  // │ Dois indicadores, cada um com três tentativas de oito segundos:    │
+  // │ o pior caso desta função eram ~54 s. Esta rota é chamada pelo      │
+  // │ browser ao abrir a página, e uma ligação segurada quase um minuto  │
+  // │ não é um pack que demora — é uma página que parece partida. O      │
+  // │ `descobrir:e2e` foi o primeiro a dizê-lo, e disse-o em CI: o       │
+  // │ `page.goto` expirou aos 30 s à espera desta rota.                   │
+  // │                                                                    │
+  // │ Pôr um prazo comum aos dois não chegou, e o segundo defeito é o    │
+  // │ mais interessante: `addEventListener("abort", …)` num sinal que JÁ │
+  // │ abortou NUNCA chama o ouvinte. O primeiro indicador terminava      │
+  // │ certo aos 20 s, o segundo arrancava a seguir e corria uma          │
+  // │ tentativa inteira de oito segundos porque ninguém lhe tinha dito   │
+  // │ que o prazo passara. Vinte segundos de orçamento davam vinte e     │
+  // │ oito — medido, não deduzido.                                        │
+  // └────────────────────────────────────────────────────────────────────┘
+  it("uma fonte que nunca responde não segura a carga além do teto", async () => {
+    const pendurado: typeof fetch = (_entrada, init) =>
+      new Promise((_resolver, rejeitar) => {
+        init?.signal?.addEventListener("abort", () => rejeitar(new Error("abortado")));
+      });
+
+    const comeco = Date.now();
+    const pack = await carregarOferta({ fetchImpl: pendurado });
+    const decorrido = Date.now() - comeco;
+
+    // Folga sobre o teto de 20 s, e MUITO abaixo dos ~54 s de antes.
+    expect(decorrido).toBeLessThan(25_000);
+    // E o pack sai vazio de forma honesta: o motor volta a dizer «lacuna
+    // por apurar» em vez de ficar sem resposta nenhuma.
+    expect(pack.emFalta.length).toBeGreaterThan(0);
+    expect(pack.populacao).toHaveLength(0);
+  }, 60_000);
+
+  it("um cancelamento de quem chama é respeitado de imediato", async () => {
+    const pendurado: typeof fetch = (_entrada, init) =>
+      new Promise((_resolver, rejeitar) => {
+        init?.signal?.addEventListener("abort", () => rejeitar(new Error("abortado")));
+      });
+    const controlador = new AbortController();
+    const comeco = Date.now();
+    const promessa = carregarOferta({ fetchImpl: pendurado, signal: controlador.signal });
+    controlador.abort();
+    await promessa;
+    // Sem a guarda no início da tentativa, isto gastava oito segundos por
+    // indicador antes de desistir de um trabalho que ninguém quer.
+    expect(Date.now() - comeco).toBeLessThan(2_000);
+  }, 30_000);
 });

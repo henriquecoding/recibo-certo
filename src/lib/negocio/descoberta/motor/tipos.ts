@@ -88,6 +88,13 @@ export interface AvaliacaoRegulatoria {
 export type LeituraDeLacuna =
   | "procura-com-pouca-oferta"
   | "procura-com-muita-oferta"
+  /**
+   * A zona está no meio da distribuição — e isso é uma LEITURA, não uma
+   * ausência dela. Era dita `desconhecida`, o que a fazia sair do score
+   * como se não soubéssemos nada; sabemos, e o que sabemos é que a
+   * geografia não decide esta hipótese.
+   */
+  | "oferta-na-media"
   | "pouca-procura"
   | "desconhecida";
 

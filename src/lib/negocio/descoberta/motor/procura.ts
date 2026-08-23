@@ -37,7 +37,13 @@
 
 import { effectiveReferenceAgeDays } from "@/lib/negocio/market/freshness";
 import { marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
-import { lerOferta, type LeituraDeOferta, type PackOferta } from "@/lib/negocio/market/oferta";
+import {
+  lerLacuna,
+  lerOferta,
+  type LeituraDeLacuna as QuocienteDeLocalizacao,
+  type LeituraDeOferta,
+  type PackOferta,
+} from "@/lib/negocio/market/oferta";
 import { CONCEITO_POR_CAPACIDADE } from "../conhecimento/dados/ontologia";
 import type { MarketObservationSummary, MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
@@ -137,6 +143,19 @@ function frescuraDe(
 const Z_DECISIVO = 0.75;
 
 /**
+ * Como se nomeia o universo de comparação, na escala em que ele está.
+ *
+ * A distinção não é estilo: «acima da mediana das nove regiões» e «acima
+ * da mediana dos 308 concelhos» são afirmações com força muito
+ * diferente, e quem lê tem direito a saber qual delas está a ler.
+ */
+function unidades(leitura: LeituraDeOferta): string {
+  return leitura.escala === "concelho"
+    ? `nos ${leitura.regioesComparadas} concelhos do país`
+    : `nas ${leitura.regioesComparadas} regiões`;
+}
+
+/**
  * A oferta desta composição, se a ontologia souber classificá-la.
  *
  * A capacidade dominante é a que decide: é ela que descreve o que a
@@ -144,6 +163,32 @@ const Z_DECISIVO = 0.75;
  * problema em vez da capacidade daria a mesma divisão a hipóteses
  * completamente diferentes que atacam o mesmo problema por vias opostas.
  */
+/**
+ * O quociente de localização, quando os dois termos existem.
+ *
+ * Exige três coisas ao mesmo tempo: concelho declarado, divisão do
+ * operador conhecida, e uma base de clientes CONTÁVEL. Falta uma e
+ * devolve `null` — porque um quociente com um denominador aproximado é
+ * um número plausível e uma conclusão errada, e este é o sítio do motor
+ * onde isso custa mais caro.
+ */
+function quocienteDoCandidato(
+  candidato: CandidatoBruto,
+  pack: PackOferta | undefined,
+): QuocienteDeLocalizacao | null {
+  if (!pack || !candidato.concelho) return null;
+  const conceito = CONCEITO_POR_CAPACIDADE.get(candidato.dominante.id);
+  if (!conceito || conceito.cae.length === 0) return null;
+  const base = candidato.problema.baseDeClientes;
+  if (base.tipo === "nao-contavel") return null;
+  return lerLacuna(
+    pack,
+    conceito.cae,
+    base.tipo === "residentes" ? { tipo: "residentes" } : { tipo: "empresas", cae: base.cae, ressalva: base.ressalva },
+    candidato.concelho,
+  );
+}
+
 function ofertaDoCandidato(
   candidato: CandidatoBruto,
   pack: PackOferta | undefined,
@@ -151,7 +196,16 @@ function ofertaDoCandidato(
   if (!pack || pack.divisoes.length === 0) return null;
   const conceito = CONCEITO_POR_CAPACIDADE.get(candidato.dominante.id);
   if (!conceito || conceito.cae.length === 0) return null;
-  const leitura = lerOferta(pack, conceito.cae, candidato.regiao);
+  // O concelho quando existe, a região quando não. A escala vai na
+  // leitura e sai ao ecrã: uma densidade entre 308 concelhos e uma entre
+  // nove regiões não são a mesma afirmação.
+  const leitura = lerOferta(
+    pack,
+    conceito.cae,
+    candidato.concelho
+      ? { tipo: "concelho", codigo: candidato.concelho }
+      : { tipo: "regiao", regiao: candidato.regiao },
+  );
   if (!leitura) return null;
   return { leitura, ressalva: conceito.ressalva };
 }
@@ -251,6 +305,50 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
   }
 
   // ── A oferta, quando a ontologia sabe classificar a hipótese ─────
+  // ── O QUOCIENTE, QUANDO É CALCULÁVEL ─────────────────────────────
+  //  Operadores por mil CLIENTES, e não por mil habitantes. A diferença
+  //  não é cosmética: em Albufeira há 52,4 empresas de limpeza por dez
+  //  mil habitantes contra 8,3 em Lisboa, o que a faz parecer seis vezes
+  //  mais servida. Por alojamento — que é o cliente real desta hipótese
+  //  — são 135 contra 89, e a diferença encolhe para 1,5×. Albufeira tem
+  //  clientes a mais, não operadores a mais. São conclusões opostas a
+  //  partir dos mesmos números, e a errada é a que usa o denominador
+  //  errado.
+  const quociente = quocienteDoCandidato(candidato, oferta);
+  if (quociente) {
+    evidencias.push({
+      id: `ine:lq:${quociente.nomeDaZona}:${quociente.periodoEmpresas}`,
+      tipo: "concorrencia",
+      afirmacao: `Operadores por mil ${quociente.unidadeCliente === "empresas" ? "clientes possíveis" : "residentes"} em ${quociente.nomeDaZona}`,
+      confianca: 0.85,
+      valor: {
+        numero: Math.round(quociente.porMilClientes * 10) / 10,
+        unidade: `por mil ${quociente.unidadeCliente === "empresas" ? "clientes" : "residentes"}`,
+      },
+      proveniencia: {
+        origem: "calculo",
+        fonte: "INE — empresas por concelho e divisão da CAE (0014449), sobre a base de clientes declarada do problema",
+        url: "https://www.ine.pt/xurl/indx/0014449/PT",
+        periodo: quociente.periodoEmpresas,
+        observadoEm: oferta!.geradoEm,
+        geografia: quociente.nomeDaZona,
+        limitacao: [
+          `${quociente.operadores} operadores para ${quociente.clientes.toLocaleString("pt-PT")} ${quociente.unidadeCliente === "empresas" ? "clientes possíveis" : "residentes"} — percentil ${quociente.percentil} entre ${quociente.unidadesComparadas} concelhos, mediana ${quociente.medianaNacional.toFixed(1)}.`,
+          quociente.ressalva ?? "",
+          "Conta inscrições na CAE, não operadores desta hipótese em concreto, e não pondera dimensão nem se cada empresa está ativa.",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      },
+    });
+    lacunas.push({
+      pergunta: "Quantos desses operadores servem mesmo este tipo de cliente?",
+      tipo: "concorrencia",
+      motivo:
+        "O quociente compara duas inscrições na CAE — a do operador e a do cliente. É a base comparável que faltava, e continua a não distinguir quem serve este segmento de quem se limita a estar na mesma divisão.",
+    });
+  }
+
   const densidade = ofertaDoCandidato(candidato, oferta);
   if (densidade) {
     const { leitura: densa, ressalva } = densidade;
@@ -266,10 +364,10 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
         url: "https://www.ine.pt/xurl/indx/0014449/PT",
         periodo: densa.periodoOferta,
         observadoEm: oferta!.geradoEm,
-        geografia: marketRegionLabel(candidato.regiao),
+        geografia: densa.aqui.nome,
         limitacao: [
           `Conta empresas inscritas na divisão da CAE, não operadores desta hipótese em concreto${ressalva ? `: ${ressalva}` : "."}`,
-          `São ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes, contra ${densa.medianaNacional.toFixed(1)} de mediana nas ${densa.regioesComparadas} regiões.`,
+          `São ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes, contra ${densa.medianaNacional.toFixed(1)} de mediana ${unidades(densa)} — percentil ${densa.percentil}.`,
           "Não pondera dimensão, qualidade nem se cada empresa está ativa.",
         ].join(" "),
       },
@@ -319,7 +417,37 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
   let nota =
     "Não há sinal de oferta nem de concorrência para este problema. Sem os dois termos, a lacuna não é calculável — e ausência de concorrentes não é o mesmo que oportunidade.";
 
-  if (temProcura && densidade) {
+  // ── O QUOCIENTE MANDA, QUANDO EXISTE ─────────────────────────────
+  //  É a única leitura deste motor que compara os dois termos na MESMA
+  //  base — operadores e clientes, os dois contados em empresas (ou em
+  //  pessoas). Por isso não precisa de um sinal de procura ao lado: a
+  //  contagem de clientes JÁ É o indicador de procura que distingue
+  //  «pouca oferta porque há espaço» de «pouca oferta porque não há
+  //  mercado». É esse cruzamento que o método do quociente de
+  //  localização faz, e é o que faltava para a lacuna ser calculável
+  //  fora dos cinco dossiers com piloto.
+  if (quociente) {
+    const cliente = quociente.unidadeCliente === "empresas" ? "clientes possíveis" : "residentes";
+    const comum = `${quociente.operadores} operadores para ${quociente.clientes.toLocaleString("pt-PT")} ${cliente} em ${quociente.nomeDaZona} — ${quociente.porMilClientes.toFixed(1)} por mil, contra ${quociente.medianaNacional.toFixed(1)} de mediana nos ${quociente.unidadesComparadas} concelhos (percentil ${quociente.percentil})`;
+
+    if (quociente.percentil <= 25) {
+      leitura = "procura-com-pouca-oferta";
+      nota = `${comum}. É o sinal mais favorável que dados oficiais conseguem dar: há menos quem sirva por cada cliente possível do que na maior parte do país. Continua a não provar que alguém paga — isso prova-se com um cliente, não com uma estatística.`;
+    } else if (quociente.percentil >= 75) {
+      leitura = "procura-com-muita-oferta";
+      nota = `${comum}. É um mercado servido: há mais quem sirva por cada cliente possível do que na maior parte do país. Não o impede, mas obriga a uma diferença que se explique numa frase.`;
+    } else {
+      leitura = "oferta-na-media";
+      nota = `${comum}. Nem mercado por servir, nem mercado cheio: a diferença vai ter de vir da tua execução, não da geografia.`;
+    }
+    if (quociente.ressalva) {
+      lacunas.push({
+        pergunta: "A base de clientes é mesmo esta?",
+        tipo: "concorrencia",
+        motivo: quociente.ressalva,
+      });
+    }
+  } else if (temProcura && densidade) {
     // ── Os dois termos, e agora numa base comparável ─────────────────
     //  O aviso antigo deste ramo continua a valer para as UNIDADES: uma
     //  taxa de ocupação e uma contagem de empresas não se subtraem. O
@@ -337,13 +465,13 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
 
     if (acima) {
       leitura = "procura-com-muita-oferta";
-      nota = `Há procura publicada e a oferta instalada é densa: ${densa.aqui.operadores} empresas em ${densa.designacoes.join(" e ")} nesta zona, ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana nacional. Entrar aqui é entrar num mercado servido — o que não o impede, mas obriga a uma diferença que se explique numa frase.`;
+      nota = `Há procura publicada e a oferta instalada é densa: ${densa.aqui.operadores} empresas em ${densa.designacoes.join(" e ")} em ${densa.aqui.nome}, ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana ${unidades(densa)} — percentil ${densa.percentil}. Entrar aqui é entrar num mercado servido — o que não o impede, mas obriga a uma diferença que se explique numa frase.`;
     } else if (abaixo) {
       leitura = "procura-com-pouca-oferta";
-      nota = `Há procura publicada e a oferta instalada é rala: ${densa.aqui.porDezMil.toFixed(1)} empresas por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana nacional. É o sinal mais favorável que este motor consegue produzir com dados oficiais — e continua a não provar que alguém paga. Prova-se com um cliente, não com uma estatística.`;
+      nota = `Há procura publicada e a oferta instalada em ${densa.aqui.nome} é rala: ${densa.aqui.porDezMil.toFixed(1)} empresas por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana ${unidades(densa)} — percentil ${densa.percentil}. É o sinal mais favorável que este motor consegue produzir com dados oficiais — e continua a não provar que alguém paga. Prova-se com um cliente, não com uma estatística.`;
     } else {
       leitura = "desconhecida";
-      nota = `Há procura publicada e a oferta desta zona está dentro do normal do país (${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes, mediana ${densa.medianaNacional.toFixed(1)}). Nem mercado por servir, nem mercado cheio: a diferença vai ter de vir da tua execução, não da geografia.`;
+      nota = `Há procura publicada e a oferta de ${densa.aqui.nome} está dentro do normal do país (${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes, mediana ${densa.medianaNacional.toFixed(1)} ${unidades(densa)}). Nem mercado por servir, nem mercado cheio: a diferença vai ter de vir da tua execução, não da geografia.`;
     }
     if (ressalva) {
       lacunas.push({
@@ -360,7 +488,7 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
     //  precisamente o erro que este motor recusa cometer.
     const { leitura: densa, ressalva } = densidade;
     leitura = "desconhecida";
-    nota = `Sabemos quantos já operam aqui — ${densa.aqui.operadores} empresas em ${densa.designacoes.join(" e ")}, ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana nacional — e não sabemos se há procura publicada para este problema. Sem os dois, densidade baixa tanto pode ser espaço por ocupar como mercado que não existe.`;
+    nota = `Sabemos quantos já operam em ${densa.aqui.nome} — ${densa.aqui.operadores} empresas em ${densa.designacoes.join(" e ")}, ${densa.aqui.porDezMil.toFixed(1)} por dez mil habitantes contra ${densa.medianaNacional.toFixed(1)} de mediana ${unidades(densa)} — e não sabemos se há procura publicada para este problema. Sem os dois, densidade baixa tanto pode ser espaço por ocupar como mercado que não existe.`;
     lacunas.push({
       pergunta: "Há alguma leitura oficial que meça a procura deste problema na tua zona?",
       tipo: "procura",
@@ -478,6 +606,7 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
 export const ROTULO_LACUNA: Readonly<Record<LeituraDeLacuna, string>> = Object.freeze({
   "procura-com-pouca-oferta": "Procura com pouca oferta",
   "procura-com-muita-oferta": "Procura com oferta instalada",
+  "oferta-na-media": "Oferta dentro do normal",
   "pouca-procura": "Pouca procura observada",
   desconhecida: "Lacuna por apurar",
 });

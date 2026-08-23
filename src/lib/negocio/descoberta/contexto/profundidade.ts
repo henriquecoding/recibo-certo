@@ -105,6 +105,14 @@ export const CAMPOS_PROFUNDIDADE: readonly CampoDeProfundidade[] = Object.freeze
       "Soma o que precisas de tirar ao custo fixo do modelo e diz quanto a operação tem de gerar por mês antes de te pagar.",
   },
   {
+    id: "concelho",
+    rotulo: "Concelho",
+    peso: 10,
+    respondido: (contexto) => contexto.localizacao.concelho !== undefined,
+    efeito:
+      "A contagem de concorrentes passa a comparar-se entre os 308 concelhos em vez das nove regiões — e a diferença é grande: Lisboa tem 8,3 empresas de limpeza por dez mil habitantes e Mafra 23,8.",
+  },
+  {
     id: "territorio",
     rotulo: "Tipo de território",
     peso: 6,

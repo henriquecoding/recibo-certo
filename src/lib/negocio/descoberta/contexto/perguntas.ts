@@ -155,6 +155,7 @@ export const ONDE_SE_RESPONDE: Readonly<
 > = Object.freeze({
   competencias: { seccao: "competencias", nivel: "essencial" },
   regiao: { seccao: "local", nivel: "essencial" },
+  concelho: { seccao: "local", nivel: "essencial" },
   territorio: { seccao: "local", nivel: "personalizado" },
   capital: { seccao: "recursos", nivel: "essencial" },
   ativos: { seccao: "recursos", nivel: "essencial" },

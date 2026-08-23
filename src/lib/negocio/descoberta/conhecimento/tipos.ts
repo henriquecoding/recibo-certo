@@ -111,6 +111,31 @@ export interface Regulacao {
   severidade: 0 | 1 | 2 | 3;
 }
 
+// ── QUEM PAGA, EM UNIDADES CONTÁVEIS ─────────────────────────────────
+
+/**
+ * A base de clientes de um problema, na única forma que o INE publica ao
+ * concelho: empresas de certas divisões da CAE, ou residentes.
+ *
+ * `TOT` é o total de empresas do concelho, e é a resposta certa para
+ * problemas cujo cliente é «uma empresa qualquer» — escolher divisões à
+ * mão nesse caso daria uma base parcial com ar de total.
+ */
+export type BaseDeClientes =
+  | {
+      tipo: "empresas";
+      /** Divisões da CAE, ou `TOT` para o total de empresas. */
+      cae: readonly string[];
+      /** O que a divisão apanha para além destes clientes. Vai ao ecrã. */
+      ressalva?: string;
+    }
+  | { tipo: "residentes" }
+  | {
+      tipo: "nao-contavel";
+      /** Porque não há base. Publica-se — não se disfarça de zero. */
+      porque: string;
+    };
+
 // ── PROBLEMAS ────────────────────────────────────────────────────────
 
 /** O que faz o problema existir agora. Liga-se aos sinais de mercado. */
@@ -136,6 +161,32 @@ export interface Problema {
   setor: string;
   /** Quem tem o problema, descrito como se descreve um cliente. */
   clientes: readonly string[];
+  /**
+   * Quem paga, em unidades CONTÁVEIS por concelho.
+   *
+   * ┌──────────────────────────────────────────────────────────────────┐
+   * │ O TERMO QUE FALTAVA À SUBTRAÇÃO                                   │
+   * │                                                                  │
+   * │ `motor/procura.ts` escreve há muito, e com razão, que ter dois   │
+   * │ sinais não é ter a lacuna: «uma taxa de ocupação e uma contagem  │
+   * │ de empresas não se subtraem». O que faltava era a base comum, e  │
+   * │ a auditoria (F-15) nomeou-a: operadores POR CLIENTE POSSÍVEL.    │
+   * │                                                                  │
+   * │ `clientes` acima é prosa para quem lê o dossier. Isto é a mesma  │
+   * │ coisa em unidades que o INE publica ao concelho — empresas de    │
+   * │ certas divisões da CAE, ou residentes. Com ela, operadores por   │
+   * │ mil clientes é calculável para qualquer hipótese, sem um único   │
+   * │ dossier escrito à mão.                                            │
+   * │                                                                  │
+   * │ ── E `nao-contavel` É UMA RESPOSTA ─────────────────────────────│
+   * │ Frequente e legítima. Os visitantes de uma cidade não são        │
+   * │ residentes nem empresas, e nenhuma fonte os conta ao concelho    │
+   * │ como compradores. Escolher uma divisão «parecida» daria um       │
+   * │ denominador errado — e um denominador errado não se vê: produz   │
+   * │ um rácio plausível e uma conclusão falsa.                         │
+   * └──────────────────────────────────────────────────────────────────┘
+   */
+  baseDeClientes: BaseDeClientes;
   publicos: readonly PublicoAlvo[];
   mercado: MercadoAlvo;
   gatilhos: readonly GatilhoProblema[];
