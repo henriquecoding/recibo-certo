@@ -161,12 +161,24 @@ export function buildResearchPlan(candidato: CandidatoBruto): PlanoDeInvestigaca
         });
         break;
       case "escassez-de-pessoas":
+        // ── O ÂMBITO ERA UMA PROMESSA QUE A FONTE NÃO CUMPRE ──────────
+        //  Dizia «nesta zona», âmbito «Região», fonte IEFP. Verificado
+        //  em 2026-08-23: a série do IEFP legível por máquina é o
+        //  indicador 0014470 do INE, e publica ao PAÍS e só ao país —
+        //  uma única categoria geográfica. O detalhe ao concelho existe
+        //  num PDF mensal, e um PDF não é uma fonte ligável.
+        //
+        //  Anunciar «Região» mandava a pessoa procurar uma resposta
+        //  local numa fonte que não a tem. O âmbito passa a dizer a
+        //  verdade, e a pergunta passa a ser a que a fonte responde.
         juntar({
-          pergunta: "Há ofertas de emprego por preencher neste setor e nesta zona?",
+          pergunta:
+            "Está a faltar gente neste setor — e o aperto é nacional ou é só aqui?",
           tipo: "mercado",
           fontes: ["iefp"],
-          metrica: "Ofertas de emprego por região e atividade",
-          ambito: `Região — ${zona}`,
+          metrica:
+            "Desempregados inscritos nos centros de emprego (IEFP via INE 0014470), mensal e nacional",
+          ambito: "Portugal — a série pública não desce da escala nacional",
           frescuraMaximaDias: FRESCURA_POR_TIPO.mercado,
           ligada: false,
         });

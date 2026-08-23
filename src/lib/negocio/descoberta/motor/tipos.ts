@@ -13,6 +13,7 @@
 
 import type { CenarioInicial } from "@/lib/pricing";
 import type { MarketRegion } from "@/lib/negocio/market/geografia";
+import type { EscalaDeLacuna } from "@/lib/negocio/market/oferta";
 import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
 import type { IntensidadeAgregada } from "./intensidade";
 import type { IntervaloDePontuacao } from "./scoring";
@@ -149,6 +150,17 @@ export interface AvaliacaoProcura {
    * nunca o score — a idade dos dados fala de nós, não do mercado.
    */
   frescura: number | null;
+  /**
+   * A mesma distribuição do quociente, ordenada — onde há menos e mais
+   * operadores por cliente, entre os 308 concelhos.
+   *
+   * `null` quando o quociente não é calculável (sem matriz, sem divisão
+   * credível, ou base de clientes não contável). NÃO é um ranking de
+   * oportunidade: menos operadores tanto pode ser espaço por ocupar
+   * como mercado que não existe, e por isso vem sempre com o outro
+   * extremo ao lado. Ver `lacunaPorConcelho`.
+   */
+  escalaDeLacuna: EscalaDeLacuna | null;
 }
 
 // ── VIABILIDADE ──────────────────────────────────────────────────────

@@ -21,6 +21,8 @@ import { describe, expect, it } from "vitest";
 import {
   carregarOferta,
   CODIGOS_NUTS_PEDIDOS,
+  lacunaPorConcelho,
+  lerLacuna,
   lerOferta,
   populacaoRegionalDaMatriz,
   type ContagemRegional,
@@ -497,5 +499,69 @@ describe("oferta: a população somada dos concelhos commitados", () => {
   it("uma matriz sem população utilizável devolve lista vazia, não zeros", () => {
     const vazia = { ...MATRIZ_CONCELHOS!, populacao: MATRIZ_CONCELHOS!.ordem.map(() => Number.NaN) };
     expect(populacaoRegionalDaMatriz(vazia)).toEqual([]);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+
+describe("oferta: a escala aos 308 concelhos", () => {
+  // `lerLacuna` já percorria os 308 para produzir um percentil e devolvia
+  // uma linha. Isto publica a mesma distribuição — sem pedido novo, sem
+  // dado novo. Os testes garantem que é MESMO a mesma.
+  const packComMatriz = () => pack({ concelhos: MATRIZ_CONCELHOS! });
+
+  it("ordena do menos servido para o mais servido", () => {
+    const escala = lacunaPorConcelho(packComMatriz(), ["81"], { tipo: "residentes" }, { quantos: 5 });
+    expect(escala).not.toBeNull();
+    const menos = escala!.menosServidos;
+    expect(menos).toHaveLength(5);
+    for (let i = 1; i < menos.length; i += 1) {
+      expect(menos[i]!.porMilClientes).toBeGreaterThanOrEqual(menos[i - 1]!.porMilClientes);
+    }
+    // E o outro extremo vem mesmo do outro lado da mesma distribuição.
+    expect(escala!.maisServidos[0]!.porMilClientes).toBeGreaterThan(menos[0]!.porMilClientes);
+    expect(escala!.menosServidos[0]!.posicao).toBe(1);
+    expect(escala!.maisServidos[0]!.posicao).toBe(escala!.unidadesComparadas);
+  });
+
+  it("os dois extremos vêm sempre juntos", () => {
+    // Só os menos servidos leria-se como uma seta a apontar para onde
+    // mudar. A função não tem modo de devolver metade.
+    const escala = lacunaPorConcelho(packComMatriz(), ["81"], { tipo: "residentes" }, { quantos: 3 });
+    expect(escala!.menosServidos).toHaveLength(3);
+    expect(escala!.maisServidos).toHaveLength(3);
+  });
+
+  it("concorda com `lerLacuna` no mesmo concelho — é a mesma distribuição", () => {
+    const codigo = MATRIZ_CONCELHOS!.ordem[100]!;
+    const uma = lerLacuna(packComMatriz(), ["81"], { tipo: "residentes" }, codigo);
+    const escala = lacunaPorConcelho(packComMatriz(), ["81"], { tipo: "residentes" }, {
+      codigoDoConcelho: codigo,
+    });
+    expect(uma).not.toBeNull();
+    expect(escala!.aqui).toBeDefined();
+    expect(escala!.aqui!.porMilClientes).toBeCloseTo(uma!.porMilClientes, 9);
+    expect(escala!.aqui!.operadores).toBe(uma!.operadores);
+    expect(escala!.aqui!.clientes).toBe(uma!.clientes);
+    expect(escala!.unidadesComparadas).toBe(uma!.unidadesComparadas);
+    expect(escala!.medianaNacional).toBeCloseTo(uma!.medianaNacional, 9);
+  });
+
+  it("sem matriz commitada não inventa uma escala", () => {
+    expect(lacunaPorConcelho(pack(), ["81"], { tipo: "residentes" })).toBeNull();
+  });
+
+  it("uma divisão que a matriz não tem devolve `null`, não zeros", () => {
+    // Zero operadores leria-se como mercado livre e promoveria a
+    // hipótese por engano. É o erro caro desta camada.
+    expect(
+      lacunaPorConcelho(packComMatriz(), ["99"], { tipo: "residentes" }),
+    ).toBeNull();
+  });
+
+  it("a ordem é determinística entre corridas", () => {
+    const uma = lacunaPorConcelho(packComMatriz(), ["81"], { tipo: "residentes" });
+    const outra = lacunaPorConcelho(packComMatriz(), ["81"], { tipo: "residentes" });
+    expect(uma!.menosServidos.map((i) => i.codigo)).toEqual(outra!.menosServidos.map((i) => i.codigo));
   });
 });

@@ -44,18 +44,27 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
     access: "api",
     canonicalUrl: "https://bpstat.bportugal.pt/data/v1/",
     documentationUrl: "https://bpstat.bportugal.pt/data/docs",
+    // ── API VERIFICADA EM 2026-08-23 ─────────────────────────────────
+    //  Responde sem autenticação, em JSON-stat, e anuncia o limite de
+    //  cadência no cabeçalho `X-Throttle: 1000`. O domínio 167
+    //  («Empresas da central de balanços») é um PAI e devolve lista
+    //  vazia — os dados estão nos filhos: 168 (trimestrais), 169
+    //  (anuais) e 178 (por região). Quem escrever o conector tem de
+    //  pedir os filhos; pedir o 167 devolve zero e parece uma falha.
     license: Object.freeze({
       status: "review_required",
       url: "https://bpstat.bportugal.pt/data/docs",
       attribution: "Fonte: Banco de Portugal — BPstat",
       storagePolicy: "Conservar apenas séries cuja licença e finalidade tenham sido confirmadas no manifesto.",
-      reviewNote: "Confirmar termos de reutilização e armazenamento antes de publicar a primeira série.",
+      reviewNote:
+        "A API responde publicamente e sem chave, mas acesso aberto não é licença: falta o termo escrito de reutilização e armazenamento antes de publicar a primeira série.",
     }),
     expectedCadence: "irregular",
     coverage: Object.freeze({
       countries: Object.freeze(["PT"] as const),
       geographicLevels: Object.freeze(["country", "nuts1", "nuts2", "nuts3"] as const),
-      notes: "A cobertura depende da série; muitos indicadores são nacionais ou setoriais, não locais.",
+      notes:
+        "Os conjuntos da central de balanços trazem as dimensões «Território de referência» e «Agregado regional», mas as fatias inspecionadas vinham com Portugal e «não especificado». A granularidade real é por série e tem de ser lida do JSON-stat, nunca assumida.",
     }),
     parserVersion: "bpstat-jsonstat@0",
     connectorStatus: "planned",
@@ -63,6 +72,8 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
     limitations: Object.freeze([
       "Benchmark setorial não é preço recomendado.",
       "Séries nacionais não provam procura num concelho.",
+      "A atividade económica vem em secções largas — «Alojamento e restauração», «Comércio e reparação de veículos» —, muito mais largas do que as divisões da CAE que o motor usa. Cruzar as duas exige um mapeamento curado e declarado.",
+      "O domínio 167 é um agregador sem dados próprios: os conjuntos vivem em 168, 169 e 178.",
     ]),
   }),
   "dados-gov": Object.freeze({
@@ -138,26 +149,46 @@ const SOURCES: Readonly<Record<MarketSourceId, MarketSourceDefinition>> = Object
     access: "file",
     canonicalUrl: "https://www.iefp.pt/estatisticas",
     documentationUrl: "https://www.iefp.pt/estatisticas",
+    // ── VERIFICADO CONTRA AS FONTES EM 2026-08-23 ────────────────────
+    //  O que estava aqui descrevia os ficheiros de iefp.pt. Há um
+    //  caminho melhor, e muda a conclusão: a série do IEFP é
+    //  republicada pelo INE como indicador 0014470, declarada CC BY no
+    //  dados.gov.pt, mensal, com último período «Junho de 2026».
+    //
+    //  Isso resolve a licença — mas levanta o que interessa mais:
+    //  **esse indicador publica SÓ ao país.** A dimensão geográfica tem
+    //  exatamente uma categoria (`PT`), verificada no `pindicaMeta`. O
+    //  que existe ao concelho é o «SIE — Desemprego registado por
+    //  concelhos», e é um PDF mensal, não um recurso legível por
+    //  máquina.
     license: Object.freeze({
-      status: "review_required",
-      url: "https://www.iefp.pt/estatisticas",
-      attribution: "Fonte: IEFP, I.P.",
-      storagePolicy: "Ler para investigação; não republicar extratos até a licença do ficheiro estar confirmada.",
-      reviewNote:
-        "Os relatórios mensais e ficheiros ODS estão acessíveis, mas falta uma licença inequívoca de reutilização comercial por recurso.",
+      status: "approved",
+      identifier: "CC BY 4.0",
+      url: "https://dados.gov.pt/pt/datasets/desempregados-inscritos-em-centros-de-emprego-do-iefp-movimento-ao-longo-do-mes-n-o/",
+      attribution: "Fonte: IEFP, I.P., via INE, I.P. (indicador 0014470)",
+      storagePolicy:
+        "Só a série republicada pelo INE (0014470) está coberta por esta licença. Os PDF e ODS publicados diretamente em iefp.pt continuam por confirmar e não podem ser republicados.",
     }),
     expectedCadence: "monthly",
     coverage: Object.freeze({
+      // `district` estava errado — o registo não tinha nada ao distrito.
+      // `municipality` também estaria: é a granularidade do PDF, não a
+      // de nada que se consiga ler. O que é legível por máquina é o
+      // país, e é isso que este campo tem de dizer, porque é ele que
+      // decide se uma série pode responder a uma pergunta local.
       countries: Object.freeze(["PT"] as const),
-      geographicLevels: Object.freeze(["country", "nuts2", "district"] as const),
-      notes: "Os relatórios mensais incluem ofertas por região e atividade; o manifesto deve fixar a folha e as colunas.",
+      geographicLevels: Object.freeze(["country"] as const),
+      notes:
+        "O indicador 0014470 (INE, dados do IEFP) publica ao país e só ao país — verificado no pindicaMeta, uma única categoria geográfica. O detalhe ao concelho existe apenas no relatório «SIE — Desemprego registado por concelhos», em PDF mensal.",
     }),
-    parserVersion: "iefp-ods@0",
-    connectorStatus: "planned",
-    allowedUses: Object.freeze(["conjunctural", "transactional", "operational"] as const),
+    parserVersion: "ine-json-indicator@1",
+    connectorStatus: "ready",
+    allowedUses: Object.freeze(["conjunctural", "operational"] as const),
     limitations: Object.freeze([
       "Ofertas de emprego não equivalem automaticamente a procura por serviços independentes.",
-      "Alterações de folhas/colunas ficam em quarentena.",
+      "É uma série NACIONAL: não prova procura num concelho nem numa região, e não pode alimentar o eixo da procura, que é local por definição.",
+      "Conta desempregados inscritos por localização do CENTRO DE EMPREGO, não por residência de quem se inscreve.",
+      "O detalhe ao concelho só existe em PDF; extraí-lo exigiria um parser de PDF mensal, com a licença desses ficheiros ainda por confirmar.",
     ]),
   }),
   "turismo-portugal": Object.freeze({

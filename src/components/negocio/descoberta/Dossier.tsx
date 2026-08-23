@@ -194,6 +194,87 @@ export default function Dossier({
           </ul>
         ) : null}
 
+        {/* ── A ESCALA AOS 308 CONCELHOS ──────────────────────────────
+            A ferramenta sabia dizer «o teu concelho está no percentil 78»
+            e não sabia dizer ONDE é que não está. A distribuição já era
+            calculada para produzir esse percentil e era deitada fora; a
+            matriz já está toda no browser, porque o concelho de quem
+            pergunta nunca sai do dispositivo. Mostrá-la não custa um
+            pedido, um dado, nem uma linha de rede.
+
+            Os DOIS extremos, sempre. Só os menos servidos leria-se como
+            uma seta a apontar para onde mudar — e menos operadores tanto
+            pode ser espaço por ocupar como mercado que não existe. */}
+        {candidato.procura.escalaDeLacuna ? (
+          <details className="group mt-3 border-t border-stone-200/70 pt-2.5 dark:border-stone-800">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-semibold uppercase tracking-wide text-stone-500 marker:hidden hover:text-stone-700 dark:hover:text-stone-300">
+              <span>Onde há menos operadores por cliente</span>
+              <span className="text-[10px] font-normal normal-case tracking-normal text-stone-400 group-open:hidden">
+                ver os {candidato.procura.escalaDeLacuna.unidadesComparadas} concelhos
+              </span>
+            </summary>
+
+            <p className="mt-2 text-[11px] leading-snug text-stone-500">
+              Operadores por mil{" "}
+              {candidato.procura.escalaDeLacuna.unidadeCliente === "residentes" ? "residentes" : "clientes possíveis"},
+              entre {candidato.procura.escalaDeLacuna.unidadesComparadas} concelhos · mediana{" "}
+              <span className="tabular-nums">{candidato.procura.escalaDeLacuna.medianaNacional.toFixed(1)}</span> ·
+              INE {candidato.procura.escalaDeLacuna.periodoEmpresas}
+            </p>
+
+            <div className="mt-2 grid gap-3 sm:grid-cols-2">
+              {(
+                [
+                  ["Menos servidos", candidato.procura.escalaDeLacuna.menosServidos],
+                  ["Mais servidos", candidato.procura.escalaDeLacuna.maisServidos],
+                ] as const
+              ).map(([titulo, lista]) => (
+                <div key={titulo}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">{titulo}</p>
+                  <ul className="mt-1 space-y-0.5">
+                    {lista.map((item) => (
+                      <li
+                        key={item.codigo}
+                        className={`flex items-baseline justify-between gap-2 text-[11px] ${
+                          item.codigo === candidato.procura.escalaDeLacuna?.aqui?.codigo
+                            ? "font-semibold text-brand-deep dark:text-brand-mint"
+                            : "text-stone-600 dark:text-stone-300"
+                        }`}
+                      >
+                        <span className="truncate">
+                          {item.posicao}. {item.nome}
+                        </span>
+                        <span className="flex-none tabular-nums text-stone-500">
+                          {item.porMilClientes.toFixed(1)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+
+            {candidato.procura.escalaDeLacuna.aqui ? (
+              <p className="mt-2 text-[11px] leading-snug text-stone-500">
+                {candidato.procura.escalaDeLacuna.aqui.nome} fica em{" "}
+                <strong className="font-semibold text-stone-700 dark:text-stone-200">
+                  {candidato.procura.escalaDeLacuna.aqui.posicao}.º
+                </strong>{" "}
+                de {candidato.procura.escalaDeLacuna.unidadesComparadas}, com{" "}
+                <span className="tabular-nums">{candidato.procura.escalaDeLacuna.aqui.porMilClientes.toFixed(1)}</span>{" "}
+                por mil.
+              </p>
+            ) : null}
+
+            <p className="mt-2 text-[11px] leading-snug text-stone-400">
+              Poucos operadores não é o mesmo que oportunidade: tanto pode ser espaço por ocupar como mercado que
+              não existe — e a segunda leitura é a que arruína quem se muda. Esta é a ordem por densidade, um facto,
+              não um conselho sobre onde ir.
+              {candidato.procura.escalaDeLacuna.ressalva ? ` ${candidato.procura.escalaDeLacuna.ressalva}` : ""}
+            </p>
+          </details>
+        ) : null}
+
         {candidato.lacunas.length > 0 ? (
           <div className="mt-3 border-t border-stone-200/70 pt-2.5 dark:border-stone-800">
             <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">O que ainda não sabemos</p>

@@ -38,10 +38,12 @@
 import { effectiveReferenceAgeDays } from "@/lib/negocio/market/freshness";
 import { marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
 import {
+  lacunaPorConcelho,
   lerLacuna,
   lerOferta,
   populacaoRegionalDaMatriz,
   type ContagemRegional,
+  type EscalaDeLacuna,
   type LeituraDeLacuna as QuocienteDeLocalizacao,
   type LeituraDeOferta,
   type PackOferta,
@@ -633,7 +635,32 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
     estadoGate,
     bloqueadasPeloGate,
     frescura: frescuraDe(brutas, agora),
+    // A distribuição que o quociente já calculou, ordenada em vez de
+    // deitada fora. Não custa um pedido nem um dado novo — ver
+    // `lacunaPorConcelho`, incluindo a razão por que vem sempre com os
+    // dois extremos e nunca como um ranking de oportunidade.
+    escalaDeLacuna: escalaDoCandidato(candidato, oferta),
   };
+}
+
+/** A escala ao concelho, quando os dois termos do quociente existem. */
+function escalaDoCandidato(
+  candidato: CandidatoBruto,
+  pack: PackOferta | undefined,
+): EscalaDeLacuna | null {
+  if (!pack) return null;
+  const conceito = CONCEITO_POR_CAPACIDADE.get(candidato.dominante.id);
+  if (!conceito || conceito.cae.length === 0) return null;
+  const base = candidato.problema.baseDeClientes;
+  if (base.tipo === "nao-contavel") return null;
+  return lacunaPorConcelho(
+    pack,
+    conceito.cae,
+    base.tipo === "residentes"
+      ? { tipo: "residentes" }
+      : { tipo: "empresas", cae: base.cae, ressalva: base.ressalva },
+    { codigoDoConcelho: candidato.concelho, quantos: 5 },
+  );
 }
 
 export const ROTULO_LACUNA: Readonly<Record<LeituraDeLacuna, string>> = Object.freeze({

@@ -803,6 +803,125 @@ export interface LeituraDeLacuna {
   ressalva?: string;
 }
 
+export interface ConcelhoNaEscala {
+  codigo: string;
+  nome: string;
+  /** Operadores da hipótese neste concelho. */
+  operadores: number;
+  /** Clientes possíveis, na unidade declarada pelo problema. */
+  clientes: number;
+  /** Operadores por mil clientes. É a base comparável. */
+  porMilClientes: number;
+  /** 1 = o menos servido de todos os comparados. */
+  posicao: number;
+}
+
+export interface EscalaDeLacuna {
+  /** Os menos servidos, por operadores por mil clientes. */
+  menosServidos: readonly ConcelhoNaEscala[];
+  /** Os mais servidos, do outro extremo da mesma distribuição. */
+  maisServidos: readonly ConcelhoNaEscala[];
+  /** Onde o concelho declarado cai, quando há um. */
+  aqui?: ConcelhoNaEscala;
+  unidadeCliente: "empresas" | "residentes";
+  medianaNacional: number;
+  unidadesComparadas: number;
+  periodoEmpresas: string;
+  ressalva?: string;
+}
+
+/**
+ * A mesma distribuição de `lerLacuna`, publicada em vez de deitada fora.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO NÃO CUSTA DADOS NENHUNS                                 │
+ * │                                                                    │
+ * │ `lerLacuna` já calcula a razão operadores/clientes para os 308     │
+ * │ concelhos — precisa da distribuição inteira para dar um percentil  │
+ * │ — e depois devolve UMA linha e deita as outras 307 fora. A matriz  │
+ * │ já está no browser por inteiro, porque o concelho de quem pergunta │
+ * │ nunca sai do dispositivo. Ordenar o que já está calculado não pede │
+ * │ um pedido novo, um dado novo, nem uma linha de rede.               │
+ * │                                                                    │
+ * │ A pergunta que passa a ter resposta é a que faltava: a ferramenta  │
+ * │ sabia dizer «o teu concelho está no percentil 78» e não sabia      │
+ * │ dizer ONDE é que não está.                                          │
+ * └────────────────────────────────────────────────────────────────────┘
+ *
+ * ⚠️ **Menos operadores não é «melhor».** Pode ser espaço por ocupar ou
+ * pode ser mercado que não existe — e a segunda leitura é a que arruína
+ * quem se muda. Esta função devolve uma ORDEM por densidade, que é um
+ * facto; não devolve um ranking de oportunidade, que seria uma conclusão
+ * que estes dados não sustentam. Quem a mostrar tem de dizer isto, e a
+ * lista dos mais servidos vai junto exatamente para o impedir de parecer
+ * uma seta a apontar para baixo.
+ */
+export function lacunaPorConcelho(
+  pack: PackOferta,
+  divisoesDoOperador: readonly string[],
+  base: BaseContavel,
+  opcoes: { codigoDoConcelho?: string; quantos?: number } = {},
+): EscalaDeLacuna | null {
+  const matriz = pack.concelhos;
+  if (!matriz || divisoesDoOperador.length === 0) return null;
+
+  const somar = (divisoes: readonly string[]): readonly number[] | null => {
+    const total = new Array<number>(matriz.ordem.length).fill(0);
+    for (const divisao of divisoes) {
+      const contagens = matriz.porDivisao[divisao];
+      if (!contagens) return null;
+      for (let posicao = 0; posicao < contagens.length; posicao += 1) {
+        total[posicao] = total[posicao]! + contagens[posicao]!;
+      }
+    }
+    return total;
+  };
+
+  const operadores = somar(divisoesDoOperador);
+  if (!operadores) return null;
+  const clientes = base.tipo === "residentes" ? matriz.populacao : somar(base.cae);
+  if (!clientes) return null;
+
+  const linhas: ConcelhoNaEscala[] = [];
+  for (let posicao = 0; posicao < matriz.ordem.length; posicao += 1) {
+    const denominador = clientes[posicao]!;
+    // Sem clientes não há razão que se compare — a mesma exclusão de
+    // `lerLacuna`, para as duas verem exatamente a mesma distribuição.
+    if (denominador <= 0) continue;
+    const codigo = matriz.ordem[posicao]!;
+    linhas.push({
+      codigo,
+      nome: CONCELHO_POR_CODIGO.get(codigo)?.nome ?? codigo,
+      operadores: operadores[posicao]!,
+      clientes: denominador,
+      porMilClientes: (operadores[posicao]! / denominador) * 1000,
+      posicao: 0,
+    });
+  }
+  if (linhas.length < 5) return null;
+
+  linhas.sort(
+    (esquerda, direita) =>
+      esquerda.porMilClientes - direita.porMilClientes ||
+      esquerda.nome.localeCompare(direita.nome, "pt-PT"),
+  );
+  for (let indice = 0; indice < linhas.length; indice += 1) linhas[indice]!.posicao = indice + 1;
+
+  const quantos = Math.max(1, Math.min(opcoes.quantos ?? 5, linhas.length));
+  return {
+    menosServidos: linhas.slice(0, quantos),
+    maisServidos: linhas.slice(-quantos).reverse(),
+    aqui: opcoes.codigoDoConcelho
+      ? linhas.find((item) => item.codigo === opcoes.codigoDoConcelho)
+      : undefined,
+    unidadeCliente: base.tipo === "residentes" ? "residentes" : "empresas",
+    medianaNacional: mediana(linhas.map((item) => item.porMilClientes)),
+    unidadesComparadas: linhas.length,
+    periodoEmpresas: matriz.periodoEmpresas,
+    ressalva: base.tipo === "empresas" ? base.ressalva : undefined,
+  };
+}
+
 /** A base de clientes, na forma que esta camada sabe contar. */
 export type BaseContavel =
   | { tipo: "empresas"; cae: readonly string[]; ressalva?: string }

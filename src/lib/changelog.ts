@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.108.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta já sabia onde há menos concorrência — só nunca tinha dito",
+    itens: [
+      "Para dar «o teu concelho está no percentil 78», a ferramenta comparava o teu concelho com os outros 307 — e depois deitava essa comparação fora. A tabela dos 308 concelhos já vem inteira para o teu dispositivo, porque o concelho que escolhes nunca sai dele. Passa a mostrar-se: onde há menos operadores por cliente, onde há mais, e em que posição fica o teu.",
+      "Não é um conselho sobre para onde mudar, e a lista diz isso. Poucos operadores tanto pode ser espaço por ocupar como mercado que não existe — e a segunda leitura é a que arruína quem se muda. Por isso os dois extremos aparecem sempre lado a lado, nunca só o que parece favorável.",
+      "Sem pedidos novos e sem dados novos: é a mesma conta que já era feita, agora publicada em vez de descartada.",
+      "Correção de rigor sobre o IEFP: a ferramenta dizia que ia procurar ofertas de emprego «nesta zona». Fomos verificar — a série pública do IEFP legível por máquina existe, é mensal e está atualizada, mas publica só ao nível do país. O detalhe por concelho só existe em PDF. A pergunta passa a dizer o que a fonte responde, em vez de prometer uma resposta local que não há.",
+      "Em contrapartida, a licença dessa série ficou esclarecida: é CC BY, publicada pelo INE a partir de dados do IEFP, e passa a estar registada como tal em vez de «por confirmar».",
+    ],
+  },
+  {
     version: "2.107.0",
     data: "2026-08-23",
     titulo: "O «não sabemos» era, em parte, uma avaria nossa",
