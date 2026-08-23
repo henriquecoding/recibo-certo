@@ -548,7 +548,14 @@ export interface DensidadeRegional {
  * │ que não é o de nenhum dos dois.                                     │
  * └────────────────────────────────────────────────────────────────────┘
  */
-export type EscalaDaLeitura = "regiao" | "concelho";
+/**
+ * `territorio` é o conjunto de concelhos que o alcance declarado abrange
+ * — o círculo de um raio, ou os concelhos de uma região. A razão é
+ * calculada sobre a SOMA do conjunto e depois posicionada na
+ * distribuição dos concelhos individuais, e quem a mostra tem de dizer
+ * isso: «o teu território, comparado com um concelho típico».
+ */
+export type EscalaDaLeitura = "regiao" | "concelho" | "territorio";
 
 export type ZonaDeAnalise =
   | { tipo: "regiao"; regiao: MarketRegion }
@@ -797,11 +804,21 @@ export interface LeituraDeLacuna {
   z: number;
   escala: EscalaDaLeitura;
   nomeDaZona: string;
+  /** Quantos concelhos foram somados. 1 = a leitura é de um só. */
+  concelhosNaZona: number;
   unidadesComparadas: number;
   periodoEmpresas: string;
   /** O que a divisão dos clientes apanha para além deles. Vai ao ecrã. */
   ressalva?: string;
 }
+
+/**
+ * Onde medir a lacuna: um concelho, ou o território que o alcance abrange.
+ *
+ * O território traz o nome já feito («25 km à volta de Loulé») porque
+ * quem o compôs sabe como o compôs, e reconstruí-lo aqui seria adivinhar.
+ */
+export type AlvoDaLacuna = string | { codigos: readonly string[]; nome: string };
 
 export interface ConcelhoNaEscala {
   codigo: string;
@@ -939,12 +956,22 @@ export function lerLacuna(
   pack: PackOferta,
   divisoesDoOperador: readonly string[],
   base: BaseContavel,
-  codigoDoConcelho: string,
+  alvo: AlvoDaLacuna,
 ): LeituraDeLacuna | null {
   const matriz = pack.concelhos;
   if (!matriz || divisoesDoOperador.length === 0) return null;
-  const indice = matriz.ordem.indexOf(codigoDoConcelho);
-  if (indice < 0) return null;
+
+  // ── UM CONCELHO OU UM TERRITÓRIO ────────────────────────────────────
+  //  A conta é a mesma; muda o que entra no numerador e no denominador.
+  //  Um território soma os seus concelhos ANTES de dividir — somar as
+  //  razões daria a média das densidades, que é outra coisa e que pesa
+  //  igual um concelho de mil habitantes e um de meio milhão.
+  const territorio = typeof alvo === "string" ? null : alvo;
+  const codigos = typeof alvo === "string" ? [alvo] : alvo.codigos;
+  const indices = codigos
+    .map((codigo) => matriz.ordem.indexOf(codigo))
+    .filter((indice) => indice >= 0);
+  if (indices.length === 0) return null;
 
   const somar = (divisoes: readonly string[]): readonly number[] | null => {
     const total = new Array<number>(matriz.ordem.length).fill(0);
@@ -976,8 +1003,12 @@ export function lerLacuna(
   }
   if (razoes.length < 5) return null;
 
-  const aqui = razoes.find((item) => item.posicao === indice);
-  if (!aqui) return null;
+  // A razão da zona: um concelho lê-se na distribuição; um território
+  // soma-se primeiro e só depois se compara com ela.
+  const operadoresAqui = indices.reduce((total, indice) => total + operadores[indice]!, 0);
+  const clientesAqui = indices.reduce((total, indice) => total + clientes[indice]!, 0);
+  if (clientesAqui <= 0) return null;
+  const aqui = { valor: (operadoresAqui / clientesAqui) * 1000 };
 
   const valores = razoes.map((item) => item.valor);
   const media = valores.reduce((total, valor) => total + valor, 0) / valores.length;
@@ -990,15 +1021,18 @@ export function lerLacuna(
   const iguais = valores.filter((valor) => valor === aqui.valor).length;
 
   return {
-    operadores: operadores[indice]!,
-    clientes: clientes[indice]!,
+    operadores: operadoresAqui,
+    clientes: clientesAqui,
     unidadeCliente: base.tipo === "residentes" ? "residentes" : "empresas",
     porMilClientes: aqui.valor,
     medianaNacional: mediana(valores),
     percentil: Math.round(((abaixo + 0.5 * iguais) / valores.length) * 100),
     z: (aqui.valor - media) / desvio,
-    escala: "concelho",
-    nomeDaZona: CONCELHO_POR_CODIGO.get(codigoDoConcelho)?.nome ?? codigoDoConcelho,
+    escala: territorio ? "territorio" : "concelho",
+    nomeDaZona: territorio
+      ? territorio.nome
+      : (CONCELHO_POR_CODIGO.get(codigos[0]!)?.nome ?? codigos[0]!),
+    concelhosNaZona: indices.length,
     unidadesComparadas: razoes.length,
     periodoEmpresas: matriz.periodoEmpresas,
     ressalva: base.tipo === "empresas" ? base.ressalva : undefined,

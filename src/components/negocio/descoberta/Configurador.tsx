@@ -80,6 +80,7 @@ import type {
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
 import { concelhosDaRegiao } from "@/lib/negocio/market/concelhos";
+import MapaOndeOperarLazy from "./MapaOndeOperarLazy";
 import { impactoDaLocalizacao, type EfeitoDeCampo } from "@/lib/negocio/descoberta/motor/impacto-local";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { PackOferta } from "@/lib/negocio/market/oferta";
@@ -238,6 +239,33 @@ export default function Configurador({
 
   const efeito = (campo: EfeitoDeCampo["campo"]) =>
     impacto?.efeitos.find((item) => item.campo === campo) ?? null;
+
+  /**
+   * O território em uma linha, por baixo do mapa.
+   *
+   * É o resultado das respostas, e não mais uma pergunta: quantos
+   * concelhos, quanta gente, e a que distância. Sem ele, o mapa seria
+   * bonito e mudo — que é a queixa de que este trabalho nasceu, do
+   * outro lado.
+   */
+  const resumoDoTerritorio = useMemo(() => {
+    const territorio = impacto?.territorio;
+    if (!territorio || territorio.concelhos === 0) return undefined;
+    const gente =
+      territorio.residentes !== null
+        ? `${territorio.residentes.toLocaleString("pt-PT")} pessoas`
+        : null;
+    const partes = [
+      territorio.base === "raio"
+        ? territorio.nome
+        : territorio.base === "concelho"
+          ? "só este concelho"
+          : territorio.nome,
+      territorio.concelhos > 1 ? `${territorio.concelhos} concelhos` : null,
+      gente,
+    ].filter(Boolean);
+    return partes.join(" · ");
+  }, [impacto]);
 
   const alterar = (parcial: Partial<OpportunityContext>) => onChange({ ...contexto, ...parcial });
 
@@ -589,7 +617,11 @@ export default function Configurador({
                 ))}
               </select>
               {efeito("zona") ? (
-                <EfeitoMedido peso={efeito("zona")!.peso} respondido={efeito("zona")!.respondido}>
+                <EfeitoMedido
+                  peso={efeito("zona")!.peso}
+                  respondido={efeito("zona")!.respondido}
+                  condicao={efeito("zona")!.condicao}
+                >
                   {efeito("zona")!.frase}
                 </EfeitoMedido>
               ) : (
@@ -598,68 +630,6 @@ export default function Configurador({
                 </p>
               )}
 
-              {/* ── O concelho, quando a região já foi escolhida ──────
-                  «Que negócio abrir» varia ao concelho: nos dados que o
-                  motor lê, Lisboa tem 8,3 empresas de limpeza por dez mil
-                  habitantes e Mafra 23,8 — a mesma célula em NUTS II. A
-                  lista é fechada e a escolha nunca sai do dispositivo. */}
-              {concelhosDisponiveis.length > 0 ? (
-                <div className="mt-3">
-                  <label
-                    htmlFor="ode-concelho"
-                    className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-500"
-                  >
-                    Concelho{" "}
-                    <span className="font-normal normal-case tracking-normal text-brand">
-                      a resposta que mais muda a análise
-                    </span>
-                  </label>
-                  <select
-                    id="ode-concelho"
-                    value={contexto.localizacao.concelho ?? ""}
-                    onChange={(evento) =>
-                      alterar({
-                        localizacao: {
-                          ...contexto.localizacao,
-                          concelho: evento.target.value || undefined,
-                        },
-                      })
-                    }
-                    className="h-10 w-full rounded-xl border border-stone-200 bg-white px-2.5 text-xs font-semibold text-ink focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
-                  >
-                    <option value="">Toda a região</option>
-                    {concelhosDisponiveis.map((item) => (
-                      <option key={item.codigo} value={item.codigo}>
-                        {item.nome}
-                      </option>
-                    ))}
-                  </select>
-                  {/* ── O CUSTO DE NÃO RESPONDER, COM O NÚMERO MEDIDO ──
-                      Era um campo «(opcional)» com uma explicação técnica,
-                      e é a pergunta de que depende a leitura de
-                      concorrência: medido sobre 1 231 hipóteses, com o
-                      mesmo pack e a mesma evidência, a lacuna de oferta é
-                      conhecida em 9 % das hipóteses sem concelho e em
-                      77 % com ele. Dizer «opcional» sem dizer isto é
-                      esconder o preço da escolha. */}
-                  {/* O número é desta análise, não uma média de todas:
-                      «dá leitura de concorrência a 4 hipóteses» conta as
-                      hipóteses que ESTA pessoa tem à frente. */}
-                  {efeito("concelho") ? (
-                    <EfeitoMedido
-                      peso={efeito("concelho")!.peso}
-                      respondido={efeito("concelho")!.respondido}
-                    >
-                      {efeito("concelho")!.frase}
-                    </EfeitoMedido>
-                  ) : (
-                    <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                      A densidade de operadores passa a comparar-se entre os 308 concelhos em vez das nove
-                      regiões. Continua a não ser morada: é uma lista, e não sai do teu dispositivo.
-                    </p>
-                  )}
-                </div>
-              ) : null}
             </div>
             <Campo rotulo="Alcance">
               <div className="flex flex-wrap gap-1.5">
@@ -685,11 +655,54 @@ export default function Configurador({
                   passa a híbrida. Os títulos ficam iguais e o trabalho
                   por trás não é o mesmo, e ninguém o dizia. */}
               {efeito("alcance") ? (
-                <EfeitoMedido peso={efeito("alcance")!.peso} respondido>
+                <EfeitoMedido
+                  peso={efeito("alcance")!.peso}
+                  respondido
+                  condicao={efeito("alcance")!.condicao}
+                >
                   {efeito("alcance")!.frase}
                 </EfeitoMedido>
               ) : null}
             </Campo>
+          </div>
+
+          {/* ── O CONCELHO, NO MAPA ──────────────────────────────────
+              Era um `<select>` de 308 nomes ao lado de uma nota técnica.
+              Duas coisas desta secção não cabem em texto: o raio, que é
+              um círculo, e o território, que é uma mancha. O mapa mostra
+              as duas e aceita três entradas para a mesma resposta —
+              tocar, procurar, GPS —, com a lista fechada lá dentro para
+              o teclado e para quando as tiles não carregam.
+
+              «Que negócio abrir» varia ao concelho: nos dados que o
+              motor lê, Lisboa tem 8,3 empresas de limpeza por dez mil
+              habitantes e Mafra 23,8 — a mesma célula em NUTS II. A
+              escolha nunca sai do dispositivo. */}
+          <div className="mt-4">
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+              Concelho{" "}
+              <span className="font-normal normal-case tracking-normal text-brand">
+                fixa a leitura local e o centro do raio
+              </span>
+            </p>
+            <MapaOndeOperarLazy
+              regiao={contexto.localizacao.regiao}
+              concelho={contexto.localizacao.concelho}
+              raioKm={contexto.localizacao.raioKm}
+              resumo={resumoDoTerritorio}
+              onEscolher={({ regiao, concelho }) =>
+                alterar({ localizacao: { ...contexto.localizacao, regiao, concelho } })
+              }
+            />
+            {efeito("concelho") ? (
+              <EfeitoMedido
+                peso={efeito("concelho")!.peso}
+                respondido={efeito("concelho")!.respondido}
+                condicao={efeito("concelho")!.condicao}
+              >
+                {efeito("concelho")!.frase}
+              </EfeitoMedido>
+            ) : null}
           </div>
 
           {mostrar("personalizado") ? (
@@ -723,6 +736,7 @@ export default function Configurador({
                   <EfeitoMedido
                     peso={efeito("territorio")!.peso}
                     respondido={efeito("territorio")!.respondido}
+                    condicao={efeito("territorio")!.condicao}
                   >
                     {efeito("territorio")!.frase}
                   </EfeitoMedido>
@@ -753,7 +767,11 @@ export default function Configurador({
                   ))}
                 </div>
                 {efeito("raio") ? (
-                  <EfeitoMedido peso={efeito("raio")!.peso} respondido={efeito("raio")!.respondido}>
+                  <EfeitoMedido
+                    peso={efeito("raio")!.peso}
+                    respondido={efeito("raio")!.respondido}
+                    condicao={efeito("raio")!.condicao}
+                  >
                     {efeito("raio")!.frase}
                   </EfeitoMedido>
                 ) : null}
