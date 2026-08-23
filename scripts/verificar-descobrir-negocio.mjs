@@ -170,7 +170,22 @@ try {
       pagina.on("pageerror", (e) => errosJS.push(String(e)));
 
       // ═══ 1. FASE A — configurar antes de ver resultados ═════════
-      await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "networkidle" });
+      //  ┌────────────────────────────────────────────────────────────┐
+      //  │ NÃO `networkidle`, E A RAZÃO É DO PRODUTO                   │
+      //  │                                                            │
+      //  │ Esta página pede dois packs públicos ao abrir, e trata os   │
+      //  │ dois como OPCIONAIS por desenho: se o INE não responder, o  │
+      //  │ motor corre na mesma e cada dossier diz que não tem leitura │
+      //  │ ligada. Esperar por `networkidle` amarrava a verificação à  │
+      //  │ latência de um terceiro que o produto decidiu não precisar  │
+      //  │ — e amarrou mesmo: o CI expirou aos 30 s à espera da rota   │
+      //  │ da oferta enquanto ela gastava o orçamento de tentativas.   │
+      //  │                                                            │
+      //  │ O que interessa verificar é a página ficar USÁVEL, e isso é │
+      //  │ o `waitFor` da linha seguinte. É um acoplamento mais forte  │
+      //  │ ao que importa e mais fraco ao que não importa.             │
+      //  └────────────────────────────────────────────────────────────┘
+      await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
       await fecharOverlays(pagina);
       await pagina.locator("#contexto-descoberta").waitFor({ timeout: 20000 });
 

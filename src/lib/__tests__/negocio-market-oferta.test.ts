@@ -336,3 +336,56 @@ describe("oferta: a cadência dos pedidos", () => {
     expect(lerOferta(pack, ["81"], { tipo: "regiao", regiao: "algarve" })).toBeNull();
   });
 });
+
+describe("oferta: o orçamento total é da carga, não de cada indicador", () => {
+  // ┌────────────────────────────────────────────────────────────────────┐
+  // │ O QUE ISTO APANHOU, E COMO                                          │
+  // │                                                                    │
+  // │ Dois indicadores, cada um com três tentativas de oito segundos:    │
+  // │ o pior caso desta função eram ~54 s. Esta rota é chamada pelo      │
+  // │ browser ao abrir a página, e uma ligação segurada quase um minuto  │
+  // │ não é um pack que demora — é uma página que parece partida. O      │
+  // │ `descobrir:e2e` foi o primeiro a dizê-lo, e disse-o em CI: o       │
+  // │ `page.goto` expirou aos 30 s à espera desta rota.                   │
+  // │                                                                    │
+  // │ Pôr um prazo comum aos dois não chegou, e o segundo defeito é o    │
+  // │ mais interessante: `addEventListener("abort", …)` num sinal que JÁ │
+  // │ abortou NUNCA chama o ouvinte. O primeiro indicador terminava      │
+  // │ certo aos 20 s, o segundo arrancava a seguir e corria uma          │
+  // │ tentativa inteira de oito segundos porque ninguém lhe tinha dito   │
+  // │ que o prazo passara. Vinte segundos de orçamento davam vinte e     │
+  // │ oito — medido, não deduzido.                                        │
+  // └────────────────────────────────────────────────────────────────────┘
+  it("uma fonte que nunca responde não segura a carga além do teto", async () => {
+    const pendurado: typeof fetch = (_entrada, init) =>
+      new Promise((_resolver, rejeitar) => {
+        init?.signal?.addEventListener("abort", () => rejeitar(new Error("abortado")));
+      });
+
+    const comeco = Date.now();
+    const pack = await carregarOferta({ fetchImpl: pendurado });
+    const decorrido = Date.now() - comeco;
+
+    // Folga sobre o teto de 20 s, e MUITO abaixo dos ~54 s de antes.
+    expect(decorrido).toBeLessThan(25_000);
+    // E o pack sai vazio de forma honesta: o motor volta a dizer «lacuna
+    // por apurar» em vez de ficar sem resposta nenhuma.
+    expect(pack.emFalta.length).toBeGreaterThan(0);
+    expect(pack.populacao).toHaveLength(0);
+  }, 60_000);
+
+  it("um cancelamento de quem chama é respeitado de imediato", async () => {
+    const pendurado: typeof fetch = (_entrada, init) =>
+      new Promise((_resolver, rejeitar) => {
+        init?.signal?.addEventListener("abort", () => rejeitar(new Error("abortado")));
+      });
+    const controlador = new AbortController();
+    const comeco = Date.now();
+    const promessa = carregarOferta({ fetchImpl: pendurado, signal: controlador.signal });
+    controlador.abort();
+    await promessa;
+    // Sem a guarda no início da tentativa, isto gastava oito segundos por
+    // indicador antes de desistir de um trabalho que ninguém quer.
+    expect(Date.now() - comeco).toBeLessThan(2_000);
+  }, 30_000);
+});

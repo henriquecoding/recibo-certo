@@ -186,6 +186,28 @@ export interface OpcoesOferta {
 const TENTATIVAS_PADRAO = 3;
 
 /**
+ * Teto TOTAL da carga, e porque ele passou a existir.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ O QUE ISTO APANHOU, E NÃO FOI EM TEORIA                             │
+ * │                                                                    │
+ * │ Dois indicadores, cada um com três tentativas de oito segundos e   │
+ * │ pausas entre elas: o pior caso desta função eram ~54 s. Esta rota  │
+ * │ é chamada pelo browser ao abrir a página, e uma ligação segurada   │
+ * │ um minuto não é um pack que demora — é uma página que parece       │
+ * │ partida. O `descobrir:e2e` foi o primeiro a dizê-lo: `page.goto`   │
+ * │ com `networkidle` expirou aos 30 s à espera desta rota.            │
+ * │                                                                    │
+ * │ Antes de a matriz ao concelho existir, esperar era defensável —    │
+ * │ esta chamada era o ÚNICO caminho para a leitura de oferta. Já não  │
+ * │ é: o instantâneo commitado cobre os 308 concelhos e não depende do │
+ * │ INE estar de pé. Falhar depressa passou a custar pouco, e insistir │
+ * │ passou a custar a página.                                           │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+const TETO_TOTAL_MS = 20_000;
+
+/**
  * Teto por tentativa, e a pausa entre elas.
  *
  * ┌────────────────────────────────────────────────────────────────────┐
@@ -226,6 +248,17 @@ async function comTentativas<T>(
   let ultimoErro: unknown;
   const total = Math.max(1, tentativas);
   for (let numero = 0; numero < total; numero += 1) {
+    // ── UM SINAL JÁ ABORTADO NÃO VOLTA A DISPARAR ──────────────────
+    //  `addEventListener("abort", …)` num `AbortSignal` que JÁ abortou
+    //  nunca chama o ouvinte — é a semântica da API, e é fácil de não
+    //  ver. O efeito medido: com o prazo comum aos dois indicadores, o
+    //  primeiro terminava certo aos 20 s e o segundo arrancava logo a
+    //  seguir e corria uma tentativa INTEIRA de oito segundos, porque
+    //  ninguém lhe disse que o prazo já tinha passado. Vinte segundos de
+    //  orçamento davam vinte e oito.
+    //
+    //  O `if` tem de estar ANTES do trabalho, não só depois da falha.
+    if (externo?.aborted) throw ultimoErro ?? externo.reason;
     const relogio = new AbortController();
     const temporizador = setTimeout(() => relogio.abort(), TETO_POR_TENTATIVA_MS);
     const cancelarExterno = () => relogio.abort();
@@ -320,18 +353,26 @@ export async function carregarOferta(opcoes: OpcoesOferta = {}): Promise<PackOfe
   //  Sequencial custa ~2,5 s no total e traz sempre os dois. A ordem é
   //  deliberada: a população primeiro, porque sem ela as contagens de
   //  empresas não produzem uma única leitura.
+  //  O relógio é COMUM aos dois pedidos: o orçamento é da carga inteira,
+  //  não de cada indicador. Sem isso, dois indicadores lentos somavam os
+  //  seus tetos e a página ficava à espera do dobro.
+  const prazo = AbortSignal.timeout(TETO_TOTAL_MS);
+  const comPrazo = opcoes.signal
+    ? AbortSignal.any([opcoes.signal, prazo])
+    : prazo;
+
   const populacaoBruta = await promessaResolvida(() =>
     comTentativas(
       (sinal) => pedir(POPULACAO_RESIDENTE, opcoes, { Dim3: ["T"], Dim4: ["T"] }, sinal),
       tentativas,
-      opcoes.signal,
+      comPrazo,
     ),
   );
   const empresas = await promessaResolvida(() =>
     comTentativas(
       (sinal) => pedir(EMPRESAS_POR_CAE, opcoes, { Dim3: pedidas }, sinal),
       tentativas,
-      opcoes.signal,
+      comPrazo,
     ),
   );
 
