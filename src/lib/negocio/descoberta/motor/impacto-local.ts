@@ -35,6 +35,12 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
+import {
+  escalaDoTerritorio,
+  territorioAlcancavel,
+  type BaseDoAlcance,
+} from "@/lib/negocio/market/alcance";
+import { PROBLEMAS } from "../conhecimento/dados/problemas";
 import type { PackOferta } from "@/lib/negocio/market/oferta";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { AlcanceOperacional, OpportunityContext, TipoTerritorio } from "../contexto/tipos";
@@ -53,6 +59,26 @@ export interface EfeitoDeCampo {
   peso: PesoDoCampo;
   /** A frase que vai ao ecrã. Construída a partir dos números medidos. */
   frase: string;
+  /**
+   * O que faria esta resposta passar a contar, quando ela não conta.
+   *
+   * ┌────────────────────────────────────────────────────────────────┐
+   * │ A QUEIXA QUE ISTO RESOLVE                                       │
+   * │                                                                │
+   * │ «Onde vai operar diz que nada do que configurar importa, e     │
+   * │ isso é falho, pois onde vais operar influencia completamente.» │
+   * │                                                                │
+   * │ Estava certa duas vezes. O motor não lia metade destes campos  │
+   * │ — isso corrigiu-se em `market/alcance.ts`. E o painel, quando  │
+   * │ media zero, dizia «não muda nada» e ficava por aí: uma frase   │
+   * │ verdadeira e inútil, que se lê como a ferramenta a declarar    │
+   * │ inúteis as suas próprias perguntas.                             │
+   * │                                                                │
+   * │ Um campo pode não contar AQUI e contar noutra combinação. Essa │
+   * │ é a informação que falta, e é esta linha.                       │
+   * └────────────────────────────────────────────────────────────────┘
+   */
+  condicao: string | null;
   /** Quantas hipóteses ganham leitura de PROCURA se isto for respondido. */
   ganhaProcura: number;
   /** Quantas ganham leitura de CONCORRÊNCIA. */
@@ -63,13 +89,38 @@ export interface EfeitoDeCampo {
   mudaEntrega: number;
 }
 
+/** O mercado que as respostas atuais deixam alcançar. Medido, não estimado. */
+export interface TerritorioResumido {
+  nome: string;
+  base: BaseDoAlcance;
+  concelhos: number;
+  residentes: number | null;
+  percentil: number | null;
+  /** Os mais próximos do centro, quando o território é um círculo. */
+  noRaio: readonly { nome: string; distanciaKm: number }[];
+  raioIgnorado: string | null;
+}
+
 export interface ImpactoDaLocalizacao {
   efeitos: readonly EfeitoDeCampo[];
+  /** Onde estas respostas te põem, em concelhos e em pessoas. */
+  territorio: TerritorioResumido | null;
   /** Hipóteses na corrida atual. O denominador de tudo o resto. */
   hipotesesAgora: number;
   /** O campo por responder que mais paga, quando há algum. */
   proximoPasso: EfeitoDeCampo | null;
 }
+
+/** Como o alcance se chama numa frase. O mesmo texto que está no botão. */
+const ALCANCES: Readonly<Record<string, string>> = Object.freeze({
+  bairro: "o meu bairro",
+  concelho: "o meu concelho",
+  regiao: "a minha região",
+  nacional: "todo o país",
+  internacional: "fora de Portugal",
+  online: "só online",
+});
+const rotuloDoAlcance = (alcance: string) => ALCANCES[alcance] ?? alcance;
 
 const ROTULOS: Readonly<Record<CampoLocal, string>> = Object.freeze({
   zona: "Zona",
@@ -224,6 +275,10 @@ function efeitoDaZona(entrada: Entrada, atual: readonly OpportunityCandidate[]):
       ganhaConcorrencia: d.ganhaConcorrencia,
       mudaPontuacao: d.mudaPontuacao,
       mudaEntrega: d.mudaEntrega,
+      condicao:
+        pesoDe(d) === "sem-efeito"
+          ? "As séries oficiais que cobrem estas hipóteses ainda são nacionais. Muda quando o problema tiver uma série publicada por região."
+          : null,
       frase:
         d.ganhaProcura > 0
           ? `É esta resposta que liga a leitura de procura em ${hipoteses(d.ganhaProcura)}. Sem ela, nenhuma teria.`
@@ -276,6 +331,7 @@ function efeitoDaZona(entrada: Entrada, atual: readonly OpportunityCandidate[]):
     ganhaConcorrencia: 0,
     mudaPontuacao: mudancas,
     mudaEntrega: 0,
+    condicao: null,
     frase:
       atual.length === 0 && nasce > 0
         ? `Sem zona fixada não há hipótese nenhuma para o que declaraste — há problemas que só existem em parte do país. Escolher a zona faz aparecer cerca de ${hipoteses(nasce)}.`
@@ -308,12 +364,20 @@ function efeitoDoConcelho(
       ganhaConcorrencia: d.ganhaConcorrencia,
       mudaPontuacao: d.mudaPontuacao,
       mudaEntrega: d.mudaEntrega,
+      // Sem efeito com o concelho JÁ escolhido quer quase sempre dizer
+      // uma coisa concreta: o alcance declarado é maior do que ele, e
+      // por isso a análise é do território, não do concelho. Dizer isso
+      // é dizer o que fazer a seguir; «não muda nada» não é.
+      condicao:
+        pesoDe(d) === "sem-efeito" && localizacao.alcance !== "concelho"
+          ? `Declaraste operar em «${rotuloDoAlcance(localizacao.alcance)}», e é essa a zona que a análise mede. O concelho passa a ser a zona se escolheres «o meu concelho» — ou o centro do círculo, se declarares um raio.`
+          : null,
       frase:
         d.ganhaConcorrencia > 0
           ? `Dá a leitura de concorrência a ${hipoteses(d.ganhaConcorrencia)}, comparada entre os 308 concelhos em vez das nove regiões.`
           : d.mudaPontuacao > 0
             ? `Muda a pontuação de ${hipoteses(d.mudaPontuacao)} face a usar a região inteira.`
-            : "Não muda esta análise: as hipóteses que tens não dependem da densidade local.",
+            : "Serve de referência local e de centro para o raio; a zona que a análise mede é a que o alcance declara.",
     };
   }
 
@@ -335,12 +399,16 @@ function efeitoDoConcelho(
     // painel anunciava «muda a pontuação de 4 hipóteses». A previsão
     // desmentida pela própria ferramenta, dois cliques depois. Se a
     // concorrência não muda mas a pontuação muda, é a pontuação que se diz.
+    condicao:
+      pesoDe(d) === "sem-efeito" && localizacao.alcance !== "concelho"
+        ? `Com alcance «${rotuloDoAlcance(localizacao.alcance)}» a análise é dessa zona inteira. O concelho passa a decidi-la se escolheres «o meu concelho» — ou se declarares um raio, que parte dele.`
+        : null,
     frase:
       d.ganhaConcorrencia > 0
         ? `Escolher o concelho dá leitura de concorrência a ${hipoteses(d.ganhaConcorrencia)} — medido agora, num concelho desta região. Continua a não ser morada: é uma lista, e não sai do teu dispositivo.`
         : d.mudaPontuacao > 0
           ? `Escolher o concelho muda a pontuação de ${hipoteses(d.mudaPontuacao)} face a usar a região inteira — a densidade compara-se entre 308 concelhos em vez de nove regiões.`
-          : "Nesta análise não muda nada: as hipóteses que tens não dependem da densidade local.",
+          : "Fixa o ponto de partida do raio e a referência local da leitura de concorrência.",
   };
 }
 
@@ -361,10 +429,11 @@ function efeitoDoTerritorio(
       respondido: true,
       peso: pesoDe(d),
       ...d,
+      condicao: pesoDe(d) === "sem-efeito" ? razaoDoTerritorioMudo(atual) : null,
       frase:
         d.mudaPontuacao > 0
           ? `Declarar ${localizacao.territorio} muda a pontuação de ${hipoteses(d.mudaPontuacao)}: há problemas mais intensos num tipo de território do que noutro.`
-          : "Nenhuma destas hipóteses depende do tipo de território.",
+          : "As hipóteses que tens à frente existem com a mesma força nos três tipos de território.",
     };
   }
 
@@ -380,10 +449,11 @@ function efeitoDoTerritorio(
     respondido: false,
     peso: pesoDe(melhor),
     ...melhor,
+    condicao: pesoDe(melhor) === "sem-efeito" ? razaoDoTerritorioMudo(atual) : null,
     frase:
       melhor.mudaPontuacao > 0
         ? `Declarar o território muda a pontuação de até ${hipoteses(melhor.mudaPontuacao)}: há problemas que só existem com densidade, e outros só sem ela.`
-        : "Nenhuma destas hipóteses depende do tipo de território.",
+        : "As hipóteses que tens à frente existem com a mesma força nos três tipos de território.",
   };
 }
 
@@ -410,46 +480,118 @@ function efeitoDoAlcance(entrada: Entrada, atual: readonly OpportunityCandidate[
     novas = Math.max(novas, d.novas);
   }
   const d: Diferenca = { ganhaProcura: 0, ganhaConcorrencia: 0, mudaPontuacao, mudaEntrega, novas };
+
+  // ── O QUE O ALCANCE FAZ, DITO PELO TERRITÓRIO E NÃO SÓ PELO SCORE ──
+  //  A conta de hipóteses é a consequência; a causa é o tamanho do
+  //  mercado que cada alcance abrange. Mostrar as duas na mesma frase é
+  //  o que torna a resposta compreensível — «muda a pontuação de 4»
+  //  sozinho não explica porquê.
+  const tamanhos = alternativas
+    .map((alcance) => {
+      const territorio = territorioAlcancavel({ ...localizacao, alcance });
+      const escala = escalaDoTerritorio(territorio);
+      return escala ? { alcance, nome: territorio.nome, residentes: escala.residentes } : null;
+    })
+    .filter((item): item is { alcance: AlcanceOperacional; nome: string; residentes: number } => item !== null);
+  const menor = tamanhos.reduce<typeof tamanhos[number] | null>(
+    (melhor, item) => (melhor === null || item.residentes < melhor.residentes ? item : melhor),
+    null,
+  );
+  const maior = tamanhos.reduce<typeof tamanhos[number] | null>(
+    (melhor, item) => (melhor === null || item.residentes > melhor.residentes ? item : melhor),
+    null,
+  );
+  const escalas =
+    menor && maior && menor.residentes !== maior.residentes
+      ? ` Decide o tamanho do mercado analisado: de ${menor.residentes.toLocaleString("pt-PT")} pessoas em ${menor.nome} a ${maior.residentes.toLocaleString("pt-PT")} em ${maior.nome}.`
+      : "";
+
   return {
     campo: "alcance",
     rotulo: ROTULOS.alcance,
     respondido: true,
-    peso: pesoDe(d),
+    peso: escalas !== "" && pesoDe(d) === "sem-efeito" ? "importante" : pesoDe(d),
     ganhaProcura: 0,
     ganhaConcorrencia: 0,
     mudaPontuacao,
     mudaEntrega,
+    condicao: null,
     frase:
       mudaEntrega > 0
-        ? `Mudar o alcance troca a forma de entrega de ${hipoteses(mudaEntrega)} — o motor recompõe-as em vez de as apagar. É por isso que os títulos ficam parecidos e o trabalho por trás não é o mesmo.`
-        : novas > 0
-          ? `Mudar o alcance traz até ${hipoteses(novas)} diferentes.`
-          : "Nesta análise, o alcance não muda as hipóteses.",
+        ? `Mudar o alcance troca a forma de entrega de ${hipoteses(mudaEntrega)} — o motor recompõe-as em vez de as apagar.${escalas}`
+        : mudaPontuacao > 0
+          ? `Mudar o alcance muda a pontuação de ${hipoteses(mudaPontuacao)}.${escalas}`
+          : novas > 0
+            ? `Mudar o alcance traz até ${hipoteses(novas)} diferentes.${escalas}`
+            : `É o alcance que define a zona onde a concorrência é medida.${escalas}`,
   };
 }
 
-/** O efeito do RAIO. Só conta onde o motor o lê: presencial em zona pouco densa. */
+/**
+ * O efeito do RAIO — agora com um círculo verdadeiro por baixo.
+ *
+ * Antes: uma regra escrita à mão que só disparava a 10 km em território
+ * rural. Medido, três dos quatro raios que a interface oferece não
+ * faziam nada, em contexto nenhum.
+ *
+ * Agora: o raio recorta um conjunto de concelhos reais à volta da sede
+ * do concelho declarado, e é sobre esse conjunto que a concorrência é
+ * medida. A frase diz os dois números que a pessoa quer — quantos
+ * concelhos e quanta gente —, porque são eles que tornam a escolha
+ * decidível.
+ */
 function efeitoDoRaio(entrada: Entrada, atual: readonly OpportunityCandidate[]): EfeitoDeCampo {
   const { localizacao } = entrada.contexto;
   const respondido = localizacao.raioKm !== undefined;
-  const comparar = respondido ? undefined : 10;
-  const d = diferenca(
-    atual,
-    correr(entrada, { ...localizacao, raioKm: comparar }),
-  );
+  const paraComparar = respondido ? undefined : 25;
+  const d = diferenca(atual, correr(entrada, { ...localizacao, raioKm: paraComparar }));
+
+  const comRaio = territorioAlcancavel({
+    ...localizacao,
+    raioKm: localizacao.raioKm ?? 25,
+  });
+  const escala = escalaDoTerritorio(comRaio);
+  const km = localizacao.raioKm ?? 25;
+
+  const alcanca =
+    comRaio.base === "raio" && escala
+      ? `${comRaio.noRaio.length === 1 ? "só o teu concelho" : `${comRaio.noRaio.length} concelhos`} e ${escala.residentes.toLocaleString("pt-PT")} pessoas`
+      : null;
+
   return {
     campo: "raio",
     rotulo: ROTULOS.raio,
     respondido,
-    peso: pesoDe(d),
+    // Um raio que recorta território é sempre uma resposta com
+    // consequência, mesmo quando a ordem das hipóteses não se mexe: a
+    // zona onde a concorrência é contada passou a ser outra.
+    peso: comRaio.base === "raio" ? (pesoDe(d) === "sem-efeito" ? "ajuste" : pesoDe(d)) : pesoDe(d),
     ...d,
+    // A razão de o raio não contar É a frase, e não uma segunda linha
+    // por baixo dela: repetir a mesma coisa duas vezes lê-se como um
+    // defeito, que foi o que a primeira versão fez.
+    condicao: null,
     frase:
-      d.mudaPontuacao > 0
+      comRaio.base === "raio" && alcanca
         ? respondido
-          ? `O raio que declaraste muda a pontuação de ${hipoteses(d.mudaPontuacao)}.`
-          : `Declarar o raio muda a pontuação de até ${hipoteses(d.mudaPontuacao)}: num círculo pequeno e em território pouco denso cabem poucos clientes, e o motor conta isso.`
-        : "Só pesa em trabalho presencial e em território pouco denso — não é o caso aqui.",
+          ? `Em linha reta a partir da sede do teu concelho, ${km} km apanham ${alcanca}. É essa a zona onde a concorrência é contada.`
+          : `Um raio de ${km} km apanharia ${alcanca} — e a análise passaria a ser desse território em vez da zona inteira.`
+        : (comRaio.raioIgnorado ??
+          "Recorta um círculo de concelhos à volta de onde partes, e é aí que a concorrência passa a ser contada."),
   };
+}
+
+/**
+ * Porque é que o território não mexe em nada, dito com o número do grafo.
+ *
+ * A resposta útil não é «não muda»: é quantos problemas do grafo
+ * distinguem densidade, e que nenhum dos que estão à frente é um deles.
+ */
+function razaoDoTerritorioMudo(atual: readonly OpportunityCandidate[]): string {
+  const discriminantes = PROBLEMAS.filter((problema) => problema.territoriosIntensos.length < 3).length;
+  return atual.length === 0
+    ? `Dos ${PROBLEMAS.length} problemas do grafo, ${discriminantes} mudam de intensidade conforme o território.`
+    : `Dos ${PROBLEMAS.length} problemas do grafo, ${discriminantes} mudam de intensidade conforme o território — e nenhum deles está entre as hipóteses que tens à frente. Passa a contar se mudares o que sabes fazer.`;
 }
 
 const ORDEM_PESO: Readonly<Record<PesoDoCampo, number>> = Object.freeze({
@@ -481,8 +623,25 @@ export function impactoDaLocalizacao(entrada: Entrada): ImpactoDaLocalizacao {
     .filter((item) => !item.respondido && item.peso !== "sem-efeito")
     .sort((esquerda, direita) => ORDEM_PESO[esquerda.peso] - ORDEM_PESO[direita.peso]);
 
+  // ── O QUE AS RESPOSTAS DE AGORA JÁ VALEM ───────────────────────────
+  //  A secção mostrava só o que FALTA. Faltava o outro lado: o que as
+  //  respostas atuais produziram — que território é analisado e quanta
+  //  gente lá vive. É o resultado concreto de responder, e é o que
+  //  transforma cinco controlos abstratos numa leitura do mapa.
+  const territorio = territorioAlcancavel(entrada.contexto.localizacao);
+  const escala = escalaDoTerritorio(territorio);
+
   return {
     efeitos,
+    territorio: {
+      nome: territorio.nome,
+      base: territorio.base,
+      concelhos: territorio.codigos.length,
+      residentes: escala?.residentes ?? null,
+      percentil: escala?.percentil ?? null,
+      noRaio: territorio.noRaio.map((item) => ({ nome: item.nome, distanciaKm: item.distanciaKm })),
+      raioIgnorado: territorio.raioIgnorado,
+    },
     hipotesesAgora: atual.length,
     proximoPasso: porResponder[0] ?? null,
   };

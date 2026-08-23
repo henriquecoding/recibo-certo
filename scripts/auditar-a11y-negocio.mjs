@@ -136,7 +136,18 @@ const ESTADOS = [
       }
       await p.waitForTimeout(400);
     },
-    verificar: ["O que mais mexe no resultado", "Mês de menor caixa", "O mesmo negócio, nas duas formas"],
+    // A prova de vida da comparação era «O mesmo negócio, nas duas
+    // formas» — o título que o cartão tinha quando esta auditoria foi
+    // escrita. O cartão passou a chamar-se «Como faz mais sentido
+    // operar?» e a frase deixou de existir no produto, pelo que a
+    // auditoria falhava as quatro combinações num estado que ela
+    // própria alcançava bem. Passa a apontar para a linha que o cartão
+    // tem hoje, que é a que descreve o que ele compara.
+    verificar: [
+      "O que mais mexe no resultado",
+      "Mês de menor caixa",
+      "como trabalhador independente e como sociedade",
+    ],
   },
 ];
 

@@ -111,10 +111,36 @@ describe("impacto local · cada campo diz o que faz", () => {
     expect(impacto.proximoPasso?.campo).toBe("zona");
   });
 
-  it("com zona fixada, o concelho passa a ser o próximo passo", () => {
-    const impacto = medir({ regiao: "grande-lisboa" }, "1A01106");
-    expect(impacto.proximoPasso?.campo).toBe("concelho");
-    expect(campo(impacto, "concelho").ganhaConcorrencia).toBeGreaterThan(0);
+  it("com alcance de região, o concelho diz que NÃO é a zona — e o que o torna", () => {
+    // ┌────────────────────────────────────────────────────────────────┐
+    // │ O QUE MUDOU AQUI, E PORQUÊ                                      │
+    // │                                                                │
+    // │ Este teste exigia que o concelho fosse sempre o próximo passo. │
+    // │ Deixou de o ser, e é uma correção: quem declara «a minha       │
+    // │ região» compete NA REGIÃO, e medir-lhe só o concelho           │
+    // │ descreveria um mercado que não é o dela. O concelho continua a │
+    // │ decidir tudo — assim que o alcance for «o meu concelho» ou     │
+    // │ houver um raio a partir dele.                                   │
+    // │                                                                │
+    // │ O que o painel NÃO pode fazer é o que fazia antes desta série  │
+    // │ de correções: dizer «não muda nada» e calar-se. Se não conta   │
+    // │ aqui, tem de dizer o que o faria contar.                        │
+    // └────────────────────────────────────────────────────────────────┘
+    const impacto = medir({ regiao: "grande-lisboa", concelho: "1A01106" });
+    const concelho = campo(impacto, "concelho");
+    expect(concelho.peso).toBe("sem-efeito");
+    expect(concelho.condicao).toMatch(/o meu concelho|raio/i);
+  });
+
+  it("com alcance de concelho, o concelho passa a decidir a leitura", () => {
+    const impacto = medir({
+      regiao: "grande-lisboa",
+      concelho: "1A01106",
+      alcance: "concelho",
+    });
+    const concelho = campo(impacto, "concelho");
+    expect(concelho.peso).not.toBe("sem-efeito");
+    expect(concelho.condicao).toBeNull();
   });
 
   it("o concelho não aparece antes de haver zona — a pergunta ainda não existe", () => {
@@ -132,12 +158,35 @@ describe("impacto local · cada campo diz o que faz", () => {
     expect(impacto.proximoPasso).toBeNull();
   });
 
-  it("um campo que não muda nada di-lo, em vez de inventar um benefício", () => {
-    // O raio só pesa em trabalho presencial e território pouco denso.
-    // Prometer efeito onde não há é o mesmo defeito, do outro lado.
+  it("um raio sem centro diz que lhe falta o centro, não que é inútil", () => {
+    // Prometer efeito onde não há é um defeito; dizer «não muda nada»
+    // onde falta uma resposta é o mesmo defeito do outro lado. A frase
+    // certa nomeia o que falta.
     const raio = campo(medir({ regiao: "grande-lisboa", territorio: "urbano" }), "raio");
     expect(raio.peso).toBe("sem-efeito");
-    expect(raio.frase).toMatch(/não é o caso/i);
+    expect(raio.frase).toMatch(/centro/i);
+  });
+
+  it("um raio com centro diz quantos concelhos e quanta gente apanha", () => {
+    // ┌────────────────────────────────────────────────────────────────┐
+    // │ O DEFEITO QUE ISTO PRENDE, E FOI MEDIDO                         │
+    // │                                                                │
+    // │ Antes de `market/alcance.ts` existir, os quatro raios que a    │
+    // │ interface oferece davam resultado idêntico — o motor lia       │
+    // │ `raioKm` numa só regra, escrita à mão, que exigia ≤ 15 km E    │
+    // │ território rural. Três valores em quatro não faziam nada.       │
+    // └────────────────────────────────────────────────────────────────┘
+    const raio = campo(medir({ regiao: "centro", concelho: "1950505", raioKm: 40 }), "raio");
+    expect(raio.frase).toMatch(/40 km/);
+    expect(raio.frase).toMatch(/concelhos/);
+    expect(raio.peso).not.toBe("sem-efeito");
+  });
+
+  it("o alcance nomeia o mercado que cada opção deixa alcançar", () => {
+    const alcance = campo(medir({ regiao: "grande-lisboa", concelho: "1A01106" }), "alcance");
+    expect(alcance.frase).toMatch(/tamanho do mercado/i);
+    // Os extremos são números reais e diferentes: um concelho e o país.
+    expect(alcance.frase).toMatch(/todo o país/);
   });
 
   it("toda a frase é acompanhada pelos números que a sustentam", () => {
@@ -152,6 +201,25 @@ describe("impacto local · cada campo diz o que faz", () => {
         expect(soma, efeito.campo).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe("impacto local · o território que as respostas produzem", () => {
+  it("o raio recorta um território mais pequeno do que a região", () => {
+    const naRegiao = medir({ regiao: "centro", concelho: "1950505" }).territorio!;
+    const noRaio = medir({ regiao: "centro", concelho: "1950505", raioKm: 40 }).territorio!;
+    expect(naRegiao.base).toBe("regiao");
+    expect(noRaio.base).toBe("raio");
+    expect(noRaio.concelhos).toBeLessThan(naRegiao.concelhos);
+    expect(noRaio.residentes!).toBeLessThan(naRegiao.residentes!);
+    expect(noRaio.noRaio.length).toBe(noRaio.concelhos);
+  });
+
+  it("sem respostas nenhumas o território é o país, e diz quanta gente é", () => {
+    const territorio = medir({}).territorio!;
+    expect(territorio.nome).toBe("todo o país");
+    expect(territorio.concelhos).toBe(308);
+    expect(territorio.residentes).toBeGreaterThan(10_000_000);
   });
 });
 

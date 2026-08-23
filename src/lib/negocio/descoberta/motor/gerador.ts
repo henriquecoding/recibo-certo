@@ -24,6 +24,7 @@
 
 import { marketRegionLabel, type MarketRegion } from "@/lib/negocio/market/geografia";
 import { CONCELHO_POR_CODIGO } from "@/lib/negocio/market/concelhos";
+import { territorioAlcancavel, type TerritorioAlcancavel } from "@/lib/negocio/market/alcance";
 import type { OpportunityContext } from "../contexto/tipos";
 import {
   capacidadesAlcancadas,
@@ -52,6 +53,17 @@ export interface CandidatoBruto {
    * número verdadeiro sobre o território errado.
    */
   concelho?: string;
+  /**
+   * O território que o alcance declarado abrange PARA ESTA VARIANTE.
+   *
+   * É por variante e não por pessoa porque a forma de entrega decide: o
+   * mesmo raio de 25 km limita o trabalho presencial e não limita nada
+   * numa entrega remota. Sem isto, o alcance e o raio não tinham por
+   * onde entrar no motor — e, medido, não entravam mesmo: três dos
+   * quatro alcances davam resultado idêntico, e três dos quatro raios
+   * também.
+   */
+  territorio: TerritorioAlcancavel;
   capacidades: readonly CapacidadeAlcancada[];
   /** A capacidade que mais pesa nesta composição. Decide o título. */
   dominante: Capacidade;
@@ -144,6 +156,38 @@ function concelhoDaZona(
   return concelho.regiao === regiao ? codigo : undefined;
 }
 
+/**
+ * O território de cada variante, calculado uma vez por combinação.
+ *
+ * O produto cartesiano gera milhares de candidatos e só há uma mão-cheia
+ * de territórios distintos entre eles — a zona, o concelho e se a
+ * entrega é remota. Recalcular o círculo de 308 sedes por candidato
+ * seria trabalho repetido no laço mais quente do motor.
+ */
+function territorioDaVariante(
+  contexto: OpportunityContext,
+  regiao: MarketRegion,
+  concelho: string | undefined,
+  entrega: FormaEntrega,
+  cache: Map<string, TerritorioAlcancavel>,
+): TerritorioAlcancavel {
+  const remota = entrega === "remoto";
+  const chave = `${regiao}|${concelho ?? ""}|${remota ? "r" : "p"}`;
+  const guardado = cache.get(chave);
+  if (guardado) return guardado;
+  const territorio = territorioAlcancavel(
+    {
+      regiao,
+      concelho,
+      alcance: contexto.localizacao.alcance,
+      raioKm: contexto.localizacao.raioKm,
+    },
+    { entregaRemota: remota },
+  );
+  cache.set(chave, territorio);
+  return territorio;
+}
+
 export interface OpcoesGeracao {
   /**
    * Incluir capacidades que a pessoa NÃO alcança por falta de ativo.
@@ -193,6 +237,7 @@ export function generateCandidates(
 
   const base = incluirForaDePerfil ? semExigirAtivos : comAtivos;
   const candidatos: CandidatoBruto[] = [];
+  const territorios = new Map<string, TerritorioAlcancavel>();
   let combinacoes = 0;
 
   for (const { problema, capacidades } of problemasAlcancaveis(base)) {
@@ -215,6 +260,7 @@ export function generateCandidates(
         if (entrega === "presencial" && modelo.id === "produto-digital") continue;
 
         const curado = referenciaCurada(problema.id, modelo.id);
+        const concelho = concelhoDaZona(contexto, regiao);
         candidatos.push({
           id: `${problema.id}::${modelo.id}::${entrega}::${regiao}`,
           titulo: curado?.template.title ?? comporTitulo(dominante, problema, modelo),
@@ -225,7 +271,8 @@ export function generateCandidates(
           regiao,
           // Só quando o concelho declarado pertence à zona proposta —
           // senão a leitura de oferta descreveria outro território.
-          concelho: concelhoDaZona(contexto, regiao),
+          concelho,
+          territorio: territorioDaVariante(contexto, regiao, concelho, entrega, territorios),
           capacidades,
           dominante,
           seedTemplateId: curado?.template.id,

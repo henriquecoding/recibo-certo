@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  EXPLORAR MERCADO — o que existe no HTML, sem JavaScript nenhum
+//  EXPLORAR MERCADO — os dossiers curados, no HTML e encontráveis
 //  ---------------------------------------------------------------------
 //  Ponto 28 do pedido separa «recomendado para ti» de «explorar mercado».
 //  A primeira é, por natureza, dinâmica: depende de um contexto que só
@@ -11,117 +11,85 @@
 //   · os dossiers curados continuam a ter valor como leitura, mesmo
 //     para quem não quer responder a um formulário.
 //
-//  Server Component. Sem estado, sem browser, sem `use client`.
+//  Este ficheiro continua a ser Server Component e continua a não ter
+//  estado. O que mudou foi a apresentação: vinte e quatro fichas com
+//  sete campos cada, todas abertas, eram uma muralha de texto sem uma
+//  única forma de procurar lá dentro. A organização passou para
+//  `MercadoFiltravel`, que é cliente — e que o servidor renderiza na
+//  mesma, pelo que o HTML sem JavaScript não perde uma palavra.
 // ═══════════════════════════════════════════════════════════════════════
 
-import Link from "next/link";
 import {
   OPPORTUNITY_SECTORS,
   OPPORTUNITY_TEMPLATES,
   templateHasLiveEvidence,
-  type OpportunityTemplate,
 } from "@/lib/negocio/market/opportunities";
+import MercadoFiltravel, { type DossierDeMercado } from "./MercadoFiltravel";
 
-function PorSetor({ setor, rotulo }: { setor: string; rotulo: string }) {
-  const dossiers = OPPORTUNITY_TEMPLATES.filter((template) => template.sector === setor);
-  if (dossiers.length === 0) return null;
+/** As faixas de capital, com o rótulo que vai ao ecrã. */
+const CAPITAIS = [
+  { id: "ate-500", rotulo: "Até 500 €" },
+  { id: "500-3000", rotulo: "500–3 000 €" },
+  { id: "mais-3000", rotulo: "Mais de 3 000 €" },
+] as const;
 
-  return (
-    <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-      <h3 className="font-display text-lg font-semibold text-ink">{rotulo}</h3>
-      <ul className="mt-3 space-y-4">
-        {dossiers.map((template) => (
-          <li key={template.id}>
-            <Dossier template={template} />
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
+const ENTREGAS = [
+  { id: "local", rotulo: "Presencial" },
+  { id: "hibrido", rotulo: "Híbrido" },
+  { id: "remoto", rotulo: "Remoto" },
+] as const;
 
-function Dossier({ template }: { template: OpportunityTemplate }) {
-  const comEvidencia = templateHasLiveEvidence(template);
-  return (
-    <article>
-      <h4 className="text-[15px] font-semibold leading-snug text-stone-800 dark:text-stone-100">
-        {template.title}
-      </h4>
-      <p className="mt-1 text-sm leading-relaxed text-stone-500">{template.promise}</p>
-      <dl className="mt-2 space-y-1 text-[13px] leading-relaxed">
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Problema: </dt>
-          <dd className="inline text-stone-500">{template.problem}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Quem compra: </dt>
-          <dd className="inline text-stone-500">{template.customer}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Como ganha dinheiro: </dt>
-          <dd className="inline text-stone-500">{template.revenueModel}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Requisitos críticos: </dt>
-          <dd className="inline text-stone-500">{template.criticalRequirements.join("; ")}.</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Primeiro teste comercial: </dt>
-          <dd className="inline text-stone-500">{template.firstCustomerPath.join(" ")}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Teste que pode matar a ideia: </dt>
-          <dd className="inline text-stone-500">{template.falsificationTest}</dd>
-        </div>
-        <div>
-          <dt className="inline font-semibold text-stone-700 dark:text-stone-200">Evidência: </dt>
-          <dd className="inline text-stone-500">{template.evidenceNote}</dd>
-        </div>
-      </dl>
-      <p className="mt-2">
-        <Link
-          href={`/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}&h=${encodeURIComponent(template.id)}`}
-          className="text-[13px] font-semibold text-brand-dark underline-offset-4 hover:underline dark:text-brand-mint"
-        >
-          Formar o preço desta hipótese
-        </Link>
-        {comEvidencia ? (
-          <span className="ml-2 text-[12px] text-stone-400">
-            Fontes oficiais ligadas:{" "}
-            {template.evidencePlan
-              .filter((entrada) => entrada.status === "live")
-              .map((entrada) => entrada.source)
-              .join("; ")}
-            .
-          </span>
-        ) : null}
-      </p>
-    </article>
-  );
-}
+const rotuloDe = (lista: readonly { id: string; rotulo: string }[], id: string) =>
+  lista.find((item) => item.id === id)?.rotulo ?? id;
 
 export default function ExplorarMercado() {
-  const comIngestao = OPPORTUNITY_TEMPLATES.filter(templateHasLiveEvidence).length;
+  const dossiers: DossierDeMercado[] = OPPORTUNITY_TEMPLATES.map((template) => ({
+    id: template.id,
+    titulo: template.title,
+    promessa: template.promise,
+    problema: template.problem,
+    cliente: template.customer,
+    setor: template.sector,
+    setorRotulo:
+      OPPORTUNITY_SECTORS.find((item) => item.id === template.sector)?.label ?? template.sector,
+    modeloDeReceita: template.revenueModel,
+    requisitos: template.criticalRequirements,
+    primeiroTeste: template.firstCustomerPath,
+    testeQueMata: template.falsificationTest,
+    notaDeEvidencia: template.evidenceNote,
+    fontesLigadas: templateHasLiveEvidence(template)
+      ? template.evidencePlan.filter((item) => item.status === "live").map((item) => item.source)
+      : [],
+    capital: template.capital,
+    capitalRotulo: rotuloDe(CAPITAIS, template.capital),
+    entrega: template.delivery,
+    entregaRotulo: template.delivery.map((forma) => rotuloDe(ENTREGAS, forma)).join(" ou "),
+    hrefPreco: `/ferramentas/recibos-verdes?modo=preco&cenario=${template.pricingScenario}&h=${encodeURIComponent(template.id)}`,
+  }));
+
+  const comIngestao = dossiers.filter((item) => item.fontesLigadas.length > 0).length;
 
   return (
-    <section aria-labelledby="explorar-mercado" className="space-y-5">
+    <section aria-labelledby="explorar-mercado" className="space-y-4">
       <div>
         <h2 id="explorar-mercado" className="font-display text-2xl font-semibold text-ink">
           Explorar mercado
         </h2>
         <p className="mt-2 max-w-3xl text-sm leading-relaxed text-stone-500">
-          Os {OPPORTUNITY_TEMPLATES.length} dossiers curados que servem de referência ao motor —{" "}
-          {comIngestao} deles com fontes oficiais ligadas. Não são o universo de respostas: o motor compõe
-          hipóteses a partir do que sabes fazer, e a maior parte do que devolve não está escrita aqui. Estes
-          existem porque foram revistos por uma pessoa, e é por isso que valem como padrão de comparação.
+          Os {dossiers.length} dossiers curados que servem de referência ao motor — {comIngestao}{" "}
+          deles com fontes oficiais ligadas. Não são o universo de respostas: o motor compõe
+          hipóteses a partir do que sabes fazer, e a maior parte do que devolve não está escrita aqui.
+          Estes existem porque foram revistos por uma pessoa, e é por isso que valem como padrão de
+          comparação.
         </p>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {OPPORTUNITY_SECTORS.map((setor) => (
-          <PorSetor key={setor.id} setor={setor.id} rotulo={setor.label} />
-        ))}
-      </div>
+      <MercadoFiltravel
+        dossiers={dossiers}
+        setores={OPPORTUNITY_SECTORS.map((item) => ({ id: item.id, rotulo: item.label }))}
+        capitais={[...CAPITAIS]}
+        entregas={[...ENTREGAS]}
+      />
     </section>
   );
 }

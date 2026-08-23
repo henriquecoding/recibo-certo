@@ -32,6 +32,7 @@ import {
   type OpportunityContext,
 } from "../contexto/tipos";
 import { marketRegionLabel } from "@/lib/negocio/market/geografia";
+import { escalaDoTerritorio } from "@/lib/negocio/market/alcance";
 import type { AvaliacaoProcura, AvaliacaoRegulatoria, AvaliacaoViabilidade, OpportunityScore, RiscoAvaliado } from "./tipos";
 import { riscosForaDaTolerancia } from "./risco";
 import type { CandidatoBruto } from "./gerador";
@@ -255,29 +256,49 @@ export function fatorGeografico(
   }
 
   // 3. O alcance declarado contra a forma de entrega.
-  const { alcance, raioKm } = contexto.localizacao;
+  const { alcance } = contexto.localizacao;
   if (alcance === "online" && candidato.entrega === "presencial") {
     valor *= 0.4;
     partes.push("Declaraste operar só online e esta variante é presencial.");
-  } else if (alcance === "bairro" && candidato.entrega === "remoto") {
-    valor *= 0.7;
-    partes.push("Declaraste alcance de bairro e esta variante é remota — o alcance não é o limite aqui.");
   }
 
-  // 4. Raio pequeno em território de baixa densidade: poucos clientes
-  //    alcançáveis. Não é uma penalização abstrata — é aritmética de
-  //    quantas portas cabem dentro do círculo que a pessoa desenhou.
-  if (
-    raioKm !== undefined &&
-    raioKm <= 15 &&
-    territorio === "rural" &&
-    candidato.entrega !== "remoto"
-  ) {
-    valor *= 0.7;
+  // ── 4. O TAMANHO DO MERCADO QUE O ALCANCE DEIXA ALCANÇAR ───────────
+  //
+  //  ┌──────────────────────────────────────────────────────────────────┐
+  //  │ O QUE ISTO SUBSTITUI, E PORQUÊ                                    │
+  //  │                                                                  │
+  //  │ Estava aqui uma regra escrita à mão: raio ≤ 15 km E território    │
+  //  │ rural E trabalho presencial → penaliza 30 %. Medido, os quatro    │
+  //  │ raios que a interface oferece (10, 25, 40 e 80 km) davam          │
+  //  │ resultado IDÊNTICO, exceto 10 km em rural. Três valores em        │
+  //  │ quatro não faziam nada, e o número 0,7 não vinha de lado nenhum.  │
+  //  │                                                                  │
+  //  │ Passa a ser uma conta sobre dados commitados do INE: quantos      │
+  //  │ residentes vivem dentro do território que a pessoa declarou.      │
+  //  │                                                                  │
+  //  │ A PERGUNTA que o fator faz é uma só: este mercado é FINO face a   │
+  //  │ um concelho típico do país? Um território com vários concelhos    │
+  //  │ ultrapassa qualquer concelho individual e não é penalizado —      │
+  //  │ o fator satura em 1,0 e é assim de propósito. Só morde onde deve  │
+  //  │ morder: um único concelho pequeno. Idanha-a-Nova sozinha tem      │
+  //  │ 8 360 residentes (percentil 35) e leva 0,805; a 80 km dali vivem  │
+  //  │ 321 326, e aí não há penalização nenhuma.                          │
+  //  │                                                                  │
+  //  │ Contínuo no percentil, sem limiar: quem escolhe um concelho       │
+  //  │ pequeno de propósito continua a ver a hipótese — vê é o preço     │
+  //  │ dessa escolha, com o número à frente.                             │
+  //  └──────────────────────────────────────────────────────────────────┘
+  const escala = escalaDoTerritorio(candidato.territorio);
+  if (escala) {
+    valor *= 0.7 + 0.3 * (escala.percentil / 100);
+    const quantos = candidato.territorio.codigos.length;
     partes.push(
-      `Num raio de ${raioKm} km em território rural cabem poucos clientes possíveis, e este trabalho é presencial.`,
+      quantos > 1
+        ? `Dentro de ${candidato.territorio.nome} vivem ${escala.residentes.toLocaleString("pt-PT")} pessoas, em ${quantos} concelhos.`
+        : `Dentro de ${candidato.territorio.nome} vivem ${escala.residentes.toLocaleString("pt-PT")} pessoas — percentil ${escala.percentil} entre os ${escala.comparados} concelhos do país.`,
     );
   }
+  if (candidato.territorio.raioIgnorado) partes.push(candidato.territorio.raioIgnorado);
 
   return {
     valor: Math.max(0, Math.min(1, valor)),

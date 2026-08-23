@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.111.0",
+    data: "2026-08-23",
+    titulo: "Onde vais operar passa a ser um mapa — e o motor passa a lê-lo",
+    itens: [
+      "Fomos medir o que cada controlo de «onde vais operar» fazia, e a resposta foi dura: «o meu concelho», «a minha região» e «todo o país» davam exatamente o mesmo resultado, e dos quatro raios só 10 km fazia diferença, e só em território rural. Três valores em quatro, em dois controlos, não mudavam nada. A ferramenta dizia-o com todas as letras porque era verdade.",
+      "A causa não era a interface: o motor não tinha geografia nenhuma. Sabia a que região pertence cada concelho e não sabia onde ele fica — e sem isso um raio de 25 km não pode significar coisa nenhuma. Passou a ter: a sede dos 308 concelhos, cada uma confirmada por duas leituras independentes do OpenStreetMap antes de entrar.",
+      "Agora o alcance decide mesmo o território analisado, e o raio desenha um círculo real. A partir de Idanha-a-Nova, o concelho tem 8 360 residentes; a 40 km moram 98 673, em quatro concelhos; a 80 km, 321 326, em vinte e um. É sobre esse território que a densidade de concorrentes passa a ser contada — e é por isso que a resposta muda a análise.",
+      "O concelho deixou de ser uma lista de 308 nomes e passou a ser um mapa. Tocas onde vais trabalhar, procuras a localidade ou o código postal, ou usas o GPS. O círculo do raio aparece desenhado, com os concelhos que apanha marcados um a um. A lista continua lá dentro, para o teclado e para quando o mapa não carrega.",
+      "Quando um campo não muda nada no teu caso, deixa de dizer só isso: diz o que o faria contar. Se declaraste «a minha região», o concelho não decide a leitura — e a ferramenta explica que passa a decidir se escolheres «o meu concelho» ou um raio a partir dele.",
+      "«Explorar mercado» era uma muralha de vinte e quatro fichas abertas ao mesmo tempo. Passa a ter procura sem acentos, filtros por setor, capital e forma de entrega, contagem por grupo e as fichas dobradas — com tudo o que lá estava a continuar no HTML, para quem navega sem JavaScript e para os motores de busca.",
+      "O teu concelho continua a não sair do dispositivo. O ponto do GPS é convertido em concelho no teu browser, contra a lista que já lá está, e não é guardado nem enviado para lado nenhum.",
+    ],
+  },
+  {
     version: "2.110.0",
     data: "2026-08-23",
     titulo: "Cada resposta passa a dizer o que muda — com o número medido na hora",

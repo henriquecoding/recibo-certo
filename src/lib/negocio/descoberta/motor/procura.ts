@@ -156,9 +156,9 @@ const Z_DECISIVO = 0.75;
  * diferente, e quem lê tem direito a saber qual delas está a ler.
  */
 function unidades(leitura: LeituraDeOferta): string {
-  return leitura.escala === "concelho"
-    ? `nos ${leitura.regioesComparadas} concelhos do país`
-    : `nas ${leitura.regioesComparadas} regiões`;
+  return leitura.escala === "regiao"
+    ? `nas ${leitura.regioesComparadas} regiões`
+    : `nos ${leitura.regioesComparadas} concelhos do país`;
 }
 
 /**
@@ -201,16 +201,30 @@ function quocienteDoCandidato(
   candidato: CandidatoBruto,
   pack: PackOferta | undefined,
 ): QuocienteDeLocalizacao | null {
-  if (!pack || !candidato.concelho) return null;
+  if (!pack) return null;
   const conceito = CONCEITO_POR_CAPACIDADE.get(candidato.dominante.id);
   if (!conceito || conceito.cae.length === 0) return null;
   const base = candidato.problema.baseDeClientes;
   if (base.tipo === "nao-contavel") return null;
+
+  // ── A ZONA É O TERRITÓRIO DECLARADO, NÃO O CONCELHO ────────────────
+  //  Quem disse «a minha região» compete na região, e ler-lhe só o
+  //  concelho descreveria um mercado que não é o dela. Quem desenhou um
+  //  raio compete dentro do círculo. É esta linha que faz o alcance e o
+  //  raio moverem um número — antes não moviam nenhum, e a interface
+  //  dizia-o com todas as letras porque era verdade.
+  const { territorio } = candidato;
+  if (territorio.codigos.length === 0) return null;
+  const alvo =
+    territorio.codigos.length === 1
+      ? territorio.codigos[0]!
+      : { codigos: territorio.codigos, nome: territorio.nome };
+
   return lerLacuna(
     pack,
     conceito.cae,
     base.tipo === "residentes" ? { tipo: "residentes" } : { tipo: "empresas", cae: base.cae, ressalva: base.ressalva },
-    candidato.concelho,
+    alvo,
   );
 }
 
@@ -359,6 +373,14 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
         geografia: quociente.nomeDaZona,
         limitacao: [
           `${quociente.operadores} operadores para ${quociente.clientes.toLocaleString("pt-PT")} ${quociente.unidadeCliente === "empresas" ? "clientes possíveis" : "residentes"} — percentil ${quociente.percentil} entre ${quociente.unidadesComparadas} concelhos, mediana ${quociente.medianaNacional.toFixed(1)}.`,
+          // Um território é a SOMA dos seus concelhos, e o percentil
+          // posiciona essa soma na distribuição dos concelhos
+          // individuais. É uma comparação legítima e é outra coisa —
+          // dizê-lo é o que impede «percentil 62» de se ler como se o
+          // território fosse um concelho.
+          quociente.escala === "territorio"
+            ? `A leitura soma os ${quociente.concelhosNaZona} concelhos de ${quociente.nomeDaZona} e compara o resultado com um concelho típico do país.`
+            : "",
           quociente.ressalva ?? "",
           "Conta inscrições na CAE, não operadores desta hipótese em concreto, e não pondera dimensão nem se cada empresa está ativa.",
         ]
