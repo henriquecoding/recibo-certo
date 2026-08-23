@@ -40,6 +40,22 @@ export type AlcanceOperacional =
 export interface ContextoLocalizacao {
   /** NUTS II — a lista fechada que a evidência sabe servir. */
   regiao: MarketRegion;
+  /**
+   * O concelho, quando a pessoa o quiser dar. Código INE, lista fechada.
+   *
+   * ┌──────────────────────────────────────────────────────────────────┐
+   * │ «Que negócio abrir» varia ao concelho, e a NUTS II escondia-o.    │
+   * │ Nos dados que o motor lê, empresas de limpeza por dez mil         │
+   * │ habitantes: Lisboa 8,3 · Mafra 23,8 — a mesma célula em NUTS II,  │
+   * │ e um fator de 2,9 entre elas. Loulé 84,5 · Espinho 5,9.           │
+   * │                                                                  │
+   * │ Continua a NÃO ser morada: é uma escolha de 308 entradas, feita   │
+   * │ no cliente, que nunca sai do dispositivo. A leitura de oferta faz │
+   * │ a comparação no browser, com a matriz inteira à frente — é por    │
+   * │ isso que o servidor não precisa de saber onde a pessoa mora.      │
+   * └──────────────────────────────────────────────────────────────────┘
+   */
+  concelho?: string;
   /** Distrito, quando a pessoa o quiser dar. Lista fechada, nunca morada. */
   distrito?: string;
   territorio?: TipoTerritorio;

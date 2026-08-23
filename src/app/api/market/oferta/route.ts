@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { carregarOferta } from "@/lib/negocio/market/oferta";
+import { MATRIZ_CONCELHOS } from "@/lib/negocio/market/oferta-concelhos";
 
 /**
  * O pack público de OFERTA — quantos operadores já existem por zona.
@@ -41,17 +42,32 @@ export async function GET() {
   try {
     const pack = await carregarOferta({ fetchImpl });
     const completo = pack.emFalta.length === 0 && pack.populacao.length > 0;
-    return NextResponse.json(pack, {
+    // ── A matriz ao concelho vem do instantâneo, não do INE ─────────
+    //  Não é uma segunda chamada: é um `import` de um ficheiro commitado
+    //  (ver `scripts/gen-oferta-concelhos.mjs` para o que foi medido —
+    //  19,7 MB não cabem no caminho de um pedido). Vai INTEIRA para o
+    //  browser porque a zona de quem pergunta nunca sai do dispositivo:
+    //  o servidor não pode filtrar por um concelho que não conhece, e
+    //  não o deve conhecer. Nove KB comprimidos é o preço de não
+    //  perguntar onde a pessoa mora.
+    const comConcelhos = MATRIZ_CONCELHOS ? { ...pack, concelhos: MATRIZ_CONCELHOS } : pack;
+    return NextResponse.json(comConcelhos, {
       headers: {
         "Cache-Control": completo ? CACHE_SAUDAVEL : CACHE_DEGRADADO,
         "X-Divisoes": String(pack.divisoes.length),
         "X-Divisoes-Em-Falta": String(pack.emFalta.length),
+        "X-Concelhos": String(MATRIZ_CONCELHOS?.ordem.length ?? 0),
       },
     });
   } catch {
     // Um pack vazio é honesto: o motor volta a dizer «lacuna por apurar»,
     // que é o que dizia antes desta rota existir. Um 500 não dizia nada e
     // deixava o cartão sem explicação nenhuma no ecrã.
+    //
+    // A matriz ao concelho SOBREVIVE a esta falha, e é o ponto de ela ser
+    // um instantâneo commitado: o INE estar em baixo deixou de apagar a
+    // leitura de oferta inteira. Quem tem concelho fixado continua a ver
+    // a comparação; só quem tem apenas a região é que fica sem ela.
     return NextResponse.json(
       {
         schemaVersion: 1 as const,
@@ -62,8 +78,15 @@ export async function GET() {
         divisoes: [],
         populacao: [],
         emFalta: [],
+        ...(MATRIZ_CONCELHOS ? { concelhos: MATRIZ_CONCELHOS } : {}),
       },
-      { status: 200, headers: { "Cache-Control": CACHE_DEGRADADO } },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": CACHE_DEGRADADO,
+          "X-Concelhos": String(MATRIZ_CONCELHOS?.ordem.length ?? 0),
+        },
+      },
     );
   }
 }

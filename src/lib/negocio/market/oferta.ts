@@ -39,9 +39,12 @@
 import { fetchIneIndicator, normalizeIneAnnualIndicator } from "./connectors/ine";
 import type { IneAnnualIndicatorManifest, IneFetchResult } from "./connectors/ine";
 import { MARKET_REGIONS, type MarketRegion } from "./geografia";
+import { CONCELHO_POR_CODIGO } from "./concelhos";
+import type { MatrizOfertaConcelhos } from "./oferta-concelhos";
 import type { MarketObservationLicense } from "./tipos";
 import { DIVISOES_CAE } from "../descoberta/conhecimento/dados/divisoes-cae";
 import { DIVISOES_USADAS } from "../descoberta/conhecimento/dados/ontologia";
+import { DIVISOES_DE_CLIENTES } from "../descoberta/conhecimento/dados/problemas";
 
 /** A mesma licença que os restantes indicadores do INE no dados.gov. */
 const INE_CC_BY: MarketObservationLicense = {
@@ -135,6 +138,15 @@ export interface PackOferta {
   populacao: readonly ContagemRegional[];
   /** Divisões pedidas que não trouxeram nada. Vai ao ecrã, não ao log. */
   emFalta: readonly string[];
+  /**
+   * A mesma leitura aos 308 concelhos, do instantâneo commitado.
+   *
+   * Opcional de propósito, e por duas razões independentes: o
+   * instantâneo pode não passar a validação, e a NUTS II continua a ser
+   * a resposta correta para quem não fixou concelho. Sem ela o motor lê
+   * exatamente como lia antes de os concelhos existirem.
+   */
+  concelhos?: MatrizOfertaConcelhos;
 }
 
 export interface OpcoesOferta {
@@ -287,7 +299,14 @@ const pedir = (
  */
 export async function carregarOferta(opcoes: OpcoesOferta = {}): Promise<PackOferta> {
   const agora = opcoes.now ?? (() => new Date().toISOString());
-  const pedidas = opcoes.divisoes && opcoes.divisoes.length > 0 ? opcoes.divisoes : DIVISOES_USADAS;
+  // Os DOIS lados da subtração: as divisões em que o operador se
+  // inscreve (ontologia) e aquelas em que os clientes estão (problemas).
+  // Sem as segundas não há denominador, e sem denominador a lacuna volta
+  // a ser uma densidade por habitante — que é o que já era.
+  const pedidas =
+    opcoes.divisoes && opcoes.divisoes.length > 0
+      ? opcoes.divisoes
+      : [...new Set([...DIVISOES_USADAS, ...DIVISOES_DE_CLIENTES])].sort();
   const tentativas = opcoes.tentativas ?? TENTATIVAS_PADRAO;
 
   // ── UM DE CADA VEZ, E NÃO POR CONSERVADORISMO ────────────────────
@@ -375,22 +394,49 @@ export async function carregarOferta(opcoes: OpcoesOferta = {}): Promise<PackOfe
 export interface DensidadeRegional {
   regiao: MarketRegion;
   codigo: string;
+  /** Nome da unidade lida — a região, ou o concelho. Vai ao ecrã. */
+  nome: string;
   operadores: number;
   habitantes: number;
   /** Operadores por dez mil habitantes. A base comum. */
   porDezMil: number;
 }
 
+/**
+ * A ESCALA da leitura, e é ela que decide o que a leitura significa.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ «Que negócio abrir» varia ao concelho, e a NUTS II escondia-o.      │
+ * │ Medido nos dados que este módulo lê, para empresas de limpeza e     │
+ * │ manutenção de edifícios (divisão 81), por dez mil habitantes:       │
+ * │                                                                    │
+ * │     Lisboa .....  8,3          Loulé ..... 84,5                     │
+ * │     Mafra ...... 23,8          Espinho ...  5,9                     │
+ * │                                                                    │
+ * │ Lisboa e Mafra são a MESMA célula em NUTS II e diferem por um       │
+ * │ fator de 2,9. Uma leitura de «Grande Lisboa» descreve um território │
+ * │ que não é o de nenhum dos dois.                                     │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export type EscalaDaLeitura = "regiao" | "concelho";
+
+export type ZonaDeAnalise =
+  | { tipo: "regiao"; regiao: MarketRegion }
+  | { tipo: "concelho"; codigo: string };
+
 export interface LeituraDeOferta {
   divisoes: readonly string[];
   designacoes: readonly string[];
   /** A densidade da zona da pessoa. */
   aqui: DensidadeRegional;
-  /** Mediana das nove NUTS II — o ponto de comparação. */
+  escala: EscalaDaLeitura;
+  /** Mediana das unidades comparadas — o ponto de comparação. */
   medianaNacional: number;
-  /** Desvio da zona face à mediana, em desvios-padrão. */
+  /** Desvio da zona face à média, em desvios-padrão. */
   z: number;
-  /** Quantas regiões entraram na comparação. Abaixo de 5 não se conclui. */
+  /** Percentil da zona entre as unidades comparadas, 0–100. */
+  percentil: number;
+  /** Quantas unidades entraram na comparação. Abaixo de 5 não se conclui. */
   regioesComparadas: number;
   periodoOferta: string;
   periodoPopulacao: string;
@@ -415,9 +461,118 @@ const mediana = (valores: readonly number[]): number => {
 export function lerOferta(
   pack: PackOferta,
   divisoesDaHipotese: readonly string[],
-  regiao: MarketRegion,
+  zona: ZonaDeAnalise,
 ): LeituraDeOferta | null {
   if (divisoesDaHipotese.length === 0) return null;
+  return zona.tipo === "concelho"
+    ? lerAoConcelho(pack, divisoesDaHipotese, zona.codigo)
+    : lerARegiao(pack, divisoesDaHipotese, zona.regiao);
+}
+
+/** A conta comum às duas escalas, para não haver duas aritméticas. */
+function concluir(
+  densidades: readonly DensidadeRegional[],
+  aqui: DensidadeRegional,
+  contexto: {
+    divisoes: readonly string[];
+    designacoes: readonly string[];
+    escala: EscalaDaLeitura;
+    periodoOferta: string;
+    periodoPopulacao: string;
+  },
+): LeituraDeOferta | null {
+  // Abaixo de cinco unidades não há distribuição de que falar, e um
+  // desvio-padrão zero é uma divisão por zero disfarçada.
+  if (densidades.length < 5) return null;
+  const valores = densidades.map((item) => item.porDezMil);
+  const media = valores.reduce((total, valor) => total + valor, 0) / valores.length;
+  const variancia =
+    valores.reduce((total, valor) => total + (valor - media) ** 2, 0) / valores.length;
+  const desvio = Math.sqrt(variancia);
+  if (desvio === 0) return null;
+
+  // Percentil de mediana de posto: estável com empates, e é o que se
+  // publica ao lado do z porque é o que se lê sem estatística.
+  const abaixo = valores.filter((valor) => valor < aqui.porDezMil).length;
+  const iguais = valores.filter((valor) => valor === aqui.porDezMil).length;
+
+  return {
+    divisoes: contexto.divisoes,
+    designacoes: contexto.designacoes,
+    aqui,
+    escala: contexto.escala,
+    medianaNacional: mediana(valores),
+    z: (aqui.porDezMil - media) / desvio,
+    percentil: Math.round(((abaixo + 0.5 * iguais) / valores.length) * 100),
+    regioesComparadas: densidades.length,
+    periodoOferta: contexto.periodoOferta,
+    periodoPopulacao: contexto.periodoPopulacao,
+  };
+}
+
+/**
+ * A leitura ao CONCELHO — 308 unidades em vez de nove.
+ *
+ * Vem do instantâneo commitado (`oferta-concelhos.ts`) e não da chamada
+ * ao vivo: 19,7 MB não cabem no caminho de um pedido. Ver o cabeçalho de
+ * `scripts/gen-oferta-concelhos.mjs` para o que foi medido.
+ */
+function lerAoConcelho(
+  pack: PackOferta,
+  divisoesDaHipotese: readonly string[],
+  codigo: string,
+): LeituraDeOferta | null {
+  const matriz = pack.concelhos;
+  if (!matriz) return null;
+  const indice = matriz.ordem.indexOf(codigo);
+  if (indice < 0) return null;
+
+  // Somar divisões é somar empresas distintas: a CAE atribui uma divisão
+  // por empresa, portanto não há dupla contagem entre divisões.
+  const designacoes: string[] = [];
+  const somaPor = new Array<number>(matriz.ordem.length).fill(0);
+  for (const divisao of divisoesDaHipotese) {
+    const contagens = matriz.porDivisao[divisao];
+    if (!contagens) return null;
+    designacoes.push(DIVISOES_CAE.get(divisao) ?? divisao);
+    for (let posicao = 0; posicao < contagens.length; posicao += 1) {
+      somaPor[posicao] = somaPor[posicao]! + contagens[posicao]!;
+    }
+  }
+
+  const densidades: DensidadeRegional[] = [];
+  for (let posicao = 0; posicao < matriz.ordem.length; posicao += 1) {
+    const habitantes = matriz.populacao[posicao]!;
+    if (habitantes <= 0) continue;
+    const concelho = CONCELHO_POR_CODIGO.get(matriz.ordem[posicao]!);
+    if (!concelho) continue;
+    densidades.push({
+      regiao: concelho.regiao,
+      codigo: concelho.codigo,
+      nome: concelho.nome,
+      operadores: somaPor[posicao]!,
+      habitantes,
+      porDezMil: (somaPor[posicao]! / habitantes) * 10_000,
+    });
+  }
+
+  const aqui = densidades.find((item) => item.codigo === codigo);
+  if (!aqui) return null;
+  return concluir(densidades, aqui, {
+    divisoes: divisoesDaHipotese,
+    designacoes,
+    escala: "concelho",
+    periodoOferta: matriz.periodoEmpresas,
+    periodoPopulacao: matriz.periodoPopulacao,
+  });
+}
+
+/** A leitura às nove NUTS II, do pack ao vivo. É a que existia. */
+function lerARegiao(
+  pack: PackOferta,
+  divisoesDaHipotese: readonly string[],
+  regiao: MarketRegion,
+): LeituraDeOferta | null {
   if (regiao === "portugal") return null;
 
   const codigoDaZona = MARKET_REGIONS.find((item) => item.id === regiao)?.nutsCode;
@@ -425,8 +580,6 @@ export function lerOferta(
 
   const habitantesPor = new Map(pack.populacao.map((item) => [item.codigo, item]));
 
-  // Somar divisões é somar empresas distintas: a CAE atribui uma divisão
-  // por empresa, portanto não há dupla contagem entre divisões.
   const operadoresPor = new Map<string, number>();
   let periodoOferta = "";
   const designacoes: string[] = [];
@@ -449,32 +602,156 @@ export function lerOferta(
     densidades.push({
       regiao: definicao.id,
       codigo: definicao.nutsCode,
+      nome: definicao.label,
       operadores,
       habitantes,
       porDezMil: (operadores / habitantes) * 10_000,
     });
   }
 
-  if (densidades.length < 5) return null;
   const aqui = densidades.find((item) => item.codigo === codigoDaZona);
   if (!aqui) return null;
+  return concluir(densidades, aqui, {
+    divisoes: divisoesDaHipotese,
+    designacoes,
+    escala: "regiao",
+    periodoOferta,
+    periodoPopulacao: pack.populacao.find((item) => item.codigo === codigoDaZona)?.periodo ?? "",
+  });
+}
 
-  const valores = densidades.map((item) => item.porDezMil);
+// ── O QUOCIENTE DE LOCALIZAÇÃO ───────────────────────────────────────
+
+/**
+ * Operadores por CLIENTE POSSÍVEL — a base que faltava.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ `motor/procura.ts` escreveu isto sobre si próprio, e esteve certo   │
+ * │ durante todo o tempo em que foi verdade:                            │
+ * │                                                                    │
+ * │   «Para saber se a oferta é pouca ou muita é preciso compará-la     │
+ * │    com a procura na MESMA base: operadores por habitante, por       │
+ * │    cliente possível, por euro gasto. Duas séries com unidades       │
+ * │    diferentes — uma taxa de ocupação e uma contagem de empresas —   │
+ * │    não se subtraem.»                                                │
+ * │                                                                    │
+ * │ A densidade por habitante era metade do caminho: serve quando o     │
+ * │ cliente é a população, e engana quando não é. Numa hipótese de      │
+ * │ serviço a alojamento turístico, o denominador certo não são os      │
+ * │ habitantes — são os alojamentos. Medido nos dados que este módulo   │
+ * │ lê, operadores de limpeza por mil alojamentos:                      │
+ * │                                                                    │
+ * │     Albufeira ... 135          Lisboa ... 89                        │
+ * │                                                                    │
+ * │ Por habitante, Albufeira parecia muito mais servida do que Lisboa   │
+ * │ (52,4 contra 8,3). Por cliente, a diferença encolhe para 1,5× —     │
+ * │ porque Albufeira tem clientes a mais, não operadores a mais.        │
+ * │ São conclusões opostas a partir dos mesmos números.                 │
+ * └────────────────────────────────────────────────────────────────────┘
+ *
+ * É o método canónico do Location Quotient, com o denominador que o
+ * problema declara em vez de um genérico.
+ */
+export interface LeituraDeLacuna {
+  /** Operadores da hipótese na zona. */
+  operadores: number;
+  /** Clientes possíveis na zona, na unidade declarada. */
+  clientes: number;
+  unidadeCliente: "empresas" | "residentes";
+  /** Operadores por mil clientes. A base comparável. */
+  porMilClientes: number;
+  /** Mediana entre as unidades comparadas. */
+  medianaNacional: number;
+  /** Percentil da zona, 0–100. Acima de 50 é mercado mais servido. */
+  percentil: number;
+  z: number;
+  escala: EscalaDaLeitura;
+  nomeDaZona: string;
+  unidadesComparadas: number;
+  periodoEmpresas: string;
+  /** O que a divisão dos clientes apanha para além deles. Vai ao ecrã. */
+  ressalva?: string;
+}
+
+/** A base de clientes, na forma que esta camada sabe contar. */
+export type BaseContavel =
+  | { tipo: "empresas"; cae: readonly string[]; ressalva?: string }
+  | { tipo: "residentes" };
+
+/**
+ * O quociente, ao concelho.
+ *
+ * Só ao concelho, e é deliberado: o pack ao vivo traz as nove NUTS II, e
+ * nove unidades são poucas para um percentil dizer alguma coisa. Com 308
+ * a distribuição tem forma. Quem não fixou concelho continua a receber a
+ * densidade por habitante, que é o que recebia.
+ */
+export function lerLacuna(
+  pack: PackOferta,
+  divisoesDoOperador: readonly string[],
+  base: BaseContavel,
+  codigoDoConcelho: string,
+): LeituraDeLacuna | null {
+  const matriz = pack.concelhos;
+  if (!matriz || divisoesDoOperador.length === 0) return null;
+  const indice = matriz.ordem.indexOf(codigoDoConcelho);
+  if (indice < 0) return null;
+
+  const somar = (divisoes: readonly string[]): readonly number[] | null => {
+    const total = new Array<number>(matriz.ordem.length).fill(0);
+    for (const divisao of divisoes) {
+      const contagens = matriz.porDivisao[divisao];
+      // Uma divisão em falta devolve `null` e não zero: zero clientes
+      // produziria uma divisão por zero, e zero operadores lê-se como
+      // mercado livre. Os dois erros promovem a hipótese por engano.
+      if (!contagens) return null;
+      for (let posicao = 0; posicao < contagens.length; posicao += 1) {
+        total[posicao] = total[posicao]! + contagens[posicao]!;
+      }
+    }
+    return total;
+  };
+
+  const operadores = somar(divisoesDoOperador);
+  if (!operadores) return null;
+  const clientes = base.tipo === "residentes" ? matriz.populacao : somar(base.cae);
+  if (!clientes) return null;
+
+  const razoes: { posicao: number; valor: number }[] = [];
+  for (let posicao = 0; posicao < matriz.ordem.length; posicao += 1) {
+    const denominador = clientes[posicao]!;
+    // Um concelho sem clientes não entra na distribuição. Entrar com
+    // `Infinity` puxaria a média e o desvio para valores sem sentido.
+    if (denominador <= 0) continue;
+    razoes.push({ posicao, valor: (operadores[posicao]! / denominador) * 1000 });
+  }
+  if (razoes.length < 5) return null;
+
+  const aqui = razoes.find((item) => item.posicao === indice);
+  if (!aqui) return null;
+
+  const valores = razoes.map((item) => item.valor);
   const media = valores.reduce((total, valor) => total + valor, 0) / valores.length;
   const variancia =
     valores.reduce((total, valor) => total + (valor - media) ** 2, 0) / valores.length;
   const desvio = Math.sqrt(variancia);
   if (desvio === 0) return null;
 
+  const abaixo = valores.filter((valor) => valor < aqui.valor).length;
+  const iguais = valores.filter((valor) => valor === aqui.valor).length;
+
   return {
-    divisoes: divisoesDaHipotese,
-    designacoes,
-    aqui,
+    operadores: operadores[indice]!,
+    clientes: clientes[indice]!,
+    unidadeCliente: base.tipo === "residentes" ? "residentes" : "empresas",
+    porMilClientes: aqui.valor,
     medianaNacional: mediana(valores),
-    z: (aqui.porDezMil - media) / desvio,
-    regioesComparadas: densidades.length,
-    periodoOferta,
-    periodoPopulacao:
-      pack.populacao.find((item) => item.codigo === codigoDaZona)?.periodo ?? "",
+    percentil: Math.round(((abaixo + 0.5 * iguais) / valores.length) * 100),
+    z: (aqui.valor - media) / desvio,
+    escala: "concelho",
+    nomeDaZona: CONCELHO_POR_CODIGO.get(codigoDoConcelho)?.nome ?? codigoDoConcelho,
+    unidadesComparadas: razoes.length,
+    periodoEmpresas: matriz.periodoEmpresas,
+    ressalva: base.tipo === "empresas" ? base.ressalva : undefined,
   };
 }

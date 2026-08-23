@@ -82,6 +82,7 @@ jobs:
               '- o INE não respondeu, e sem a lista dos 308 concelhos não há conversão para NUTS II;',
               '- uma grafia alternativa deixou de corresponder a um concelho real;',
               '- o ficheiro mudou de formato (deixou de ser um ZIP de entrada única, ou o JSON de topo mudou de forma).',
+              '- o indicador 0014449 ou 0012918 do INE mudou de dimensões, e a matriz ao concelho deixou de alinhar.',
               '',
               '```',
               registo,
@@ -116,10 +117,26 @@ jobs:
         if: steps.ingestao.outputs.exit_code != '0'
         run: exit 1
 
+      # A matriz de oferta ao concelho vem dos mesmos indicadores anuais do
+      # INE. Corre aqui pela mesma razão que os contratos: 19,7 MB não cabem
+      # no caminho de um pedido, e o que fica no repositório são 23 KB.
+      #
+      # Uma falha AQUI não trava o PR dos contratos: são fontes
+      # independentes, e o instantâneo anterior continua válido — as contas
+      # integradas das empresas saem uma vez por ano.
+      - name: Refrescar os concelhos e a matriz de oferta
+        id: concelhos
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/gen-concelhos.mjs 2>&1 | tee -a mercado-registo.txt
+          node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs 2>&1 | tee -a mercado-registo.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
       - name: Ver se há alguma coisa para commitar
         id: mudanca
         run: |
-          if [ -z "$(git status --porcelain src/lib/negocio/market/bulk/dados)" ]; then
+          if [ -z "$(git status --porcelain src/lib/negocio/market/bulk/dados src/lib/negocio/market/concelhos.ts)" ]; then
             echo "ha=false" >> "$GITHUB_OUTPUT"
             echo "Os números não mudaram. Nada a fazer."
           else

@@ -106,6 +106,13 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/lib/negocio/market/opportunities.ts` — ★ Founder Fit v2: repartição do
   score por dimensão, empate publicado (`rank` partilhado + `tiedWith`) e
   deteção de perguntas inertes derivada do catálogo.
+- `src/lib/negocio/market/concelhos.ts` — ★ os 308 concelhos, GERADO por
+  `npm run concelhos:gen` a partir da metainformação do INE. Não editar à mão.
+- `src/lib/negocio/market/oferta-concelhos.ts` + `bulk/dados/oferta-concelhos.json`
+  — ★ matriz de oferta aos 308 concelhos (empresas por divisão da CAE +
+  população). Gerada por `npm run oferta:concelhos` e **é para commitar**.
+  Alimenta o quociente de localização — operadores por mil CLIENTES, com o
+  denominador que cada `Problema` declara em `baseDeClientes`.
 - `src/lib/negocio/market/bulk/` — ★ ingestão de fontes que não cabem num pedido
   HTTP (contratos públicos: 52 MB → 273 MB). O instantâneo em `bulk/dados/` é
   gerado por `npm run mercado:ingerir` e **é para commitar** — é ele que a
