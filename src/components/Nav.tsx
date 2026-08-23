@@ -7,9 +7,9 @@ import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
 import { Logo, ArrowRight } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
+import BarraSecoes from "@/components/navegacao/BarraSecoes";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
 import MenuCompleto from "@/components/navegacao/MenuCompleto";
-import { useBuscaAberta } from "@/components/busca/motor";
 
 /**
  * O cabeçalho de secretária — duas linhas no topo, uma ao rolar.
@@ -44,52 +44,34 @@ export default function Nav() {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
-  const buscaAberta = useBuscaAberta();
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────┐
-   * │ ABRIR A PESQUISA REEXPANDE O CABEÇALHO — E ISSO É DE PROPÓSITO       │
+   * │ O QUE ENCOLHE É A PRIMEIRA LINHA, E SÓ ELA                           │
    * │                                                                     │
-   * │ Houve uma tentativa de tornar a densidade independente do overlay    │
-   * │ (P1-03 da auditoria: «abrir busca não muda density»). Em abstracto   │
-   * │ faz sentido; neste cabeçalho estava errado, e o erro foi meu.        │
+   * │ Este estado já dependeu de mais duas coisas, e as duas razões        │
+   * │ desapareceram com a passagem a três linhas:                          │
    * │                                                                     │
-   * │ A razão é que a navegação VIVE na linha que desaparece ao compactar  │
-   * │ (`group-data-[compacto=true]:hidden`). Com o cabeçalho compacto e o  │
-   * │ painel aberto, o resultado era: os pilares sumiam da cápsula, e o    │
-   * │ painel — que tem 44 rem, muito mais largo do que a barra             │
-   * │ encolhida — ficava por cima da faixa onde elas deviam estar. Quem    │
-   * │ abria a pesquisa perdia a navegação do site enquanto pesquisava.     │
+   * │  · da PESQUISA, porque a navegação vivia na linha que encolhia e o   │
+   * │    painel (44 rem) abria por cima da faixa onde ela devia estar.     │
+   * │    Agora a cápsula está ACIMA da barra e o painel abre para baixo:   │
+   * │    não há como tapá-la;                                              │
+   * │  · do MENU, porque o gatilho vivia nessa mesma linha e desmontava    │
+   * │    ao compactar, deixando o foco no `<body>` ao fechar. O gatilho    │
+   * │    está na cápsula, que não encolhe.                                 │
    * │                                                                     │
-   * │ Congelar a densidade só é neutro num cabeçalho onde a navegação não  │
-   * │ depende dela. Aqui depende. Portanto: abrir a pesquisa devolve o     │
-   * │ cabeçalho ao estado alto, as abas voltam, e o painel abre na segunda │
-   * │ linha — POR BAIXO delas, não em cima.                                │
-   * │                                                                     │
-   * │ O efeito secundário que a auditoria temia (a superfície fixa crescer │
-   * │ 64 px no momento da intenção) é real e é o preço menor: 64 px de     │
-   * │ conteúdo tapado contra a navegação inteira inacessível.              │
+   * │ Sobra o scroll — que é a única coisa que isto sempre quis responder. │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  /**
-   * O MENU já não entra nesta conta, e a razão de ter entrado desapareceu.
-   *
-   * Enquanto a cápsula recolhia ao compactar, abrir o menu com o cabeçalho
-   * encolhido desmontava o próprio gatilho — e a `SuperficieModal` devolve
-   * o foco ao elemento que estava activo à abertura, portanto fechar
-   * deixava o foco no `<body>`. Agora a cápsula fica, o gatilho fica, e o
-   * estado do menu não tem de mexer na densidade do cabeçalho.
-   */
-  const compacto = rolado && !buscaAberta;
+  const compacto = rolado;
 
   /**
    * O FUNDO não segue a densidade — segue o scroll, e só ele.
    *
-   * São duas decisões diferentes e já estiveram presas à mesma variável: a
-   * ALTURA tem de ficar quieta enquanto o painel está aberto, mas o fundo
-   * depende apenas de haver conteúdo a passar por baixo. Com a pesquisa
-   * aberta e a página rolada há — e o cabeçalho tem de ficar opaco na
-   * mesma, senão o texto da página lê-se através dele, por trás do painel.
+   * Estiveram presas à mesma variável e são decisões diferentes. O fundo
+   * depende apenas de haver conteúdo a passar por baixo — e com a página
+   * rolada há, com ou sem painel de pesquisa aberto. Sem isto, o texto da
+   * página lê-se através do cabeçalho, por trás do painel.
    */
   const opaco = rolado;
 
@@ -168,86 +150,99 @@ export default function Nav() {
       >
         {/**
          * ┌───────────────────────────────────────────────────────────────────┐
-         * │ TRÊS LINHAS, E CADA UMA COM UM TRABALHO SÓ                         │
+         * │ TRÊS LINHAS, UMA COLUNA, E CADA LINHA COM UM TRABALHO SÓ           │
          * │                                                                   │
-         * │   1  marca · acções          (as pontas, nada no meio)            │
-         * │   2  a cápsula               (atravessa a grelha, centrada)        │
-         * │   3  a barra de pesquisa     (atravessa a grelha, centrada)        │
+         * │   1  marca · secções · conta e acção   (as pontas)                │
+         * │   2  a cápsula dos cinco pilares       (centrada)                  │
+         * │   3  a barra de pesquisa               (centrada)                  │
          * │                                                                   │
-         * │ Eram DUAS, com a marca, a navegação e as acções a disputarem a     │
-         * │ primeira, e isso partiu-se quando a navegação passou a ter seis    │
-         * │ lugares. A 1920 px a cápsula ficava a 3 px do logótipo e a 2 px    │
-         * │ de «Conta» — e, pior, o seu centro caía a 886 px enquanto a barra  │
-         * │ por baixo estava centrada a 960. Dois elementos centrados,         │
-         * │ empilhados, em eixos diferentes.                                   │
+         * │ Houve uma versão de duas linhas em que a marca, a navegação e as   │
+         * │ acções disputavam a primeira. Com seis lugares na cápsula isso     │
+         * │ partiu-se: a 1920 px ficava a 3 px do logótipo e o seu centro      │
+         * │ caía em 886 px enquanto a barra logo por baixo estava centrada em  │
+         * │ 960. Dois elementos centrados, empilhados, em eixos diferentes —   │
+         * │ porque a cápsula vivia na coluna do meio de uma grelha cujas       │
+         * │ colunas laterais têm larguras diferentes, e centrava-se no espaço  │
+         * │ que SOBRAVA.                                                       │
          * │                                                                   │
-         * │ A causa era estrutural, não de espaçamento: a cápsula vivia na     │
-         * │ coluna do meio de uma grelha cujas colunas laterais têm larguras   │
-         * │ diferentes (marca ~136 px, acções ~233 px), portanto centrava-se   │
-         * │ no ESPAÇO QUE SOBRAVA. Numa linha inteira, o eixo é o da página —  │
-         * │ e a linha 2 e a linha 3 partilham-no por construção.                │
+         * │ Com UMA coluna o problema deixa de poder existir: as linhas 2 e 3  │
+         * │ centram-se na página, e não umas nas outras.                        │
          * │                                                                   │
-         * │ AO ENCOLHER, as linhas 2 e 3 esvaziam-se: a cápsula recolhe e a    │
-         * │ barra sobe para a coluna do meio da linha 1. É a MESMA instância   │
-         * │ da barra a mudar de célula — nunca uma segunda montada noutro      │
-         * │ sítio, que perderia o texto escrito e o foco no gesto.             │
+         * │ A BARRA DE PESQUISA NÃO MUDA DE LINHA. Chegou a subir para o meio  │
+         * │ da primeira ao compactar, e ficava encravada entre a marca e a     │
+         * │ conta — um objecto a saltar de sítio ao fim de 40 px de scroll.    │
+         * │ Fica na terceira, sempre. O que recolhe é a PRIMEIRA, que é a      │
+         * │ única cujo conteúdo está todo noutro lado: as secções, a conta e   │
+         * │ o «Começar» vivem também na folha do «Menu», e a marca leva a      │
+         * │ casa a partir do cabeçalho dessa folha. Nada fica inalcançável.    │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center gap-x-4 px-6 group-data-[compacto=true]:grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_0px] xl:max-w-6xl">
-          <Link
-            href="/"
-            aria-label="ReciboCerto — início"
-            className="focus-marca col-start-1 row-start-1 flex-shrink-0 justify-self-start rounded-xl"
-          >
-            <Logo />
-          </Link>
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-1 grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center px-6 group-data-[compacto=true]:grid-rows-[0px_var(--rc-linha-nav)_var(--rc-linha-busca)] xl:max-w-6xl">
+          {/* ── Linha 1 — marca · secções | conta · acção ────────────────
+              Recolhe ao rolar. `invisible` e não `hidden`: a linha passa a
+              ter altura zero pela grelha, e esconder por visibilidade evita
+              que o conteúdo desapareça e reapareça do DOM em cada limiar de
+              scroll — o `MenuConta` é um menu com estado e não pode ser
+              desmontado por causa de 40 px de rolagem. */}
+          <div className="row-start-1 flex min-w-0 items-center justify-between gap-4 overflow-hidden group-data-[compacto=true]:invisible">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
+                <Logo />
+              </Link>
+              <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
+              <BarraSecoes />
+            </div>
 
-          {/* Linha 2 — a cápsula, a atravessar a grelha toda para ficar no
-              eixo da página. NÃO recolhe ao rolar: é a espinha do produto, e
-              perdê-la aos primeiros 40 px de scroll obrigava a voltar ao topo
-              só para mudar de sítio. O que recolhe é a linha da pesquisa, e a
-              barra sobe para o meio da primeira. */}
-          <div className="col-span-3 col-start-1 row-start-2 flex min-w-0 justify-center">
+            {/* Uma entrada de conta/ajuda e UMA acção. O tema vive dentro do
+                menu — ver o quadro em `MenuConta.tsx`. O feedback passou para
+                a barra de secções, ao lado dos destinos que também são «o
+                resto do produto». */}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <MenuConta avatarUrl={avatarUrl} />
+
+              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+                {user ? (
+                  <Link
+                    href="/dashboard"
+                    className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
+                  >
+                    Painel
+                    <ArrowRight size={13} aria-hidden />
+                  </Link>
+                ) : disponivel ? (
+                  <CTAComecar />
+                ) : (
+                  <Link
+                    href="/dashboard"
+                    className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
+                  >
+                    Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
+                    <ArrowRight size={13} aria-hidden />
+                  </Link>
+                )}
+              </m.div>
+            </div>
+          </div>
+
+          {/* ── Linha 2 — a cápsula dos cinco pilares ────────────────────
+              NÃO recolhe ao rolar: é a espinha do produto, e perdê-la aos
+              primeiros 40 px de scroll obrigava a voltar ao topo da página
+              só para mudar de sítio. */}
+          <div className="row-start-2 flex min-w-0 justify-center">
             <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
           </div>
 
-          {/**
-           * Linha 3 — a barra. Atravessa a grelha quando o cabeçalho está
-           * alto; sobe para a coluna do meio da linha 1 quando encolhe. Sem
-           * transição de largura — `grid-row` não é interpolável, portanto a
-           * mudança de linha é instantânea, e animar só a largura deixaria a
-           * caixa a arrastar-se depois de já ter aterrado.
-           */}
-          <div className="col-span-3 col-start-1 row-start-3 w-full justify-self-center group-data-[compacto=true]:col-span-1 group-data-[compacto=true]:col-start-2 group-data-[compacto=true]:row-start-1 group-data-[compacto=true]:max-w-[22rem] lg:max-w-[var(--rc-dock-larga)]">
-            <LancadorBusca inputId="rc-header-busca" />
-          </div>
-
-          {/* Uma entrada de conta/ajuda e UMA acção. O tema e o feedback
-              vivem dentro do menu — ver o quadro em `MenuConta.tsx`. */}
-          <div className="col-start-3 row-start-1 flex items-center justify-self-end gap-2">
-            <MenuConta avatarUrl={avatarUrl} />
-
-            <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
-              {user ? (
-                <Link
-                  href="/dashboard"
-                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
-                >
-                  Painel
-                  <ArrowRight size={13} aria-hidden />
-                </Link>
-              ) : disponivel ? (
-                <CTAComecar />
-              ) : (
-                <Link
-                  href="/dashboard"
-                  className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
-                >
-                  Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
-                  <ArrowRight size={13} aria-hidden />
-                </Link>
-              )}
-            </m.div>
+          {/* ── Linha 3 — a barra de pesquisa ────────────────────────────
+              Na mesma largura e no mesmo eixo da cápsula: as duas leem
+              `--rc-dock-larga`. Não muda de linha nem de largura em estado
+              nenhum. Chegou a subir para o meio da primeira ao compactar, e
+              ficava encravada entre a marca e a conta — um objecto a saltar
+              de sítio ao fim de 40 px de scroll. É o elemento central; não
+              tem de ser procurado duas vezes. */}
+          <div className="row-start-3 flex w-full justify-center">
+            <div className="w-full max-w-[var(--rc-dock-larga)]">
+              <LancadorBusca inputId="rc-header-busca" />
+            </div>
           </div>
         </div>
       </header>

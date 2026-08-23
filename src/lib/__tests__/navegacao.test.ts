@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { MENU_GRUPOS, PILARES, SECOES, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
+import { MENU_GRUPOS, PILARES, SECOES, SECOES_TOPO, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
 import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -39,6 +39,7 @@ const semComentarios = (fonte: string) =>
 const CAPSULA = ler("components", "navegacao", "CapsulaNav.tsx");
 const MENU = ler("components", "navegacao", "MenuCompleto.tsx");
 const FILA = ler("components", "navegacao", "FilaPilares.tsx");
+const SECBAR = ler("components", "navegacao", "BarraSecoes.tsx");
 const CHROME = ler("components", "ChromeMobile.tsx");
 const TOPO = ler("components", "ChromeMobileTopo.tsx");
 const NAV = ler("components", "Nav.tsx");
@@ -52,6 +53,9 @@ const SUPERFICIES = [
   ["fila da homepage", FILA],
   ["rodapé", RODAPE],
 ] as const;
+
+/** As superfícies que leem a fonte, incluindo as que só levam secções. */
+const TODAS_AS_SUPERFICIES = [...SUPERFICIES, ["barra de secções", SECBAR] as const];
 
 describe("navegacao:fonte-unica", () => {
   it("já não existe uma segunda lista de navegação", () => {
@@ -86,7 +90,7 @@ describe("navegacao:fonte-unica", () => {
     // │ de secretária chegaram a discordar em dois lugares.            │
     // └───────────────────────────────────────────────────────────────┘
     const doPilar = new Set(PILARES.map((p) => p.href));
-    for (const [nome, fonte] of [...SUPERFICIES, ["folha do menu", MENU] as const]) {
+    for (const [nome, fonte] of [...TODAS_AS_SUPERFICIES, ["folha do menu", MENU] as const]) {
       const literais = [...semComentarios(fonte).matchAll(/href[:=]\s*["'{]?"?(\/[^"'\s}]*)"?/g)]
         .map((m) => m[1])
         .filter((href) => doPilar.has(href));
@@ -101,6 +105,55 @@ describe("navegacao:fonte-unica", () => {
       expect(RODAPE.includes("...PILARES.map("), `rodapé sem os pilares (${pilar.id})`).toBe(true);
     }
     expect(semComentarios(RODAPE)).not.toContain('href: "/#calculadora"');
+  });
+});
+
+describe("navegacao:barra-de-seccoes", () => {
+  it("mostra um SUBCONJUNTO das secções, filtrado na fonte", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ A TENTAÇÃO ERA ESCREVER OS QUATRO RÓTULOS OUTRA VEZ            │
+    // │                                                               │
+    // │ E era exactamente o defeito que este ficheiro existe para não  │
+    // │ repetir. A barra do topo e a folha do menu são a MESMA lista   │
+    // │ vista com dois recortes: quem declara `topo` aparece nas duas, │
+    // │ quem não declara aparece só na folha. Acrescentar uma secção   │
+    // │ nova ao menu deixa de poder pô-las a discordar.                 │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(SECBAR).toContain("SECOES_TOPO.map(");
+    expect(SECOES_TOPO.length).toBeGreaterThan(0);
+    for (const s of SECOES_TOPO) {
+      expect(SECOES, `«${s.label}» está na barra do topo e não é uma secção`).toContain(s);
+    }
+    // «Todas as ferramentas» fica de fora de propósito: o hub já está a um
+    // clique de qualquer pilar e da fila da página inicial.
+    expect(SECOES_TOPO.map((s) => s.href)).not.toContain("/ferramentas");
+  });
+
+  it("é um nível ABAIXO da cápsula, e o desenho di-lo", () => {
+    // Duas filas de ligações com o mesmo peso seriam duas navegações
+    // principais — o problema que a reestruturação foi resolver. A barra é
+    // texto pequeno sem pastilha; a cápsula tem ícone, forma e a cor da
+    // marca. Se um dia alguém lhes der o mesmo tratamento, isto reprova.
+    expect(SECBAR).toContain("text-[13px]");
+    expect(SECBAR).not.toContain("rc-capsula");
+    expect(CAPSULA).toContain("rc-capsula");
+  });
+
+  it("«Sugestões» é uma acção e não finge ser um destino", () => {
+    // Os outros levam a uma página; este abre uma caixa de escrita. Uma
+    // régua separa-os, e é um `<button>` e não uma `<a>`.
+    expect(SECBAR).toContain("abrirFeedback");
+    expect(SECBAR).toContain('type="button"');
+    expect(SECBAR).toMatch(/w-px[\s\S]{0,400}abrirFeedback/);
+  });
+
+  it("acende como qualquer outro destino, e pela mesma função", () => {
+    expect(SECBAR).toContain("hrefAtivo(pathname)");
+    expect(SECBAR).toContain('aria-current={ativo ? "page" : undefined}');
+    // O marco tem nome próprio: dois `<nav>` sem distinção no mesmo
+    // cabeçalho dizem a um leitor de ecrã que há duas navegações iguais.
+    expect(SECBAR).toContain('aria-label="Secções"');
+    expect(CAPSULA).toContain('aria-label="Principal"');
   });
 });
 
@@ -137,6 +190,14 @@ describe("navegacao:contrato-dos-destinos", () => {
 });
 
 describe("navegacao:acessibilidade", () => {
+  it("a barra de pesquisa vive numa linha só, em qualquer estado", () => {
+    // Subia para o meio da primeira linha ao compactar e ficava encravada
+    // entre a marca e a conta. Agora o que recolhe é a PRIMEIRA linha.
+    expect(NAV).toContain("row-start-3");
+    expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]:row-start-1");
+    expect(NAV).toContain("group-data-[compacto=true]:grid-rows-[0px_var(--rc-linha-nav)_var(--rc-linha-busca)]");
+  });
+
   it("há UM marco de navegação principal, e é a cápsula", () => {
     // O cabeçalho era `<nav aria-label="Principal">` e a cápsula é outro:
     // dois marcos com o mesmo nome no mesmo documento dizem a um leitor de

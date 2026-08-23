@@ -43,11 +43,12 @@
      · --rc-header-linha  a linha da marca/ações.
      · --rc-linha-nav     a linha da cápsula.
      · --rc-linha-busca   a linha da barra de pesquisa.
-     · --rc-header-compacto  o que fica ao rolar: a marca/ações mais a
-       CÁPSULA. Só a linha da pesquisa recolhe, e a barra sobe para o
-       meio da primeira. A navegação é a espinha do produto e deixar de
-       a haver a partir dos primeiros 40 px de scroll obrigava a voltar
-       ao topo da página só para mudar de sítio.
+     · --rc-header-compacto  o que fica ao rolar: a CÁPSULA e a
+       PESQUISA. Recolhe a primeira linha — marca, secções, conta e
+       acção — que é a única cujo conteúdo está todo noutro lado: as
+       secções, a conta e o «Começar» vivem também na folha do «Menu»,
+       e a marca leva a casa a partir do cabeçalho dessa folha. A
+       navegação e a pesquisa ficam porque são o trabalho.
      · --rc-header-alto   as três linhas. O espaçador em fluxo reserva
        sempre este valor, para o cabeçalho encolher sem realimentar o
        scroll (ver o quadro em `Nav.tsx`).
@@ -60,7 +61,7 @@
   --rc-header-linha: 72px;
   --rc-linha-nav: 56px;
   --rc-linha-busca: 64px;
-  --rc-header-compacto: calc(var(--rc-header-linha) + var(--rc-linha-nav));
+  --rc-header-compacto: calc(var(--rc-linha-nav) + var(--rc-linha-busca));
   --rc-header-alto: calc(var(--rc-header-compacto) + var(--rc-linha-busca));
   --rc-dock-h: 48px;
   --rc-dock-larga: 44rem;

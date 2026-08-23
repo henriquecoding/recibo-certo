@@ -167,6 +167,8 @@ export const PILARES: Pilar[] = [
 
 /** Uma entrada do menu completo. */
 export interface EntradaMenu {
+  /** Só as secções o têm — é por ele que a barra do topo as escolhe. */
+  id?: string;
   label: string;
   href: string;
   /** Uma linha de contexto. Opcional: as entradas legais não precisam. */
@@ -174,6 +176,12 @@ export interface EntradaMenu {
   icone?: string;
   /** Prefixos que a acendem, quando é um destino de secção. */
   prefixos?: string[];
+  /**
+   * Aparece na barra de secções, na primeira linha do cabeçalho de
+   * secretária. É um SUBCONJUNTO do menu, não uma segunda lista: quem não
+   * tem `topo` continua a existir — na folha, no rodapé e na pesquisa.
+   */
+  topo?: true;
 }
 
 export interface GrupoMenu {
@@ -197,6 +205,10 @@ export interface GrupoMenu {
  */
 export const SECOES: EntradaMenu[] = [
   {
+    // Sem `topo`: o hub já está a um clique de qualquer pilar (todos
+    // vivem em `/ferramentas/...` e o migalho leva lá) e da fila da página
+    // inicial. Repeti-lo na barra seria o quinto atalho para o mesmo sítio.
+    id: "ferramentas",
     label: "Todas as ferramentas",
     href: "/ferramentas",
     // A contagem DERIVA do catálogo (§2.3). Nunca se escreve à mão.
@@ -205,6 +217,8 @@ export const SECOES: EntradaMenu[] = [
     prefixos: ["/ferramentas"],
   },
   {
+    id: "guias",
+    topo: true,
     label: "Guias",
     href: "/guias",
     desc: "Passo a passo para cada obrigação, com base legal.",
@@ -212,6 +226,8 @@ export const SECOES: EntradaMenu[] = [
     prefixos: ["/guias"],
   },
   {
+    id: "quiz",
+    topo: true,
     label: "Quiz Fiscal",
     href: "/quiz-fiscal",
     desc: "Testa o que sabes, com a fonte de cada resposta.",
@@ -219,6 +235,8 @@ export const SECOES: EntradaMenu[] = [
     prefixos: ["/quiz-fiscal"],
   },
   {
+    id: "contabilistas",
+    topo: true,
     label: "Contabilistas",
     href: "/contabilistas",
     desc: "O único sítio daqui que acaba com uma pessoa do outro lado.",
@@ -226,6 +244,8 @@ export const SECOES: EntradaMenu[] = [
     prefixos: ["/contabilistas"],
   },
   {
+    id: "planos",
+    topo: true,
     label: "Planos",
     href: "/precos",
     desc: "O que é grátis, o que é Plus e o que a FIZ executa.",
@@ -233,6 +253,26 @@ export const SECOES: EntradaMenu[] = [
     prefixos: ["/precos"],
   },
 ];
+
+/**
+ * AS SECÇÕES QUE VÃO À PRIMEIRA LINHA DO CABEÇALHO.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ NÃO É UMA SEGUNDA LISTA — É UM FILTRO SOBRE A PRIMEIRA               │
+ * │                                                                     │
+ * │ Foi a tentação óbvia (escrever aqui os quatro rótulos outra vez) e   │
+ * │ era exactamente o defeito que este ficheiro existe para não repetir. │
+ * │ A barra do topo mostra as secções que declaram `topo`; a folha do    │
+ * │ menu mostra-as TODAS. Acrescentar uma secção nova ao menu e esquecer │
+ * │ a barra deixa de poder pô-las a discordar: são a mesma lista, vista  │
+ * │ com dois recortes.                                                   │
+ * │                                                                     │
+ * │ A folha continua a ser um SUPERCONJUNTO de propósito — é a           │
+ * │ «navegação completa», e é o único caminho no telemóvel, onde não há  │
+ * │ primeira linha nenhuma.                                              │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const SECOES_TOPO: EntradaMenu[] = SECOES.filter((s) => s.topo);
 
 export const MENU_GRUPOS: GrupoMenu[] = [
   {

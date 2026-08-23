@@ -163,7 +163,7 @@ for (const vp of VIEWPORTS) {
         const nav = document.querySelector('nav[aria-label="Principal"]');
         const grelha = nav?.closest("div.grid");
         const marca = grelha?.querySelector('a[aria-label^="ReciboCerto"]');
-        const accoes = grelha?.querySelector("div.col-start-3");
+        const accoes = grelha?.querySelector("div.row-start-1 > div:last-child");
         const busca = grelha?.querySelector("div.row-start-3");
         const r = (el) => (el ? el.getBoundingClientRect() : null);
         const n = r(nav), m = r(marca), a = r(accoes), b = r(busca), g = r(grelha);
@@ -204,6 +204,42 @@ for (const vp of VIEWPORTS) {
       if (Math.abs(larguras.capsula - larguras.busca) > 1) {
         mal(`${vp.nome}px: cápsula ${larguras.capsula}px e pesquisa ${larguras.busca}px — quase igual não é igual`);
       } else ok(`${vp.nome}px: cápsula e pesquisa com a mesma largura (${larguras.capsula}px)`);
+
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ A BARRA DE PESQUISA NÃO MUDA DE LINHA AO ROLAR                 │
+      // │                                                               │
+      // │ Chegou a subir para o meio da primeira linha ao compactar, e   │
+      // │ ficava encravada entre a marca e a conta — um objecto a saltar  │
+      // │ de sítio ao fim de 40 px de scroll. Agora o que recolhe é a    │
+      // │ PRIMEIRA linha; a cápsula e a barra ficam onde estavam, com a  │
+      // │ mesma largura e no mesmo eixo.                                  │
+      // └───────────────────────────────────────────────────────────────┘
+      const aoRolar = await page.evaluate(async () => {
+        const medir = () => {
+          const g = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
+          const cx = (sel) => {
+            const r = g?.querySelector(sel)?.getBoundingClientRect();
+            return r ? { x: Math.round(r.left + r.width / 2), w: Math.round(r.width) } : null;
+          };
+          return { capsula: cx('nav[aria-label="Principal"]'), busca: cx("div.row-start-3 > div") };
+        };
+        const antes = medir();
+        window.scrollTo(0, 900);
+        await new Promise((r) => setTimeout(r, 700));
+        return { antes, depois: medir(), secoes: !!document.querySelector('nav[aria-label="Secções"]') };
+      });
+      const igual = (a, b) => a && b && Math.abs(a.x - b.x) <= 1 && Math.abs(a.w - b.w) <= 1;
+      if (!igual(aoRolar.antes.busca, aoRolar.depois.busca)) {
+        mal(
+          `${vp.nome}px: a pesquisa muda ao rolar — ${JSON.stringify(aoRolar.antes.busca)} → ` +
+            JSON.stringify(aoRolar.depois.busca),
+        );
+      } else if (!igual(aoRolar.antes.capsula, aoRolar.depois.capsula)) {
+        mal(`${vp.nome}px: a cápsula muda ao rolar`);
+      } else ok(`${vp.nome}px: cápsula e pesquisa não se mexem ao rolar`);
+      if (!aoRolar.secoes) mal(`${vp.nome}px: barra de secções ausente na primeira linha`);
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.waitForTimeout(500);
       if (!capsula.classes.includes("rc-capsula")) mal(`${vp.nome}px: cápsula sem a classe do material`);
       for (const i of capsula.itens) {
         if (!i.visivel) mal(`${vp.nome}px: item «${i.nome}» invisível`);
