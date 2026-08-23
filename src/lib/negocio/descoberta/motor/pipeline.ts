@@ -16,7 +16,10 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
-import type { OpportunityContext } from "../contexto/tipos";
+import { ATIVOS } from "../contexto/perguntas";
+import { CAPACIDADES } from "../conhecimento/dados/capacidades";
+import { COMPETENCIA_POR_ID } from "../conhecimento/dados/competencias";
+import type { AtivoId, OpportunityContext } from "../contexto/tipos";
 import type { Evidencia, LacunaDeEvidencia } from "../proveniencia";
 import { avaliarConfianca } from "./confianca";
 import { deduplicar, destaques, diversificar, type Destaque } from "./diversidade";
@@ -89,10 +92,81 @@ export interface ResultadoDescoberta {
   descartados: readonly CandidatoDescartado[];
   destaques: readonly Destaque[];
   planos: ReadonlyMap<string, PlanoDeInvestigacao>;
+  /**
+   * O que está a impedir o motor de compor mais — por meio em falta.
+   *
+   * Existe sempre, e não só quando o resultado é vazio: alguém com três
+   * hipóteses e uma carrinha por declarar merece saber que a carrinha
+   * abre mais nove tanto quanto quem tem zero.
+   */
+  bloqueiosPorMeio: readonly BloqueioPorMeio[];
+  /** Preenchido só quando não há candidatos. `null` quando há. */
+  diagnosticoVazio: DiagnosticoVazio | null;
   telemetria: TelemetriaDescoberta;
   /** Instante de referência da análise. Entra nos instantâneos. */
   geradoEm: string;
 }
+
+/**
+ * O que impede o motor de compor mais — e quanto custa destrancar.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ O DEFEITO QUE ISTO CORRIGE, MEDIDO                                  │
+ * │                                                                    │
+ * │ Quinze das vinte e cinco capacidades exigem um meio declarado, e   │
+ * │ dez delas exigem «computador» ou «ferramentas» — coisas que quase  │
+ * │ toda a gente tem e ninguém se lembra de declarar. Resultado: DOZE  │
+ * │ das vinte e duas competências, escolhidas sozinhas, geravam ZERO   │
+ * │ hipóteses, e o ecrã respondia «nada passou os critérios · abre o   │
+ * │ que descartámos» — um painel que nesse estado não existe, porque   │
+ * │ não houve descarte nenhum: não houve geração.                      │
+ * │                                                                    │
+ * │ O motor sempre soube o que faltava (`capacidadesBloqueadasPorAtivo`│
+ * │ está lá desde o início). Só o deitava fora antes de chegar ao ecrã.│
+ * │                                                                    │
+ * │ ── DUAS REGRAS QUE ISTO TEM DE RESPEITAR ─────────────────────────│
+ * │  1. Agrupa pelo CONJUNTO de meios em falta, não meio a meio. Uma  │
+ * │     intervenção elétrica exige ferramentas E equipamento técnico;  │
+ * │     prometer que só as ferramentas destrancam alguma coisa seria   │
+ * │     mentira, e foi o que a primeira versão fez.                    │
+ * │  2. Conta o que a pessoa VAI VER, não o que o gerador produz. O    │
+ * │     gerador produzia 2 e o ecrã mostrava 1 — a deduplicação e a    │
+ * │     diversificação vêm depois. Um número ao lado de «declara isto» │
+ * │     tem de ser o número que aparece depois de declarar.            │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export interface BloqueioPorMeio {
+  /** Os meios que têm de existir, todos, para isto destrancar. */
+  ativos: readonly AtivoId[];
+  /** Como se chamam na lista «Meios que já tens». */
+  rotulos: readonly string[];
+  /** As capacidades que este conjunto destranca. */
+  capacidades: readonly string[];
+  /** Hipóteses que a pessoa passa a ver. Contado a correr o motor. */
+  hipotesesQueAbriria: number;
+}
+
+/**
+ * Porque é que não saiu nada — dito com precisão, e só quando é verdade.
+ *
+ * Havia três causas possíveis para um resultado vazio e o ecrã dava a
+ * mesma frase às três, a mandar abrir um painel que em duas delas não
+ * existe. São problemas diferentes e têm saídas diferentes:
+ *
+ *  · `meios-em-falta`  — o grafo tem o que fazer, falta declarar a
+ *    ferramenta. É a causa de doze das vinte e duas competências.
+ *  · `competencia-de-apoio` — a competência declarada reforça outras e
+ *    não sustenta um negócio sozinha (é o caso das línguas, que aparecem
+ *    sempre como competência ÚTIL e nunca como necessária). Não é uma
+ *    falha: é o grafo a dizer a verdade, e a interface tem de a passar.
+ *  · `restricoes` — houve hipóteses e as recusas declaradas apagaram-nas
+ *    todas. Aí sim, «o que descartámos» tem o que mostrar.
+ */
+export type DiagnosticoVazio =
+  | { tipo: "meios-em-falta" }
+  | { tipo: "competencia-de-apoio"; competencias: readonly string[] }
+  | { tipo: "restricoes"; quantas: number }
+  | { tipo: "sem-causa-identificada" };
 
 export interface OpcoesDescoberta {
   evidencia?: readonly MarketPilotEvidence[];
@@ -101,6 +175,12 @@ export interface OpcoesDescoberta {
   /** Incluir hipóteses que exigiriam um meio que a pessoa não tem. */
   incluirForaDePerfil?: boolean;
   agora?: () => string;
+  /**
+   * Travão de recursão. Calcular os bloqueios exige correr o motor outra
+   * vez com o meio acrescentado; essa passagem não volta a calculá-los.
+   * Interno — não faz parte da API de quem chama de fora.
+   */
+  semBloqueios?: boolean;
 }
 
 /**
@@ -119,6 +199,7 @@ export function descobrir(
     limite = 12,
     incluirForaDePerfil = false,
     agora = () => new Date().toISOString(),
+    semBloqueios = false,
   } = opcoes;
 
   const etapas: ContagemEtapa[] = [];
@@ -228,6 +309,17 @@ export function descobrir(
     descartados,
     destaques: destaques(ordenados),
     planos,
+    bloqueiosPorMeio:
+      semBloqueios || incluirForaDePerfil
+        ? []
+        : bloqueiosPorMeio(contexto, geracao.capacidadesBloqueadasPorAtivo, ordenados.length, {
+            evidencia,
+            limite,
+          }),
+    diagnosticoVazio:
+      ordenados.length > 0
+        ? null
+        : diagnosticar(contexto, geracao.capacidadesBloqueadasPorAtivo.length, restricoes.descartados.length),
     geradoEm: agora(),
     telemetria: {
       etapas,
@@ -242,6 +334,99 @@ export function descobrir(
       bloqueadasPorAtivo: geracao.capacidadesBloqueadasPorAtivo.length,
     },
   };
+}
+
+/**
+ * A causa de um resultado vazio, na ordem em que é acionável.
+ *
+ * A ordem não é arbitrária: primeiro o que a pessoa resolve com um clique
+ * (declarar um meio), depois o que exige responder outra pergunta, e só
+ * no fim o que exige rever as recusas.
+ */
+function diagnosticar(
+  contexto: OpportunityContext,
+  bloqueadas: number,
+  descartadas: number,
+): DiagnosticoVazio {
+  if (bloqueadas > 0) return { tipo: "meios-em-falta" };
+  if (descartadas > 0) return { tipo: "restricoes", quantas: descartadas };
+
+  // Uma competência que o grafo só conhece como reforço de outras nunca
+  // alcança capacidade nenhuma sozinha. Dizer «nada passou os critérios»
+  // a quem escolheu «Línguas estrangeiras» é verdade e não é resposta.
+  const declaradas = contexto.competencias.map((item) => item.id);
+  const soDeApoio = declaradas.filter(
+    (id) =>
+      !CAPACIDADES.some((capacidade) => capacidade.competenciasNecessarias.includes(id)) &&
+      CAPACIDADES.some((capacidade) => capacidade.competenciasUteis.includes(id)),
+  );
+  if (soDeApoio.length > 0 && soDeApoio.length === declaradas.length) {
+    return {
+      tipo: "competencia-de-apoio",
+      competencias: soDeApoio.map(
+        (id) => COMPETENCIA_POR_ID.get(id)?.rotulo ?? id,
+      ),
+    };
+  }
+
+  return { tipo: "sem-causa-identificada" };
+}
+
+/**
+ * Agrupa os bloqueios pelo CONJUNTO de meios em falta e conta, a sério,
+ * quantas hipóteses cada conjunto destranca.
+ *
+ * A conta corre o motor inteiro com os meios acrescentados e subtrai o
+ * que já havia. É mais caro do que estimar — e é a única forma de o
+ * número ao lado de «declara isto» ser o mesmo que aparece a seguir.
+ * O motor é puro e síncrono (dezenas de milissegundos para o grafo todo),
+ * por isso o custo cabe no orçamento de uma análise.
+ */
+function bloqueiosPorMeio(
+  contexto: OpportunityContext,
+  bloqueadas: readonly { capacidade: { rotulo: string }; ativosEmFalta: readonly AtivoId[] }[],
+  jaVisiveis: number,
+  opcoes: { evidencia: readonly MarketPilotEvidence[]; limite: number },
+): readonly BloqueioPorMeio[] {
+  if (bloqueadas.length === 0) return [];
+
+  // A chave é o conjunto ordenado — «ferramentas+equipamento-tecnico» é
+  // um bloqueio só, não dois meios bloqueios.
+  const porConjunto = new Map<string, { ativos: AtivoId[]; capacidades: string[] }>();
+  for (const bloqueada of bloqueadas) {
+    if (bloqueada.ativosEmFalta.length === 0) continue;
+    const ativos = [...bloqueada.ativosEmFalta].sort();
+    const chave = ativos.join("+");
+    const entrada = porConjunto.get(chave) ?? { ativos, capacidades: [] };
+    entrada.capacidades.push(bloqueada.capacidade.rotulo);
+    porConjunto.set(chave, entrada);
+  }
+
+  const resultado: BloqueioPorMeio[] = [];
+  for (const { ativos, capacidades } of porConjunto.values()) {
+    const comEstes = descobrir(
+      { ...contexto, ativos: [...contexto.ativos, ...ativos] },
+      { ...opcoes, semBloqueios: true },
+    );
+    const abre = comEstes.candidatos.length - jaVisiveis;
+    if (abre <= 0) continue;
+    resultado.push({
+      ativos,
+      rotulos: ativos.map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id),
+      capacidades,
+      hipotesesQueAbriria: abre,
+    });
+  }
+
+  // Primeiro o que mais destranca; depois o conjunto mais pequeno (pedir
+  // um meio é mais barato do que pedir dois); o rótulo desempata, para a
+  // ordem ser estável — o motor é determinístico e esta lista também.
+  return resultado.sort(
+    (esquerda, direita) =>
+      direita.hipotesesQueAbriria - esquerda.hipotesesQueAbriria ||
+      esquerda.ativos.length - direita.ativos.length ||
+      esquerda.rotulos.join().localeCompare(direita.rotulos.join(), "pt-PT"),
+  );
 }
 
 /**

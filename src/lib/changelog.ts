@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.98.0",
+    data: "2026-08-23",
+    titulo: "«Zero hipóteses» passou a dizer porquê — e a resolver-se com um clique",
+    itens: [
+      "Havia um beco sem saída na ferramenta de descobrir negócio, e era grande: doze das vinte e duas competências, escolhidas sozinhas, devolviam zero hipóteses. Um programador que escolhesse «Programação» e mais nada via «0 hipóteses passaram os critérios» e a indicação para abrir um painel que nesse ecrã nem existe.",
+      "A causa: quinze das vinte e cinco capacidades do motor precisam de uma ferramenta declarada, e dez delas precisam de um computador ou de uma caixa de ferramentas — coisas que quase toda a gente tem e ninguém se lembra de declarar. O motor sempre soube o que faltava; simplesmente não o dizia.",
+      "Agora diz, e resolve: «Computador de trabalho destranca construir e manter software — 1 hipótese», com um botão «Tenho isto» que declara o meio e volta a correr o motor. O número prometido é contado a correr o motor com esse meio, não estimado — é exatamente o que aparece a seguir.",
+      "Quando uma capacidade precisa de dois meios (uma intervenção elétrica precisa de ferramentas E de equipamento técnico), o motor pede os dois juntos em vez de prometer que um deles chega.",
+      "Há competências que reforçam outras e não sustentam um negócio sozinhas — as línguas são o caso. Zero hipóteses é a resposta certa; o que faltava era dizê-lo. Passou a dizer: «Línguas estrangeiras reforça, mas não sustenta sozinha».",
+      "E quando foram mesmo as tuas recusas a eliminar tudo, é isso que aparece — com o caminho para ver o que caiu e porquê.",
+    ],
+  },
+  {
     version: "2.97.1",
     data: "2026-08-23",
     titulo: "Filtros a sério para escolher o que sabes fazer",

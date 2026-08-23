@@ -130,7 +130,13 @@ export interface ResultadoGeracao {
   candidatos: readonly CandidatoBruto[];
   /** Quantas combinações foram consideradas antes de qualquer filtro. */
   combinacoesConsideradas: number;
-  /** Capacidades que a pessoa alcançaria se tivesse o ativo em falta. */
+  /**
+   * Capacidades que a pessoa alcançaria se tivesse o ativo em falta.
+   *
+   * Quem transforma isto em «declara este meio e abres N hipóteses» é o
+   * pipeline: só ele sabe quantas hipóteses sobrevivem à deduplicação e
+   * à diversificação, e o número prometido tem de ser o que aparece.
+   */
   capacidadesBloqueadasPorAtivo: readonly CapacidadeAlcancada[];
 }
 

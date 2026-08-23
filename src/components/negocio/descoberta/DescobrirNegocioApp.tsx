@@ -22,6 +22,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import {
   CONTEXTO_INICIAL,
+  type AtivoId,
   type OpportunityContext,
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { descobrir, type ResultadoDescoberta } from "@/lib/negocio/descoberta/motor/pipeline";
@@ -141,6 +142,21 @@ export default function DescobrirNegocioApp() {
     analisar(proximo);
   };
 
+  // ── Declarar um meio a partir do resultado vazio ──────────────────
+  //  O motor diz «declara "Computador de trabalho" e abres 1 hipótese».
+  //  A pessoa não devia ter de voltar atrás, encontrar a secção certa e
+  //  procurar a pastilha: carrega, o meio entra no contexto e o motor
+  //  corre outra vez. O perfil deixa de estar guardado, como em qualquer
+  //  outra alteração ao contexto.
+  const declararMeios = (ativos: readonly AtivoId[]) => {
+    const novos = ativos.filter((id) => !contexto.ativos.includes(id));
+    if (novos.length === 0) return;
+    const proximo = { ...contexto, ativos: [...contexto.ativos, ...novos] };
+    setContexto(proximo);
+    setPerfilGuardado(false);
+    analisar(proximo);
+  };
+
   const hipotesesGuardadas = useMemo(
     () => new Set(hipoteses.map((item) => item.templateId)),
     [hipoteses],
@@ -202,6 +218,7 @@ export default function DescobrirNegocioApp() {
         efeitosWhatIf={efeitosWhatIf}
         onAplicarWhatIf={aplicarWhatIf}
         diferenca={diferenca}
+        onDeclararMeios={declararMeios}
       />
     );
   }
