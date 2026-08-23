@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+import type { PackOferta } from "@/lib/negocio/market/oferta";
 import { ATIVOS } from "../contexto/perguntas";
 import { CAPACIDADES } from "../conhecimento/dados/capacidades";
 import { COMPETENCIA_POR_ID } from "../conhecimento/dados/competencias";
@@ -170,6 +171,14 @@ export type DiagnosticoVazio =
 
 export interface OpcoesDescoberta {
   evidencia?: readonly MarketPilotEvidence[];
+  /**
+   * Contagem de operadores por divisão da CAE, do INE.
+   *
+   * Opcional de propósito: o motor tem de correr sem ela — e correu
+   * sempre — devolvendo «lacuna por apurar». Torná-la obrigatória faria
+   * uma falha de rede apagar a análise inteira.
+   */
+  oferta?: PackOferta;
   /** Quantos candidatos apresentar. O resto continua a existir. */
   limite?: number;
   /** Incluir hipóteses que exigiriam um meio que a pessoa não tem. */
@@ -200,6 +209,7 @@ export function descobrir(
     incluirForaDePerfil = false,
     agora = () => new Date().toISOString(),
     semBloqueios = false,
+    oferta,
   } = opcoes;
 
   const etapas: ContagemEtapa[] = [];
@@ -230,7 +240,7 @@ export function descobrir(
 
   for (const bruto of restricoes.aprovados) {
     const regulacao = avaliarRegulacao(bruto);
-    const procura = avaliarProcura({ candidato: bruto, evidencePorTemplate });
+    const procura = avaliarProcura({ candidato: bruto, evidencePorTemplate, oferta });
     const viabilidade = avaliarViabilidade(bruto, contexto, regulacao.barreira);
     const riscos = avaliarRiscos(bruto, contexto, regulacao);
     const { total: fit, detalhe: fitDetalhe } = calcularFit(bruto, contexto);
@@ -315,6 +325,7 @@ export function descobrir(
         : bloqueiosPorMeio(contexto, geracao.capacidadesBloqueadasPorAtivo, ordenados.length, {
             evidencia,
             limite,
+            oferta,
           }),
     diagnosticoVazio:
       ordenados.length > 0
@@ -386,7 +397,7 @@ function bloqueiosPorMeio(
   contexto: OpportunityContext,
   bloqueadas: readonly { capacidade: { rotulo: string }; ativosEmFalta: readonly AtivoId[] }[],
   jaVisiveis: number,
-  opcoes: { evidencia: readonly MarketPilotEvidence[]; limite: number },
+  opcoes: { evidencia: readonly MarketPilotEvidence[]; limite: number; oferta?: PackOferta },
 ): readonly BloqueioPorMeio[] {
   if (bloqueadas.length === 0) return [];
 

@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.99.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta passou a saber quantos concorrentes já existem na tua zona",
+    itens: [
+      "Até hoje, a leitura de mercado acabava sempre em «lacuna por apurar». Não era preguiça: faltava metade da conta. A ferramenta sabia ler procura e não sabia ler oferta — e sem os dois termos, dizer que há uma lacuna seria uma conclusão sem conta nenhuma por trás.",
+      "Passou a ler. Cada hipótese diz agora em que divisão da CAE um operador dela se inscreveria, e a ferramenta vai buscar ao INE quantas empresas existem nessa atividade, na tua região: são 2 706 empresas de limpeza e manutenção de edifícios no Algarve, 501 no Alentejo, 4 447 no Norte.",
+      "O número sozinho engana — o Norte tem nove vezes mais empresas do que o Alentejo e também tem sete vezes mais gente. Por isso a comparação é feita por dez mil habitantes: 46,8 no Algarve contra uma mediana nacional de 11,6. É aí que se vê que o Algarve está saturado e o Alentejo não.",
+      "Quando há procura publicada E a oferta é densa, a ferramenta diz «procura com oferta instalada»: entrar ali é entrar num mercado servido. Quando a oferta é rala, diz que é o melhor sinal que consegue dar com dados oficiais — e avisa que continua a não provar que alguém paga.",
+      "Quando só há oferta e não há procura, continua a dizer que não sabe. Pouca concorrência tanto pode ser espaço por ocupar como mercado que não existe, e confundir as duas é o erro mais caro de quem escolhe um negócio.",
+      "As divisões da CAE são largas — a que conta as limpezas conta também a jardinagem. A ferramenta diz isso em vez de o esconder, e transforma-o numa pergunta a investigar: quantas dessas empresas fazem mesmo isto?",
+      "Dados do INE: empresas por região e atividade (Sistema de contas integradas das empresas, 2023) e população residente (estimativas anuais, 2025). Licença CC BY 4.0, lidos em tempo real e nunca inventados: se a fonte falhar, a leitura desaparece em vez de aparecer um número plausível.",
+    ],
+  },
+  {
     version: "2.98.0",
     data: "2026-08-23",
     titulo: "«Zero hipóteses» passou a dizer porquê — e a resolver-se com um clique",

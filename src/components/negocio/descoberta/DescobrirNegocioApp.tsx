@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+import type { PackOferta } from "@/lib/negocio/market/oferta";
 import {
   CONTEXTO_INICIAL,
   type AtivoId,
@@ -57,6 +58,7 @@ export default function DescobrirNegocioApp() {
   const [contexto, setContexto] = useState<OpportunityContext>(CONTEXTO_INICIAL);
   const [resultado, setResultado] = useState<ResultadoDescoberta | null>(null);
   const [evidencia, setEvidencia] = useState<readonly MarketPilotEvidence[]>([]);
+  const [oferta, setOferta] = useState<PackOferta | undefined>(undefined);
   const [aConsultar, setAConsultar] = useState(true);
   const [aAnalisar, setAAnalisar] = useState(false);
   const [hipoteses, setHipoteses] = useState<readonly MarketHypothesis[]>([]);
@@ -84,6 +86,25 @@ export default function DescobrirNegocioApp() {
     return () => controlador.abort();
   }, []);
 
+  // ── O pack de OFERTA, também uma vez por sessão ───────────────────
+  //  Independente do de pilotos de propósito: são eixos diferentes e
+  //  falham de maneiras diferentes. Se a oferta não vier, o motor corre
+  //  na mesma e volta a dizer «lacuna por apurar» — que é o que dizia
+  //  antes de esta fonte existir.
+  useEffect(() => {
+    const controlador = new AbortController();
+    fetch("/api/market/oferta", { signal: controlador.signal, headers: { Accept: "application/json" } })
+      .then((resposta) => {
+        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+        return resposta.json() as Promise<PackOferta>;
+      })
+      .then((payload) => {
+        setOferta(Array.isArray(payload?.divisoes) && payload.divisoes.length > 0 ? payload : undefined);
+      })
+      .catch(() => setOferta(undefined));
+    return () => controlador.abort();
+  }, []);
+
   // ── O que já está guardado, lido depois da montagem ───────────────
   useEffect(() => {
     const guardado = lerPerfilGuardado();
@@ -95,9 +116,8 @@ export default function DescobrirNegocioApp() {
   }, []);
 
   const correr = useCallback(
-    (paraContexto: OpportunityContext) =>
-      descobrir(paraContexto, { evidencia, limite: 10 }),
-    [evidencia],
+    (paraContexto: OpportunityContext) => descobrir(paraContexto, { evidencia, oferta, limite: 10 }),
+    [evidencia, oferta],
   );
 
   const analisar = useCallback(
