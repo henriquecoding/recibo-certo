@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.100.0",
+    data: "2026-08-23",
+    titulo: "Quatro vezes mais hipóteses passam a ter dados oficiais por trás",
+    itens: [
+      "A ferramenta tinha uma ponte desligada. Cada problema que o motor conhece já dizia, internamente, que estatísticas oficiais o medem — e esse campo só era usado para escrever o plano de investigação. A evidência de verdade chegava por outro caminho: só as hipóteses que coincidiam com um dos cinco dossiers com dados ligados recebiam números.",
+      "O resultado era o motor a contradizer-se: o plano dizia «esta fonte está ligada» e o cartão ao lado não mostrava leitura nenhuma. Medido em 713 hipóteses, 16% tinham sinal de procura.",
+      "Ligada a ponte, são 61%. Uma hipótese composta que ninguém escreveu passa a receber as séries que medem o problema que ataca — ocupação hoteleira, casas transacionadas, índice de envelhecimento, competências digitais, contratos públicos.",
+      "Com a leitura de oferta que entrou na versão anterior, 94% das hipóteses têm agora contagem de concorrentes, e 13% chegam a uma leitura de lacuna a sério — «procura com oferta instalada» ou «procura com pouca oferta» —, coisa que antes era estruturalmente impossível.",
+      "Três problemas declaravam estatísticas e declaravam-se, ao mesmo tempo, não mensuráveis por fonte pública. Não era descuido: a ocupação hoteleira não mede se um produtor tem tempo para o lado comercial. Esses sinais ficam no plano de investigação e fora da evidência — o motor não anexa um número a fingir que mede o que não mede.",
+      "Um sinal mal escrito deixaria de trazer dados sem dar erro nenhum. Passou a haver uma verificação que recusa qualquer sinal que não corresponda a uma série publicada.",
+    ],
+  },
+  {
     version: "2.99.0",
     data: "2026-08-23",
     titulo: "A ferramenta passou a saber quantos concorrentes já existem na tua zona",

@@ -112,16 +112,59 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
   const lacunas: LacunaDeEvidencia[] = [];
   const evidencias: Evidencia[] = [];
 
-  // A ponte para a evidência real passa pelos seeds: um candidato só
-  // chega às séries do INE quando compõe um par (problema, modelo) que
-  // um dossier curado também ataca. Para os outros — a maioria — não há
-  // observação, e o motor diz isso.
-  const pack = candidato.seedTemplateId ? evidencePorTemplate.get(candidato.seedTemplateId) : undefined;
+  // ── DUAS PONTES PARA A MESMA EVIDÊNCIA ───────────────────────────
+  //  A primeira sempre existiu: quando o candidato compõe um par
+  //  (problema, modelo) que um dossier curado também ataca, herda o pack
+  //  desse dossier. Cobria cinco dossiers — 16 % das hipóteses, medido.
+  //
+  //  A segunda estava declarada e nunca tinha sido ligada. Cada problema
+  //  do grafo diz, no campo `sinais`, que séries o medem — dezanove dos
+  //  vinte e oito declaram pelo menos uma. Esse campo só era lido pelo
+  //  PLANEADOR, para marcar uma consulta como «já ligada»: o plano dizia
+  //  que a fonte estava ligada e a evidência não aparecia em lado nenhum.
+  //  Duas partes do mesmo motor a discordar uma da outra.
+  //
+  //  As duas somam-se, e a soma é deduplicada pelo id da observação: um
+  //  dossier curado não perde as séries que o seu pack tem a mais (o
+  //  registo de alojamento local, por exemplo, que nenhum problema
+  //  declara), e uma composição sem dossier passa a receber as séries
+  //  que o seu problema declara.
+  const vistas = new Set<string>();
+  const juntar = (observacoes: readonly MarketObservationSummary[]) => {
+    const { local, nacional } = splitObservationsByRegion(observacoes, candidato.regiao);
+    for (const observacao of local) {
+      if (vistas.has(observacao.id)) continue;
+      vistas.add(observacao.id);
+      evidencias.push(comoEvidencia(observacao, true));
+    }
+    for (const observacao of nacional) {
+      if (vistas.has(observacao.id)) continue;
+      vistas.add(observacao.id);
+      evidencias.push(comoEvidencia(observacao, false));
+    }
+  };
 
-  if (pack) {
-    const { local, nacional } = splitObservationsByRegion(pack.observations, candidato.regiao);
-    for (const observacao of local) evidencias.push(comoEvidencia(observacao, true));
-    for (const observacao of nacional) evidencias.push(comoEvidencia(observacao, false));
+  const pack = candidato.seedTemplateId ? evidencePorTemplate.get(candidato.seedTemplateId) : undefined;
+  if (pack) juntar(pack.observations);
+
+  // ── O VETO DO PRÓPRIO PROBLEMA ───────────────────────────────────
+  //  Três problemas declaram sinais E declaram-se NÃO observáveis, e não
+  //  é um descuido: a ocupação hoteleira não mede se um produtor tem
+  //  tempo para o lado comercial, e a contagem de sociedades nascidas não
+  //  mede se uma equipa comercial anda sem lista. São contexto — servem
+  //  ao planeador para saber que fonte consultar — e não medem a
+  //  intensidade da necessidade.
+  //
+  //  Anexá-los como procura seria o motor a contradizer-se: a nota diz
+  //  «nenhuma fonte pública mede isto» e o cartão ao lado mostrava um
+  //  número a fingir que media. Quando o problema se declara não
+  //  observável, os sinais ficam no plano de investigação e fora da
+  //  evidência.
+  if (candidato.problema.sinais.length > 0 && candidato.problema.procuraObservavel) {
+    const pedidos = new Set(candidato.problema.sinais);
+    for (const disponivel of evidencePorTemplate.values()) {
+      juntar(disponivel.observations.filter((observacao) => pedidos.has(observacao.seriesId)));
+    }
   }
 
   // ── A oferta, quando a ontologia sabe classificar a hipótese ─────
