@@ -131,7 +131,8 @@ src/lib/negocio/descoberta/
 │   ├── viabilidade.ts Intervalos, nunca falsa precisão
 │   ├── regulacao.ts   Licenças e requisitos, com fonte ou sem afirmação
 │   ├── procura.ts     Lacuna = procura − oferta (e a distinção crítica)
-│   ├── risco.ts       Sete dimensões, separadas
+│   ├── intensidade.ts O VALOR de cada série, contra uma referência declarada
+│   ├── risco.ts       Oito dimensões, separadas, com «apurado» ou assumido
 │   ├── scoring.ts     OpportunityScore multidimensional, pesos justificados
 │   ├── confianca.ts   Confiança ≠ fit ≠ mercado
 │   ├── stress.ts      Tentar destruir antes de promover
@@ -202,6 +203,47 @@ declarar.
 
 ---
 
+## 3.1. O que a pontuação mede, e o que NÃO mede
+
+Oito dimensões, agrupadas em três eixos combinados por **média geométrica** —
+um eixo arrasado não é compensável pelos outros:
+
+| Eixo | Expoente | Dimensões |
+|---|---:|---|
+| Mercado | 0,45 | procura · lacuna de oferta · geografia |
+| Encaixe contigo | 0,30 | fit pessoal |
+| Viabilidade | 0,25 | economia · exequibilidade · regulação · risco |
+
+Três regras que a tabela tem de respeitar, e que estão presas por testes em
+`negocio-descoberta-auditoria.test.ts`:
+
+1. **Nenhuma dimensão mede a quantidade de dados.** A força da evidência e a
+   atualidade das leituras vivem na CONFIANÇA e nunca tocam no score. Uma
+   hipótese não vale mais por sabermos mais sobre ela.
+2. **Nenhuma variável pontua duas vezes.** O fit responde «consegues fazer
+   isto?»; a economia responde «cabe no que tens?»; a exequibilidade responde
+   «tens como executar?»; a geografia responde «é aqui?». Capital, tempo,
+   equipa e geografia saíram do fit por causa desta regra — ver a matriz de
+   sobreposição no cabeçalho de `fit.ts`.
+3. **A procura lê o VALOR, nunca o número de linhas.** `intensidade.ts`
+   normaliza cada série contra uma referência declarada no ecrã — o percentil
+   da zona entre as nove NUTS II, ou o índice face ao valor nacional. Uma
+   contagem absoluta (empresas, alojamentos, transações) só é comparável
+   depois de dividida pela população: sem denominador não pontua, porque
+   comparar contagens entre regiões mede o tamanho da região.
+
+A pontuação é publicada como **intervalo** derivado da cobertura: «77, entre
+41 e 92 consoante o que ainda não sabemos». Quando todas as dimensões têm
+base, o intervalo colapsa no ponto — e essa é a recompensa por responder a
+mais perguntas.
+
+O `evidence-gate` de `market/` é o **teto da confiança**: um dossier em
+`template` nunca chega a «confiança alta» e um `contradicted` não passa de
+«insuficiente», por muitas leituras que traga. As observações que ele não
+lista em `usableObservationIds` não entram na evidência nem no score.
+
+---
+
 ## 4. O que fica por fazer, dito à cabeça
 
 - **Pesquisa web em direto não está ligada.** O `planeador.ts` produz o plano de
@@ -250,11 +292,21 @@ declarar.
   leituras retidas à contagem de linhas rejeitadas. O mecanismo continua vivo e
   testado — é o que retém qualquer leitura desta fonte que não agregue.
 
-- **Sinais de oferta e concorrência continuam a zero.** O motor sabe raciocinar
-  sobre lacuna e distingue «pouca oferta com procura» de «pouca oferta sem
-  procura» — mas, sem uma série de `supply`, a resposta honesta é «não sabemos».
+- **A oferta entrou, e a lacuna deixou de ser sempre «por apurar».** O motor lê
+  o indicador 0014449 do INE — empresas por NUTS 2024 e divisão da CAE — e a
+  ontologia diz em que divisão um operador de cada hipótese se inscreveria.
+  Normalizado pela população residente (INE 0012918), dá operadores por dez mil
+  habitantes, comparável entre as nove regiões. A leitura de lacuna só é
+  produzida quando existem OS DOIS termos: sem procura publicada, densidade
+  baixa é indistinguível de mercado que não existe.
 
-  E o RNAL não é essa série, apesar de contar operadores. Todas as hipóteses do
+  Isso alimenta também a dimensão de risco competitivo, que era uma constante
+  em nível 2 para todos os candidatos. Quando a densidade não é apurável, o
+  nível continua a ser 2 mas fica marcado como **não apurado** — e o que não
+  foi apurado não conta para a contagem que baixa o score. Assumir por
+  prudência é legítimo; punir por uma suposição não é.
+
+  E o RNAL nunca foi essa série, apesar de contar operadores. Todas as hipóteses do
   produto são serviços prestados a alguém, e o RNAL conta esse alguém: para
   «operações locais para alojamento turístico», os 44 818 alojamentos do Algarve
   não são a concorrência — são a lista de clientes possíveis. Classificá-los

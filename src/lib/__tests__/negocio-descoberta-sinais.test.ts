@@ -67,6 +67,12 @@ describe("sinais: cada um aponta para uma série que existe", () => {
           piloto.templateId,
           {
             templateId: piloto.templateId,
+            // O gate governa: uma observação que ele não liste em
+            // `usableObservationIds` não entra na evidência nem no score.
+            gate: {
+              state: "evidence_qualified",
+              usableObservationIds: piloto.series.map((serie) => `falso:${serie.id}`),
+            },
             observations: piloto.series.map((serie) => ({
               id: `falso:${serie.id}`,
               seriesId: serie.id,
@@ -85,7 +91,7 @@ describe("sinais: cada um aponta para uma série que existe", () => {
         ]),
       ) as unknown as Parameters<typeof avaliarProcura>[0]["evidencePorTemplate"];
 
-      const resultado = avaliarProcura({ candidato, evidencePorTemplate: pilotos });
+      const resultado = avaliarProcura({ candidato, evidencePorTemplate: pilotos, agora: "2026-08-23" });
       expect(resultado.evidencias, problema.id).toEqual([]);
     }
   });

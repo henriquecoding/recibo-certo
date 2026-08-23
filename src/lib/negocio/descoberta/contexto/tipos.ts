@@ -366,6 +366,78 @@ export function nivelDe(contexto: OpportunityContext, competenciaId: string): nu
   return declarada.nivel === "avancado" ? 3 : declarada.nivel === "intermedio" ? 2 : 1;
 }
 
+/**
+ * O mesmo nível em [0, 1], para PONDERAR em vez de testar.
+ *
+ * O configurador pergunta básico / intermédio / avançado desde sempre, e
+ * o grafo lia a resposta como um booleano — `nivelDe(...) > 0`. Alguém
+ * com dez anos de canalização e alguém que mexeu uma vez num sifão
+ * produziam a mesma cobertura, o mesmo fit e a mesma posição na lista.
+ *
+ * A escala não começa em zero de propósito: quem declara «básico» SABE
+ * fazer, e vale 0,6 do que sabe quem domina. Começar em 0,33 castigava
+ * quem responde com honestidade — e é exatamente essa pessoa que a
+ * ferramenta tem de servir bem.
+ */
+export function forcaDe(contexto: OpportunityContext, competenciaId: string): number {
+  const declarada = contexto.competencias.find((item) => item.id === competenciaId);
+  if (!declarada) return 0;
+  return declarada.nivel === "avancado" ? 1 : declarada.nivel === "intermedio" ? 0.8 : 0.6;
+}
+
+/**
+ * Quanto vale a relação declarada com uma área, em [0, 1].
+ *
+ * Seis valores, e o comentário que os introduziu dizia que «tenho
+ * contactos» é o mais valioso dos seis para vender o primeiro serviço.
+ * Estava certo, e durante todo esse tempo o campo não era lido por uma
+ * única linha do motor. Passa a ser: é a diferença entre saber fazer e
+ * ter a quem vender, e é a que decide se o primeiro mês tem receita.
+ */
+const PESO_EXPERIENCIA: Readonly<Record<TipoExperiencia, number>> = Object.freeze({
+  "tenho-contactos": 1,
+  geri: 0.9,
+  trabalhei: 0.75,
+  "conheco-setor": 0.6,
+  "sei-fazer": 0.45,
+  interesse: 0.2,
+});
+
+/**
+ * A força da experiência numa competência, com os anos a somar.
+ *
+ * `undefined` devolve 0,35 e não zero: não declarar não é não ter, e o
+ * campo é opcional no formulário. Os anos valem no máximo mais 0,15, com
+ * teto aos cinco — a diferença entre um e cinco anos é grande, a
+ * diferença entre dez e vinte não é o que decide um negócio novo.
+ */
+export function experienciaForca(
+  contexto: OpportunityContext,
+  competenciaId: string,
+): number | null {
+  const declarada = contexto.competencias.find((item) => item.id === competenciaId);
+  if (!declarada) return null;
+  const base = declarada.experiencia === undefined ? 0.35 : PESO_EXPERIENCIA[declarada.experiencia];
+  const anos = declarada.anos ?? 0;
+  return Math.min(1, base + 0.15 * Math.min(1, anos / 5));
+}
+
+/**
+ * O nível de escalabilidade que cada ambição pressupõe, em 0–3.
+ *
+ * `ambicao` estava recolhida com quatro respostas e não era lida em lado
+ * nenhum. Não serve para estimar receita — isso o motor recusa fazer —
+ * mas serve para uma afirmação estrutural e verificável: um modelo que
+ * troca horas por dinheiro (escalabilidade 0) não escala, e propô-lo a
+ * quem disse «quero escalar» é propor o contrário do que foi pedido.
+ */
+export const ESCALABILIDADE_PRETENDIDA: Readonly<Record<AmbicaoNegocio, number>> = Object.freeze({
+  complemento: 0,
+  "substituir-salario": 1,
+  crescer: 2,
+  escalar: 3,
+});
+
 /** A pessoa tem contactos ou experiência de gestão nesta competência? */
 export function experienciaDe(
   contexto: OpportunityContext,

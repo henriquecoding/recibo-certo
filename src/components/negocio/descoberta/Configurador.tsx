@@ -107,6 +107,7 @@ import {
   Seccao,
   type OpcaoFiltravel,
 } from "./atomos";
+import ExplorarSemCompetencias from "./ExplorarSemCompetencias";
 
 const NIVEIS_COMPETENCIA: readonly { id: NivelCompetencia; rotulo: string }[] = [
   { id: "basico", rotulo: "Básico" },
@@ -187,6 +188,10 @@ export default function Configurador({
   const [descricoes, setDescricoes] = useState(false);
 
   const profundidade = useMemo(() => profundidadeDoContexto(contexto), [contexto]);
+  const idsDeclarados = useMemo(
+    () => new Set(contexto.competencias.map((item) => item.id)),
+    [contexto.competencias],
+  );
 
   const alterar = (parcial: Partial<OpportunityContext>) => onChange({ ...contexto, ...parcial });
 
@@ -369,6 +374,19 @@ export default function Configurador({
             É por aqui que o motor começa: sem isto não consegue compor hipótese nenhuma. Escolhe o
             que farias por dinheiro amanhã, não o que gostavas de aprender.
           </p>
+
+          {/* Quem chega sem saber o que sabe fazer não fica com um botão
+              desativado: fica com a lista dos problemas que existem, para
+              se reconhecer numa e declarar a competência a partir dali. */}
+          {contexto.competencias.length === 0 ? (
+            <div className="mb-4">
+              <ExplorarSemCompetencias
+                regiao={contexto.localizacao.regiao}
+                declaradas={idsDeclarados}
+                onDeclarar={alternarCompetencia}
+              />
+            </div>
+          ) : null}
 
           <ListaFiltravel
             nome="competencias"

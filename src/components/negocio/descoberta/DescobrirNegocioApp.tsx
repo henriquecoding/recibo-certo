@@ -146,11 +146,35 @@ export default function DescobrirNegocioApp() {
   );
 
   // ── E se? Corre o motor sobre o contexto alterado ─────────────────
+  //  ┌──────────────────────────────────────────────────────────────┐
+  //  │ DOIS DEFEITOS NUMA LINHA SÓ                                   │
+  //  │                                                              │
+  //  │ `.slice(0, 4)` cortava ANTES de correr, e portanto os quatro  │
+  //  │ cenários mostrados eram os quatro primeiros da lista — não os │
+  //  │ quatro que mais mudam alguma coisa. Uma pessoa podia ver      │
+  //  │ quatro cenários que não desbloqueiam nada enquanto o quinto,  │
+  //  │ escondido, abria sete hipóteses.                              │
+  //  │                                                              │
+  //  │ E 13,6 % dos perfis saíam de mãos vazias sem ver escada       │
+  //  │ nenhuma. O cálculo que responde a «se aceitasses B2B,         │
+  //  │ apareceriam 4» já existia — só corria quando já havia         │
+  //  │ resultados, que é precisamente quando é menos preciso.        │
+  //  │                                                              │
+  //  │ Corre-se tudo (o pipeline é síncrono e leva milissegundos),   │
+  //  │ ordena-se pelo que abre, e mostram-se os quatro melhores.     │
+  //  └──────────────────────────────────────────────────────────────┘
   const efeitosWhatIf: readonly EfeitoWhatIf[] = useMemo(() => {
     if (!resultado) return [];
     return CENARIOS_WHATIF.filter((cenario) => cenario.aplicavel(contexto))
-      .slice(0, 4)
-      .map((cenario) => compararCenario(cenario, resultado, correr(cenario.aplicar(contexto))));
+      .map((cenario) => compararCenario(cenario, resultado, correr(cenario.aplicar(contexto))))
+      .sort(
+        (esquerda, direita) =>
+          direita.novas.length - esquerda.novas.length ||
+          direita.desbloqueadas - esquerda.desbloqueadas ||
+          direita.subiram.length - esquerda.subiram.length ||
+          esquerda.cenario.id.localeCompare(direita.cenario.id),
+      )
+      .slice(0, 4);
   }, [resultado, contexto, correr]);
 
   const aplicarWhatIf = (cenarioId: string) => {

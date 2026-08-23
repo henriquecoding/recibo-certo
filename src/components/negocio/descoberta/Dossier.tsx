@@ -17,7 +17,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatarIntervalo, ROTULO_ORIGEM } from "@/lib/negocio/descoberta/proveniencia";
 import { descreverZona, ROTULO_ENTREGA } from "@/lib/negocio/descoberta/motor/gerador";
-import { ROTULO_DIMENSAO } from "@/lib/negocio/descoberta/motor/scoring";
+import { EXPLICACAO_DIMENSAO, ROTULO_DIMENSAO } from "@/lib/negocio/descoberta/motor/scoring";
+import { ROTULO_BASE } from "@/lib/negocio/descoberta/motor/intensidade";
 import { FRASE_CONFIANCA, ROTULO_CONFIANCA } from "@/lib/negocio/descoberta/motor/confianca";
 import { ROTULO_RISCO } from "@/lib/negocio/descoberta/motor/risco";
 import { ROTULO_LACUNA } from "@/lib/negocio/descoberta/motor/procura";
@@ -48,8 +49,6 @@ const DIMENSOES: readonly (keyof OpportunityScore)[] = [
   "regulacao",
   "risco",
   "geografia",
-  "qualidadeDaEvidencia",
-  "frescura",
 ];
 
 export default function Dossier({
@@ -338,18 +337,64 @@ export default function Dossier({
           <div className="mt-3 space-y-4 rounded-3xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950/40">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-                As dez dimensões, em separado
+                As oito dimensões, em separado
               </p>
               <ul className="mt-2 space-y-1.5">
                 {DIMENSOES.map((dimensao) => (
-                  <LinhaDimensao key={dimensao} rotulo={ROTULO_DIMENSAO[dimensao]} valor={candidato.scores[dimensao]} />
+                  <LinhaDimensao
+                    key={dimensao}
+                    rotulo={ROTULO_DIMENSAO[dimensao]}
+                    valor={candidato.scores[dimensao]}
+                    explicacao={EXPLICACAO_DIMENSAO[dimensao]}
+                  />
                 ))}
               </ul>
               <p className="mt-2 text-[11px] leading-snug text-stone-500">
                 As dimensões sem base para serem avaliadas ficam de fora da média — não valem zero.
                 Zero seria uma afirmação sobre o mercado; ausência é uma afirmação sobre nós.
               </p>
+              <p className="mt-2 text-[11px] leading-snug text-stone-500">
+                <strong className="font-semibold text-stone-700 dark:text-stone-200">
+                  Pontuação {candidato.pontuacaoGlobal}
+                  {candidato.intervaloPontuacao.fechado
+                    ? ""
+                    : `, entre ${candidato.intervaloPontuacao.min} e ${candidato.intervaloPontuacao.max}`}
+                </strong>{" "}
+                {candidato.intervaloPontuacao.fechado
+                  ? "— todas as dimensões tinham base para ser avaliadas, por isso não há intervalo: o número é o número."
+                  : "consoante o que ainda não sabemos. O intervalo fecha à medida que respondes a mais perguntas e que mais leituras oficiais ficam ligadas."}
+              </p>
             </div>
+
+            {/* A intensidade: o que as séries DIZEM, contra o quê */}
+            {candidato.procura.intensidade.leituras.length > 0 ? (
+              <div className="border-t border-stone-200/70 pt-3 dark:border-stone-800">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
+                  Como lemos a procura
+                </p>
+                <ul className="mt-2 space-y-1.5">
+                  {candidato.procura.intensidade.leituras.map((leitura) => (
+                    <li key={leitura.seriesId} className="text-[11px] leading-snug">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-semibold text-stone-700 dark:text-stone-200">
+                          {leitura.seriesLabel}
+                        </span>
+                        <Chip tom={leitura.posicao >= 60 ? "marca" : "neutro"}>{leitura.posicao} / 100</Chip>
+                      </span>
+                      <span className="mt-0.5 block text-stone-500">
+                        {leitura.valor.toLocaleString("pt-PT", { maximumFractionDigits: 1 })} {leitura.unidade} ·{" "}
+                        {ROTULO_BASE[leitura.base]} · {leitura.referencia}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-[11px] leading-snug text-stone-500">
+                  Um número solto não diz nada: 62 % de ocupação é bom ou mau consoante o resto do país. O
+                  motor só pontua a procura quando tem contra o que a ler — e quando não tem, diz que não
+                  tem em vez de contar quantas leituras encontrou.
+                </p>
+              </div>
+            ) : null}
 
             <div className="border-t border-stone-200/70 pt-3 dark:border-stone-800">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">Confiança da análise</p>
@@ -358,6 +403,19 @@ export default function Dossier({
                 dimensões com base
               </p>
               <p className="mt-1 text-[12px] leading-snug text-stone-500">{FRASE_CONFIANCA[candidato.confianca.nivel]}</p>
+              <p className="mt-1.5 flex flex-wrap gap-1.5">
+                <Chip>Força da evidência {candidato.confianca.forcaDaEvidencia} / 100</Chip>
+                {candidato.confianca.frescura !== null ? (
+                  <Chip tom={candidato.confianca.frescura < 50 ? "aviso" : "neutro"}>
+                    Atualidade {candidato.confianca.frescura} / 100
+                  </Chip>
+                ) : null}
+              </p>
+              <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
+                Estas duas viajam ao lado da pontuação e nunca entram nela. Medem o que sabemos, não o
+                negócio — somá-las ao score seria dizer que uma hipótese vale mais por termos mais dados
+                sobre ela.
+              </p>
               <ul className="mt-2 space-y-1">
                 {candidato.confianca.motivos.map((motivo) => (
                   <li key={motivo} className="text-[11px] leading-snug text-stone-500">

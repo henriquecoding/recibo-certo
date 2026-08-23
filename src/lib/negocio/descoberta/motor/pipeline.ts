@@ -32,7 +32,7 @@ import { avaliarProcura } from "./procura";
 import { avaliarRegulacao } from "./regulacao";
 import { aplicarRestricoes } from "./restricoes";
 import { avaliarRiscos } from "./risco";
-import { calcularScores, pontuacaoGlobal } from "./scoring";
+import { calcularScores, intervaloDePontuacao, pontuacaoGlobal } from "./scoring";
 import { correrStressTest } from "./stress";
 import { planoDeValidacao } from "./validacao";
 import { avaliarViabilidade } from "./viabilidade";
@@ -69,6 +69,22 @@ export interface ContagemEtapa {
   entraram: number;
   /** Quantos sobreviveram. */
   sairam: number;
+  /**
+   * O que está a ser contado.
+   *
+   * ┌──────────────────────────────────────────────────────────────┐
+   * │ A etapa «evidência» era publicada como `entraram → sairam`    │
+   * │ ao lado das outras, mas `entraram` eram CANDIDATOS e `sairam` │
+   * │ eram OBSERVAÇÕES distintas. Numa corrida real: `17 → 3`, que  │
+   * │ se lê como «catorze hipóteses foram eliminadas na procura de  │
+   * │ evidência». Nenhuma foi. Duas unidades na mesma linha, sem    │
+   * │ nada a assinalá-lo, é um número errado com ar de telemetria.  │
+   * └──────────────────────────────────────────────────────────────┘
+   */
+  unidadeEntrada: "hipoteses" | "observacoes";
+  unidadeSaida: "hipoteses" | "observacoes";
+  /** `true` quando a etapa não filtra nada — só produz. */
+  naoFiltra?: boolean;
 }
 
 export interface TelemetriaDescoberta {
@@ -78,6 +94,8 @@ export interface TelemetriaDescoberta {
   descartadasPorRestricao: number;
   descartadasPorDuplicacao: number;
   aprovadas: number;
+  /** Quantas a diversificação escolheu mostrar. Nem sempre é `aprovadas`. */
+  apresentadas: number;
   /** Observações oficiais realmente lidas, sem contar duas vezes. */
   observacoesUsadas: number;
   /** Fontes distintas por trás dessas observações. */
@@ -214,6 +232,10 @@ export function descobrir(
 
   const etapas: ContagemEtapa[] = [];
   const evidencePorTemplate = new Map(evidencia.map((item) => [item.templateId, item]));
+  // Lido UMA vez: o pipeline é puro e não pode consultar o relógio a
+  // meio, senão duas observações da mesma corrida teriam idades
+  // diferentes e o determinismo caía.
+  const instante = agora();
 
   // ── 1. Geração ────────────────────────────────────────────────────
   const geracao = generateCandidates(contexto, { incluirForaDePerfil });
@@ -221,6 +243,8 @@ export function descobrir(
     etapa: "geracao",
     entraram: geracao.combinacoesConsideradas,
     sairam: geracao.candidatos.length,
+    unidadeEntrada: "hipoteses",
+    unidadeSaida: "hipoteses",
   });
 
   // ── 2. Restrições ─────────────────────────────────────────────────
@@ -229,6 +253,8 @@ export function descobrir(
     etapa: "restricoes",
     entraram: geracao.candidatos.length,
     sairam: restricoes.aprovados.length,
+    unidadeEntrada: "hipoteses",
+    unidadeSaida: "hipoteses",
   });
 
   // ── 3–7. Avaliação, candidato a candidato ─────────────────────────
@@ -240,9 +266,9 @@ export function descobrir(
 
   for (const bruto of restricoes.aprovados) {
     const regulacao = avaliarRegulacao(bruto);
-    const procura = avaliarProcura({ candidato: bruto, evidencePorTemplate, oferta });
+    const procura = avaliarProcura({ candidato: bruto, evidencePorTemplate, oferta, agora: instante });
     const viabilidade = avaliarViabilidade(bruto, contexto, regulacao.barreira);
-    const riscos = avaliarRiscos(bruto, contexto, regulacao);
+    const riscos = avaliarRiscos(bruto, contexto, regulacao, procura);
     const { total: fit, detalhe: fitDetalhe } = calcularFit(bruto, contexto);
 
     const scores = calcularScores({ candidato: bruto, contexto, fit, viabilidade, regulacao, procura, riscos });
@@ -284,6 +310,7 @@ export function descobrir(
       riscos,
       scores,
       pontuacaoGlobal: pontuacaoGlobal(scores),
+      intervaloPontuacao: intervaloDePontuacao(scores),
       confianca,
       objecoes,
       explicacao,
@@ -293,14 +320,33 @@ export function descobrir(
     });
   }
 
-  etapas.push({ etapa: "evidencia", entraram: avaliados.length, sairam: observacoesVistas.size });
-  etapas.push({ etapa: "viabilidade", entraram: avaliados.length, sairam: avaliados.length });
-  etapas.push({ etapa: "risco", entraram: avaliados.length, sairam: avaliados.length });
-  etapas.push({ etapa: "scoring", entraram: avaliados.length, sairam: avaliados.length });
+  // A evidência NÃO filtra hipóteses: anexa leituras. As unidades dizem-no
+  // e a interface tem de as respeitar em vez de escrever uma seta entre
+  // dois números que não são a mesma coisa.
+  etapas.push({
+    etapa: "evidencia",
+    entraram: avaliados.length,
+    sairam: observacoesVistas.size,
+    unidadeEntrada: "hipoteses",
+    unidadeSaida: "observacoes",
+    naoFiltra: true,
+  });
+  for (const etapa of ["viabilidade", "risco", "scoring"] as const) {
+    etapas.push({
+      etapa,
+      entraram: avaliados.length,
+      sairam: avaliados.length,
+      unidadeEntrada: "hipoteses",
+      unidadeSaida: "hipoteses",
+      naoFiltra: true,
+    });
+  }
   etapas.push({
     etapa: "stress",
     entraram: avaliados.length,
     sairam: avaliados.filter((item) => !item.objecoes.some((objecao) => objecao.fatal && objecao.procede)).length,
+    unidadeEntrada: "hipoteses",
+    unidadeSaida: "hipoteses",
   });
 
   // ── 8. Deduplicação e diversificação ──────────────────────────────
@@ -310,6 +356,8 @@ export function descobrir(
     etapa: "diversificacao",
     entraram: dedup.candidatos.length,
     sairam: ordenados.length,
+    unidadeEntrada: "hipoteses",
+    unidadeSaida: "hipoteses",
   });
 
   const descartados = [...restricoes.descartados, ...dedup.descartados];
@@ -331,7 +379,7 @@ export function descobrir(
       ordenados.length > 0
         ? null
         : diagnosticar(contexto, geracao.capacidadesBloqueadasPorAtivo.length, restricoes.descartados.length),
-    geradoEm: agora(),
+    geradoEm: instante,
     telemetria: {
       etapas,
       combinacoesConsideradas: geracao.combinacoesConsideradas,
@@ -339,6 +387,7 @@ export function descobrir(
       descartadasPorRestricao: restricoes.descartados.length,
       descartadasPorDuplicacao: dedup.descartados.length,
       aprovadas: dedup.candidatos.length,
+      apresentadas: ordenados.length,
       observacoesUsadas: observacoesVistas.size,
       fontesDistintas: fontesVistas.size,
       consultasPorLigar,
@@ -461,6 +510,18 @@ export function resumoDoTrabalho(telemetria: TelemetriaDescoberta): string | nul
       `${telemetria.observacoesUsadas} leituras oficiais de ${telemetria.fontesDistintas} ${telemetria.fontesDistintas === 1 ? "fonte" : "fontes"}`,
     );
   }
-  partes.push(`${telemetria.aprovadas} passaram os critérios`);
+  // ┌──────────────────────────────────────────────────────────────────┐
+  // │ Este número e o do cabeçalho são DIFERENTES e diziam a mesma      │
+  // │ frase: «14 passaram os critérios» aqui, «10 hipóteses passaram    │
+  // │ os critérios» duas linhas acima. Um é o que sobreviveu aos        │
+  // │ filtros, o outro é o que a diversificação escolheu mostrar. Duas  │
+  // │ contagens verdadeiras com as mesmas palavras é uma contradição    │
+  // │ visível, e a auditoria apanhou-a na irmã desta (a etapa da        │
+  // │ evidência, que misturava candidatos com observações).             │
+  // └──────────────────────────────────────────────────────────────────┘
+  partes.push(`${telemetria.aprovadas} sobreviveram aos filtros`);
+  if (telemetria.apresentadas < telemetria.aprovadas) {
+    partes.push(`${telemetria.apresentadas} apresentadas, sem repetir o mesmo problema`);
+  }
   return partes.join(" · ");
 }

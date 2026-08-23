@@ -123,12 +123,12 @@ export const RESTRICOES: readonly {
   { id: "sem-trabalho-fisico", grupo: "esforco", rotulo: "Não quero trabalho físico", nota: "Deixa só o que se resolve à secretária ou a falar." },
   { id: "sem-atendimento-presencial", grupo: "contacto", rotulo: "Não quero atendimento presencial", nota: "Elimina as variantes presenciais." },
   { id: "sem-deslocacoes", grupo: "contacto", rotulo: "Não quero deslocar-me", nota: "Elimina trabalho em casa ou instalações do cliente." },
-  { id: "sem-porta-a-porta", grupo: "contacto", rotulo: "Não quero vender porta-a-porta", nota: "Pesa em aquisição direta ao consumidor." },
+  { id: "sem-porta-a-porta", grupo: "contacto", rotulo: "Não quero vender porta-a-porta", nota: "Desce o encaixe de modelos cujos primeiros clientes vêm de abordagem direta." },
   { id: "sem-fins-de-semana", grupo: "horario", rotulo: "Não quero fins de semana", nota: "Elimina problemas cuja procura se concentra no fim de semana." },
-  { id: "sem-noites", grupo: "horario", rotulo: "Não quero trabalhar à noite", nota: "Pesa em problemas com ocorrências fora de horas." },
+  { id: "sem-noites", grupo: "horario", rotulo: "Não quero trabalhar à noite", nota: "Desce o encaixe de problemas que geram ocorrências fora de horas." },
   { id: "sem-alimentos", grupo: "setor", rotulo: "Não quero trabalhar com alimentos", nota: "Elimina o setor alimentar por inteiro." },
   { id: "sem-atividade-regulada", grupo: "setor", rotulo: "Não quero atividade muito regulada", nota: "Elimina o que acumula licenças e habilitações." },
-  { id: "sem-redes-sociais", grupo: "setor", rotulo: "Não quero depender de redes sociais", nota: "Pesa em modelos que vivem de tráfego." },
+  { id: "sem-redes-sociais", grupo: "setor", rotulo: "Não quero depender de redes sociais", nota: "Desce o encaixe de modelos que vivem de trazer tráfego." },
 ]);
 
 // ── ONDE SE RESPONDE CADA COISA ──────────────────────────────────────
@@ -155,6 +155,7 @@ export const ONDE_SE_RESPONDE: Readonly<
 > = Object.freeze({
   competencias: { seccao: "competencias", nivel: "essencial" },
   regiao: { seccao: "local", nivel: "essencial" },
+  territorio: { seccao: "local", nivel: "personalizado" },
   capital: { seccao: "recursos", nivel: "essencial" },
   ativos: { seccao: "recursos", nivel: "essencial" },
   tempo: { seccao: "tempo", nivel: "essencial" },

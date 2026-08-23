@@ -12,7 +12,7 @@
 
 import { toleranciaDe, type DimensaoRisco, type OpportunityContext } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
-import type { AvaliacaoRegulatoria, RiscoAvaliado } from "./tipos";
+import type { AvaliacaoProcura, AvaliacaoRegulatoria, RiscoAvaliado } from "./tipos";
 
 const DIMENSOES: readonly DimensaoRisco[] = Object.freeze([
   "financeiro",
@@ -48,13 +48,16 @@ export function avaliarRiscos(
   candidato: CandidatoBruto,
   contexto: OpportunityContext,
   regulacao: AvaliacaoRegulatoria,
+  procura: AvaliacaoProcura,
 ): readonly RiscoAvaliado[] {
   const proprios = new Set<DimensaoRisco>([
     ...candidato.problema.riscosProprios,
     ...candidato.modelo.riscosProprios,
   ]);
 
-  const nivelDe = (dimensao: DimensaoRisco): { nivel: 0 | 1 | 2 | 3; nota: string } => {
+  const nivelDe = (
+    dimensao: DimensaoRisco,
+  ): { nivel: 0 | 1 | 2 | 3; nota: string; apurado?: boolean } => {
     switch (dimensao) {
       case "regulatorio":
         return {
@@ -95,12 +98,47 @@ export function avaliarRiscos(
         };
 
       case "concorrencia":
-        // Sem sinal de oferta, o motor NÃO sabe. Devolver 0 seria dizer
-        // «não há concorrência», que é a leitura mais perigosa possível.
-        return {
-          nivel: 2,
-          nota: "Não há sinal de oferta ligado, por isso a concorrência real é desconhecida. Assume-se moderada por prudência, nunca nula.",
-        };
+        // ── DEIXOU DE SER CONSTANTE, E CONTINUA PRUDENTE ─────────────
+        //  Este ramo devolvia sempre 2, com a nota prudente de que a
+        //  concorrência real era desconhecida. A prudência estava certa
+        //  — devolver 0 diria «não há concorrência», que é a leitura
+        //  mais perigosa possível. O efeito era outro: a dimensão não
+        //  separava candidato nenhum e, para quem declarava perfil muito
+        //  conservador (nível aceitável = 0), marcava TODAS as hipóteses
+        //  como fora de tolerância. Um terço dos candidatos apresentados
+        //  arrastava uma objeção fatal por acumulação.
+        //
+        //  Com a densidade de operadores ligada, a maior parte das
+        //  hipóteses já tem resposta. Quando não tem, o nível continua a
+        //  ser 2 mas fica marcado como NÃO APURADO — e o que não foi
+        //  apurado não conta para a tolerância. Assumir por prudência é
+        //  legítimo; punir por uma suposição não é.
+        switch (procura.leitura) {
+          case "procura-com-muita-oferta":
+            return {
+              nivel: 3,
+              apurado: true,
+              nota: "A densidade de operadores desta zona está acima do normal do país. É um mercado servido: entrar exige uma diferença que se explique numa frase.",
+            };
+          case "procura-com-pouca-oferta":
+            return {
+              nivel: 1,
+              apurado: true,
+              nota: "A densidade de operadores desta zona está abaixo do normal do país, e há procura publicada. É o sinal competitivo mais favorável que dados oficiais conseguem dar.",
+            };
+          case "pouca-procura":
+            return {
+              nivel: 2,
+              apurado: true,
+              nota: "Pouca procura observada: a concorrência conta menos do que a existência do mercado.",
+            };
+          default:
+            return {
+              nivel: 2,
+              apurado: false,
+              nota: "Não há densidade de operadores apurada para esta hipótese. Assume-se moderada por prudência — e, por não estar apurada, não conta contra a tua tolerância.",
+            };
+        }
 
       case "dependencia-clientes":
         return {
@@ -130,13 +168,25 @@ export function avaliarRiscos(
   };
 
   return DIMENSOES.map((dimensao) => {
-    const { nivel, nota } = nivelDe(dimensao);
+    const { nivel, nota, apurado = true } = nivelDe(dimensao);
     const aceitavel = NIVEL_ACEITAVEL[toleranciaDe(contexto, dimensao)]!;
-    return { dimensao, nivel, nota, dentroDaTolerancia: nivel <= aceitavel };
+    return { dimensao, nivel, nota, apurado, dentroDaTolerancia: nivel <= aceitavel };
   });
 }
 
-/** Quantas dimensões excedem a tolerância declarada. Entra no score. */
+/**
+ * Quantas dimensões APURADAS excedem a tolerância declarada.
+ *
+ * O filtro por `apurado` é o que impede uma suposição de custar pontos:
+ * um nível assumido por prudência serve de aviso na ficha e não entra na
+ * conta que baixa o score. A distinção é a mesma do resto do motor —
+ * ausência de conhecimento não é uma afirmação sobre o negócio.
+ */
 export function riscosForaDaTolerancia(riscos: readonly RiscoAvaliado[]): number {
-  return riscos.filter((item) => !item.dentroDaTolerancia).length;
+  return riscos.filter((item) => item.apurado && !item.dentroDaTolerancia).length;
+}
+
+/** Riscos assumidos por prudência, que a ficha mostra como aviso. */
+export function riscosPorApurar(riscos: readonly RiscoAvaliado[]): readonly RiscoAvaliado[] {
+  return riscos.filter((item) => !item.apurado);
 }

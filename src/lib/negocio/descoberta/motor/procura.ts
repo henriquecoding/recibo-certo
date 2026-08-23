@@ -35,12 +35,15 @@
 //  negócio.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { effectiveReferenceAgeDays } from "@/lib/negocio/market/freshness";
 import { marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/market/geografia";
 import { lerOferta, type LeituraDeOferta, type PackOferta } from "@/lib/negocio/market/oferta";
 import { CONCEITO_POR_CAPACIDADE } from "../conhecimento/dados/ontologia";
 import type { MarketObservationSummary, MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
 import type { Evidencia, LacunaDeEvidencia } from "../proveniencia";
 import type { CandidatoBruto } from "./gerador";
+import { agregarIntensidade, lerIntensidade } from "./intensidade";
 import type { AvaliacaoProcura, LeituraDeLacuna } from "./tipos";
 
 /** Traduz uma observação do pack público numa evidência do motor. */
@@ -83,6 +86,51 @@ export interface EntradaProcura {
   evidencePorTemplate: ReadonlyMap<string, MarketPilotEvidence>;
   /** Contagem de operadores por divisão CAE. Ausente = sem oferta lida. */
   oferta?: PackOferta;
+  /** O instante da análise. Entra na frescura e é fixo por corrida. */
+  agora: string;
+}
+
+/**
+ * Meia-vida da frescura, em dias, por tipo de sinal.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ A atualidade era binária: `observadas === 0 ? null : 100`. Uma      │
+ * │ leitura de 2019 e uma de 2026 valiam exatamente o mesmo. Existia    │
+ * │ — e existe — um módulo que sabe classificar frescura                │
+ * │ (`market/freshness.ts`, 104 linhas) e o motor de descoberta         │
+ * │ simplesmente nunca o chamava.                                       │
+ * │                                                                    │
+ * │ O decaimento é contínuo e a meia-vida depende do que a série mede,  │
+ * │ porque envelhecer não é a mesma coisa em todas: uma ocupação        │
+ * │ hoteleira envelhece em meses e um índice de envelhecimento          │
+ * │ demográfico envelhece em anos. Dar-lhes o mesmo relógio seria       │
+ * │ descartar demografia boa e aceitar conjuntura velha.                │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+const MEIA_VIDA_DIAS: Readonly<Record<string, number>> = Object.freeze({
+  demand: 365,
+  transactional: 548,
+  supply: 1095,
+  competition: 1095,
+  cost: 365,
+  negative: 365,
+  structural: 1460,
+});
+
+/** 0–100 pela idade efetiva desde o fim do período de referência. */
+function frescuraDe(
+  observacoes: readonly MarketObservationSummary[],
+  agora: string,
+): number | null {
+  const valores: number[] = [];
+  for (const observacao of observacoes) {
+    const idade = effectiveReferenceAgeDays(observacao, agora);
+    if (idade === null) continue;
+    const meiaVida = MEIA_VIDA_DIAS[observacao.kind] ?? 730;
+    valores.push(100 * Math.pow(0.5, idade / meiaVida));
+  }
+  if (valores.length === 0) return null;
+  return Math.round(valores.reduce((total, item) => total + item, 0) / valores.length);
 }
 
 /** Acima disto a densidade conta como fora do normal do país. */
@@ -108,7 +156,7 @@ function ofertaDoCandidato(
   return { leitura, ressalva: conceito.ressalva };
 }
 
-export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: EntradaProcura): AvaliacaoProcura {
+export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }: EntradaProcura): AvaliacaoProcura {
   const lacunas: LacunaDeEvidencia[] = [];
   const evidencias: Evidencia[] = [];
 
@@ -130,8 +178,43 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
   //  declara), e uma composição sem dossier passa a receber as séries
   //  que o seu problema declara.
   const vistas = new Set<string>();
-  const juntar = (observacoes: readonly MarketObservationSummary[]) => {
-    const { local, nacional } = splitObservationsByRegion(observacoes, candidato.regiao);
+  const brutas: MarketObservationSummary[] = [];
+  const brutasVistas = new Set<string>();
+  const estadosDoGate: MarketOpportunityState[] = [];
+  let bloqueadasPeloGate = 0;
+
+  // ── O GATE PASSA A GOVERNAR ──────────────────────────────────────
+  //  `market/evidence-gate.ts` é a peça mais rigorosa do repositório —
+  //  oito estados, triangulação entre origens estatísticas independentes,
+  //  bloqueio por saúde da fonte, exigência de um teste de falsificação —
+  //  e este motor consumia `observations` cru e ignorava-o. O efeito
+  //  prático: um piloto em `stale` ou `contradicted` contribuía para a
+  //  procura exatamente como um `evidence_qualified`.
+  //
+  //  `usableObservationIds` já vinha no payload e nunca era lido. Passa a
+  //  ser o filtro: uma observação que o gate não considera utilizável não
+  //  entra no score nem na evidência. Não desaparece em silêncio — fica
+  //  contada em `bloqueadasPeloGate` e dita na nota.
+  const juntar = (pacote: MarketPilotEvidence, observacoes: readonly MarketObservationSummary[]) => {
+    const utilizaveis = new Set(pacote.gate.usableObservationIds);
+    const admitidas: MarketObservationSummary[] = [];
+    for (const observacao of observacoes) {
+      if (utilizaveis.has(observacao.id)) admitidas.push(observacao);
+      else if (!brutasVistas.has(observacao.id) && !vistas.has(observacao.id)) bloqueadasPeloGate += 1;
+    }
+    if (admitidas.length === 0) return;
+    estadosDoGate.push(pacote.gate.state);
+
+    // A distribuição regional precisa de TODAS as regiões da série, não
+    // só da nossa: é ela que dá o percentil. As outras regiões nunca
+    // aparecem como evidência — servem de régua, não de afirmação.
+    for (const observacao of admitidas) {
+      if (brutasVistas.has(observacao.id)) continue;
+      brutasVistas.add(observacao.id);
+      brutas.push(observacao);
+    }
+
+    const { local, nacional } = splitObservationsByRegion(admitidas, candidato.regiao);
     for (const observacao of local) {
       if (vistas.has(observacao.id)) continue;
       vistas.add(observacao.id);
@@ -145,7 +228,7 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
   };
 
   const pack = candidato.seedTemplateId ? evidencePorTemplate.get(candidato.seedTemplateId) : undefined;
-  if (pack) juntar(pack.observations);
+  if (pack) juntar(pack, pack.observations);
 
   // ── O VETO DO PRÓPRIO PROBLEMA ───────────────────────────────────
   //  Três problemas declaram sinais E declaram-se NÃO observáveis, e não
@@ -163,7 +246,7 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
   if (candidato.problema.sinais.length > 0 && candidato.problema.procuraObservavel) {
     const pedidos = new Set(candidato.problema.sinais);
     for (const disponivel of evidencePorTemplate.values()) {
-      juntar(disponivel.observations.filter((observacao) => pedidos.has(observacao.seriesId)));
+      juntar(disponivel, disponivel.observations.filter((observacao) => pedidos.has(observacao.seriesId)));
     }
   }
 
@@ -195,6 +278,41 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
 
   const temProcura = evidencias.some((item) => item.tipo === "procura" || item.tipo === "mercado");
   const temOferta = evidencias.some((item) => item.tipo === "concorrencia");
+
+  // ── A INTENSIDADE, QUE É O QUE AS SÉRIES DIZEM ───────────────────
+  //  Presença e intensidade são perguntas diferentes. `temProcura`
+  //  responde «existe alguma série que meça isto?» e serve à leitura da
+  //  lacuna. A intensidade responde «e o que é que ela diz aqui?», e é
+  //  ela — não a contagem de linhas — que pontua.
+  const intensidade = agregarIntensidade(
+    lerIntensidade({
+      observacoes: brutas.filter(
+        (item) => item.kind === "demand" || item.kind === "transactional",
+      ),
+      regiao: candidato.regiao,
+      populacao: oferta?.populacao,
+    }),
+  );
+
+  // O estado mais forte entre os packs que contribuíram. É o TETO da
+  // confiança: um dossier em `template` nunca sustenta «confiança alta»,
+  // por muitas linhas que traga.
+  const ORDEM_ESTADO: readonly MarketOpportunityState[] = [
+    "contradicted",
+    "stale",
+    "template",
+    "signal_detected",
+    "candidate",
+    "evidence_qualified",
+    "user_validated",
+    "operating",
+  ];
+  const estadoGate =
+    estadosDoGate.length === 0
+      ? null
+      : estadosDoGate.reduce((melhor, atual) =>
+          ORDEM_ESTADO.indexOf(atual) > ORDEM_ESTADO.indexOf(melhor) ? atual : melhor,
+        );
 
   // ── A leitura ────────────────────────────────────────────────────
   let leitura: LeituraDeLacuna = "desconhecida";
@@ -319,7 +437,42 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta }: Entra
     });
   }
 
-  return { leitura, evidencias, lacunas, nota };
+  // ── O que a zona por fixar custa, dito onde se pode agir ─────────
+  //  Sem zona escolhida não há leitura local, e sem leitura local uma
+  //  série não tem contra o que ser normalizada. Isto não é uma falha do
+  //  motor: é uma resposta em falta, e é acionável num clique.
+  if (temProcura && intensidade.posicao === null) {
+    lacunas.push({
+      pergunta:
+        candidato.regiao === "portugal"
+          ? "Em que zona vais operar?"
+          : "Que régua compara esta série entre regiões?",
+      tipo: "procura",
+      motivo:
+        candidato.regiao === "portugal"
+          ? "As séries existem e estão ligadas. Sem zona fixada não há valor local para comparar com o resto do país — e é a comparação que transforma um número numa leitura."
+          : "As séries desta composição não trazem valor comparável para esta zona: ou são contagens sem população para as dividir, ou não têm leitura regional publicada.",
+    });
+  }
+
+  if (bloqueadasPeloGate > 0) {
+    lacunas.push({
+      pergunta: "Porque é que algumas leituras não contam?",
+      tipo: "oficial",
+      motivo: `${bloqueadasPeloGate} ${bloqueadasPeloGate === 1 ? "observação foi excluída" : "observações foram excluídas"} pelo gate de evidência — fonte expirada, em quarentena ou com mapeamento semântico por aprovar. Aparecer sem contar seria pior do que não aparecer.`,
+    });
+  }
+
+  return {
+    leitura,
+    evidencias,
+    lacunas,
+    nota,
+    intensidade,
+    estadoGate,
+    bloqueadasPeloGate,
+    frescura: frescuraDe(brutas, agora),
+  };
 }
 
 export const ROTULO_LACUNA: Readonly<Record<LeituraDeLacuna, string>> = Object.freeze({

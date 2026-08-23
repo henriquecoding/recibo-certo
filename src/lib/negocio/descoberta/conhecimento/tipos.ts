@@ -37,6 +37,7 @@ import type {
   NaturezaOferta,
   PadraoReceita,
   PublicoAlvo,
+  TipoTerritorio,
 } from "../contexto/tipos";
 
 // ── COMPETÊNCIAS ─────────────────────────────────────────────────────
@@ -156,6 +157,38 @@ export interface Problema {
   naturezas: readonly NaturezaOferta[];
   /** Onde o PROBLEMA existe — nunca onde temos dados. */
   regioes: readonly MarketRegion[];
+  /**
+   * Onde o problema é MAIS INTENSO — não onde existe.
+   *
+   * Urbano, suburbano ou rural é provavelmente a variável isolada que
+   * mais muda que negócio funciona, e o configurador recolhia-a há muito
+   * sem que uma única linha do motor a lesse. A distinção face a
+   * `regioes` é deliberada: `regioes` é geografia administrativa,
+   * `territoriosIntensos` é densidade — e as duas respondem a perguntas
+   * diferentes («existe onde estou?» e «é aqui que dói mais?»).
+   *
+   * As três entradas são o caso normal e não são preguiça: significam
+   * que a densidade não decide este problema. Restringir sem razão seria
+   * afirmar uma especificidade que não temos como sustentar.
+   */
+  territoriosIntensos: readonly TipoTerritorio[];
+  /**
+   * Gera ocorrências fora do horário normal de trabalho?
+   *
+   * Cruza com a restrição «não quero trabalhar à noite», que a interface
+   * anunciava como «pesa em problemas com ocorrências fora de horas» e
+   * que não tinha, no motor, uma única linha a implementá-la.
+   */
+  ocorrenciasForaDeHoras: boolean;
+  /**
+   * A procura concentra-se ao fim de semana?
+   *
+   * Era uma lista literal de três ids dentro de `restricoes.ts`. Um
+   * problema novo com procura ao sábado passava incólume e ninguém dava
+   * por isso — exatamente o modo de falha que o grafo existe para tornar
+   * impossível. Como campo obrigatório, o compilador obriga a responder.
+   */
+  procuraFimDeSemana: boolean;
   /** Séries do motor de evidência que dizem alguma coisa sobre isto. */
   sinais: readonly string[];
   regulacoes: readonly string[];
@@ -193,6 +226,20 @@ export interface ModeloReceita {
   precisaLojaFisica: boolean;
   /** Precisa de equipa desde o primeiro dia? Cruza com «sem empregados». */
   precisaEquipa: boolean;
+  /**
+   * A receita depende de trazer tráfego — próprio ou do cliente?
+   *
+   * Cruza com «não quero depender de redes sociais», que a interface
+   * anunciava como «pesa em modelos que vivem de tráfego» sem que nada
+   * no motor a lesse. Substitui também a lista literal de três ids que
+   * o stress test usava para a mesma pergunta.
+   */
+  dependeTrafegoPago: boolean;
+  /**
+   * Os primeiros clientes vêm de abordagem direta — feira, banca, porta,
+   * contacto a frio? Cruza com «não quero vender porta-a-porta».
+   */
+  dependeAquisicaoDireta: boolean;
   /** Investimento típico deste MODELO, à parte do problema. */
   capitalTipico: Intervalo;
   /** Meses até à primeira receita, tipicamente. */
