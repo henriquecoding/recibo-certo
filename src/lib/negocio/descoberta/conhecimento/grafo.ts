@@ -19,7 +19,8 @@ import { REGULACOES, REGULACAO_POR_ID } from "./dados/regulacao";
 import { SETORES, SETOR_POR_ID } from "./dados/setores";
 import type { Capacidade, GrafoConhecimento, ModeloReceita, Problema } from "./tipos";
 import type { AtivoId, OpportunityContext } from "../contexto/tipos";
-import { nivelDe } from "../contexto/tipos";
+import type { MarketRegion } from "@/lib/negocio/market/geografia";
+import { forcaDe, nivelDe } from "../contexto/tipos";
 
 export const GRAFO: GrafoConhecimento = Object.freeze({
   competencias: COMPETENCIAS,
@@ -183,8 +184,25 @@ export function capacidadesAlcancadas(
     const uteis = capacidade.competenciasUteis;
     const temUteis = uteis.filter((id) => nivelDe(contexto, id) > 0);
 
-    const parteNecessaria = necessarias.length === 0 ? 1 : temNecessarias.length / necessarias.length;
-    const parteUtil = uteis.length === 0 ? 1 : temUteis.length / uteis.length;
+    // ── O NÍVEL DEIXA DE SER UM BOOLEANO ────────────────────────────
+    //  O configurador pergunta básico / intermédio / avançado desde
+    //  sempre, e esta conta lia a resposta como `> 0`. Dez anos de
+    //  canalização e um sifão apertado uma vez produziam a mesma
+    //  cobertura, o mesmo fit e a mesma posição na lista. `forcaDe`
+    //  pondera (0,6 / 0,8 / 1) em vez de testar — e a diferença
+    //  propaga-se ao score inteiro pelo eixo da capacidade.
+    //
+    //  A PRESENÇA continua a ser a condição de alcançar a capacidade
+    //  (`temNecessarias.length === 0` corta acima): o nível gradua quem
+    //  já entrou, nunca decide quem entra.
+    const parteNecessaria =
+      necessarias.length === 0
+        ? 1
+        : necessarias.reduce((total, id) => total + forcaDe(contexto, id), 0) / necessarias.length;
+    const parteUtil =
+      uteis.length === 0
+        ? 1
+        : uteis.reduce((total, id) => total + forcaDe(contexto, id), 0) / uteis.length;
     const cobertura = 0.75 * parteNecessaria + 0.25 * parteUtil;
 
     alcancadas.push({
@@ -236,4 +254,99 @@ export function modelosDoProblema(problema: Problema): readonly ModeloReceita[] 
   return problema.modelos
     .map((id) => MODELO_POR_ID.get(id))
     .filter((item): item is ModeloReceita => item !== undefined);
+}
+
+// ── EXPLORAR SEM SABER O QUE SE SABE FAZER ───────────────────────────
+
+/**
+ * O grafo lido ao contrário: dos problemas para as competências.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ `suficienteParaCorrer` exige competências declaradas, e é uma      │
+ * │ exigência correta — sem elas o grafo não tem por onde começar. Mas │
+ * │ 13,6 % dos perfis simulados saíam de mãos vazias, e quem chega à   │
+ * │ página SEM SABER o que sabe fazer é, plausivelmente, quem mais     │
+ * │ precisa da ferramenta. A esse, o motor respondia com um formulário │
+ * │ bloqueado.                                                         │
+ * │                                                                    │
+ * │ Este modo não pontua nada e não é um atalho ao motor: mostra o que │
+ * │ existe, por setor, com quem tem o problema e o que é preciso saber │
+ * │ para o atacar — para a pessoa se RECONHECER numa linha e declarar  │
+ * │ a competência a partir daí. A escolha continua a ser dela; o que   │
+ * │ muda é que passa a haver por onde começar.                         │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export interface ProblemaParaExplorar {
+  problema: Problema;
+  /** As competências que, declaradas, tornam este problema alcançável. */
+  destrancadoPor: readonly { id: string; rotulo: string }[];
+  /** Meios sem os quais nenhuma capacidade deste problema é alcançável. */
+  meiosImprescindiveis: readonly AtivoId[];
+}
+
+export interface SetorParaExplorar {
+  setor: string;
+  rotulo: string;
+  problemas: readonly ProblemaParaExplorar[];
+}
+
+/**
+ * Os problemas que existem numa zona, agrupados por setor.
+ *
+ * `regiao` filtra pelo que o PROBLEMA declara, nunca pelo que temos
+ * dados: um problema nacional aparece em qualquer zona, e um regional só
+ * na sua. Sem zona fixada aparecem todos.
+ */
+export function explorarPorSetor(regiao: MarketRegion): readonly SetorParaExplorar[] {
+  const porSetor = new Map<string, ProblemaParaExplorar[]>();
+
+  for (const problema of PROBLEMAS) {
+    const existeAqui =
+      regiao === "portugal" ||
+      problema.regioes.includes("portugal") ||
+      problema.regioes.includes(regiao);
+    if (!existeAqui) continue;
+
+    const capacidades = problema.capacidades
+      .map((id) => CAPACIDADE_POR_ID.get(id))
+      .filter((item): item is Capacidade => item !== undefined);
+
+    // As competências que abrem alguma das capacidades essenciais — ou
+    // quaisquer, quando o problema não declara essenciais.
+    const relevantes =
+      problema.capacidadesEssenciais && problema.capacidadesEssenciais.length > 0
+        ? capacidades.filter((item) => problema.capacidadesEssenciais!.includes(item.id))
+        : capacidades;
+
+    const ids = new Set(relevantes.flatMap((item) => item.competenciasNecessarias));
+    const destrancadoPor = [...ids]
+      .map((id) => COMPETENCIA_POR_ID.get(id))
+      .filter((item): item is NonNullable<typeof item> => item !== undefined)
+      .map((item) => ({ id: item.id, rotulo: item.rotulo }))
+      .sort((esquerda, direita) => esquerda.rotulo.localeCompare(direita.rotulo, "pt-PT"));
+
+    // Um meio só é imprescindível quando TODAS as capacidades relevantes
+    // o exigem. Listar o que só uma delas pede assustaria sem razão.
+    const meiosImprescindiveis =
+      relevantes.length === 0
+        ? []
+        : relevantes
+            .map((item) => new Set(item.ativosNecessarios))
+            .reduce<AtivoId[]>(
+              (comuns, conjunto) => comuns.filter((ativo) => conjunto.has(ativo)),
+              [...(relevantes[0]?.ativosNecessarios ?? [])],
+            );
+
+    const lista = porSetor.get(problema.setor) ?? [];
+    lista.push({ problema, destrancadoPor, meiosImprescindiveis });
+    porSetor.set(problema.setor, lista);
+  }
+
+  return [...porSetor.entries()]
+    .map(([setor, problemas]) => ({
+      setor,
+      rotulo: SETOR_POR_ID.get(setor)?.rotulo ?? setor,
+      problemas,
+    }))
+    .sort((esquerda, direita) => esquerda.rotulo.localeCompare(direita.rotulo, "pt-PT"));
 }

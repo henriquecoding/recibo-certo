@@ -43,8 +43,6 @@ const score = (over: Partial<OpportunityScore> = {}): OpportunityScore => ({
   regulacao: 70,
   risco: 70,
   geografia: 70,
-  qualidadeDaEvidencia: 70,
-  frescura: 70,
   ...over,
 });
 
@@ -74,8 +72,6 @@ describe("pontuação: um eixo mau não é compensável", () => {
       procura: 90,
       lacunaDeOferta: 90,
       geografia: 90,
-      qualidadeDaEvidencia: 90,
-      frescura: 90,
       fitPessoal: 0,
       economia: 90,
       exequibilidade: 90,
@@ -91,8 +87,6 @@ describe("pontuação: um eixo mau não é compensável", () => {
       procura: 0,
       lacunaDeOferta: 0,
       geografia: 0,
-      qualidadeDaEvidencia: 0,
-      frescura: 0,
       fitPessoal: 90,
       economia: 90,
       exequibilidade: 90,
@@ -140,13 +134,7 @@ describe("pontuação: um eixo mau não é compensável", () => {
 
   it("o eixo mais pesado é o mercado, e vê-se no efeito", () => {
     const base = score();
-    const semMercado = score({
-      procura: 10,
-      lacunaDeOferta: 10,
-      geografia: 10,
-      qualidadeDaEvidencia: 10,
-      frescura: 10,
-    });
+    const semMercado = score({ procura: 10, lacunaDeOferta: 10, geografia: 10 });
     const semViabilidade = score({ economia: 10, exequibilidade: 10, regulacao: 10, risco: 10 });
     const quedaMercado = pontuacaoGlobal(base) - pontuacaoGlobal(semMercado);
     const quedaViabilidade = pontuacaoGlobal(base) - pontuacaoGlobal(semViabilidade);
@@ -155,9 +143,9 @@ describe("pontuação: um eixo mau não é compensável", () => {
 });
 
 describe("pontuação: a ausência não penaliza", () => {
-  // Quatro dimensões podem ser `null` — procura, lacuna de oferta,
-  // economia e frescura. As outras seis são sempre um número, e é por
-  // isso que nenhum eixo fica hoje inteiramente por avaliar.
+  // Três dimensões podem ser `null` — procura, lacuna de oferta e
+  // economia. As outras cinco são sempre um número, e é por isso que
+  // nenhum eixo fica hoje inteiramente por avaliar.
   it("não declarar capital não transforma uma boa hipótese numa má", () => {
     const semCapital = score({ economia: null });
     expect(pontuacaoPorEixo(semCapital).viabilidade).not.toBeNull();
@@ -167,7 +155,7 @@ describe("pontuação: a ausência não penaliza", () => {
   });
 
   it("uma procura por medir não empurra a hipótese para o fundo", () => {
-    const semProcura = score({ procura: null, lacunaDeOferta: null, frescura: null });
+    const semProcura = score({ procura: null, lacunaDeOferta: null });
     expect(pontuacaoPorEixo(semProcura).mercado).not.toBeNull();
     expect(pontuacaoGlobal(semProcura)).toBe(pontuacaoGlobal(score()));
   });

@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.103.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta passou a ler os números que já tinha, em vez de os contar",
+    itens: [
+      "Uma auditoria externa correu a ferramenta com 800 perfis sintéticos e encontrou o defeito mais incómodo possível: o valor das estatísticas oficiais nunca era lido. A pontuação de procura era uma função de QUANTAS leituras encontrámos, não do que elas diziam. Um mercado com 98% de ocupação e um com 2% davam o mesmo resultado — 89 pontos, confiança alta, os dois.",
+      "Agora lê. Cada série é comparada com uma referência declarada no ecrã: o percentil da tua zona entre as nove regiões do país, ou o índice face ao valor nacional. E uma contagem absoluta — «sociedades nascidas», «alojamentos registados» — só entra depois de dividida pela população, porque comparar o Norte com o Algarve em números absolutos mede o tamanho da região, não a intensidade do problema.",
+      "Cerca de um quinto da pontuação media a quantidade de dados que tínhamos, não o negócio. «Força das evidências» e «atualidade dos dados» saíram do score e foram para a confiança, onde sempre pertenceram: uma hipótese não vale mais por sabermos mais sobre ela.",
+      "A atualidade deixou de ser sim ou não. Uma leitura de 2019 e uma de 2026 valiam exatamente o mesmo; agora envelhecem de forma contínua, e a meia-vida depende do que a série mede — uma ocupação hoteleira envelhece em meses, um índice de envelhecimento demográfico em anos.",
+      "«Cabe no capital» era um sim ou não decidido pelo melhor caso: um intervalo de 4 500 a 30 000 € «cabia» num teto de 5 000 €. Passou a ser a fração do intervalo que o teu teto cobre mesmo.",
+      "Doze respostas do questionário eram recolhidas e nunca usadas. O nível da competência era lido como um sim/não — dez anos de canalização valiam o mesmo que ter mexido uma vez num sifão. O tipo de experiência, os anos, o tipo de território, o alcance, o raio, o mínimo mensal, a ambição, o prazo de arranque e a estrutura pretendida passaram todos a mudar o resultado.",
+      "Três limites que declaravas — «não quero vender porta-a-porta», «não quero trabalhar à noite», «não quero depender de redes sociais» — descreviam um efeito que não existia. Passaram a ter efeito, e a copy passou a dizer qual.",
+      "A pontuação passa a vir com a incerteza ao lado: «77, entre 41 e 92 consoante o que ainda não sabemos». O intervalo fecha-se à medida que respondes a mais perguntas — e quando tudo tem base, colapsa no número.",
+      "As hipóteses que não sobrevivem ao teste de esforço deixaram de aparecer debaixo do título «passaram os critérios». Têm secção própria, com a objeção que as trava.",
+      "Quem chega sem saber o que sabe fazer deixou de encontrar um botão desativado: passa a ver a lista dos problemas que existem na sua zona, por setor, e declara a competência a partir dali.",
+      "O custo mensal de um modelo com equipa era uma fração arbitrária do capital — o único número inventado num motor que os proíbe. Passou a ser calculado a partir do salário mínimo em vigor e da taxa social única da entidade empregadora, com a fonte ao lado.",
+    ],
+  },
+  {
     version: "2.102.0",
     data: "2026-08-23",
     titulo: "Auditoria à calculadora de preço: nove contas que estavam erradas",

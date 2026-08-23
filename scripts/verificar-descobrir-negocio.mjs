@@ -289,7 +289,22 @@ try {
       await cartao.getByRole("button", { name: /Como chegámos a esta conclusão/ }).click();
       await pagina.waitForTimeout(400);
       texto = await cartao.innerText();
-      verificar("abre as dimensões em separado", /Compatibilidade contigo/.test(texto) && /Força das evidências/.test(texto));
+      verificar(
+        "abre as dimensões em separado",
+        /Compatibilidade contigo/.test(texto) && /Exequibilidade/.test(texto) && /Lacuna de oferta/.test(texto),
+      );
+      // A força da evidência e a atualidade dos dados SAÍRAM do score e
+      // viajam com a confiança. Somadas ao score mediam a quantidade de
+      // dados dentro de um número apresentado como juízo sobre o negócio.
+      verificar(
+        "a força da evidência viaja com a confiança, não com o score",
+        /Força da evidência/.test(texto) && !/Força das evidências/.test(texto),
+      );
+      verificar(
+        "a pontuação vai publicada com a incerteza ao lado",
+        /Pontuação \d+/.test(texto) &&
+          (/entre \d+ e \d+/.test(texto) || /não há intervalo/.test(texto)),
+      );
       verificar(
         "diz o que não teve base para ser avaliado",
         /sem base para avaliar/.test(texto),

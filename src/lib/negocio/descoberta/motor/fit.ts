@@ -1,33 +1,70 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  FIT PESSOAL — compatibilidade, e só isso
+//  FIT PESSOAL — «consegues fazer isto?», e MAIS NADA
 //  ---------------------------------------------------------------------
-//  Sete eixos, 100 pontos, cada um com a frase que o explica. Não se soma
-//  com mercado nem com confiança: é uma das dimensões do score, não o
-//  score. A separação é a tese do produto e está testada.
+//  ┌────────────────────────────────────────────────────────────────────┐
+//  │ A MATRIZ DE SOBREPOSIÇÃO, ESCRITA UMA VEZ                           │
+//  │                                                                    │
+//  │ O fit valia 26 pontos do score e continha, dentro de si, capital   │
+//  │ (15/100), tempo (15), ativos (15), geografia (10) e equipa (5). O  │
+//  │ score voltava a pontuar as MESMAS variáveis em `economia` (14),    │
+//  │ `exequibilidade` (10) e `geografia` (6). O capital entrava três    │
+//  │ vezes: no fit, na economia e — pela via de `capitalTipico.min` —   │
+//  │ no risco financeiro.                                               │
+//  │                                                                    │
+//  │     Peso declarado à compatibilidade pessoal ........  26 %        │
+//  │     Peso efetivo, contando a dupla contagem .........  ~50 %       │
+//  │                                                                    │
+//  │ A regra que resolve isto cabe em duas linhas, e é esta:            │
+//  │                                                                    │
+//  │     o FIT responde «consegues fazer isto?»                         │
+//  │     a ECONOMIA responde «cabe no que tens?»                        │
+//  │     a EXEQUIBILIDADE responde «tens como executar?»                │
+//  │     a GEOGRAFIA responde «o problema é aqui?»                      │
+//  │                                                                    │
+//  │ A mesma resposta não pode alimentar duas. Por isso capital, tempo, │
+//  │ equipa e geografia SAÍRAM deste ficheiro — cada um foi para a      │
+//  │ dimensão cuja pergunta responde. O que fica é o que só aqui cabe:  │
+//  │ o que a pessoa sabe, o que a pessoa tem, o que a pessoa já viveu,  │
+//  │ e o que a pessoa quer.                                             │
+//  └────────────────────────────────────────────────────────────────────┘
 //
-//  A diferença face ao Founder Fit anterior é o que entra: capacidades
-//  reais (competência × ativo) em vez de cinco chips, tempo disponível
-//  contra o que o modelo exige, e a equipa que o modelo pressupõe.
+//  ── E O QUE ENTROU ─────────────────────────────────────────────────
+//  Três campos que o configurador recolhia e que nenhuma linha do motor
+//  lia: o NÍVEL da competência (que era testado como booleano), o TIPO DE
+//  EXPERIÊNCIA (seis valores, incluindo «tenho contactos») e os ANOS. Com
+//  eles, dez anos de canalização deixam de valer o mesmo que ter mexido
+//  uma vez num sifão.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { marketRegionLabel } from "@/lib/negocio/market/geografia";
 import {
-  horasSemanais,
-  pessoasDisponiveis,
-  tetoDeCapital,
+  ESCALABILIDADE_PRETENDIDA,
+  experienciaForca,
+  temRestricao,
   type OpportunityContext,
 } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
 import type { ContribuicaoFit } from "./tipos";
 
+/**
+ * Os pesos, e a razão de cada um. Somam 100.
+ *
+ * Nenhum destes eixos aparece noutra dimensão do score. Um teste obriga
+ * a que continue assim — a dupla contagem é invisível a olho nu e volta
+ * sempre que alguém acrescenta «só mais um eixo».
+ */
 export const PESOS_FIT = Object.freeze({
-  capacidade: 30,
-  ativos: 15,
-  tempo: 15,
-  capital: 15,
-  preferencias: 10,
-  geografia: 10,
-  equipa: 5,
+  /** O que a pessoa sabe fazer, ponderado pelo nível declarado. */
+  capacidade: 35,
+  /** Os meios que a execução exige e que já existem. */
+  ativos: 20,
+  /** Já fez isto, geriu isto, ou tem a quem vender isto. */
+  experiencia: 15,
+  /** Coincide com o tipo de negócio que a pessoa pediu. */
+  preferencias: 15,
+  /** O modelo dá o que a pessoa quer que ele dê? */
+  ambicao: 8,
+  /** Respeita os limites brandos — os que pesam em vez de eliminarem. */
+  limites: 7,
 });
 
 export function calcularFit(
@@ -37,6 +74,8 @@ export function calcularFit(
   const detalhe: ContribuicaoFit[] = [];
 
   // ── Capacidade: quanto do que o trabalho pede está coberto ────────
+  //  A cobertura já vem ponderada pelo nível (ver `grafo.ts`): quem
+  //  declara «básico» conta 0,6 do que conta quem declara «avançado».
   const melhor = candidato.capacidades[0]!;
   const cobertura = melhor.cobertura;
   detalhe.push({
@@ -48,7 +87,7 @@ export function calcularFit(
         ? `Dominas o que isto pede: ${melhor.capacidade.rotulo.toLocaleLowerCase("pt-PT")}.`
         : melhor.competenciasEmFalta.length > 0
           ? `Tens parte do que isto pede — falta ${melhor.competenciasEmFalta.length === 1 ? "uma competência" : `${melhor.competenciasEmFalta.length} competências`} que o trabalho usa.`
-          : `Tens o essencial de ${melhor.capacidade.rotulo.toLocaleLowerCase("pt-PT")}, com folga por preencher.`,
+          : `Tens ${melhor.capacidade.rotulo.toLocaleLowerCase("pt-PT")}, no nível que declaraste — subir o nível sobe este eixo.`,
   });
 
   // ── Ativos ────────────────────────────────────────────────────────
@@ -70,43 +109,30 @@ export function calcularFit(
           : "Não exige meios que não tenhas.",
   });
 
-  // ── Tempo ─────────────────────────────────────────────────────────
-  const horas = horasSemanais(contexto);
-  const exigencia = candidato.modelo.precisaEquipa ? 30 : candidato.modelo.precisaLojaFisica ? 25 : 10;
-  const parteTempo = Math.min(1, horas / exigencia);
+  // ── Experiência ───────────────────────────────────────────────────
+  //  Três campos recolhidos e nunca lidos. «Tenho contactos» vale o
+  //  dobro de «tenho interesse» porque vender o primeiro serviço a
+  //  desconhecidos é a parte que mata mais negócios do que a execução.
+  const forcas = melhor.capacidade.competenciasNecessarias
+    .map((id) => experienciaForca(contexto, id))
+    .filter((valor): valor is number => valor !== null);
+  const parteExperiencia = forcas.length === 0 ? 0.35 : Math.max(...forcas);
+  const declaradas = contexto.competencias.filter((item) =>
+    melhor.capacidade.competenciasNecessarias.includes(item.id),
+  );
+  const comContactos = declaradas.some((item) => item.experiencia === "tenho-contactos");
+  const anosMax = Math.max(0, ...declaradas.map((item) => item.anos ?? 0));
   detalhe.push({
-    eixo: "tempo",
-    obtido: Math.round(PESOS_FIT.tempo * parteTempo),
-    maximo: PESOS_FIT.tempo,
-    nota:
-      parteTempo >= 1
-        ? `As ${horas} horas por semana que declaraste chegam para este modelo.`
-        : `Este modelo pede perto de ${exigencia} horas por semana e declaraste ${horas}.`,
-  });
-
-  // ── Capital ───────────────────────────────────────────────────────
-  const teto = tetoDeCapital(contexto);
-  const minimo = candidato.modelo.capitalTipico.min;
-  const maximoModelo = candidato.modelo.capitalTipico.max;
-  let parteCapital = 0.5;
-  let notaCapital = "Não declaraste capital, por isso este eixo não pontua a teu favor nem contra.";
-  if (teto !== undefined) {
-    if (teto >= maximoModelo) {
-      parteCapital = 1;
-      notaCapital = "O capital que declaraste cobre o topo do intervalo estimado.";
-    } else if (teto >= minimo) {
-      parteCapital = 0.6;
-      notaCapital = "O capital que declaraste cobre o mínimo, mas não o topo do intervalo.";
-    } else {
-      parteCapital = 0;
-      notaCapital = "O capital declarado fica abaixo do mínimo estimado para arrancar.";
-    }
-  }
-  detalhe.push({
-    eixo: "capital",
-    obtido: Math.round(PESOS_FIT.capital * parteCapital),
-    maximo: PESOS_FIT.capital,
-    nota: notaCapital,
+    eixo: "experiencia",
+    obtido: Math.round(PESOS_FIT.experiencia * parteExperiencia),
+    maximo: PESOS_FIT.experiencia,
+    nota: comContactos
+      ? "Declaraste ter contactos nesta área — é o que mais encurta o caminho até ao primeiro cliente."
+      : anosMax >= 3
+        ? `${anosMax} anos declarados nesta área contam a teu favor.`
+        : forcas.length === 0
+          ? "Não declaraste que relação tens com esta área, por isso o eixo fica a meio."
+          : "Sabes fazer, mas ainda não declaraste experiência de trabalho ou de gestão nesta área.",
   });
 
   // ── Preferências ──────────────────────────────────────────────────
@@ -135,33 +161,53 @@ export function calcularFit(
         : `Coincide com ${acertos} de ${possiveis} ${possiveis === 1 ? "preferência declarada" : "preferências declaradas"}.`,
   });
 
-  // ── Geografia ─────────────────────────────────────────────────────
-  const nacional = candidato.problema.regioes.includes("portugal");
-  const zonaFixada = contexto.localizacao.regiao !== "portugal";
-  const parteGeo = nacional ? 1 : zonaFixada ? 1 : 0.5;
+  // ── Ambição contra escalabilidade ─────────────────────────────────
+  //  Não estima receita — o motor recusa fazê-lo. Afirma uma coisa
+  //  estrutural e verificável: um modelo que troca horas por dinheiro
+  //  não escala, e propô-lo a quem pediu «escalar» é propor o contrário.
+  const pretendida = ESCALABILIDADE_PRETENDIDA[contexto.rendimento.ambicao];
+  const oferecida = candidato.modelo.escalabilidade;
+  const falta = Math.max(0, pretendida - oferecida);
+  const parteAmbicao = Math.max(0, 1 - falta / 3);
   detalhe.push({
-    eixo: "geografia",
-    obtido: Math.round(PESOS_FIT.geografia * parteGeo),
-    maximo: PESOS_FIT.geografia,
-    nota: nacional
-      ? "O problema existe em qualquer zona do país."
-      : zonaFixada
-        ? `O problema é específico de ${candidato.problema.regioes.map(marketRegionLabel).join(", ")} — e é onde estás.`
-        : `Depende de estar em ${candidato.problema.regioes.map(marketRegionLabel).join(" ou ")}, e ainda não fixaste zona.`,
+    eixo: "ambicao",
+    obtido: Math.round(PESOS_FIT.ambicao * parteAmbicao),
+    maximo: PESOS_FIT.ambicao,
+    nota:
+      falta === 0
+        ? `${candidato.modelo.rotulo} comporta o que declaraste querer deste negócio.`
+        : `Declaraste querer ${contexto.rendimento.ambicao === "escalar" ? "escalar" : contexto.rendimento.ambicao === "crescer" ? "crescer" : "substituir o salário"}, e este modelo cresce sobretudo com mais horas tuas.`,
   });
 
-  // ── Equipa ────────────────────────────────────────────────────────
-  const pessoas = pessoasDisponiveis(contexto);
-  const parteEquipa = candidato.modelo.precisaEquipa ? (pessoas >= 2 ? 1 : 0.3) : pessoas >= 1 ? 1 : 0;
+  // ── Limites brandos ───────────────────────────────────────────────
+  //  Três restrições que a interface anunciava com «Pesa em…» e que o
+  //  motor não implementava. Pesam aqui, e não eliminam — é o que a copy
+  //  sempre prometeu, e a terceira via (descrever um efeito inexistente)
+  //  é a única inaceitável neste produto.
+  const conflitos: string[] = [];
+  if (temRestricao(contexto, "sem-porta-a-porta") && candidato.modelo.dependeAquisicaoDireta) {
+    conflitos.push("os primeiros clientes vêm de abordagem direta");
+  }
+  if (temRestricao(contexto, "sem-noites") && candidato.problema.ocorrenciasForaDeHoras) {
+    conflitos.push("o problema gera ocorrências fora de horas");
+  }
+  if (temRestricao(contexto, "sem-redes-sociais") && candidato.modelo.dependeTrafegoPago) {
+    conflitos.push("o modelo vive de trazer tráfego");
+  }
+  const declarouLimites = ["sem-porta-a-porta", "sem-noites", "sem-redes-sociais"].some((id) =>
+    temRestricao(contexto, id as never),
+  );
+  const parteLimites = conflitos.length === 0 ? 1 : Math.max(0, 1 - conflitos.length * 0.4);
   detalhe.push({
-    eixo: "equipa",
-    obtido: Math.round(PESOS_FIT.equipa * parteEquipa),
-    maximo: PESOS_FIT.equipa,
-    nota: candidato.modelo.precisaEquipa
-      ? pessoas >= 2
-        ? "És mais do que uma pessoa, e este modelo precisa disso."
-        : "Este modelo precisa de mais gente do que declaraste ter."
-      : "Uma pessoa chega para arrancar isto.",
+    eixo: "limites",
+    obtido: Math.round(PESOS_FIT.limites * parteLimites),
+    maximo: PESOS_FIT.limites,
+    nota:
+      conflitos.length > 0
+        ? `Choca com o que pediste: ${conflitos.join("; ")}.`
+        : declarouLimites
+          ? "Não colide com nenhum dos limites que declaraste."
+          : "Não declaraste limites que pesem sobre este modelo.",
   });
 
   const total = detalhe.reduce((soma, item) => soma + item.obtido, 0);

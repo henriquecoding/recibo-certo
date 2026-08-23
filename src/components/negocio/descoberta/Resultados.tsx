@@ -27,6 +27,7 @@ import {
   ROTULO_ETAPA,
   resumoDoTrabalho,
   type BloqueioPorMeio,
+  type ContagemEtapa,
   type DiagnosticoVazio,
   type ResultadoDescoberta,
 } from "@/lib/negocio/descoberta/motor/pipeline";
@@ -53,6 +54,27 @@ import {
 } from "@/components/ui/Icons";
 import { Chip } from "./atomos";
 import Dossier from "./Dossier";
+
+/**
+ * Uma etapa contada na unidade em que ela conta.
+ *
+ * A seta só se usa entre dois números da mesma espécie e onde há
+ * mesmo um filtro. A etapa da evidência não elimina hipóteses — anexa
+ * leituras — e escrevê-la como «17 → 3» dizia que catorze tinham sido
+ * eliminadas. Nenhuma tinha.
+ */
+function descreverEtapa(etapa: ContagemEtapa): string {
+  const nome = (quantidade: number, unidade: ContagemEtapa["unidadeEntrada"]) =>
+    unidade === "observacoes"
+      ? `${quantidade} ${quantidade === 1 ? "leitura oficial" : "leituras oficiais"}`
+      : `${quantidade} ${quantidade === 1 ? "hipótese" : "hipóteses"}`;
+
+  if (etapa.unidadeEntrada !== etapa.unidadeSaida) {
+    return `${nome(etapa.sairam, etapa.unidadeSaida)} em ${nome(etapa.entraram, etapa.unidadeEntrada)}`;
+  }
+  if (etapa.naoFiltra || etapa.entraram === etapa.sairam) return nome(etapa.sairam, etapa.unidadeSaida);
+  return `${etapa.entraram} → ${nome(etapa.sairam, etapa.unidadeSaida)}`;
+}
 
 const MOTIVO_ROTULO: Readonly<Record<string, string>> = {
   restricao: "Restrição que declaraste",
@@ -105,16 +127,56 @@ export default function Resultados({
   const resumo = resumoDoTrabalho(resultado.telemetria);
   const resumoHistorico = diferenca ? resumoDaDiferenca(diferenca) : null;
 
+  // ── UMA OBJEÇÃO FATAL NÃO É «PASSOU OS CRITÉRIOS» ────────────────
+  //  Um terço dos candidatos apresentados carregava uma objeção marcada
+  //  `fatal` a proceder — falta um meio que a execução exige, ou quatro
+  //  ou mais dimensões de risco fora da tolerância declarada. Eram
+  //  despromovidos para o fim da lista e continuavam debaixo de um
+  //  cabeçalho que dizia, literalmente, «hipóteses que passaram os
+  //  critérios». Não passaram: sobreviveram à eliminação e falharam o
+  //  stress test, que é outra coisa e merece outro sítio no ecrã.
+  const temFatal = (candidato: OpportunityCandidate) =>
+    candidato.objecoes.some((objecao) => objecao.fatal && objecao.procede);
+  const passaram = useMemo(
+    () => resultado.candidatos.filter((item) => !temFatal(item)),
+    [resultado.candidatos],
+  );
+  const comObjecaoFatal = useMemo(
+    () => resultado.candidatos.filter(temFatal),
+    [resultado.candidatos],
+  );
+
+  // ── A ORDEM VISÍVEL CONTRA A PONTUAÇÃO VISÍVEL ───────────────────
+  //  A lista é ordenada por MMR, que desconta semelhança para não pôr
+  //  cinco variantes do mesmo problema no topo. A escolha é correta e
+  //  defensável — mas o cartão mostra «Pontuação global N» e observou-se
+  //  numa corrida real 89, 82, 80, 83, 82, 80. Quem lê com atenção vê um
+  //  83 abaixo de um 80 e conclui, com razão, que um dos dois números
+  //  está errado. Nenhum está: falta dizê-lo no ecrã, e é o que estas
+  //  duas linhas fazem.
+  const ordemPorPontuacao = useMemo(() => {
+    const porScore = [...passaram].sort(
+      (esquerda, direita) =>
+        direita.pontuacaoGlobal - esquerda.pontuacaoGlobal ||
+        esquerda.titulo.localeCompare(direita.titulo, "pt-PT"),
+    );
+    return new Map(porScore.map((item, indice) => [item.id, indice]));
+  }, [passaram]);
+  const ordemFoiDiversificada = useMemo(
+    () => passaram.some((item, indice) => ordemPorPontuacao.get(item.id) !== indice),
+    [passaram, ordemPorPontuacao],
+  );
+
   const porAngulo = useMemo(
     () => new Map(resultado.destaques.map((item) => [item.angulo, item.candidato.id])),
     [resultado.destaques],
   );
 
   const visiveis = useMemo(() => {
-    if (anguloAtivo === "todos") return resultado.candidatos;
+    if (anguloAtivo === "todos") return passaram;
     const id = porAngulo.get(anguloAtivo);
     return resultado.candidatos.filter((item) => item.id === id);
-  }, [anguloAtivo, porAngulo, resultado.candidatos]);
+  }, [anguloAtivo, porAngulo, passaram, resultado.candidatos]);
 
   const paraComparar = resultado.candidatos.filter((item) => comparar.includes(item.id));
 
@@ -131,9 +193,15 @@ export default function Resultados({
           <div className="min-w-0">
             <p className="eyebrow text-brand">Recomendado para ti</p>
             <h2 id="resultado-descoberta" className="font-display mt-0.5 text-xl font-semibold text-ink">
-              {resultado.candidatos.length}{" "}
-              {resultado.candidatos.length === 1 ? "hipótese passou os critérios" : "hipóteses passaram os critérios"}
+              {passaram.length}{" "}
+              {passaram.length === 1 ? "hipótese passou os critérios" : "hipóteses passaram os critérios"}
             </h2>
+            {comObjecaoFatal.length > 0 ? (
+              <p className="mt-0.5 text-[12px] leading-relaxed text-stone-500">
+                Outras {comObjecaoFatal.length} sobreviveram à eliminação e falharam o stress test — estão em
+                baixo, com a objeção que as trava.
+              </p>
+            ) : null}
             {resumo ? <p className="mt-1 text-[12px] leading-relaxed text-stone-500">{resumo}.</p> : null}
           </div>
           <button
@@ -146,13 +214,16 @@ export default function Resultados({
         </div>
 
         {/* As etapas reais, com as contagens que produziram */}
+        {/* As etapas reais, com as contagens que produziram — e com a
+            UNIDADE de cada uma. A seta só aparece onde há mesmo um filtro
+            entre dois números da mesma espécie: «17 → 3» com hipóteses de
+            um lado e observações do outro lia-se como catorze hipóteses
+            eliminadas, e nenhuma tinha sido. */}
         <ol className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-stone-100 pt-3 dark:border-stone-800">
           {resultado.telemetria.etapas.map((etapa) => (
             <li key={etapa.etapa} className="text-[11px] text-stone-500">
               <span className="font-medium text-stone-600 dark:text-stone-300">{ROTULO_ETAPA[etapa.etapa]}</span>{" "}
-              <span className="tabular-nums">
-                {etapa.entraram} → {etapa.sairam}
-              </span>
+              <span className="tabular-nums">{descreverEtapa(etapa)}</span>
             </li>
           ))}
         </ol>
@@ -222,6 +293,19 @@ export default function Resultados({
         </section>
       ) : null}
 
+      {/* ══ Porque a ordem não é só a pontuação ═════════════════ */}
+      {ordemFoiDiversificada && anguloAtivo === "todos" ? (
+        <p className="flex items-start gap-1.5 rounded-3xl border border-stone-100 bg-stone-50 px-4 py-2.5 text-[11px] leading-snug text-stone-500 dark:border-stone-800 dark:bg-stone-900/50">
+          <BarChart2 size={12} className="mt-0.5 flex-none text-brand" />
+          <span>
+            <strong className="font-semibold text-stone-700 dark:text-stone-200">A ordem não é só a pontuação.</strong>{" "}
+            Um ranking puro põe cinco variantes do mesmo problema no topo e não dá escolha nenhuma. O motor
+            desconta semelhança para que cada linha seja uma decisão diferente — por isso podes ver uma
+            pontuação mais alta abaixo de uma mais baixa. As marcadas com «diversificada» são essas.
+          </span>
+        </p>
+      ) : null}
+
       {/* ══ A lista ═════════════════════════════════════════════ */}
       <section aria-label="Oportunidades" className="space-y-2.5">
         {visiveis.map((candidato, posicao) => {
@@ -283,7 +367,19 @@ export default function Resultados({
                   <Swap size={12} /> {comparar.includes(candidato.id) ? "A comparar" : "Comparar"}
                 </button>
                 <span className="text-[11px] text-stone-400">
-                  Pontuação global {candidato.pontuacaoGlobal} · {candidato.problema.setor}
+                  Pontuação global {candidato.pontuacaoGlobal}
+                  {candidato.intervaloPontuacao.fechado ? null : (
+                    <span className="text-stone-400">
+                      {" "}
+                      <span className="tabular-nums">
+                        ({candidato.intervaloPontuacao.min}–{candidato.intervaloPontuacao.max})
+                      </span>
+                    </span>
+                  )}{" "}
+                  · {candidato.problema.setor}
+                  {anguloAtivo === "todos" && ordemPorPontuacao.get(candidato.id) !== posicao ? (
+                    <span className="text-stone-400"> · diversificada</span>
+                  ) : null}
                 </span>
               </div>
 
@@ -306,11 +402,18 @@ export default function Resultados({
             <SaidaDoVazio
               bloqueios={resultado.bloqueiosPorMeio}
               diagnostico={resultado.diagnosticoVazio}
-              descartadas={resultado.descartados.length}
+              descartadas={resultado.descartados.filter((item) => item.motivo !== "duplicado").length}
               onDeclararMeios={onDeclararMeios}
               onVerDescartadas={() => setVerDescartadas(true)}
               onVoltar={onVoltar}
             />
+          ) : anguloAtivo === "todos" ? (
+            <p className="rounded-4xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500 dark:border-stone-700">
+              Compusemos {resultado.candidatos.length}{" "}
+              {resultado.candidatos.length === 1 ? "hipótese" : "hipóteses"} e nenhuma sobreviveu ao stress
+              test. Estão listadas em baixo com a objeção que as trava — e os cenários «e se» dizem o que
+              mudaria isso.
+            </p>
           ) : (
             <p className="rounded-4xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500 dark:border-stone-700">
               Nenhuma hipótese corresponde a este ângulo de leitura. Volta a «Todos» para as ver.
@@ -318,6 +421,44 @@ export default function Resultados({
           )
         ) : null}
       </section>
+
+      {/* ══ Falharam o stress test ══════════════════════════════ */}
+      {comObjecaoFatal.length > 0 && anguloAtivo === "todos" ? (
+        <section
+          aria-labelledby="fatais-descoberta"
+          className="rounded-4xl border border-amber-200/70 bg-amber-50/50 p-4 dark:border-amber-900/40 dark:bg-amber-950/20 sm:p-5"
+        >
+          <h3 id="fatais-descoberta" className="font-display text-base font-semibold text-ink">
+            {comObjecaoFatal.length}{" "}
+            {comObjecaoFatal.length === 1 ? "hipótese não passou" : "hipóteses não passaram"} o stress test
+          </h3>
+          <p className="mt-1 text-[12px] leading-relaxed text-stone-600 dark:text-stone-300">
+            Encaixam no teu contexto e sobreviveram às tuas restrições, mas o motor tentou destruí-las e
+            conseguiu. Ficam aqui porque a objeção é acionável — e porque escondê-las seria decidir por ti.
+          </p>
+          <ul className="mt-3 space-y-2">
+            {comObjecaoFatal.map((candidato) => {
+              const objecao = candidato.objecoes.find((item) => item.fatal && item.procede);
+              return (
+                <li
+                  key={candidato.id}
+                  className="rounded-3xl border border-amber-200/60 bg-white p-3 dark:border-amber-900/30 dark:bg-stone-900"
+                >
+                  <p className="text-[13px] font-semibold leading-snug text-ink">{candidato.titulo}</p>
+                  {objecao ? (
+                    <p className="mt-1 text-[12px] leading-snug text-stone-600 dark:text-stone-300">
+                      <strong className="font-semibold">{objecao.pergunta}</strong> {objecao.resposta}
+                    </p>
+                  ) : null}
+                  <p className="mt-1 text-[11px] text-stone-400">
+                    Encaixa contigo {candidato.fit}% · pontuação {candidato.pontuacaoGlobal}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {/* ══ Comparador ══════════════════════════════════════════ */}
       {paraComparar.length >= 2 ? (

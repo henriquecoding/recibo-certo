@@ -13,6 +13,9 @@
 
 import type { CenarioInicial } from "@/lib/pricing";
 import type { MarketRegion } from "@/lib/negocio/market/geografia";
+import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
+import type { IntensidadeAgregada } from "./intensidade";
+import type { IntervaloDePontuacao } from "./scoring";
 import type { Evidencia, Intervalo, LacunaDeEvidencia } from "../proveniencia";
 import type { DimensaoRisco, MercadoAlvo, NaturezaOferta, PadraoReceita } from "../contexto/tipos";
 import type { Capacidade, ModeloReceita, Problema, Regulacao } from "../conhecimento/tipos";
@@ -21,14 +24,21 @@ export type FormaEntrega = "presencial" | "remoto" | "hibrido";
 
 // ── COMPATIBILIDADE PESSOAL ──────────────────────────────────────────
 
+/**
+ * Os eixos do fit, e só eles.
+ *
+ * `tempo`, `capital`, `equipa` e `geografia` estavam aqui e saíram: cada
+ * um respondia a uma pergunta que outra dimensão do score já respondia, e
+ * a soma das duas dava ao encaixe pessoal quase o dobro do peso que a
+ * tabela declarava. Ver a matriz de sobreposição em `fit.ts`.
+ */
 export type EixoFit =
   | "capacidade"
   | "ativos"
-  | "tempo"
-  | "capital"
+  | "experiencia"
   | "preferencias"
-  | "geografia"
-  | "equipa";
+  | "ambicao"
+  | "limites";
 
 export interface ContribuicaoFit {
   eixo: EixoFit;
@@ -47,6 +57,13 @@ export interface RiscoAvaliado {
   nota: string;
   /** A pessoa declarou tolerar isto? Compara com o perfil de risco. */
   dentroDaTolerancia: boolean;
+  /**
+   * O nível foi MEDIDO, ou assumido por prudência?
+   *
+   * Um nível assumido é um aviso legítimo e não é uma afirmação sobre o
+   * negócio — por isso não conta para a contagem que baixa o score.
+   */
+  apurado: boolean;
 }
 
 // ── REGULAÇÃO ────────────────────────────────────────────────────────
@@ -81,6 +98,27 @@ export interface AvaliacaoProcura {
   /** O que falta saber para a leitura deixar de ser desconhecida. */
   lacunas: readonly LacunaDeEvidencia[];
   nota: string;
+  /**
+   * O que as séries DIZEM, contra uma referência declarada.
+   *
+   * `posicao === null` significa que existe evidência mas não existe
+   * régua — e é diferente de não haver evidência nenhuma. O eixo da
+   * procura lê isto; nunca o número de linhas.
+   */
+  intensidade: IntensidadeAgregada;
+  /**
+   * O estado mais forte do `evidence-gate` entre os packs que
+   * contribuíram. É o TETO da confiança, nunca um somatório.
+   */
+  estadoGate: MarketOpportunityState | null;
+  /** Observações que o gate recusou. Contadas, não silenciadas. */
+  bloqueadasPeloGate: number;
+  /**
+   * 0–100 pela idade efetiva das leituras, com meia-vida por tipo de
+   * série. `null` quando não há leitura nenhuma. Alimenta a CONFIANÇA,
+   * nunca o score — a idade dos dados fala de nós, não do mercado.
+   */
+  frescura: number | null;
 }
 
 // ── VIABILIDADE ──────────────────────────────────────────────────────
@@ -93,6 +131,16 @@ export interface AvaliacaoViabilidade {
   cabeNoCapital: boolean | null;
   /** Cabe no prazo que a pessoa aguenta? `null` = não declarou prazo. */
   cabeNoPrazo: boolean | null;
+  /**
+   * Que fração do intervalo de investimento o teto declarado cobre, [0, 1].
+   *
+   * É isto que o score lê, e não o booleano: um teto que cobre o mínimo
+   * de um intervalo de 4 500–30 000 € não cobre o negócio, e o booleano
+   * dizia que sim.
+   */
+  fracaoCapitalCoberta: number | null;
+  /** O mesmo para o prazo até à primeira receita. */
+  fracaoPrazoCoberta: number | null;
   /** O que impede uma estimativa mais fina. Sempre presente. */
   limitacoes: readonly string[];
 }
@@ -113,8 +161,6 @@ export interface OpportunityScore {
   regulacao: number;
   risco: number;
   geografia: number;
-  qualidadeDaEvidencia: number;
-  frescura: number | null;
 }
 
 export type NivelConfianca = "alta" | "media" | "baixa" | "insuficiente";
@@ -124,6 +170,19 @@ export interface AvaliacaoConfianca {
   /** 0–1. Quanto do que seria preciso saber está coberto. */
   cobertura: number;
   motivos: readonly string[];
+  /**
+   * Força das evidências e atualidade — as duas dimensões que ESTAVAM no
+   * score do negócio e que pertencem aqui.
+   *
+   * `forcaDaEvidencia` é 0–100 e nasce de quantas observações
+   * utilizáveis sustentam a análise; `frescura` é 0–100 e nasce da idade
+   * efetiva das leituras, com meia-vida por tipo de série. Nenhuma das
+   * duas toca no score: as duas viajam ao lado dele.
+   */
+  forcaDaEvidencia: number;
+  frescura: number | null;
+  /** O estado do gate que serve de teto a este nível. */
+  tetoDoGate: MarketOpportunityState | null;
 }
 
 // ── STRESS TEST ──────────────────────────────────────────────────────
@@ -190,6 +249,14 @@ export interface OpportunityCandidate {
   scores: OpportunityScore;
   /** O número único que ordena. Nasce dos scores, com pesos declarados. */
   pontuacaoGlobal: number;
+  /**
+   * O mesmo número com a incerteza publicada ao lado.
+   *
+   * Um ponto único esconde que metade das dimensões pode não ter sido
+   * avaliada. O intervalo diz-o: colapsa no ponto quando a cobertura é
+   * total, e abre-se quando não é.
+   */
+  intervaloPontuacao: IntervaloDePontuacao;
   confianca: AvaliacaoConfianca;
   objecoes: readonly ObjecaoStress[];
   explicacao: Explicacao;

@@ -14,6 +14,7 @@
 import { marketRegionLabel } from "@/lib/negocio/market/geografia";
 import { horasSemanais, type OpportunityContext } from "../contexto/tipos";
 import { COMPETENCIA_POR_ID } from "../conhecimento/grafo";
+import { fatorGeografico } from "./scoring";
 import type { CandidatoBruto } from "./gerador";
 import { ROTULO_ENTREGA } from "./gerador";
 import type {
@@ -107,6 +108,19 @@ export function explicar(entrada: EntradaExplicacao): Explicacao {
   if (procura.evidencias.length >= 2) {
     aFavor.push(`${procura.evidencias.length} leituras oficiais sustentam parte desta análise.`);
   }
+  // A intensidade só entra «a favor» quando o número é bom E há régua
+  // contra a qual o ler. Um valor solto não é um argumento.
+  const posicao = procura.intensidade.posicao;
+  if (posicao !== null && posicao >= 60) {
+    const primeira = procura.intensidade.leituras[0];
+    aFavor.push(
+      primeira && procura.intensidade.base === "distribuicao-regional"
+        ? `Nas séries oficiais que medem este problema, a tua zona está no percentil ${posicao} do país.`
+        : `As séries oficiais que medem este problema põem a tua zona ${posicao >= 75 ? "bem " : ""}acima da referência nacional.`,
+    );
+  }
+  const geo = fatorGeografico(candidato, contexto);
+  if (geo.valor >= 0.95) aFavor.push(geo.nota);
   if (candidato.modelo.escalabilidade >= 2) {
     aFavor.push("O modelo cresce sem custo proporcional ao teu tempo.");
   }
@@ -125,6 +139,14 @@ export function explicar(entrada: EntradaExplicacao): Explicacao {
   if (regulacao.temIncerteza) {
     contra.push("Há requisitos regulatórios que dependem do caso concreto e têm de ser confirmados antes de investir.");
   }
+  if (posicao !== null && posicao <= 35) {
+    contra.push(
+      procura.intensidade.base === "distribuicao-regional"
+        ? `Nas séries que medem este problema, a tua zona está no percentil ${posicao} — está entre as regiões onde ele é menos intenso.`
+        : "As séries que medem este problema põem a tua zona abaixo da referência nacional.",
+    );
+  }
+  if (geo.valor < 0.7) contra.push(geo.nota);
   if (horasSemanais(contexto) < 10 && candidato.modelo.padrao !== "pontual") {
     contra.push("Um modelo recorrente com poucas horas por semana enche a agenda depressa e depois não tem para onde crescer.");
   }

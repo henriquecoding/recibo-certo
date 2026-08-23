@@ -123,14 +123,19 @@ const REGRAS: readonly Regra[] = Object.freeze<readonly Regra[]>([
         }
       : null,
 
+  // ── A sazonalidade semanal deixa de ser uma lista de ids ──────────
+  //  Isto comparava com três identificadores escritos à mão. Um problema
+  //  novo com procura ao sábado passava incólume e ninguém dava por
+  //  isso — que é precisamente o modo de falha mais perigoso do grafo:
+  //  silencioso, plausível e sem teste que o apanhe. `procuraFimDeSemana`
+  //  é agora um campo OBRIGATÓRIO de `Problema`, e é o compilador que
+  //  obriga a responder a cada problema que entre.
   (candidato, contexto) =>
-    temRestricao(contexto, "sem-fins-de-semana") &&
-    ["picos-operacionais-alojamento", "reforco-imprevisivel-hotelaria", "visitante-sem-programa"].includes(
-      candidato.problema.id,
-    )
+    temRestricao(contexto, "sem-fins-de-semana") && candidato.problema.procuraFimDeSemana
       ? {
           motivo: "restricao",
           explicacao: "A procura deste problema concentra-se ao fim de semana, e excluíste fins de semana.",
+          oQueMudaria: "Aceitar trabalhar ao fim de semana, ou atacar um problema com procura distribuída pela semana.",
         }
       : null,
 
@@ -140,10 +145,17 @@ const REGRAS: readonly Regra[] = Object.freeze<readonly Regra[]>([
     if (teto === undefined) return null;
     const minimo = candidato.modelo.capitalTipico.min;
     if (minimo <= teto) return null;
+    // `aberturaInvestidores` era recolhida e nunca lida. NÃO alarga o
+    // teto — dinheiro de terceiros que ainda não existe não é capital
+    // disponível, e alargar por causa de uma intenção seria inventar
+    // meios. O que faz é mudar o caminho de saída que se propõe.
+    const caminho = contexto.capital.aberturaInvestidores
+      ? `Ter cerca de ${minimo.toLocaleString("pt-PT")} € disponíveis. Disseste estar aberto a investidores, e esta é das hipóteses em que essa abertura muda mesmo o que é possível — mas só depois de o dinheiro entrar, não antes.`
+      : `Ter cerca de ${minimo.toLocaleString("pt-PT")} € disponíveis, ou atacar o mesmo problema por um modelo mais leve.`;
     return {
       motivo: "capital",
       explicacao: `Este modelo raramente arranca abaixo de ${minimo.toLocaleString("pt-PT")} €, e o teto que declaraste é ${teto.toLocaleString("pt-PT")} €.`,
-      oQueMudaria: `Ter cerca de ${minimo.toLocaleString("pt-PT")} € disponíveis, ou atacar o mesmo problema por um modelo mais leve.`,
+      oQueMudaria: caminho,
     };
   },
 

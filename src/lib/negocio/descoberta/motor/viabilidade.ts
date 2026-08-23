@@ -9,8 +9,27 @@
 //  O que este ficheiro NÃO faz: calcular preço. Isso é do motor canónico
 //  (`src/lib/pricing`), que é a única porta de preço do produto. Aqui
 //  estima-se o que é preciso para ARRANCAR, que é outra pergunta.
+//
+//  ── PORQUE O TESTE BINÁRIO SAIU ────────────────────────────────────
+//  Durante muito tempo a economia decidia-se assim:
+//
+//      cabeNoCapital = investimentoInicial.min <= teto
+//
+//  Um intervalo de 4 500–30 000 € «cabia» num teto de 5 000 €. O stress
+//  test, na linha ao lado, escrevia a objeção certa — «cabe no mínimo,
+//  não cabe no pior caso, e os negócios raramente correm pelo melhor» — e
+//  o score usava o mínimo à mesma. Média medida do eixo: 94,9 em 100, com
+//  o topo saturado.
+//
+//  O booleano continua a existir porque há sítios onde a pergunta é
+//  mesmo binária (a restrição que ELIMINA, e a objeção do stress test).
+//  O que mudou é que o SCORE deixou de o usar: passa a ler a FRAÇÃO do
+//  intervalo que o teto cobre. Um teto que cobre o mínimo e mais nada
+//  vale perto de zero; um teto que cobre o topo vale um. Fica contínuo,
+//  penaliza a cauda, e mantém a honestidade de o intervalo ser intervalo.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { SMN, SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { intervalo, somarIntervalos, type Intervalo } from "../proveniencia";
 import { tetoDeCapital, type OpportunityContext } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
@@ -23,6 +42,64 @@ const CUSTO_REGULATORIO: Readonly<Record<0 | 1 | 2 | 3, [number, number]>> = {
   2: [300, 2000],
   3: [1000, 6000],
 };
+
+/**
+ * Que fração de um intervalo é que um teto cobre, em [0, 1].
+ *
+ * `null` quando não há teto declarado — que NÃO é zero: zero diria «não
+ * cabe nada», e o que se passa é que ninguém respondeu.
+ *
+ * Um intervalo degenerado (min === max) só admite a resposta binária, e
+ * é a única circunstância em que a devolve.
+ */
+export function fracaoCoberta(alcance: Intervalo | null, teto: number | undefined): number | null {
+  if (alcance === null || teto === undefined) return null;
+  if (alcance.max <= alcance.min) return teto >= alcance.min ? 1 : 0;
+  const parte = (teto - alcance.min) / (alcance.max - alcance.min);
+  return Math.max(0, Math.min(1, parte));
+}
+
+/**
+ * O custo fixo mensal de uma operação com equipa, calculado e não inventado.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ O ÚNICO NÚMERO INVENTADO DE UM MOTOR QUE OS PROÍBE                  │
+ * │                                                                    │
+ * │ Este campo era `capitalTipico.min / 10` a `capitalTipico.max / 6`. │
+ * │ O divisor 10 e o divisor 6 não tinham proveniência nenhuma: nem    │
+ * │ método, nem fonte, nem razão escrita. Num motor que se recusa a    │
+ * │ estimar receita, estimar custo fixo por uma fração arbitrária do   │
+ * │ capital era a exceção que enfraquecia a regra inteira.             │
+ * │                                                                    │
+ * │ Passa a ser um CÁLCULO sobre dados fiscais verificados: a RMMG em  │
+ * │ vigor e a TSU da entidade empregadora, ambas de `fiscal-data.ts`,  │
+ * │ com base legal e `lastVerified`. Duas pessoas ao mínimo legal, com │
+ * │ os catorze meses repartidos por doze. É verificável, é a fronteira │
+ * │ INFERIOR real de uma operação com equipa, e diz o que não inclui.  │
+ * │                                                                    │
+ * │ O espaço próprio não ganhou substituto e ficou sem número: a renda │
+ * │ domina o custo, varia por concelho e por metro quadrado, e não há  │
+ * │ série ligada que a meça. Dizer «não estimamos, e é isto que pesa»  │
+ * │ é mais útil do que uma fração do capital com ar de conta.          │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+function custoDeEquipa(pessoas: number): Intervalo {
+  const mensalPorPessoa = SMN.value * (1 + SS_DEPENDENTE.entidade.value);
+  // Catorze meses de retribuição repartidos por doze de tesouraria: os
+  // subsídios são devidos e ignorá-los subavaliava o custo em ~17 %.
+  const comSubsidios = (mensalPorPessoa * 14) / 12;
+  return intervalo(
+    Math.round(comSubsidios),
+    Math.round(comSubsidios * pessoas),
+    "€/mês",
+    {
+      origem: "calculo",
+      fonte: `RMMG ${SMN.value.toLocaleString("pt-PT")} € + TSU da entidade ${(SS_DEPENDENTE.entidade.value * 100).toLocaleString("pt-PT")} %`,
+      url: "https://www.seg-social.pt/entidades-contratantes",
+      limitacao: `Uma a ${pessoas} pessoas ao mínimo legal, com os catorze meses repartidos por doze. Não inclui subsídio de refeição, seguro de acidentes de trabalho, formação obrigatória nem substituições. É o piso, não o custo real.`,
+    },
+  );
+}
 
 export function avaliarViabilidade(
   candidato: CandidatoBruto,
@@ -76,30 +153,21 @@ export function avaliarViabilidade(
   const teto = tetoDeCapital(contexto);
   const cabeNoCapital =
     teto === undefined || investimentoInicial === null ? null : investimentoInicial.min <= teto;
+  const fracaoCapitalCoberta = fracaoCoberta(investimentoInicial, teto);
 
   const prazo = contexto.tempo.prazoMaxPrimeiraReceitaMeses;
   const tempo = candidato.modelo.tempoAteReceitaMeses;
   const cabeNoPrazo = prazo === undefined ? null : tempo.min <= prazo;
+  const fracaoPrazoCoberta = fracaoCoberta(tempo, prazo);
 
-  // O custo mensal só se estima quando o modelo tem custo recorrente
-  // estrutural. Inventar um valor «de manutenção» para todos seria o tipo
-  // de número plausível que este motor existe para não produzir.
-  const custoMensal =
-    candidato.modelo.precisaLojaFisica || candidato.modelo.precisaEquipa
-      ? intervalo(
-          Math.round(doModelo.min / 10),
-          Math.round(doModelo.max / 6),
-          "€/mês",
-          {
-            origem: "estimativa",
-            fonte: "Estrutura do modelo de receita (ReciboCerto)",
-            limitacao:
-              "Modelos com espaço ou equipa têm custo fixo mensal antes de qualquer venda. O valor real depende da renda e dos salários concretos.",
-          },
-        )
-      : null;
+  // ── Custo fixo mensal: só quando é derivável, e sempre com método ──
+  const custoMensal = candidato.modelo.precisaEquipa ? custoDeEquipa(2) : null;
 
-  if (custoMensal === null) {
+  if (candidato.modelo.precisaLojaFisica) {
+    limitacoes.push(
+      "Não estimamos a renda: domina o custo fixo deste modelo, varia por concelho e por metro quadrado, e não há série ligada que a meça. Confirma-a antes de decidir — é o número que decide se o mês fecha.",
+    );
+  } else if (custoMensal === null) {
     limitacoes.push(
       "Sem espaço nem equipa, o custo fixo mensal é sobretudo o teu tempo — e esse entra no preço, não no arranque.",
     );
@@ -111,6 +179,8 @@ export function avaliarViabilidade(
     tempoAteReceitaMeses: tempo,
     cabeNoCapital,
     cabeNoPrazo,
+    fracaoCapitalCoberta,
+    fracaoPrazoCoberta,
     limitacoes,
   };
 }

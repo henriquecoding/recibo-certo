@@ -97,7 +97,20 @@ export const CAMPOS_PROFUNDIDADE: readonly CampoDeProfundidade[] = Object.freeze
     rotulo: "Quanto queres ganhar",
     peso: 5,
     respondido: (contexto) => contexto.rendimento.minimoMensal !== undefined,
-    efeito: "Serve para confrontar o modelo com o que precisas de tirar dele.",
+    // A promessa desta frase esteve por cumprir durante muito tempo: o
+    // campo valia 5 pontos de profundidade, a frase dizia «confronta», e
+    // nenhuma linha do motor lia `minimoMensal`. Confronta agora, e o
+    // confronto é o que aqui se descreve — não uma projeção de receita.
+    efeito:
+      "Soma o que precisas de tirar ao custo fixo do modelo e diz quanto a operação tem de gerar por mês antes de te pagar.",
+  },
+  {
+    id: "territorio",
+    rotulo: "Tipo de território",
+    peso: 6,
+    respondido: (contexto) => contexto.localizacao.territorio !== undefined,
+    efeito:
+      "Urbano, suburbano ou rural é o que mais muda que negócio funciona — e há problemas que só são intensos num deles.",
   },
 ]);
 

@@ -97,20 +97,41 @@ export function BarraProfundidade({ percentagem }: { percentagem: number }) {
 }
 
 /** Uma linha de barra para uma dimensão do score. `null` = não avaliada. */
-export function LinhaDimensao({ rotulo, valor }: { rotulo: string; valor: number | null }) {
+export function LinhaDimensao({
+  rotulo,
+  valor,
+  explicacao,
+}: {
+  rotulo: string;
+  valor: number | null;
+  /**
+   * O que a dimensão mede.
+   *
+   * Um rótulo como «Exequibilidade» com uma barra ao lado não é uma
+   * explicação — e este painel chama-se «Como chegámos a esta
+   * conclusão?». A frase vive no motor (`EXPLICACAO_DIMENSAO`) para não
+   * poder divergir do que a aritmética faz.
+   */
+  explicacao?: string;
+}) {
   return (
-    <li className="flex items-center gap-2 text-[12px]">
-      <span className="min-w-0 flex-1 truncate text-stone-600 dark:text-stone-300">{rotulo}</span>
-      {valor === null ? (
-        <span className="flex-none text-[11px] italic text-stone-400">sem base para avaliar</span>
-      ) : (
-        <>
-          <span aria-hidden="true" className="h-1.5 w-16 flex-none overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
-            <span className="block h-full rounded-full bg-brand" style={{ width: `${valor}%` }} />
-          </span>
-          <span className="w-8 flex-none text-right tabular-nums text-stone-500">{valor}</span>
-        </>
-      )}
+    <li className="text-[12px]">
+      <span className="flex items-center gap-2">
+        <span className="min-w-0 flex-1 text-stone-600 dark:text-stone-300">{rotulo}</span>
+        {valor === null ? (
+          <span className="flex-none text-[11px] italic text-stone-400">sem base para avaliar</span>
+        ) : (
+          <>
+            <span aria-hidden="true" className="h-1.5 w-16 flex-none overflow-hidden rounded-full bg-stone-100 dark:bg-stone-800">
+              <span className="block h-full rounded-full bg-brand" style={{ width: `${valor}%` }} />
+            </span>
+            <span className="w-8 flex-none text-right tabular-nums text-stone-500">{valor}</span>
+          </>
+        )}
+      </span>
+      {explicacao ? (
+        <span className="mt-0.5 block pr-[6.5rem] text-[11px] leading-snug text-stone-400">{explicacao}</span>
+      ) : null}
     </li>
   );
 }

@@ -132,6 +132,23 @@ export function compararCenario(
     novas,
     perdidas,
     subiram,
-    desbloqueadas: Math.max(0, antes.descartados.length - depois.descartados.length),
+    desbloqueadas: Math.max(0, recusadas(antes) - recusadas(depois)),
   };
+}
+
+/**
+ * Descartes que são RECUSAS, e não variantes deduplicadas.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ `descartados` mistura duas coisas diferentes: hipóteses recusadas   │
+ * │ por uma restrição, e variantes da mesma hipótese removidas por      │
+ * │ deduplicação (o mesmo par problema × modelo em duas formas de       │
+ * │ entrega). Contar a diferença bruta fazia um cenário que apenas      │
+ * │ reduzisse variantes duplicadas ser anunciado à pessoa como tendo    │
+ * │ «desbloqueado hipóteses». Não desbloqueou nada — só deixou de       │
+ * │ haver duas maneiras de escrever a mesma.                            │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+function recusadas(resultado: ResultadoDescoberta): number {
+  return resultado.descartados.filter((item) => item.motivo !== "duplicado").length;
 }
