@@ -35,7 +35,7 @@
 import geo from "./bulk/dados/concelhos-geo.json";
 import { CONCELHOS, CONCELHO_POR_CODIGO, concelhosDaRegiao } from "./concelhos";
 import { marketRegionLabel, type MarketRegion } from "./geografia";
-import { MATRIZ_CONCELHOS, indiceDoConcelho } from "./oferta-concelhos";
+import { MATRIZ_CONCELHOS } from "./oferta-concelhos";
 
 export interface SedeDeConcelho {
   codigo: string;
@@ -294,31 +294,68 @@ const populacaoOrdenada: number[] = (() => {
 })();
 
 /**
- * A escala do território, em residentes e em percentil.
+ * Código do concelho → posição na matriz, indexado uma vez.
  *
- * `null` sem matriz commitada — e não zero, que se leria como «não vive
- * lá ninguém». Um território que não some nada é o mesmo caso.
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO NÃO É MICRO-OTIMIZAÇÃO                                  │
+ * │                                                                    │
+ * │ `indiceDoConcelho` é um `indexOf` sobre 308 códigos. A escala de   │
+ * │ um território nacional precisa de 308 posições, o que dá 95 000    │
+ * │ comparações de string — por CANDIDATO. O score corre isto para     │
+ * │ centenas de candidatos, e o painel de impacto corre o motor        │
+ * │ inteiro dezasseis vezes. Medido, era o dobro do tempo do painel.   │
+ * └────────────────────────────────────────────────────────────────────┘
  */
+const POSICAO_NA_MATRIZ: ReadonlyMap<string, number> = (() => {
+  const mapa = new Map<string, number>();
+  const matriz = MATRIZ_CONCELHOS;
+  if (matriz) matriz.ordem.forEach((codigo, posicao) => mapa.set(codigo, posicao));
+  return mapa;
+})();
+
+/**
+ * A escala de cada território, calculada uma vez por território.
+ *
+ * O gerador partilha o MESMO objeto de território entre todos os
+ * candidatos da mesma variante, pelo que a chave fraca acerta quase
+ * sempre — e o que se poupa é a soma de até 308 populações por
+ * candidato.
+ */
+const escalasEmCache = new WeakMap<object, EscalaDoTerritorio | null>();
+
 export function escalaDoTerritorio(
   territorio: Pick<TerritorioAlcancavel, "codigos">,
 ): EscalaDoTerritorio | null {
   const matriz = MATRIZ_CONCELHOS;
   if (!matriz || populacaoOrdenada.length < 5 || territorio.codigos.length === 0) return null;
 
+  const chave = territorio.codigos as unknown as object;
+  const guardada = escalasEmCache.get(chave);
+  if (guardada !== undefined) return guardada;
+
   let residentes = 0;
   for (const codigo of territorio.codigos) {
-    const indice = indiceDoConcelho(matriz, codigo);
-    if (indice < 0) continue;
+    const indice = POSICAO_NA_MATRIZ.get(codigo);
+    if (indice === undefined) continue;
     residentes += matriz.populacao[indice] ?? 0;
   }
-  if (residentes <= 0) return null;
+  if (residentes <= 0) {
+    escalasEmCache.set(chave, null);
+    return null;
+  }
 
-  const abaixo = populacaoOrdenada.filter((valor) => valor < residentes).length;
-  const iguais = populacaoOrdenada.filter((valor) => valor === residentes).length;
-  return {
+  let abaixo = 0;
+  let iguais = 0;
+  for (const valor of populacaoOrdenada) {
+    if (valor < residentes) abaixo += 1;
+    else if (valor === residentes) iguais += 1;
+  }
+  const escala: EscalaDoTerritorio = {
     residentes,
     percentil: Math.round(((abaixo + 0.5 * iguais) / populacaoOrdenada.length) * 100),
     comparados: populacaoOrdenada.length,
     periodo: matriz.periodoPopulacao,
   };
+  escalasEmCache.set(chave, escala);
+  return escala;
 }

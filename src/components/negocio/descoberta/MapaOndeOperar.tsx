@@ -148,9 +148,14 @@ export default function MapaOndeOperar({
   const [movel, setMovel] = useState(false);
 
   // O callback muda a cada render do pai; o handler do Leaflet é montado
-  // uma vez. A referência mantém o clique sempre ligado ao mais recente.
+  // uma vez. A referência mantém o clique sempre ligado ao mais recente
+  // — e é atualizada num efeito, não durante o render: escrever numa ref
+  // a meio do render é o tipo de efeito lateral que o modo concorrente
+  // do React pode executar duas vezes ou descartar.
   const escolherRef = useRef(onEscolher);
-  escolherRef.current = onEscolher;
+  useEffect(() => {
+    escolherRef.current = onEscolher;
+  }, [onEscolher]);
 
   const sede = concelho ? SEDES.get(concelho) : undefined;
   const nomeDoConcelho = concelho ? CONCELHO_POR_CODIGO.get(concelho)?.nome : undefined;
