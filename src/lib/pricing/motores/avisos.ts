@@ -165,19 +165,22 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
     });
   }
 
-  // ── Regime da margem: o que a engine ainda NÃO põe dentro do preço ──
-  //  Declarar a inexatidão em vez de a esconder. No DL 199/96 o IVA está
-  //  CONTIDO na margem — não se acrescenta ao preço —, e o solver ainda o
-  //  trata como taxa por cima. A tesouraria já usa a fórmula certa
-  //  (t/(1+t) sobre a margem); a formação do preço não, e enquanto for
-  //  assim tem de estar dito.
-  if (e.situacaoIVA.regimeMargem) {
+  // ── Regime da margem: o que muda, e o que continua a ser preciso ────
+  //  O preço já é formado com o modelo certo (o IVA incide na margem e está
+  //  contido nela — ver `conversorDe` em `iva.ts`). O que este aviso diz é
+  //  o que o cálculo não pode decidir: se a pessoa está mesmo enquadrada
+  //  neste regime, que tem condições de acesso e obrigações próprias.
+  if (e.situacaoIVA.regimeMargem && e.saida.ok) {
+    const margem = Math.max(0, e.saida.precoLiquido - e.custos.diretoAjustado);
     avisos.push({
       id: "regime-margem-confirmar-enquadramento",
       severidade: "atencao",
-      titulo: "O regime da margem exige enquadramento próprio",
+      titulo: "Neste regime o IVA sai da margem, não do preço",
       texto:
-        "Neste regime o IVA incide sobre a diferença entre o que pagaste e o que vais receber — e está CONTIDO nessa margem, não acrescentado ao preço. Aqui o preço ainda é formado como se o IVA fosse por cima: usa-o como ponto de partida e confirma o enquadramento com o teu contabilista antes de o afixar.",
+        `Pagaste ${eur(e.custos.diretoAjustado)} pelo bem e o imposto incide só sobre o que ganhas com ele: ` +
+        `${eur(margem * e.situacaoIVA.taxaVenda)} por unidade, contidos no preço. A fatura não mostra IVA à parte e não ` +
+        `deduzes o IVA da compra — é por isso que o custo aqui é o valor que pagaste, com imposto incluído. ` +
+        `O regime tem condições de acesso próprias: confirma com o teu contabilista que te aplica antes de afixares o preço.`,
       fonte: "DL n.º 199/96 — regime especial de tributação da margem",
       fonteUrl: "https://diariodarepublica.pt/dr/detalhe/decreto-lei/199-1996-435847",
     });

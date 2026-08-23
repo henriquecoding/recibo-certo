@@ -153,38 +153,49 @@ Ignorar (2) é subestimar o custo em até 23% e recomendar um preço abaixo do
 sustentável. A engine exige sempre saber se o valor introduzido inclui IVA e
 qual a taxa de compra.
 
-### 2.3 Bens em segunda mão
+### 2.3 Bens em segunda mão — o regime da margem
 
-Regime da margem (DL 199/96): o IVA incide sobre `P − Cd`, não sobre `P` — e
-está **contido** nessa margem, não acrescentado a ela. Logo:
+Regime da margem (DL 199/96). Três regras que se aplicam em conjunto:
 
-```
-IVA_margem = max(0, P − Cd) × t / (1 + t)
-```
+1. O imposto incide sobre a **margem**, não sobre o preço (Art. 4.º).
+2. Está **contido** nela: a fatura não o mostra à parte (Art. 6.º).
+3. O revendedor **não deduz** o IVA da aquisição (Art. 5.º).
 
-`t/(1+t)`, não `t`. À taxa normal são 18,70% da margem, e usar 23% sobrestima o
-imposto em quase um quarto.
-
-**Limitação declarada:** a formação do preço ainda trata este regime como IVA por
-cima (`PVP = P(1+t)`). O modelo correto — `PVP = P` e o IVA da margem como
-terceira base de incidência no solver — está derivado em §2.3.1 e por
-implementar. Enquanto não estiver, o aviso
-`regime-margem-confirmar-enquadramento` di-lo ao utilizador, e a tesouraria já
-usa a fórmula certa acima.
-
-### 2.3.1 O que falta para o modelar a sério
-
-O IVA da margem não é `v` (não incide na faturação) nem `τ` (a base não é o
-lucro: as comissões não lhe abatem). É uma **terceira base** — a margem bruta de
-aquisição — mas cabe no mesmo solver de forma fechada, com `τ' = t/(1+t)`:
+Mantendo `P` com o significado que tem em todo o lado — a **receita** do
+vendedor, já sem o imposto a entregar:
 
 ```
-lucro = P(1 − v − g − τ') − [ (Cd + Cv) + f − τ'·Cd ]
+IVA  = t × (P − Cₐ)            ← margem LÍQUIDA × taxa
+PVP  = P + IVA = P(1+t) − Cₐ·t
 ```
 
-ou seja `D' = D − τ'` e `base' = base − τ'·Cd`, com `t = 0` na conversão para
-PVP porque neste regime o preço anunciado É o preço final. Duas linhas no
-solver; falta a decisão de produto sobre o que a UI passa a mostrar.
+e `PVP = P + IVA` continua verdadeiro (invariante 1). Bate com a forma legal
+`(PVP − Cₐ) × t/(1+t)` sobre a margem **bruta**: é a mesma margem, medida antes
+e depois de lá estar o imposto. Há um teste que exige que as duas concordem.
+
+Consequência prática, e é grande: um bem comprado a 100 € com 142,86 € de
+receita pretendida custa ao cliente **152,71 €, não 175,71 €**. Tratar o regime
+como IVA por cima punha 23 € a mais na etiqueta — o preço a que se perde a venda.
+
+Abaixo do custo de aquisição não há IVA negativo: o Estado não devolve imposto
+por se vender com prejuízo. Daí o `max(0, …)`, que é também o que torna a
+conversão invertível em todo o domínio.
+
+**A comissão de canal incide no total da fatura**, que aqui é `P(1+t) − Cₐ·t` e
+não `P(1+t)`: o marketplace não cobra comissão sobre um IVA que a fatura não
+tem. É o que o campo `ajusteBruto` do solver representa — euros em que o
+faturado fica abaixo de `P(1+t)`:
+
+```
+lucro = P·D − [ (C + f) − τ(C_ded + f) − g·A·(1 − τ) ]
+```
+
+Com `A = 0` colapsa exatamente nas equações de sempre, e há um teste que o exige.
+
+**Uma só porta de conversão.** `× (1 + t)` estava escrito à mão em cinco
+ficheiros. `conversorDe()` (`motores/iva.ts`) é agora o único sítio que sabe
+converter líquido ↔ PVP, e leva o regime lá dentro — âncoras, descontos, preços
+psicológicos e veredicto passam todos por ele.
 
 ### 2.4 O IVA que SAI não é o IVA que se liquida
 
@@ -275,6 +286,20 @@ Art. 25.º) e **nunca** em `outrosRendimentos`, que espera um valor já líquido
 há um teste (`verificacao-irs.test.ts`) que reprova quem o faça.
 
 **Não se reimplementa IRS aqui.**
+
+### 3.2.1 As comissões também são despesa — e isso muda o preço
+
+Em contabilidade organizada o tributável é receita − despesas, e a comissão do
+canal é despesa como a renda. Deixá-la de fora não é arredondamento: num TI a
+faturar 40 000 € com 20% de marketplace são 8 000 € de despesa desaparecida, e a
+taxa marginal que forma o preço salta de 24,1% para 31,1% — mais de sete pontos.
+Com salário por cima, de 34,9% para 43,1%.
+
+A comissão depende do preço e o preço depende dela, mas **isto não é a
+circularidade que o solver resolve em forma fechada**: o IRS marginal é uma
+derivada com degraus, não uma fração. Resolve-se com **duas passagens** — a
+primeira dá o preço com que medir as comissões, a segunda usa-as. Só corre em
+organizada, que é o único regime onde estas despesas mudam alguma coisa.
 
 ### 3.3 Retenção na fonte não é custo
 
@@ -513,3 +538,9 @@ Duas operações distintas que nunca se misturam:
     A folga da «confortável» são os pontos de margem declarados sobre a margem
     ENTREGUE — com markup, a conversão ingénua `m = k/(1+k)` ignora comissões e
     impostos e produz uma âncora ao dobro do preço.
+15. **Há uma só conversão líquido ↔ PVP**, e é invertível: `paraLiquido(paraPVP(P)) = P`
+    ao cêntimo, em qualquer regime — o da margem incluído.
+16. **`ajusteBruto = 0` colapsa o solver nas equações de sempre**, ao cêntimo,
+    tal como `τ = 0` já colapsava.
+17. **Nenhum parâmetro público mente.** Uma opção que não é lida é pior do que
+    nenhuma: quem a passa fica convencido de ter mudado a conta.

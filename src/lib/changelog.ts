@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.104.0",
+    data: "2026-08-23",
+    titulo: "Segunda mão: o teu cliente deixa de pagar 23% a mais",
+    itens: [
+      "Quem revende bens em segunda mão está no regime da margem: o IVA incide só sobre a diferença entre o que pagaste e o que recebes, e está contido nessa margem — não é acrescentado ao preço. A calculadora somava-o por cima na mesma.",
+      "Um bem comprado a 100 €, com 142,86 € de receita para ti, aparecia ao cliente por 175,71 €. O preço certo é 152,71 €. Vinte e três euros de diferença numa etiqueta são, muitas vezes, a venda inteira.",
+      "A comissão do marketplace passa também a ser cobrada sobre o valor que a fatura tem mesmo, e não sobre um IVA que ela não mostra.",
+      "Em contabilidade organizada, as comissões do canal passam a contar como despesa dedutível — que é o que são. Num negócio a faturar 40 000 € com 20% de comissão, faltavam 8 000 € de despesa e a taxa de IRS que forma o preço aparecia sete pontos acima da real. Com salário por cima, oito.",
+      "Havia uma opção em «quanto tenho de cobrar para ganhar X» que não fazia nada. Saiu: quem decide se X é o que fica na mão ou o lucro do negócio é o teu enquadramento, não uma caixa para marcar.",
+      "Em ecrãs muito estreitos (320 px) a barra do topo empurrava a página 2 px para o lado em todas as páginas do site. Deixou de empurrar.",
+    ],
+  },
+  {
     version: "2.103.0",
     data: "2026-08-23",
     titulo: "A ferramenta passou a ler os números que já tinha, em vez de os contar",

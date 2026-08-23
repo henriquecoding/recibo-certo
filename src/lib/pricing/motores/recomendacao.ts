@@ -22,6 +22,7 @@
 
 import type { AncoraPreco, FaixaPreco } from "../tipos";
 import { precoPorMargem, type EntradaSolver } from "./preco";
+import type { ConversorPreco } from "./iva";
 import { sugerirPrecosPsicologicos } from "./psicologico";
 import { lucroAoPreco } from "./preco";
 import { cent, dividir, fracao, num } from "../numeros";
@@ -39,8 +40,12 @@ export interface EntradaFaixa {
    * com uma equação diferente da que produziu o preço recomendado ao lado.
    */
   solverComFixos: EntradaSolver;
-  /** Quota de custos fixos por unidade ao volume esperado. */
-  fixosPorUnidade: number;
+  /**
+   * Líquido ↔ PVP com o regime lá dentro. As âncoras têm de ser convertidas
+   * pela mesma regra que converteu o preço recomendado — no regime da
+   * margem, `× (1 + t)` mostraria um PVP que ninguém paga.
+   */
+  conversor: ConversorPreco;
   /** Margem que o preço recomendado ENTREGA (fração). */
   margemAlvo: number;
   /** Folga adicional para a âncora «confortável», em pontos de margem. */
@@ -49,10 +54,8 @@ export interface EntradaFaixa {
   precoRecomendado: number;
 }
 
-const pvpDe = (liquido: number, taxa: number) => liquido * (1 + fracao(taxa, 0, 1));
-
 export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
-  const t = fracao(e.solver.taxaIVA, 0, 1);
+  const pvpDe = (liquido: number) => e.conversor.paraPVP(liquido);
   const ancoras: AncoraPreco[] = [];
 
   // Medida com o solver dos fixos — o mesmo com que o preço foi resolvido.
@@ -79,7 +82,7 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       chave: "piso",
       rotulo: "Piso absoluto",
       precoLiquido: piso.precoLiquido,
-      pvp: pvpDe(piso.precoLiquido, t),
+      pvp: pvpDe(piso.precoLiquido),
       margem: margemEm(piso.precoLiquido),
       explicacao: coincidem
         ? "Abaixo deste valor cada venda tira-te dinheiro. Como não declaraste custos fixos, este é também o mínimo sustentável — não há contas de estrutura à espera de serem cobertas."
@@ -92,7 +95,7 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       chave: "minimo",
       rotulo: "Mínimo sustentável",
       precoLiquido: minimo.precoLiquido,
-      pvp: pvpDe(minimo.precoLiquido, t),
+      pvp: pvpDe(minimo.precoLiquido),
       margem: 0,
       explicacao:
         "Cobre tudo — incluindo a parte das contas fixas que cabe a cada venda — mas não te deixa lucro nenhum.",
@@ -106,7 +109,7 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       chave: "recomendado",
       rotulo: "Recomendado",
       precoLiquido: recomendado,
-      pvp: pvpDe(recomendado, t),
+      pvp: pvpDe(recomendado),
       margem: margemEm(recomendado),
       explicacao: "O preço que corresponde ao objetivo que definiste.",
     });
@@ -121,15 +124,15 @@ export function calcularFaixa(e: EntradaFaixa): FaixaPreco {
       chave: "confortavel",
       rotulo: "Margem confortável",
       precoLiquido: confortavel.precoLiquido,
-      pvp: pvpDe(confortavel.precoLiquido, t),
+      pvp: pvpDe(confortavel.precoLiquido),
       margem: margemEm(confortavel.precoLiquido),
       explicacao: `Mais ${Math.round(folga * 100)} pontos de margem — a folga que absorve estimativas otimistas e imprevistos.`,
     });
   }
 
   const psicologicos = sugerirPrecosPsicologicos({
-    pvp: pvpDe(recomendado, t),
-    taxaIVA: t,
+    pvp: pvpDe(recomendado),
+    conversor: e.conversor,
     lucroAoPrecoLiquido: (p) => lucroAoPreco(solverComFixos, p),
   });
 

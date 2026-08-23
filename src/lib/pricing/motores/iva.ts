@@ -365,6 +365,75 @@ export const pvpDe = (precoLiquido: number, taxa: number): number =>
 export const liquidoDe = (pvp: number, taxa: number): number =>
   dividir(num(pvp), 1 + fracao(taxa, 0, 1), num(pvp));
 
+// ═══════════════════════════════════════════════════════════════════════
+//  O CONVERSOR — líquido ↔ PVP, com o regime lá dentro
+//  ---------------------------------------------------------------------
+//  `× (1 + t)` estava escrito à mão em cinco ficheiros. Enquanto só havia
+//  um regime isso era repetição inofensiva; com o regime da margem passa a
+//  ser cinco sítios a poder discordar sobre quanto o cliente paga.
+//
+//  ── O regime da margem (DL 199/96) ───────────────────────────────────
+//
+//  O IVA incide sobre a diferença entre o que se vendeu e o que se
+//  comprou, e está CONTIDO nela — a fatura não o mostra à parte (Art. 6.º)
+//  e o vendedor não deduz o IVA da aquisição (Art. 5.º).
+//
+//  Mantendo `precoLiquido` com o significado que tem em todo o lado — a
+//  RECEITA do vendedor, já sem o IVA que vai entregar — sai:
+//
+//      IVA  = t × (P − Cₐ)              ← margem líquida × taxa
+//      PVP  = P + IVA = P(1+t) − Cₐ·t
+//
+//  e `PVP = P + IVA` continua verdadeiro, que é o invariante 1. A conta
+//  bate com a forma legal `(PVP − Cₐ) × t/(1+t)`: são a mesma coisa vista
+//  da margem líquida e da margem bruta.
+//
+//  Consequência prática, e é grande: um bem comprado a 100 € com 142,86 €
+//  de receita pretendida custa ao cliente 152,72 €, não 175,71 €. Vinte e
+//  três euros de diferença — o preço a que o negócio se perde.
+//
+//  Abaixo do custo de aquisição não há IVA negativo: o Estado não devolve
+//  imposto por se vender com prejuízo. Daí o `max(0, …)`, que é também o
+//  que torna a função invertível em todo o domínio.
+// ═══════════════════════════════════════════════════════════════════════
+
+export interface ConversorPreco {
+  /** Taxa da venda. No regime da margem, a taxa que incide na margem. */
+  readonly taxa: number;
+  /** O que o cliente paga, a partir da receita do vendedor. */
+  paraPVP(precoLiquido: number): number;
+  /** A receita do vendedor, a partir do que o cliente paga. */
+  paraLiquido(pvp: number): number;
+  /** O IVA contido neste preço. Sempre `paraPVP(p) − p`. */
+  iva(precoLiquido: number): number;
+}
+
+export function conversorDe(
+  situacao: Pick<SituacaoIVAPreco, "taxaVenda" | "regimeMargem">,
+  custoAquisicao = 0,
+): ConversorPreco {
+  const t = fracao(situacao.taxaVenda, 0, 1);
+  const ca = naoNegativo(custoAquisicao);
+
+  if (!situacao.regimeMargem || ca <= 0) {
+    return {
+      taxa: t,
+      paraPVP: (p) => num(p) * (1 + t),
+      paraLiquido: (g) => dividir(num(g), 1 + t, num(g)),
+      iva: (p) => num(p) * t,
+    };
+  }
+
+  return {
+    taxa: t,
+    paraPVP: (p) => num(p) + Math.max(0, num(p) - ca) * t,
+    // Inversa exata: abaixo do custo de aquisição não há imposto, logo o
+    // que o cliente paga é o que o vendedor recebe.
+    paraLiquido: (g) => (num(g) <= ca ? num(g) : dividir(num(g) + ca * t, 1 + t, num(g))),
+    iva: (p) => Math.max(0, num(p) - ca) * t,
+  };
+}
+
 /**
  * IVA a ENTREGAR ao Estado por unidade vendida. Não é o IVA liquidado: é o
  * saldo, já abatido do IVA dedutível suportado nas compras (Art. 19.º e
@@ -387,11 +456,10 @@ export function ivaAEntregar(
   if (!situacao.liquida) return 0;
 
   if (situacao.regimeMargem) {
-    // DL 199/96: a base é a margem, e o IVA está CONTIDO nela — não se
-    // acrescenta por cima. Por isso t/(1+t) e não t. À taxa normal são
-    // 18,70% da margem, não 23%.
-    const margem = Math.max(0, num(precoLiquido) - num(custoAquisicao));
-    return dividir(margem * situacao.taxaVenda, 1 + situacao.taxaVenda);
+    // DL 199/96: incide sobre a margem, e `precoLiquido` já é a receita do
+    // vendedor sem o imposto — logo `t` sobre a margem LÍQUIDA, que é a
+    // mesma conta que `t/(1+t)` sobre a margem bruta. Ver `conversorDe`.
+    return conversorDe(situacao, custoAquisicao).iva(precoLiquido);
   }
 
   const liquidado = num(precoLiquido) * situacao.taxaVenda;
