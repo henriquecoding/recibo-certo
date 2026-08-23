@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.96.4",
+  "version": "2.97.0",
   "private": true,
   "scripts": {
     "build": "next build",
