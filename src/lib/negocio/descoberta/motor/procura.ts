@@ -40,10 +40,13 @@ import { marketRegionLabel, splitObservationsByRegion } from "@/lib/negocio/mark
 import {
   lerLacuna,
   lerOferta,
+  populacaoRegionalDaMatriz,
+  type ContagemRegional,
   type LeituraDeLacuna as QuocienteDeLocalizacao,
   type LeituraDeOferta,
   type PackOferta,
 } from "@/lib/negocio/market/oferta";
+import { MATRIZ_CONCELHOS } from "@/lib/negocio/market/oferta-concelhos";
 import { CONCEITO_POR_CAPACIDADE } from "../conhecimento/dados/ontologia";
 import type { MarketObservationSummary, MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
@@ -163,6 +166,25 @@ function unidades(leitura: LeituraDeOferta): string {
  * problema em vez da capacidade daria a mesma divisão a hipóteses
  * completamente diferentes que atacam o mesmo problema por vias opostas.
  */
+/**
+ * O denominador da normalização: o do INE quando existe, a soma dos
+ * concelhos commitados quando não.
+ *
+ * Calculada uma vez por processo — a matriz não muda entre pedidos, e
+ * refazer a soma dos 308 concelhos por cada candidato seria trabalho
+ * repetido dentro do laço mais quente do motor.
+ */
+const POPULACAO_DA_MATRIZ: readonly ContagemRegional[] = MATRIZ_CONCELHOS
+  ? populacaoRegionalDaMatriz(MATRIZ_CONCELHOS)
+  : [];
+
+function populacaoParaNormalizar(
+  oferta: PackOferta | undefined,
+): readonly ContagemRegional[] | undefined {
+  if (oferta?.populacao && oferta.populacao.length > 0) return oferta.populacao;
+  return POPULACAO_DA_MATRIZ.length > 0 ? POPULACAO_DA_MATRIZ : undefined;
+}
+
 /**
  * O quociente de localização, quando os dois termos existem.
  *
@@ -388,7 +410,18 @@ export function avaliarProcura({ candidato, evidencePorTemplate, oferta, agora }
         (item) => item.kind === "demand" || item.kind === "transactional",
       ),
       regiao: candidato.regiao,
-      populacao: oferta?.populacao,
+      // ── O denominador nunca depende da rede ────────────────────────
+      //  `oferta.populacao` vem de um pedido ao INE feito na altura, e
+      //  quando ele falha as CONTAGENS deixam de ser normalizáveis: o
+      //  eixo da procura, dezassete pontos em cem, desaparece sem
+      //  deixar rasto no ecrã. A matriz commitada traz a população dos
+      //  308 concelhos e está no repositório — somada às NUTS II dá o
+      //  mesmo denominador, sem rede.
+      //
+      //  A ordem é «o observado primeiro, o calculado a seguir»: a
+      //  leitura regional do INE é melhor do que a nossa soma, e só
+      //  entra a soma quando não há leitura nenhuma.
+      populacao: populacaoParaNormalizar(oferta),
     }),
   );
 

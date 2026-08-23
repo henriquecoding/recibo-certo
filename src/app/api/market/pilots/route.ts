@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { loadPilotMarketEvidence } from "@/lib/negocio/market/pilot-loader";
+import { comInstantaneoPorBaixo, PROCURA_COMMITADA } from "@/lib/negocio/market/procura-nuts2";
 import type { MarketSourceHealthState } from "@/lib/negocio/market/tipos";
 
 /**
@@ -55,7 +56,13 @@ export async function GET() {
     fetch(input, { ...init, next: { revalidate: TTL_SEGUNDOS } })) as typeof fetch;
 
   try {
-    const pilots = await loadPilotMarketEvidence({ fetchImpl });
+    const aoVivo = await loadPilotMarketEvidence({ fetchImpl });
+    // ── O instantâneo commitado por baixo do ao vivo ────────────────
+    //  Piloto a piloto: o fresco ganha sempre, o guardado só entra onde
+    //  não veio nada. Sem isto, um mau dia das fontes apagava o eixo da
+    //  procura inteiro — dezassete pontos em cem — e o ecrã dizia «não
+    //  sabemos» sobre tudo, sem nada a explicar porquê.
+    const { pilotos: pilots, doInstantaneo } = comInstantaneoPorBaixo(aoVivo);
 
     // Uma execução pode apanhar o INE sob carga e montar um pack com
     // metade das séries em falta. Guardar isso durante seis horas fazia um
@@ -72,19 +79,58 @@ export async function GET() {
       pilot.sourceHealth.some((health) => ESTADOS_TRANSITORIOS.includes(health.state)),
     );
 
+    // ── Cabeçalhos de saúde: dar por fora o que se via por dentro ───
+    //  Quatro pilotos vazios eram indistinguíveis de quatro pilotos
+    //  cheios sem abrir o corpo da resposta. Estes três contadores são
+    //  o que permite ver, de fora, que a procura secou — que é a
+    //  situação que gerou o relatório.
+    const observacoes = pilots.reduce((total, pilot) => total + pilot.observations.length, 0);
+    const degradadas = new Set(
+      pilots.flatMap((pilot) =>
+        pilot.sourceHealth.filter((health) => health.state !== "healthy").map((health) => health.sourceId),
+      ),
+    );
+
     return NextResponse.json(
       { schemaVersion: 1, generatedAt: new Date().toISOString(), pilots },
-      { headers: { "Cache-Control": degradado ? CACHE_DEGRADADO : CACHE_SAUDAVEL } },
+      {
+        headers: {
+          "Cache-Control": degradado ? CACHE_DEGRADADO : CACHE_SAUDAVEL,
+          "X-Pilotos": String(pilots.length),
+          "X-Observacoes": String(observacoes),
+          "X-Pilotos-Vazios": String(pilots.filter((pilot) => pilot.observations.length === 0).length),
+          "X-Fontes-Degradadas": degradadas.size > 0 ? [...degradadas].sort().join(",") : "",
+          "X-Do-Instantaneo": doInstantaneo.join(","),
+        },
+      },
     );
   } catch {
+    // O que rebenta ANTES do carregador degradar cada piloto sozinho —
+    // Web Crypto ausente, um registo mal formado. Antes disto a resposta
+    // era uma lista vazia; agora o instantâneo commitado ainda responde,
+    // pela mesma razão que a matriz de oferta sobrevive à queda do INE.
+    const guardados = PROCURA_COMMITADA?.pilotos ?? [];
     return NextResponse.json(
       {
         schemaVersion: 1,
         generatedAt: new Date().toISOString(),
-        pilots: [],
-        degraded: "Não foi possível montar o pack de mercado nesta execução.",
+        pilots: guardados,
+        degraded:
+          guardados.length > 0
+            ? `Não foi possível falar com as fontes nesta execução. As leituras são do instantâneo de ${PROCURA_COMMITADA?.geradoEm ?? "data desconhecida"}.`
+            : "Não foi possível montar o pack de mercado nesta execução.",
       },
-      { status: 200, headers: { "Cache-Control": CACHE_DEGRADADO } },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": CACHE_DEGRADADO,
+          "X-Pilotos": String(guardados.length),
+          "X-Observacoes": String(
+            guardados.reduce((total, pilot) => total + pilot.observations.length, 0),
+          ),
+          "X-Do-Instantaneo": guardados.map((pilot) => pilot.templateId).join(","),
+        },
+      },
     );
   }
 }

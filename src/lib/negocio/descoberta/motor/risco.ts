@@ -170,7 +170,14 @@ export function avaliarRiscos(
   return DIMENSOES.map((dimensao) => {
     const { nivel, nota, apurado = true } = nivelDe(dimensao);
     const aceitavel = NIVEL_ACEITAVEL[toleranciaDe(contexto, dimensao)]!;
-    return { dimensao, nivel, nota, apurado, dentroDaTolerancia: nivel <= aceitavel };
+    // Um nível que ninguém mediu não produz veredito sobre a tolerância.
+    return {
+      dimensao,
+      nivel,
+      nota,
+      apurado,
+      dentroDaTolerancia: apurado ? nivel <= aceitavel : null,
+    };
   });
 }
 
@@ -183,7 +190,7 @@ export function avaliarRiscos(
  * ausência de conhecimento não é uma afirmação sobre o negócio.
  */
 export function riscosForaDaTolerancia(riscos: readonly RiscoAvaliado[]): number {
-  return riscos.filter((item) => item.apurado && !item.dentroDaTolerancia).length;
+  return riscos.filter((item) => item.dentroDaTolerancia === false).length;
 }
 
 /** Riscos assumidos por prudência, que a ficha mostra como aviso. */

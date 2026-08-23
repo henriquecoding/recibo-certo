@@ -79,7 +79,17 @@ export const POPULACAO_RESIDENTE = "0012918";
 
 const manifestoEmpresas = (divisao: string): IneAnnualIndicatorManifest => ({
   indicatorCode: EMPRESAS_POR_CAE,
-  metricId: `business.count.cae_${divisao}`,
+  // ── O `toLowerCase()` não é cosmético: sem ele o pack inteiro morria ──
+  //  `METRIC_ID` (ine.ts) só admite minúsculas, e a divisão «TOT» — o
+  //  total de empresas, que quatro problemas declaram como base de
+  //  clientes — produzia `business.count.cae_TOT`. O manifesto era
+  //  recusado, a exceção subia por `carregarOferta` inteira e a rota
+  //  devolvia um pack VAZIO: sem divisões e, pior, sem POPULAÇÃO — que é
+  //  o denominador de que a normalização da procura depende.
+  //
+  //  O código da divisão continua em maiúsculas onde tem de estar: no
+  //  filtro de dimensão e na classificação, que são o que o INE lê.
+  metricId: `business.count.cae_${divisao.toLowerCase()}`,
   unit: "empresas",
   // Contas integradas das empresas: o apuramento sai com mais de um ano
   // de desfasamento por natureza. Exigir frescura anual descartaria a
@@ -147,6 +157,61 @@ export interface PackOferta {
    * exatamente como lia antes de os concelhos existirem.
    */
   concelhos?: MatrizOfertaConcelhos;
+}
+
+/**
+ * A população das NUTS II somada a partir dos 308 concelhos commitados.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO EXISTE                                                  │
+ * │                                                                    │
+ * │ A normalização da procura precisa de população: metade das séries  │
+ * │ são CONTAGENS (sociedades nascidas, transações de casas) e uma     │
+ * │ contagem sem denominador mede o tamanho da região, não a           │
+ * │ intensidade do problema. Sem população, `intensidade.ts` devolve   │
+ * │ `null` — e o eixo de 17 pontos desaparece.                          │
+ * │                                                                    │
+ * │ Essa população vinha de um `fetch` ao INE feito no PEDIDO. Quando  │
+ * │ ele falha, o eixo inteiro cai. Só que a matriz commitada já traz   │
+ * │ a população dos 308 concelhos, no repositório, sem rede nenhuma:   │
+ * │ somá-la às nove NUTS II dá exatamente o denominador que faltava.   │
+ * │                                                                    │
+ * │ O eixo da OFERTA aprendeu esta lição primeiro — instantâneo        │
+ * │ commitado, entrega 100 % — e o da procura ficou a depender da      │
+ * │ rede. Isto é aplicar-lhe o mesmo padrão.                            │
+ * └────────────────────────────────────────────────────────────────────┘
+ *
+ * ⚠️ A proveniência disto é `calculo`, NUNCA `observado`: não é a leitura
+ * regional que o INE publica, é uma soma dos concelhos feita por nós. A
+ * diferença é pequena em valor e grande em honestidade, e quem mostrar
+ * este número ao ecrã tem de a declarar.
+ *
+ * Inclui `PT` — o total do país — porque as séries nacionais precisam do
+ * mesmo denominador para produzirem um índice comparável.
+ */
+export function populacaoRegionalDaMatriz(
+  matriz: MatrizOfertaConcelhos,
+): readonly ContagemRegional[] {
+  const porRegiao = new Map<string, number>();
+  let total = 0;
+
+  for (let indice = 0; indice < matriz.ordem.length; indice += 1) {
+    const habitantes = matriz.populacao[indice];
+    if (typeof habitantes !== "number" || !Number.isFinite(habitantes)) continue;
+    // Os dois primeiros caracteres do código do concelho SÃO o código da
+    // NUTS II — é assim que `concelhos.ts` deriva a região, e é a mesma
+    // regra aqui para as duas não poderem divergir.
+    const nuts = matriz.ordem[indice]!.slice(0, 2);
+    porRegiao.set(nuts, (porRegiao.get(nuts) ?? 0) + habitantes);
+    total += habitantes;
+  }
+
+  const contagens: ContagemRegional[] = [...porRegiao.entries()]
+    .map(([codigo, valor]) => ({ codigo, valor, periodo: matriz.periodoPopulacao }))
+    .sort((esquerda, direita) => esquerda.codigo.localeCompare(direita.codigo));
+
+  if (total > 0) contagens.push({ codigo: "PT", valor: total, periodo: matriz.periodoPopulacao });
+  return contagens;
 }
 
 export interface OpcoesOferta {
@@ -396,7 +461,24 @@ export async function carregarOferta(opcoes: OpcoesOferta = {}): Promise<PackOfe
     // divisão que o INE não devolva fica com zero contagens e entra em
     // `emFalta` — nunca com zero empresas, que se leria como mercado
     // livre e promoveria a hipótese por engano.
-    const contagens = contagensDe(empresas.value, manifestoEmpresas(divisao));
+    // ── Uma divisão que rebente NÃO leva o pack atrás ────────────────
+    //  A regra do carregador de pilotos vale aqui igual: «uma série que
+    //  falhe degrada o seu piloto; nunca contamina outro». Faltava-lhe o
+    //  `try` — e um manifesto recusado (ver o `toLowerCase()` acima)
+    //  apagava as vinte e sete divisões boas e a população com ele.
+    let contagens: readonly ContagemRegional[];
+    try {
+      contagens = contagensDe(empresas.value, manifestoEmpresas(divisao));
+    } catch (erro) {
+      divisoes.push({
+        divisao,
+        designacao,
+        contagens: [],
+        falha: erro instanceof Error ? erro.message : String(erro),
+      });
+      emFalta.push(divisao);
+      continue;
+    }
     if (contagens.length === 0) {
       divisoes.push({
         divisao,
@@ -413,10 +495,17 @@ export async function carregarOferta(opcoes: OpcoesOferta = {}): Promise<PackOfe
   // Sem base não há rácio — e sem rácio a leitura volta a «por apurar».
   // É o comportamento correto: uma contagem de empresas sem população
   // por baixo não diz se é muita ou pouca.
-  const populacao =
-    populacaoBruta.status === "fulfilled"
-      ? contagensDe(populacaoBruta.value, MANIFESTO_POPULACAO)
-      : [];
+  //  Protegida pela mesma razão que as divisões: a população é o
+  //  denominador de tudo o que se compara entre regiões, e uma exceção
+  //  aqui devolvia um pack vazio em vez de um pack sem população.
+  let populacao: readonly ContagemRegional[] = [];
+  if (populacaoBruta.status === "fulfilled") {
+    try {
+      populacao = contagensDe(populacaoBruta.value, MANIFESTO_POPULACAO);
+    } catch {
+      populacao = [];
+    }
+  }
 
   return {
     schemaVersion: 1,

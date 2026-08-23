@@ -258,8 +258,17 @@ export default function Dossier({
                 <li key={risco.dimensao} className="text-[12px] leading-snug">
                   <span className="flex flex-wrap items-center gap-1.5">
                     <span className="font-semibold text-stone-700 dark:text-stone-200">{ROTULO_RISCO[risco.dimensao]}</span>
-                    <Chip tom={risco.dentroDaTolerancia ? "neutro" : "risco"}>
-                      {risco.dentroDaTolerancia ? "dentro do que aceitas" : "acima do que aceitas"}
+                    {/* Três estados, porque há três. O chip vermelho num
+                        risco por apurar contradizia a frase logo por baixo
+                        («por não estar apurada, não conta contra a tua
+                        tolerância») e a contagem do stress test, que já o
+                        ignorava. Cinza e «por apurar» dizem o que é. */}
+                    <Chip tom={risco.dentroDaTolerancia === false ? "risco" : "neutro"}>
+                      {risco.dentroDaTolerancia === null
+                        ? "por apurar"
+                        : risco.dentroDaTolerancia
+                          ? "dentro do que aceitas"
+                          : "acima do que aceitas"}
                     </Chip>
                   </span>
                   <span className="mt-0.5 block text-stone-500">{risco.nota}</span>

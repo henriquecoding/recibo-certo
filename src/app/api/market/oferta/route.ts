@@ -57,6 +57,12 @@ export async function GET() {
         "X-Divisoes": String(pack.divisoes.length),
         "X-Divisoes-Em-Falta": String(pack.emFalta.length),
         "X-Concelhos": String(MATRIZ_CONCELHOS?.ordem.length ?? 0),
+        // Sem este, um pack sem POPULAÇÃO era indistinguível de um pack
+        // completo por fora — e é a população o denominador de que a
+        // normalização da procura depende. Foi assim que uma exceção no
+        // manifesto da divisão «TOT» passou despercebida: a rota
+        // respondia 200 com tudo vazio.
+        "X-Populacao": String(pack.populacao.length),
       },
     });
   } catch {

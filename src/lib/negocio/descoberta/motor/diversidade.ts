@@ -20,6 +20,7 @@
 //  registada como variante em vez de ocupar uma linha.
 // ═══════════════════════════════════════════════════════════════════════
 
+import { forcaDaConfianca } from "./confianca";
 import type { OpportunityCandidate, CandidatoDescartado } from "./tipos";
 
 /** Quanto é que dois candidatos se sobrepõem, em [0, 1]. */
@@ -86,12 +87,37 @@ export function diversificar(
     maxPorProblema = 2,
   }: { lambda?: number; limite?: number; maxPorProblema?: number } = {},
 ): readonly OpportunityCandidate[] {
+  // ── ORDENAR PELO QUE SE PROVA, NÃO PELO QUE SE ESTIMA ─────────────
+  //  ┌────────────────────────────────────────────────────────────────┐
+  //  │ A chave era `pontuacaoGlobal` — o PONTO CENTRAL de um número    │
+  //  │ que o próprio motor publica com um intervalo de ±20 ao lado.    │
+  //  │ Medido: nenhum score é alguma vez um ponto quando falta         │
+  //  │ evidência, e a hipótese em primeiro lugar tinha, em média, um   │
+  //  │ intervalo de 39 pontos de largura. Ordenar por esse centro é    │
+  //  │ apresentar ruído como ranking, e contradiz a doutrina do resto  │
+  //  │ do motor.                                                       │
+  //  │                                                                │
+  //  │ A chave passa a ser lexicográfica:                              │
+  //  │                                                                │
+  //  │   1.º  o nível de CONFIANÇA (alta > média > baixa > insuf.)     │
+  //  │   2.º  o LIMITE INFERIOR do intervalo — o que é defensável      │
+  //  │   3.º  a pontuação global, só para desempatar dentro do estrato │
+  //  │                                                                │
+  //  │ Entre «77, entre 41 e 92» e «75, entre 70 e 80», a segunda é a  │
+  //  │ melhor recomendação: está provada. Ordenar pelo mínimo          │
+  //  │ recompensa SABER, que é o incentivo que o resto do motor tenta  │
+  //  │ criar — responder a mais perguntas fecha o intervalo e sobe a   │
+  //  │ hipótese.                                                       │
+  //  └────────────────────────────────────────────────────────────────┘
+  const fatal = (item: OpportunityCandidate) =>
+    item.objecoes.some((objecao) => objecao.fatal && objecao.procede) ? 1 : 0;
+
   const restantes = [...candidatos].sort((esquerda, direita) => {
     // Uma objeção fatal nunca chega ao topo, por muito que pontue.
-    const fatalEsq = esquerda.objecoes.some((item) => item.fatal && item.procede) ? 1 : 0;
-    const fatalDir = direita.objecoes.some((item) => item.fatal && item.procede) ? 1 : 0;
     return (
-      fatalEsq - fatalDir ||
+      fatal(esquerda) - fatal(direita) ||
+      forcaDaConfianca(direita.confianca.nivel) - forcaDaConfianca(esquerda.confianca.nivel) ||
+      direita.intervaloPontuacao.min - esquerda.intervaloPontuacao.min ||
       direita.pontuacaoGlobal - esquerda.pontuacaoGlobal ||
       esquerda.titulo.localeCompare(direita.titulo, "pt-PT")
     );
@@ -123,7 +149,11 @@ export function diversificar(
           escolhidos.length === 0
             ? 0
             : Math.max(...escolhidos.map((escolhido) => semelhanca(escolhido, candidato)));
-        const valor = lambda * candidato.pontuacaoGlobal - (1 - lambda) * repeticao * 100;
+        // O MMR usa o MESMO número defensável da chave de partida. Com
+        // `pontuacaoGlobal` aqui, a ordenação por evidência acima era
+        // desfeita logo a seguir — o ponto central voltava a mandar.
+        const valor =
+          lambda * candidato.intervaloPontuacao.min - (1 - lambda) * repeticao * 100;
         if (valor > melhorValor) {
           melhorValor = valor;
           melhorIndice = indice;
@@ -210,7 +240,11 @@ export function destaques(candidatos: readonly OpportunityCandidate[]): readonly
     return meses(a) - meses(b) || b.pontuacaoGlobal - a.pontuacaoGlobal;
   });
   escolher("menor-risco", (a, b) => {
-    const fora = (item: OpportunityCandidate) => item.riscos.filter((risco) => !risco.dentroDaTolerancia).length;
+    // Só riscos APURADOS decidem quem leva o selo. Com `!`, uma hipótese
+    // penalizada por riscos que ninguém mediu perdia-o para outra com
+    // risco medido maior — o selo saía errado, e ninguém o via.
+    const fora = (item: OpportunityCandidate) =>
+      item.riscos.filter((risco) => risco.dentroDaTolerancia === false).length;
     return fora(a) - fora(b) || b.pontuacaoGlobal - a.pontuacaoGlobal;
   });
   escolher("mais-evidencia", (a, b) => b.evidencias.length - a.evidencias.length || b.pontuacaoGlobal - a.pontuacaoGlobal);

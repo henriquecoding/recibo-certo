@@ -239,7 +239,7 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
   //  │     isso significa — em vez de o repetir hipótese a hipótese │
   //  │     como se fosse defeito de cada uma.                       │
   //  └──────────────────────────────────────────────────────────────┘
-  const fora = riscos.filter((item) => item.apurado && !item.dentroDaTolerancia);
+  const fora = riscos.filter((item) => item.dentroDaTolerancia === false);
   const decisivo = fora.some((item) => item.nivel >= 3);
   const apurados = riscos.filter((item) => item.apurado);
   const toleranciaImpossivel = apurados.length > 0 && fora.length === apurados.length;

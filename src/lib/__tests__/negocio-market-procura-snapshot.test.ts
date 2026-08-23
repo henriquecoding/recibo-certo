@@ -1,0 +1,130 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  O INSTANTÂNEO DE PROCURA — a assinatura e as regras de substituição
+//  ---------------------------------------------------------------------
+//  O ficheiro é escrito por um job e lido em produção sem ninguém o ver
+//  pelo meio. Estes testes são o que garante que o que está lá dentro é
+//  o que o gerador escreveu, e que a camada que o serve não deita fora
+//  leituras frescas nem inventa leituras que não existem.
+// ═══════════════════════════════════════════════════════════════════════
+
+import { createHash } from "node:crypto";
+import { describe, expect, it } from "vitest";
+import bruto from "@/lib/negocio/market/bulk/dados/procura-nuts2.json";
+import { comInstantaneoPorBaixo, PROCURA_COMMITADA } from "@/lib/negocio/market/procura-nuts2";
+import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
+
+describe("procura commitada · o ficheiro é o que o gerador escreveu", () => {
+  it("passa a validação e traz pilotos", () => {
+    expect(PROCURA_COMMITADA).not.toBeNull();
+    expect(PROCURA_COMMITADA!.pilotos.length).toBeGreaterThan(0);
+  });
+
+  it("o contentHash bate com os dados", () => {
+    // A mesma conta do gerador: cobre os dados e NÃO os carimbos de
+    // quando perguntámos. Sem isto, o job commitava a cada corrida só
+    // para dizer que os números continuam iguais — e uma escrita
+    // truncada passaria despercebida.
+    const documento = bruto as unknown as Record<string, unknown>;
+    const { contentHash, ...semHash } = documento;
+    const semCarimbos = JSON.stringify(semHash, (chave, valor) =>
+      chave === "geradoEm" || chave === "checkedAt" || chave === "retrievedAt" ? undefined : valor,
+    );
+    expect(`sha256:${createHash("sha256").update(semCarimbos).digest("hex")}`).toBe(contentHash);
+  });
+
+  it("todas as observações têm valor, série e geografia", () => {
+    for (const piloto of PROCURA_COMMITADA!.pilotos) {
+      for (const observacao of piloto.observations) {
+        expect(observacao.seriesId, piloto.templateId).toBeTruthy();
+        expect(observacao.geography.code, observacao.seriesId).toBeTruthy();
+        expect(observacao.value, observacao.seriesId).not.toBeUndefined();
+      }
+    }
+  });
+
+  it("a granularidade declarada é a que os dados têm", () => {
+    // O nome do ficheiro promete NUTS II e país. Uma leitura ao concelho
+    // aqui dentro seria uma promessa quebrada em silêncio — e o resto do
+    // motor compara percentis assumindo nove regiões.
+    const niveis = new Set(
+      PROCURA_COMMITADA!.pilotos.flatMap((piloto) =>
+        piloto.observations.map((observacao) => observacao.geography.level),
+      ),
+    );
+    for (const nivel of niveis) expect(["nuts2", "country"]).toContain(nivel);
+  });
+
+  it("nenhuma leitura chega sem licença apurada", () => {
+    // A regra é anterior a este ficheiro: uma observação sem licença
+    // aprovada não pode ser publicada, esteja ela ao vivo ou guardada.
+    for (const piloto of PROCURA_COMMITADA!.pilotos) {
+      for (const observacao of piloto.observations) {
+        expect(observacao.license?.status, `${piloto.templateId}/${observacao.seriesId}`).toBe("approved");
+      }
+    }
+  });
+});
+
+describe("procura commitada · o ao vivo ganha, o instantâneo só preenche", () => {
+  const falso = (templateId: string, observations: number): MarketPilotEvidence =>
+    ({
+      templateId,
+      checkedAt: "2026-08-23T00:00:00.000Z",
+      gate: { state: "candidate" },
+      observations: Array.from({ length: observations }, (_, indice) => ({
+        seriesId: `serie-${indice}`,
+      })),
+      sourceHealth: [],
+    }) as unknown as MarketPilotEvidence;
+
+  it("uma leitura fresca nunca é substituída pela guardada", () => {
+    const guardado = PROCURA_COMMITADA!.pilotos[0]!;
+    const aoVivo = [falso(guardado.templateId, 3)];
+    const { pilotos, doInstantaneo } = comInstantaneoPorBaixo(aoVivo);
+    const resultado = pilotos.find((item) => item.templateId === guardado.templateId)!;
+    expect(resultado.observations).toHaveLength(3);
+    expect(doInstantaneo).not.toContain(guardado.templateId);
+  });
+
+  it("um piloto vazio é preenchido pelo guardado, e diz que foi", () => {
+    const guardado = PROCURA_COMMITADA!.pilotos[0]!;
+    const { pilotos, doInstantaneo } = comInstantaneoPorBaixo([falso(guardado.templateId, 0)]);
+    const resultado = pilotos.find((item) => item.templateId === guardado.templateId)!;
+    expect(resultado.observations.length).toBeGreaterThan(0);
+    expect(doInstantaneo).toContain(guardado.templateId);
+  });
+
+  it("um carregamento que não produziu nada devolve o instantâneo inteiro", () => {
+    const { pilotos, doInstantaneo } = comInstantaneoPorBaixo([]);
+    expect(pilotos).toHaveLength(PROCURA_COMMITADA!.pilotos.length);
+    expect(doInstantaneo).toHaveLength(PROCURA_COMMITADA!.pilotos.length);
+  });
+
+  it("nunca duplica um piloto", () => {
+    const guardado = PROCURA_COMMITADA!.pilotos[0]!;
+    const { pilotos } = comInstantaneoPorBaixo([falso(guardado.templateId, 2)]);
+    const ids = pilotos.map((item) => item.templateId);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("um piloto ao vivo que o instantâneo não conhece passa tal e qual", () => {
+    // Um dossier novo, ainda sem instantâneo, não pode desaparecer da
+    // resposta só por não estar no ficheiro.
+    const { pilotos } = comInstantaneoPorBaixo([falso("dossier-novo", 0)]);
+    const novo = pilotos.find((item) => item.templateId === "dossier-novo");
+    expect(novo).toBeDefined();
+    expect(novo!.observations).toHaveLength(0);
+  });
+
+  it("o instantâneo não reescreve os carimbos para parecer fresco", () => {
+    // A honestidade deste ficheiro depende disto: as leituras guardadas
+    // trazem a data em que foram colhidas, e é sobre ela que a frescura
+    // é calculada. Reescrevê-las seria dar por observado hoje o que foi
+    // observado noutro dia.
+    const { pilotos } = comInstantaneoPorBaixo([]);
+    const guardado = PROCURA_COMMITADA!.pilotos[0]!;
+    const servido = pilotos.find((item) => item.templateId === guardado.templateId)!;
+    expect(servido.checkedAt).toBe(guardado.checkedAt);
+    expect(servido.observations[0]?.retrievedAt).toBe(guardado.observations[0]?.retrievedAt);
+  });
+});

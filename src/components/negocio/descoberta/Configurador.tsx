@@ -518,7 +518,10 @@ export default function Configurador({
                     htmlFor="ode-concelho"
                     className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-500"
                   >
-                    Concelho <span className="font-normal normal-case tracking-normal">(opcional)</span>
+                    Concelho{" "}
+                    <span className="font-normal normal-case tracking-normal text-brand">
+                      a resposta que mais muda a análise
+                    </span>
                   </label>
                   <select
                     id="ode-concelho"
@@ -540,10 +543,29 @@ export default function Configurador({
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                    A contagem de concorrentes passa a comparar-se entre os 308 concelhos em vez das nove
-                    regiões. Continua a não ser morada — é uma escolha de uma lista, e não sai daqui.
-                  </p>
+                  {/* ── O CUSTO DE NÃO RESPONDER, COM O NÚMERO MEDIDO ──
+                      Era um campo «(opcional)» com uma explicação técnica,
+                      e é a pergunta de que depende a leitura de
+                      concorrência: medido sobre 1 231 hipóteses, com o
+                      mesmo pack e a mesma evidência, a lacuna de oferta é
+                      conhecida em 9 % das hipóteses sem concelho e em
+                      77 % com ele. Dizer «opcional» sem dizer isto é
+                      esconder o preço da escolha. */}
+                  {contexto.localizacao.concelho ? (
+                    <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
+                      A contagem de concorrentes passa a comparar-se entre os 308 concelhos em vez das nove
+                      regiões. Continua a não ser morada — é uma escolha de uma lista, e não sai daqui.
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
+                      <span className="font-semibold text-stone-700 dark:text-stone-200">
+                        Sem concelho, a maioria das hipóteses fica sem leitura de concorrência.
+                      </span>{" "}
+                      Com ele, essa leitura existe em cerca de três em cada quatro — a densidade de operadores
+                      compara-se entre os 308 concelhos em vez das nove regiões. Continua a não ser morada: é
+                      uma escolha de uma lista, e não sai daqui.
+                    </p>
+                  )}
                 </div>
               ) : null}
             </div>

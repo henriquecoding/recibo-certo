@@ -134,7 +134,10 @@ export function explicar(entrada: EntradaExplicacao): Explicacao {
     if (objecao.procede) contra.push(objecao.resposta);
   }
   for (const risco of riscos) {
-    if (!risco.dentroDaTolerancia) contra.push(risco.nota);
+    // `=== false` e não `!`: um risco por apurar não é argumento contra
+    // nada. Entrava aqui como se fosse, e a lista «contra» ficava a
+    // discutir suposições nossas em vez de factos sobre a hipótese.
+    if (risco.dentroDaTolerancia === false) contra.push(risco.nota);
   }
   if (regulacao.temIncerteza) {
     contra.push("Há requisitos regulatórios que dependem do caso concreto e têm de ser confirmados antes de investir.");

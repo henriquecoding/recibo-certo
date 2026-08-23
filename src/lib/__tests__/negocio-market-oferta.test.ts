@@ -22,9 +22,11 @@ import {
   carregarOferta,
   CODIGOS_NUTS_PEDIDOS,
   lerOferta,
+  populacaoRegionalDaMatriz,
   type ContagemRegional,
   type PackOferta,
 } from "@/lib/negocio/market/oferta";
+import { MATRIZ_CONCELHOS } from "@/lib/negocio/market/oferta-concelhos";
 import { MARKET_REGIONS } from "@/lib/negocio/market/geografia";
 import { DIVISOES_USADAS } from "@/lib/negocio/descoberta/conhecimento/dados/ontologia";
 
@@ -388,4 +390,112 @@ describe("oferta: o orçamento total é da carga, não de cada indicador", () =>
     // indicador antes de desistir de um trabalho que ninguém quer.
     expect(Date.now() - comeco).toBeLessThan(2_000);
   }, 30_000);
+});
+
+// ══════════════════════════════════════════════════════════════════════
+
+describe("oferta: uma divisão que rebenta não leva o pack atrás", () => {
+  // ┌────────────────────────────────────────────────────────────────┐
+  // │ O DEFEITO QUE ISTO PRENDE — e que só aparecia COM rede           │
+  // │                                                                │
+  // │ Quatro problemas declaram `baseDeClientes: { cae: ["TOT"] }` —  │
+  // │ o total de empresas do concelho. `manifestoEmpresas("TOT")`     │
+  // │ produzia o metricId `business.count.cae_TOT`, e o `METRIC_ID`   │
+  // │ do conector só admite minúsculas. O manifesto era recusado, a   │
+  // │ exceção subia por `carregarOferta` INTEIRA, e a rota devolvia   │
+  // │ um pack vazio: sem divisões e — o que custa mais — sem          │
+  // │ POPULAÇÃO, que é o denominador de que a normalização da procura │
+  // │ depende.                                                        │
+  // │                                                                │
+  // │ Nenhum teste apanhava isto porque só dispara depois de a fonte  │
+  // │ responder: com o INE inacessível, a rejeição acontecia antes e  │
+  // │ o caminho nunca era percorrido.                                 │
+  // └────────────────────────────────────────────────────────────────┘
+
+  it("a divisão «TOT» já não rebenta, e a população sobrevive", async () => {
+    const registo: Chamada[] = [];
+    const pack = await carregarOferta({
+      fetchImpl: fetchFalso(registo),
+      divisoes: ["81", "TOT"],
+    });
+
+    // 1. O pack existe — a contenção por divisão funciona.
+    expect(pack.populacao.length).toBeGreaterThan(0);
+    const oitentaEUm = pack.divisoes.find((item) => item.divisao === "81")!;
+    expect(oitentaEUm.contagens.length).toBeGreaterThan(0);
+
+    // 2. E «TOT» é MESMO utilizável, não apenas contida.
+    //    Sem o `toLowerCase()` no metricId, a contenção salvava o pack
+    //    mas «TOT» caía em `emFalta` — e as quatro hipóteses que a
+    //    declaram como base de clientes ficavam sem denominador, sem
+    //    nada no ecrã a dizer porquê. As duas correções são precisas, e
+    //    este teste separa-as.
+    expect(pack.emFalta, "«TOT» não devia estar em falta").not.toContain("TOT");
+    const total = pack.divisoes.find((item) => item.divisao === "TOT");
+    expect(total?.falha, "«TOT» rebentou em vez de ser lida").toBeUndefined();
+    expect(total?.contagens.length ?? 0).toBeGreaterThan(0);
+  }, 30_000);
+
+  it("as divisões que os problemas declaram são todas pedíveis", async () => {
+    // A lista real, não uma amostra: é assim que uma divisão nova com um
+    // código impossível é apanhada aqui e não em produção.
+    const registo: Chamada[] = [];
+    const pack = await carregarOferta({ fetchImpl: fetchFalso(registo) });
+    expect(pack.populacao.length).toBeGreaterThan(0);
+    expect(pack.divisoes.length).toBeGreaterThan(0);
+  }, 60_000);
+});
+
+describe("oferta: a população somada dos concelhos commitados", () => {
+  // O denominador da normalização da procura vinha de um `fetch` ao INE
+  // feito no pedido. Quando ele falha, as CONTAGENS deixam de ser
+  // comparáveis entre regiões e o eixo de 17 pontos desaparece. A matriz
+  // commitada já traz a população dos 308 concelhos — isto soma-a.
+
+  it("soma os 308 concelhos às nove NUTS II, mais o país", () => {
+    expect(MATRIZ_CONCELHOS).not.toBeNull();
+    const contagens = populacaoRegionalDaMatriz(MATRIZ_CONCELHOS!);
+
+    // Nove regiões e o total nacional.
+    expect(contagens).toHaveLength(10);
+    const codigos = contagens.map((item) => item.codigo);
+    expect(codigos).toContain("PT");
+    for (const regiao of MARKET_REGIONS) {
+      if (regiao.nutsCode === null) continue;
+      expect(codigos, `falta a região ${regiao.id}`).toContain(regiao.nutsCode);
+    }
+  });
+
+  it("o total nacional é a soma das regiões, e bate com a matriz", () => {
+    const contagens = populacaoRegionalDaMatriz(MATRIZ_CONCELHOS!);
+    const nacional = contagens.find((item) => item.codigo === "PT")!;
+    const somaRegioes = contagens
+      .filter((item) => item.codigo !== "PT")
+      .reduce((total, item) => total + item.valor, 0);
+
+    expect(nacional.valor).toBe(somaRegioes);
+    // E é mesmo a população dos 308 concelhos, não uma aproximação.
+    expect(nacional.valor).toBe(MATRIZ_CONCELHOS!.populacao.reduce((total, item) => total + item, 0));
+  });
+
+  it("declara o período da matriz e nunca um valor a zero", () => {
+    const contagens = populacaoRegionalDaMatriz(MATRIZ_CONCELHOS!);
+    for (const item of contagens) {
+      // Zero seria uma divisão por zero a produzir `Infinity` com ar de
+      // densidade altíssima, mais adiante.
+      expect(item.valor, item.codigo).toBeGreaterThan(0);
+      expect(item.periodo).toBe(MATRIZ_CONCELHOS!.periodoPopulacao);
+    }
+  });
+
+  it("a ordem é canónica, para o resultado não depender do mapa", () => {
+    const primeira = populacaoRegionalDaMatriz(MATRIZ_CONCELHOS!).map((item) => item.codigo);
+    const segunda = populacaoRegionalDaMatriz(MATRIZ_CONCELHOS!).map((item) => item.codigo);
+    expect(primeira).toEqual(segunda);
+  });
+
+  it("uma matriz sem população utilizável devolve lista vazia, não zeros", () => {
+    const vazia = { ...MATRIZ_CONCELHOS!, populacao: MATRIZ_CONCELHOS!.ordem.map(() => Number.NaN) };
+    expect(populacaoRegionalDaMatriz(vazia)).toEqual([]);
+  });
 });

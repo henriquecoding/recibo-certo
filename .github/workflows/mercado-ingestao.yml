@@ -133,6 +133,28 @@ jobs:
           node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs 2>&1 | tee -a mercado-registo.txt
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
+      # O instantâneo de PROCURA — as séries dos cinco pilotos, colhidas
+      # aqui em vez de no pedido do utilizador.
+      #
+      # É a mesma lição que a oferta já tinha aprendido, aplicada ao lado
+      # que faltava: o eixo da procura vale 17 pontos em 100 e vinha
+      # inteiro de `fetch` feito no pedido. Num mau dia das fontes, os
+      # cinco pilotos chegavam vazios e o eixo desaparecia sem deixar
+      # rasto no ecrã. Com o instantâneo commitado por baixo, o pior caso
+      # deixa de ser «não sabemos nada» e passa a ser «sabemos isto, e é
+      # desta data».
+      #
+      # `continue-on-error` pela mesma razão que a matriz de oferta: as
+      # fontes são independentes, e o gerador recusa-se a escrever um
+      # instantâneo vazio — velho é melhor do que vazio.
+      - name: Refrescar o instantâneo de procura
+        id: procura
+        continue-on-error: true
+        run: |
+          set +e
+          node scripts/gen-procura-nuts2.mjs 2>&1 | tee -a mercado-registo.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
       - name: Ver se há alguma coisa para commitar
         id: mudanca
         run: |
@@ -154,7 +176,7 @@ jobs:
         if: steps.mudanca.outputs.ha == 'true'
         # O instantâneo é assinado: se alguma coisa correu mal na escrita, o
         # `contentHash` deixa de bater e isto falha aqui, e não num PR aberto.
-        run: npx vitest run src/lib/__tests__/negocio-market-bulk.test.ts src/lib/__tests__/negocio-market-contratos-snapshot.test.ts
+        run: npx vitest run src/lib/__tests__/negocio-market-bulk.test.ts src/lib/__tests__/negocio-market-contratos-snapshot.test.ts src/lib/__tests__/negocio-market-procura-snapshot.test.ts
 
       - name: Commitar no ramo de dados
         if: steps.mudanca.outputs.ha == 'true'
@@ -164,7 +186,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -B "$RAMO"
           git add src/lib/negocio/market/bulk/dados src/lib/version.ts src/lib/changelog.ts package.json
-          git commit -m "Contratos publicos: atualizar as contagens da fonte oficial"
+          git commit -m "Dados de mercado: atualizar oferta, procura e contagens de contratos"
           git push --force-with-lease -u origin "$RAMO"
 
       - name: Abrir ou atualizar o PR
@@ -221,7 +243,7 @@ jobs:
             const { data: criado } = await github.rest.pulls.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: 'Contratos públicos: atualizar as contagens da fonte oficial',
+              title: 'Dados de mercado: atualizar oferta, procura e contagens de contratos',
               head: ramo,
               base: context.payload.repository.default_branch,
               body: corpo,

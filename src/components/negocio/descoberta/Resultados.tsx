@@ -22,7 +22,7 @@ import {
   type AnguloDeLeitura,
 } from "@/lib/negocio/descoberta/motor/diversidade";
 import { descreverZona, ROTULO_ENTREGA } from "@/lib/negocio/descoberta/motor/gerador";
-import { ROTULO_CONFIANCA } from "@/lib/negocio/descoberta/motor/confianca";
+import { forcaDaConfianca, ROTULO_CONFIANCA } from "@/lib/negocio/descoberta/motor/confianca";
 import {
   ROTULO_ETAPA,
   resumoDoTrabalho,
@@ -155,17 +155,25 @@ export default function Resultados({
   //  83 abaixo de um 80 e conclui, com razão, que um dos dois números
   //  está errado. Nenhum está: falta dizê-lo no ecrã, e é o que estas
   //  duas linhas fazem.
-  const ordemPorPontuacao = useMemo(() => {
-    const porScore = [...passaram].sort(
+  //  A ordem de referência é a mesma que `diversificar()` usa antes do
+  //  MMR — confiança, depois o piso do intervalo, e só então o ponto.
+  //  Comparar com uma ordenação por `pontuacaoGlobal` marcaria como
+  //  «diversificada» toda a linha em que as duas divergem, que passou a
+  //  ser quase todas: o aviso deixaria de assinalar o MMR e passaria a
+  //  assinalar a própria chave de ordenação.
+  const ordemDefensavel = useMemo(() => {
+    const ordenados = [...passaram].sort(
       (esquerda, direita) =>
+        forcaDaConfianca(direita.confianca.nivel) - forcaDaConfianca(esquerda.confianca.nivel) ||
+        direita.intervaloPontuacao.min - esquerda.intervaloPontuacao.min ||
         direita.pontuacaoGlobal - esquerda.pontuacaoGlobal ||
         esquerda.titulo.localeCompare(direita.titulo, "pt-PT"),
     );
-    return new Map(porScore.map((item, indice) => [item.id, indice]));
+    return new Map(ordenados.map((item, indice) => [item.id, indice]));
   }, [passaram]);
   const ordemFoiDiversificada = useMemo(
-    () => passaram.some((item, indice) => ordemPorPontuacao.get(item.id) !== indice),
-    [passaram, ordemPorPontuacao],
+    () => passaram.some((item, indice) => ordemDefensavel.get(item.id) !== indice),
+    [passaram, ordemDefensavel],
   );
 
   const porAngulo = useMemo(
@@ -299,10 +307,13 @@ export default function Resultados({
         <p className="flex items-start gap-1.5 rounded-3xl border border-stone-100 bg-stone-50 px-4 py-2.5 text-[11px] leading-snug text-stone-500 dark:border-stone-800 dark:bg-stone-900/50">
           <BarChart2 size={12} className="mt-0.5 flex-none text-brand" />
           <span>
-            <strong className="font-semibold text-stone-700 dark:text-stone-200">A ordem não é só a pontuação.</strong>{" "}
-            Um ranking puro põe cinco variantes do mesmo problema no topo e não dá escolha nenhuma. O motor
-            desconta semelhança para que cada linha seja uma decisão diferente — por isso podes ver uma
-            pontuação mais alta abaixo de uma mais baixa. As marcadas com «diversificada» são essas.
+            <strong className="font-semibold text-stone-700 dark:text-stone-200">
+              Ordenadas pelo que se prova, não pelo que se estima.
+            </strong>{" "}
+            Primeiro a confiança, depois o mínimo garantido do intervalo — entre «77, entre 41 e 92» e «75,
+            entre 70 e 80», a segunda é a melhor recomendação porque está provada. Por cima disso, o motor
+            desconta semelhança para que cada linha seja uma decisão diferente e não cinco variantes do mesmo
+            problema. As marcadas com «diversificada» são essas.
           </span>
         </p>
       ) : null}
@@ -367,18 +378,34 @@ export default function Resultados({
                 >
                   <Swap size={12} /> {comparar.includes(candidato.id) ? "A comparar" : "Comparar"}
                 </button>
+                {/* O INTERVALO é o número principal e o ponto o
+                    secundário: o ponto é o centro de uma coisa que o
+                    motor declara desconhecer com ±20, e mostrá-lo
+                    sozinho dá-lhe uma autoridade que ele não tem.
+                    Quando a cobertura é total o intervalo colapsa e
+                    passa a haver um número só — que é a recompensa por
+                    ter respondido a tudo. */}
                 <span className="text-[11px] text-stone-400">
-                  Pontuação global {candidato.pontuacaoGlobal}
-                  {candidato.intervaloPontuacao.fechado ? null : (
-                    <span className="text-stone-400">
-                      {" "}
-                      <span className="tabular-nums">
-                        ({candidato.intervaloPontuacao.min}–{candidato.intervaloPontuacao.max})
+                  {candidato.intervaloPontuacao.fechado ? (
+                    <>
+                      Pontuação <span className="tabular-nums font-semibold text-stone-500 dark:text-stone-400">{candidato.pontuacaoGlobal}</span>
+                      <span className="text-stone-400"> · sem margem por apurar</span>
+                    </>
+                  ) : (
+                    <>
+                      Entre{" "}
+                      <span className="tabular-nums font-semibold text-stone-500 dark:text-stone-400">
+                        {candidato.intervaloPontuacao.min}
+                      </span>{" "}
+                      e{" "}
+                      <span className="tabular-nums font-semibold text-stone-500 dark:text-stone-400">
+                        {candidato.intervaloPontuacao.max}
                       </span>
-                    </span>
+                      <span className="text-stone-400"> · melhor estimativa {candidato.pontuacaoGlobal}</span>
+                    </>
                   )}{" "}
                   · {candidato.problema.setor}
-                  {anguloAtivo === "todos" && ordemPorPontuacao.get(candidato.id) !== posicao ? (
+                  {anguloAtivo === "todos" && ordemDefensavel.get(candidato.id) !== posicao ? (
                     <span className="text-stone-400"> · diversificada</span>
                   ) : null}
                 </span>
@@ -625,7 +652,12 @@ function Comparador({
       (item) => (item.viabilidade.tempoAteReceitaMeses ? formatarIntervalo(item.viabilidade.tempoAteReceitaMeses) : "por estimar"),
     ],
     ["Receita", (item) => item.modelo.rotulo],
-    ["Riscos acima do que aceitas", (item) => String(item.riscos.filter((risco) => !risco.dentroDaTolerancia).length)],
+    [
+      "Riscos acima do que aceitas",
+      // Só os APURADOS. Com `!`, esta coluna contava riscos supostos e
+      // comparava hipóteses por prudência nossa, não por medição.
+      (item) => String(item.riscos.filter((risco) => risco.dentroDaTolerancia === false).length),
+    ],
     ["Requisitos a confirmar", (item) => String(item.regulacao.requisitos.length)],
     ["Leituras oficiais", (item) => String(item.evidencias.length)],
   ];

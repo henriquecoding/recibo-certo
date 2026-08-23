@@ -33,11 +33,21 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { MarketOpportunityState } from "@/lib/negocio/market/tipos";
+import { CONCEITO_POR_CAPACIDADE, type PrecisaoCae } from "../conhecimento/dados/ontologia";
 import { cobertura } from "./scoring";
 import type { AvaliacaoConfianca, AvaliacaoProcura, AvaliacaoRegulatoria, NivelConfianca, OpportunityScore } from "./tipos";
 import type { CandidatoBruto } from "./gerador";
 
-const ORDEM_NIVEL: readonly NivelConfianca[] = ["insuficiente", "baixa", "media", "alta"];
+/**
+ * Do mais fraco para o mais forte. Exportada porque a ordenação dos
+ * resultados estratifica por confiança e as duas não podem divergir.
+ */
+export const ORDEM_NIVEL: readonly NivelConfianca[] = ["insuficiente", "baixa", "media", "alta"];
+
+/** 0 = insuficiente … 3 = alta. Para comparar níveis sem repetir a lista. */
+export function forcaDaConfianca(nivel: NivelConfianca): number {
+  return ORDEM_NIVEL.indexOf(nivel);
+}
 
 /**
  * O teto de confiança que cada estado do gate autoriza.
@@ -55,6 +65,18 @@ const TETO_POR_ESTADO: Readonly<Record<MarketOpportunityState, NivelConfianca>> 
   evidence_qualified: "alta",
   user_validated: "alta",
   operating: "alta",
+});
+
+/**
+ * O teto de confiança que cada precisão de CAE permite.
+ *
+ * `justa` não limita nada — a divisão descreve a hipótese. `larga`
+ * trava em «média»: a leitura é real, a fonte é oficial, e mesmo assim
+ * conta gente que não faz isto.
+ */
+const TETO_POR_PRECISAO_CAE: Readonly<Record<PrecisaoCae, NivelConfianca>> = Object.freeze({
+  justa: "alta",
+  larga: "media",
 });
 
 function limitar(nivel: NivelConfianca, teto: NivelConfianca): NivelConfianca {
@@ -126,7 +148,35 @@ export function avaliarConfianca(
           : "insuficiente";
 
   const tetoDoGate = procura.estadoGate;
-  const nivel = tetoDoGate === null ? bruto : limitar(bruto, TETO_POR_ESTADO[tetoDoGate]);
+  let nivel = tetoDoGate === null ? bruto : limitar(bruto, TETO_POR_ESTADO[tetoDoGate]);
+
+  // ── A PRECISÃO DA DIVISÃO DA CAE PASSA A CUSTAR ───────────────────
+  //  ┌────────────────────────────────────────────────────────────────┐
+  //  │ `precisao` existia, estava correta, e não entrava em cálculo    │
+  //  │ nenhum: uma leitura da divisão 81 — que junta limpeza de        │
+  //  │ edifícios COM jardinagem — produzia exatamente a mesma          │
+  //  │ confiança que uma da 53, que é justa. Dezanove dos vinte e      │
+  //  │ cinco conceitos são `larga`. O campo era decorativo.            │
+  //  │                                                                │
+  //  │ Uma leitura de oferta vinda de uma divisão larga limita a       │
+  //  │ confiança a «média». NÃO altera o score do negócio: a força da  │
+  //  │ evidência vive na confiança e nunca no score — é a regra que o  │
+  //  │ cabeçalho do `scoring.ts` defende em letra grande, e alargar a  │
+  //  │ divisão para obter números maiores é sabotagem silenciosa.      │
+  //  │                                                                │
+  //  │ Só se aplica quando HOUVE leitura de oferta. Sem ela não há     │
+  //  │ nada de largo a descontar, e a cobertura já trata do resto.     │
+  //  └────────────────────────────────────────────────────────────────┘
+  const conceito = CONCEITO_POR_CAPACIDADE.get(candidato.dominante.id);
+  if (scores.lacunaDeOferta !== null && conceito?.precisao === "larga") {
+    const limitado = limitar(nivel, TETO_POR_PRECISAO_CAE.larga);
+    if (limitado !== nivel) {
+      motivos.push(
+        `A leitura de oferta vem de uma divisão da CAE mais larga do que esta hipótese${conceito.ressalva ? ` — ${conceito.ressalva.replace(/\.$/, "")}` : ""}, por isso a confiança não passa de média.`,
+      );
+      nivel = limitado;
+    }
+  }
   if (tetoDoGate !== null && nivel !== bruto) {
     motivos.push(
       `O gate de evidência classifica o dossier equivalente como «${tetoDoGate}», e isso limita a confiança possível independentemente do que já sabemos.`,

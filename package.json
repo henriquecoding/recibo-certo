@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.106.0",
+  "version": "2.107.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -48,6 +48,8 @@
     "novidades:check": "node scripts/gen-novidades.mjs --check",
     "novidades:gen": "node scripts/gen-novidades.mjs",
     "oferta:concelhos": "node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs",
+    "procura:nuts2": "node scripts/gen-procura-nuts2.mjs",
+    "procura:nuts2:check": "node scripts/gen-procura-nuts2.mjs --check",
     "oferta:concelhos:check": "node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs --check",
     "parcerias:check": "vitest run src/lib/__tests__/parcerias.test.ts",
     "parcerias:copy": "vitest run src/lib/__tests__/parcerias.test.ts -t \"parcerias:copy\"",

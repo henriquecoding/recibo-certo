@@ -55,8 +55,31 @@ export interface RiscoAvaliado {
   /** 0 = negligenciável, 3 = decisivo. */
   nivel: 0 | 1 | 2 | 3;
   nota: string;
-  /** A pessoa declarou tolerar isto? Compara com o perfil de risco. */
-  dentroDaTolerancia: boolean;
+  /**
+   * A pessoa declarou tolerar isto?
+   *
+   * `true`  — apurado, e dentro da tolerância.
+   * `false` — apurado, e acima dela.
+   * `null`  — NÃO apurado: não há afirmação nenhuma a fazer sobre a
+   *           tolerância, porque não se mediu o nível.
+   *
+   * ┌──────────────────────────────────────────────────────────────────┐
+   * │ PORQUE É `null` E NÃO `false`                                     │
+   * │                                                                  │
+   * │ Era `boolean`, e um nível assumido por prudência (nível 2, sem   │
+   * │ densidade de operadores apurada) comparava-se com a tolerância   │
+   * │ como se tivesse sido medido. Dois consumidores filtravam por     │
+   * │ `apurado` e quatro não — e o ecrã dizia, no mesmo cartão, «acima │
+   * │ do que aceitas» num chip vermelho e «por não estar apurada, não  │
+   * │ conta contra a tua tolerância» na frase por baixo.               │
+   * │                                                                  │
+   * │ Com `null`, quem consome é OBRIGADO a decidir o que mostrar em   │
+   * │ vez de herdar `false` por omissão. O erro deixa de ser possível  │
+   * │ por construção, que é a regra desta casa: ausência de            │
+   * │ conhecimento não é uma afirmação sobre o negócio.                │
+   * └──────────────────────────────────────────────────────────────────┘
+   */
+  dentroDaTolerancia: boolean | null;
   /**
    * O nível foi MEDIDO, ou assumido por prudência?
    *

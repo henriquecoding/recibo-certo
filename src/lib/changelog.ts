@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.107.0",
+    data: "2026-08-23",
+    titulo: "O «não sabemos» era, em parte, uma avaria nossa",
+    itens: [
+      "A ferramenta de descobrir negócio respondia «por apurar» a quase tudo. Uma parte disso era honestidade — há coisas que nenhuma fonte pública portuguesa mede. Outra parte era uma avaria, e é essa que foi corrigida.",
+      "A leitura de quantos operadores já existem numa zona estava desligada em silêncio, e com ela a população que serve de denominador a todas as comparações. Bastava uma das vinte e oito atividades pedidas ao INE ter um código com letras maiúsculas — «TOT», o total de empresas — para o pedido inteiro ser recusado. A página respondia como se estivesse tudo bem, e vinha vazia. Agora uma atividade que falhe fica sozinha na falha, e as outras vinte e sete continuam a chegar.",
+      "A intensidade da procura deixou de depender de a rede estar boa no momento em que perguntas. As leituras oficiais dos cinco temas com dados ligados passam a estar guardadas no próprio site, atualizadas por um trabalho semanal. Se o INE, o Eurostat ou o portal de dados abertos não responderem, continuas a ver os números — com a data em que foram recolhidos à vista, nunca com uma data de hoje que seria falsa.",
+      "Medido: com a rede em baixo, a análise passou de não conseguir avaliar 27 % do que pesa na pontuação para conseguir avaliar 87 %.",
+      "O risco de concorrência dizia duas coisas ao mesmo tempo no mesmo cartão: uma etiqueta vermelha «acima do que aceitas» e, por baixo, a frase «por não estar apurada, não conta contra a tua tolerância». A etiqueta estava errada. Um risco que ninguém mediu passa a dizer «por apurar» — e deixa de entrar na comparação entre hipóteses, na lista de argumentos contra, e na escolha de qual delas leva o selo de menor risco.",
+      "As hipóteses passam a ser ordenadas pelo que se consegue provar, não pelo palpite do meio. Cada uma mostra o intervalo à frente («entre 70 e 80») e a melhor estimativa atrás, porque um número sozinho dava a ideia de uma certeza que não existia. Quando conseguimos avaliar tudo, o intervalo fecha num número só — e essa é a recompensa por teres respondido a mais perguntas.",
+      "O concelho deixou de ser um campo «opcional» sem explicação. É a resposta que mais muda a análise: sem ele, a maioria das hipóteses fica sem leitura de concorrência; com ele, essa leitura existe em cerca de três em cada quatro. Continua a não ser morada — é uma escolha de uma lista, feita no teu dispositivo, que não sai daqui.",
+      "Quando a comparação vem de uma atividade económica mais larga do que o teu negócio — a divisão da limpeza inclui jardinagem, a dos escritórios inclui advogados —, a confiança passa a ficar limitada a «média» e a razão aparece escrita. O número não muda; a certeza com que to apresentamos é que muda.",
+    ],
+  },
+  {
     version: "2.106.0",
     data: "2026-08-23",
     titulo: "No fim de cada simulação, alguém que trabalha com aquilo",

@@ -489,8 +489,14 @@ describe("auditoria F-08 · o risco de concorrência deixou de ser uma constante
       const concorrencia = candidato.riscos.find((item) => item.dimensao === "concorrencia")!;
       if (concorrencia.apurado) continue;
       // Sem oferta ligada, a concorrência é uma suposição prudente — e
-      // uma suposição não pode custar pontos.
-      expect(concorrencia.dentroDaTolerancia).toBe(false);
+      // uma suposição não pode custar pontos NEM produzir veredito.
+      //
+      // Este `expect` dizia `false`, que é o que o campo valia: o nível
+      // assumido era comparado com a tolerância como se tivesse sido
+      // medido, e o ecrã mostrava «acima do que aceitas» a vermelho. O
+      // valor certo para «não medimos isto» é `null` — ausência de
+      // conhecimento não é uma afirmação sobre o negócio.
+      expect(concorrencia.dentroDaTolerancia).toBeNull();
       expect(riscosForaDaTolerancia([concorrencia])).toBe(0);
     }
   });
@@ -507,7 +513,7 @@ describe("auditoria F-08 · o risco de concorrência deixou de ser uma constante
       item.objecoes.some((objecao) => objecao.id === "risco" && objecao.fatal && objecao.procede),
     );
     for (const candidato of comFatalDeRisco) {
-      const fora = candidato.riscos.filter((item) => item.apurado && !item.dentroDaTolerancia);
+      const fora = candidato.riscos.filter((item) => item.dentroDaTolerancia === false);
       expect(fora.length).toBeGreaterThanOrEqual(4);
       expect(fora.some((item) => item.nivel >= 3), candidato.titulo).toBe(true);
     }
