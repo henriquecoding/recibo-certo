@@ -155,10 +155,51 @@ qual a taxa de compra.
 
 ### 2.3 Bens em segunda mão
 
-Regime da margem (DL 199/96): o IVA incide sobre `P − Cd`, não sobre `P`.
-Suportado como modo de IVA `margem`; a UI avisa que exige enquadramento próprio.
+Regime da margem (DL 199/96): o IVA incide sobre `P − Cd`, não sobre `P` — e
+está **contido** nessa margem, não acrescentado a ela. Logo:
 
-### 2.4 O regime é derivado, não perguntado
+```
+IVA_margem = max(0, P − Cd) × t / (1 + t)
+```
+
+`t/(1+t)`, não `t`. À taxa normal são 18,70% da margem, e usar 23% sobrestima o
+imposto em quase um quarto.
+
+**Limitação declarada:** a formação do preço ainda trata este regime como IVA por
+cima (`PVP = P(1+t)`). O modelo correto — `PVP = P` e o IVA da margem como
+terceira base de incidência no solver — está derivado em §2.3.1 e por
+implementar. Enquanto não estiver, o aviso
+`regime-margem-confirmar-enquadramento` di-lo ao utilizador, e a tesouraria já
+usa a fórmula certa acima.
+
+### 2.3.1 O que falta para o modelar a sério
+
+O IVA da margem não é `v` (não incide na faturação) nem `τ` (a base não é o
+lucro: as comissões não lhe abatem). É uma **terceira base** — a margem bruta de
+aquisição — mas cabe no mesmo solver de forma fechada, com `τ' = t/(1+t)`:
+
+```
+lucro = P(1 − v − g − τ') − [ (Cd + Cv) + f − τ'·Cd ]
+```
+
+ou seja `D' = D − τ'` e `base' = base − τ'·Cd`, com `t = 0` na conversão para
+PVP porque neste regime o preço anunciado É o preço final. Duas linhas no
+solver; falta a decisão de produto sobre o que a UI passa a mostrar.
+
+### 2.4 O IVA que SAI não é o IVA que se liquida
+
+O que a tesouraria tem de reservar é o **saldo** — liquidado menos dedutível
+(Arts. 19.º e 22.º CIVA):
+
+```
+IVA_a_entregar = max(0, P × t − IVA_suportado_dedutível)
+```
+
+Reservar o liquidado inteiro a quem deduz é um erro tão caro como reservar a
+menos: um revendedor que compra a 100 € e vende a 146 € entrega 10,64 €, e
+mandá-lo guardar 33,64 € é mandar guardar mais do triplo.
+
+### 2.5 O regime é derivado, não perguntado
 
 A engine não acredita na resposta do `select`: chama `situacaoIVA()`
 (`fiscal-iva.ts`) com a faturação **declarada** e lê o regime efetivo. Isso
@@ -310,18 +351,33 @@ prospeção, propostas, administração, deslocações, formação, pós-venda).
 típico declarado na literatura de serviços: 0,55–0,70. A engine usa **0,60 por
 omissão e diz que é um pressuposto editável**.
 
-Para um trabalhador independente:
+Para um trabalhador independente há **dois** valores/hora, e confundi-los conta
+a estrutura duas vezes:
 
 ```
-                       rendimentoLíquidoPretendido + custosFixosAnuais
-valorHoraLíquido = ──────────────────────────────────────────────────────
-                                   horasProdutivas
+                    rendimentoLíquidoPretendido
+valorHoraLíquido = ─────────────────────────────         ← entra no solver
+                          horasProdutivas
 
-valorHoraFaturado = valorHoraLíquido / (1 − v)
+                                rendimentoLíquidoPretendido + custosFixosAnuais
+valorHoraLíquidoComEstrutura = ──────────────────────────────────────────────────
+                                              horasProdutivas
+
+valorHoraFaturado = valorHoraLíquidoComEstrutura / (1 − v)   ← para mostrar
 ```
 
-onde `v` já inclui SS e IRS marginal (§3). O resultado responde à pergunta real:
-*«quanto tenho de cobrar por hora para me sobrar X»*.
+onde `v` já inclui SS e IRS marginal (§3). `valorHoraFaturado` responde à
+pergunta real — *«quanto tenho de cobrar por hora para me sobrar X»* — e é um
+**resultado**, nunca uma entrada da equação.
+
+**Porquê separar.** Dentro de `precificar()` os custos fixos já são repartidos
+por unidade (`F/Q`, §6 e §7). Somá-los também ao valor/hora cobrava-os duas
+vezes ao mesmo cliente: 600 €/mês de contabilidade apareciam como 55,81 € dentro
+do custo do tempo **e** como 60 € de custos fixos por unidade — 23% de base de
+custo inventada.
+
+**E o custo do tempo SOMA-SE ao custo direto, não o substitui.** Um serviço com
+materiais tem os dois, e o cliente paga os dois.
 
 ---
 
@@ -445,3 +501,15 @@ Duas operações distintas que nunca se misturam:
    percentagem **desce**.
 9. Nenhuma função devolve `NaN` para qualquer entrada finita.
 10. Desconto de 0% devolve exatamente o mesmo resultado que não aplicar desconto.
+11. **A margem entregue é a margem pedida**, com custos fixos e em qualquer
+    regime de contabilidade. Medir o lucro fora do solver que resolveu o preço
+    perde o escudo fiscal dos custos fixos e entrega 33,2% a quem pediu 35%.
+12. **Nenhum custo entra duas vezes.** Custos fixos: ou no valor/hora, ou
+    repartidos por unidade — nunca nos dois. Impostos sobre a faturação: só no
+    `v` do solver, nunca outra vez a jusante.
+13. **Acrescentar um custo nunca baixa o preço.** Vale para serviços com
+    materiais, que é onde a substituição em vez da soma o violava por 96%.
+14. **As âncoras da faixa saem todas do mesmo solver que o preço recomendado.**
+    A folga da «confortável» são os pontos de margem declarados sobre a margem
+    ENTREGUE — com markup, a conversão ingénua `m = k/(1+k)` ignora comissões e
+    impostos e produz uma âncora ao dobro do preço.

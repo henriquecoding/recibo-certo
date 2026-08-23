@@ -39,11 +39,27 @@ export interface ResultadoTempo {
   semanasTrabalhadas: number;
   /** Horas por unidade/projeto. */
   horasPorUnidade: number;
-  /** Valor/hora necessário para atingir o rendimento pretendido, LÍQUIDO. */
+  /**
+   * Valor/hora do TEMPO, líquido e SEM estrutura: só o rendimento
+   * pretendido a dividir pelas horas faturáveis.
+   *
+   * ⚠️ As contas fixas NÃO estão aqui de propósito. Quem as reparte é o
+   * orquestrador, por unidade e ao volume esperado (`fixosPorUnidade`), e
+   * também as somar ao valor/hora contava-as duas vezes: 600 €/mês de
+   * contabilidade apareciam como 55,81 € dentro do custo do tempo E como
+   * 60 € de custos fixos por unidade, inflando a base de custo em 23%.
+   */
   valorHoraLiquido: number;
   /**
-   * Valor/hora a FATURAR, depois de repor o que sai em impostos sobre a
-   * faturação. É o número que vai para a proposta.
+   * Valor/hora com a quota das contas fixas por dentro. É o que responde à
+   * pergunta isolada «quanto vale a minha hora se ela tiver de pagar tudo»
+   * — e é a base de `valorHoraFaturado`. Não entra no solver.
+   */
+  valorHoraLiquidoComEstrutura: number;
+  /**
+   * Valor/hora a FATURAR: estrutura por dentro e impostos sobre a faturação
+   * repostos. É o número que vai para a proposta — e um RESULTADO para
+   * mostrar, nunca uma entrada da equação.
    */
   valorHoraFaturado: number;
   /** Custo de tempo imputado a uma unidade. */
@@ -53,7 +69,11 @@ export interface ResultadoTempo {
 
 export function calcularTempo(input: {
   tempo?: ModeloTempo;
-  /** Custos fixos anuais que o valor/hora tem de cobrir. */
+  /**
+   * Custos fixos anuais. Entram apenas no valor/hora COM estrutura, que é
+   * um número para mostrar — nunca no custo que alimenta o solver, onde as
+   * contas fixas já entram repartidas por unidade.
+   */
   custosFixosAnuais: number;
   /** Fração da faturação que sai em SS + IRS (de `fiscal-ti.ts`). */
   fracaoFiscal: number;
@@ -91,11 +111,18 @@ export function calcularTempo(input: {
   const fixos = naoNegativo(input.custosFixosAnuais);
   const fracaoFiscal = fracao(input.fracaoFiscal, 0, 0.9);
 
-  const valorHoraLiquido =
+  // O custo do TEMPO é só o rendimento pretendido. As contas fixas são
+  // repartidas pelo orquestrador, por unidade — somá-las aqui também seria
+  // cobrá-las duas vezes ao mesmo cliente.
+  const valorHoraLiquido = horasProdutivasAno > 0 ? dividir(rendimento, horasProdutivasAno) : 0;
+
+  const valorHoraLiquidoComEstrutura =
     horasProdutivasAno > 0 ? dividir(rendimento + fixos, horasProdutivasAno) : 0;
 
   const valorHoraFaturado =
-    fracaoFiscal < 1 ? dividir(valorHoraLiquido, 1 - fracaoFiscal, valorHoraLiquido) : valorHoraLiquido;
+    fracaoFiscal < 1
+      ? dividir(valorHoraLiquidoComEstrutura, 1 - fracaoFiscal, valorHoraLiquidoComEstrutura)
+      : valorHoraLiquidoComEstrutura;
 
   if (rendimento > 0 && horasProdutivasAno > 0) {
     const ingenuo = dividir(rendimento, 12 * horasSemana * 4.33);
@@ -103,7 +130,7 @@ export function calcularTempo(input: {
       notas.push(
         `A conta rápida — rendimento a dividir pelas horas do mês — daria ${ingenuo
           .toFixed(2)
-          .replace(".", ",")} €/hora. Com férias, feriados, horas não faturáveis e impostos, o número real é ${valorHoraFaturado
+          .replace(".", ",")} €/hora. Com férias, feriados, horas não faturáveis, contas fixas e impostos, o número real é ${valorHoraFaturado
           .toFixed(2)
           .replace(".", ",")} €/hora.`,
       );
@@ -119,6 +146,7 @@ export function calcularTempo(input: {
     semanasTrabalhadas,
     horasPorUnidade,
     valorHoraLiquido,
+    valorHoraLiquidoComEstrutura,
     valorHoraFaturado,
     // ⚠️ CUSTO É O VALOR LÍQUIDO, NÃO O FATURADO.
     //

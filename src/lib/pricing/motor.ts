@@ -109,28 +109,30 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   });
 
   // ── 5. Tempo (serviços) ────────────────────────────────────────────
-  //  O custo do tempo é brutado para repor os impostos que saem de cada euro
-  //  faturado. Em contabilidade organizada o IRS não sai de cada euro
-  //  faturado — sai do lucro — e por isso não entra aqui: entraria a dobrar,
-  //  porque o solver já lhe aplica τ.
-  //  Exatamente um de `irsFracao`/`irsSobreLucro` é diferente de zero: em
-  //  qualquer dos regimes é o IRS que vai comer este rendimento, e o valor/
-  //  hora tem de o repor para a pessoa ficar mesmo com o que pediu.
+  //  `fracaoFiscal` serve APENAS o `valorHoraFaturado` — o número que
+  //  responde a «quanto tenho de cobrar por hora» e que a interface mostra.
+  //  O custo que alimenta o solver é o valor/hora LÍQUIDO: os impostos são
+  //  repostos uma só vez, lá dentro. Entram aqui os dois IRS possíveis
+  //  porque exatamente um deles é diferente de zero, e em qualquer dos
+  //  regimes é o IRS que vai comer este rendimento.
   const tempo = calcularTempo({
     tempo: contexto.tempo,
     custosFixosAnuais: fixosMensaisTotais * 12,
     fracaoFiscal: ssFracao + irsFracao + irsSobreLucro,
   });
 
-  // Num serviço, o custo do tempo É o custo direto.
-  const custoDiretoFinal =
-    tempo && tempo.custoTempoPorUnidade > 0 && custos.diretoAjustado === 0
-      ? tempo.custoTempoPorUnidade
-      : custos.diretoAjustado;
+  //  O custo do tempo SOMA-SE ao custo direto, não o substitui.
+  //
+  //  Substituí-lo era um defeito com consequência absurda: uma sessão de
+  //  fotografia com 5 € de impressões passava de 243,53 € para 10,96 €,
+  //  porque declarar um custo apagava as cinco horas de trabalho. Um
+  //  serviço com materiais tem as duas coisas, e o cliente paga as duas.
+  const custoTempo = tempo ? naoNegativo(tempo.custoTempoPorUnidade) : 0;
+  const custoDiretoFinal = custos.diretoAjustado + custoTempo;
 
-  // ...mas NÃO é despesa dedutível: o trabalho do próprio é o rendimento
-  // que se está a apurar, não um custo da atividade. A mesma linha que
-  // `despesasAnuais` acima já respeita.
+  // ...mas o tempo NÃO é despesa dedutível: o trabalho do próprio é o
+  // rendimento que se está a apurar, não um custo da atividade. A mesma
+  // linha que `despesasAnuais` acima já respeita.
   const custoDiretoDedutivel = custos.diretoAjustado;
 
   // ── 6. Montar a equação ────────────────────────────────────────────
@@ -190,7 +192,10 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
         ok: liquido > 0,
         precoLiquido: liquido,
         denominador: 1,
-        fracaoDisponivel: 1 - solver.fracaoLiquido - solver.fracaoBruto * (1 + iva.taxaVenda),
+        // Do solver, para não haver uma segunda versão da mesma conta: a
+        // cópia à mão que aqui estava esquecia τ e dava uma fração
+        // disponível otimista a quem está em contabilidade organizada.
+        fracaoDisponivel: fracaoDisponivel(solver),
         motivo: liquido > 0 ? undefined : "dados_insuficientes",
       };
       margemAlvo = liquido > 0 ? dividir(lucroAoPreco(solverComFixos, liquido), liquido) : 0;
@@ -224,13 +229,28 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   };
 
   // ── 9. Margem ──────────────────────────────────────────────────────
+  //  O lucro mede-se com o MESMO solver que resolveu o preço. Medi-lo como
+  //  «contribuição − fixos» perdia o escudo fiscal dos custos fixos, e uma
+  //  margem pedida de 35% aparecia no ecrã como 33,2% a quem está em
+  //  contabilidade organizada — a ferramenta a não entregar o que pediram.
+  const lucroUnidade = lucroAoPreco(solverComFixos, precoLiquido);
+
   const margem = calcularMargem({
     precoLiquido,
     custosVariaveis: variaveisTotais,
-    fixosPorUnidade,
+    lucroUnidade,
     baseMarkup: custoDiretoFinal + custos.variaveisFixos + comissoes.fixos + fixosPorUnidade,
     unidadesMes: q,
   });
+
+  // A margem que o preço resolvido ENTREGA. É ela — não a pedida — que
+  // ancora a faixa: com markup, `margemDeMarkup(k)` ignora comissões e
+  // impostos e um markup de 50% dava uma âncora «confortável» ao dobro do
+  // preço recomendado.
+  const margemEntregue = precoLiquido > 0 ? dividir(lucroUnidade, precoLiquido) : 0;
+  if (saida.ok && objetivo.modo !== "margem") {
+    margemAlvo = margemEntregue;
+  }
 
   // ── 10. Break-even ─────────────────────────────────────────────────
   const breakEven = calcularBreakEven({
@@ -243,6 +263,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   // ── 11. Faixa de preço ─────────────────────────────────────────────
   const faixa = calcularFaixa({
     solver,
+    solverComFixos,
     fixosPorUnidade,
     margemAlvo,
     folga,
@@ -262,14 +283,34 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     // O mesmo número que entrou no solver — senão a taxa de IRS mostrada não
     // seria a taxa que formou o preço.
     despesasAnuais,
-    custoDedutivelPorUnidade: (solverComFixos.custosDedutiveis ?? 0) + comissoes.fixos,
+    // A MESMA base dedutível que o solver usou, avaliada a este preço. As
+    // comissões percentuais têm de estar cá: são despesa da atividade, o
+    // solver abate-as ao lucro tributável (é o que o termo τ(1 − g(1+t))
+    // diz), e deixá-las de fora fazia o IRS em euros do ecrã não bater com
+    // o IRS que formou o preço.
+    custoDedutivelPorUnidade:
+      (solverComFixos.custosDedutiveis ?? 0) +
+      comissoes.fixos +
+      comissoes.sobreBruto * pvp +
+      comissoes.sobreLiquido * precoLiquido,
   });
 
   // ── 13. Tesouraria ─────────────────────────────────────────────────
-  const ivaEntregue = ivaAEntregar(precoLiquido, custoDiretoFinal, iva);
+  //  O IVA que SAI é o que se entrega: o liquidado menos o dedutível das
+  //  compras. Usar o liquidado mandava um revendedor no regime normal
+  //  reservar 1 682 €/mês onde lhe saem 532 € — e uma reserva três vezes
+  //  maior do que a dívida é um erro tão caro como a reserva a menos.
+  const ivaEntregue = ivaAEntregar(precoLiquido, custos.diretoAjustado, iva, custos.ivaDedutivel);
+
+  // O que a comissão consome sai da conta, incida ela sobre o bruto ou
+  // sobre o líquido. O afiliado vivia só na margem: um afiliado a 20%
+  // desaparecia daqui e a caixa dizia que ficavam 20,00 € onde ficam 16,00 €.
+  const comissoesPorUnidade =
+    comissoes.fixos + comissoes.sobreBruto * pvp + comissoes.sobreLiquido * precoLiquido;
+
   const caixa: DetalheCaixa = {
     cobradoAoCliente: cent(pvp),
-    entraNaConta: cent(pvp - fiscal.retencaoPorUnidade - comissoes.fixos - solver.fracaoBruto * pvp),
+    entraNaConta: cent(pvp - fiscal.retencaoPorUnidade - comissoesPorUnidade),
     saiDepois: cent(ivaEntregue + fiscal.ssPorUnidade + Math.max(0, fiscal.irsPorUnidade - fiscal.retencaoPorUnidade)),
   };
 
@@ -318,8 +359,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     ? avaliarPrecoPensado({
         precoPensadoPVP: num(contexto.precoPensado),
         taxaIVA: iva.taxaVenda,
-        solver,
-        fixosPorUnidade,
+        solverComFixos,
         faixa,
       })
     : undefined;
@@ -350,7 +390,6 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     pvp,
     fixosPorUnidade,
     lucroUnidade: margem.lucroUnidade,
-    custoDireto: custoDiretoFinal,
   });
 
   return {
@@ -474,12 +513,12 @@ function textoImpossivel(saida: SaidaSolver, margemAlvo: number): string {
 function avaliarPrecoPensado(e: {
   precoPensadoPVP: number;
   taxaIVA: number;
-  solver: EntradaSolver;
-  fixosPorUnidade: number;
+  /** O solver que resolveu o preço — fixos e escudo fiscal por dentro. */
+  solverComFixos: EntradaSolver;
   faixa: ResultadoPreco["faixa"];
 }): VeredictoPreco {
   const liquido = liquidoDe(e.precoPensadoPVP, e.taxaIVA);
-  const lucro = lucroAoPreco(e.solver, liquido) - num(e.fixosPorUnidade);
+  const lucro = lucroAoPreco(e.solverComFixos, liquido);
   const margem = liquido > 0 ? dividir(lucro, liquido) : 0;
 
   const piso = e.faixa.ancoras.find((a) => a.chave === "piso")?.pvp ?? 0;

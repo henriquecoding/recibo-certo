@@ -49,7 +49,6 @@ export interface EntradaExplicacao {
   pvp: number;
   fixosPorUnidade: number;
   lucroUnidade: number;
-  custoDireto: number;
 }
 
 export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
@@ -96,6 +95,9 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
   });
 
   // ── O que sai ──────────────────────────────────────────────────────
+  //  As duas linhas seguintes são INDEPENDENTES, não alternativas. Um
+  //  serviço com materiais tem tempo E custo direto, e mostrar só um deles
+  //  era o sintoma visível de o motor estar a descartar o outro.
   if (e.tempo && e.tempo.custoTempoPorUnidade > 0) {
     linhas.push({
       rotulo: `Custo do teu tempo (${e.tempo.horasPorUnidade} h × ${cent(e.tempo.valorHoraLiquido)} €/h)`,
@@ -103,12 +105,14 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
       confianca: "estimativa",
       nota: `Valor/hora LÍQUIDO, calculado sobre ${Math.round(
         e.tempo.horasProdutivasAno,
-      )} horas faturáveis por ano — não sobre as horas trabalhadas. Os impostos entram uma só vez, nas linhas abaixo.`,
+      )} horas faturáveis por ano — não sobre as horas trabalhadas. As contas fixas e os impostos entram uma só vez cada, nas linhas abaixo.`,
     });
-  } else if (e.custoDireto > 0) {
+  }
+
+  if (e.custos.diretoAjustado > 0) {
     linhas.push({
       rotulo: "Custo direto",
-      valor: -cent(e.custoDireto),
+      valor: -cent(e.custos.diretoAjustado),
       confianca: "estimativa",
       nota: e.situacaoIVA.deduz
         ? "Valor sem IVA — deduzes o IVA da compra."
