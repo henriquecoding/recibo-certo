@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.101.0",
+    data: "2026-08-23",
+    titulo: "Uma hipótese que não consegues executar deixa de valer 67 em 100",
+    itens: [
+      "A pontuação de cada hipótese era uma média das dez dimensões que o motor avalia. Numa média, um valor mau é diluído pelos bons — e há valores maus que não devem ser diluíveis por nada.",
+      "Medido: uma hipótese que a pessoa não conseguia executar de todo — encaixe zero — valia 67 em 100, porque as outras nove dimensões a puxavam para o meio da lista. Uma sem sinal nenhum de mercado valia 59. Uma que não cabia no capital nem no prazo, 56.",
+      "As dez dimensões passaram a agrupar-se em três eixos — mercado, encaixe contigo, viabilidade — combinados por média geométrica em vez de aritmética. Os mesmos casos passam a valer 23, 12 e 30.",
+      "A meio da escala as duas contas concordam, e acima dela a nova chega a dar alguns pontos a mais. Não é uma calibração para baixo: é uma correção nos extremos, que é onde a média estava errada e onde uma recomendação errada custa mais caro.",
+      "O que continua igual: o que não se sabe não penaliza. Não declarares capital não transforma uma boa hipótese numa má — a dimensão sai da conta em vez de entrar como zero, e a ausência aparece na confiança, que é onde se lê.",
+    ],
+  },
+  {
     version: "2.100.0",
     data: "2026-08-23",
     titulo: "Quatro vezes mais hipóteses passam a ter dados oficiais por trás",

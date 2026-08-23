@@ -151,16 +151,93 @@ export function calcularScores(entrada: EntradaScore): OpportunityScore {
  * nós não termos dados sobre ela, que é a definição de castigar o
  * mensageiro. A ausência aparece na confiança, e é lá que a pessoa a lê.
  */
-export function pontuacaoGlobal(scores: OpportunityScore): number {
+function mediaPonderada(
+  scores: OpportunityScore,
+  chaves: readonly (keyof OpportunityScore)[],
+): number | null {
   let soma = 0;
   let pesoUsado = 0;
-  for (const [chave, peso] of Object.entries(PESOS_SCORE) as [keyof OpportunityScore, number][]) {
+  for (const chave of chaves) {
     const valor = scores[chave];
     if (valor === null) continue;
-    soma += valor * peso;
-    pesoUsado += peso;
+    soma += valor * PESOS_SCORE[chave];
+    pesoUsado += PESOS_SCORE[chave];
   }
-  return pesoUsado === 0 ? 0 : Math.round(soma / pesoUsado);
+  return pesoUsado === 0 ? null : soma / pesoUsado;
+}
+
+/**
+ * Os três eixos que não se compensam uns aos outros.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE A MÉDIA PONDERADA NÃO CHEGAVA                                │
+ * │                                                                    │
+ * │ As dez dimensões entravam numa média ponderada. Numa média, um      │
+ * │ valor baixo é diluído pelos altos — e há valores baixos que não     │
+ * │ devem ser diluíveis por nada:                                       │
+ * │                                                                    │
+ * │     Mercado 95 · Encaixe 92 · Viabilidade 22                        │
+ * │                                                                    │
+ * │ A média ponderada dava ~85 e apresentava isto como excelente. Não   │
+ * │ é: é um negócio que a pessoa não consegue pagar. O mercado não      │
+ * │ compra capital que não existe.                                      │
+ * │                                                                    │
+ * │ A média GEOMÉTRICA resolve-o pela própria aritmética: multiplicar   │
+ * │ por 0,22 elevado a um expoente arrasta o produto para baixo, faça o │
+ * │ resto o que fizer. Mesmo caso: ~62 em vez de ~85.                   │
+ * │                                                                    │
+ * │ ── E O QUE NÃO SE SABE NÃO PENALIZA ──────────────────────────────│
+ * │ Um eixo sem uma única dimensão avaliável sai da conta e os          │
+ * │ expoentes renormalizam-se. É a mesma regra que a média já seguia,   │
+ * │ e pela mesma razão: contar ausência como zero puniria a hipótese    │
+ * │ por NÓS não sabermos, que é castigar o mensageiro. A ausência       │
+ * │ aparece na confiança, e é lá que se lê.                             │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export const EIXOS = Object.freeze({
+  /** O mercado: existe procura, há espaço, é aqui, e sabemo-lo. */
+  mercado: {
+    expoente: 0.45,
+    dimensoes: ["procura", "lacunaDeOferta", "geografia", "qualidadeDaEvidencia", "frescura"],
+  },
+  /** A pessoa: consegue executar isto? */
+  encaixe: { expoente: 0.3, dimensoes: ["fitPessoal"] },
+  /** A conta: cabe no capital, no prazo, na lei e na tolerância ao risco. */
+  viabilidade: {
+    expoente: 0.25,
+    dimensoes: ["economia", "exequibilidade", "regulacao", "risco"],
+  },
+} as const satisfies Record<
+  string,
+  { expoente: number; dimensoes: readonly (keyof OpportunityScore)[] }
+>);
+
+export type EixoId = keyof typeof EIXOS;
+
+/** O valor de cada eixo, 0–100, ou `null` quando nada nele foi avaliável. */
+export function pontuacaoPorEixo(scores: OpportunityScore): Record<EixoId, number | null> {
+  return {
+    mercado: mediaPonderada(scores, EIXOS.mercado.dimensoes),
+    encaixe: mediaPonderada(scores, EIXOS.encaixe.dimensoes),
+    viabilidade: mediaPonderada(scores, EIXOS.viabilidade.dimensoes),
+  };
+}
+
+export function pontuacaoGlobal(scores: OpportunityScore): number {
+  const eixos = pontuacaoPorEixo(scores);
+  let logaritmo = 0;
+  let expoenteUsado = 0;
+  for (const [id, definicao] of Object.entries(EIXOS) as [EixoId, (typeof EIXOS)[EixoId]][]) {
+    const valor = eixos[id];
+    if (valor === null) continue;
+    // Um eixo a zero levaria o produto a zero e o logaritmo a -infinito.
+    // O piso de 1 ponto mantém a aritmética definida sem suavizar o
+    // efeito: 1/100 elevado a 0,45 continua a arrasar o resultado.
+    logaritmo += definicao.expoente * Math.log(Math.max(valor, 1) / 100);
+    expoenteUsado += definicao.expoente;
+  }
+  if (expoenteUsado === 0) return 0;
+  return Math.round(100 * Math.exp(logaritmo / expoenteUsado));
 }
 
 /** Que fração do peso total tinha base para ser avaliada. Alimenta a confiança. */
