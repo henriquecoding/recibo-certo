@@ -12,7 +12,7 @@ import CapsulaNav from "@/components/navegacao/CapsulaNav";
 import MenuCompleto from "@/components/navegacao/MenuCompleto";
 
 /**
- * O cabeçalho de secretária — duas linhas no topo, uma ao rolar.
+ * O cabeçalho de secretária — três linhas, sempre as mesmas.
  *
  * ┌─────────────────────────────────────────────────────────────────────────┐
  * │ A PESQUISA É O ELEMENTO CENTRAL, E UM ELEMENTO CENTRAL PRECISA DE ESPAÇO │
@@ -47,23 +47,25 @@ export default function Nav() {
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────┐
-   * │ O QUE ENCOLHE É A PRIMEIRA LINHA, E SÓ ELA                           │
+   * │ ESTE CABEÇALHO NÃO ENCOLHE, E CUSTOU DUAS TENTATIVAS PERCEBER PORQUÊ │
    * │                                                                     │
-   * │ Este estado já dependeu de mais duas coisas, e as duas razões        │
-   * │ desapareceram com a passagem a três linhas:                          │
+   * │ A primeira recolhia a LINHA DE CIMA: sumiam a marca, as secções, a   │
+   * │ conta e o «Começar» ao mesmo gesto. Um cabeçalho que fica no ecrã e  │
+   * │ se despe às peças ao fim de 40 px de scroll lê-se como avaria, não   │
+   * │ como densidade.                                                      │
    * │                                                                     │
-   * │  · da PESQUISA, porque a navegação vivia na linha que encolhia e o   │
-   * │    painel (44 rem) abria por cima da faixa onde ela devia estar.     │
-   * │    Agora a cápsula está ACIMA da barra e o painel abre para baixo:   │
-   * │    não há como tapá-la;                                              │
-   * │  · do MENU, porque o gatilho vivia nessa mesma linha e desmontava    │
-   * │    ao compactar, deixando o foco no `<body>` ao fechar. O gatilho    │
-   * │    está na cápsula, que não encolhe.                                 │
+   * │ A segunda recolhia só a LINHA DA PESQUISA — uma peça, com atalho de  │
+   * │ teclado e página própria. Parecia inofensiva e partia o teclado: com │
+   * │ o campo em `display:none`, fechar o painel com Escape deixava o foco │
+   * │ no `<body>` (o efeito que o devolve chama `focus()` num elemento que │
+   * │ já não é focável). Quem navega assim recomeçava a tabulação no topo  │
+   * │ do documento. O `verificar-cabecalho.mjs` apanhou-o.                  │
    * │                                                                     │
-   * │ Sobra o scroll — que é a única coisa que isto sempre quis responder. │
+   * │ Portanto: uma altura só. As três linhas estão apertadas de propósito │
+   * │ (64 + 52 + 56) para 172 px serem suportáveis, e em troca o cabeçalho │
+   * │ é a única coisa da página que nunca muda.                             │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  const compacto = rolado;
 
   /**
    * O FUNDO não segue a densidade — segue o scroll, e só ele.
@@ -121,7 +123,9 @@ export default function Nav() {
     <>
       {/* Espaçador em fluxo — só no desktop. No telemóvel o cabeçalho vive em
           baixo (ChromeMobile), por isso aqui não reservamos espaço nem
-          mostramos este header (evita o «duplo header» no telemóvel). */}
+          mostramos este header (evita o «duplo header» no telemóvel).
+          A sentinela de 40 px continua a existir, mas já só decide o FUNDO:
+          a altura é uma só. */}
       <div aria-hidden className="relative hidden h-[var(--rc-header-alto)] lg:block">
         <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
       </div>
@@ -131,10 +135,7 @@ export default function Nav() {
           aninhados no mesmo documento dariam dois marcos com o mesmo nome a um
           leitor de ecrã — e o de fora não tem destino nenhum, só geometria. */}
       <header
-        data-compacto={compacto}
-        className={`group fixed inset-x-0 top-0 z-50 hidden border-b transition-[height,background-color,border-color,box-shadow] duration-300 lg:block ${
-          compacto ? "h-[var(--rc-header-compacto)]" : "h-[var(--rc-header-compacto)] lg:h-[var(--rc-header-alto)]"
-        } ${
+        className={`fixed inset-x-0 top-0 z-50 hidden h-[var(--rc-header-alto)] border-b transition-[background-color,border-color,box-shadow] duration-300 lg:block ${
           opaco
             ? /**
                * Rolado é o estado em que passa conteúdo por baixo — e é por
@@ -177,14 +178,9 @@ export default function Nav() {
          * │ casa a partir do cabeçalho dessa folha. Nada fica inalcançável.    │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-1 grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center px-6 group-data-[compacto=true]:grid-rows-[0px_var(--rc-linha-nav)_var(--rc-linha-busca)] xl:max-w-6xl">
-          {/* ── Linha 1 — marca · secções | conta · acção ────────────────
-              Recolhe ao rolar. `invisible` e não `hidden`: a linha passa a
-              ter altura zero pela grelha, e esconder por visibilidade evita
-              que o conteúdo desapareça e reapareça do DOM em cada limiar de
-              scroll — o `MenuConta` é um menu com estado e não pode ser
-              desmontado por causa de 40 px de rolagem. */}
-          <div className="row-start-1 flex min-w-0 items-center justify-between gap-4 overflow-hidden group-data-[compacto=true]:invisible">
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-1 grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center px-6 xl:max-w-6xl">
+          {/* ── Linha 1 — marca · secções | conta · acção ──────────────── */}
+          <div className="row-start-1 flex min-w-0 items-center justify-between gap-4">
             <div className="flex min-w-0 items-center gap-3">
               <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
                 <Logo />
@@ -224,25 +220,19 @@ export default function Nav() {
             </div>
           </div>
 
-          {/* ── Linha 2 — a cápsula dos cinco pilares ────────────────────
-              NÃO recolhe ao rolar: é a espinha do produto, e perdê-la aos
-              primeiros 40 px de scroll obrigava a voltar ao topo da página
-              só para mudar de sítio. */}
-          <div className="row-start-2 flex min-w-0 justify-center">
+          {/* ── Linha 2 — a cápsula dos cinco pilares ──────────────────── */}
+          <div className="row-start-2 flex min-w-0">
             <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
           </div>
 
           {/* ── Linha 3 — a barra de pesquisa ────────────────────────────
-              Na mesma largura e no mesmo eixo da cápsula: as duas leem
-              `--rc-dock-larga`. Não muda de linha nem de largura em estado
-              nenhum. Chegou a subir para o meio da primeira ao compactar, e
-              ficava encravada entre a marca e a conta — um objecto a saltar
-              de sítio ao fim de 40 px de scroll. É o elemento central; não
-              tem de ser procurado duas vezes. */}
-          <div className="row-start-3 flex w-full justify-center">
-            <div className="w-full max-w-[var(--rc-dock-larga)]">
-              <LancadorBusca inputId="rc-header-busca" />
-            </div>
+              A largura da LINHA, como as duas de cima. Chegou a subir para o
+              meio da primeira ao compactar e ficava encravada entre a marca e
+              a conta. Por não mudar de sítio nem de tamanho em estado nenhum,
+              o painel deixou de precisar de aritmética de centragem — ver o
+              quadro em `.rc-dock-painel`. */}
+          <div className="row-start-3 w-full">
+            <LancadorBusca inputId="rc-header-busca" />
           </div>
         </div>
       </header>

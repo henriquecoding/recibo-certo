@@ -206,38 +206,57 @@ for (const vp of VIEWPORTS) {
       } else ok(`${vp.nome}px: cápsula e pesquisa com a mesma largura (${larguras.capsula}px)`);
 
       // ┌───────────────────────────────────────────────────────────────┐
-      // │ A BARRA DE PESQUISA NÃO MUDA DE LINHA AO ROLAR                 │
+      // │ AO ROLAR NÃO MUDA NADA — e isso já foi falso duas vezes        │
       // │                                                               │
-      // │ Chegou a subir para o meio da primeira linha ao compactar, e   │
-      // │ ficava encravada entre a marca e a conta — um objecto a saltar  │
-      // │ de sítio ao fim de 40 px de scroll. Agora o que recolhe é a    │
-      // │ PRIMEIRA linha; a cápsula e a barra ficam onde estavam, com a  │
-      // │ mesma largura e no mesmo eixo.                                  │
+      // │ Numa versão a barra de pesquisa saltava para o meio da         │
+      // │ primeira linha com outra largura. Noutra recolhia a primeira    │
+      // │ linha inteira e sumiam a marca, as secções, a conta e o        │
+      // │ «Começar» ao mesmo gesto. Numa terceira recolhia só a linha da │
+      // │ pesquisa — e aí o campo ficava em `display:none`, portanto     │
+      // │ fechar o painel com Escape deixava o foco no `<body>`.          │
+      // │                                                               │
+      // │ Agora o cabeçalho tem uma altura só. Isto mede-o: mesma caixa   │
+      // │ para as três linhas, antes e depois do scroll.                  │
       // └───────────────────────────────────────────────────────────────┘
-      const aoRolar = await page.evaluate(async () => {
-        const medir = () => {
-          const g = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
-          const cx = (sel) => {
-            const r = g?.querySelector(sel)?.getBoundingClientRect();
-            return r ? { x: Math.round(r.left + r.width / 2), w: Math.round(r.width) } : null;
-          };
-          return { capsula: cx('nav[aria-label="Principal"]'), busca: cx("div.row-start-3 > div") };
+      const medida = `() => {
+        const g = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
+        const cx = (sel) => {
+          const e = g?.querySelector(sel);
+          if (!e || !e.offsetParent) return null;
+          const r = e.getBoundingClientRect();
+          return { x: Math.round(r.left), w: Math.round(r.width) };
         };
-        const antes = medir();
-        window.scrollTo(0, 900);
-        await new Promise((r) => setTimeout(r, 700));
-        return { antes, depois: medir(), secoes: !!document.querySelector('nav[aria-label="Secções"]') };
-      });
+        return {
+          capsula: cx('nav[aria-label="Principal"]'),
+          busca: cx("div.row-start-3"),
+          linha1: cx("div.row-start-1"),
+          altura: Math.round(document.querySelector("header").getBoundingClientRect().height),
+        };
+      }`;
+      const antes = await page.evaluate(`(${medida})()`);
+      await page.evaluate(() => window.scrollTo(0, 1200));
+      await page.waitForTimeout(800);
+      const rolado = await page.evaluate(`(${medida})()`);
+
       const igual = (a, b) => a && b && Math.abs(a.x - b.x) <= 1 && Math.abs(a.w - b.w) <= 1;
-      if (!igual(aoRolar.antes.busca, aoRolar.depois.busca)) {
-        mal(
-          `${vp.nome}px: a pesquisa muda ao rolar — ${JSON.stringify(aoRolar.antes.busca)} → ` +
-            JSON.stringify(aoRolar.depois.busca),
-        );
-      } else if (!igual(aoRolar.antes.capsula, aoRolar.depois.capsula)) {
-        mal(`${vp.nome}px: a cápsula muda ao rolar`);
-      } else ok(`${vp.nome}px: cápsula e pesquisa não se mexem ao rolar`);
-      if (!aoRolar.secoes) mal(`${vp.nome}px: barra de secções ausente na primeira linha`);
+      const mudou = ["linha1", "capsula", "busca"].filter((k) => !igual(antes[k], rolado[k]));
+      if (mudou.length) mal(`${vp.nome}px: ao rolar mexeu-se ${mudou.join(", ")}`);
+      else if (antes.altura !== rolado.altura) {
+        mal(`${vp.nome}px: o cabeçalho muda de altura ao rolar (${antes.altura} → ${rolado.altura})`);
+      } else ok(`${vp.nome}px: ao rolar não muda nada — ${antes.altura}px nos dois estados`);
+
+      // E a pesquisa continua a responder ao atalho com a página rolada.
+      await page.keyboard.press("Control+k");
+      await page.waitForTimeout(900);
+      const focado = await page.evaluate(() => document.activeElement?.id ?? "");
+      if (focado !== "rc-header-busca") mal(`${vp.nome}px: ⌘K não põe o foco no campo (foco em «${focado}»)`);
+      else ok(`${vp.nome}px: ⌘K põe o foco no campo com a página rolada`);
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(500);
+      const depoisDeEscape = await page.evaluate(() => document.activeElement?.id ?? "");
+      if (depoisDeEscape !== "rc-header-busca") {
+        mal(`${vp.nome}px: Escape deixa o foco em «${depoisDeEscape}» em vez do lançador`);
+      } else ok(`${vp.nome}px: Escape devolve o foco ao lançador`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.waitForTimeout(500);
       if (!capsula.classes.includes("rc-capsula")) mal(`${vp.nome}px: cápsula sem a classe do material`);

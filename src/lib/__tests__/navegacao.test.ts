@@ -190,12 +190,35 @@ describe("navegacao:contrato-dos-destinos", () => {
 });
 
 describe("navegacao:acessibilidade", () => {
-  it("a barra de pesquisa vive numa linha só, em qualquer estado", () => {
-    // Subia para o meio da primeira linha ao compactar e ficava encravada
-    // entre a marca e a conta. Agora o que recolhe é a PRIMEIRA linha.
-    expect(NAV).toContain("row-start-3");
-    expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]:row-start-1");
-    expect(NAV).toContain("group-data-[compacto=true]:grid-rows-[0px_var(--rc-linha-nav)_var(--rc-linha-busca)]");
+  it("as três linhas do cabeçalho têm a mesma largura", () => {
+    // Houve uma versão em que a cápsula e a barra tinham 704 px e a primeira
+    // linha ocupava o contentor todo: num ecrã largo dava um «T», e o
+    // desequilíbrio não era de espaçamento — era duas das três linhas não
+    // pertencerem à mesma grelha. Nenhuma leva uma largura própria.
+    expect(NAV).toContain("grid-cols-1");
+    expect(semComentarios(NAV)).not.toContain("max-w-[var(--rc-dock-larga)]");
+    expect(semComentarios(CAPSULA)).not.toContain("max-w-[var(--rc-dock-larga)]");
+    expect(CAPSULA).toContain("flex w-full");
+  });
+
+  it("o cabeçalho tem UMA altura — nada recolhe ao rolar", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ DUAS TENTATIVAS DE ENCOLHER, DOIS CUSTOS MAIORES DO QUE OS      │
+    // │ PÍXEIS QUE POUPAVAM                                             │
+    // │                                                                │
+    // │ A primeira recolhia a linha de cima e sumiam a marca, as        │
+    // │ secções, a conta e o «Começar» ao mesmo gesto — um cabeçalho    │
+    // │ que fica no ecrã e se despe às peças lê-se como avaria.         │
+    // │                                                                │
+    // │ A segunda recolhia só a da pesquisa e partia o teclado: com o   │
+    // │ campo em `display:none`, fechar o painel com Escape deixava o   │
+    // │ foco no `<body>`. Está pinado em `verificar-cabecalho.mjs`.     │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]");
+    expect(semComentarios(NAV)).not.toContain("data-compacto");
+    expect(NAV).toContain("h-[var(--rc-header-alto)]");
+    // A altura não entra na transição: só a cor do fundo muda com o scroll.
+    expect(NAV).toContain("transition-[background-color,border-color,box-shadow]");
   });
 
   it("há UM marco de navegação principal, e é a cápsula", () => {

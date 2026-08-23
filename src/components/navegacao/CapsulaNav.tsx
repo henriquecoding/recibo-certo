@@ -70,7 +70,7 @@ import { medirNavegacao } from "@/lib/busca/medicao";
  * └───────────────────────────────────────────────────────────────────────┘
  */
 const ITEM =
-  "focus-marca relative flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm font-medium no-underline transition-colors";
+  "focus-marca relative flex min-h-[40px] min-w-0 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-full px-2 text-sm font-medium no-underline transition-colors";
 
 const INATIVO =
   "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200";
@@ -86,23 +86,23 @@ export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: (
 
   return (
     /* ┌─────────────────────────────────────────────────────────────────┐
-       │ A MESMA LARGURA DA BARRA DE PESQUISA — exactamente, não quase    │
-       │                                                                 │
-       │ Com `w-fit` a cápsula media 715 px e a barra logo por baixo 704: │
-       │ 5 px de desvio de cada lado, dois objectos empilhados quase       │
-       │ alinhados. «Quase» é o pior sítio para parar — lê-se como um     │
-       │ erro, e não como uma diferença. Ou são claramente larguras       │
-       │ diferentes, ou são a MESMA.                                      │
-       │                                                                 │
-       │ São a mesma, e vem do mesmo token (`--rc-dock-larga`), porque    │
-       │ escrever 44 rem aqui e ler o token ali bastava para uma afinação │
-       │ futura desalinhar as duas em silêncio. `justify-between`         │
-       │ distribui a folga que sobra: os itens tocam as bordas de dentro  │
-       │ e as duas linhas passam a ter uma aresta vertical comum.          │
+       │ A LARGURA DA LINHA — porque as três linhas têm de ter uma aresta  │
+       │                                                                   │
+       │ Houve uma versão em que a cápsula e a barra tinham 704 px e a      │
+       │ primeira linha ocupava o contentor todo. Num ecrã largo isso dava  │
+       │ um «T»: a linha de cima com 1390 px e as duas de baixo com 870,    │
+       │ nada a alinhar com nada. O desequilíbrio não estava no             │
+       │ espaçamento — estava em duas das três linhas não pertencerem à     │
+       │ mesma grelha.                                                      │
+       │                                                                   │
+       │ As três ocupam agora a largura do contentor, e os seis lugares     │
+       │ repartem-na (`flex-1`) em vez de se encostarem ao meio. É a razão  │
+       │ de o rótulo ir centrado dentro do lugar: cada um é uma coluna de   │
+       │ largura igual, não uma etiqueta encostada a um ícone.               │
        └─────────────────────────────────────────────────────────────────┘ */
     <nav
       aria-label="Principal"
-      className="rc-capsula flex w-full max-w-[var(--rc-dock-larga)] items-center justify-between gap-0.5 p-1.5"
+      className="rc-capsula flex w-full items-center gap-0.5 p-1.5"
     >
       {PILARES.map((pilar) => {
         const Icon = iconeDe(pilar.icone);
@@ -124,7 +124,7 @@ export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: (
 
       {/* A régua separa o que é destino do que é «há mais». Sem ela, «Menu»
           lê-se como o sexto pilar. */}
-      <span aria-hidden className="mx-0.5 h-6 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
+      <span aria-hidden className="mx-1 h-6 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
 
       <button
         type="button"
