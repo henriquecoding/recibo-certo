@@ -35,9 +35,12 @@ import { cent, dividir, fracao, naoNegativo, num, unidades } from "../numeros";
 /**
  * «Quero ganhar X por mês — quanto tenho de cobrar?»
  *
- * `liquidoPessoal: true` interpreta X como o que fica DEPOIS de impostos
- * (o que a pessoa quer mesmo dizer). `false` interpreta como lucro
- * operacional do negócio.
+ * ⚠️ `liquidoPessoal` não tem efeito e está a caminho de sair da assinatura.
+ * Quem decide a leitura de X é `vendedor.tipo`, não este parâmetro: para um
+ * trabalhador independente a SS e o IRS já estão no `v` do solver, logo o
+ * lucro resolvido É líquido; para uma sociedade não há SS nem IRS no `v`,
+ * logo é lucro operacional. As duas interpretações que a flag prometia
+ * distinguir são a mesma conta vista de dois enquadramentos diferentes.
  */
 export function precoParaGanhar(
   contexto: ContextoPreco,
@@ -111,6 +114,8 @@ export function precoParaGanhar(
 
 /**
  * «Consigo cobrar Y — quantas vendas preciso para ganhar X?»
+ *
+ * `liquidoPessoal` é inerte aqui pela mesma razão que em `precoParaGanhar`.
  */
 export function unidadesParaGanhar(
   contexto: ContextoPreco,
@@ -188,12 +193,18 @@ export function resultadoAoPreco(
     objetivo: { ...contexto.objetivo, modo: "preco_fixo", valor: pvpPraticado, valorEhPVP: true },
   };
   const r = precificar(contextoAoPreco);
-  const q = Math.max(0, num(contexto.volume.unidadesMes));
-  const fracaoFiscal = r.fiscal.aplicavel ? r.fiscal.ssFracao + r.fiscal.irsFracao : 0;
 
+  // O MESMO erro do cabeçalho, e este ficou por corrigir: multiplicar o
+  // lucro por (1 − SS − IRS) descontava outra vez impostos que o solver já
+  // tinha descontado. A 15% de SS e 19% de IRS, o «líquido pessoal» saía a
+  // 66% do que a pessoa fica mesmo a ganhar.
+  //
+  // Para um trabalhador independente o lucro que `precificar` devolve JÁ é
+  // o que fica na mão. Para uma sociedade é lucro operacional, e a conversão
+  // até ao bolso do dono vive em `sociedade.ts` — não aqui.
   return {
     lucroMensal: cent(r.margem.lucroMensal),
-    liquidoPessoalMensal: cent(r.margem.lucroMensal * (1 - fracao(fracaoFiscal, 0, 0.9))),
+    liquidoPessoalMensal: cent(r.margem.lucroMensal),
     margem: r.margem.margem,
   };
 }

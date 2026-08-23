@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.102.0",
+    data: "2026-08-23",
+    titulo: "Auditoria à calculadora de preço: nove contas que estavam erradas",
+    itens: [
+      "Se prestas um serviço e declaravas um custo de material, a calculadora deixava de contar o teu tempo. Uma sessão com cinco horas de trabalho e 5 € de impressões passava de 243,53 € para 10,96 € — declarar um custo fazia o preço cair 96%. O tempo e o material passam a somar-se, como sempre deviam.",
+      "Quem tem contas fixas e cobra por hora estava a pagá-las duas vezes no mesmo preço: uma dentro do valor/hora, outra repartida por venda. Com 600 €/mês de contabilidade, a base de custo aparecia 23% mais alta do que é. Agora entram uma só vez.",
+      "A reserva de IVA mandava guardar o imposto todo das vendas, sem abater o IVA das compras. Quem compra a 100 € e vende a 146 € entrega 10,64 € — a ferramenta mandava reservar 33,64 €, mais do triplo. Passa a mostrar o saldo que sai mesmo da conta.",
+      "Em contabilidade organizada, pedir 35% de margem devolvia 33,2%. Faltava contar o desconto de imposto que as contas fixas dão. A margem que pedes é agora a margem que recebes, ao milésimo.",
+      "Quem escolhe markup via uma faixa absurda: 50% de markup dava um preço «confortável» ao dobro do recomendado. A folga da faixa passa a ser os dez pontos de margem que promete, medidos sobre o que o preço entrega mesmo.",
+      "Uma comissão de afiliado desaparecia da vista «o que fica contigo»: 20% de afiliado e a ferramenta dizia que ficavam 20,00 € onde ficam 16,00 €. Todas as comissões saem agora da conta, incidam sobre o preço com IVA ou sem.",
+      "Declarar contas fixas sem dizer quantas vendas esperas deixava-as silenciosamente fora do preço. Agora há um aviso a dizê-lo, com o valor que ficou de fora.",
+      "Na venda de bens em segunda mão, o IVA da margem estava a ser calculado a 23% da margem quando são 18,70% — no regime da margem o imposto está contido nela, não somado a ela. E o preço passa a avisar que este regime exige confirmação com o teu contabilista.",
+    ],
+  },
+  {
     version: "2.101.0",
     data: "2026-08-23",
     titulo: "Uma hipótese que não consegues executar deixa de valer 67 em 100",
