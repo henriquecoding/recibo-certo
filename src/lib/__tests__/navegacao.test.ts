@@ -150,13 +150,23 @@ describe("navegacao:acessibilidade", () => {
   });
 
   it("o nome acessível de um destino nunca depende da largura do ecrã", () => {
-    // Os dois rótulos vivem no DOM e a CSS troca a palavra que se vê; o
-    // curto é `aria-hidden` e a âncora carrega o nome completo.
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ DUAS SUPERFÍCIES, DUAS QUANTIDADES DE ESPAÇO, UM SÓ NOME       │
+    // │                                                               │
+    // │ A cápsula tem uma linha inteira: mostra o nome COMPLETO em     │
+    // │ qualquer largura de secretária. A barra do telemóvel tem cinco │
+    // │ lugares a dividir 360 px: mostra o CURTO — e carrega o completo │
+    // │ em `aria-label`, porque o que um leitor de ecrã anuncia não     │
+    // │ pode depender do tamanho do ecrã.                              │
+    // └───────────────────────────────────────────────────────────────┘
     expect(CAPSULA).toContain("aria-label={pilar.label}");
-    expect(CAPSULA).toContain("{pilar.curto}");
-    expect(CAPSULA).toContain("{pilar.label}");
-    expect(CAPSULA).toMatch(/\{pilar\.curto\}[\s\S]{0,40}<\/span>/);
+    expect(CAPSULA).toContain("<span>{pilar.label}</span>");
+    // O rótulo curto é da barra do telemóvel — na cápsula seria uma segunda
+    // regra a decidir o que se vê, e foi de onde veio a troca de rótulos por
+    // largura que a linha própria tornou desnecessária.
+    expect(semComentarios(CAPSULA)).not.toContain("pilar.curto");
     expect(CHROME).toContain("aria-label={slot.nomeCompleto}");
+    expect(CHROME).toContain("label: p.curto");
   });
 
   it("é o `aria-current` que comanda a pintura, e não uma classe", () => {

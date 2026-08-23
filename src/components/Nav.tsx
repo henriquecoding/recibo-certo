@@ -72,14 +72,15 @@ export default function Nav() {
    * └─────────────────────────────────────────────────────────────────────┘
    */
   /**
-   * O MENU entra nesta conta pela mesma razão que a pesquisa, e por uma a
-   * mais: o botão que o abre VIVE na linha que desaparece ao compactar.
-   * Com o cabeçalho encolhido, abrir o menu desmontava o próprio gatilho —
-   * e a `SuperficieModal` devolve o foco ao elemento que estava activo à
-   * abertura. Fechar deixava o foco no `<body>`, ou seja, quem navega por
-   * teclado recomeçava a tabulação no topo do documento.
+   * O MENU já não entra nesta conta, e a razão de ter entrado desapareceu.
+   *
+   * Enquanto a cápsula recolhia ao compactar, abrir o menu com o cabeçalho
+   * encolhido desmontava o próprio gatilho — e a `SuperficieModal` devolve
+   * o foco ao elemento que estava activo à abertura, portanto fechar
+   * deixava o foco no `<body>`. Agora a cápsula fica, o gatilho fica, e o
+   * estado do menu não tem de mexer na densidade do cabeçalho.
    */
-  const compacto = rolado && !buscaAberta && !menuAberto;
+  const compacto = rolado && !buscaAberta;
 
   /**
    * O FUNDO não segue a densidade — segue o scroll, e só ele.
@@ -150,7 +151,7 @@ export default function Nav() {
       <header
         data-compacto={compacto}
         className={`group fixed inset-x-0 top-0 z-50 hidden border-b transition-[height,background-color,border-color,box-shadow] duration-300 lg:block ${
-          compacto ? "h-[var(--rc-header-linha)]" : "h-[var(--rc-header-linha)] lg:h-[var(--rc-header-alto)]"
+          compacto ? "h-[var(--rc-header-compacto)]" : "h-[var(--rc-header-compacto)] lg:h-[var(--rc-header-alto)]"
         } ${
           opaco
             ? /**
@@ -167,23 +168,32 @@ export default function Nav() {
       >
         {/**
          * ┌───────────────────────────────────────────────────────────────────┐
-         * │ UMA GRELHA DE DUAS LINHAS, E A BARRA MUDA DE CÉLULA                │
+         * │ TRÊS LINHAS, E CADA UMA COM UM TRABALHO SÓ                         │
          * │                                                                   │
-         * │ Linha 1: marca · navegação · acções. Linha 2: a barra, a           │
-         * │ atravessar as três colunas. Quando o cabeçalho encolhe, a linha 2  │
-         * │ fica vazia e a barra passa para a coluna do meio da linha 1.       │
+         * │   1  marca · acções          (as pontas, nada no meio)            │
+         * │   2  a cápsula               (atravessa a grelha, centrada)        │
+         * │   3  a barra de pesquisa     (atravessa a grelha, centrada)        │
          * │                                                                   │
-         * │ A CONSEQUÊNCIA QUE ISTO EXISTE PARA GARANTIR: nos dois estados a   │
-         * │ barra fica centrada no MESMO eixo. A barra muda de largura e de    │
-         * │ linha; nunca desliza para o lado.                                  │
+         * │ Eram DUAS, com a marca, a navegação e as acções a disputarem a     │
+         * │ primeira, e isso partiu-se quando a navegação passou a ter seis    │
+         * │ lugares. A 1920 px a cápsula ficava a 3 px do logótipo e a 2 px    │
+         * │ de «Conta» — e, pior, o seu centro caía a 886 px enquanto a barra  │
+         * │ por baixo estava centrada a 960. Dois elementos centrados,         │
+         * │ empilhados, em eixos diferentes.                                   │
+         * │                                                                   │
+         * │ A causa era estrutural, não de espaçamento: a cápsula vivia na     │
+         * │ coluna do meio de uma grelha cujas colunas laterais têm larguras   │
+         * │ diferentes (marca ~136 px, acções ~233 px), portanto centrava-se   │
+         * │ no ESPAÇO QUE SOBRAVA. Numa linha inteira, o eixo é o da página —  │
+         * │ e a linha 2 e a linha 3 partilham-no por construção.                │
+         * │                                                                   │
+         * │ AO ENCOLHER, as linhas 2 e 3 esvaziam-se: a cápsula recolhe e a    │
+         * │ barra sobe para a coluna do meio da linha 1. É a MESMA instância   │
+         * │ da barra a mudar de célula — nunca uma segunda montada noutro      │
+         * │ sítio, que perderia o texto escrito e o foco no gesto.             │
          * └───────────────────────────────────────────────────────────────────┘
          */}
-        {/* As colunas laterais deixaram de ter um mínimo em `rem` e passaram
-            a `auto`: com seis lugares, a cápsula é o elemento que decide a
-            largura da linha, e um mínimo de 14 rem de cada lado espremia-a a
-            1024 px até os rótulos partirem. `minmax(0,auto)` deixa a marca e
-            as acções ocuparem o que precisam — nem mais. */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(0,auto)_minmax(0,1fr)_minmax(0,auto)] grid-rows-[var(--rc-header-linha)_1fr] items-center gap-x-3 px-6 xl:max-w-6xl xl:gap-x-4">
+        <div className="mx-auto grid h-full max-w-5xl grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center gap-x-4 px-6 group-data-[compacto=true]:grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_0px] xl:max-w-6xl">
           <Link
             href="/"
             aria-label="ReciboCerto — início"
@@ -192,21 +202,23 @@ export default function Nav() {
             <Logo />
           </Link>
 
-          {/* Recolhe ao rolar — a cápsula vive na linha que desaparece ao
-              compactar, e é por isso que abrir o menu ou a pesquisa devolve
-              o cabeçalho ao estado alto (ver o quadro em `compacto`). */}
-          <div className="col-start-2 row-start-1 flex min-w-0 justify-center justify-self-center group-data-[compacto=true]:hidden">
+          {/* Linha 2 — a cápsula, a atravessar a grelha toda para ficar no
+              eixo da página. NÃO recolhe ao rolar: é a espinha do produto, e
+              perdê-la aos primeiros 40 px de scroll obrigava a voltar ao topo
+              só para mudar de sítio. O que recolhe é a linha da pesquisa, e a
+              barra sobe para o meio da primeira. */}
+          <div className="col-span-3 col-start-1 row-start-2 flex min-w-0 justify-center">
             <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
           </div>
 
           {/**
-           * A barra: linha 2 a atravessar a grelha quando o cabeçalho está
-           * alto; coluna do meio da linha 1 quando encolhe. Sem transição de
-           * largura — `grid-row` não é interpolável, portanto a mudança de
-           * linha é instantânea, e animar só a largura deixaria a caixa a
-           * arrastar-se depois de já ter aterrado.
+           * Linha 3 — a barra. Atravessa a grelha quando o cabeçalho está
+           * alto; sobe para a coluna do meio da linha 1 quando encolhe. Sem
+           * transição de largura — `grid-row` não é interpolável, portanto a
+           * mudança de linha é instantânea, e animar só a largura deixaria a
+           * caixa a arrastar-se depois de já ter aterrado.
            */}
-          <div className="col-span-3 col-start-1 row-start-2 w-full justify-self-center group-data-[compacto=true]:col-span-1 group-data-[compacto=true]:col-start-2 group-data-[compacto=true]:row-start-1 group-data-[compacto=true]:max-w-[22rem] lg:max-w-[var(--rc-dock-larga)]">
+          <div className="col-span-3 col-start-1 row-start-3 w-full justify-self-center group-data-[compacto=true]:col-span-1 group-data-[compacto=true]:col-start-2 group-data-[compacto=true]:row-start-1 group-data-[compacto=true]:max-w-[22rem] lg:max-w-[var(--rc-dock-larga)]">
             <LancadorBusca inputId="rc-header-busca" />
           </div>
 

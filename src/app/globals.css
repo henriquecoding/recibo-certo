@@ -19,10 +19,38 @@
      cópia divergiria na primeira afinação — em silêncio, porque nada
      parte: o cabeçalho fica apenas ligeiramente errado.
 
-     · --rc-header-linha  a linha da marca/ações. É também a primeira
-       linha da grelha e a altura TOTAL do cabeçalho quando encolhido.
-     · --rc-header-alto   no topo da página: a linha de chrome mais a
-       linha da barra. O espaçador em fluxo reserva sempre este valor.
+     ┌──────────────────────────────────────────────────────────────┐
+     │ TRÊS LINHAS, E CADA UMA COM UM TRABALHO SÓ                    │
+     │                                                              │
+     │ Eram duas, com a marca, a navegação e as acções a disputarem  │
+     │ a primeira. Com seis lugares na cápsula isso deixou de caber: │
+     │ a 1920 px a cápsula ficava a 3 px do logótipo e a 2 px de     │
+     │ «Conta», e — pior — o seu centro caía a 886 px enquanto a     │
+     │ barra de pesquisa por baixo estava centrada a 960. Dois       │
+     │ elementos centrados, empilhados, em eixos diferentes.          │
+     │                                                              │
+     │ A causa era estrutural: a cápsula vivia na coluna do meio de  │
+     │ uma grelha cujas colunas laterais têm larguras diferentes     │
+     │ (marca ~136 px, acções ~233 px), portanto centrava-se no      │
+     │ ESPAÇO QUE SOBRAVA e não na página. Nenhuma afinação de        │
+     │ espaçamento resolve isso — só dar-lhe uma linha inteira.       │
+     │                                                              │
+     │ Agora: marca e acções na primeira, a cápsula na segunda, a    │
+     │ pesquisa na terceira. As duas de baixo atravessam a grelha    │
+     │ toda, portanto partilham o eixo da página por construção.      │
+     └──────────────────────────────────────────────────────────────┘
+
+     · --rc-header-linha  a linha da marca/ações.
+     · --rc-linha-nav     a linha da cápsula.
+     · --rc-linha-busca   a linha da barra de pesquisa.
+     · --rc-header-compacto  o que fica ao rolar: a marca/ações mais a
+       CÁPSULA. Só a linha da pesquisa recolhe, e a barra sobe para o
+       meio da primeira. A navegação é a espinha do produto e deixar de
+       a haver a partir dos primeiros 40 px de scroll obrigava a voltar
+       ao topo da página só para mudar de sítio.
+     · --rc-header-alto   as três linhas. O espaçador em fluxo reserva
+       sempre este valor, para o cabeçalho encolher sem realimentar o
+       scroll (ver o quadro em `Nav.tsx`).
      · --rc-dock-h        a altura da barra, aberta ou fechada. A
        primeira linha do painel tem esta altura para o campo não se
        mexer um pixel quando o painel abre por cima dela.
@@ -30,7 +58,10 @@
        que TEM de ser a mesma, senão o campo salta ao ser clicado.
      ══════════════════════════════════════════════════════════════════ */
   --rc-header-linha: 72px;
-  --rc-header-alto: 136px;
+  --rc-linha-nav: 56px;
+  --rc-linha-busca: 64px;
+  --rc-header-compacto: calc(var(--rc-header-linha) + var(--rc-linha-nav));
+  --rc-header-alto: calc(var(--rc-header-compacto) + var(--rc-linha-busca));
   --rc-dock-h: 48px;
   --rc-dock-larga: 44rem;
 
@@ -320,12 +351,12 @@ html {
      │ de um segundo scroll, e o `scroll-margin-top` nos alvos cobre   │
      │ os que não passam por este caminho.                             │
      └────────────────────────────────────────────────────────────────┘ */
-  scroll-padding-top: calc(var(--rc-header-linha) + 12px);
+  scroll-padding-top: calc(var(--rc-header-compacto) + 12px);
 }
 
 [id],
 [data-scroll-target] {
-  scroll-margin-top: calc(var(--rc-header-linha) + 12px);
+  scroll-margin-top: calc(var(--rc-header-compacto) + 12px);
 }
 
 body {

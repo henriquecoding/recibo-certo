@@ -18,18 +18,20 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ DOIS RÓTULOS POR PILAR, E O NOME ACESSÍVEL NUNCA É O CURTO           │
+//  │ O NOME COMPLETO, SEMPRE — E O `aria-label` MESMO ASSIM                │
 //  │                                                                     │
-//  │ «Recibos verdes» não cabe numa cápsula de seis lugares abaixo de     │
-//  │ `xl`. A saída fácil — encolher a letra dos seis — poria a barra a    │
-//  │ parecer um nível de navegação diferente consoante a largura da       │
-//  │ janela. A saída certa é ter os dois rótulos no DOM e deixar a CSS    │
-//  │ trocar a PALAVRA que se vê.                                          │
+//  │ Enquanto a cápsula dividia a linha com a marca e as acções, houve    │
+//  │ aqui um mecanismo de dois rótulos: o completo em ecrãs largos, um    │
+//  │ curto abaixo de `xl`. Com uma linha inteira deixou de ser preciso —  │
+//  │ o nome completo cabe em qualquer largura de secretária.               │
 //  │                                                                     │
-//  │ O curto é `aria-hidden` e a âncora carrega `aria-label` com o nome   │
-//  │ completo: o que um leitor de ecrã anuncia é sempre «Recibos verdes», │
-//  │ em qualquer largura. Um nome acessível que depende do viewport é um  │
-//  │ defeito que ninguém vê a desenvolver.                                 │
+//  │ O `aria-label` fica na mesma. Não é redundância: o rótulo visível é  │
+//  │ texto dentro da âncora AO LADO de um ícone, e declarar o nome        │
+//  │ explicitamente é o que garante que o que se ouve é exactamente o que │
+//  │ se lê, sem depender de como cada leitor de ecrã junta as partes.     │
+//  │                                                                     │
+//  │ O rótulo curto continua a existir em `lib/navegacao.ts` — quem o usa │
+//  │ é a barra do telemóvel, onde cinco lugares dividem 360 px.           │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
@@ -52,22 +54,23 @@ import { medirNavegacao } from "@/lib/busca/medicao";
 
 /*
  * ┌───────────────────────────────────────────────────────────────────────┐
- * │ ESTES NÚMEROS FORAM MEDIDOS NO BROWSER, NÃO ESCOLHIDOS                 │
+ * │ A CÁPSULA TEM UMA LINHA SÓ PARA SI, E É POR ISSO QUE PODE RESPIRAR     │
  * │                                                                       │
- * │ Com `gap-2` e `px-3 xl:px-4`, a cápsula ficava 8 px mais larga do que  │
- * │ o espaço entre a marca e as acções a 1024 px, e 17 px a 1440. E não    │
- * │ transbordava do ecrã — passava POR CIMA do logótipo e do botão, que    │
- * │ é o defeito que «cabe na janela» não apanha. Ver a verificação de      │
- * │ colisão em `smoke-nav.mjs`.                                            │
+ * │ Houve uma versão em que ela dividia a primeira linha com a marca e as  │
+ * │ acções, e aí cada píxel de `padding` era uma decisão de sobrevivência: │
+ * │ a 1024 px sobravam-lhe ~390 px de folga e a 1440 sobravam 17, o que    │
+ * │ obrigava a apertar o espaçamento até a barra ficar densa e a trocar    │
+ * │ «Recibos verdes» por «Recibos» a partir de certa largura.              │
  * │                                                                       │
- * │ `gap-1.5` e `px-2.5 xl:px-3.5` devolvem ~36 px, que é folga suficiente │
- * │ nas duas larguras sem mexer no tamanho de letra — encolher a letra     │
- * │ faria a barra parecer um nível de navegação diferente conforme a       │
- * │ janela.                                                                │
+ * │ Numa linha inteira sobram ~300 px em QUALQUER largura de secretária,   │
+ * │ com os rótulos completos. Portanto: espaçamento confortável e o nome   │
+ * │ inteiro sempre — o rótulo curto continua a existir em                  │
+ * │ `lib/navegacao.ts`, mas quem o usa é a barra do telemóvel, onde cinco  │
+ * │ lugares dividem 360 px e ele é mesmo necessário.                       │
  * └───────────────────────────────────────────────────────────────────────┘
  */
 const ITEM =
-  "focus-marca relative flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 text-sm font-medium no-underline transition-colors xl:px-3.5";
+  "focus-marca relative flex min-h-[40px] items-center gap-2 whitespace-nowrap rounded-full px-3 text-sm font-medium no-underline transition-colors";
 
 const INATIVO =
   "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200";
@@ -82,7 +85,25 @@ export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: (
   const aceso = hrefAtivo(pathname);
 
   return (
-    <nav aria-label="Principal" className="rc-capsula flex w-fit max-w-full items-center gap-0.5 p-1.5">
+    /* ┌─────────────────────────────────────────────────────────────────┐
+       │ A MESMA LARGURA DA BARRA DE PESQUISA — exactamente, não quase    │
+       │                                                                 │
+       │ Com `w-fit` a cápsula media 715 px e a barra logo por baixo 704: │
+       │ 5 px de desvio de cada lado, dois objectos empilhados quase       │
+       │ alinhados. «Quase» é o pior sítio para parar — lê-se como um     │
+       │ erro, e não como uma diferença. Ou são claramente larguras       │
+       │ diferentes, ou são a MESMA.                                      │
+       │                                                                 │
+       │ São a mesma, e vem do mesmo token (`--rc-dock-larga`), porque    │
+       │ escrever 44 rem aqui e ler o token ali bastava para uma afinação │
+       │ futura desalinhar as duas em silêncio. `justify-between`         │
+       │ distribui a folga que sobra: os itens tocam as bordas de dentro  │
+       │ e as duas linhas passam a ter uma aresta vertical comum.          │
+       └─────────────────────────────────────────────────────────────────┘ */
+    <nav
+      aria-label="Principal"
+      className="rc-capsula flex w-full max-w-[var(--rc-dock-larga)] items-center justify-between gap-0.5 p-1.5"
+    >
       {PILARES.map((pilar) => {
         const Icon = iconeDe(pilar.icone);
         const ativo = aceso === pilar.href;
@@ -96,10 +117,7 @@ export default function CapsulaNav({ aoAbrirMenu, menuAberto }: { aoAbrirMenu: (
             className={`${ITEM} ${ativo ? ATIVO : INATIVO}`}
           >
             <Icon size={17} className="flex-shrink-0" />
-            <span className="hidden xl:inline">{pilar.label}</span>
-            <span className="xl:hidden" aria-hidden>
-              {pilar.curto}
-            </span>
+            <span>{pilar.label}</span>
           </Link>
         );
       })}

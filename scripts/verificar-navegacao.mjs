@@ -142,24 +142,68 @@ for (const vp of VIEWPORTS) {
       if (capsula.itens.length !== 6) mal(`${vp.nome}px: cápsula com ${capsula.itens.length} itens (esperados 6)`);
       else ok(`${vp.nome}px: cápsula com 6 itens (${capsula.largura}px) — ${capsula.itens.map((i) => i.nome).join(" · ")}`);
       if (!capsula.cabe) mal(`${vp.nome}px: cápsula sai do ecrã`);
-      // A COLISÃO é o que a medição anterior não via: a cápsula cabia no
-      // ecrã e passava POR CIMA do logótipo e das acções. «Cabe na janela»
-      // e «não se sobrepõe aos vizinhos» são duas perguntas diferentes.
-      const colisao = await page.evaluate(() => {
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ DUAS MEDIÇÕES QUE FALTARAM, E CADA UMA APANHOU UM DEFEITO      │
+      // │                                                               │
+      // │ 1. COLISÃO. A cápsula cabia no ecrã e passava POR CIMA do      │
+      // │    logótipo — 8 px a 1024, 17 px a 1440. «Cabe na janela» e    │
+      // │    «não se sobrepõe aos vizinhos» são perguntas diferentes.    │
+      // │    A sobreposição mede-se nos DOIS eixos: desde que o          │
+      // │    cabeçalho passou a três linhas, a cápsula e a marca         │
+      // │    partilham colunas sem partilharem linha, e um teste só      │
+      // │    horizontal daria um falso positivo permanente.               │
+      // │                                                               │
+      // │ 2. EIXO. A cápsula ficava centrada no espaço que SOBRAVA entre │
+      // │    duas colunas de larguras diferentes, e a barra de pesquisa  │
+      // │    por baixo ficava centrada na página: a 1920 px os centros   │
+      // │    caíam a 886 e a 960. Dois elementos centrados, empilhados,  │
+      // │    desalinhados — nada falha, e vê-se logo.                     │
+      // └───────────────────────────────────────────────────────────────┘
+      const geometria = await page.evaluate(() => {
         const nav = document.querySelector('nav[aria-label="Principal"]');
-        const marca = document.querySelector('header a[aria-label^="ReciboCerto"]');
-        const accoes = nav?.closest("div.grid")?.querySelector("div.col-start-3");
-        const r = (el) => el && el.getBoundingClientRect();
-        const n = r(nav), m = r(marca), a = r(accoes);
-        const sobrepoe = (x, y) => x && y && x.right > y.left + 1 && y.right > x.left + 1;
+        const grelha = nav?.closest("div.grid");
+        const marca = grelha?.querySelector('a[aria-label^="ReciboCerto"]');
+        const accoes = grelha?.querySelector("div.col-start-3");
+        const busca = grelha?.querySelector("div.row-start-3");
+        const r = (el) => (el ? el.getBoundingClientRect() : null);
+        const n = r(nav), m = r(marca), a = r(accoes), b = r(busca), g = r(grelha);
+        const cruza = (x, y) =>
+          x && y && x.right > y.left + 1 && y.right > x.left + 1 && x.bottom > y.top + 1 && y.bottom > x.top + 1;
+        const meio = (x) => (x ? Math.round(x.left + x.width / 2) : null);
         return {
-          comMarca: sobrepoe(m, n) ? Math.round(m.right - n.left) : 0,
-          comAccoes: sobrepoe(n, a) ? Math.round(n.right - a.left) : 0,
+          comMarca: cruza(m, n) ? Math.round(m.right - n.left) : 0,
+          comAccoes: cruza(n, a) ? Math.round(n.right - a.left) : 0,
+          eixoCapsula: meio(n),
+          eixoBusca: meio(b),
+          eixoGrelha: meio(g),
         };
       });
-      if (colisao.comMarca > 0) mal(`${vp.nome}px: cápsula sobrepõe o logótipo em ${colisao.comMarca}px`);
-      if (colisao.comAccoes > 0) mal(`${vp.nome}px: cápsula sobrepõe as acções em ${colisao.comAccoes}px`);
-      if (!colisao.comMarca && !colisao.comAccoes) ok(`${vp.nome}px: cápsula sem colisão com marca nem acções`);
+      if (geometria.comMarca > 0) mal(`${vp.nome}px: cápsula sobrepõe o logótipo em ${geometria.comMarca}px`);
+      if (geometria.comAccoes > 0) mal(`${vp.nome}px: cápsula sobrepõe as acções em ${geometria.comAccoes}px`);
+      if (!geometria.comMarca && !geometria.comAccoes) ok(`${vp.nome}px: cápsula sem colisão com marca nem acções`);
+
+      const desvioCapsula = Math.abs(geometria.eixoCapsula - geometria.eixoGrelha);
+      const desvioBusca = Math.abs(geometria.eixoBusca - geometria.eixoGrelha);
+      if (desvioCapsula > 2 || desvioBusca > 2) {
+        mal(
+          `${vp.nome}px: eixos desalinhados — cápsula ${geometria.eixoCapsula}, ` +
+            `pesquisa ${geometria.eixoBusca}, página ${geometria.eixoGrelha}`,
+        );
+      } else {
+        ok(`${vp.nome}px: cápsula e pesquisa no mesmo eixo da página (${geometria.eixoGrelha})`);
+      }
+
+      // E a MESMA largura, não uma parecida: 715 contra 704 são 5 px de
+      // desvio de cada lado, que é o pior sítio onde parar — lê-se como
+      // erro, não como diferença. As duas leem `--rc-dock-larga`.
+      const larguras = await page.evaluate(() => {
+        const grelha = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
+        const l = (sel) => Math.round(grelha?.querySelector(sel)?.getBoundingClientRect().width ?? 0);
+        return { capsula: l('nav[aria-label="Principal"]'), busca: l("div.row-start-3 form, div.row-start-3 > *") };
+      });
+      if (Math.abs(larguras.capsula - larguras.busca) > 1) {
+        mal(`${vp.nome}px: cápsula ${larguras.capsula}px e pesquisa ${larguras.busca}px — quase igual não é igual`);
+      } else ok(`${vp.nome}px: cápsula e pesquisa com a mesma largura (${larguras.capsula}px)`);
       if (!capsula.classes.includes("rc-capsula")) mal(`${vp.nome}px: cápsula sem a classe do material`);
       for (const i of capsula.itens) {
         if (!i.visivel) mal(`${vp.nome}px: item «${i.nome}» invisível`);
