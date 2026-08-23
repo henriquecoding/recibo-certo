@@ -20,6 +20,7 @@
 import { OPPORTUNITY_SECTORS } from "@/lib/negocio/market/opportunities";
 import { COMPETENCIAS } from "../conhecimento/dados/competencias";
 import { SETORES } from "../conhecimento/dados/setores";
+import type { FamiliaCompetencia } from "../conhecimento/tipos";
 import type {
   AtivoId,
   Dedicacao,
@@ -33,49 +34,136 @@ export type NivelConfiguracao = "essencial" | "personalizado" | "avancado";
 
 export const NIVEIS: readonly { id: NivelConfiguracao; rotulo: string; nota: string }[] =
   Object.freeze([
-    { id: "essencial", rotulo: "O essencial", nota: "Cinco decisões. Chega para uma primeira análise." },
-    { id: "personalizado", rotulo: "Personalizar mais", nota: "Restrições e preferências passam a eliminar hipóteses." },
-    { id: "avancado", rotulo: "Preferências avançadas", nota: "Risco por dimensão, prazos e rendimento pretendido." },
+    { id: "essencial", rotulo: "Essencial", nota: "Cinco decisões. Chega para uma primeira análise." },
+    { id: "personalizado", rotulo: "Personalizar", nota: "Restrições e preferências passam a eliminar hipóteses." },
+    { id: "avancado", rotulo: "Avançado", nota: "Risco por dimensão, prazos e rendimento pretendido." },
+  ]);
+
+// ── COMO A INTERFACE ARRUMA ISTO ─────────────────────────────────────
+//  ┌──────────────────────────────────────────────────────────────────┐
+//  │ O AGRUPAMENTO É DADO, NÃO DESENHO                                 │
+//  │                                                                  │
+//  │ Vinte e duas competências, catorze meios e quinze recusas numa   │
+//  │ grelha plana são cinquenta e um cartões seguidos: a página fica  │
+//  │ verdadeira e ilegível ao mesmo tempo. Agrupar resolve — e o       │
+//  │ agrupamento vive aqui, com o resto do questionário, para o        │
+//  │ componente não passar a ter uma segunda taxonomia sua que        │
+//  │ diverge desta em silêncio na primeira entrada nova.               │
+//  │                                                                  │
+//  │ `negocio-descoberta-perguntas.test.ts` recusa uma entrada sem     │
+//  │ grupo e um grupo sem entradas: a suite parte antes de a interface │
+//  │ deixar cair uma opção que ninguém volta a ver.                    │
+//  └──────────────────────────────────────────────────────────────────┘
+
+/** As famílias do grafo, com o nome que a interface lhes dá. */
+export const FAMILIAS_COMPETENCIA: readonly { id: FamiliaCompetencia; rotulo: string }[] =
+  Object.freeze([
+    { id: "operacional", rotulo: "Organizar e operar" },
+    { id: "manual", rotulo: "Trabalho manual" },
+    { id: "tecnica", rotulo: "Técnica e digital" },
+    { id: "comercial", rotulo: "Comercial e atendimento" },
+    { id: "gestao", rotulo: "Gestão" },
+    { id: "criativa", rotulo: "Criativa" },
+    { id: "cuidado", rotulo: "Cuidar e ensinar" },
   ]);
 
 // ── ATIVOS ───────────────────────────────────────────────────────────
 
-export const ATIVOS: readonly { id: AtivoId; rotulo: string; nota: string }[] = Object.freeze([
-  { id: "carta-conducao", rotulo: "Carta de condução", nota: "Abre tudo o que envolva rota ou deslocação." },
-  { id: "veiculo-ligeiro", rotulo: "Viatura ligeira", nota: "Serve deslocações e recolhas pequenas." },
-  { id: "veiculo-carga", rotulo: "Viatura de carga", nota: "Muda o que é possível: volume, mudanças, entregas B2B." },
-  { id: "computador", rotulo: "Computador de trabalho", nota: "Condição de qualquer trabalho digital." },
-  { id: "ferramentas", rotulo: "Ferramentas", nota: "Trabalho manual, instalação e reparação." },
-  { id: "equipamento-tecnico", rotulo: "Equipamento técnico", nota: "Diagnóstico, medição ou bancada." },
-  { id: "camara-video", rotulo: "Equipamento de imagem", nota: "Fotografia e vídeo com qualidade vendável." },
-  { id: "espaco-comercial", rotulo: "Espaço comercial", nota: "Um sítio aberto ao público." },
-  { id: "armazem", rotulo: "Armazém", nota: "Guardar volume entre recolha e entrega." },
-  { id: "oficina", rotulo: "Oficina", nota: "Espaço próprio de trabalho técnico." },
-  { id: "cozinha-licenciada", rotulo: "Cozinha licenciada", nota: "Condição de qualquer produção alimentar legal." },
-  { id: "terreno", rotulo: "Terreno", nota: "Produção agrícola ou atividade ao ar livre." },
-  { id: "stock", rotulo: "Stock", nota: "Produto já comprado, à espera de ser vendido." },
-  { id: "carteira-clientes", rotulo: "Carteira de clientes", nota: "O ativo mais subestimado: encurta meses de aquisição." },
+export type GrupoAtivo = "mobilidade" | "equipamento" | "espaco" | "negocio";
+
+export const GRUPOS_ATIVOS: readonly { id: GrupoAtivo; rotulo: string }[] = Object.freeze([
+  { id: "mobilidade", rotulo: "Mobilidade" },
+  { id: "equipamento", rotulo: "Equipamento" },
+  { id: "espaco", rotulo: "Espaço" },
+  { id: "negocio", rotulo: "Já do negócio" },
 ]);
+
+export const ATIVOS: readonly { id: AtivoId; grupo: GrupoAtivo; rotulo: string; nota: string }[] =
+  Object.freeze([
+    { id: "carta-conducao", grupo: "mobilidade", rotulo: "Carta de condução", nota: "Abre tudo o que envolva rota ou deslocação." },
+    { id: "veiculo-ligeiro", grupo: "mobilidade", rotulo: "Viatura ligeira", nota: "Serve deslocações e recolhas pequenas." },
+    { id: "veiculo-carga", grupo: "mobilidade", rotulo: "Viatura de carga", nota: "Muda o que é possível: volume, mudanças, entregas B2B." },
+    { id: "computador", grupo: "equipamento", rotulo: "Computador de trabalho", nota: "Condição de qualquer trabalho digital." },
+    { id: "ferramentas", grupo: "equipamento", rotulo: "Ferramentas", nota: "Trabalho manual, instalação e reparação." },
+    { id: "equipamento-tecnico", grupo: "equipamento", rotulo: "Equipamento técnico", nota: "Diagnóstico, medição ou bancada." },
+    { id: "camara-video", grupo: "equipamento", rotulo: "Equipamento de imagem", nota: "Fotografia e vídeo com qualidade vendável." },
+    { id: "espaco-comercial", grupo: "espaco", rotulo: "Espaço comercial", nota: "Um sítio aberto ao público." },
+    { id: "armazem", grupo: "espaco", rotulo: "Armazém", nota: "Guardar volume entre recolha e entrega." },
+    { id: "oficina", grupo: "espaco", rotulo: "Oficina", nota: "Espaço próprio de trabalho técnico." },
+    { id: "cozinha-licenciada", grupo: "espaco", rotulo: "Cozinha licenciada", nota: "Condição de qualquer produção alimentar legal." },
+    { id: "terreno", grupo: "espaco", rotulo: "Terreno", nota: "Produção agrícola ou atividade ao ar livre." },
+    { id: "stock", grupo: "negocio", rotulo: "Stock", nota: "Produto já comprado, à espera de ser vendido." },
+    { id: "carteira-clientes", grupo: "negocio", rotulo: "Carteira de clientes", nota: "O ativo mais subestimado: encurta meses de aquisição." },
+  ]);
 
 // ── RESTRIÇÕES ───────────────────────────────────────────────────────
 
-export const RESTRICOES: readonly { id: RestricaoId; rotulo: string; nota: string }[] = Object.freeze([
-  { id: "sem-empregados", rotulo: "Não quero empregados", nota: "Elimina modelos que só funcionam com equipa." },
-  { id: "sem-loja-fisica", rotulo: "Não quero loja física", nota: "Elimina o que vive de um espaço aberto ao público." },
-  { id: "sem-stock", rotulo: "Não quero stock", nota: "Elimina comprar antes de vender." },
-  { id: "sem-carro", rotulo: "Não tenho carro", nota: "Elimina rotas e trabalho que dependa de viatura." },
-  { id: "sem-carregar-peso", rotulo: "Não posso carregar peso", nota: "Elimina trabalho com esforço físico continuado." },
-  { id: "sem-trabalho-fisico", rotulo: "Não quero trabalho físico", nota: "Deixa só o que se resolve à secretária ou a falar." },
-  { id: "sem-atendimento-presencial", rotulo: "Não quero atendimento presencial", nota: "Elimina as variantes presenciais." },
-  { id: "sem-deslocacoes", rotulo: "Não quero deslocar-me", nota: "Elimina trabalho em casa ou instalações do cliente." },
-  { id: "sem-fins-de-semana", rotulo: "Não quero fins de semana", nota: "Elimina problemas cuja procura se concentra no fim de semana." },
-  { id: "sem-noites", rotulo: "Não quero trabalhar à noite", nota: "Pesa em problemas com ocorrências fora de horas." },
-  { id: "sem-alimentos", rotulo: "Não quero trabalhar com alimentos", nota: "Elimina o setor alimentar por inteiro." },
-  { id: "sem-atividade-regulada", rotulo: "Não quero atividade muito regulada", nota: "Elimina o que acumula licenças e habilitações." },
-  { id: "sem-financiamento", rotulo: "Não quero recorrer a financiamento", nota: "Fecha o teto de capital no que tens." },
-  { id: "sem-redes-sociais", rotulo: "Não quero depender de redes sociais", nota: "Pesa em modelos que vivem de tráfego." },
-  { id: "sem-porta-a-porta", rotulo: "Não quero vender porta-a-porta", nota: "Pesa em aquisição direta ao consumidor." },
+export type GrupoRestricao = "estrutura" | "esforco" | "contacto" | "horario" | "setor";
+
+export const GRUPOS_RESTRICOES: readonly { id: GrupoRestricao; rotulo: string }[] = Object.freeze([
+  { id: "estrutura", rotulo: "Estrutura do negócio" },
+  { id: "esforco", rotulo: "Esforço e mobilidade" },
+  { id: "contacto", rotulo: "Contacto com clientes" },
+  { id: "horario", rotulo: "Horários" },
+  { id: "setor", rotulo: "Setores e dependências" },
 ]);
+
+export const RESTRICOES: readonly {
+  id: RestricaoId;
+  grupo: GrupoRestricao;
+  rotulo: string;
+  nota: string;
+}[] = Object.freeze([
+  { id: "sem-empregados", grupo: "estrutura", rotulo: "Não quero empregados", nota: "Elimina modelos que só funcionam com equipa." },
+  { id: "sem-loja-fisica", grupo: "estrutura", rotulo: "Não quero loja física", nota: "Elimina o que vive de um espaço aberto ao público." },
+  { id: "sem-stock", grupo: "estrutura", rotulo: "Não quero stock", nota: "Elimina comprar antes de vender." },
+  { id: "sem-financiamento", grupo: "estrutura", rotulo: "Não quero recorrer a financiamento", nota: "Fecha o teto de capital no que tens." },
+  { id: "sem-carro", grupo: "esforco", rotulo: "Não tenho carro", nota: "Elimina rotas e trabalho que dependa de viatura." },
+  { id: "sem-carregar-peso", grupo: "esforco", rotulo: "Não posso carregar peso", nota: "Elimina trabalho com esforço físico continuado." },
+  { id: "sem-trabalho-fisico", grupo: "esforco", rotulo: "Não quero trabalho físico", nota: "Deixa só o que se resolve à secretária ou a falar." },
+  { id: "sem-atendimento-presencial", grupo: "contacto", rotulo: "Não quero atendimento presencial", nota: "Elimina as variantes presenciais." },
+  { id: "sem-deslocacoes", grupo: "contacto", rotulo: "Não quero deslocar-me", nota: "Elimina trabalho em casa ou instalações do cliente." },
+  { id: "sem-porta-a-porta", grupo: "contacto", rotulo: "Não quero vender porta-a-porta", nota: "Pesa em aquisição direta ao consumidor." },
+  { id: "sem-fins-de-semana", grupo: "horario", rotulo: "Não quero fins de semana", nota: "Elimina problemas cuja procura se concentra no fim de semana." },
+  { id: "sem-noites", grupo: "horario", rotulo: "Não quero trabalhar à noite", nota: "Pesa em problemas com ocorrências fora de horas." },
+  { id: "sem-alimentos", grupo: "setor", rotulo: "Não quero trabalhar com alimentos", nota: "Elimina o setor alimentar por inteiro." },
+  { id: "sem-atividade-regulada", grupo: "setor", rotulo: "Não quero atividade muito regulada", nota: "Elimina o que acumula licenças e habilitações." },
+  { id: "sem-redes-sociais", grupo: "setor", rotulo: "Não quero depender de redes sociais", nota: "Pesa em modelos que vivem de tráfego." },
+]);
+
+// ── ONDE SE RESPONDE CADA COISA ──────────────────────────────────────
+//  O painel lateral transformou «o que mais mudaria o resultado» de aviso
+//  em atalho: cada linha leva à secção certa e abre o nível onde a
+//  pergunta vive. Sem o nível, carregar em «Tolerância ao risco» levava a
+//  uma secção que ainda nem existia no ecrã.
+//
+//  Vive aqui, com o resto do questionário, para o mapa e os campos de
+//  profundidade poderem ser confrontados por um teste — um campo sem
+//  destino é um botão que não faz nada, e ninguém repara num botão inerte.
+
+export type SeccaoConfigurador =
+  | "competencias"
+  | "local"
+  | "recursos"
+  | "tempo"
+  | "preferencias"
+  | "limites"
+  | "risco";
+
+export const ONDE_SE_RESPONDE: Readonly<
+  Record<string, { seccao: SeccaoConfigurador; nivel: NivelConfiguracao }>
+> = Object.freeze({
+  competencias: { seccao: "competencias", nivel: "essencial" },
+  regiao: { seccao: "local", nivel: "essencial" },
+  capital: { seccao: "recursos", nivel: "essencial" },
+  ativos: { seccao: "recursos", nivel: "essencial" },
+  tempo: { seccao: "tempo", nivel: "essencial" },
+  prazo: { seccao: "tempo", nivel: "personalizado" },
+  restricoes: { seccao: "limites", nivel: "personalizado" },
+  preferencias: { seccao: "preferencias", nivel: "personalizado" },
+  risco: { seccao: "risco", nivel: "avancado" },
+  rendimento: { seccao: "risco", nivel: "avancado" },
+});
 
 // ── PÚBLICOS ─────────────────────────────────────────────────────────
 

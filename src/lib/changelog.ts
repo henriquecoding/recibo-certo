@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.97.0",
+    data: "2026-08-23",
+    titulo: "A ferramenta de descobrir negócio deixou de ser um muro de texto",
+    itens: [
+      "Antes, a primeira coisa que aparecia eram vinte e duas competências numa lista corrida, cada uma com título e descrição — quarenta e quatro linhas de texto antes de haver uma única decisão para tomar. Agora entram arrumadas por categoria: organizar e operar, trabalho manual, técnica e digital, comercial, gestão, criativa, cuidar e ensinar.",
+      "As escolhas passaram a pastilhas de uma linha. As descrições não desapareceram: estão no interruptor «Mostrar descrições», e valem para as competências, para os meios que já tens e para o que recusas.",
+      "Os catorze meios e as quinze recusas também ficaram por categoria — mobilidade, equipamento, espaço, já do negócio; estrutura, esforço, contacto com clientes, horários, setores.",
+      "Cada secção fecha, e fechada diz num resumo o que já lá está («Lisboa · só online», «até 5 000 € · 3 meios»). Há um «fechar todas as secções» para arrumar de uma vez. À entrada continua tudo aberto: nada fica escondido de quem chega pela primeira vez.",
+      "Uma caixa de procura para as competências, que ignora acentos — escrever «eletrica» encontra «Instalações elétricas».",
+      "O nível de cada competência deixou de abrir por baixo da escolha e passou a uma lista à parte, só com as que escolheste.",
+      "No painel lateral, «o que mais mudaria o resultado» deixou de ser um aviso para ler e passou a ser um atalho: carregas na linha e a ferramenta abre a secção certa — e abre sozinha o nível de perguntas onde essa resposta vive.",
+    ],
+  },
+  {
     version: "2.96.4",
     data: "2026-08-22",
     titulo: "Já sabes quantos alojamentos locais há na tua zona — e é a lei que o permite dizer",
