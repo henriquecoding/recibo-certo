@@ -124,9 +124,23 @@ function sequenciaEm(agulha: readonly string[], palheiro: readonly string[]): bo
 
 // ─── As dimensões ──────────────────────────────────────────────────────
 
+/**
+ * Uma enumeração em português — com uma exceção que se vê no ecrã.
+ *
+ * «Trabalha com recibos verdes e trabalhadores e salários.» Duas áreas,
+ * três «e», e quem lê conta três coisas em vez de duas. Acontece porque
+ * metade dos nomes do eixo já traz uma conjunção dentro («Trabalhadores e
+ * salários», «Sociedades e IRC», «Heranças e sucessões», «Dívidas e
+ * execuções»).
+ *
+ * Quando um dos itens já tem um «e», a lista passa a vírgulas e a
+ * ambiguidade desaparece. Nos outros casos — «confirmada e LinkedIn
+ * ligado» — a conjunção é a forma certa e fica.
+ */
 function juntar(itens: readonly string[]): string {
   if (itens.length === 0) return "";
   if (itens.length === 1) return itens[0];
+  if (itens.some((i) => / e /i.test(i))) return itens.join(", ");
   return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
 }
 

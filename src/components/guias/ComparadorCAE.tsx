@@ -19,6 +19,7 @@ import { Check, ArrowRight } from "@/components/ui/Icons";
 import type { Atividade } from "@/lib/fiscal-data";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import Link from "next/link";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const TIPO_BADGE: Record<string, { label: string; tone: "brand" | "neutral" | "alert" | "danger" }> = {
   art151: { label: "Art. 151.º CIRS", tone: "brand" },
@@ -207,6 +208,8 @@ export function ComparadorCAE({ comPlanoFiz = false }: { comPlanoFiz?: boolean }
           </p>
         </div>
       )}
+
+      <ContabilistasNoResultado pronto={Boolean(atividade)} />
     </div>
   );
 }

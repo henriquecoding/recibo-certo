@@ -19,6 +19,7 @@ import InfoTip from "@/components/ui/InfoTip";
 import { Check, Warning, Building, ShieldCheck, FileSign, Wallet } from "@/components/ui/Icons";
 import MapaRegioesLazy from "@/components/mapa/MapaRegioesLazy";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const num = (s: string) => Math.max(0, parseNumericDraft(s) ?? 0);
 const soDecimal = (s: string) => sanitizeNumericDraft(s);
@@ -297,6 +298,11 @@ export function PassoContabilista({
           ))}
         </div>
       </div>
+
+      {/* O diagnóstico acima responde a «precisas de um contabilista?».
+          Esta é a pergunta seguinte — quem — e é a única que interessa a
+          quem respondeu que sim. Sem faturação não há diagnóstico nenhum. */}
+      <ContabilistasNoResultado pronto={faturacaoAnual > 0} />
 
       {onVoltar && (
         <div className="flex flex-wrap items-center gap-3">

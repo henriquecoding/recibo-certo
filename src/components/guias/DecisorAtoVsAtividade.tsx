@@ -7,6 +7,7 @@ import Link from "next/link";
 import { ArrowRight, Check, ChevronRight } from "@/components/ui/Icons";
 import Badge from "@/components/ui/Badge";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 type ResultadoId = "ATO_ISOLADO" | "ABRIR_ATIVIDADE" | "RECIBO_VERDE" | "CONSIDERAR_ATIVIDADE";
 
@@ -208,6 +209,10 @@ export function DecisorAtoVsAtividade({ comPlanoFiz = false }: { comPlanoFiz?: b
           )}
         </m.div>
       ) : null}
+
+      {/* Só depois de o decisor concluir: a meio das perguntas, a pessoa
+          ainda não sabe o que está a decidir. */}
+      <ContabilistasNoResultado pronto={resultado !== null} />
     </div>
   );
 }

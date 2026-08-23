@@ -20,7 +20,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
     data: "2026-08-23",
     titulo: "No fim de cada simulação, alguém que trabalha com aquilo",
     itens: [
-      "As dezasseis ferramentas acabavam num número e num vazio. Passam a acabar com um a três contabilistas que trabalham com aquela matéria — o mesmo cartão do diretório, com uma linha a dizer porque é que aparece ali.",
+      "As dezasseis ferramentas acabavam num número e num vazio. Agora, no fim da simulação — logo a seguir ao resultado, e não no rodapé da página —, aparecem um a três contabilistas que trabalham com aquela matéria. O mesmo cartão do diretório, com uma linha a dizer porque é que aparece ali.",
+      "Só com resultado no ecrã: um formulário por preencher não é uma pergunta, e ninguém é oferecido antes de haver o que perguntar.",
       "A ordem vem das áreas que cada contabilista escolheu e do que escreveu no perfil por palavras dele. Quem escreveu «nómadas digitais» passa a aparecer em cenários de clientes internacionais mesmo sem ter marcado o filtro — e a página diz que a ordem é essa, e que não há lugares pagos.",
       "Quem já tem contabilista não vê alternativas: vê o dele, e o caminho para lhe enviar o que acabou de calcular.",
       "«Levar a minha simulação»: ao seguir um perfil a partir de uma ferramenta, o resultado vai contigo e o contabilista pode continuar de onde estavas. Fica guardado só no teu dispositivo, expira em três dias, e nada segue para ninguém antes de veres os campos exatos e confirmares.",

@@ -124,6 +124,7 @@ import {
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const ICONES: Record<string, (p: { size?: number; className?: string }) => ReactNode> = {
   Briefcase, User, Invoice, Coin, ChartProjection, Globe, Home, Building, Plane,
@@ -2741,6 +2742,12 @@ function ResumoLateral({
       )}
 
       <ProximosPassos resultado={resultado} reembolso={reembolso} />
+
+      {/* A seguir aos próximos passos, e não na coluna do resumo: a coluna
+          é estreita de mais para cartões, e a pergunta «isto merece uma
+          pessoa?» é sobre a simulação inteira, não sobre o número sozinho.
+          Sem rendimento não há simulação, e não há nada que levar. */}
+      <ContabilistasNoResultado pronto={resultado.rendimentoGlobal > 0} />
 
       <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-700 dark:bg-stone-900">
         <div className="mb-1 flex items-center justify-between">

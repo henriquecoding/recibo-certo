@@ -64,6 +64,7 @@ import {
   Warning,
   Wallet,
 } from "@/components/ui/Icons";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 const LoadingPanel = () => (
   <div className="animate-pulse rounded-3xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900" aria-hidden>
@@ -878,6 +879,12 @@ export function MotorReciboVencimento() {
         <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3.5 dark:border-stone-800 dark:bg-stone-900/50"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300"><Receipt size={14} className="text-brand" /><span className="text-[11px] font-semibold">Rubrica a rubrica</span></div><p className="mt-1 text-[9px] leading-relaxed text-stone-400">Bases e descontos nunca ficam escondidos num total.</p></div>
         <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3.5 dark:border-stone-800 dark:bg-stone-900/50"><div className="flex items-center gap-2 text-stone-600 dark:text-stone-300"><Building size={14} className="text-brand" /><span className="text-[11px] font-semibold">Custo completo</span></div><p className="mt-1 text-[9px] leading-relaxed text-stone-400">Inclui caixa e Segurança Social da entidade.</p></div>
       </div>
+
+      {/* Um recibo de vencimento raramente precisa de contabilista — mas
+          quando precisa (erros nos descontos, acumulação de rendimentos,
+          um contrato novo) é aqui, com o número à frente, que a pessoa o
+          percebe. Sem salário introduzido não há nada disso. */}
+      <ContabilistasNoResultado pronto={baseSalary > 0} />
 
       <p className="px-2 text-center text-[10px] leading-relaxed text-stone-400">Estimativa informativa. O resultado depende dos factos e documentos introduzidos e não substitui o recibo oficial nem aconselhamento profissional.</p>
 

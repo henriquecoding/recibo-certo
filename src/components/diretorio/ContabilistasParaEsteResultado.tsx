@@ -136,9 +136,14 @@ export default function ContabilistasParaEsteResultado({ necessidade, limite = 3
   if (estado === "vazio") return null;
 
   return (
+    // ── Uma continuação do resultado, não um cartão a competir com ele ──
+    //  Isto vive DENTRO da ferramenta, muitas vezes já dentro de um cartão.
+    //  Um segundo cartão com borda e sombra por cima do primeiro lê-se como
+    //  publicidade encaixada a meio de um cálculo. Uma linha por cima e o
+    //  título a seguir dizem o que é: o passo seguinte do mesmo resultado.
     <section
       aria-labelledby="contabilistas-do-resultado"
-      className="mt-10 rounded-4xl border border-stone-200 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+      className="mt-8 border-t border-stone-200 pt-6 dark:border-stone-800"
     >
       <header className="flex items-start gap-3">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
@@ -257,16 +262,23 @@ function Diretorio({
 
   return (
     <>
+      {/* A lista de áreas vai depois de dois pontos e separada por
+          vírgulas, e não com um «e» final. Metade dos nomes do eixo já
+          traz uma conjunção dentro («Trabalhadores e salários»), e
+          «recibos verdes e trabalhadores e salários» faz quem lê contar
+          três coisas onde estão duas. */}
       <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-300">
         {correspondentes > 0 ? (
           <>
             {candidatos.length === 1 ? "Este contabilista trabalha" : "Estes contabilistas trabalham"}{" "}
-            com {areas.join(" e ")}. Ligares-te a um contabilista e enviares-lhe o que
-            simulaste não tem custo nenhum.
+            {areas.length === 1 ? "na área deste cálculo" : "nas áreas deste cálculo"}:{" "}
+            <strong className="font-semibold text-stone-800 dark:text-stone-100">{areas.join(", ")}</strong>.
+            {" "}Ligares-te a um contabilista e enviares-lhe o que simulaste não tem custo nenhum.
           </>
         ) : (
           <>
-            Ainda não há ninguém no diretório a declarar {areas.join(" ou ")}.
+            Ainda não há no diretório ninguém a declarar{" "}
+            {areas.length === 1 ? "esta área" : "estas áreas"}: {areas.join(", ")}.
             {candidatos.length === 1 ? " Este perfil atende" : " Estes perfis atendem"} de forma geral —
             vale a pena abrir e ver o que fazem.
           </>
@@ -353,7 +365,7 @@ function Esqueleto() {
   return (
     <section
       aria-hidden="true"
-      className="mt-10 animate-pulse rounded-4xl border border-stone-200 bg-white p-5 dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+      className="mt-8 animate-pulse border-t border-stone-200 pt-6 dark:border-stone-800"
     >
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 shrink-0 rounded-xl bg-stone-100 dark:bg-stone-800" />

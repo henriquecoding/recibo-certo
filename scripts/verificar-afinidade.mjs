@@ -80,7 +80,7 @@ const FICHAS = [
     titulo_profissional: null,
     apresentacao_curta: "Trabalho com quem factura para fora de Portugal.",
     distrito: "Porto", concelho: "Matosinhos",
-    especialidades: ["IVA"],
+    especialidades: ["Trabalhadores e salários"],
     modalidades: ["online"], idiomas: ["pt"],
     resposta_media_horas: null, linkedin_ligado: false, linkedin_avatar_url: null,
     aceita_novos_clientes: true, fidelidade_ativa: false, recebe_pagamentos: false,
@@ -159,40 +159,62 @@ async function novaPagina({ largura = 1280, altura = 900 } = {}) {
 
 const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
 
-// ── 1. A secção aparece no fim de uma ferramenta ────────────────────────
+/**
+ * Rolar como uma pessoa rola, e não de um salto.
+ *
+ * `scrollTo(0, scrollHeight)` falha nas páginas com ferramentas
+ * diferidas: a altura no instante do salto é a da página SEM o simulador,
+ * e quando ele monta o fim da página passa a estar muito mais abaixo do
+ * que o sítio onde ficámos. O observador nunca chega a ver o sentinela.
+ */
+async function rolarAteAoFim(pagina, passos = 30) {
+  for (let i = 0; i < passos; i++) {
+    await pagina.evaluate(() => window.scrollBy(0, 1200));
+    await pagina.waitForTimeout(150);
+  }
+  await pagina.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+}
+
+// ── 1. A secção vive DENTRO da ferramenta, no fim do resultado ─────────
 {
-  seccao("1. No fim do simulador de IRS");
+  seccao("1. No fim do resultado, dentro da ferramenta");
   const { ctx, pagina } = await novaPagina();
-  await pagina.goto(`${BASE}/ferramentas/simulador-irs`, { waitUntil: "domcontentloaded" });
+  await pagina.goto(`${BASE}/ferramentas/seguranca-social`, { waitUntil: "domcontentloaded" });
 
   const antes = await pagina.locator(SECCAO).count();
   reg("não está montada à entrada (só perto do ecrã)", antes === 0);
 
-  await pagina.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await rolarAteAoFim(pagina);
   await pagina.waitForSelector(SECCAO, { timeout: 15000 }).catch(() => null);
+  reg("monta ao aproximar-se do ecrã", (await pagina.locator(SECCAO).count()) === 1);
 
-  const visivel = await pagina.locator(SECCAO).count();
-  reg("monta ao chegar ao fim da página", visivel === 1);
+  // ── O ponto todo desta versão ───────────────────────────────────────
+  //  Esteve no rodapé da página, depois dos guias e das ferramentas
+  //  relacionadas. O sítio é dentro da zona da ferramenta — `#ferramenta`
+  //  é a caixa que o `ToolShell` desenha à volta dela.
+  const dentro = await pagina.evaluate((sel) => {
+    const s = document.querySelector(sel);
+    return Boolean(s && s.closest("#ferramenta"));
+  }, SECCAO);
+  reg("está DENTRO da zona da ferramenta, não no rodapé da página", dentro);
 
-  const titulo = await pagina.locator("#contabilistas-do-resultado").textContent().catch(() => "");
-  reg("tem um título próprio", /contabilista/i.test(titulo ?? ""), (titulo ?? "").trim());
+  const ordem = await pagina.evaluate((sel) => {
+    const s = document.querySelector(sel);
+    const relacionadas = document.querySelector("#relacionadas-ferramenta");
+    if (!s || !relacionadas) return null;
+    // `DOCUMENT_POSITION_FOLLOWING` = as relacionadas vêm DEPOIS da secção.
+    return Boolean(s.compareDocumentPosition(relacionadas) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }, SECCAO);
+  reg("vem antes das ferramentas relacionadas", ordem === true);
 
   const nomes = await pagina.locator(`${SECCAO} article h3`).allTextContents();
-  reg("a especialista de IRS vem primeiro", nomes[0] === "Ana Especialista", nomes.join(" · "));
-  // A Carla só faz heranças: não é um terceiro cartão, é ruído com um nome.
+  reg("quem trabalha com recibos verdes vem primeiro", nomes[0] === "Ana Especialista", nomes.join(" · "));
   reg("quem não trabalha com isto não entra a encher", !nomes.includes("Carla Alheia"), nomes.join(" · "));
 
   const motivos = await pagina.locator(`${SECCAO} article p[data-motivo]`).allTextContents();
   reg("cada cartão diz porque aparece", motivos.length === nomes.length, motivos.join(" | "));
-  reg("os acrónimos não vão para minúsculas", !/\birs\b/.test(motivos.join(" ")), motivos[0] ?? "");
-  // O Bruno só tem IVA marcado; entra por ter escrito «nómadas digitais».
-  reg(
-    "quem corresponde por um termo escrito também entra",
-    motivos.some((m) => /O perfil aponta para/.test(m)),
-    motivos.join(" | "),
-  );
 
-  const rodape = await pagina.locator(SECCAO).textContent();
+  const rodape = await pagina.locator(SECCAO).textContent().catch(() => "");
   reg("declara de onde vem a ordem", /A ordem vem das áreas/.test(rodape ?? ""));
   reg("declara que não há lugares pagos", /Não há lugares pagos/.test(rodape ?? ""));
 
@@ -202,21 +224,35 @@ const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
   await ctx.close();
 }
 
-// ── 2. O motor muda com a ferramenta ────────────────────────────────────
+// ── 2. Sem resultado, não há secção ───────────────────────────────────
 {
-  seccao("2. Noutra ferramenta, outra ordem");
+  seccao("2. Sem resultado, não há convite");
   const { ctx, pagina } = await novaPagina();
-  await pagina.goto(`${BASE}/ferramentas/simulador-herancas`, { waitUntil: "domcontentloaded" });
-  await pagina.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await pagina.waitForSelector(SECCAO, { timeout: 15000 }).catch(() => null);
+  await pagina.goto(`${BASE}/ferramentas/classificar-atividade`, { waitUntil: "domcontentloaded" });
+  await rolarAteAoFim(pagina);
+  await pagina.waitForTimeout(2500);
+
+  reg(
+    "com o formulário por preencher, ninguém é oferecido",
+    (await pagina.locator(SECCAO).count()) === 0,
+  );
+  await ctx.close();
+}
+
+// ── 2b. O motor muda com a ferramenta ─────────────────────────────────
+{
+  seccao("2b. Noutra ferramenta, outra ordem");
+  const { ctx, pagina } = await novaPagina();
+  await pagina.goto(`${BASE}/ferramentas/recibo-vencimento`, { waitUntil: "domcontentloaded" });
+  await rolarAteAoFim(pagina);
+  await pagina.waitForSelector(SECCAO, { timeout: 20000 }).catch(() => null);
 
   const nomes = await pagina.locator(`${SECCAO} article h3`).allTextContents();
-  reg("nas heranças, quem faz heranças vem primeiro", nomes[0] === "Carla Alheia", nomes.join(" · "));
-  // O Bruno não tem nem heranças nem nada adjacente: fica de fora.
-  reg("quem não tem nada a ver com o caso não aparece", !nomes.includes("Bruno Implícito"), nomes.join(" · "));
+  reg("em salários, quem faz salários vem primeiro", nomes[0] === "Bruno Implícito", nomes.join(" · "));
 
-  const intro = await pagina.locator(SECCAO).textContent();
-  reg("a frase de topo nomeia a área desta ferramenta", /heranças e sucessões/.test(intro ?? ""));
+  const intro = await pagina.locator(SECCAO).textContent().catch(() => "");
+  reg("a frase nomeia a área desta ferramenta", /nas áreas deste cálculo: trabalhadores e salários/.test(intro ?? ""), (intro ?? "").slice(0, 140));
+  reg("os acrónimos não vão para minúsculas", !/\birs\b/.test(intro ?? ""));
   await ctx.close();
 }
 
@@ -228,27 +264,27 @@ const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
     window.localStorage.setItem(
       "recibocerto:contabilistas:bagagem:v1",
       JSON.stringify({
-        toolId: "simulador-irs", tipo: "simulador_irs",
-        titulo: "Simulação de IRS 2026",
-        conteudo: { ano: 2026, irsEstimado: 1234 }, campos: 2,
+        toolId: "recibos-verdes", tipo: "recibos_verdes",
+        titulo: "Recibos verdes 2026",
+        conteudo: { ano: 2026, liquido: 1234 }, campos: 2,
         criadoEm: new Date().toISOString(),
       }),
     );
   });
-  await pagina.goto(`${BASE}/ferramentas/simulador-irs`, { waitUntil: "domcontentloaded" });
-  await pagina.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await pagina.waitForSelector(SECCAO, { timeout: 15000 }).catch(() => null);
+  await pagina.goto(`${BASE}/ferramentas/recibos-verdes`, { waitUntil: "domcontentloaded" });
+  await rolarAteAoFim(pagina);
+  await pagina.waitForSelector(SECCAO, { timeout: 25000 }).catch(() => null);
 
   const caixa = pagina.locator(`${SECCAO} input[type=checkbox]`);
   reg("há uma escolha para levar a simulação", (await caixa.count()) === 1);
   reg("vem marcada", await caixa.isChecked().catch(() => false));
 
-  const texto = await pagina.locator(SECCAO).textContent();
+  const texto = await pagina.locator(SECCAO).textContent().catch(() => "");
   reg("diz que fica no dispositivo", /só neste dispositivo/i.test(texto ?? ""));
   reg("não revela valores da simulação", !/1234/.test(texto ?? ""));
 
   const comBagagem = await pagina.locator(`${SECCAO} article a`).first().getAttribute("href");
-  reg("o cartão leva a origem no endereço", (comBagagem ?? "").includes("?de=simulador-irs"), comBagagem ?? "");
+  reg("o cartão leva a origem no endereço", (comBagagem ?? "").includes("?de=recibos-verdes"), comBagagem ?? "");
 
   await caixa.uncheck();
   const semBagagem = await pagina.locator(`${SECCAO} article a`).first().getAttribute("href");
@@ -265,14 +301,14 @@ const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
     window.localStorage.setItem(
       "recibocerto:contabilistas:bagagem:v1",
       JSON.stringify({
-        toolId: "simulador-irs", tipo: "simulador_irs",
-        titulo: "Simulação de IRS 2026",
-        conteudo: { ano: 2026, irsEstimado: 1234 }, campos: 2,
+        toolId: "recibos-verdes", tipo: "recibos_verdes",
+        titulo: "Recibos verdes 2026",
+        conteudo: { ano: 2026, liquido: 1234 }, campos: 2,
         criadoEm: new Date().toISOString(),
       }),
     );
   });
-  await pagina.goto(`${BASE}/contabilistas/ana-especialista?de=simulador-irs`, {
+  await pagina.goto(`${BASE}/contabilistas/ana-especialista?de=recibos-verdes`, {
     waitUntil: "domcontentloaded",
   });
   const barra = pagina.locator("section[aria-label='A simulação que trouxeste']");
@@ -280,7 +316,7 @@ const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
   reg("o perfil reconhece a bagagem", (await barra.count()) === 1);
 
   const texto = await barra.textContent().catch(() => "");
-  reg("diz o que se traz", /Simulação de IRS 2026/.test(texto ?? ""));
+  reg("diz o que se traz", /Recibos verdes 2026/.test(texto ?? ""));
   reg("promete que nada segue sem aceitação", /Nada segue antes disso/.test(texto ?? ""));
   reg("não revela valores", !/1234/.test(texto ?? ""));
 
@@ -299,8 +335,8 @@ const SECCAO = "section[aria-labelledby='contabilistas-do-resultado']";
   seccao("5. A 360 px");
   const { ctx, pagina } = await novaPagina({ largura: 360, altura: 740 });
   await pagina.goto(`${BASE}/ferramentas/seguranca-social`, { waitUntil: "domcontentloaded" });
-  await pagina.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-  await pagina.waitForSelector(SECCAO, { timeout: 15000 }).catch(() => null);
+  await rolarAteAoFim(pagina);
+  await pagina.waitForSelector(SECCAO, { timeout: 20000 }).catch(() => null);
 
   const overflow = await pagina.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

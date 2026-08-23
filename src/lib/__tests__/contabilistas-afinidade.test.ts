@@ -10,7 +10,7 @@
 //  Ver `docs/architecture/motor-de-afinidade-contabilistas.md`.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
@@ -309,6 +309,21 @@ describe("afinidade:lingua", () => {
     expect(emFrase("Heranças e sucessões")).toBe("heranças e sucessões");
   });
 
+  it("uma área que já tem «e» dentro não gera «X e Y e Z»", () => {
+    // «Trabalha com recibos verdes e trabalhadores e salários» faz quem lê
+    // contar três coisas onde estão duas.
+    const cc = ficha({ nome: "Ana", especialidades: ["Recibos verdes", "Trabalhadores e salários"] });
+    const [c] = ordenarPorAfinidade([cc], necessidadeDe("seguranca-social"));
+    expect(c.motivo).toBe("Trabalha com recibos verdes, trabalhadores e salários.");
+    expect(c.motivo.match(/ e /g) ?? []).toHaveLength(1);
+  });
+
+  it("sem conjunções dentro dos nomes, a lista mantém o «e»", () => {
+    const cc = ficha({ nome: "Bruno", especialidades: ["IRS", "Recibos verdes"] });
+    const [c] = ordenarPorAfinidade([cc], necessidadeDe("simulador-irs"));
+    expect(c.motivo).toBe("Trabalha com IRS e recibos verdes.");
+  });
+
   it("nenhum motivo escreve «irs», «iva» ou «irc»", () => {
     const casos = [
       ficha({ nome: "Ana", especialidades: ["IRS", "IVA"] }),
@@ -433,7 +448,7 @@ describe("afinidade:fronteira", () => {
   it("o catálogo das ferramentas não desce para o browser por causa disto", () => {
     // A necessidade é calculada no ToolShell (servidor) e passa como dados.
     const seccao = ler(SECCAO);
-    const ponte = ler("src/components/diretorio/ContabilistasNoFim.tsx");
+    const ponte = ler("src/components/diretorio/ContabilistasNoResultado.tsx");
     for (const fonte of [seccao, ponte]) {
       expect(fonte).not.toContain("@/lib/ferramentas");
       expect(fonte).not.toContain("necessidadeDaFerramenta");
@@ -564,28 +579,132 @@ describe("afinidade:bagagem", () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-//  7. A SUPERFÍCIE — onde a secção aparece, e o que ela promete
+//  7. A SUPERFÍCIE — dentro do resultado, e não no rodapé da página
 // ═══════════════════════════════════════════════════════════════════════
 
+/** Os ficheiros que uma página de ferramenta alcança pelos seus imports. */
+function alcancados(entrada: string, profundidade = 8): string[] {
+  const vistos = new Set<string>();
+  const fila: Array<{ caminho: string; nivel: number }> = [{ caminho: entrada, nivel: 0 }];
+  const saida: string[] = [];
+
+  while (fila.length > 0) {
+    const { caminho, nivel } = fila.shift()!;
+    if (vistos.has(caminho) || nivel > profundidade) continue;
+    vistos.add(caminho);
+
+    let fonte: string;
+    try {
+      fonte = ler(caminho);
+    } catch {
+      continue;
+    }
+    saida.push(caminho);
+
+    // Só imports do projeto, e só os que apontam para componentes: seguir
+    // `@/lib` inteiro faria isto percorrer o codebase todo sem necessidade.
+    for (const m of fonte.matchAll(/from\s+"(@\/[^"]+|\.\.?\/[^"]+)"|import\("(@\/[^"]+|\.\.?\/[^"]+)"\)/g)) {
+      const bruto = m[1] ?? m[2];
+      if (!bruto) continue;
+      const resolvido = bruto.startsWith("@/")
+        ? join("src", bruto.slice(2))
+        : join(caminho, "..", bruto);
+      for (const ext of [".tsx", ".ts", "/index.tsx", "/index.ts"]) {
+        const tentativa = `${resolvido}${ext}`;
+        if (existsSync(join(process.cwd(), tentativa))) {
+          fila.push({ caminho: tentativa, nivel: nivel + 1 });
+          break;
+        }
+      }
+    }
+  }
+  return saida;
+}
+
 describe("afinidade:superficie", () => {
-  it("o ToolShell mostra-a por omissão em todas as ferramentas", () => {
+  it("a moldura DECLARA a necessidade, e não desenha a secção", () => {
     const fonte = ler("src/components/ferramentas/ToolShell.tsx");
-    expect(fonte).toContain("contabilistas = true");
-    expect(fonte).toContain("<ContabilistasNoFim");
+    expect(fonte).toContain("<ProvedorNecessidade");
+    expect(fonte).toContain("necessidadeDaFerramenta(tool)");
+    // O sítio errado — e onde isto já esteve: o rodapé da página.
+    expect(fonte).not.toContain("<ContabilistasNoResultado");
   });
 
-  it("fica antes do material editorial, não depois dos guias", () => {
+  it("o provedor envolve a ferramenta, não a página inteira", () => {
     const fonte = ler("src/components/ferramentas/ToolShell.tsx");
-    const seccao = fonte.indexOf("<ContabilistasNoFim");
-    const contexto = fonte.indexOf("{contexto ? (");
-    const guias = fonte.indexOf("Compreender melhor");
-    expect(seccao).toBeGreaterThan(0);
-    expect(seccao).toBeLessThan(contexto);
-    expect(seccao).toBeLessThan(guias);
+    const abre = fonte.indexOf("<ProvedorNecessidade");
+    const fecha = fonte.indexOf("</ProvedorNecessidade>");
+    const editorial = fonte.indexOf("{contexto ? (");
+    const relacionadas = fonte.indexOf("relacionadas-ferramenta");
+
+    expect(abre).toBeGreaterThan(0);
+    expect(fecha).toBeGreaterThan(abre);
+    // Fechado ANTES do material editorial: uma secção colocada num guia,
+    // numa FAQ ou nas ferramentas relacionadas não é o fim de um resultado.
+    expect(fecha).toBeLessThan(editorial);
+    expect(fecha).toBeLessThan(relacionadas);
+  });
+
+  it("TODA a ferramenta do hub alcança a secção pelos seus imports", () => {
+    // Sem isto, uma ferramenta nova estreia com o resultado a acabar num
+    // vazio, e ninguém dá por isso — que é exatamente o defeito que este
+    // trabalho existe para corrigir.
+    const semSeccao: string[] = [];
+
+    for (const f of FERRAMENTAS_ATIVAS) {
+      const pagina = `src/app/ferramentas/${f.slug}/page.tsx`;
+      const encontrou = alcancados(pagina).some((c) =>
+        ler(c).includes("<ContabilistasNoResultado"),
+      );
+      if (!encontrou) semSeccao.push(f.id);
+    }
+
+    expect(semSeccao, `sem contabilistas no fim do resultado: ${semSeccao.join(", ")}`).toEqual([]);
+  });
+
+  it("cada colocação diz quando é que já há resultado", () => {
+    // `pronto` sem argumento é o valor por omissão (`true`) e só é legítimo
+    // onde o bloco à volta já só existe com resultado.
+    const semGate = [
+      "src/app/ferramentas/mapa-contabilistas/page.tsx",
+      "src/components/precos/ConclusaoPreco.tsx",
+      "src/components/negocio/ConclusaoNegocio.tsx",
+      "src/components/negocio/descoberta/Resultados.tsx",
+    ];
+    const comGate = [
+      "src/components/SimuladorIntegrado.tsx",
+      "src/components/simulador/SimuladorIRS.tsx",
+      "src/components/simulador/ModoGuiadoEmpresa.tsx",
+      "src/components/simulador/PassoContabilista.tsx",
+      "src/components/SimuladorHeranca.tsx",
+      "src/components/dependente/MotorReciboVencimento.tsx",
+      "src/components/dependente/AuditoriaRecibo.tsx",
+      "src/components/guias/CalculadoraSSTrimestral.tsx",
+      "src/components/guias/CalculadoraRegimeSimplificado.tsx",
+      "src/components/guias/ComparadorCAE.tsx",
+      "src/components/guias/DecisorAtoVsAtividade.tsx",
+      "src/components/guias/SimuladorIRSJovem.tsx",
+      "src/app/ferramentas/payout-mor/Wizard.tsx",
+    ];
+
+    for (const f of comGate) {
+      expect(ler(f), f).toMatch(/<ContabilistasNoResultado pronto=\{/);
+    }
+    for (const f of semGate) {
+      expect(ler(f), f).toContain("<ContabilistasNoResultado");
+    }
+  });
+
+  it("as calculadoras que também vivem em guias não trazem cartões atrás", () => {
+    // A garantia é por construção: fora de um `ToolShell` não há
+    // necessidade no contexto, e a ponte não desenha nada.
+    const ponte = ler("src/components/diretorio/ContabilistasNoResultado.tsx");
+    expect(ponte).toContain("useNecessidade()");
+    expect(ponte).toMatch(/if \(!necessidade \|\| !pronto\) return null;/);
   });
 
   it("só monta quando se aproxima do ecrã", () => {
-    const ponte = ler("src/components/diretorio/ContabilistasNoFim.tsx");
+    const ponte = ler("src/components/diretorio/ContabilistasNoResultado.tsx");
     expect(ponte).toContain("IntersectionObserver");
     expect(ponte).toContain("ssr: false");
     expect(ponte).toContain("ErrorBoundary");

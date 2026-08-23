@@ -8,6 +8,7 @@ import { useScrollTopOnStep } from "@/lib/scroll";
 import { Check, Warning, ArrowRight, ChevronDown } from "@/components/ui/Icons";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 
 // ── Barra de progresso ────────────────────────────────────────────────────────
 
@@ -477,6 +478,11 @@ export default function Wizard() {
           ← Voltar
         </button>
       )}
+
+      {/* No último passo, e não antes: quem vai a meio do assistente ainda
+          está a perceber o problema. IVA em plataformas estrangeiras é dos
+          casos onde uma segunda opinião paga o que custa. */}
+      <ContabilistasNoResultado pronto={passo === 5} />
     </div>
   );
 }

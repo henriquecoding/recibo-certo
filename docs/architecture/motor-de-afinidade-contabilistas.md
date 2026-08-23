@@ -117,11 +117,34 @@ aceitar**.
 
 ## Onde aparece, e o que aparece
 
-`ToolShell` renderiza a secção logo a seguir à ferramenta e antes do
-material editorial — é aí que a pessoa está quando acaba de ter o
-resultado. A necessidade é calculada no **servidor** e desce como
-propriedade: o catálogo de ferramentas e a tabela de vocabulário não entram
-no pacote do cliente.
+**No fim do resultado, dentro da ferramenta.** Não no rodapé da página —
+esteve lá durante uma versão, e estava errado: depois dos guias e das
+ferramentas relacionadas, a secção competia com navegação e chegava tarde.
+A decisão «isto merece uma pessoa» toma-se com o número à vista.
+
+A mecânica são três peças:
+
+1. `ToolShell` **declara** a necessidade, calculada no servidor, num
+   contexto (`components/diretorio/contexto.tsx`). O catálogo das
+   ferramentas e a tabela de vocabulário nunca descem para o browser.
+2. Cada ferramenta **coloca** `<ContabilistasNoResultado pronto={…} />`
+   onde o seu resultado acaba, e diz o que é «já há resultado» — um
+   formulário em branco não é uma pergunta, e oferecer um contabilista aí
+   é oferecer ajuda para nada.
+3. A ponte monta a secção quando o sentinela se aproxima do ecrã, dentro
+   de um `ErrorBoundary`. Uma falha aqui não pode levar o resultado fiscal
+   com ela.
+
+O contexto tem um efeito lateral que não é acidente: **fora de uma
+ferramenta não há necessidade declarada, e a secção não desenha nada**.
+Metade destas calculadoras vive também embutida em guias
+(`/guias/seguranca-social` usa a mesma `CalculadoraSSTrimestral`), e a
+calculadora da homepage é a mesma dos recibos verdes. Lá não aparecem
+cartões — por construção, não por um `if` em cada sítio.
+
+`contabilistas-afinidade.test.ts` percorre os imports de cada página do
+hub e falha se alguma ferramenta não alcançar a secção: uma ferramenta
+nova não pode estrear com o resultado a acabar num vazio.
 
 Dois estados, e não três:
 
@@ -129,11 +152,15 @@ Dois estados, e não três:
   É a regra 2 do `routing.ts`: quem já escolheu, escolheu. Não se mostram
   três alternativas a quem tem um profissional.
 - **Sem vínculo** → um a três cartões do diretório, ordenados pelo motor,
-  cada um com o motivo por que ali está.
+  cada um com o motivo por que ali está. Encher a grelha não é razão para
+  mostrar alguém: havendo quem trabalhe na matéria, é só isso que aparece.
 
-O cartão é o mesmo componente do diretório (`ContabilistaCard`), movido
-para `components/` para poder ser partilhado. Uma segunda implementação
-seria uma segunda verdade sobre a mesma ficha.
+O cartão é o mesmo componente do diretório (`ContabilistaCard`), em
+`components/diretorio/` — e não em `components/contabilistas/`, porque o
+diretório público e o painel do contabilista seguem convenções de modo
+escuro diferentes, ambas fixadas por testes que se contradizem se um
+ficheiro cair na pasta errada. Uma segunda implementação do cartão seria
+uma segunda verdade sobre a mesma ficha.
 
 ## Medição
 
