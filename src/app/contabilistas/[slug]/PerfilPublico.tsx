@@ -7,7 +7,7 @@
 // `src/lib/contabilistas/vinculo.ts`, coberto por teste.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/supabase/auth";
 import {
@@ -23,7 +23,11 @@ import { podeAgendar, podePedirVinculo, vinculoAtivo } from "@/lib/contabilistas
 import { estadoOcc } from "@/lib/contabilistas/diretorio";
 import { eurosDeCents, valorComDesconto } from "@/lib/contabilistas/fidelidade";
 import { comoOClienteVe } from "@/lib/contabilistas/stripe/estado";
+import {
+  descreverBagagem, lerBagagem, limparBagagem, type Bagagem,
+} from "@/lib/contabilistas/bagagem";
 import Button from "@/components/ui/Button";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import BlocosDoPerfil from "@/components/contabilistas/BlocosDoPerfil";
 import { lerTermos } from "@/lib/contabilistas/personalizacao/taxonomia";
 import {
@@ -36,7 +40,7 @@ import { primeiroNome } from "@/components/contabilistas/hub";
 import Marcacao from "@/components/contabilistas/Marcacao";
 import { useAvisos } from "@/components/ui/Avisos";
 import {
-  Calendar, Gift, Lock, MapPin, ShieldCheck, Warning,
+  Calendar, Gift, Lock, MapPin, PaperClip, ShieldCheck, Warning,
 } from "@/components/ui/Icons";
 
 const JANELA_DIAS = 30;
@@ -44,6 +48,7 @@ const JANELA_DIAS = 30;
 export default function PerfilPublico({ slug }: { slug: string }) {
   const { user, carregado, abrirModal } = useAuth();
   const router = useRouter();
+  const params = useSearchParams();
   const avisos = useAvisos();
   const [cc, setCc] = useState<Contabilista | null>(null);
   const [regras, setRegras] = useState<RegraDisponibilidade[]>([]);
@@ -64,6 +69,19 @@ export default function PerfilPublico({ slug }: { slug: string }) {
   const [aApresentar, setAApresentar] = useState(false);
   const [nomeParaOContabilista, setNome] = useState("");
   const [recado, setRecado] = useState("");
+  /**
+   * O que a pessoa trouxe da ferramenta de onde veio.
+   *
+   * Só existe quando o endereço traz `?de=<ferramenta>` E há, neste
+   * dispositivo, uma bagagem daquela ferramenta. Um `?de=` inventado à mão
+   * não faz aparecer nada: a bagagem é local, e o endereço é só a chave.
+   */
+  const [bagagem, setBagagem] = useState<Bagagem | null>(null);
+
+  const veioDe = params.get("de");
+  useEffect(() => {
+    setBagagem(veioDe ? lerBagagem(veioDe) : null);
+  }, [veioDe]);
 
   const carregar = useCallback(async () => {
     setALer(true);
@@ -194,6 +212,16 @@ export default function PerfilPublico({ slug }: { slug: string }) {
         <Link href="/contabilistas" className="text-sm font-medium text-stone-500 underline underline-offset-2">
           Diretório de contabilistas
         </Link>
+
+        {bagagem && (
+          <BarraDaBagagem
+            bagagem={bagagem}
+            nome={primeiroNome(cc.nome)}
+            ativo={ativo}
+            aceitaNovosClientes={cc.aceitaNovosClientes}
+            aoDispensar={() => { limparBagagem(); setBagagem(null); }}
+          />
+        )}
 
         <header className="mt-4 rounded-4xl border border-stone-200 bg-white p-5 shadow-card sm:p-7">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -465,5 +493,82 @@ export default function PerfilPublico({ slug }: { slug: string }) {
         </section>
       </div>
     </main>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CHEGAR COM BAGAGEM
+//  ---------------------------------------------------------------------
+//  Quem vem de uma ferramenta traz uma simulação. O que esta barra faz é
+//  dizer-lho — e dizer, sem rodeios, o que acontece a seguir.
+//
+//  A frase que interessa é a do estado sem vínculo: «nada segue antes de
+//  ele aceitar». É a verdade literal do sistema (a partilha exige vínculo
+//  ativo, e a base de dados recusa-a sem ele), e é exatamente a dúvida de
+//  quem acabou de carregar num botão que dizia «levar a minha simulação».
+//  Deixá-la por responder era deixar alguém a pensar que os seus números
+//  já tinham sido enviados a um desconhecido.
+// ═══════════════════════════════════════════════════════════════════════
+
+function BarraDaBagagem({
+  bagagem, nome, ativo, aceitaNovosClientes, aoDispensar,
+}: {
+  bagagem: Bagagem;
+  nome: string;
+  ativo: boolean;
+  aceitaNovosClientes: boolean;
+  aoDispensar: () => void;
+}) {
+  return (
+    <section
+      aria-label="A simulação que trouxeste"
+      className="mt-4 rounded-4xl border border-brand/25 bg-brand-light/50 p-4 dark:border-brand/30 dark:bg-brand/10 sm:p-5"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-wider text-brand-dark dark:text-brand-mint">
+            <PaperClip size={13} aria-hidden /> Trazes uma simulação
+          </p>
+          <p className="mt-1 font-display text-lg leading-snug text-ink dark:text-stone-50">
+            {bagagem.titulo}
+          </p>
+          <p className="mt-0.5 text-xs text-stone-500 dark:text-stone-400">
+            {descreverBagagem(bagagem)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={aoDispensar}
+          className="focus-marca inline-flex min-h-[2.25rem] items-center rounded-xl px-3 text-sm font-medium text-stone-500 underline underline-offset-2 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"
+        >
+          Não levar
+        </button>
+      </div>
+
+      {ativo ? (
+        <div className="mt-3">
+          <EnviarAoContabilista
+            tipo={bagagem.tipo}
+            conteudo={bagagem.conteudo}
+            toolId={bagagem.toolId}
+            titulo={bagagem.titulo}
+            variante="discreto"
+            // A bagagem não se reescreve a si própria a partir do perfil:
+            // o que está guardado é o que a ferramenta produziu, e voltar a
+            // gravá-lo aqui só serviria para lhe mudar a data de validade.
+            guardarComoBagagem={false}
+          />
+        </div>
+      ) : (
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-white/70 px-3.5 py-2.5 text-sm leading-relaxed text-stone-600 dark:bg-stone-900/50 dark:text-stone-300">
+          <Lock size={14} className="mt-0.5 shrink-0 text-stone-400" aria-hidden />
+          <span>
+            {aceitaNovosClientes
+              ? <>Fica guardada só neste dispositivo. Assim que {nome} aceitar o pedido, podes enviá-la — e vês os campos exatos antes de confirmar. <strong className="font-semibold text-stone-800 dark:text-stone-100">Nada segue antes disso.</strong></>
+              : <>Fica guardada só neste dispositivo, e nada segue daqui. {nome} não está a aceitar clientes de momento — podes voltar ao diretório e escolher outra pessoa sem perder a simulação.</>}
+          </span>
+        </p>
+      )}
+    </section>
   );
 }

@@ -19,6 +19,8 @@ import Link from "next/link";
 import { ArrowRight, BookOpen } from "@/components/ui/Icons";
 import type { ToolDefinition, ToolLayout } from "@/lib/ferramentas";
 import { relacionadas, percursosCom, resolverPercurso } from "@/lib/ferramentas";
+import { necessidadeDaFerramenta } from "@/lib/contabilistas/afinidade";
+import ContabilistasNoFim from "@/components/diretorio/ContabilistasNoFim";
 import { iconeDe } from "./icon-map";
 import ToolStart from "./ToolStart";
 import MedidorFerramenta from "./MedidorFerramenta";
@@ -40,6 +42,15 @@ interface ToolShellProps {
   /** Substitui o subtítulo por omissão (`shortOutcome`) quando é preciso mais. */
   subtitulo?: ReactNode;
   /**
+   * Mostrar, no fim da ferramenta, quem trabalha com isto.
+   *
+   * `false` só para superfícies onde a pergunta já foi feita de outra
+   * maneira. Por omissão está LIGADO nas dezasseis ferramentas: era
+   * precisamente a ausência de um caminho para uma pessoa que fazia cada
+   * simulação acabar num número e num vazio.
+   */
+  contabilistas?: boolean;
+  /**
    * Medir a conclusão desta ferramenta a partir da moldura.
    *
    * `false` para quem se mede a si própria com uma definição melhor de
@@ -50,7 +61,9 @@ interface ToolShellProps {
   medir?: boolean;
 }
 
-export default function ToolShell({ tool, children, contexto, subtitulo, medir = true }: ToolShellProps) {
+export default function ToolShell({
+  tool, children, contexto, subtitulo, medir = true, contabilistas = true,
+}: ToolShellProps) {
   const Icone = iconeDe(tool.icon);
   const relacionadasResolvidas = relacionadas(tool);
   const percursos = percursosCom(tool.id);
@@ -97,6 +110,19 @@ export default function ToolShell({ tool, children, contexto, subtitulo, medir =
       ) : (
         <div id="ferramenta" className="scroll-mt-24">{children}</div>
       )}
+
+      {/* ── QUEM TRABALHA COM ISTO ────────────────────────────────────
+          Fica AQUI, e não no fundo da página, por uma razão material: é
+          neste ponto do ecrã que a pessoa está quando acaba de ter o
+          resultado. Empurrada para depois dos guias e das ferramentas
+          relacionadas, a secção passaria a competir com navegação — e a
+          decisão «isto merece uma pessoa» toma-se com o número ainda à
+          vista, não oito mil pixels depois.
+
+          A necessidade é calculada AQUI, no servidor: assim o catálogo das
+          ferramentas e a tabela de afinidade não descem para o browser. O
+          que atravessa a fronteira é um objeto de dados. ──────────────── */}
+      {contabilistas && <ContabilistasNoFim necessidade={necessidadeDaFerramenta(tool)} />}
 
       {/* ── ONDE A FERRAMENTA ACABA E A LEITURA COMEÇA ────────────────
           Isto era um `<div className="mt-12">`: nem marco, nem fronteira,

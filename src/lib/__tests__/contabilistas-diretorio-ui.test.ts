@@ -10,7 +10,7 @@ const ler = (p: string) => readFileSync(join(raiz, p), "utf8");
 // controlos. As garantias abaixo não mudaram de exigência — mudaram de
 // morada, e algumas ficaram mais fortes (ver o LinkedIn).
 const CLIENTE = "src/app/contabilistas/DiretorioCliente.tsx";
-const CARTAO = "src/app/contabilistas/ContabilistaCard.tsx";
+const CARTAO = "src/components/diretorio/ContabilistaCard.tsx";
 const FINDER = "src/app/contabilistas/DiretorioFinder.tsx";
 const FILTROS = "src/app/contabilistas/DiretorioFiltros.tsx";
 const DADOS = "src/lib/contabilistas/diretorio.ts";

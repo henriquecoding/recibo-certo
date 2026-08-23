@@ -30,7 +30,7 @@ import {
   comFiltro, contarFiltros, filtroParaQuery, FILTRO_VAZIO, lerDiretorio, parseFiltro,
   type CartaoDoDiretorio, type FiltroDiretorio, type OrdemDoDiretorio,
 } from "@/lib/contabilistas/diretorio";
-import ContabilistaCard from "./ContabilistaCard";
+import ContabilistaCard from "@/components/diretorio/ContabilistaCard";
 import DiretorioFinder from "./DiretorioFinder";
 import { ColunaDeFiltros, FolhaDeFiltros } from "./DiretorioFiltros";
 import VisitanteContextBar from "./VisitanteContextBar";

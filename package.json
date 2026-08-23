@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.104.0",
+  "version": "2.105.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -37,6 +37,8 @@
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
     "market:check": "vitest run src/lib/__tests__/negocio-market-*.test.ts",
+    "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
+    "afinidade:e2e": "node scripts/verificar-afinidade.mjs",
     "market:fit-audit": "vitest run src/lib/__tests__/negocio-market-fit-audit.test.ts",
     "mercado:check": "node --max-old-space-size=2048 scripts/ingerir-mercado.mjs --check",
     "mercado:ingerir": "node --max-old-space-size=2048 scripts/ingerir-mercado.mjs",

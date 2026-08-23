@@ -35,7 +35,7 @@ import { DISTRITOS, ESPECIALIDADES } from "./catalogo";
 import { copyResposta, IDIOMAS } from "./perfil";
 import type { Modalidade } from "./tipos";
 
-type Linha = Record<string, unknown>;
+export type Linha = Record<string, unknown>;
 
 /** O contrato público. Nunca a tabela — ver a migração 20260815200000. */
 const VISTA_PUBLICA = "contabilistas_publico";
@@ -53,7 +53,7 @@ const VISTA_PUBLICA = "contabilistas_publico";
  * «há fotografia?» e é descartada em `paraCartao`. A fotografia em si
  * continua a ser servida pelo proxy do ReciboCerto (§8).
  */
-const CAMPOS_DO_CARTAO =
+export const CAMPOS_DO_CARTAO =
   "user_id,slug,nome,occ,occ_verificado,titulo_profissional,apresentacao_curta," +
   "distrito,concelho,especialidades,modalidades,idiomas,resposta_media_horas," +
   "linkedin_ligado,linkedin_avatar_url,aceita_novos_clientes,fidelidade_ativa," +
@@ -142,7 +142,16 @@ export interface PaginaDoDiretorio {
 
 // ─── Leitura ───────────────────────────────────────────────────────────
 
-function paraCartao(l: Linha): CartaoDoDiretorio {
+/**
+ * Uma linha da view pública, na forma que o cartão consome.
+ *
+ * Exportada porque o motor de afinidade lê a MESMA view com um punhado de
+ * colunas a mais (`perfil_termos`, `cobertura`) e não pode ter uma segunda
+ * leitura da mesma ficha — duas leituras acabam sempre por divergir numa
+ * coluna, e o cartão do diretório e o cartão do fim de uma ferramenta
+ * passariam a contar histórias diferentes da mesma pessoa (§50).
+ */
+export function paraCartao(l: Linha): CartaoDoDiretorio {
   const avatar = (l.linkedin_avatar_url as string | null) ?? null;
 
   return {

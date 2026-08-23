@@ -33,7 +33,7 @@ import {
 } from "@/lib/contabilistas/diretorio";
 import { nomesDosIdiomas } from "@/lib/contabilistas/perfil";
 import AvatarContabilista from "@/components/contabilistas/AvatarContabilista";
-import { ArrowRight, Gift, Linkedin, MapPin, ShieldCheck } from "@/components/ui/Icons";
+import { ArrowRight, Gift, Linkedin, MapPin, ShieldCheck, Target } from "@/components/ui/Icons";
 
 const TOM_DA_OCC = {
   verificada: "text-brand-dark dark:text-brand-mint",
@@ -44,10 +44,31 @@ const TOM_DA_OCC = {
 export default function ContabilistaCard({
   cartao,
   areaEmDestaque = "",
+  motivo,
+  href,
+  onAbrir,
 }: {
   cartao: CartaoDoDiretorio;
   /** A área que a pessoa está a filtrar — vem à frente nas etiquetas. */
   areaEmDestaque?: string;
+  /**
+   * Porque é que ESTE cartão está aqui, quando não foi a pessoa a procurá-lo.
+   *
+   * Só o motor de afinidade o preenche — no diretório, quem escolheu os
+   * filtros foi a pessoa, e explicar-lhe a sua própria escolha seria ruído.
+   * A frase vem pronta de `explicar()`: descritiva, nunca superlativa.
+   */
+  motivo?: string;
+  /**
+   * Um destino alternativo ao perfil.
+   *
+   * Serve para levar contexto no endereço (`?de=simulador-irs`) sem que o
+   * cartão saiba o que é uma ferramenta. Continua a apontar sempre para o
+   * perfil da MESMA pessoa — quem o passar é responsável por isso.
+   */
+  href?: string;
+  /** Medição do lado de quem chamou. O cartão não regista nada por si. */
+  onAbrir?: () => void;
 }) {
   const occ = estadoOcc(cartao);
   const local = textoLocalizacao(cartao);
@@ -135,6 +156,16 @@ export default function ContabilistaCard({
           ?? `Atendimento ${textoModalidades(cartao.modalidades).toLowerCase()}. Abre o perfil para conhecer as áreas de trabalho, a disponibilidade e como começar.`}
       </p>
 
+      {motivo && (
+        <p
+          data-motivo=""
+          className="relative mt-3 flex items-start gap-2 rounded-2xl bg-brand-light/60 px-3 py-2 text-xs font-medium leading-relaxed text-brand-dark dark:bg-brand/15 dark:text-brand-mint"
+        >
+          <Target size={13} className="mt-0.5 shrink-0" aria-hidden />
+          <span className="min-w-0">{motivo}</span>
+        </p>
+      )}
+
       {visiveis.length > 0 && (
         <ul className="relative mt-3.5 flex flex-wrap gap-1.5">
           {visiveis.map((e) => (
@@ -199,8 +230,9 @@ export default function ContabilistaCard({
         </div>
 
         <Link
-          href={`/contabilistas/${cartao.slug}`}
-          className="focus-marca inline-flex items-center gap-1.5 rounded-lg text-sm font-semibold text-brand-dark after:absolute after:inset-0 after:content-[''] dark:text-brand-mint"
+          href={href ?? `/contabilistas/${cartao.slug}`}
+          onClick={onAbrir}
+          className="focus-marca inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg text-sm font-semibold text-brand-dark after:absolute after:inset-0 after:content-[''] dark:text-brand-mint"
         >
           Ver perfil
           <span className="sr-only"> de {cartao.nome}</span>

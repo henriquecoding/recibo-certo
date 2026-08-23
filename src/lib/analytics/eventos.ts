@@ -75,6 +75,8 @@ export type NomeEvento =
   | "accountant_link_request"
   | "accountant_share"
   | "accountant_booking"
+  | "accountant_match_impression"
+  | "accountant_match_click"
   | "lead_consent"
   | "lead_submitted"
   | "lead_accepted"
@@ -182,6 +184,37 @@ export interface PayloadsEvento {
     /** `pedido` ou `cancelado` — a ação, não a data nem o assunto. */
     action: string;
     modality: string;
+  };
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ OS DOIS DA AFINIDADE: SEM O CONTABILISTA, SEM O RESULTADO          │
+   * │                                                                   │
+   * │ Medem se o fim de uma ferramenta leva alguém a um profissional —   │
+   * │ e não QUEM. O id (ou o nome, ou o distrito) do contabilista        │
+   * │ cruzado com o utilizador seria a relação profissional de alguém    │
+   * │ num sistema de medição, que é a mesma linha que `accountant_share` │
+   * │ já se recusa a atravessar.                                        │
+   * │                                                                   │
+   * │ `carries_result` é um sim/não sobre a EXISTÊNCIA de bagagem. O que │
+   * │ a bagagem contém nunca sai do dispositivo por esta porta.          │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  accountant_match_impression: {
+    tool_id: string;
+    /** Estado da secção: `vinculado`, `diretorio` ou `vazio`. */
+    state: string;
+    /** Quantos cartões foram mostrados. */
+    candidate_count: number;
+    /** Quantos deles cobrem mesmo alguma das áreas pedidas. */
+    matched_count: number;
+    /** Havia uma simulação para levar? */
+    carries_result: boolean;
+  };
+  accountant_match_click: {
+    tool_id: string;
+    /** A posição publicada do cartão seguido. Empates partilham o número. */
+    rank: number;
+    carries_result: boolean;
   };
   lead_consent: { case_type: string; partner_id: string; consent_version: string };
   lead_submitted: { case_type: string; partner_id: string; consent_version: string };
@@ -376,6 +409,16 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   accountant_booking: {
     disparo: "Consulta pedida ou cancelada pelo cliente.",
     serve: "Se a agenda é usada — e quanto do que é marcado se desmarca.",
+    origem: "cliente",
+  },
+  accountant_match_impression: {
+    disparo: "A secção do fim de uma ferramenta resolveu — com cartões, com o contabilista da própria pessoa, ou sem ninguém.",
+    serve: "Se o motor de afinidade encontra mesmo alguém, e em que ferramentas não encontra.",
+    origem: "cliente",
+  },
+  accountant_match_click: {
+    disparo: "Cartão de contabilista seguido a partir do fim de uma ferramenta.",
+    serve: "Se a ordem por áreas converte — e se levar a simulação muda alguma coisa.",
     origem: "cliente",
   },
   lead_consent: {

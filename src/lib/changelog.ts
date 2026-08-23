@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.105.0",
+    data: "2026-08-23",
+    titulo: "No fim de cada simulação, alguém que trabalha com aquilo",
+    itens: [
+      "As dezasseis ferramentas acabavam num número e num vazio. Passam a acabar com um a três contabilistas que trabalham com aquela matéria — o mesmo cartão do diretório, com uma linha a dizer porque é que aparece ali.",
+      "A ordem vem das áreas que cada contabilista escolheu e do que escreveu no perfil por palavras dele. Quem escreveu «nómadas digitais» passa a aparecer em cenários de clientes internacionais mesmo sem ter marcado o filtro — e a página diz que a ordem é essa, e que não há lugares pagos.",
+      "Quem já tem contabilista não vê alternativas: vê o dele, e o caminho para lhe enviar o que acabou de calcular.",
+      "«Levar a minha simulação»: ao seguir um perfil a partir de uma ferramenta, o resultado vai contigo e o contabilista pode continuar de onde estavas. Fica guardado só no teu dispositivo, expira em três dias, e nada segue para ninguém antes de veres os campos exatos e confirmares.",
+      "Os cartões só carregam quando te aproximas deles — nenhuma ferramenta ficou mais lenta por causa disto.",
+    ],
+  },
+  {
     version: "2.104.0",
     data: "2026-08-23",
     titulo: "Segunda mão: o teu cliente deixa de pagar 23% a mais",
