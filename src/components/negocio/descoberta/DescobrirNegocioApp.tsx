@@ -99,7 +99,13 @@ export default function DescobrirNegocioApp() {
         return resposta.json() as Promise<PackOferta>;
       })
       .then((payload) => {
-        setOferta(Array.isArray(payload?.divisoes) && payload.divisoes.length > 0 ? payload : undefined);
+        // Um pack serve se trouxer QUALQUER das duas leituras. A matriz
+        // ao concelho vem de um instantâneo commitado e sobrevive a uma
+        // falha do INE — exigir as duas fazia a leitura ao concelho ser
+        // deitada fora por causa da outra.
+        const temRegioes = Array.isArray(payload?.divisoes) && payload.divisoes.length > 0;
+        const temConcelhos = Array.isArray(payload?.concelhos?.ordem) && payload.concelhos.ordem.length > 0;
+        setOferta(temRegioes || temConcelhos ? payload : undefined);
       })
       .catch(() => setOferta(undefined));
     return () => controlador.abort();

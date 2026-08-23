@@ -103,14 +103,21 @@ export function calcularScores(entrada: EntradaScore): OpportunityScore {
     : procura.intensidade.posicao;
 
   // ── Lacuna ────────────────────────────────────────────────────────
+  //  «Na média» era dito `desconhecida` e saía do denominador como se
+  //  não soubéssemos nada. Sabemos: sabemos que a densidade desta zona
+  //  está no meio do país, e isso é informação — nem espaço por ocupar,
+  //  nem mercado cheio. Vale mais do que um mercado servido e menos do
+  //  que uma lacuna a sério.
   const scoreLacuna =
     procura.leitura === "desconhecida"
       ? null
       : procura.leitura === "procura-com-pouca-oferta"
         ? 90
-        : procura.leitura === "procura-com-muita-oferta"
-          ? 45
-          : 15;
+        : procura.leitura === "oferta-na-media"
+          ? 60
+          : procura.leitura === "procura-com-muita-oferta"
+            ? 45
+            : 15;
 
   // ── Economia ──────────────────────────────────────────────────────
   //  A FRAÇÃO do intervalo que o teto cobre, nunca o teste binário. Um

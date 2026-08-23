@@ -79,6 +79,7 @@ import type {
   TipoExperiencia,
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
+import { concelhosDaRegiao } from "@/lib/negocio/market/concelhos";
 import { ROTULO_RISCO } from "@/lib/negocio/descoberta/motor/risco";
 import {
   ArrowRight,
@@ -191,6 +192,10 @@ export default function Configurador({
   const idsDeclarados = useMemo(
     () => new Set(contexto.competencias.map((item) => item.id)),
     [contexto.competencias],
+  );
+  const concelhosDisponiveis = useMemo(
+    () => concelhosDaRegiao(contexto.localizacao.regiao),
+    [contexto.localizacao.regiao],
   );
 
   const alterar = (parcial: Partial<OpportunityContext>) => onChange({ ...contexto, ...parcial });
@@ -480,7 +485,14 @@ export default function Configurador({
                 value={contexto.localizacao.regiao}
                 onChange={(evento) =>
                   alterar({
-                    localizacao: { ...contexto.localizacao, regiao: evento.target.value as MarketRegion },
+                    localizacao: {
+                      ...contexto.localizacao,
+                      regiao: evento.target.value as MarketRegion,
+                      // Mudar de região invalida o concelho: manter um
+                      // concelho de outra região faria a leitura de
+                      // oferta descrever um território que não é o dela.
+                      concelho: undefined,
+                    },
                   })
                 }
                 className="h-10 w-full rounded-xl border border-stone-200 bg-white px-2.5 text-xs font-semibold text-ink focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
@@ -494,6 +506,46 @@ export default function Configurador({
               <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
                 Decide que leituras oficiais são da tua zona e quais entram como contexto nacional.
               </p>
+
+              {/* ── O concelho, quando a região já foi escolhida ──────
+                  «Que negócio abrir» varia ao concelho: nos dados que o
+                  motor lê, Lisboa tem 8,3 empresas de limpeza por dez mil
+                  habitantes e Mafra 23,8 — a mesma célula em NUTS II. A
+                  lista é fechada e a escolha nunca sai do dispositivo. */}
+              {concelhosDisponiveis.length > 0 ? (
+                <div className="mt-3">
+                  <label
+                    htmlFor="ode-concelho"
+                    className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-500"
+                  >
+                    Concelho <span className="font-normal normal-case tracking-normal">(opcional)</span>
+                  </label>
+                  <select
+                    id="ode-concelho"
+                    value={contexto.localizacao.concelho ?? ""}
+                    onChange={(evento) =>
+                      alterar({
+                        localizacao: {
+                          ...contexto.localizacao,
+                          concelho: evento.target.value || undefined,
+                        },
+                      })
+                    }
+                    className="h-10 w-full rounded-xl border border-stone-200 bg-white px-2.5 text-xs font-semibold text-ink focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100"
+                  >
+                    <option value="">Toda a região</option>
+                    {concelhosDisponiveis.map((item) => (
+                      <option key={item.codigo} value={item.codigo}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
+                    A contagem de concorrentes passa a comparar-se entre os 308 concelhos em vez das nove
+                    regiões. Continua a não ser morada — é uma escolha de uma lista, e não sai daqui.
+                  </p>
+                </div>
+              ) : null}
             </div>
             <Campo rotulo="Alcance">
               <div className="flex flex-wrap gap-1.5">

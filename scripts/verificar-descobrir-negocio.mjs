@@ -170,7 +170,22 @@ try {
       pagina.on("pageerror", (e) => errosJS.push(String(e)));
 
       // ═══ 1. FASE A — configurar antes de ver resultados ═════════
-      await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "networkidle" });
+      //  ┌────────────────────────────────────────────────────────────┐
+      //  │ NÃO `networkidle`, E A RAZÃO É DO PRODUTO                   │
+      //  │                                                            │
+      //  │ Esta página pede dois packs públicos ao abrir, e trata os   │
+      //  │ dois como OPCIONAIS por desenho: se o INE não responder, o  │
+      //  │ motor corre na mesma e cada dossier diz que não tem leitura │
+      //  │ ligada. Esperar por `networkidle` amarrava a verificação à  │
+      //  │ latência de um terceiro que o produto decidiu não precisar  │
+      //  │ — e amarrou mesmo: o CI expirou aos 30 s à espera da rota   │
+      //  │ da oferta enquanto ela gastava o orçamento de tentativas.   │
+      //  │                                                            │
+      //  │ O que interessa verificar é a página ficar USÁVEL, e isso é │
+      //  │ o `waitFor` da linha seguinte. É um acoplamento mais forte  │
+      //  │ ao que importa e mais fraco ao que não importa.             │
+      //  └────────────────────────────────────────────────────────────┘
+      await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
       await fecharOverlays(pagina);
       await pagina.locator("#contexto-descoberta").waitFor({ timeout: 20000 });
 
@@ -260,27 +275,57 @@ try {
       verificar("explica porque apareceu para esta pessoa", /Porque apareceu para ti/.test(texto));
       verificar("mostra capital e prazo em intervalo", /Investimento inicial/.test(texto));
       // ── A regra: nenhum número chega ao ecrã sem proveniência ──────
-      //  Esta verificação já foi `/Estimativa/ || /Dado observado/` no
-      //  primeiro cartão, e era frágil por uma razão que só se percebeu
-      //  quando falhou: uma hipótese sem evidência ligada e com capital
-      //  não estimável mostra «não estimável com o que sabemos» e nenhum
-      //  dos dois rótulos — o que está CERTO. A verificação dependia de
-      //  qual hipótese calhava em primeiro, e ficava vermelha quando o
-      //  pack de mercado não respondia.
+      //  Esta verificação já foi `/Estimativa/ || /Dado observado/` sobre
+      //  o texto do cartão, e falhou duas vezes por duas razões
+      //  diferentes — ambas de acoplamento ao texto, nenhuma do produto:
       //
-      //  Passa a verificar o que o produto promete mesmo, em duas metades
-      //  que juntas são mais exigentes do que a original: o cartão nunca
-      //  mostra um valor sem dizer de onde vem, e a marcação existe de
-      //  facto em algum lado dos resultados.
+      //   1. Uma hipótese sem evidência ligada e com capital não
+      //      estimável mostra «não estimável com o que sabemos» e nenhum
+      //      dos rótulos, o que está CERTO. A verificação dependia de
+      //      qual hipótese calhava em primeiro.
+      //   2. `innerText` devolve o texto JÁ transformado por CSS, e o
+      //      rótulo que acompanha cada número é `uppercase`: sai
+      //      «ESTIMATIVA». A comparação sensível à caixa só passava pela
+      //      linha da evidência, a única em caixa normal — ou seja, só
+      //      quando o pack de mercado respondia.
+      //
+      //  Ignorar a caixa resolvia (2) e destruía a verificação: `/hipótese/i`
+      //  acerta em «31 → 27 hipóteses» e em «Nenhuma hipótese nova», e o
+      //  teste passava a passar sempre, dissesse o produto o que dissesse.
+      //
+      //  Passa a ler o DOM. Cada número traz `data-numero`, e a origem
+      //  viaja em `data-proveniencia` — em dados, não em prosa. A regra
+      //  fica afirmada como o produto a promete: TODOS os números do
+      //  cartão dizem de onde vêm, ou declaram-se não estimáveis.
+      const blocosDeNumero = await cartao.evaluate((raiz) =>
+        Array.from(raiz.querySelectorAll("[data-numero]")).map((no) => ({
+          rotulo: no.getAttribute("data-numero") ?? "",
+          origem: no.querySelector("[data-proveniencia]")?.getAttribute("data-proveniencia") ?? null,
+          ausente: no.querySelector("[data-numero-ausente]") !== null,
+        })),
+      );
+      // Sem este guarda a verificação seguinte passaria com zero números
+      // no ecrã — que é exatamente o modo de falhar que interessa apanhar.
+      verificar(
+        "o dossier traz mesmo os números de capital e prazo",
+        blocosDeNumero.length >= 3,
+        `${blocosDeNumero.length} blocos`,
+      );
+      const mudos = blocosDeNumero.filter((bloco) => bloco.origem === null && !bloco.ausente);
       verificar(
         "o cartão nunca mostra um número sem dizer de onde vem",
-        /Dado observado|Estimativa|Cálculo|Hipótese/.test(texto) ||
-          /não estimável com o que sabemos/.test(texto),
+        blocosDeNumero.length > 0 && mudos.length === 0,
+        mudos.length > 0 ? `sem origem: ${mudos.map((bloco) => bloco.rotulo).join(", ")}` : "",
       );
-      const textoDosResultados = await pagina.locator("#ferramenta").innerText();
+
+      const ORIGENS = ["observado", "estimativa", "calculo", "hipotese"];
+      const marcas = await pagina.$$eval("#ferramenta [data-proveniencia]", (nos) =>
+        nos.map((no) => no.getAttribute("data-proveniencia")),
+      );
       verificar(
         "marca o que é estimativa e o que é observação",
-        /Dado observado|Estimativa|Cálculo|Hipótese/.test(textoDosResultados),
+        marcas.length > 0 && marcas.every((origem) => ORIGENS.includes(origem)),
+        `${marcas.length} marcas: ${[...new Set(marcas)].join(", ")}`,
       );
       verificar("nunca lê ausência de concorrentes como oportunidade", !/pouca oferta/i.test(texto) || /por apurar/i.test(texto));
       verificar("traz plano de validação com critério", /Validar esta oportunidade/.test(texto) && /Feito quando:/.test(texto));
