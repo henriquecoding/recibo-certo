@@ -21,6 +21,12 @@ import {
 } from "@/lib/negocio/descoberta/conhecimento/dados/ontologia";
 import { DIVISOES_CAE } from "@/lib/negocio/descoberta/conhecimento/dados/divisoes-cae";
 import { CAPACIDADES } from "@/lib/negocio/descoberta/conhecimento/dados/capacidades";
+import { COMPETENCIAS } from "@/lib/negocio/descoberta/conhecimento/dados/competencias";
+import { CONTEXTO_INICIAL } from "@/lib/negocio/descoberta/contexto/tipos";
+import { ATIVOS } from "@/lib/negocio/descoberta/contexto/perguntas";
+import { descobrir } from "@/lib/negocio/descoberta/motor/pipeline";
+import { MARKET_REGIONS } from "@/lib/negocio/market/geografia";
+import { MATRIZ_CONCELHOS } from "@/lib/negocio/market/oferta-concelhos";
 
 describe("ontologia: nenhuma divisão CAE inventada", () => {
   it("todas as divisões usadas existem na nomenclatura do INE", () => {
@@ -98,5 +104,107 @@ describe("ontologia: as ausências são deliberadas e visíveis", () => {
   it("`DIVISOES_USADAS` é a união exata do que os conceitos declaram", () => {
     const esperado = [...new Set(CONCEITOS_OPERADOR.flatMap((item) => item.cae))].sort();
     expect([...DIVISOES_USADAS]).toEqual(esperado);
+  });
+});
+
+// ══════════════════════════════════════════════════════════════════════
+//  NENHUMA COMPETÊNCIA É UM BOTÃO MORTO
+//  --------------------------------------------------------------------
+//  A lista passou de 22 para 28 competências. O risco de crescer uma
+//  taxonomia é oferecer escolhas que não levam a lado nenhum — e o modo
+//  de falhar é silencioso: a pessoa declara o que sabe fazer e recebe um
+//  ecrã vazio.
+//
+//  ⚠️ A MEDIÇÃO TEM DE VARRER AS REGIÕES. Foi o erro que se cometeu a
+//  escrever isto: medindo só em Grande Lisboa, a agricultura e a
+//  jardinagem pareciam becos. Não eram — `terreno-por-manter` declara
+//  `regioes: alentejo, centro, norte, algarve` e exclui Lisboa de
+//  propósito, porque terreno de proprietário ausente é um problema do
+//  interior. O motor estava certo e a medição é que estava errada.
+// ══════════════════════════════════════════════════════════════════════
+
+describe("ontologia · toda a competência leva a alguma parte", () => {
+  const TODOS_OS_ATIVOS = ATIVOS.map((item) => item.id);
+  const REGIOES = MARKET_REGIONS.filter((item) => item.nutsCode !== null).map((item) => item.id);
+
+  /**
+   * Competências que NÃO sustentam um negócio sozinhas — e é verdade,
+   * não é lacuna. O motor tem um diagnóstico próprio para isto
+   * (`competencia-de-apoio`) e explica-o a quem lá chegar.
+   */
+  const DE_APOIO = new Set(["linguas"]);
+
+  const melhorCorrida = (id: string) => {
+    let melhor = 0;
+    for (const regiao of REGIOES) {
+      const resultado = descobrir(
+        {
+          ...CONTEXTO_INICIAL,
+          localizacao: { regiao, alcance: "regiao" },
+          competencias: [{ id, nivel: "avancado" }],
+          ativos: TODOS_OS_ATIVOS,
+          capital: { disponivelAgora: 20_000 },
+          tempo: { dedicacao: "integral" },
+          rendimento: { ambicao: "substituir-salario" },
+          equipa: { forma: "sozinho" },
+          risco: { perfil: "arrojado" },
+        },
+        { agora: () => "2026-08-23T00:00:00.000Z", limite: 12 },
+      );
+      melhor = Math.max(melhor, resultado.candidatos.length);
+    }
+    return melhor;
+  };
+
+  for (const competencia of COMPETENCIAS) {
+    if (DE_APOIO.has(competencia.id)) continue;
+    it(`${competencia.id} gera hipóteses em pelo menos uma região`, () => {
+      expect(melhorCorrida(competencia.id)).toBeGreaterThan(0);
+    });
+  }
+
+  it("uma competência de apoio sai vazia mas COM diagnóstico", () => {
+    // Vazio sem explicação é um ecrã partido; vazio explicado é uma
+    // resposta. A diferença é tudo o que a pessoa tem para agir.
+    const resultado = descobrir(
+      {
+        ...CONTEXTO_INICIAL,
+        localizacao: { regiao: "norte", alcance: "regiao" },
+        competencias: [{ id: "linguas", nivel: "avancado" }],
+        ativos: TODOS_OS_ATIVOS,
+      },
+      { agora: () => "2026-08-23T00:00:00.000Z", limite: 12 },
+    );
+    expect(resultado.candidatos).toHaveLength(0);
+    expect(resultado.diagnosticoVazio).not.toBeNull();
+  });
+
+  it("cada competência nova tem conceito de CAE com ressalva declarada", () => {
+    // Todas as divisões novas são largas. Uma divisão larga sem ressalva
+    // é uma leitura que parece precisa e não é — e `precisao` deixou de
+    // ser decorativa: limita a confiança a média.
+    for (const id of ["jardinagem", "estetica", "treino", "costura", "fotografia", "marketing"]) {
+      const capacidade = CAPACIDADES.find(
+        (item) => item.competenciasNecessarias.includes(id),
+      );
+      expect(capacidade, id).toBeDefined();
+      const conceito = CONCEITO_POR_CAPACIDADE.get(capacidade!.id);
+      expect(conceito, capacidade!.id).toBeDefined();
+      expect(conceito!.cae.length, capacidade!.id).toBeGreaterThan(0);
+      if (conceito!.precisao === "larga") {
+        expect(conceito!.ressalva, capacidade!.id).toBeTruthy();
+      }
+    }
+  });
+
+  it("as divisões que a ontologia usa estão todas na matriz commitada", () => {
+    // Uma divisão declarada e ausente da matriz é uma leitura de
+    // concorrência que nunca acontece, em silêncio. Foi por isto que a
+    // matriz teve de ser regenerada ao acrescentar 14, 74 e 93.
+    expect(MATRIZ_CONCELHOS).not.toBeNull();
+    const naMatriz = new Set(Object.keys(MATRIZ_CONCELHOS!.porDivisao));
+    for (const divisao of DIVISOES_USADAS) {
+      expect(naMatriz.has(divisao), `divisão ${divisao} não está na matriz`).toBe(true);
+    }
   });
 });

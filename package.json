@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.110.0",
+  "version": "2.112.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -74,7 +74,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "versao:check": "node scripts/check-versao.mjs",
-    "versao:fix": "node scripts/check-versao.mjs --fix"
+    "versao:fix": "node scripts/check-versao.mjs --fix",
+    "concelhos:geo": "node scripts/gen-concelhos-geo.mjs",
+    "concelhos:geo:check": "node scripts/gen-concelhos-geo.mjs --check"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

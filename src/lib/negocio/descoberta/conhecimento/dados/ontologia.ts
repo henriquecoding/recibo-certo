@@ -212,6 +212,56 @@ export const CONCEITOS_OPERADOR: readonly ConceitoOperador[] = Object.freeze([
   { capacidadeId: "operar-no-local", cae: [], precisao: "larga" },
   { capacidadeId: "gerir-operacao", cae: [], precisao: "larga" },
   { capacidadeId: "atender-balcao", cae: [], precisao: "larga" },
+
+  // ── OS CONCEITOS DAS CAPACIDADES NOVAS ──────────────────────────────
+  //  Divisões confirmadas contra o próprio indicador do INE (0014449, que
+  //  publica 99 divisões) e não de memória. Todas `larga`, e as ressalvas
+  //  dizem porquê — é o que limita a confiança a média, desde que
+  //  `precisao` deixou de ser decorativa.
+  {
+    capacidadeId: "tratar-espacos-verdes",
+    cae: ["81"],
+    precisao: "larga",
+    // A mesma divisão da limpeza, e é esse o ponto: o INE não as separa.
+    // Contar jardineiros aqui conta também limpeza de edifícios.
+    ressalva:
+      "A divisão 81 junta plantação e manutenção de jardins com limpeza de edifícios — a contagem inclui as duas.",
+  },
+  {
+    capacidadeId: "cuidar-da-imagem",
+    cae: ["96"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 96 são «outras atividades de serviços pessoais»: além de cabeleireiro e estética, inclui lavandarias e agências funerárias.",
+  },
+  {
+    capacidadeId: "orientar-treino",
+    cae: ["93"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 93 abrange atividades desportivas, de diversão e recreativas — de ginásios a parques de diversões.",
+  },
+  {
+    capacidadeId: "arranjar-texteis",
+    cae: ["14"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 14 é a indústria do vestuário inteira: a confeção domina a contagem e os arranjos são uma fração dela.",
+  },
+  {
+    capacidadeId: "registar-em-imagem",
+    cae: ["74"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 74 junta fotografia com design, tradução e outras consultorias técnicas.",
+  },
+  {
+    capacidadeId: "atrair-clientes",
+    cae: ["73"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 73 é publicidade e estudos de mercado, e inclui agências de qualquer dimensão.",
+  },
 ]);
 
 export const CONCEITO_POR_CAPACIDADE = new Map(

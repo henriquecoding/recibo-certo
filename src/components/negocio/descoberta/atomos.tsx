@@ -161,6 +161,82 @@ export function BarraDeIntervalo({
   );
 }
 
+/**
+ * O que uma resposta muda — dito com o número que o motor mediu.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO EXISTE                                                  │
+ * │                                                                    │
+ * │ «Onde vais operar» tinha cinco controlos e nenhum dizia o que      │
+ * │ fazia. O motor respondia a todos — mas respondia mudando a         │
+ * │ pontuação e a forma de entrega, não os títulos da lista. Quem      │
+ * │ olhava concluía, com razão, que os botões não faziam nada.         │
+ * │                                                                    │
+ * │ A frase vem de `impactoDaLocalizacao`, que corre o pipeline a      │
+ * │ sério com a resposta posta e com ela tirada. Não há aqui uma       │
+ * │ única frase escrita à mão sobre o que «costuma» mudar: o que se    │
+ * │ promete é o que a análise vai mesmo fazer.                          │
+ * └────────────────────────────────────────────────────────────────────┘
+ */
+export function EfeitoMedido({
+  peso,
+  respondido,
+  condicao = null,
+  children,
+}: {
+  peso: "decisivo" | "importante" | "ajuste" | "sem-efeito";
+  respondido: boolean;
+  /**
+   * O que faria esta resposta passar a contar, quando ela não conta.
+   *
+   * ┌────────────────────────────────────────────────────────────────┐
+   * │ «Onde vai operar diz que nada do que configurar importa, e     │
+   * │ isso é falho.»                                                  │
+   * │                                                                │
+   * │ Três dos cinco campos apareciam com «não muda nada» — e era    │
+   * │ verdade, porque o motor não os lia. Corrigido o motor, sobra o │
+   * │ caso legítimo: um campo que não conta NESTA combinação. Aí a   │
+   * │ frase útil não é «não muda»; é «muda se…». Sem esta segunda    │
+   * │ linha, o painel continuava a parecer uma ferramenta a declarar │
+   * │ inúteis as suas próprias perguntas.                             │
+   * └────────────────────────────────────────────────────────────────┘
+   */
+  condicao?: string | null;
+  children: ReactNode;
+}) {
+  // Um campo sem efeito nenhum é informação útil — poupa uma decisão que
+  // não paga — mas não merece destaque nenhum.
+  const tom = !respondido && peso === "decisivo" ? "destaque" : "discreto";
+  return (
+    <div className="mt-1.5">
+      <p
+        data-peso={peso}
+        className={`flex items-start gap-1.5 text-[11px] leading-snug ${
+          tom === "destaque"
+            ? "rounded-xl bg-brand-light/60 px-2.5 py-1.5 text-brand-deep dark:bg-brand/10 dark:text-brand-mint"
+            : "text-stone-500"
+        }`}
+      >
+        {tom === "destaque" ? (
+          <span aria-hidden="true" className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-brand" />
+        ) : null}
+        <span className="min-w-0">{children}</span>
+      </p>
+      {condicao ? (
+        <p
+          data-condicao
+          className="mt-1 flex items-start gap-1.5 rounded-xl border border-stone-100 bg-cream/60 px-2.5 py-1.5 text-[11px] leading-snug text-stone-600 dark:border-stone-800 dark:bg-stone-950/40 dark:text-stone-300"
+        >
+          <span aria-hidden="true" className="mt-0.5 flex-none font-semibold text-brand">
+            →
+          </span>
+          <span className="min-w-0">{condicao}</span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 /** Uma linha de barra para uma dimensão do score. `null` = não avaliada. */
 export function LinhaDimensao({
   rotulo,

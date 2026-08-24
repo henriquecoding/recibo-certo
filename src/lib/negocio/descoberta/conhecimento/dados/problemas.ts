@@ -198,8 +198,24 @@ export const PROBLEMAS: readonly Problema[] = Object.freeze([
     baseDeClientes: { tipo: "empresas", cae: ["47"] },
     mercado: "b2b",
     gatilhos: ["digitalizacao", "crescimento"],
-    capacidades: ["montar-ferramentas-digitais", "produzir-conteudo", "organizar-processos", "atender-balcao"],
-    capacidadesEssenciais: ["montar-ferramentas-digitais", "produzir-conteudo", "atender-balcao"],
+    // Fotografia e marketing atacam este problema por vias diferentes e
+    // ambas reais: sem imagem que venda não há loja online que converta,
+    // e sem quem ponha o negócio a aparecer não há quem chegue à loja.
+    capacidades: [
+      "montar-ferramentas-digitais",
+      "produzir-conteudo",
+      "organizar-processos",
+      "atender-balcao",
+      "registar-em-imagem",
+      "atrair-clientes",
+    ],
+    capacidadesEssenciais: [
+      "montar-ferramentas-digitais",
+      "produzir-conteudo",
+      "atender-balcao",
+      "registar-em-imagem",
+      "atrair-clientes",
+    ],
     modelos: ["loja-online", "projeto", "avenca"],
     naturezas: ["servico", "comercio"],
     regioes: TODO_O_PAIS,
@@ -892,8 +908,16 @@ export const PROBLEMAS: readonly Problema[] = Object.freeze([
     baseDeClientes: { tipo: "residentes" },
     mercado: "b2c",
     gatilhos: ["obrigacao-legal", "manutencao", "envelhecimento"],
-    capacidades: ["trabalhar-terreno", "transporte-carga"],
-    capacidadesEssenciais: ["trabalhar-terreno"],
+    // `tratar-espacos-verdes` entra aqui porque é literalmente isto: o
+    // terreno por manter é o trabalho de quem trata de espaços verdes.
+    // Antes só lá chegava quem declarasse agricultura — e a agricultura
+    // era, medida, a única competência necessária que não gerava
+    // hipótese nenhuma sozinha.
+    capacidades: ["trabalhar-terreno", "transporte-carga", "tratar-espacos-verdes"],
+    // Manter jardins É a resposta a este problema, tanto como trabalhar
+    // o terreno — e as essenciais são um OU. Sem estar aqui, quem
+    // declarasse só jardinagem não chegava a este problema de todo.
+    capacidadesEssenciais: ["trabalhar-terreno", "tratar-espacos-verdes"],
     modelos: ["contrato-anual", "projeto", "avenca"],
     naturezas: ["servico"],
     regioes: ["alentejo", "centro", "norte", "algarve"],
@@ -913,6 +937,117 @@ export const PROBLEMAS: readonly Problema[] = Object.freeze([
     testeDeFalsificacao: "Parar se os proprietários só contratarem quando recebem aviso da câmara — a procura passa a ser um pico anual, e um pico não sustenta um negócio.",
     procuraObservavel: false,
   },
+
+  // ── TRÊS PROBLEMAS PARA AS CAPACIDADES QUE NÃO TINHAM ONDE ENTRAR ───
+  //  As outras três capacidades novas encaixaram em problemas que já
+  //  existiam. Estas não: não havia no grafo nada que descrevesse quem
+  //  precisa delas. Escrever o problema é o trabalho — a capacidade sem
+  //  problema não é alcançável, e o grafo recusa-a no build.
+  {
+    id: "imagem-sem-saida-de-casa",
+    enunciado: "Quem já não sai de casa com facilidade deixa de tratar do cabelo e das unhas.",
+    porqueDoi:
+      "Não é vaidade: é a última rotina que dá a alguém a sensação de continuar a ser quem era. As famílias sabem-no e não têm a quem pedir — os salões não se deslocam e as poucas pessoas que o fazem trabalham de boca em boca.",
+    setor: "pessoas",
+    clientes: ["Pessoas com mobilidade reduzida", "Famílias de quem vive só", "Lares e residências pequenas"],
+    baseDeClientes: { tipo: "residentes" },
+    publicos: ["idosos", "familias"],
+    mercado: "b2c",
+    gatilhos: ["envelhecimento", "escassez-de-tempo"],
+    capacidades: ["cuidar-da-imagem", "acompanhar-pessoas", "rota-recolha-entrega"],
+    capacidadesEssenciais: ["cuidar-da-imagem"],
+    modelos: ["hora", "avenca"],
+    naturezas: ["servico"],
+    regioes: TODO_O_PAIS,
+    territoriosIntensos: TODOS_OS_TERRITORIOS,
+    ocorrenciasForaDeHoras: false,
+    procuraFimDeSemana: false,
+    // O índice de envelhecimento mede quem tem o problema, não o
+    // problema. É contexto forte e não é medição — daí
+    // `procuraObservavel: false` logo abaixo, e o motor não pontua
+    // procura a partir disto.
+    sinais: ["senior-ageing-index"],
+    regulacoes: ["seguro-responsabilidade"],
+    recorrenciaNatural: "recorrente",
+    sazonalidade: 0,
+    riscosProprios: ["dependencia-clientes"],
+    comoValidar: [
+      "Falar com dez famílias que já pagam ajuda ao domicílio e perguntar quem trata do cabelo hoje.",
+      "Propor uma volta fixa de um dia por semana e ver quantas marcações se repetem ao segundo mês.",
+      "Perguntar a três lares pequenos quanto pagam hoje a quem lá vai, e com que frequência.",
+    ],
+    testeDeFalsificacao:
+      "Rejeitar se as famílias já resolverem isto dentro de casa sem custo, ou se o preço que aceitam pagar não cobrir a deslocação entre duas casas na mesma manhã.",
+    procuraObservavel: false,
+  },
+  {
+    id: "corpo-parado-sem-acompanhamento",
+    enunciado: "Adultos que passaram anos parados não começam a mexer-se sozinhos, e o ginásio não os retém.",
+    porqueDoi:
+      "Quem chega sem hábito desiste nas primeiras semanas, e volta a pagar mensalidade no ano seguinte para desistir outra vez. O que falta não é equipamento: é alguém que ajuste a carga a um corpo que dói.",
+    setor: "pessoas",
+    clientes: ["Adultos sedentários", "Pessoas em recuperação de lesão orientada por médico", "Grupos pequenos de vizinhos"],
+    baseDeClientes: { tipo: "residentes" },
+    publicos: ["familias", "idosos"],
+    mercado: "b2c",
+    gatilhos: ["envelhecimento", "escassez-de-tempo"],
+    capacidades: ["orientar-treino", "acompanhar-pessoas", "ensinar-e-treinar"],
+    capacidadesEssenciais: ["orientar-treino"],
+    modelos: ["hora", "avenca", "contrato-anual"],
+    naturezas: ["servico"],
+    regioes: TODO_O_PAIS,
+    territoriosIntensos: TODOS_OS_TERRITORIOS,
+    ocorrenciasForaDeHoras: true,
+    procuraFimDeSemana: true,
+    sinais: [],
+    // A barreira que decide se isto é um negócio de semanas ou de meses.
+    regulacoes: ["titulo-exercicio-fisico", "seguro-responsabilidade"],
+    recorrenciaNatural: "recorrente",
+    sazonalidade: 1,
+    riscosProprios: ["dependencia-clientes", "volatilidade"],
+    comoValidar: [
+      "Encontrar dez pessoas que se inscreveram num ginásio no último ano e já não vão, e perguntar em que semana pararam.",
+      "Correr quatro sessões pagas com três pessoas e medir quantas aparecem à quinta.",
+      "Confirmar no IPDJ se o formato que queres vender exige título profissional antes de aceitares o primeiro cliente.",
+    ],
+    testeDeFalsificacao:
+      "Rejeitar se as pessoas que pararam disserem que o problema era o preço e não o acompanhamento, ou se menos de metade voltar à quinta sessão.",
+    procuraObservavel: false,
+  },
+  {
+    id: "roupa-que-se-deita-fora",
+    enunciado: "Roupa boa é deitada fora por causa de um fecho, uma bainha ou dois centímetros a mais.",
+    porqueDoi:
+      "A peça custou dinheiro e continua boa; o arranjo custaria uma fração e não há onde o fazer sem atravessar a cidade. As costureiras de bairro fecharam e as marcas só arranjam o que venderam.",
+    setor: "casa",
+    clientes: ["Famílias", "Pessoas que compram em segunda mão", "Lojas de roupa sem serviço de arranjos"],
+    baseDeClientes: { tipo: "residentes" },
+    publicos: ["familias", "idosos"],
+    mercado: "b2c",
+    gatilhos: ["escassez-de-tempo"],
+    capacidades: ["arranjar-texteis", "rota-recolha-entrega"],
+    capacidadesEssenciais: ["arranjar-texteis"],
+    modelos: ["hora", "loja-online"],
+    naturezas: ["servico"],
+    regioes: TODO_O_PAIS,
+    territoriosIntensos: TODOS_OS_TERRITORIOS,
+    ocorrenciasForaDeHoras: false,
+    procuraFimDeSemana: false,
+    sinais: [],
+    regulacoes: ["seguro-responsabilidade"],
+    recorrenciaNatural: "pontual",
+    sazonalidade: 1,
+    riscosProprios: ["volatilidade"],
+    comoValidar: [
+      "Perguntar a vinte pessoas quantas peças têm em casa à espera de arranjo, e há quanto tempo.",
+      "Recolher e devolver dez peças reais numa semana, cobrando, e medir o tempo por peça.",
+      "Falar com três lojas de roupa do concelho sobre encaminharem arranjos, e a que preço.",
+    ],
+    testeDeFalsificacao:
+      "Rejeitar se o tempo médio por peça não deixar margem ao preço que as pessoas aceitam, ou se a maioria disser que prefere comprar nova a arranjar.",
+    procuraObservavel: false,
+  },
+
 ] as const);
 
 export const PROBLEMA_POR_ID = new Map(PROBLEMAS.map((item) => [item.id, item]));

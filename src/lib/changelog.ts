@@ -16,8 +16,8 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.110.0",
-    data: "2026-08-23",
+    version: "2.112.0",
+    data: "2026-08-24",
     titulo: "A navegação passou a contar uma história, e passou a ser a mesma nos dois ecrãs",
     itens: [
       "Havia duas navegações e não concordavam uma com a outra. No computador a barra dizia «Simular · Guias · Quiz · Planos · Contabilistas»; no telemóvel dizia «Início · Guias · Quiz · Contabilistas · Conta». Duas listas, dois ficheiros, e nada que as obrigasse a bater certo — ou seja, duas respostas diferentes a «onde posso ir?», conforme o ecrã. Passa a haver uma lista só, e um teste que reprova a alteração quando uma das superfícies deixar de a refletir.",
@@ -34,6 +34,40 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "A navegação ganhou o mesmo desenho dos controlos do resto do produto: uma bandeja recuada com o sítio onde estás em relevo, e réguas finas a separar os cinco. Continua a ler-se em preto e branco e sem sombras — a pastilha acesa levanta-se do fundo, não é só de outra cor.",
       "Correção que só se via a olhar: a folha do menu ficava meio ecrã à direita no computador, com a última coluna cortada. A animação de entrada estava a desfazer a centragem.",
       "Correção na página inicial: em «Por conta de outrem» e «Abrir empresa» mostravam-se menos ferramentas do que nos outros dois perfis, e a secção saltava de altura ao trocar de perfil.",
+    version: "2.111.1",
+    data: "2026-08-24",
+    titulo: "O mapa deixa de passar por cima do cabeçalho",
+    itens: [
+      "Ao percorrer a página com o mapa de «onde vais operar» aberto, a caixa de pesquisa do mapa passava por cima da barra de topo e tapava o logótipo. Corrigido: o mapa passa a viver na sua própria camada, por baixo da barra, onde tem de estar.",
+      "Fica preso por um teste que mede o problema em vez de o descrever: varre a linha da barra ponto a ponto e falha se algum deles pertencer ao mapa. Antes da correção eram 28 pontos tapados; agora são zero.",
+    ],
+  },
+  {
+    version: "2.111.0",
+    data: "2026-08-23",
+    titulo: "Onde vais operar passa a ser um mapa — e o motor passa a lê-lo",
+    itens: [
+      "Fomos medir o que cada controlo de «onde vais operar» fazia, e a resposta foi dura: «o meu concelho», «a minha região» e «todo o país» davam exatamente o mesmo resultado, e dos quatro raios só 10 km fazia diferença, e só em território rural. Três valores em quatro, em dois controlos, não mudavam nada. A ferramenta dizia-o com todas as letras porque era verdade.",
+      "A causa não era a interface: o motor não tinha geografia nenhuma. Sabia a que região pertence cada concelho e não sabia onde ele fica — e sem isso um raio de 25 km não pode significar coisa nenhuma. Passou a ter: a sede dos 308 concelhos, cada uma confirmada por duas leituras independentes do OpenStreetMap antes de entrar.",
+      "Agora o alcance decide mesmo o território analisado, e o raio desenha um círculo real. A partir de Idanha-a-Nova, o concelho tem 8 360 residentes; a 40 km moram 98 673, em quatro concelhos; a 80 km, 321 326, em vinte e um. É sobre esse território que a densidade de concorrentes passa a ser contada — e é por isso que a resposta muda a análise.",
+      "O concelho deixou de ser uma lista de 308 nomes e passou a ser um mapa. Tocas onde vais trabalhar, procuras a localidade ou o código postal, ou usas o GPS. O círculo do raio aparece desenhado, com os concelhos que apanha marcados um a um. A lista continua lá dentro, para o teclado e para quando o mapa não carrega.",
+      "Quando um campo não muda nada no teu caso, deixa de dizer só isso: diz o que o faria contar. Se declaraste «a minha região», o concelho não decide a leitura — e a ferramenta explica que passa a decidir se escolheres «o meu concelho» ou um raio a partir dele.",
+      "«Explorar mercado» era uma muralha de vinte e quatro fichas abertas ao mesmo tempo. Passa a ter procura sem acentos, filtros por setor, capital e forma de entrega, contagem por grupo e as fichas dobradas — com tudo o que lá estava a continuar no HTML, para quem navega sem JavaScript e para os motores de busca.",
+      "O teu concelho continua a não sair do dispositivo. O ponto do GPS é convertido em concelho no teu browser, contra a lista que já lá está, e não é guardado nem enviado para lado nenhum.",
+    ],
+  },
+  {
+    version: "2.110.0",
+    data: "2026-08-23",
+    titulo: "Cada resposta passa a dizer o que muda — com o número medido na hora",
+    itens: [
+      "«Onde vais operar» parecia não fazer nada. Fomos medir, e a verdade é mais estranha: fazia tudo, e não dizia nada. Fixar a zona liga a leitura de procura em quatro hipóteses; escolher o concelho liga a leitura de concorrência; declarar o território muda a pontuação. E o alcance — o mais enganador — troca a forma de entrega de todas as hipóteses, de presencial para híbrido, deixando os mesmos títulos no ecrã.",
+      "Agora cada campo diz o que muda, e o número não é escrito à mão: a ferramenta corre a análise com a resposta posta e com ela tirada, e conta a diferença. Quando um campo não muda nada no teu caso, diz isso também — poupa-te uma decisão que não paga.",
+      "No topo da secção aparece a resposta que mais muda a tua análise. Se a pergunta viver num nível que ainda não abriste, tocar leva-te lá.",
+      "O raio deixou de dizer «deixa vazio se não for relevante» — decisão que ninguém consegue tomar sem saber para que serve. Passa a dizer quando pesa: trabalho presencial em território pouco denso.",
+      "Seis competências novas: jardins e espaços verdes, estética e cuidados de imagem, treino e atividade física, costura e arranjos de roupa, fotografia e vídeo, marketing e presença digital. Duas delas estavam escondidas dentro de outras — a jardinagem dentro da limpeza e a fotografia dentro do design — e separá-las dá leituras mais precisas.",
+      "Cada uma traz consigo o que precisa para ir a algum lado: capacidade própria, atividade económica correspondente e problemas reais que resolve. Verificado uma a uma — nenhuma é um botão que não leva a lado nenhum.",
+      "Quem orienta exercício físico passa a ver o Título Profissional de Técnico de Exercício Físico na análise, com a lei e o IPDJ à vista. É uma barreira de meses, e aparecer só depois de alguém decidir avançar seria tarde.",
     ],
   },
   {
