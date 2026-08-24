@@ -13,7 +13,7 @@
 import type { ReciboMensalResult, VencimentoAnualResult } from "@/lib/fiscal-dependente";
 import type { PayrollDisplayLine } from "@/lib/payroll-simulator-legacy-adapter";
 import type { Proveniencia } from "./referencia";
-import { cent, dataExtenso, eur } from "./dinheiro";
+import { cent, dataExtenso, eur, pctDoc } from "./dinheiro";
 import { dinheiro, numero, texto, vazio, type TabelaCSV } from "./csv";
 import type { ColunaXLSX, FolhaXLSX, LivroXLSX } from "./xlsx";
 import { amplitude, niveisDePrestacao } from "./prestacoes";
@@ -73,6 +73,22 @@ const COLUNAS_ANO = [
   { codigo: "valor_eur", rotulo: "Valor", tipo: "dinheiro" },
 ] as const satisfies readonly ColunaXLSX[];
 
+/**
+ * As taxas efetivas de CADA remuneração paga no mês, em separado.
+ *
+ * O n.º 10 do Despacho 233-A/2026 impõe esta apresentação à entidade pagadora
+ * sempre que o pagamento inclui mais do que uma remuneração. Um relatório que
+ * serve para conferir o recibo tem de mostrar as mesmas taxas que o recibo é
+ * obrigado a mostrar — uma taxa média não é comparável com nenhuma delas.
+ */
+const COLUNAS_TAXAS_EFETIVAS = [
+  { codigo: "remuneracao", rotulo: "Remuneração", tipo: "texto", largura: 26 },
+  { codigo: "base_eur", rotulo: "Base", tipo: "dinheiro" },
+  { codigo: "retencao_eur", rotulo: "Retenção", tipo: "dinheiro" },
+  { codigo: "taxa_efetiva", rotulo: "Taxa efetiva", tipo: "percentagem" },
+  { codigo: "fonte", rotulo: "Base legal", tipo: "texto", largura: 30 },
+] as const satisfies readonly ColunaXLSX[];
+
 const COLUNAS_MEMORIA = [
   { codigo: "rubrica", rotulo: "Rubrica", tipo: "texto", largura: 30 },
   { codigo: "formula", rotulo: "Como se chega ao valor", tipo: "texto", largura: 52 },
@@ -90,6 +106,16 @@ function linhasRubricas(doc: DocumentoVencimento) {
     cent(linha.irsWithheld),
     cent(linha.employeeSocialSecurity),
     cent(linha.netImpact),
+  ]);
+}
+
+function linhasTaxasEfetivas(doc: DocumentoVencimento) {
+  return doc.mes.taxasEfetivasRetencao.map((linha) => [
+    linha.rotulo,
+    cent(linha.base),
+    cent(linha.retencao),
+    linha.taxa,
+    linha.fonte,
   ]);
 }
 
@@ -135,6 +161,20 @@ export function tabelasCSV(doc: DocumentoVencimento): { variante: string; nome: 
             dinheiro(doc.mes.liquido),
           ],
         ],
+      },
+    },
+    {
+      variante: "taxas-efetivas",
+      nome: "Mês — taxa efetiva de cada remuneração",
+      tabela: {
+        colunas: COLUNAS_TAXAS_EFETIVAS.map(({ codigo, rotulo }) => ({ codigo, rotulo })),
+        linhas: doc.mes.taxasEfetivasRetencao.map((linha) => [
+          texto(linha.rotulo),
+          dinheiro(linha.base),
+          dinheiro(linha.retencao),
+          texto(pctDoc(linha.taxa)),
+          texto(linha.fonte),
+        ]),
       },
     },
     {
@@ -189,6 +229,12 @@ export function livroXLSX(doc: DocumentoVencimento): LivroXLSX {
       linhas: linhasRubricas(doc),
       totais: ["bruto_eur", "base_irs_eur", "base_ss_eur", "irs_retido_eur", "ss_trabalhador_eur", "impacto_liquido_eur"],
       nota: "O total é uma fórmula SUBTOTAL: ao filtrar linhas, ele acompanha o filtro em vez de mentir.",
+    },
+    {
+      nome: "Mês — taxa efetiva",
+      colunas: COLUNAS_TAXAS_EFETIVAS,
+      linhas: linhasTaxasEfetivas(doc),
+      nota: "Com mais do que uma remuneração no mesmo pagamento, a entidade tem de apresentar a taxa de cada uma em separado (Despacho 233-A/2026, n.º 10).",
     },
     { nome: "Ano — decomposição", colunas: COLUNAS_ANO, linhas: linhasAno(doc) },
     {
@@ -281,6 +327,13 @@ export function dadosTypst(doc: DocumentoVencimento) {
       liquido: cent(doc.ano.liquidoAnual),
       liquidoMedioMes: cent(doc.ano.liquidoMedioMes),
     },
+    taxasEfetivas: doc.mes.taxasEfetivasRetencao.map((linha) => ({
+      rotulo: linha.rotulo,
+      base: cent(linha.base),
+      retencao: cent(linha.retencao),
+      taxaTexto: pctDoc(linha.taxa),
+      fonte: linha.fonte,
+    })),
     memoria: doc.memoria.map((m) => ({ ...m, valor: cent(m.valor) })),
     prestacoes: doc.prestacoes.map((p) => ({ ...p, liquido: cent(p.liquido), nota: p.nota ?? "" })),
     // Os níveis são o que o relatório desenha; as prestações ficam para o CSV e

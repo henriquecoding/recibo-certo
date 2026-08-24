@@ -3,7 +3,7 @@ import GuiaLayout from "@/components/guias/GuiaLayout";
 import { metadataDoGuia } from "@/lib/guias/metadata";
 import { Seccao, Paragrafo, AvisoPrazo, Nota, Passos, TabelaPrazos, VaiPara } from "@/components/guias/BlocosDireitos";
 import { SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA, SMN, SS_DEPENDENTE, SUBSIDIO_REFEICAO } from "@/lib/fiscal-data";
-import { fmt, pct } from "@/lib/format";
+import { fmt, pctExato } from "@/lib/format";
 
 export const metadata: Metadata = metadataDoGuia("contratar-primeiro-trabalhador");
 
@@ -27,7 +27,7 @@ export default function ContratarPrimeiroTrabalhadorPage() {
           linhas={[
             ["Salário em 14 meses", fmt(anualBase), "12 meses + subsídio de férias + subsídio de Natal"],
             [
-              `Contribuição da empresa (${pct(SS_DEPENDENTE.entidade.value)})`,
+              `Contribuição da empresa (${pctExato(SS_DEPENDENTE.entidade.value)})`,
               fmt(tsu),
               "Incide sobre a remuneração e sobre os subsídios",
             ],

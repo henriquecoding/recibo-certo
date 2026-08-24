@@ -215,7 +215,46 @@
   ]
 })
 
-// ── 6 · Memória de cálculo ──────────────────────────────────────────────────
+// ── 6 · Taxa efetiva de cada remuneração ────────────────────────────────────
+//  O n.º 10 do Despacho 233-A/2026 obriga a entidade pagadora a apresentar
+//  estas taxas EM SEPARADO sempre que o pagamento inclui mais do que uma
+//  remuneração. Este relatório serve para conferir o recibo: tem de mostrar as
+//  mesmas taxas que o recibo é obrigado a mostrar.
+
+#if d.taxasEfetivas.len() > 0 {
+  pagebreak(weak: true)
+
+  heading(level: 2)[Taxa efetiva de cada remuneração]
+
+  text(size: t-peq, fill: ink-soft)[
+    #if d.taxasEfetivas.len() > 1 [
+      Com mais do que uma remuneração no mesmo pagamento — o mês de um subsídio,
+      tipicamente — a entidade pagadora tem de apresentar a taxa efetiva de cada
+      uma em separado, e não uma taxa única. É assim que devem constar do recibo.
+    ] else [
+      A taxa com que esta remuneração foi retida.
+    ]
+  ]
+
+  v(0.7em)
+
+  tabela-financeira(
+    colunas: ("texto", "n", "n", "n"),
+    cabecalhos: ("Remuneração", "Base", "Retenção", "Taxa efetiva"),
+    linhas: d.taxasEfetivas.map(t => (
+      {
+        text(weight: 600)[#t.rotulo]
+        linebreak()
+        text(size: t-micro, fill: brand-dark)[#t.fonte]
+      },
+      eur(t.base, simbolo: false),
+      eur(t.retencao, simbolo: false),
+      text(weight: 600)[#t.taxaTexto],
+    )),
+  )
+}
+
+// ── 7 · Memória de cálculo ──────────────────────────────────────────────────
 
 #pagebreak(weak: true)
 

@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.114.0",
+  "version": "2.117.0",
   "private": true,
   "scripts": {
     "build": "next build",
@@ -73,6 +73,7 @@
     "supabase:check": "node scripts/check-supabase.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
+    "vencimento:e2e": "node scripts/verificar-vencimento.mjs",
     "versao:check": "node scripts/check-versao.mjs",
     "versao:fix": "node scripts/check-versao.mjs --fix",
     "concelhos:geo": "node scripts/gen-concelhos-geo.mjs",

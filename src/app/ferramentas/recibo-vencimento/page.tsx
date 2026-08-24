@@ -3,7 +3,7 @@ import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import MotorReciboVencimentoLazy from "./lazy";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
-import { pct } from "@/lib/format";
+import { pctExato } from "@/lib/format";
 
 const TOOL = porId("recibo-vencimento")!;
 
@@ -39,13 +39,13 @@ export default function ReciboVencimentoPage() {
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-400">Como funciona</p>
             <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-400">
               Cada rubrica é classificada antes do cálculo. Sobre a remuneração contributiva incide a tua
-              contribuição para a Segurança Social ({pct(SS_DEPENDENTE.trabalhador.value)}) e a retenção na fonte de IRS é
+              contribuição para a Segurança Social ({pctExato(SS_DEPENDENTE.trabalhador.value)}) e a retenção na fonte de IRS é
               calculada pela fórmula oficial <span className="text-stone-700 dark:text-stone-300">remuneração × taxa
               marginal − parcela a abater − parcela por dependente</span> (Despacho 233-A/2026). O subsídio
               de refeição fica isento até ao limite diário; o excesso integra as bases. Os subsídios
               de férias e de Natal são tributados em separado (retenção autónoma, Art. 99.º-C CIRS), seja
               recebidos por inteiro ou em duodécimos. A entidade empregadora suporta ainda a Taxa Social
-              Única ({pct(SS_DEPENDENTE.entidade.value)}) sobre a base contributiva, além dos valores pagos ao trabalhador.
+              Única ({pctExato(SS_DEPENDENTE.entidade.value)}) sobre a base contributiva, além dos valores pagos ao trabalhador.
             </p>
           </section>
       }

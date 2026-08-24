@@ -84,8 +84,8 @@ export const ESTATISTICAS_BANCO: Record<QuizCategoria, ContagemCategoria> = {
   "dep_subsidios": {
     "total": 123,
     "facil": 31,
-    "medio": 27,
-    "dificil": 65
+    "medio": 30,
+    "dificil": 62
   },
   "empresa_criacao": {
     "total": 102,

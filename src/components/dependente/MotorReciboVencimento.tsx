@@ -16,13 +16,16 @@ import {
   type PayrollRubricDraft,
   type PayrollSimulatorContext,
 } from "@/lib/payroll-simulator-legacy-adapter";
-import { calcularVencimentoAnual } from "@/lib/fiscal-dependente";
+import { calcularVencimentoAnual, taxaMarginalRetencao, type RegimeEntidade } from "@/lib/fiscal-dependente";
+import { calcularTempoParcial } from "@/lib/fiscal-laboral";
 import { solveNetToGross } from "@/lib/payroll-inverse";
 import type { ReciboExtraido } from "@/lib/recibo-pdf";
 import type { EstadoCivilRet, Regiao } from "@/lib/fiscal-data";
 import {
   DATA_LAST_REVIEW,
+  SMN,
   SS_DEPENDENTE,
+  RETENCAO_TAXA_OPCIONAL,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
   RETENCAO_CONJUGE_DEFICIENTE,
   RETENCAO_DEP_DEFICIENTE,
@@ -37,7 +40,7 @@ import { MIME, descarregar, nomeFicheiro } from "@/lib/export/nomes";
 import { numeroDoc } from "@/lib/export/dinheiro";
 import { livroXLSX, tabelasCSV, type DocumentoVencimento } from "@/lib/export/documento-vencimento";
 import { prestacoesDoAno } from "@/lib/export/prestacoes";
-import { fmt, pct } from "@/lib/format";
+import { fmt, pct, pctExato } from "@/lib/format";
 import { gravarCenarioVencimento } from "@/lib/store/importacao-irs";
 import { useCenarios, consumirReabertura, type ResumoCenario } from "@/lib/store/cenarios";
 import { useExportacaoPro } from "@/lib/store/exportacao-pro";
@@ -88,6 +91,10 @@ const FAMILY_OPTIONS: readonly [EstadoCivilRet, string][] = [
   ["naoCasado", "Não casado"],
   ["casadoDois", "Casado · 2 titulares"],
   ["casadoUnico", "Casado · 1 titular"],
+];
+const EMPLOYER_OPTIONS: readonly [RegimeEntidade, string][] = [
+  ["geral", "Regime geral"],
+  ["ipss", "IPSS / sem fins lucrativos"],
 ];
 const REGION_OPTIONS: readonly [Regiao, string][] = [
   ["continente", "Continente"],
@@ -188,7 +195,7 @@ function solveTargetGross(target: number, makeContext: (base: number) => Payroll
 }
 
 interface SavedSnapshotV2 extends Record<string, unknown> {
-  version: 2;
+  version: 2 | 3;
   mode: "gross" | "target";
   gross: string;
   target: string;
@@ -209,6 +216,11 @@ interface SavedSnapshotV2 extends Record<string, unknown> {
   mealDays: string;
   mealCard: boolean;
   rubrics: PayrollRubricDraft[];
+  /** v3: opção do Art. 98.º, n.º 6 CIRS (taxa inteira, em pontos percentuais). */
+  optionalRate?: boolean;
+  optionalRatePct?: number;
+  /** v3: regime contributivo da entidade empregadora. */
+  employerRegime?: RegimeEntidade;
 }
 
 interface LegacySavedSnapshot extends Record<string, unknown> {
@@ -301,6 +313,9 @@ export function MotorReciboVencimento() {
   const [mealDaily, setMealDaily] = useState("6,15");
   const [mealDays, setMealDays] = useState("22");
   const [mealCard, setMealCard] = useState(true);
+  const [optionalRate, setOptionalRate] = useState(false);
+  const [optionalRatePct, setOptionalRatePct] = useState<number | null>(null);
+  const [employerRegime, setEmployerRegime] = useState<RegimeEntidade>("geral");
   const [rubrics, setRubrics] = useState<PayrollRubricDraft[]>([]);
   const [pendingNotice, setPendingNotice] = useState<string | null>(null);
   const [imported, setImported] = useState<ReciboExtraido | null>(null);
@@ -327,6 +342,8 @@ export function MotorReciboVencimento() {
     spouseDisability: effectiveSpouseDisability,
     region,
     youthIrsBenefitYear: youthIrs ? youthYear : undefined,
+    optionalWithholdingRate: optionalRate && optionalRatePct !== null ? optionalRatePct / 100 : undefined,
+    employerRegime,
     meal: {
       enabled: mealEnabled,
       days: Math.min(31, Math.floor(parseNumber(mealDays))),
@@ -339,13 +356,13 @@ export function MotorReciboVencimento() {
     () => mode === "target" ? solveTargetGross(parseNumber(target), makeContext, rubrics, duodecimos) : undefined,
     // makeContext is intentionally represented by its primitive dependencies.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [mode, target, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard, rubrics, duodecimos],
+    [mode, target, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, optionalRate, optionalRatePct, employerRegime, mealEnabled, mealDaily, mealDays, mealCard, rubrics, duodecimos],
   );
   const targetGross = targetSolution?.gross;
   const baseSalary = mode === "target" ? targetGross ?? 0 : parseNumber(gross);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const context = useMemo(() => makeContext(baseSalary), [
-    baseSalary, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, mealEnabled, mealDaily, mealDays, mealCard,
+    baseSalary, weeklyHours, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, maritalStatus, disability, region, youthIrs, youthYear, optionalRate, optionalRatePct, employerRegime, mealEnabled, mealDaily, mealDays, mealCard,
   ]);
   const calculationRubrics = useMemo(
     () => includeMonthlyDuodecimos(rubrics, baseSalary, duodecimos),
@@ -364,8 +381,9 @@ export function MotorReciboVencimento() {
     estadoCivil: maritalStatus,
     deficiencia: disability,
     regiao: region,
+    taxaRetencaoOpcional: optionalRate && optionalRatePct !== null ? optionalRatePct / 100 : undefined,
     irsJovemAno: youthIrs ? youthYear : undefined,
-  }), [baseSalary, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, mealEnabled, mealDaily, mealCard, mealDays, maritalStatus, disability, region, youthIrs, youthYear]);
+  }), [baseSalary, dependants, dependantsWithDisability, effectiveFactor, effectiveSpouseDisability, mealEnabled, mealDaily, mealCard, mealDays, maritalStatus, disability, region, youthIrs, youthYear, optionalRate, optionalRatePct]);
   const issues = useMemo(() => [
     ...validateContext(context),
     ...validateRubrics(rubrics),
@@ -376,7 +394,7 @@ export function MotorReciboVencimento() {
   const exportAccess = useExportacaoPro();
 
   const snapshot: SavedSnapshotV2 = {
-    version: 2,
+    version: 3,
     mode,
     gross,
     target,
@@ -396,13 +414,16 @@ export function MotorReciboVencimento() {
     mealDaily,
     mealDays,
     mealCard,
+    optionalRate,
+    optionalRatePct: optionalRatePct ?? undefined,
+    employerRegime,
     rubrics,
   };
 
   useEffect(() => {
     const saved = consumirReabertura("vencimento") as Partial<SavedSnapshotV2> | LegacySavedSnapshot | null;
     if (!saved) return;
-    if (saved.version === 2) {
+    if (saved.version === 2 || saved.version === 3) {
       const current = saved as Partial<SavedSnapshotV2>;
       if (current.mode) setMode(current.mode);
       if (current.gross !== undefined) setGross(sanitizeNumericDraft(current.gross));
@@ -423,6 +444,9 @@ export function MotorReciboVencimento() {
       if (current.mealDaily !== undefined) setMealDaily(sanitizeNumericDraft(current.mealDaily));
       if (current.mealDays !== undefined) setMealDays(dayDraft(current.mealDays));
       if (current.mealCard !== undefined) setMealCard(current.mealCard);
+      if (current.optionalRate !== undefined) setOptionalRate(current.optionalRate);
+      if (current.optionalRatePct !== undefined) setOptionalRatePct(current.optionalRatePct);
+      if (current.employerRegime) setEmployerRegime(current.employerRegime);
       if (current.rubrics) setRubrics(current.rubrics);
       return;
     }
@@ -528,6 +552,8 @@ export function MotorReciboVencimento() {
         { codigo: "subsidio_refeicao", rotulo: "Subsídio de refeição", valor: mealEnabled ? `${fmt(parseNumber(mealDaily))}/dia · ${mealCard ? "cartão" : "dinheiro"} · ${Math.min(31, Math.floor(parseNumber(mealDays)))} dias` : "Não aplicável" },
         { codigo: "duodecimos", rotulo: "Subsídios de férias e Natal", valor: duodecimos ? "Em duodécimos" : "Por inteiro" },
         { codigo: "irs_jovem", rotulo: "IRS Jovem", valor: youthIrs ? `${youthYear}.º ano` : "Não aplicável" },
+        { codigo: "taxa_retencao_opcional", rotulo: "Taxa de retenção comunicada (Art. 98.º, n.º 6 CIRS)", valor: optionalRate && optionalAvailable ? `${optionalValue}% (tabela: ${pct(marginal.taxa)})` : "Não aplicável — retém-se pela tabela" },
+        { codigo: "regime_entidade", rotulo: "Regime contributivo da entidade", valor: EMPLOYER_OPTIONS.find(([value]) => value === employerRegime)?.[1] ?? "Regime geral" },
       ],
       linhas: calculation.lines,
       mes: calculation.result,
@@ -540,6 +566,8 @@ export function MotorReciboVencimento() {
         { norma: "Art. 2.º, n.º 3 CIRS", determina: "Limites isentos do subsídio de refeição e das ajudas de custo", verificadoEm: DATA_LAST_REVIEW },
         { norma: "Art. 99.º-C CIRS", determina: "Retenção autónoma dos subsídios de férias e de Natal e do trabalho suplementar", verificadoEm: DATA_LAST_REVIEW },
         { norma: "CT arts. 262.º e 271.º", determina: "Retribuição horária que valoriza horas extra, trabalho noturno e faltas", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "Despacho n.º 233-A/2026, n.º 10", determina: "Taxa efetiva de retenção apresentada em separado por cada remuneração paga no mês", verificadoEm: DATA_LAST_REVIEW },
+        { norma: "Art. 98.º, n.º 6 CIRS", determina: "Opção do titular por taxa inteira de retenção superior à legalmente aplicável", verificadoEm: DATA_LAST_REVIEW },
       ],
       ambito: [
         "Não substitui o recibo emitido pela entidade empregadora.",
@@ -550,7 +578,7 @@ export function MotorReciboVencimento() {
       memoria: [
         { rubrica: "Retribuição horária", formula: "(retribuição mensal × 12) ÷ (52 × horas semanais)", valor: calculation.result.retribuicaoHoraria, fonte: "CT art. 271.º" },
         { rubrica: "Base de incidência da SS", formula: "soma das rubricas contributivas do mês", valor: calculation.result.baseSS, fonte: "CRC arts. 44.º-48.º" },
-        { rubrica: "Segurança Social do trabalhador", formula: `base × ${pct(SS_DEPENDENTE.trabalhador.value)}`, valor: calculation.result.ssTrabalhador, fonte: "CRC art. 53.º" },
+        { rubrica: "Segurança Social do trabalhador", formula: `base × ${pctExato(SS_DEPENDENTE.trabalhador.value)}`, valor: calculation.result.ssTrabalhador, fonte: "CRC art. 53.º" },
         { rubrica: "Retenção da remuneração mensal", formula: "R × taxa marginal − parcela a abater − parcelas por dependente e por incapacidade", valor: calculation.result.irsBaseMensal, fonte: "Despacho 233-A/2026" },
         { rubrica: "Retenção do trabalho suplementar", formula: "suplementar × 50% da taxa efetiva do mês", valor: calculation.result.suplementarIRS, fonte: "Despacho 233-A/2026, n.º 5 al. f)" },
         { rubrica: "Retenção dos subsídios", formula: "imposto do direito completo × fração paga", valor: calculation.result.irsSubsidios, fonte: "Art. 99.º-C, n.º 6 CIRS" },
@@ -655,6 +683,62 @@ export function MotorReciboVencimento() {
 
   const mealExceeds = mealEnabled && parseNumber(mealDaily) > mealLimit(mealCard);
   const weeklyHoursInvalid = validateContext(context).length > 0;
+
+  // ── Opção do Art. 98.º, n.º 6 CIRS ───────────────────────────────────
+  // A base da tabela é a remuneração mensal sujeita, que o motor já apurou. Não
+  // depende da taxa escolhida (a opção só muda o imposto), pelo que se pode ler
+  // do próprio resultado sem circularidade.
+  const remuneracaoDaTabela =
+    calculation.result.taxasEfetivasRetencao.find((linha) => linha.codigo === "mensal")?.base ?? 0;
+  const marginal = taxaMarginalRetencao(remuneracaoDaTabela, {
+    dependentes: dependants,
+    estadoCivil: maritalStatus,
+    deficiencia: disability,
+    regiao: region,
+    dependentesDeficientes: Math.min(dependants, dependantsWithDisability),
+    fatorDependenteDeficiente: effectiveFactor,
+    conjugeDeficiente: effectiveSpouseDisability,
+  });
+  // «Taxa inteira SUPERIOR à que lhes é legalmente aplicável»: o piso é o
+  // primeiro inteiro acima da taxa da tabela; o teto é o último inteiro que a
+  // tabela ainda comporta. Fora deste intervalo não há opção legal a oferecer.
+  const optionalMin = Math.floor(marginal.taxa * 100) + 1;
+  const optionalMax = Math.floor(marginal.taxaMaximaTabela * 100);
+  const optionalAvailable = optionalMin <= optionalMax;
+  const optionalValue = Math.min(optionalMax, Math.max(optionalMin, optionalRatePct ?? optionalMin));
+
+  // A taxa da tabela muda com o salário e com a situação familiar. Sem este
+  // ajuste, uma opção de 26% ficava guardada e passava a ser INFERIOR à legal
+  // depois de um aumento — deixando de se aplicar sem que o ecrã o dissesse.
+  useEffect(() => {
+    if (!optionalRate) return;
+    setOptionalRatePct((atual) => {
+      if (atual === null) return optionalAvailable ? optionalMin : null;
+      return Math.min(optionalMax, Math.max(optionalMin, atual));
+    });
+  }, [optionalRate, optionalMin, optionalMax, optionalAvailable]);
+
+  // Retenção que a tabela aplicaria sem a opção — é a diferença que dá sentido
+  // ao controlo: «retém mais X por mês» é a única forma de o avaliar.
+  const semOpcao = useMemo(
+    () => calculateLegacyPayroll(
+      { ...context, optionalWithholdingRate: undefined },
+      calculationRubrics,
+    ).result,
+    [context, calculationRubrics],
+  );
+  const optionalExtra = Math.round((calculation.result.irsTotal - semOpcao.irsTotal) * 100) / 100;
+
+  // ── Retribuição mínima garantida (proporcional ao horário) ───────────
+  // O tempo parcial reduz a retribuição mínima na proporção do período normal
+  // de trabalho (Art. 154.º CT), por isso o aviso não pode comparar 20 h/semana
+  // com o salário mínimo a tempo completo.
+  const horasContrato = parseNumber(weeklyHours);
+  const minimoProporcional = weeklyHoursInvalid
+    ? 0
+    : calcularTempoParcial(SMN.value, horasContrato).retribuicaoMinimaProporcional;
+  const abaixoDoMinimo = baseSalary > 0 && minimoProporcional > 0 && baseSalary + 0.005 < minimoProporcional;
+
   const auditInput = {
     salarioBruto: baseSalary,
     dependentes: dependants,
@@ -667,6 +751,7 @@ export function MotorReciboVencimento() {
     estadoCivil: maritalStatus,
     deficiencia: disability,
     regiao: region,
+    taxaRetencaoOpcional: optionalRate && optionalRatePct !== null ? optionalRatePct / 100 : undefined,
     irsJovemAno: youthIrs ? youthYear : undefined,
   };
   const defaultScenarioName = `Recibo · ${MONTHS[month]} 2026 · ${fmt(calculation.result.liquido)} líquidos`;
@@ -718,7 +803,7 @@ export function MotorReciboVencimento() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Mês <InfoTip label="Para que serve o mês">Identifica o período do recibo, do cenário guardado e das exportações. As tabelas de retenção de 2026 são iguais em todos os meses do ano, por isso mudar o mês não altera o IRS nem a Segurança Social.</InfoTip></span><span className="relative block"><Calendar size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><select value={month} onChange={(event) => setMonth(Number(event.target.value))} className={`${inputClass} pl-9`}>{MONTHS.map((label, index) => <option key={label} value={index}>{label} 2026</option>)}</select></span></label>
-              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} aria-invalid={weeklyHoursInvalid} aria-describedby={weeklyHoursInvalid ? "weekly-hours-error" : undefined} className={`${inputClass} pr-12 ${weeklyHoursInvalid ? "border-alert-border focus:border-alert-border focus:ring-alert-border/20" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span>{weeklyHoursInvalid && <span id="weekly-hours-error" className="mt-1.5 block text-[11px] leading-relaxed text-alert-text">Indica entre {WEEKLY_HOURS_RANGE.min} e {WEEKLY_HOURS_RANGE.max} horas — é a base do valor da hora extra e do desconto por falta.</span>}</label>
+              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input id="weekly-hours" type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} aria-invalid={weeklyHoursInvalid} aria-describedby={weeklyHoursInvalid ? "weekly-hours-error" : undefined} className={`${inputClass} pr-12 ${weeklyHoursInvalid ? "border-alert-border focus:border-alert-border focus:ring-alert-border/20" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span>{weeklyHoursInvalid && <span id="weekly-hours-error" className="mt-1.5 block text-[11px] leading-relaxed text-alert-text">Indica entre {WEEKLY_HOURS_RANGE.min} e {WEEKLY_HOURS_RANGE.max} horas — é a base do valor da hora extra e do desconto por falta.</span>}</label>
             </div>
 
             <div className="mt-4">
@@ -735,6 +820,11 @@ export function MotorReciboVencimento() {
                 <Stepper id="dependants-count" value={dependants} min={0} max={20} decreaseLabel="Menos dependentes" increaseLabel="Mais dependentes" onChange={(value) => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} />
               </div>
               <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Região fiscal</span><div className="grid grid-cols-3 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{REGION_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={region === value} onClick={() => setRegion(value)} className={segmentClass(region === value)}>{label}</button>)}</div></div>
+            </div>
+
+            <div className="mt-4">
+              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Entidade empregadora <InfoTip label="Taxa contributiva da entidade">As instituições particulares de solidariedade social e demais entidades sem fins lucrativos contribuem à taxa de {pctExato(SS_DEPENDENTE.ipss.value)}, e não aos {pctExato(SS_DEPENDENTE.entidade.value)} do regime geral. Só muda o custo da EMPRESA — o teu desconto de {pctExato(SS_DEPENDENTE.trabalhador.value)} e o IRS são os mesmos.</InfoTip></span>
+              <div className="grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 sm:grid-cols-2">{EMPLOYER_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={employerRegime === value} onClick={() => setEmployerRegime(value)} className={segmentClass(employerRegime === value)}>{label}</button>)}</div>
             </div>
 
             {dependants > 0 && (
@@ -784,6 +874,55 @@ export function MotorReciboVencimento() {
               </div>
               {youthIrs && <div className="mt-3"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400">Ano do benefício</span><div className="grid grid-cols-5 gap-1 rounded-xl bg-white/70 p-1 dark:bg-stone-800">{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" onClick={() => setYouthYear(value)} className={segmentClass(youthYear === value)}>{value}.º</button>)}</div></div>}
             </div>
+
+            {/* Opção do titular por taxa de retenção superior — Art. 98.º, n.º 6
+                CIRS. É um direito que se exerce por declaração à entidade
+                pagadora e que quase nenhum simulador oferece, apesar de ser a
+                única forma de evitar a surpresa de ter imposto a pagar em maio. */}
+            <div className={`mt-4 rounded-2xl border p-4 ${optionalRate && optionalAvailable ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
+              <div className="flex items-start gap-2.5">
+                <label className="flex min-w-0 shrink cursor-pointer items-start gap-2.5">
+                  <input type="checkbox" checked={optionalRate} disabled={!optionalAvailable} onChange={(event) => setOptionalRate(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand disabled:opacity-40" />
+                  <ShieldCheck size={14} className="mt-0.5 flex-none text-brand" />
+                  <span className="min-w-0 text-xs font-semibold leading-snug text-stone-700 dark:text-stone-200">Pedi retenção a uma taxa superior à das tabelas</span>
+                </label>
+                <span className="mt-0.5 flex-none"><InfoTip label="Art. 98.º, n.º 6 CIRS">{RETENCAO_TAXA_OPCIONAL.direito.value} A opção não muda o imposto que vais dever no fim: adianta-o. {RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo.value} (Despacho 233-A/2026, n.º 5, al. e).</InfoTip></span>
+              </div>
+              {!optionalAvailable ? (
+                <p className="mt-2 text-[10px] leading-relaxed text-stone-400">Esta remuneração já está no escalão de topo da tabela ({pct(marginal.taxaMaximaTabela)}): não há taxa inteira superior por que optar.</p>
+              ) : !optionalRate ? (
+                <p className="mt-2 text-[10px] leading-relaxed text-stone-400">A tabela aplica {pct(marginal.taxa)} a esta remuneração. Podes comunicar à entidade pagadora uma taxa inteira superior — mais desconto por mês, menos imposto a pagar no acerto.</p>
+              ) : (
+                <div className="mt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <label htmlFor="optional-rate" className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Taxa comunicada</label>
+                    <div className="flex items-center gap-2">
+                      <Stepper id="optional-rate" value={optionalValue} min={optionalMin} max={optionalMax} decreaseLabel="Menos um ponto percentual" increaseLabel="Mais um ponto percentual" onChange={setOptionalRatePct} />
+                      <span className="text-sm font-semibold text-stone-500 dark:text-stone-400">%</span>
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-stone-400">
+                    Entre {optionalMin}% e {optionalMax}% — tem de ser inteira e superior aos {pct(marginal.taxa)} da tabela (Art. 98.º, n.º 6 CIRS).
+                    {optionalExtra > 0 && <> Com {optionalValue}%, retém-se mais <strong className="text-brand-dark dark:text-brand-light">{fmt(optionalExtra)}</strong> este mês.</>}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {abaixoDoMinimo && (
+              /* A retribuição mínima é proporcional ao período normal de
+                 trabalho (Art. 154.º CT): comparar um contrato de 20 h com o
+                 salário mínimo a tempo completo daria um alarme falso a metade
+                 dos trabalhadores a tempo parcial. */
+              <div className="mt-4 flex items-start gap-2 rounded-2xl border border-alert-border bg-alert-bg p-3.5 text-[11px] leading-relaxed text-alert-text">
+                <Warning size={13} className="mt-0.5 flex-none" />
+                <span>
+                  O vencimento base indicado ({fmt(baseSalary)}) fica abaixo da retribuição mínima garantida para {numeroDoc(horasContrato)} h por semana, que em {FISCAL_YEAR} é {fmt(minimoProporcional)}
+                  {horasContrato < 40 ? <> ({fmt(SMN.value)} a tempo completo, na proporção do horário — Art. 154.º CT)</> : <> (Salário Mínimo Nacional, {fmt(SMN.value)})</>}.
+                  Confirma o recibo: o valor pode estar certo se incluir faltas ou uma admissão a meio do mês, mas a retribuição base contratada não pode ser inferior a este mínimo.
+                </span>
+              </div>
+            )}
           </section>
 
           <section className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6">
@@ -802,7 +941,7 @@ export function MotorReciboVencimento() {
 
             <div className="mt-3 rounded-2xl border border-stone-200 p-4 dark:border-stone-800">
               <div className="flex items-center justify-between gap-3"><div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-stone-100 text-stone-500 dark:bg-stone-800"><Wallet size={15} /></span><div><h4 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Subsídio de refeição</h4><p className="text-[10px] text-stone-400">O limite é aplicado por dia, não ao total do mês.</p></div></div><label className="inline-flex cursor-pointer items-center gap-2 text-[10px] font-semibold text-stone-500"><input type="checkbox" checked={mealEnabled} onChange={(event) => setMealEnabled(event.target.checked)} className="h-4 w-4 accent-brand" /> Incluir</label></div>
-              {mealEnabled && <div className="mt-3 grid gap-3 sm:grid-cols-3"><MoneyField id="meal-daily" label="Valor por dia" value={mealDaily} onChange={setMealDaily} hint={`limite ${fmt(mealLimit(mealCard))}`} /><label><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dias pagos</span><input type="text" inputMode="numeric" value={mealDays} onChange={(event) => setMealDays(dayDraft(event.target.value))} className={inputClass} /></label><div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Forma</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-800"><button type="button" onClick={() => setMealCard(false)} className={segmentClass(!mealCard)}>Dinheiro</button><button type="button" onClick={() => setMealCard(true)} className={segmentClass(mealCard)}>Cartão</button></div></div></div>}
+              {mealEnabled && <div className="mt-3 grid gap-3 sm:grid-cols-3"><MoneyField id="meal-daily" label="Valor por dia" value={mealDaily} onChange={setMealDaily} hint={`limite ${fmt(mealLimit(mealCard))}`} /><label><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dias pagos</span><input id="meal-days" type="text" inputMode="numeric" value={mealDays} onChange={(event) => setMealDays(dayDraft(event.target.value))} className={inputClass} /></label><div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Forma</span><div className="grid grid-cols-2 gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-800"><button type="button" onClick={() => setMealCard(false)} className={segmentClass(!mealCard)}>Dinheiro</button><button type="button" onClick={() => setMealCard(true)} className={segmentClass(mealCard)}>Cartão</button></div></div></div>}
               {mealExceeds && <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-alert-text"><Warning size={12} className="mt-0.5 flex-none" /> O excesso diário de {fmt(parseNumber(mealDaily) - mealLimit(mealCard))} integra as bases de IRS e Segurança Social.</p>}
             </div>
 

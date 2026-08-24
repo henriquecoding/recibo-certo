@@ -72,6 +72,7 @@ export async function construirDocumentoExemplo(): Promise<DocumentoVencimento> 
       { norma: "Art. 2.º, n.º 3 CIRS", determina: "Limite diário isento do subsídio de refeição em cartão", verificadoEm: DATA_LAST_REVIEW },
       { norma: "Art. 99.º-C CIRS", determina: "Retenção autónoma dos subsídios e do trabalho suplementar", verificadoEm: DATA_LAST_REVIEW },
       { norma: "CT arts. 262.º e 271.º", determina: "Retribuição horária que valoriza o trabalho suplementar", verificadoEm: DATA_LAST_REVIEW },
+      { norma: "Despacho n.º 233-A/2026, n.º 10", determina: "Taxa efetiva de retenção apresentada em separado por cada remuneração paga no mês", verificadoEm: DATA_LAST_REVIEW },
     ],
     ambito: [
       "Não substitui o recibo emitido pela entidade empregadora.",

@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { auditarRecibo } from "@/lib/fiscal-dependente";
 import { SS_DEPENDENTE } from "@/lib/fiscal-data";
-import { pct } from "@/lib/format";
+import { pctExato } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
 import { useAuth } from "@/lib/supabase/auth";
 import { getSupabase } from "@/lib/supabase/client";
@@ -133,7 +133,7 @@ export function AuditoriaRecibo() {
         <div>
           <label htmlFor="a-ss" className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
             Segurança Social no recibo{" "}
-            <InfoTip label="Onde está">Linha &quot;Segurança Social&quot; do teu recibo ({pct(SS_DEPENDENTE.trabalhador.value)} do bruto).</InfoTip>
+            <InfoTip label="Onde está">Linha &quot;Segurança Social&quot; do teu recibo ({pctExato(SS_DEPENDENTE.trabalhador.value)} do bruto).</InfoTip>
           </label>
           <div className="relative">
             <input id="a-ss" type="text" inputMode="decimal" autoComplete="off" value={ssStr} onChange={(e) => setSsStr(soDecimal(e.target.value))} placeholder="0" className={campo} />

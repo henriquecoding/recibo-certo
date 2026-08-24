@@ -43,7 +43,7 @@
 import type { ComponentType } from "react";
 import {
   Award, BellAlert, Briefcase, CheckTrend, Coin, Flag, Handshake, LayoutGrid,
-  Megaphone, Shield, ShieldCheck, Target, User,
+  Mail, Megaphone, Shield, ShieldCheck, Target, User,
 } from "@/components/ui/Icons";
 
 export const BASE_ADMIN = "/admin";
@@ -203,6 +203,12 @@ export const SECCOES_ADMIN: readonly SeccaoAdmin[] = [
         label: "Anúncios",
         Icon: Megaphone,
         descricao: "Parceiros, Google Ads, banners e anúncios nativos, com posições e ordem.",
+      },
+      {
+        href: "/admin/emails",
+        label: "Emails",
+        Icon: Mail,
+        descricao: "Os moldes que o produto envia, e um envio de teste para os ver numa caixa a sério.",
       },
     ],
   },

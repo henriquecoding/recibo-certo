@@ -9,7 +9,7 @@ import {
   DEDUCAO_ESPECIFICA_DEPENDENTE,
   RETENCAO_DEP_ISENCAO,
 } from "@/lib/fiscal-data";
-import { fmt, pct } from "@/lib/format";
+import { fmt, pctExato } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
 export const metadata: Metadata = metadataDoGuia("recibo-vencimento");
@@ -22,7 +22,7 @@ const LINHAS = [
   },
   {
     titulo: "Segurança Social (11%)",
-    desc: `Contribuição obrigatória do trabalhador: ${pct(SS_DEPENDENTE.trabalhador.value)} sobre o salário bruto. A entidade empregadora paga adicionalmente ${pct(SS_DEPENDENTE.entidade.value)} (não aparece no teu recibo).`,
+    desc: `Contribuição obrigatória do trabalhador: ${pctExato(SS_DEPENDENTE.trabalhador.value)} sobre o salário bruto. A entidade empregadora paga adicionalmente ${pctExato(SS_DEPENDENTE.entidade.value)} (não aparece no teu recibo).`,
     cor: "stone",
   },
   {
@@ -50,7 +50,7 @@ export default function ReciboVencimentoPage() {
         <div className="rounded-3xl border border-brand bg-brand-light dark:bg-brand/10 p-5 mb-6">
           <p className="text-sm font-semibold text-brand-dark dark:text-brand mb-2">A fórmula do vencimento líquido</p>
           <p className="font-mono text-sm text-stone-700 dark:text-stone-300">
-            Bruto - SS ({pct(SS_DEPENDENTE.trabalhador.value)}) - IRS (tabela) + Sub. refeição = Líquido
+            Bruto - SS ({pctExato(SS_DEPENDENTE.trabalhador.value)}) - IRS (tabela) + Sub. refeição = Líquido
           </p>
           <p className="text-xs text-stone-500 mt-2">
             A Segurança Social incide sobre o bruto. O IRS incide sobre o bruto menos a SS.
@@ -80,17 +80,17 @@ export default function ReciboVencimentoPage() {
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
             <p className="text-xs text-stone-400 mb-1">Tu (trabalhador)</p>
-            <p className="font-display text-xl font-semibold text-brand">{pct(SS_DEPENDENTE.trabalhador.value)}</p>
+            <p className="font-display text-xl font-semibold text-brand">{pctExato(SS_DEPENDENTE.trabalhador.value)}</p>
             <p className="text-xs text-stone-500 mt-1">Descontado no recibo</p>
           </div>
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
             <p className="text-xs text-stone-400 mb-1">Entidade empregadora</p>
-            <p className="font-display text-xl font-semibold text-stone-700 dark:text-stone-300">{pct(SS_DEPENDENTE.entidade.value)}</p>
+            <p className="font-display text-xl font-semibold text-stone-700 dark:text-stone-300">{pctExato(SS_DEPENDENTE.entidade.value)}</p>
             <p className="text-xs text-stone-500 mt-1">Custo adicional da empresa</p>
           </div>
         </div>
         <p className="mt-3 text-xs text-stone-400">
-          Taxa Social Unica (TSU) total: {pct(SS_DEPENDENTE.trabalhador.value + SS_DEPENDENTE.entidade.value)}. IPSS: {pct(SS_DEPENDENTE.ipss.value)} (entidade).
+          Taxa Social Unica (TSU) total: {pctExato(SS_DEPENDENTE.trabalhador.value + SS_DEPENDENTE.entidade.value)}. IPSS: {pctExato(SS_DEPENDENTE.ipss.value)} (entidade).
         </p>
       </section>
 

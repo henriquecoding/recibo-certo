@@ -3,7 +3,7 @@
   "proveniencia": {
     "referencia": "RC-2026-VNC-EXEMPL",
     "digest": "c40ff91f3d02308f533cfa39cc8c944c90d8c7ffe2c3de6b65d4c13d849503b5",
-    "motor": "2.114.0",
+    "motor": "2.117.0",
     "anoFiscal": 2026,
     "emitidoEm": "1 de agosto de 2026",
     "verificacao": "https://www.recibocerto.pt/v/RC-2026-VNC-EXEMPL"
@@ -112,6 +112,22 @@
     "liquido": 25035.22,
     "liquidoMedioMes": 2086.27
   },
+  "taxasEfetivas": [
+    {
+      "rotulo": "Remuneração mensal",
+      "base": 2100,
+      "retencao": 37.65,
+      "taxaTexto": "1,8%",
+      "fonte": "Despacho 233-A/2026, n.º 3"
+    },
+    {
+      "rotulo": "Trabalho suplementar",
+      "base": 16.67,
+      "retencao": 0.15,
+      "taxaTexto": "0,9%",
+      "fonte": "Despacho 233-A/2026, n.º 5, al. f)"
+    }
+  ],
   "memoria": [
     {
       "rubrica": "Retribuição horária",
@@ -299,6 +315,11 @@
     {
       "norma": "CT arts. 262.º e 271.º",
       "determina": "Retribuição horária que valoriza o trabalho suplementar",
+      "verificadoEm": "2026-08-24"
+    },
+    {
+      "norma": "Despacho n.º 233-A/2026, n.º 10",
+      "determina": "Taxa efetiva de retenção apresentada em separado por cada remuneração paga no mês",
       "verificadoEm": "2026-08-24"
     }
   ],

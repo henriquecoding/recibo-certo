@@ -5,20 +5,23 @@
  */
 import {
   calcularReciboMensal,
+  limiteDaLinha,
+  taxaEntidadeDoRegime,
   type AjudaCustoLinha,
   type ReciboMensalInput,
   type ReciboMensalResult,
+  type RegimeEntidade,
 } from "./fiscal-dependente";
 import {
-  SS_DEPENDENTE,
+  ABONO_PARA_FALHAS,
   SUBSIDIO_REFEICAO,
-  limiteAjudasCusto,
   type EscalaoAjudasCusto,
   type EstadoCivilRet,
   type Regiao,
 } from "./fiscal-data";
 import { calcularTrabalhoNoturno } from "./fiscal-laboral";
 import { eur } from "./export/dinheiro";
+import { pctExato } from "./format";
 
 export type PayrollRubricType =
   | "seniority"
@@ -39,6 +42,8 @@ export type PayrollRubricType =
   | "unpaid_absence"
   | "travel_national"
   | "travel_foreign"
+  | "travel_km"
+  | "cash_handling_allowance"
   | "other_taxable";
 
 export interface PayrollRubricDraft {
@@ -78,6 +83,13 @@ export interface PayrollSimulatorContext {
   spouseDisability?: boolean;
   youthIrsBenefitYear?: number;
   meal: { enabled: boolean; days: number; dailyAmount: number; card: boolean };
+  /**
+   * Taxa inteira SUPERIOR à legalmente aplicável, comunicada por declaração à
+   * entidade pagadora (Art. 98.º, n.º 6 CIRS). Em fração: 0,25 = 25%.
+   */
+  optionalWithholdingRate?: number;
+  /** Regime contributivo da entidade empregadora (regime geral ou IPSS). */
+  employerRegime?: RegimeEntidade;
 }
 
 export interface PayrollRubricMeta {
@@ -109,6 +121,8 @@ export const PAYROLL_RUBRIC_CATALOGUE: readonly PayrollRubricMeta[] = [
   { type: "unpaid_absence", label: "Falta não remunerada", shortLabel: "Falta", description: "Desconto pela fórmula da retribuição horária.", category: "absence", editor: "hours", source: "CT art. 271.º" },
   { type: "travel_national", label: "Ajuda de custo · Portugal", shortLabel: "Ajuda nacional", description: "Dias e valor diário de uma deslocação documentada. Adiciona uma linha por deslocação — o limite isento aplica-se a cada uma.", category: "travel", editor: "travel", source: "CIRS art. 2.º, n.º 3, al. d) · DGAEP" },
   { type: "travel_foreign", label: "Ajuda de custo · estrangeiro", shortLabel: "Ajuda estrangeiro", description: "Dias e valor diário de uma deslocação documentada ao estrangeiro. Uma linha por deslocação.", category: "travel", editor: "travel", source: "CIRS art. 2.º, n.º 3, al. d) · DGAEP" },
+  { type: "travel_km", label: "Quilómetros em automóvel próprio", shortLabel: "Quilómetros", description: "Deslocações em serviço no teu carro. O limite isento é por QUILÓMETRO, não por dia, e é o mesmo para toda a gente. Portagens e estacionamento reembolsam-se à parte, contra documento.", category: "travel", editor: "travel", source: "CIRS art. 2.º, n.º 3, al. d) · DL 1/2025" },
+  { type: "cash_handling_allowance", label: "Abono para falhas", shortLabel: "Abono para falhas", description: "Devido a quem movimenta numerário no seu trabalho. Não tem um limite em euros: é isento até 5% da remuneração mensal fixa, e só o excesso é tributado.", category: "variable", editor: "amount", source: "CIRS art. 2.º, n.º 3, al. c)" },
   { type: "other_taxable", label: "Outra remuneração sujeita", shortLabel: "Outra remuneração", description: "Use só quando conhece a incidência em IRS e SS.", category: "variable", editor: "amount", source: "CIRS art. 2.º · CRC art. 46.º" },
 ] as const;
 
@@ -143,6 +157,27 @@ const FIXED_SUBJECT_TYPES = new Set<PayrollRubricType>([
  * porque depender de IRCT não é o mesmo que estar previsto na lei.
  */
 const HOURLY_BASE_TYPES = new Set<PayrollRubricType>(["seniority"]);
+
+/**
+ * Complementos FIXOS que integram a «remuneração mensal fixa» do Art. 2.º,
+ * n.º 3, al. c) — a base sobre a qual se mede os 5% isentos do abono para
+ * falhas. Comissões e prémios ficam de fora por serem variáveis; medir os 5%
+ * sobre um mês de boas comissões isentaria um abono que a lei tributa.
+ */
+const FIXED_PAY_TYPES = new Set<PayrollRubricType>([
+  "seniority",
+  "function_allowance",
+  "schedule_exemption",
+  "shift_allowance",
+]);
+
+/** Remuneração mensal fixa: vencimento base mais os complementos fixos. */
+export function fixedMonthlyPay(baseSalary: number, rubrics: readonly PayrollRubricDraft[]): number {
+  return cent(
+    positive(baseSalary)
+      + rubrics.reduce((total, rubric) => FIXED_PAY_TYPES.has(rubric.type) ? total + positive(rubric.amount) : total, 0),
+  );
+}
 
 const SUBSIDY_TYPES: readonly PayrollRubricType[] = ["holiday_subsidy", "christmas_subsidy"];
 
@@ -213,12 +248,18 @@ function nightWorkAmount(
 }
 
 /** Deslocação de uma rubrica de ajudas de custo, com o seu limite próprio. */
+const TRAVEL_TYPES = new Set<PayrollRubricType>(["travel_national", "travel_foreign", "travel_km"]);
+
 function travelLine(rubric: PayrollRubricDraft): AjudaCustoLinha {
+  // Os quilómetros contam-se ao quilómetro, não ao dia: arredondá-los a
+  // inteiros como os dias perdia 0,4 km em cada viagem.
+  const km = rubric.type === "travel_km";
   return {
-    dias: Math.floor(positive(rubric.days)),
+    dias: km ? positive(rubric.days) : Math.floor(positive(rubric.days)),
     valorDia: positive(rubric.dailyAmount),
     estrangeiro: rubric.type === "travel_foreign",
     escalao: rubric.travelTier ?? "trabalhador",
+    unidade: km ? "km" : "dia",
   };
 }
 
@@ -233,6 +274,7 @@ export function buildLegacyPayrollInput(
   let nonRegularAwards = 0;
   let otherSubject = 0;
   let nightWork = 0;
+  let cashHandling = 0;
   let holiday = 0;
   let holidayEntitlement = 0;
   let christmas = 0;
@@ -251,7 +293,8 @@ export function buildLegacyPayrollInput(
       christmas += positive(rubric.amount);
       christmasEntitlement += Math.max(positive(rubric.amount), positive(rubric.entitlement ?? 0));
     } else if (rubric.type === "unpaid_absence") absenceHours += positive(rubric.hours);
-    else if (rubric.type === "travel_national" || rubric.type === "travel_foreign") {
+    else if (rubric.type === "cash_handling_allowance") cashHandling += positive(rubric.amount);
+    else if (TRAVEL_TYPES.has(rubric.type)) {
       ajudas.push(travelLine(rubric));
     } else if (rubric.type === "night_work") {
       nightWork += nightWorkAmount(rubric, context, complements);
@@ -272,6 +315,8 @@ export function buildLegacyPayrollInput(
     fatorDependenteDeficiente: context.disabilityFactor,
     conjugeDeficiente: context.spouseDisability,
     regiao: context.region,
+    taxaRetencaoOpcional: context.optionalWithholdingRate,
+    regimeEntidade: context.employerRegime,
     irsJovemAno: context.youthIrsBenefitYear,
     horasSemanais: Math.max(1, context.weeklyHours),
     complementosRetributivos: complements,
@@ -287,6 +332,8 @@ export function buildLegacyPayrollInput(
     subsidioNatal: christmas,
     subsidioNatalDireitoTotal: christmasEntitlement,
     outrosRendimentosSujeitos: otherSubject + regularAwards + nightWork,
+    abonoFalhas: cashHandling,
+    remuneracaoFixaMensal: fixedMonthlyPay(context.baseSalary, rubrics),
     ajudas,
   };
 }
@@ -326,11 +373,30 @@ function rubricAmount(
   if (rubric.type === "unpaid_absence") {
     return { amount: 0, irsBase: 0, ssBase: 0, treatment: "deduction", bucket: "normal", detail: `${positive(rubric.hours)} h` };
   }
-  if (rubric.type === "travel_national" || rubric.type === "travel_foreign") {
+  if (TRAVEL_TYPES.has(rubric.type)) {
     const linha = travelLine(rubric);
-    const limit = limiteAjudasCusto(!!linha.estrangeiro, linha.escalao);
+    const km = linha.unidade === "km";
+    const limit = limiteDaLinha(linha);
     const amount = cent(linha.dias * linha.valorDia);
     const exempt = cent(linha.dias * Math.min(linha.valorDia, limit));
+    const taxable = cent(amount - exempt);
+    const unidades = km
+      ? `${linha.dias.toLocaleString("pt-PT")} km · limite ${eur(limit)}/km`
+      : `${linha.dias} dia${linha.dias === 1 ? "" : "s"} · limite ${eur(limit)}/dia`;
+    return {
+      amount,
+      irsBase: taxable,
+      ssBase: taxable,
+      treatment: taxable <= 0 ? "exempt" : exempt > 0 ? "partial" : "subject",
+      bucket: "normal",
+      detail: `${unidades} · ${eur(exempt)} isentos`,
+    };
+  }
+  if (rubric.type === "cash_handling_allowance") {
+    // O limite não é um valor em euros: é 5% da remuneração mensal FIXA. Por
+    // isso a linha diz sempre qual foi a base, ou o número parece arbitrário.
+    const amount = positive(rubric.amount);
+    const exempt = cent(Math.min(amount, result.abonoFalhasLimite));
     const taxable = cent(amount - exempt);
     return {
       amount,
@@ -338,7 +404,7 @@ function rubricAmount(
       ssBase: taxable,
       treatment: taxable <= 0 ? "exempt" : exempt > 0 ? "partial" : "subject",
       bucket: "normal",
-      detail: `${linha.dias} dia${linha.dias === 1 ? "" : "s"} · limite ${eur(limit)}/dia · ${eur(exempt)} isentos`,
+      detail: `isento até ${eur(result.abonoFalhasLimite)} (${pctExato(ABONO_PARA_FALHAS.value)} da remuneração fixa) · ${eur(exempt)} isentos`,
     };
   }
   if (rubric.type === "night_work") {
@@ -566,8 +632,20 @@ export function validateContext(context: PayrollSimulatorContext): string[] {
   return issues;
 }
 
+/**
+ * Custo salarial direto da entidade empregadora.
+ *
+ * Lê o número que o motor já apurou em vez de o recalcular. Enquanto a fórmula
+ * viveu aqui duplicada, a taxa da entidade estava presa ao regime geral: uma
+ * IPSS via o custo de uma empresa comum e nada no ecrã dizia porquê.
+ */
 export function employerCost(result: ReciboMensalResult): number {
-  return cent(result.brutoTotal + result.baseSS * SS_DEPENDENTE.entidade.value);
+  return result.custoEmpresa;
+}
+
+/** Taxa contributiva patronal do regime, para a UI a poder mostrar e explicar. */
+export function employerRate(regime: RegimeEntidade = "geral"): number {
+  return taxaEntidadeDoRegime(regime);
 }
 
 export function mealLimit(card: boolean): number {

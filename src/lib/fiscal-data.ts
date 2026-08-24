@@ -264,6 +264,14 @@ export const SOURCES = {
     label: "Art. 2.º CIRS — Rendimentos da categoria A: subsídio de refeição, abono para falhas e ajudas de custo · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs2.aspx",
   },
+  art98cirs: {
+    label: "Art. 98.º CIRS — Retenção na fonte: regras gerais e opção por taxa inteira superior (n.º 6) · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs98.aspx",
+  },
+  ct154: {
+    label: "Art. 154.º Código do Trabalho — Condições de trabalho a tempo parcial (retribuição proporcional ao período normal de trabalho) · PGDL",
+    url: "https://www.pgdlisboa.pt/leis/lei_mostra_articulado.php?artigo_id=1047A0154&nid=1047&tabela=leis",
+  },
   art56aCirs: {
     label: "Art. 56.º-A CIRS — Exclusão de rendimentos de pessoas com deficiência · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs56a.aspx",
@@ -303,6 +311,10 @@ export const SOURCES = {
   occIVA: {
     label: "IVA — Taxas em Portugal continental e regiões autónomas · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores",
+  },
+  occAjudasCusto: {
+    label: "Atualização das ajudas de custo e do subsídio de transporte (DL n.º 1/2025) · Ordem dos Contabilistas Certificados",
+    url: "https://www.occ.pt/pt-pt/noticias/atualizacao-de-ajudas-de-custo-para-2025",
   },
   occRegimeSimplificado: {
     label: "IRS — Regime simplificado (coeficientes e regra dos 15%) · OCC",
@@ -5472,6 +5484,23 @@ export const AJUDAS_CUSTO = {
     "ajudasCusto2026",
     REV_RETENCAO_INCAPACIDADE
   ),
+  /**
+   * Utilização de automóvel PRÓPRIO em serviço. A mesma alínea d) que fixa as
+   * ajudas de custo cobre os quilómetros, mas com uma diferença que se perde
+   * com facilidade: o Decreto-Lei n.º 1/2025 atualizou as ajudas de custo
+   * diárias em 5% e NÃO tocou no valor por quilómetro, que ficou onde estava.
+   * Aplicar-lhe a mesma subida daria 0,42 €/km e um excesso tributável a menos.
+   *
+   * O escalão não conta aqui: ao contrário das diárias, o valor por quilómetro
+   * é único — um administrador e um trabalhador têm o mesmo limite.
+   */
+  kmAutomovelProprio: sv(
+    0.40,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite isento por quilómetro em automóvel próprio (subsídio de transporte dos servidores do Estado)",
+    "occAjudasCusto",
+    DATA_LAST_REVIEW,
+    "Não inclui portagens nem estacionamento, que são reembolsáveis à parte contra documento. Mantido pelo DL n.º 1/2025, que subiu apenas as ajudas de custo diárias."
+  ),
 };
 
 /** Escalão de ajudas de custo aplicável a quem se desloca. */
@@ -5638,6 +5667,77 @@ export const RETENCAO_DEP_REDUCAO_3MAIS = sv(
   "despachoRetencao2026",
   DEP_TODAY
 );
+
+/**
+ * Opção do titular por uma taxa de retenção SUPERIOR à legalmente aplicável.
+ *
+ * O direito está no n.º 6 do Art. 98.º do CIRS: «Os titulares dos rendimentos
+ * das categorias A, B e H podem optar pela retenção do IRS mediante taxa
+ * inteira superior à que lhes é legalmente aplicável em declaração para o
+ * efeito a apresentar à entidade pagadora dos rendimentos.»
+ *
+ * O que muda no CÁLCULO está no n.º 5, al. e) do Despacho: «altera-se apenas o
+ * valor da taxa marginal máxima que seria aplicável, mantendo-se inalterada a
+ * parcela a abater e, se aplicável, a parcela adicional a abater por
+ * dependente». É por isso que aqui não há uma segunda fórmula: há uma
+ * substituição de UM fator dentro da fórmula que já existe.
+ *
+ * Sobre o máximo: a lei não fixa nenhum. Fixar 40% ou 48% neste ficheiro seria
+ * inventar um limite legal — o teto que a aplicação usa é DERIVADO da própria
+ * tabela aplicável (`taxaMarginalMaximaTabela`), que é o mais alto que a
+ * retenção pode legitimamente alcançar por via das tabelas.
+ */
+export const RETENCAO_TAXA_OPCIONAL = {
+  direito: sv(
+    "os titulares dos rendimentos das categorias A, B e H podem optar pela retenção do IRS mediante taxa inteira superior à que lhes é legalmente aplicável, em declaração a apresentar à entidade pagadora dos rendimentos",
+    "Art. 98.º, n.º 6 CIRS",
+    "art98cirs",
+    DATA_LAST_REVIEW
+  ),
+  efeitoNoCalculo: sv(
+    "altera-se apenas o valor da taxa marginal máxima que seria aplicável, mantendo-se inalterada a parcela a abater e, se aplicável, a parcela adicional a abater por dependente",
+    "Despacho n.º 233-A/2026, n.º 5, al. e)",
+    "despachoRetencao2026",
+    DATA_LAST_REVIEW
+  ),
+  /** «Taxa INTEIRA»: a opção é por pontos percentuais inteiros, não por décimas. */
+  passoEmPontos: sv(
+    1,
+    "Art. 98.º, n.º 6 CIRS — a opção é por «taxa inteira», isto é, em pontos percentuais inteiros",
+    "art98cirs",
+    DATA_LAST_REVIEW
+  ),
+};
+
+/**
+ * Taxa marginal máxima de uma tabela de retenção — o teto que a opção do n.º 6
+ * do Art. 98.º pode alcançar nesta aplicação. Derivado da tabela, não fixado à
+ * mão: quando as tabelas mudarem, o teto acompanha-as sozinho.
+ */
+export function taxaMarginalMaximaTabela(escaloes: readonly EscalaoRetencao[]): number {
+  return escaloes.reduce((maior, escalao) => Math.max(maior, escalao.taxa), 0);
+}
+
+/**
+ * Normaliza a taxa opcional comunicada à entidade: pontos percentuais INTEIROS,
+ * nunca abaixo da taxa que a tabela já aplicaria (nesse caso não há opção
+ * nenhuma — a taxa legal prevalece) e nunca acima do topo da tabela.
+ *
+ * Devolve `undefined` quando não há opção a aplicar, para que o motor siga o
+ * caminho normal em vez de receber um valor igual ao legal e ter de o descobrir.
+ */
+export function taxaRetencaoOpcionalValida(
+  taxaEscolhida: number | undefined,
+  taxaLegal: number,
+  escaloes: readonly EscalaoRetencao[]
+): number | undefined {
+  if (taxaEscolhida === undefined || !Number.isFinite(taxaEscolhida)) return undefined;
+  const passo = RETENCAO_TAXA_OPCIONAL.passoEmPontos.value / 100;
+  const inteira = Math.round(taxaEscolhida / passo) * passo;
+  const teto = taxaMarginalMaximaTabela(escaloes);
+  const limitada = Math.min(teto, inteira);
+  return limitada > taxaLegal ? Math.round(limitada * 10000) / 10000 : undefined;
+}
 
 /**
  * Parcela ACRESCIDA à parcela a abater por cada dependente com grau de
@@ -6664,10 +6764,14 @@ export const PARAMETROS_AUDITADOS: readonly Sourced<unknown>[] = [
     RETENCAO_DEP_DEFICIENTE,
     RETENCAO_CONJUGE_DEFICIENTE,
     RETENCAO_UNICO_TITULAR_FRACAO,
+    RETENCAO_TAXA_OPCIONAL.direito,
+    RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo,
+    RETENCAO_TAXA_OPCIONAL.passoEmPontos,
     AJUDAS_CUSTO.nacionalDia,
     AJUDAS_CUSTO.estrangeiroDia,
     AJUDAS_CUSTO.nacionalDiaDirecao,
     AJUDAS_CUSTO.estrangeiroDiaDirecao,
+    AJUDAS_CUSTO.kmAutomovelProprio,
     DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,
@@ -7319,6 +7423,15 @@ export function assertFiscalDataIntegrity(): void {
   ) {
     erros.push("Ajudas de custo: o escalão de direção deve exceder o do trabalhador em ambos os destinos.");
   }
+  // O quilómetro é um limite POR UNIDADE PERCORRIDA, não uma diária: se algum
+  // dia alguém lhe aplicar a subida das diárias por engano, a ordem de grandeza
+  // denuncia-o antes de chegar ao ecrã.
+  if (!(AJUDAS_CUSTO.kmAutomovelProprio.value > 0 && AJUDAS_CUSTO.kmAutomovelProprio.value < 5)) {
+    erros.push("Limite por quilómetro em automóvel próprio fora do intervalo plausível (0; 5) €.");
+  }
+  if (!(ABONO_PARA_FALHAS.value > 0 && ABONO_PARA_FALHAS.value < 1)) {
+    erros.push("Abono para falhas: a fração isenta da remuneração fixa tem de estar em (0; 1).");
+  }
   if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
   if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");
   // Incapacidade do agregado (Despacho 233-A/2026, n.ºs 5 e 6): a parcela de
@@ -7343,6 +7456,29 @@ export function assertFiscalDataIntegrity(): void {
   }
   if (!(RETENCAO_UNICO_TITULAR_FRACAO.value > 0.5 && RETENCAO_UNICO_TITULAR_FRACAO.value <= 1)) {
     erros.push("Fração do rendimento englobado para «casado, único titular» fora de (0,5; 1].");
+  }
+  // Opção do n.º 6 do Art. 98.º: a regra é uma SUBSTITUIÇÃO da taxa marginal.
+  // As asserções prendem as três propriedades que a tornam correta — só sobe,
+  // é inteira, e não passa do topo da tabela — para que nenhuma refatoração as
+  // perca em silêncio.
+  {
+    const topo = taxaMarginalMaximaTabela(RETENCAO_DEP_CONTINENTE_T1.value);
+    if (!(topo > 0 && topo <= 1)) {
+      erros.push("Taxa marginal máxima da Tabela I (Continente) fora de (0; 1].");
+    }
+    if (!(RETENCAO_TAXA_OPCIONAL.passoEmPontos.value === 1)) {
+      erros.push("A opção do Art. 98.º, n.º 6 é por «taxa inteira»: o passo tem de ser de 1 ponto percentual.");
+    }
+    const escaloes = RETENCAO_DEP_CONTINENTE_T1.value;
+    if (taxaRetencaoOpcionalValida(0.2, 0.25, escaloes) !== undefined) {
+      erros.push("Taxa opcional abaixo da legal não pode ser aceite (Art. 98.º, n.º 6 exige taxa SUPERIOR).");
+    }
+    if (taxaRetencaoOpcionalValida(0.99, 0.25, escaloes) !== topo) {
+      erros.push("Taxa opcional acima do topo da tabela não foi limitada ao topo.");
+    }
+    if (taxaRetencaoOpcionalValida(0.305, 0.25, escaloes) !== 0.31) {
+      erros.push("Taxa opcional não foi arredondada a ponto percentual inteiro.");
+    }
   }
   // A al. b) é exclusiva de «casado, único titular»: a asserção prende a regra
   // ao código, para que nenhuma refatoração a espalhe pelas outras situações.

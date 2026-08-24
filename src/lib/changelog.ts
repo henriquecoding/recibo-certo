@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.114.0",
+    version: "2.117.0",
     data: "2026-08-24",
     titulo: "Quem ainda não sabe o que vai vender deixa de começar pelo fim",
     itens: [
@@ -39,6 +39,39 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Os extremos das escalas do simulador de empresa («0 €», «300 000 €+») eram quase invisíveis no modo escuro, e os rótulos dos passos ainda por fazer eram-no no modo claro, em todos os simuladores guiados. Ambos corrigidos, com a hierarquia intacta.",
       "A faixa de confiança do rodapé («Fontes oficiais», «Sem conta obrigatória») estava abaixo do contraste mínimo nos dois temas.",
       "Quem está a contar quanto custa abrir empresa passa a saber que parte disso pode não sair do seu bolso: o PAECPE, o Empreende XXI e o microcrédito apoiam quem cria o próprio emprego, e a candidatura faz-se antes de avançar, não depois. O mesmo aviso aparece no motor de descoberta, ao lado do capital disponível — porque é esse número que elimina hipóteses, e um teto fixado sem saber destes apoios elimina hipóteses a mais. Não simulamos nada disto: as condições mudam e quem decide a elegibilidade é o IEFP.",
+    ],
+  },
+  {
+    version: "2.116.0",
+    data: "2026-08-25",
+    titulo: "Os parâmetros novos passam a estar à vista de quem os quiser conferir",
+    itens: [
+      "Publicamos em /api/fiscal-data todos os parâmetros fiscais que usamos, cada um com a sua base legal e a data em que foi verificado — é assim que se confere um cálculo nosso sem ter de acreditar em nós. Os quatro que entraram na versão anterior tinham ficado de fora dessa lista: o limite por quilómetro, o abono para falhas, a taxa contributiva das IPSS e a opção por taxa de retenção superior. Já lá estão.",
+      "O do quilómetro é o que mais fazia falta: quem lesse a nossa API a partir das ajudas de custo diárias podia tomar 65,89 € por dia como se fosse o limite dos quilómetros, e errar por um fator de mais de cem.",
+    ],
+  },
+  {
+    version: "2.115.0",
+    data: "2026-08-25",
+    titulo: "O simulador de salário passa a fazer três coisas que a lei prevê e ele não fazia",
+    itens: [
+      "Fomos a cada botão do simulador de salário líquido confirmar que muda mesmo o resultado — os dezanove tipos de rubrica, os dez anos do IRS Jovem, as três situações familiares, as três regiões, os seis escalões de horas extra, o modo «quero receber». Ficou tudo preso em teste: um controlo que deixe de chegar ao resultado passa a partir a construção em vez de ficar lá, calado, a não fazer nada.",
+      "Podes agora pedir que te retenham a mais. É um direito do Art. 98.º, n.º 6 do Código do IRS — comunicas à entidade que pagas por uma taxa inteira superior à da tabela — e serve a quem prefere descontar mais todos os meses a receber uma nota de cobrança em maio. O simulador diz-te qual é a taxa da tabela, quais as taxas superiores que podes escolher e quanto é que cada uma retém a mais este mês.",
+      "Um recibo com subsídio de férias ou de Natal tem várias remunerações no mesmo pagamento, e a lei obriga a entidade a mostrar a taxa efetiva de CADA uma em separado, nunca uma taxa única. Nós mostrávamos a taxa única. Agora, no separador «Cálculo», estão as taxas como devem constar do teu recibo — e vão também no relatório, na folha de cálculo e no CSV.",
+      "Quem trabalha numa IPSS ou noutra entidade sem fins lucrativos via o custo da empresa calculado como se fosse uma empresa comum. A taxa é outra, e agora podes escolhê-la: o separador «Empresa» passa a mostrar a taxa certa e a diferença que ela faz.",
+      "Se o vencimento base que introduzires ficar abaixo da retribuição mínima garantida, dizemos-to. E dizemo-lo bem para quem trabalha a tempo parcial: aí o mínimo é proporcional ao horário, e comparar meio horário com o salário mínimo inteiro seria um alarme falso.",
+      "Duas rubricas que faltavam ao construtor do recibo. Os quilómetros em automóvel próprio, com o limite isento a contar ao quilómetro e não ao dia — e igual para toda a gente, sem os escalões que as ajudas de custo têm. E o abono para falhas, de quem movimenta numerário: esse não tem um limite em euros, é isento até 5% da tua remuneração mensal fixa, por isso o simulador diz-te sempre qual foi a base a que chegou.",
+      "As taxas da Segurança Social deixam de aparecer arredondadas. A contribuição da entidade é de 23,75% e via-se «23,8%»; a Taxa Social Única é 34,75% e via-se «34,8%». São números que se procuram para conferir com um recibo — meio ponto percentual a mais chega para a comparação falhar.",
+    ],
+  },
+  {
+    version: "2.114.0",
+    data: "2026-08-25",
+    titulo: "Uma proposta à espera passa a chegar-te ao email",
+    itens: [
+      "Na versão anterior fizemos com que uma proposta pronta acendesse o sino na aplicação — antes não acendia nada. Faltava metade: o aviso ficava no site, e quem não voltasse por iniciativa própria continuava sem saber que tinha uma decisão à espera. Agora também segue por email.",
+      "O mesmo para os casos sem resposta. Ao fim de três dias, quem foi convidado recebe o lembrete na caixa de entrada; ao fim de sete, é o cliente que é avisado de que ninguém respondeu — sem depender de ele calhar voltar ao site nesse dia.",
+      "Continuam a não gerar email as mensagens da conversa, os envios de simulações e os avisos de pagamento e de patamar. São factos que se leem quando se entra, não interrupções — um email por cada linha de conversa seria um motivo para desligar os avisos todos.",
     ],
   },
   {
