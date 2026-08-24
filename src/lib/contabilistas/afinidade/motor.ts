@@ -192,6 +192,10 @@ function avaliarAreas(ficha: FichaParaAfinidade, n: Necessidade): ResultadoAreas
   const valor = total > 0 ? Math.min(1, obtido / total) : 0;
   const dimensoes: Dimensao[] = [];
 
+  const notaImplicita =
+    `${juntar(implicitas.map(emFrase))} ` +
+    `${implicitas.length === 1 ? "vem" : "vêm"} do que escreveu no perfil, não de um filtro marcado.`;
+
   if (declaradas.length > 0) {
     dimensoes.push({
       fonte: "area_declarada",
@@ -199,18 +203,19 @@ function avaliarAreas(ficha: FichaParaAfinidade, n: Necessidade): ResultadoAreas
       peso: PESOS.areas,
       nota: `Escolheu ${juntar(declaradas.map(emFrase))} como área de trabalho.`,
     });
-  }
-  if (implicitas.length > 0) {
-    dimensoes.push({
-      fonte: "area_implicita",
-      valor,
-      peso: 0,
-      nota:
-        `${juntar(implicitas.map(emFrase))} ` +
-        `${implicitas.length === 1 ? "vem" : "vêm"} do que escreveu no perfil, não de um filtro marcado.`,
-    });
-  }
-  if (dimensoes.length === 0) {
+    if (implicitas.length > 0) {
+      // Decorativa: o crédito das áreas implícitas já está dentro do `valor`
+      // da dimensão declarada acima (via `CREDITO_AREA_IMPLICITA` em
+      // `obtido`). Um segundo peso aqui somava a mesma prova duas vezes.
+      dimensoes.push({ fonte: "area_implicita", valor, peso: 0, nota: notaImplicita });
+    }
+  } else if (implicitas.length > 0) {
+    // SEM nenhuma área marcada: esta é a ÚNICA dimensão de área, e tem de
+    // entrar com peso a sério — senão o desconto de `CREDITO_AREA_IMPLICITA`
+    // nunca chega a contar, e um perfil que só se descreve pela clientela
+    // (em vez de marcar a etiqueta) fica sem crédito nenhum pela área.
+    dimensoes.push({ fonte: "area_implicita", valor, peso: PESOS.areas, nota: notaImplicita });
+  } else {
     dimensoes.push({ fonte: "area_declarada", valor: 0, peso: PESOS.areas, nota: null });
   }
 

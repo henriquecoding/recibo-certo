@@ -19,7 +19,9 @@ import type {
 } from "./tipos";
 import type { Excecao, RegraDisponibilidade } from "./agenda";
 import type { EstadoProgressao } from "./progressao/catalogo";
-import { CONSENTIMENTO_VERSAO, sanitizarConteudoPartilha, tituloPorOmissao } from "./vinculo";
+import {
+  CONSENTIMENTO_VERSAO, LIMITE_PARTILHAS_DIA, sanitizarConteudoPartilha, tituloPorOmissao,
+} from "./vinculo";
 
 type Linha = Record<string, unknown>;
 
@@ -307,12 +309,15 @@ export async function meuVinculo(clienteId: string): Promise<
     .select("*")
     .eq("cliente_id", clienteId)
     .neq("estado", "terminado")
-    .order("criado_em", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .order("criado_em", { ascending: false });
 
-  if (!data) return null;
-  const vinculo = paraVinculo(data as unknown as Linha);
+  const vinculos = ((data ?? []) as unknown as Linha[]).map(paraVinculo);
+  // Um vínculo ATIVO é sempre a relação verdadeira, mesmo que não seja o
+  // pedido mais recente — pedir a outro contabilista por impaciência não
+  // pode esconder uma relação que já está a funcionar. Sem nenhum ativo,
+  // cai no mais recente (a lista já vem ordenada por `criado_em desc`).
+  const vinculo = vinculos.find((v) => v.estado === "ativo") ?? vinculos[0];
+  if (!vinculo) return null;
 
   const { data: ficha } = await getSupabase()
     .from(VISTA_PUBLICA)
@@ -845,19 +850,49 @@ export async function definirLocalConsulta(
   return { erro: MOTIVO_CONSULTA[r.motivo ?? ""] ?? "Não foi possível guardar o local." };
 }
 
+/** Quantas linhas por pedido ao paginar. */
+const PAGINA_AGENDAMENTOS = 500;
+
+/** Teto absoluto, para uma agenda enorme não puxar a tabela inteira. */
+const MAX_AGENDAMENTOS = 3000;
+
+/**
+ * As consultas, por ordem de início.
+ *
+ * ⚠️ PAGINA, e não é um detalhe de desempenho. Isto era um `limit(300)`
+ * sobre uma ordenação ASCENDENTE: um contabilista com mais de 300
+ * consultas nos últimos 90 dias guardava as MAIS ANTIGAS e perdia as
+ * FUTURAS — sem aviso, e precisamente na época de picos em que isso mais
+ * custa. É o mesmo defeito que `resumo_clientes_do_contabilista` fechou
+ * do lado dos clientes.
+ *
+ * `ate` existe para quem só quer uma janela: limitar pela data é honesto,
+ * limitar pela contagem é perder o fim da lista em silêncio.
+ */
 export async function listarAgendamentos(filtro: {
   contabilistaId?: string;
   clienteId?: string;
   desde?: Date;
+  ate?: Date;
 }): Promise<Agendamento[]> {
-  let q = getSupabase().from("agendamentos").select("*").order("inicio");
-  if (filtro.contabilistaId) q = q.eq("contabilista_id", filtro.contabilistaId);
-  if (filtro.clienteId) q = q.eq("cliente_id", filtro.clienteId);
-  if (filtro.desde) q = q.gte("inicio", filtro.desde.toISOString());
+  const linhas: Linha[] = [];
 
-  const { data, error } = await q.limit(300);
-  if (error) throw new Error(error.message);
-  return (data ?? []).map((l) => paraAgendamento(l as unknown as Linha));
+  for (let inicio = 0; inicio < MAX_AGENDAMENTOS; inicio += PAGINA_AGENDAMENTOS) {
+    let q = getSupabase().from("agendamentos").select("*").order("inicio");
+    if (filtro.contabilistaId) q = q.eq("contabilista_id", filtro.contabilistaId);
+    if (filtro.clienteId) q = q.eq("cliente_id", filtro.clienteId);
+    if (filtro.desde) q = q.gte("inicio", filtro.desde.toISOString());
+    if (filtro.ate) q = q.lte("inicio", filtro.ate.toISOString());
+
+    const { data, error } = await q.range(inicio, inicio + PAGINA_AGENDAMENTOS - 1);
+    if (error) throw new Error(error.message);
+
+    const pagina = (data ?? []) as unknown as Linha[];
+    linhas.push(...pagina);
+    if (pagina.length < PAGINA_AGENDAMENTOS) break;
+  }
+
+  return linhas.map(paraAgendamento);
 }
 
 // ─── Partilhas ─────────────────────────────────────────────────────────
@@ -904,7 +939,17 @@ export async function partilhar(p: {
     consentimento_versao: CONSENTIMENTO_VERSAO,
   });
 
-  if (error) return { erro: error.message };
+  // O limite diário é imposto por gatilho (migração 20260824100000), e não
+  // aqui: uma contagem no browser protege quem passa por este ficheiro, e o
+  // caminho REST direto — que é o do abuso — ficava aberto. Aqui só se
+  // traduz o que a base recusou.
+  if (error) {
+    return {
+      erro: error.code === "23514" && error.message.includes("simulações hoje")
+        ? `Já enviaste ${LIMITE_PARTILHAS_DIA} simulações hoje. Tenta amanhã.`
+        : error.message,
+    };
+  }
   return { removidos: limpo.removidos };
 }
 

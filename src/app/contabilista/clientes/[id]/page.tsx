@@ -276,8 +276,17 @@ export default function FichaClientePage() {
 
         {/* Coluna lateral */}
         <aside className="space-y-4">
+          {/* Mensagem e pedido de documento acontecem na sala, nesta mesma
+              página; as outras três vivem em páginas próprias e agora têm
+              caminho para lá. */}
           <AcoesDisponiveis
-            acoes={["Mensagem", "pedir documento", "consulta", "proposta", "pagamento"]}
+            acoes={[
+              { rotulo: "Mensagem" },
+              { rotulo: "Pedir documento" },
+              { rotulo: "Consulta", href: painel.href("/contabilista/agenda") },
+              { rotulo: "Proposta", href: painel.href("/contabilista/casos") },
+              { rotulo: "Pagamento", href: painel.href("/contabilista/pagamentos") },
+            ]}
           />
 
           <ContextoSemRuido

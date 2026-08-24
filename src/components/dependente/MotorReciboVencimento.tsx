@@ -65,6 +65,7 @@ import {
   Wallet,
 } from "@/components/ui/Icons";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 
 const LoadingPanel = () => (
   <div className="animate-pulse rounded-3xl border border-stone-100 bg-white p-5 dark:border-stone-800 dark:bg-stone-900" aria-hidden>
@@ -884,6 +885,24 @@ export function MotorReciboVencimento() {
           quando precisa (erros nos descontos, acumulação de rendimentos,
           um contrato novo) é aqui, com o número à frente, que a pessoa o
           percebe. Sem salário introduzido não há nada disso. */}
+      {baseSalary > 0 && (
+        <EnviarAoContabilista
+          tipo="recibo_vencimento"
+          toolId="recibo-vencimento"
+          titulo={`Recibo de vencimento ${FISCAL_YEAR}`}
+          conteudo={{
+            ano: FISCAL_YEAR,
+            vencimentoBruto: Math.round(baseSalary),
+            subsidioAlimentacao: mealEnabled
+              ? Math.round(parseNumber(mealDaily) * Math.min(31, Math.floor(parseNumber(mealDays))))
+              : 0,
+            duodecimos,
+            irsRetido: Math.round(calculation.result.irsTotal),
+            ssTrabalhador: Math.round(calculation.result.ssTrabalhador),
+            liquido: Math.round(calculation.result.liquido),
+          }}
+        />
+      )}
       <ContabilistasNoResultado pronto={baseSalary > 0} />
 
       <p className="px-2 text-center text-[10px] leading-relaxed text-stone-400">Estimativa informativa. O resultado depende dos factos e documentos introduzidos e não substitui o recibo oficial nem aconselhamento profissional.</p>

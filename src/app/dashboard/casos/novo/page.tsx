@@ -75,8 +75,8 @@ export default function DescreverCaso() {
     });
     setAEnviar(false);
     if (r.erro) { avisos.erro(r.erro); return; }
-    avisos.sucesso(`Caso ${r.referencia} recebido.`, {
-      detalhe: "Agora escolhe a quem o queres enviar.",
+    avisos.sucesso(`Caso ${r.referencia} guardado.`, {
+      detalhe: "Ainda não seguiu para ninguém — escolhe a quem o queres enviar.",
       duracaoMs: 9000,
     });
     // Para o detalhe, e não para a lista: o passo que falta — escolher a
@@ -229,8 +229,19 @@ export default function DescreverCaso() {
                     uma coisa que já ninguém impede — e a proibição falsa era
                     lida como garantia. */}
                 <p className="mt-1 text-xs leading-relaxed text-stone-500">
-                  Quanto mais claro fores, melhor a proposta que recebes. O que
-                  escreveres aqui segue tal e qual para quem escolheres.
+                  Quanto mais claro fores, melhor a proposta que recebes.
+                </p>
+                {/* Com o mesmo peso visual do interruptor de contactos, e não
+                    numa linha discreta: esse interruptor parece cobrir tudo,
+                    e um telefone escrito AQUI segue à mesma — a decisão é de
+                    quem escreve, mas tem de ser informada. */}
+                <p className="mt-2 flex items-start gap-2 rounded-2xl border border-alert-border bg-alert-bg px-4 py-3 text-sm leading-relaxed text-alert-text">
+                  <Warning size={15} className="mt-0.5 shrink-0" aria-hidden />
+                  <span>
+                    O que escreveres aqui segue <strong className="font-semibold">tal e qual</strong>.
+                    Um email ou telemóvel escrito neste campo vai junto — o interruptor
+                    de contactos abaixo não o cobre.
+                  </span>
                 </p>
                 <textarea
                   id="situacao"
@@ -402,8 +413,12 @@ export default function DescreverCaso() {
               Continuar <ArrowRight size={14} aria-hidden />
             </Button>
           ) : (
+            /* NÃO diz «Enviar o caso»: este botão só GRAVA o caso, e ninguém
+               o recebe ainda — quem o entrega é o botão do ecrã seguinte, que
+               tinha exatamente o mesmo rótulo. Quem saísse depois deste clique
+               achava, com razão, que já tinha enviado a alguém. */
             <Button onClick={() => void enviar()} disabled={!podeAvancar || aEnviar} className="w-full sm:w-auto">
-              {aEnviar ? <><Spinner size={14} /> A enviar…</> : "Enviar o caso"}
+              {aEnviar ? <><Spinner size={14} /> A guardar…</> : "Guardar e escolher quem o vê"}
             </Button>
           )}
         </div>

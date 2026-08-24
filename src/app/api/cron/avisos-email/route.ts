@@ -43,12 +43,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ erro: "Não autorizado." }, { status: 401 });
   }
 
-  // Sem Resend não se reclama nada: reclamar e falhar gastava tentativas
-  // de linhas que ficariam marcadas como perdidas sem nunca terem saído.
-  if (!process.env.RESEND_API_KEY) {
-    return NextResponse.json({ ok: true, enviados: 0, motivo: "sem_resend" });
-  }
-
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const chave = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !chave) {
@@ -58,6 +52,30 @@ export async function GET(req: NextRequest) {
   const sb = createClient(url, chave, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  // Sem Resend não se reclama nada: reclamar e falhar gastava tentativas
+  // de linhas que ficariam marcadas como perdidas sem nunca terem saído.
+  //
+  // ⚠️ MAS NÃO EM SILÊNCIO. Isto respondia `{ ok: true, motivo: "sem_resend" }`
+  // e a execução do cron aparecia VERDE: o canal de email podia estar
+  // desligado durante semanas sem ninguém dar por isso, enquanto clientes
+  // que não voltassem ao site nunca soubessem que o contabilista respondeu.
+  // Um 503 com a fila contada põe a execução a vermelho, que é o alerta.
+  if (!process.env.RESEND_API_KEY) {
+    const { count } = await sb
+      .from("notificacoes")
+      .select("id", { count: "exact", head: true })
+      .in("email_estado", ["por_enviar", "a_enviar"]);
+
+    console.error(
+      "[cron/avisos-email] RESEND_API_KEY não configurada — nenhum email sai.",
+      { porEnviar: count ?? 0 },
+    );
+    return NextResponse.json(
+      { erro: "Canal de email desligado.", motivo: "sem_resend", porEnviar: count ?? 0 },
+      { status: 503 },
+    );
+  }
 
   const { data, error } = await sb.rpc("avisos_email_reclamar", { p_limite: LOTE });
   if (error) {

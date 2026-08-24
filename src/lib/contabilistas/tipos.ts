@@ -71,7 +71,15 @@ export type TipoPartilha =
    * não anexo de um pedido. O que segue é o que torna o pedido
    * respondível, e nada mais.
    */
-  | "plano_negocio";
+  | "plano_negocio"
+  /**
+   * Conclusão da engine de formação de preço: o PVP e a faixa recomendados.
+   *
+   * Também restrita, pela mesma razão que `plano_negocio`: o motor conhece
+   * custos unitários, margem e markup exatos, e nada disso é preciso para
+   * um contabilista opinar sobre o preço final. Só a conclusão segue.
+   */
+  | "preco_calculado";
 
 export type EstadoCupao = "disponivel" | "usado" | "expirado";
 

@@ -74,6 +74,7 @@ export async function listarAgendamentos(filtro: {
   contabilistaId?: string;
   clienteId?: string;
   desde?: Date;
+  ate?: Date;
 }): Promise<Agendamento[]> {
   if (emDemonstracao()) return (await loja()).listarAgendamentos({ desde: filtro.desde });
   return real.listarAgendamentos(filtro);

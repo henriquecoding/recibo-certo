@@ -23,13 +23,15 @@ import { ehTelefone } from "@/lib/contabilistas/local-consulta";
 import {
   listarAgendamentos, obterDisponibilidade, guardarDisponibilidade, meusClientes,
   decidirConsulta, definirLocalConsulta,
+  obterExcecoes, fecharDia, reabrirDia,
   meusCupoes,
   type CupaoLido,
 } from "@/lib/contabilistas/fonte/dados";
 import type { Agendamento, EstadoAgendamento, Vinculo } from "@/lib/contabilistas/tipos";
 import { tratamentoDoCliente } from "@/lib/contabilistas/tipos";
 import {
-  NOMES_DIAS, minutosDeHora, type RegraDisponibilidade,
+  NOMES_DIAS, minutosDeHora, disponibilidadePorOmissao,
+  type Excecao, type RegraDisponibilidade,
 } from "@/lib/contabilistas/agenda";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
@@ -427,6 +429,29 @@ function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string
         <p role="alert" className="rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">{erro}</p>
       )}
 
+      {/* Um perfil novo chegava aqui a uma semana vazia e tinha de clicar
+          «+ Período» dez vezes para reconstruir à mão um horário que o
+          produto já sabe gerar. Só aparece com a semana vazia — depois de
+          haver períodos, oferecer isto seria oferecer apagá-los. */}
+      {regras.length === 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-light px-4 py-3">
+          <p className="text-sm leading-relaxed text-stone-600">
+            Ainda não tens nenhum período. Queres começar pelo horário mais comum —
+            dias úteis, das 9h às 13h e das 14h às 18h?
+          </p>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => {
+              setPorGuardar(true);
+              setRegras(disponibilidadePorOmissao(duracaoOmissao));
+            }}
+          >
+            Usar horário habitual
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-3">
         {NOMES_DIAS.map((nome, dia) => {
           const doDia = regras.map((r, i) => ({ r, i })).filter(({ r }) => r.diaSemana === dia);
@@ -484,6 +509,111 @@ function SemanaTipo({ contabilistaId, duracaoOmissao }: { contabilistaId: string
           {porGuardar ? "Tens alterações por guardar." : "Está tudo guardado."}
         </span>
       </div>
+
+      <DiasFechados contabilistaId={contabilistaId} />
+    </div>
+  );
+}
+
+/**
+ * Fechar um dia sem apagar a semana-tipo.
+ *
+ * `contabilista_excecoes` existia no esquema, com política própria e
+ * verificação no servidor, mas não tinha nenhum chamador fora da
+ * demonstração: para tirar uma sexta de folga, a única forma era apagar a
+ * sexta da semana-tipo — o que a fechava PARA SEMPRE, não só uma vez.
+ */
+function DiasFechados({ contabilistaId }: { contabilistaId: string }) {
+  const avisos = useAvisos();
+  const [excecoes, setExcecoes] = useState<Excecao[]>([]);
+  const [dia, setDia] = useState("");
+  const [motivo, setMotivo] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+
+  const hoje = new Date().toISOString().slice(0, 10);
+
+  const recarregar = useCallback(() => {
+    obterExcecoes(contabilistaId, hoje)
+      .then(setExcecoes)
+      .catch(() => setExcecoes([]));
+  }, [contabilistaId, hoje]);
+
+  useEffect(() => { recarregar(); }, [recarregar]);
+
+  async function fechar() {
+    if (!dia) return;
+    setOcupado(true);
+    const { erro } = await fecharDia(contabilistaId, dia, motivo.trim() || undefined);
+    setOcupado(false);
+    if (erro) { avisos.erro(erro); return; }
+    setDia(""); setMotivo("");
+    recarregar();
+    avisos.sucesso("Dia fechado.", {
+      detalhe: "Ninguém consegue marcar nesse dia. As consultas já marcadas mantêm-se.",
+    });
+  }
+
+  async function reabrir(data: string) {
+    setOcupado(true);
+    const { erro } = await reabrirDia(contabilistaId, data);
+    setOcupado(false);
+    if (erro) { avisos.erro(erro); return; }
+    recarregar();
+    avisos.sucesso("Dia reaberto.");
+  }
+
+  return (
+    <div className="rounded-4xl border border-stone-200 bg-white p-4 shadow-card sm:p-5">
+      <h3 className="font-display text-lg text-ink">Dias fechados</h3>
+      <p className="mt-1 text-sm leading-relaxed text-stone-500">
+        Férias, doença ou um dia sem consultas. Fecha só esse dia — a semana-tipo
+        fica como está, e as consultas já marcadas mantêm-se.
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-end gap-2.5">
+        <label htmlFor="dia-fechar" className="flex flex-col gap-1 text-xs font-medium text-stone-500">
+          Dia
+          <input
+            id="dia-fechar"
+            type="date"
+            min={hoje}
+            value={dia}
+            onChange={(e) => setDia(e.target.value)}
+            className="min-h-[2.25rem] rounded-xl border border-stone-200 bg-white px-2.5 py-1.5 text-sm tabular-nums text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </label>
+        <label htmlFor="motivo-fechar" className="flex min-w-[10rem] flex-1 flex-col gap-1 text-xs font-medium text-stone-500">
+          Motivo (opcional)
+          <input
+            id="motivo-fechar"
+            type="text"
+            value={motivo}
+            maxLength={200}
+            placeholder="Férias"
+            onChange={(e) => setMotivo(e.target.value)}
+            className="min-h-[2.25rem] rounded-xl border border-stone-200 bg-white px-2.5 py-1.5 text-sm text-stone-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30"
+          />
+        </label>
+        <Button size="sm" onClick={fechar} disabled={!dia || ocupado}>Fechar dia</Button>
+      </div>
+
+      {excecoes.length === 0 ? (
+        <p className="mt-4 text-sm text-stone-400">Não tens nenhum dia fechado.</p>
+      ) : (
+        <ul className="mt-4 divide-y divide-stone-100 rounded-2xl border border-stone-100">
+          {excecoes.map((e) => (
+            <li key={e.data} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5">
+              <span className="text-sm text-stone-700">
+                <span className="font-medium tabular-nums">{e.data}</span>
+                {e.motivo && <span className="text-stone-500"> · {e.motivo}</span>}
+              </span>
+              <Button size="sm" variant="ghost" onClick={() => reabrir(e.data)} disabled={ocupado}>
+                Reabrir
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

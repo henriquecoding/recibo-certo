@@ -131,6 +131,8 @@ import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
+import { FISCAL_YEAR } from "@/lib/fiscal-year";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -3053,6 +3055,25 @@ export default function ModoGuiadoEmpresa({
             Uma sociedade em contabilidade organizada não é opcional: quem
             chega aqui vai precisar de um contabilista, e o sítio de o dizer
             é com o IRC estimado à frente. */}
+        {(passo === "resultado" || passo === "aseguir") && resultado.faturacao > 0 && (
+          <div className="mt-4">
+            <EnviarAoContabilista
+              tipo="simulador_empresa"
+              toolId="simulador-empresa"
+              titulo={`Simulação de empresa ${FISCAL_YEAR}`}
+              conteudo={{
+                ano: FISCAL_YEAR,
+                formaJuridica: "Sociedade (Lda.)",
+                volumeNegocios: Math.round(resultado.faturacao),
+                despesas: Math.round(resultado.despesasOper + resultado.custosExtra),
+                salarioGerente: Math.round(resultado.salGerente),
+                dividendos: Math.round(resultado.dividendos),
+                ircEstimado: Math.round(resultado.ircTotal),
+                tributacaoAutonoma: Math.round(resultado.ta.total),
+              }}
+            />
+          </div>
+        )}
         <ContabilistasNoResultado pronto={passo === "resultado" || passo === "aseguir"} />
       </div>
 

@@ -23,8 +23,10 @@ import {
 } from "@/lib/fiscal-heranca";
 import {
   IS_TRANSMISSAO_GRATUITA, IS_DOACAO_IMOVEL, IS_DOACAO_MINIMO_ISENTO, PRAZO_MODELO1_MESES,
+  FISCAL_YEAR,
 } from "@/lib/fiscal-data";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 
 const ModoGuiadoHeranca = dynamic(() => import("@/components/simulador/ModoGuiadoHeranca"), {
   ssr: false,
@@ -479,6 +481,22 @@ function ModoCompleto({ onGuiado }: { onGuiado?: () => void }) {
 
       {/* Uma partilha só existe quando há património para partilhar. Com o
           acervo a zero, o simulador ainda não respondeu a nada. */}
+      {r.meacao.herancaBruta > 0 && (
+        <div className="mt-4">
+          <EnviarAoContabilista
+            tipo="simulador_herancas"
+            toolId="simulador-herancas"
+            titulo={`Heranças e sucessões ${FISCAL_YEAR}`}
+            conteudo={{
+              ano: FISCAL_YEAR,
+              valorAcervo: Math.round(r.meacao.herancaBruta),
+              herdeiros: r.partilha.quinhoes.length,
+              grauParentesco: Array.from(new Set(r.partilha.quinhoes.map((q) => q.relacao))).join(", "),
+              impostoSelo: Math.round(r.selo.total),
+            }}
+          />
+        </div>
+      )}
       <ContabilistasNoResultado pronto={r.meacao.herancaBruta > 0} />
     </div>
   );

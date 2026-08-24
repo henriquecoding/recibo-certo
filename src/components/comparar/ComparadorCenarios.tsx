@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { m, AnimatePresence } from "motion/react";
 import { EASE } from "@/lib/motion";
 import { compararCategorias } from "@/lib/fiscal-dependente";
-import { DERRAMA_MAX, type EstadoCivilRet, type Regiao } from "@/lib/fiscal-data";
+import { DERRAMA_MAX, FISCAL_YEAR, type EstadoCivilRet, type Regiao } from "@/lib/fiscal-data";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import { AVENCA_SOCIEDADE, AVENCA_SOCIEDADE_ANUAL_MEDIA } from "@/lib/contabilista";
 import { fmt, pct } from "@/lib/format";
 import InfoTip from "@/components/ui/InfoTip";
@@ -1041,6 +1042,26 @@ export default function ComparadorCenarios() {
         `Cenário com maior líquido identificado: ${tituloMelhor}.`,
       ]}
     />
+
+    {bruto > 0 && (
+      <div className="mt-4">
+        <EnviarAoContabilista
+          tipo="comparador_regimes"
+          toolId="comparar-regimes"
+          titulo={`Comparação de regimes ${FISCAL_YEAR}`}
+          conteudo={{
+            ano: FISCAL_YEAR,
+            cenarios: [
+              { nome: "Trabalhador dependente", liquidoAnual: Math.round(liquidos.dependente) },
+              { nome: "Recibos verdes", liquidoAnual: Math.round(liquidos.freelancer) },
+              { nome: "Empresa (sociedade)", liquidoAnual: Math.round(liquidos.empresa) },
+            ],
+            recomendacao: tituloMelhor,
+            pressupostos: { rendimentoBrutoAnual: Math.round(bruto), despesasAnuais: Math.round(despesas) },
+          }}
+        />
+      </div>
+    )}
 
     {/* ── Próximos passos: precisas de um contabilista? ── */}
     <ErrorBoundary etiqueta="o diagnóstico de contabilista">

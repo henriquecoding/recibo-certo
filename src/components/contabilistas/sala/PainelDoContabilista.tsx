@@ -16,6 +16,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ReactNode } from "react";
+import Link from "next/link";
 import Badge from "@/components/ui/Badge";
 import { Calendar, Gift, Lock, PaperClip } from "@/components/ui/Icons";
 
@@ -72,7 +73,13 @@ export function IdentidadeDoCliente({
  * pergunta que toda a gente faz, e uma resposta a meia-voz manda procurar
  * noutro sítio.
  */
-export function AcoesDisponiveis({ acoes }: { acoes: string[] }) {
+export interface AcaoDisponivel {
+  rotulo: string;
+  /** Para onde leva. Sem `href`, a ação acontece nesta mesma página. */
+  href?: string;
+}
+
+export function AcoesDisponiveis({ acoes }: { acoes: AcaoDisponivel[] }) {
   return (
     <section
       aria-labelledby="acoes-titulo"
@@ -82,9 +89,29 @@ export function AcoesDisponiveis({ acoes }: { acoes: string[] }) {
         Ações disponíveis
       </h2>
 
-      <p className="mt-1.5 text-sm leading-relaxed text-stone-600">{acoes.join(" · ")}</p>
+      {/* Eram texto separado por «·» — uma lista do que existe noutras
+          páginas, sem caminho para lá. Cada ação que tem sítio próprio é
+          agora um link; as que acontecem nesta página ficam como rótulo. */}
+      <ul className="mt-2.5 flex flex-wrap gap-1.5">
+        {acoes.map((a) => (
+          <li key={a.rotulo}>
+            {a.href ? (
+              <Link
+                href={a.href}
+                className="inline-flex min-h-[2.25rem] items-center rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition-colors hover:border-brand hover:text-brand-dark"
+              >
+                {a.rotulo}
+              </Link>
+            ) : (
+              <span className="inline-flex min-h-[2.25rem] items-center rounded-xl border border-stone-200 px-3 py-1.5 text-sm text-stone-600">
+                {a.rotulo}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
 
-      <p className="mt-2 flex items-start gap-2 text-sm font-semibold leading-relaxed text-clay-text">
+      <p className="mt-3 flex items-start gap-2 text-sm font-semibold leading-relaxed text-clay-text">
         <Lock size={14} className="mt-0.5 shrink-0" aria-hidden />
         Sem email · sem telemóvel · sem WhatsApp
       </p>

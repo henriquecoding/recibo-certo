@@ -133,7 +133,51 @@ export default function ContabilistasParaEsteResultado({ necessidade, limite = 3
   // abre é pior do que não a desenhar.
   if (!disponivel) return null;
   if (estado === "a-ler") return <Esqueleto />;
-  if (estado === "vazio") return null;
+
+  // ── Zero candidatos ────────────────────────────────────────────────
+  //  Devolvia `null`, e com ele desaparecia a ÚNICA ponte entre este
+  //  resultado e o diretório real — precisamente no cenário mais provável
+  //  numa plataforma a começar, com poucos contabilistas inscritos. O
+  //  motor não ter encontrado ninguém para ESTA matéria não quer dizer que
+  //  não haja diretório: quer dizer que a escolha é da pessoa.
+  if (estado === "vazio") {
+    return (
+      <section
+        aria-labelledby="contabilistas-do-resultado"
+        className="mt-8 border-t border-stone-200 pt-6 dark:border-stone-800"
+      >
+        <header className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
+            <Briefcase size={18} aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="eyebrow text-brand">A seguir</p>
+            <h2
+              id="contabilistas-do-resultado"
+              className="font-display mt-0.5 text-xl text-ink dark:text-stone-100 sm:text-2xl"
+            >
+              Falar com um contabilista sobre isto
+            </h2>
+          </div>
+        </header>
+        <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+          Ainda não temos ninguém inscrito para esta matéria em concreto. O diretório
+          está a crescer — vê quem já lá está.
+        </p>
+        <Link
+          href="/contabilistas"
+          onClick={() =>
+            registar("accountant_match_click", {
+              tool_id: necessidade.origem, rank: 0, carries_result: bagagem !== null,
+            })
+          }
+          className="focus-marca mt-4 inline-flex min-h-[2.25rem] items-center gap-1.5 rounded-xl bg-brand px-3.5 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
+        >
+          Ver o diretório <ArrowRight size={14} aria-hidden />
+        </Link>
+      </section>
+    );
+  }
 
   return (
     // ── Uma continuação do resultado, não um cartão a competir com ele ──

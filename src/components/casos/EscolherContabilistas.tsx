@@ -145,9 +145,22 @@ export default function EscolherContabilistas({
           </div>
 
           <ul className="mt-3 space-y-2">
+            {/* Duas mensagens, como no diretório principal. «Ninguém
+                corresponde a essa procura» sobre uma lista VAZIA culpava a
+                pessoa por um problema que é da plataforma: sem nenhum
+                contabilista a aceitar clientes, não há procura nenhuma que
+                dê resultado. */}
             {ordenada.length === 0 && (
-              <li className="rounded-2xl border border-stone-200 bg-cream px-4 py-6 text-center text-sm text-stone-500">
-                Ninguém corresponde a essa procura.
+              <li className="rounded-2xl border border-stone-200 bg-cream px-4 py-6 text-center text-sm leading-relaxed text-stone-500">
+                {lista.length === 0 ? (
+                  <>
+                    Ainda não há contabilistas a aceitar novos clientes. O diretório
+                    está a crescer — o teu caso fica guardado e podes enviá-lo assim
+                    que houver alguém.
+                  </>
+                ) : (
+                  <>Ninguém corresponde a essa procura.</>
+                )}
               </li>
             )}
             {ordenada.slice(0, 12).map((c) => {
@@ -194,7 +207,7 @@ export default function EscolherContabilistas({
                     >
                       {aEnviar === c.userId
                         ? <><Spinner size={13} /> A enviar…</>
-                        : "Enviar o caso"}
+                        : "Enviar a esta pessoa"}
                     </Button>
                   )}
                 </li>

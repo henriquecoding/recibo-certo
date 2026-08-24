@@ -51,6 +51,8 @@ import {
   type ResultadoPreco,
 } from "@/lib/pricing";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
+import { FISCAL_YEAR } from "@/lib/fiscal-year";
 
 const PERFIL: Record<string, string> = {
   ti: "Trabalhador independente",
@@ -129,6 +131,29 @@ export default function ConclusaoPreco({
     {/* Fora do cartão do resultado e logo a seguir a ele: um preço que não
         fecha, um limiar de isenção de IVA à porta ou uma sociedade a
         considerar são exatamente os casos que se levam a alguém. */}
+    {resultado.ok && (
+      <div className="mt-4">
+        <EnviarAoContabilista
+          tipo="preco_calculado"
+          toolId="calcular-preco"
+          titulo={`Preço calculado ${FISCAL_YEAR}`}
+          conteudo={{
+            ano: FISCAL_YEAR,
+            produto: contexto.produto.nome,
+            pvp: Number(resultado.pvp.toFixed(2)),
+            precoLiquido: Number(resultado.precoLiquido.toFixed(2)),
+            iva: Number(resultado.iva.toFixed(2)),
+            taxaIvaPct: Number((resultado.taxaIVA * 100).toFixed(2)),
+            margemPct: Number((resultado.margem.margem * 100).toFixed(2)),
+            faixaMinima: resultado.faixa.ancoras.find((a) => a.chave === "minimo")?.pvp,
+            faixaRecomendada: resultado.faixa.ancoras.find((a) => a.chave === "recomendado")?.pvp,
+            faixaConfortavel: resultado.faixa.ancoras.find((a) => a.chave === "confortavel")?.pvp,
+            regimeIva: resultado.regimeIVA,
+            perfil: PERFIL[contexto.vendedor.tipo] ?? PERFIL.nao_sei,
+          }}
+        />
+      </div>
+    )}
     <ContabilistasNoResultado />
     </>
   );

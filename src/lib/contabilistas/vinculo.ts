@@ -37,7 +37,15 @@ export const TEXTO_CONSENTIMENTO =
  */
 export const PARTILHA_NUNCA_EXIGE_PLUS = true as const;
 
-/** Anti-spam: partilhas por cliente e por dia. */
+/**
+ * Anti-spam: partilhas por cliente e por dia.
+ *
+ * ⚠️ ESPELHO. Quem impõe isto é `public.limite_partilhas_dia()`, através
+ * de um gatilho em `partilhas` (migração `20260824100000`). Durante muito
+ * tempo esta constante existiu só aqui e nos testes, e não era aplicada em
+ * lado nenhum — a escrita ia direta à tabela. Mudar o número aqui sem
+ * mudar a função da base volta a pôr as duas a divergir.
+ */
 export const LIMITE_PARTILHAS_DIA = 20;
 
 /** Tamanho máximo do conteúdo de uma partilha, em bytes de JSON. */
@@ -122,6 +130,13 @@ export const CAMPOS_PARTILHA: Record<TipoPartilha, readonly string[]> = {
     "faturacaoProjetada", "custosOperacionais", "resultadoOperacional",
     "clientes", "trabalhadores", "pontoEquilibrio", "confianca", "regiao", "notas",
   ],
+  // Repare-se no que NÃO está aqui: custo unitário, margem, markup e a
+  // estrutura de custos detalhada. Só a conclusão — o preço final e a
+  // faixa — é precisa para um contabilista opinar.
+  preco_calculado: [
+    "ano", "produto", "pvp", "precoLiquido", "iva", "taxaIvaPct", "margemPct",
+    "faixaMinima", "faixaRecomendada", "faixaConfortavel", "regimeIva", "perfil", "notas",
+  ],
 };
 
 export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
@@ -134,6 +149,7 @@ export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
   cenario_guardado: "Cenário guardado",
   resumo_anual: "Resumo anual",
   plano_negocio: "Projeto de negócio",
+  preco_calculado: "Preço calculado",
 };
 
 export interface ConteudoSanitizado {

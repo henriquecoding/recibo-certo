@@ -371,11 +371,32 @@ describe("O painel do contabilista", () => {
 
   it("diz o que se pode fazer E o que não existe", () => {
     const html = renderToStaticMarkup(
-      <AcoesDisponiveis acoes={["Mensagem", "pedir documento", "consulta"]} />,
+      <AcoesDisponiveis
+        acoes={[
+          { rotulo: "Mensagem" },
+          { rotulo: "Pedir documento" },
+          { rotulo: "Consulta", href: "/contabilista/agenda" },
+        ]}
+      />,
     );
     expect(html).toContain("Ações disponíveis");
-    expect(html).toContain("Mensagem · pedir documento · consulta");
+    expect(html).toContain("Mensagem");
+    expect(html).toContain("Pedir documento");
     expect(html).toContain("Sem email · sem telemóvel · sem WhatsApp");
+  });
+
+  it("dá caminho às ações que vivem noutra página, e não às desta", () => {
+    const html = renderToStaticMarkup(
+      <AcoesDisponiveis
+        acoes={[
+          { rotulo: "Mensagem" },
+          { rotulo: "Consulta", href: "/contabilista/agenda" },
+        ]}
+      />,
+    );
+    // A ação com destino é um link; a que acontece aqui não pode sê-lo.
+    expect(html).toContain('href="/contabilista/agenda"');
+    expect(html).not.toMatch(/<a[^>]*>Mensagem</);
   });
 
   it("dá contexto com datas, e diz quando não há", () => {

@@ -6,14 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  Estas 40 migrações dependem umas das outras: a 046 usa tabelas
+--  Estas 45 migrações dependem umas das outras: a 046 usa tabelas
 --  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
 --  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
 --  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260821022535_o_fim_da_mediacao_chega_a_producao.sql).
+--  à última  (20260824100000_limite_diario_de_partilhas.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -13348,3 +13348,268 @@ DROP FUNCTION IF EXISTS public.texto_parece_contacto_externo(text);
 DROP FUNCTION IF EXISTS public.rever_mensagem(uuid, text, text, text);
 DROP FUNCTION IF EXISTS public.encaminhar_caso(uuid, uuid);
 DROP FUNCTION IF EXISTS public.libertar_documento(uuid, boolean);
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260824090000_partilha_admite_plano_negocio.sql                  ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260824090000_partilha_admite_plano_negocio.sql
+-- Admite o tipo de partilha `plano_negocio` — enviar a conclusão de
+-- "Descobrir o meu negócio" a um contabilista.
+--
+-- src/lib/contabilistas/tipos.ts já declara `plano_negocio` como
+-- TipoPartilha válido, e ConclusaoNegocio.tsx já monta o botão de envio
+-- com esse tipo — mas esta constraint, criada na 042, nunca foi
+-- atualizada para o admitir. Todo o envio falha hoje com a violação
+-- 23514 do Postgres. É o mesmo defeito que a 20260819120000 já fechou
+-- para `cenarios.tipo`, agora para `partilhas.tipo`.
+--
+-- Idempotente — seguro correr múltiplas vezes.
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.partilhas'::regclass AND conname = 'partilhas_tipo_check'
+  ) THEN
+    ALTER TABLE public.partilhas DROP CONSTRAINT partilhas_tipo_check;
+  END IF;
+END $$;
+
+ALTER TABLE public.partilhas
+  ADD CONSTRAINT partilhas_tipo_check
+  CHECK (tipo IN (
+    'simulador_irs', 'recibos_verdes', 'recibo_vencimento',
+    'comparador_regimes', 'simulador_empresa', 'simulador_herancas',
+    'cenario_guardado', 'resumo_anual', 'plano_negocio'
+  ));
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260824091500_proposta_avisa_e_atualiza_caso.sql                 ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260824091500_proposta_avisa_e_atualiza_caso.sql
+-- Uma proposta enviada passa a acordar o caso e a avisar o cliente.
+--
+-- `enviarProposta()` em src/lib/contabilistas/casos.ts insere diretamente em
+-- `propostas` (a política `propostas_contabilista_envia` já permite ao
+-- contabilista fazê-lo por REST) — mas nada fazia `casos.estado` avançar
+-- para 'com_proposta', nem chamava `avisar_utilizador`. O sino do cliente
+-- nunca acendia: ele continuava a ver "Avisamos-te quando houver proposta"
+-- com uma proposta pronta à espera.
+--
+-- Segue o mesmo princípio do cabeçalho da 047: o aviso nasce da mesma
+-- transação que causa o facto, nunca de um caminho à parte que alguém se
+-- possa esquecer de chamar.
+--
+-- Idempotente.
+
+CREATE OR REPLACE FUNCTION public.proposta_avisa_e_atualiza_caso()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_cliente uuid;
+BEGIN
+  -- Só a primeira proposta transita o estado — um segundo contabilista
+  -- encaminhado que também proponha não reabre um caso já decidido.
+  UPDATE public.casos SET estado = 'com_proposta'
+   WHERE id = NEW.caso_id AND estado = 'encaminhado'
+   RETURNING cliente_id INTO v_cliente;
+
+  IF v_cliente IS NULL THEN
+    SELECT cliente_id INTO v_cliente FROM public.casos WHERE id = NEW.caso_id;
+  END IF;
+
+  PERFORM public.avisar_utilizador(v_cliente, 'proposta',
+    'Tens uma proposta à espera', NULL, '/dashboard/casos');
+
+  RETURN NULL;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS proposta_avisa_e_atualiza_caso ON public.propostas;
+CREATE TRIGGER proposta_avisa_e_atualiza_caso
+  AFTER INSERT ON public.propostas
+  FOR EACH ROW EXECUTE FUNCTION public.proposta_avisa_e_atualiza_caso();
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260824093000_partilha_admite_preco_calculado.sql                ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260824093000_partilha_admite_preco_calculado.sql
+-- Admite o tipo de partilha `preco_calculado` — enviar a conclusão da
+-- engine de formação de preço (`/ferramentas/calcular-preco`) a um
+-- contabilista.
+--
+-- Mesmo padrão de 20260824090000: um TipoPartilha novo em
+-- src/lib/contabilistas/tipos.ts precisa de entrar aqui, ou o insert em
+-- `partilhas` falha sempre com a violação 23514 do Postgres.
+--
+-- Idempotente.
+
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conrelid = 'public.partilhas'::regclass AND conname = 'partilhas_tipo_check'
+  ) THEN
+    ALTER TABLE public.partilhas DROP CONSTRAINT partilhas_tipo_check;
+  END IF;
+END $$;
+
+ALTER TABLE public.partilhas
+  ADD CONSTRAINT partilhas_tipo_check
+  CHECK (tipo IN (
+    'simulador_irs', 'recibos_verdes', 'recibo_vencimento',
+    'comparador_regimes', 'simulador_empresa', 'simulador_herancas',
+    'cenario_guardado', 'resumo_anual', 'plano_negocio', 'preco_calculado'
+  ));
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260824094500_lembrar_casos_sem_resposta.sql                     ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260824094500_lembrar_casos_sem_resposta.sql
+-- Um caso encaminhado que ninguém responde deixa de ficar calado.
+--
+-- `caso_encaminhamentos.estado` nasce 'convidado' e ficava assim PARA
+-- SEMPRE se nenhum dos até três contabilistas escolhidos respondesse: não
+-- havia cron nenhum a detetá-lo (só existiam para anexos, propostas
+-- expiradas e reconciliação Stripe). O cliente ficava à espera de uma
+-- resposta que ninguém sabia que devia dar.
+--
+-- Duas medidas, uma por dia:
+--   · ao fim de LEMBRETE_DIAS, lembra-se cada contabilista convidado;
+--   · ao fim de AVISAR_CLIENTE_DIAS, avisa-se o CLIENTE de que ninguém
+--     respondeu — para ele poder escolher outra pessoa em vez de esperar.
+--
+-- Não muda o estado do encaminhamento: um convite por responder continua
+-- por responder, e inventar um estado 'esquecido' seria fechar a porta a
+-- quem ainda vai responder.
+--
+-- Idempotente.
+
+-- As marcas de «já foi lembrado» vivem nas tabelas e não numa fila à
+-- parte: sem elas, o cron voltava a avisar todos os dias.
+ALTER TABLE public.caso_encaminhamentos ADD COLUMN IF NOT EXISTS lembrado_em timestamptz;
+ALTER TABLE public.casos ADD COLUMN IF NOT EXISTS cliente_avisado_sem_resposta_em timestamptz;
+
+CREATE OR REPLACE FUNCTION public.lembrar_casos_sem_resposta()
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  LEMBRETE_DIAS        constant integer := 3;
+  AVISAR_CLIENTE_DIAS  constant integer := 7;
+  v_lembrados integer := 0;
+  v_avisados  integer := 0;
+  r record;
+BEGIN
+  -- ── 1. Lembrar quem foi convidado e não respondeu ──────────────────
+  FOR r IN
+    SELECT e.id, e.contabilista_id, c.referencia
+      FROM public.caso_encaminhamentos e
+      JOIN public.casos c ON c.id = e.caso_id
+     WHERE e.estado = 'convidado'
+       AND e.encaminhado_em < now() - make_interval(days => LEMBRETE_DIAS)
+       AND e.lembrado_em IS NULL
+  LOOP
+    PERFORM public.avisar_utilizador(r.contabilista_id, 'caso',
+      'Tens um caso por responder',
+      'O caso ' || r.referencia || ' está à tua espera há alguns dias.',
+      '/contabilista/casos');
+    UPDATE public.caso_encaminhamentos SET lembrado_em = now() WHERE id = r.id;
+    v_lembrados := v_lembrados + 1;
+  END LOOP;
+
+  -- ── 2. Avisar o cliente de que ninguém respondeu ───────────────────
+  -- Um caso só entra aqui se NENHUM dos convites teve resposta: basta um
+  -- 'aceite' para o caso estar a andar.
+  FOR r IN
+    SELECT c.id, c.cliente_id, c.referencia
+      FROM public.casos c
+     WHERE c.estado = 'encaminhado'
+       AND c.cliente_avisado_sem_resposta_em IS NULL
+       AND EXISTS (
+         SELECT 1 FROM public.caso_encaminhamentos e
+          WHERE e.caso_id = c.id
+            AND e.encaminhado_em < now() - make_interval(days => AVISAR_CLIENTE_DIAS)
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM public.caso_encaminhamentos e
+          WHERE e.caso_id = c.id AND e.estado = 'aceite'
+       )
+  LOOP
+    PERFORM public.avisar_utilizador(r.cliente_id, 'caso',
+      'Ainda não tens resposta',
+      'Ninguém respondeu ao caso ' || r.referencia || '. Podes escolher outro contabilista.',
+      '/dashboard/casos');
+    UPDATE public.casos SET cliente_avisado_sem_resposta_em = now() WHERE id = r.id;
+    v_avisados := v_avisados + 1;
+  END LOOP;
+
+  RETURN jsonb_build_object('lembrados', v_lembrados, 'avisados', v_avisados);
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.lembrar_casos_sem_resposta() FROM anon, authenticated, public;
+GRANT EXECUTE ON FUNCTION public.lembrar_casos_sem_resposta() TO service_role;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260824100000_limite_diario_de_partilhas.sql                     ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260824100000_limite_diario_de_partilhas.sql
+-- `LIMITE_PARTILHAS_DIA` passa a ser imposto, e não só declarado.
+--
+-- A constante existia em src/lib/contabilistas/vinculo.ts (20 por cliente
+-- e por dia) e era usada nos testes de unidade — mas `partilhar()` escreve
+-- diretamente na tabela sem contagem prévia, e a política de INSERT só
+-- verifica `cliente_id`, `estado` e vínculo ativo. Alguém com acesso
+-- direto à API REST do Supabase podia inundar o painel de um contabilista
+-- com partilhas sem limite.
+--
+-- É um GATILHO e não uma RPC de propósito: uma RPC só protege quem passa
+-- por ela, e o caminho REST direto — que é precisamente o do abuso —
+-- continuava aberto. O gatilho está em todos os caminhos.
+--
+-- Não é um risco de fuga de dados (continua a exigir vínculo ativo e
+-- sessão autenticada); é o único vetor de abuso na camada de escrita.
+--
+-- Idempotente.
+
+/* O limite vive aqui, e não num ecrã: um teto que vive na interface é uma
+   sugestão. O espelho em JavaScript é `LIMITE_PARTILHAS_DIA`. */
+CREATE OR REPLACE FUNCTION public.limite_partilhas_dia() RETURNS integer
+LANGUAGE sql IMMUTABLE AS $$ SELECT 20 $$;
+
+CREATE OR REPLACE FUNCTION public.partilhas_dentro_do_limite_diario()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE n integer;
+BEGIN
+  SELECT count(*) INTO n
+    FROM public.partilhas p
+   WHERE p.cliente_id = NEW.cliente_id
+     AND p.criado_em >= date_trunc('day', now());
+
+  IF n >= public.limite_partilhas_dia() THEN
+    RAISE EXCEPTION 'Já enviaste % simulações hoje. Tenta amanhã.',
+      public.limite_partilhas_dia()
+      USING ERRCODE = 'check_violation';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS partilhas_dentro_do_limite_diario ON public.partilhas;
+CREATE TRIGGER partilhas_dentro_do_limite_diario
+  BEFORE INSERT ON public.partilhas
+  FOR EACH ROW EXECUTE FUNCTION public.partilhas_dentro_do_limite_diario();

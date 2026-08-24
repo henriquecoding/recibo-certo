@@ -221,7 +221,9 @@ import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA as calcularSituacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import type { CategoriaSimuladorRV } from "@/lib/fiscal-data";
+import { FISCAL_YEAR } from "@/lib/fiscal-data";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 
 // ── Fluxos guiados carregados sob procura ────────────────────────────────────
 // O simulador abre com o seletor "Como queres simular?" (OnboardingGate). Os
@@ -7502,6 +7504,25 @@ export default function SimuladorIntegrado({
           Esta calculadora também é a da homepage; lá não há necessidade
           declarada no contexto e isto não desenha nada. Dentro da
           ferramenta desenha, e só com faturação introduzida. */}
+      {resultRecibo.bruto > 0 && (
+        <div className="mt-4">
+          <EnviarAoContabilista
+            tipo="recibos_verdes"
+            toolId="recibos-verdes"
+            titulo={`Recibos verdes ${FISCAL_YEAR}`}
+            conteudo={{
+              ano: FISCAL_YEAR,
+              valorBruto: Math.round(resultRecibo.bruto),
+              atividade: atividade.label,
+              retencaoPct: Number((resultRecibo.taxaRetencao * 100).toFixed(2)),
+              segurancaSocial: Math.round(resultRecibo.segSocial),
+              isencaoIva: isentoEfetivo,
+              liquido: Math.round(resultRecibo.liquido),
+              reservaSugerida: Math.round(resultReciboFinal.iva + resultRecibo.segSocial),
+            }}
+          />
+        </div>
+      )}
       <ContabilistasNoResultado pronto={resultRecibo.bruto > 0} />
     </div>
   );

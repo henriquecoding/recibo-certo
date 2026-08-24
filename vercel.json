@@ -30,6 +30,10 @@
     {
       "path": "/api/cron/expirar-propostas",
       "schedule": "15 3 * * *"
+    },
+    {
+      "path": "/api/cron/lembrar-casos",
+      "schedule": "45 8 * * *"
     }
   ]
 }

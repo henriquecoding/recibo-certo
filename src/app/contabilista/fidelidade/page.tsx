@@ -549,6 +549,15 @@ function CupoesEmitidos({
             <span className="min-w-0 flex-1">
               <span className="block text-sm font-semibold text-ink">{nomeDe(c.clienteId)}</span>
               <span className="block font-mono text-xs text-stone-400">{c.codigo}</span>
+              {/* A vista do cliente já dizia «Válido até»; esta não dizia
+                  nada, e o contabilista só descobria a expiração depois de
+                  ela acontecer — sem poder lembrar ninguém a tempo. */}
+              {c.estado === "disponivel" && (
+                <span className="block text-xs text-stone-500">
+                  Válido até{" "}
+                  {new Intl.DateTimeFormat("pt-PT", { dateStyle: "long" }).format(new Date(c.expiraEm))}
+                </span>
+              )}
             </span>
             <span className="shrink-0 text-sm font-semibold text-brand-dark tabular-nums dark:text-brand-mint">
               {c.percentagem}%

@@ -16,6 +16,28 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.113.0",
+    data: "2026-08-24",
+    titulo: "A ponte para o teu contabilista deixou de acabar a meio",
+    itens: [
+      "O changelog da 2.106.0 prometia que, no fim de qualquer simulação, quem já tem contabilista via o caminho para lhe enviar o que acabou de calcular. Fomos verificar ferramenta a ferramenta e não era verdade: de todas elas, só o simulador de IRS tinha esse caminho a funcionar. As outras mostravam «encontra um contabilista» e mais nada — a pessoa chegava ao perfil dele de mãos a abanar.",
+      "Recibos verdes passa a ter o envio. É a ferramenta mais usada do produto e era das que não o tinha — precisamente a que mais faz sentido pôr à frente de alguém. Agora, com faturação introduzida, aparece o botão para enviar ao teu contabilista, com os campos exatos à vista antes de confirmares.",
+      "Com ela entram o recibo de vencimento, o comparador de regimes, o simulador de empresa, o de heranças e a calculadora de preço. Cada um envia só o que faz sentido para aquele caso: o de preço, por exemplo, leva o preço final e a faixa, e nunca os teus custos, margens ou markup — isso é segredo comercial, não anexo de um pedido.",
+      "«Descobrir o meu negócio» tinha o botão de envio desenhado e testado, e falhava sempre que alguém o usasse a sério: a base de dados nunca tinha sido atualizada para aceitar este tipo de envio, e quem carregasse em «Confirmar e enviar» recebia um erro em vez de «Enviado». Corrigido.",
+      "Uma proposta pronta deixa de ficar em silêncio. Quando um contabilista enviava uma proposta a um caso, o caso não mudava de estado e o sino do cliente nunca acendia: ele continuava a ver «Avisamos-te quando houver proposta» com a proposta à espera da decisão dele. Agora o aviso nasce da mesma operação que cria a proposta.",
+      "Um caso que ninguém responde também deixa de ficar em silêncio. Ao fim de três dias lembramos quem foi convidado; ao fim de sete dizemos-te que ninguém respondeu, para poderes escolher outra pessoa em vez de continuares à espera.",
+      "Corrigido um erro de confiança que aparecia em cinco ecrãs: se pedisses vínculo a mais do que um contabilista, mostrávamos sempre o pedido mais recente e não a relação que estava mesmo ativa — o que podia esconder um acompanhamento já a funcionar.",
+      "Na agenda, as consultas futuras podiam desaparecer sem aviso: acima de trezentas marcações guardávamos as mais antigas e perdíamos as que ainda vinham, precisamente na época de picos. Deixou de haver esse limite.",
+      "Fechar um dia por doença ou férias passa a ser possível sem desfazer a semana-tipo. Até aqui a única forma de faltar a uma sexta era apagar a sexta inteira do horário — o que a fechava para sempre, e não só naquele dia.",
+      "Um contabilista novo já não chega a uma semana vazia: é-lhe oferecido o horário mais comum (dias úteis, 9h–13h e 14h–18h) com um clique, em vez de dez cliques a reconstruí-lo à mão.",
+      "«Enviar o caso» era o nome de dois botões que faziam coisas diferentes — um guardava o caso, o outro entregava-o mesmo. Quem saísse depois do primeiro achava, com razão, que já tinha enviado a alguém. Passam a dizer o que fazem.",
+      "O aviso de que um contacto escrito no campo «Conta-nos a situação» segue tal e qual passa a ter o mesmo destaque do interruptor de partilha de contactos, que está logo por baixo e parecia cobri-lo.",
+      "Os perfis públicos diziam todos «Contabilista certificado» na etiqueta que viaja para a pesquisa e para as partilhas, mesmo os que ainda não têm a inscrição na Ordem confirmada. Passa a dizer o estado real.",
+      "Quando não há contabilistas para a matéria da simulação, deixámos de fazer desaparecer a secção inteira: convidamos-te a ver o diretório, que está a crescer. E na escolha de quem vê o teu caso, «ninguém corresponde a essa procura» deixa de aparecer quando o problema não é a tua procura, mas o facto de ainda não haver ninguém a aceitar clientes.",
+      "Correções internas: um contabilista que descreve a clientela por palavras próprias em vez de marcar a etiqueta deixa de pontuar abaixo de um perfil genérico; o limite de envios por dia, que estava escrito mas nunca aplicado, passa a ser imposto pela base de dados; e se o canal de email deixar de funcionar, isso deixa de passar despercebido.",
+    ],
+  },
+  {
     version: "2.112.0",
     data: "2026-08-24",
     titulo: "A navegação passou a contar uma história, e passou a ser a mesma nos dois ecrãs",
