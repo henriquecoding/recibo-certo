@@ -139,110 +139,97 @@ for (const vp of VIEWPORTS) {
     });
     if (!capsula) mal(`${vp.nome}px: cápsula ausente`);
     else {
-      if (capsula.itens.length !== 6) mal(`${vp.nome}px: cápsula com ${capsula.itens.length} itens (esperados 6)`);
-      else ok(`${vp.nome}px: cápsula com 6 itens (${capsula.largura}px) — ${capsula.itens.map((i) => i.nome).join(" · ")}`);
+      // CINCO e não seis: «Menu» saiu da bandeja para a primeira linha do
+      // cartão. Esteve lá dentro, separado por uma régua, e uma régua é
+      // sinal fraco de mais para dizer «isto é de outra natureza».
+      if (capsula.itens.length !== 5) mal(`${vp.nome}px: bandeja com ${capsula.itens.length} pilares (esperados 5)`);
+      else ok(`${vp.nome}px: bandeja com 5 pilares (${capsula.largura}px) — ${capsula.itens.map((i) => i.nome).join(" · ")}`);
+      const menuNaLinha1 = await page.evaluate(() => {
+        const gat = document.querySelector('[data-menu-gatilho="secretaria"]');
+        const bandeja = document.querySelector('nav[aria-label="Principal"]');
+        return { existe: !!gat, dentroDaBandeja: !!(gat && bandeja?.contains(gat)) };
+      });
+      if (!menuNaLinha1.existe) mal(`${vp.nome}px: gatilho do menu ausente do cartão`);
+      else if (menuNaLinha1.dentroDaBandeja) mal(`${vp.nome}px: «Menu» voltou para dentro da bandeja`);
+      else ok(`${vp.nome}px: «Menu» na primeira linha, fora da bandeja`);
       if (!capsula.cabe) mal(`${vp.nome}px: cápsula sai do ecrã`);
       // ┌───────────────────────────────────────────────────────────────┐
-      // │ DUAS MEDIÇÕES QUE FALTARAM, E CADA UMA APANHOU UM DEFEITO      │
+      // │ AS TRÊS MEDIÇÕES QUE FALTARAM, E CADA UMA APANHOU UM DEFEITO   │
       // │                                                               │
-      // │ 1. COLISÃO. A cápsula cabia no ecrã e passava POR CIMA do      │
-      // │    logótipo — 8 px a 1024, 17 px a 1440. «Cabe na janela» e    │
-      // │    «não se sobrepõe aos vizinhos» são perguntas diferentes.    │
-      // │    A sobreposição mede-se nos DOIS eixos: desde que o          │
-      // │    cabeçalho passou a três linhas, a cápsula e a marca         │
-      // │    partilham colunas sem partilharem linha, e um teste só      │
-      // │    horizontal daria um falso positivo permanente.               │
+      // │ 1. COLISÃO. Numa versão a barra de navegação cabia no ecrã e   │
+      // │    passava POR CIMA do logótipo — 8 px a 1024, 17 px a 1440.   │
+      // │    «Cabe na janela» e «não se sobrepõe aos vizinhos» são       │
+      // │    perguntas diferentes, e mede-se nos DOIS eixos: as linhas   │
+      // │    partilham colunas sem partilharem linha.                     │
       // │                                                               │
-      // │ 2. EIXO. A cápsula ficava centrada no espaço que SOBRAVA entre │
-      // │    duas colunas de larguras diferentes, e a barra de pesquisa  │
-      // │    por baixo ficava centrada na página: a 1920 px os centros   │
-      // │    caíam a 886 e a 960. Dois elementos centrados, empilhados,  │
-      // │    desalinhados — nada falha, e vê-se logo.                     │
-      // └───────────────────────────────────────────────────────────────┘
-      const geometria = await page.evaluate(() => {
-        const nav = document.querySelector('nav[aria-label="Principal"]');
-        const grelha = nav?.closest("div.grid");
-        const marca = grelha?.querySelector('a[aria-label^="ReciboCerto"]');
-        const accoes = grelha?.querySelector("div.row-start-1 > div:last-child");
-        const busca = grelha?.querySelector("div.row-start-3");
-        const r = (el) => (el ? el.getBoundingClientRect() : null);
-        const n = r(nav), m = r(marca), a = r(accoes), b = r(busca), g = r(grelha);
-        const cruza = (x, y) =>
-          x && y && x.right > y.left + 1 && y.right > x.left + 1 && x.bottom > y.top + 1 && y.bottom > x.top + 1;
-        const meio = (x) => (x ? Math.round(x.left + x.width / 2) : null);
-        return {
-          comMarca: cruza(m, n) ? Math.round(m.right - n.left) : 0,
-          comAccoes: cruza(n, a) ? Math.round(n.right - a.left) : 0,
-          eixoCapsula: meio(n),
-          eixoBusca: meio(b),
-          eixoGrelha: meio(g),
-        };
-      });
-      if (geometria.comMarca > 0) mal(`${vp.nome}px: cápsula sobrepõe o logótipo em ${geometria.comMarca}px`);
-      if (geometria.comAccoes > 0) mal(`${vp.nome}px: cápsula sobrepõe as acções em ${geometria.comAccoes}px`);
-      if (!geometria.comMarca && !geometria.comAccoes) ok(`${vp.nome}px: cápsula sem colisão com marca nem acções`);
-
-      const desvioCapsula = Math.abs(geometria.eixoCapsula - geometria.eixoGrelha);
-      const desvioBusca = Math.abs(geometria.eixoBusca - geometria.eixoGrelha);
-      if (desvioCapsula > 2 || desvioBusca > 2) {
-        mal(
-          `${vp.nome}px: eixos desalinhados — cápsula ${geometria.eixoCapsula}, ` +
-            `pesquisa ${geometria.eixoBusca}, página ${geometria.eixoGrelha}`,
-        );
-      } else {
-        ok(`${vp.nome}px: cápsula e pesquisa no mesmo eixo da página (${geometria.eixoGrelha})`);
-      }
-
-      // E a MESMA largura, não uma parecida: 715 contra 704 são 5 px de
-      // desvio de cada lado, que é o pior sítio onde parar — lê-se como
-      // erro, não como diferença. As duas leem `--rc-dock-larga`.
-      const larguras = await page.evaluate(() => {
-        const grelha = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
-        const l = (sel) => Math.round(grelha?.querySelector(sel)?.getBoundingClientRect().width ?? 0);
-        return { capsula: l('nav[aria-label="Principal"]'), busca: l("div.row-start-3 form, div.row-start-3 > *") };
-      });
-      if (Math.abs(larguras.capsula - larguras.busca) > 1) {
-        mal(`${vp.nome}px: cápsula ${larguras.capsula}px e pesquisa ${larguras.busca}px — quase igual não é igual`);
-      } else ok(`${vp.nome}px: cápsula e pesquisa com a mesma largura (${larguras.capsula}px)`);
-
-      // ┌───────────────────────────────────────────────────────────────┐
-      // │ AO ROLAR NÃO MUDA NADA — e isso já foi falso duas vezes        │
+      // │ 2. ARESTAS. As três linhas do cartão têm de começar e acabar   │
+      // │    no mesmo píxel. Já tiveram larguras diferentes — a bandeja  │
+      // │    e a barra com 704 px e a linha de cima com o contentor      │
+      // │    todo: num ecrã largo isso dava um «T».                       │
       // │                                                               │
-      // │ Numa versão a barra de pesquisa saltava para o meio da         │
-      // │ primeira linha com outra largura. Noutra recolhia a primeira    │
-      // │ linha inteira e sumiam a marca, as secções, a conta e o        │
-      // │ «Começar» ao mesmo gesto. Numa terceira recolhia só a linha da │
-      // │ pesquisa — e aí o campo ficava em `display:none`, portanto     │
-      // │ fechar o painel com Escape deixava o foco no `<body>`.          │
-      // │                                                               │
-      // │ Agora o cabeçalho tem uma altura só. Isto mede-o: mesma caixa   │
-      // │ para as três linhas, antes e depois do scroll.                  │
+      // │ 3. QUIETUDE. Ao rolar não pode mexer-se nada. Já se recolheu   │
+      // │    a linha de cima (sumiam marca, secções, conta e «Começar»)  │
+      // │    e a da pesquisa (o campo ia a `display:none` e o Escape     │
+      // │    deixava o foco no `<body>`). Muda a sombra, e mais nada.     │
       // └───────────────────────────────────────────────────────────────┘
       const medida = `() => {
-        const g = document.querySelector('nav[aria-label="Principal"]')?.closest("div.grid");
-        const cx = (sel) => {
-          const e = g?.querySelector(sel);
-          if (!e || !e.offsetParent) return null;
-          const r = e.getBoundingClientRect();
-          return { x: Math.round(r.left), w: Math.round(r.width) };
+        const cartao = document.querySelector("header > div");
+        const linhas = [...cartao.children];
+        const r = (el) => {
+          if (!el || !el.offsetParent) return null;
+          const b = el.getBoundingClientRect();
+          return { e: Math.round(b.left), d: Math.round(b.right), w: Math.round(b.width) };
+        };
+        const marca = cartao.querySelector('a[aria-label^="ReciboCerto"]');
+        const accoes = linhas[0].lastElementChild;
+        const cruza = (x, y) => {
+          if (!x || !y) return 0;
+          const a = x.getBoundingClientRect(), b = y.getBoundingClientRect();
+          const h = a.right > b.left + 1 && b.right > a.left + 1;
+          const v = a.bottom > b.top + 1 && b.bottom > a.top + 1;
+          return h && v ? Math.round(Math.min(a.right, b.right) - Math.max(a.left, b.left)) : 0;
         };
         return {
-          capsula: cx('nav[aria-label="Principal"]'),
-          busca: cx("div.row-start-3"),
-          linha1: cx("div.row-start-1"),
-          altura: Math.round(document.querySelector("header").getBoundingClientRect().height),
+          linha1: r(linhas[0]),
+          bandeja: r(cartao.querySelector('nav[aria-label="Principal"]')),
+          busca: r(linhas[2]),
+          altura: Math.round(cartao.getBoundingClientRect().height),
+          colideMarca: cruza(marca, cartao.querySelector('nav[aria-label="Principal"]')),
+          colideAccoes: cruza(accoes, cartao.querySelector('nav[aria-label="Principal"]')),
         };
       }`;
       const antes = await page.evaluate(`(${medida})()`);
+
+      if (antes.colideMarca > 0) mal(`${vp.nome}px: a navegação sobrepõe o logótipo em ${antes.colideMarca}px`);
+      else if (antes.colideAccoes > 0) mal(`${vp.nome}px: a navegação sobrepõe as acções em ${antes.colideAccoes}px`);
+      else ok(`${vp.nome}px: sem colisões dentro do cartão`);
+
+      const arestas = ["linha1", "bandeja", "busca"].map((k) => antes[k]);
+      const desalinhadas = arestas.some(
+        (a) => !a || Math.abs(a.e - arestas[0].e) > 1 || Math.abs(a.d - arestas[0].d) > 1,
+      );
+      if (desalinhadas) {
+        mal(
+          `${vp.nome}px: as três linhas não partilham as arestas — ` +
+            arestas.map((a) => (a ? `${a.e}…${a.d}` : "ausente")).join(" / "),
+        );
+      } else ok(`${vp.nome}px: três linhas nas mesmas arestas (${arestas[0].e}…${arestas[0].d})`);
+
+      // A bandeja ocupa a linha inteira, e é a régua entre fatias que torna
+      // isso legítimo: sem ela eram seis rótulos a boiar num tubo.
+      const reguas = await page.evaluate(() =>
+        document.querySelectorAll('nav[aria-label="Principal"] > span[aria-hidden]').length);
+      if (reguas < 1) mal(`${vp.nome}px: a bandeja perdeu as réguas entre os pilares`);
+      else ok(`${vp.nome}px: bandeja com ${reguas} réguas entre fatias`);
+
       await page.evaluate(() => window.scrollTo(0, 1200));
       await page.waitForTimeout(800);
       const rolado = await page.evaluate(`(${medida})()`);
-
-      const igual = (a, b) => a && b && Math.abs(a.x - b.x) <= 1 && Math.abs(a.w - b.w) <= 1;
-      const mudou = ["linha1", "capsula", "busca"].filter((k) => !igual(antes[k], rolado[k]));
-      if (mudou.length) mal(`${vp.nome}px: ao rolar mexeu-se ${mudou.join(", ")}`);
+      const igual = (a, b) => a && b && Math.abs(a.e - b.e) <= 1 && Math.abs(a.w - b.w) <= 1;
+      const mexeu = ["linha1", "bandeja", "busca"].filter((k) => !igual(antes[k], rolado[k]));
+      if (mexeu.length) mal(`${vp.nome}px: ao rolar mexeu-se ${mexeu.join(", ")}`);
       else if (antes.altura !== rolado.altura) {
-        mal(`${vp.nome}px: o cabeçalho muda de altura ao rolar (${antes.altura} → ${rolado.altura})`);
+        mal(`${vp.nome}px: o cartão muda de altura ao rolar (${antes.altura} → ${rolado.altura})`);
       } else ok(`${vp.nome}px: ao rolar não muda nada — ${antes.altura}px nos dois estados`);
 
       // E a pesquisa continua a responder ao atalho com a página rolada.
@@ -259,27 +246,6 @@ for (const vp of VIEWPORTS) {
       } else ok(`${vp.nome}px: Escape devolve o foco ao lançador`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.waitForTimeout(500);
-      // A bandeja é OPACA e do tamanho do conteúdo — é isso que a faz ler
-      // como um controlo só. Esticada a toda a largura, com `flex-1` nos
-      // itens, ficavam ~80 px de ar entre rótulos e o agrupamento que uma
-      // bandeja existe para comunicar desaparecia.
-      const bandeja = await page.evaluate(() => {
-        const t = document.querySelector('nav[aria-label="Principal"] > div');
-        if (!t) return null;
-        const linha = document.querySelector('nav[aria-label="Principal"]').getBoundingClientRect();
-        const r = t.getBoundingClientRect();
-        return { largura: Math.round(r.width), linha: Math.round(linha.width), classes: t.className };
-      });
-      if (!bandeja) mal(`${vp.nome}px: bandeja da navegação ausente`);
-      else if (!bandeja.classes.includes("bg-stone-100")) {
-        mal(`${vp.nome}px: a bandeja perdeu o fundo recuado`);
-      } else if (bandeja.largura >= bandeja.linha - 40) {
-        mal(`${vp.nome}px: a bandeja está esticada (${bandeja.largura} de ${bandeja.linha})`);
-      } else ok(`${vp.nome}px: bandeja agrupada, ${bandeja.largura}px numa linha de ${bandeja.linha}`);
-      for (const i of capsula.itens) {
-        if (!i.visivel) mal(`${vp.nome}px: item «${i.nome}» invisível`);
-        if (!i.alturaOk) mal(`${vp.nome}px: item «${i.nome}» abaixo de 36px de alvo`);
-      }
     }
   } else {
     // A barra do telemóvel: cinco lugares, cada um com ícone E texto.

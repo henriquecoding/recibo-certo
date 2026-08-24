@@ -39,21 +39,20 @@ import { medirNavegacao } from "@/lib/busca/medicao";
 /*
  * O rank não vem do TAMANHO — vem do peso e do contentor.
  *
- * A navegação por baixo tem o mesmo corpo de letra (12 px) e está em
- * negrito, dentro de uma bandeja, com o activo em relevo. Estes são 12 px
- * de peso normal, sem contentor nenhum. Um pixel de diferença de tamanho
- * entre os dois níveis não se lê; a diferença de peso e de superfície lê-se
- * de relance.
+ * A bandeja por baixo tem o mesmo corpo de letra. O que a separa desta fila
+ * é estar dentro de um contentor recuado, com o pilar aceso em relevo.
+ * Estas são ligações soltas, de peso normal, sobre o cartão. A diferença de
+ * superfície lê-se de relance; um pixel de diferença de tamanho não.
  */
 const BASE =
-  "focus-marca flex min-h-[36px] items-center whitespace-nowrap rounded-lg px-2.5 text-[12px] no-underline transition-colors";
+  "focus-marca flex min-h-[40px] items-center whitespace-nowrap rounded-xl px-2.5 text-sm no-underline transition-colors";
 
 export default function BarraSecoes() {
   const pathname = usePathname();
   const aceso = hrefAtivo(pathname);
 
   return (
-    <nav aria-label="Secções" className="flex items-center gap-0.5">
+    <nav aria-label="Secções" className="flex min-w-0 items-center gap-0.5">
       {SECOES_TOPO.map((secao) => {
         const ativo = aceso === secao.href;
         return (
@@ -76,14 +75,14 @@ export default function BarraSecoes() {
         );
       })}
 
-      <span aria-hidden className="mx-1.5 h-4 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
+      <span aria-hidden className="mx-2 h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
 
       <button
         type="button"
         onClick={() => abrirFeedback({ area: pathname })}
         className={`${BASE} gap-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200`}
       >
-        <Megaphone size={14} className="flex-shrink-0" />
+        <Megaphone size={15} className="flex-shrink-0 text-stone-400 dark:text-stone-500" />
         Sugestões
       </button>
     </nav>

@@ -143,13 +143,13 @@ describe("navegacao:barra-de-seccoes", () => {
     // │ navegações principais — o problema que a reestruturação foi    │
     // │ resolver. Se alguém lhes der o mesmo peso, isto reprova.        │
     // └───────────────────────────────────────────────────────────────┘
-    expect(SECBAR).toContain("text-[12px]");
-    expect(SECBAR).not.toContain("font-semibold\"");
-    // A bandeja e o relevo do segmento activo são da navegação, não daqui.
-    expect(SECBAR).not.toContain("bg-stone-100 p-1");
+    // A bandeja e o relevo do pilar aceso são da navegação, não daqui: esta
+    // fila são ligações soltas sobre o cartão, sem contentor nenhum.
+    // `rounded-full bg-stone-100` e não só a cor: um `hover:bg-stone-100`
+    // nestas ligações é uma lavagem de rato, não uma bandeja.
+    expect(SECBAR).not.toContain("rounded-full bg-stone-100");
     expect(SECBAR).not.toContain("shadow-card");
-    expect(CAPSULA).toContain("rounded-full bg-stone-100 p-1");
-    expect(CAPSULA).toContain("text-[12px] font-semibold");
+    expect(CAPSULA).toContain("rounded-full bg-stone-100");
     expect(CAPSULA).toContain("shadow-card");
   });
 
@@ -204,36 +204,7 @@ describe("navegacao:contrato-dos-destinos", () => {
 });
 
 describe("navegacao:acessibilidade", () => {
-  it("as três linhas do cabeçalho têm a mesma largura", () => {
-    // Houve uma versão em que a cápsula e a barra tinham 704 px e a primeira
-    // linha ocupava o contentor todo: num ecrã largo dava um «T», e o
-    // desequilíbrio não era de espaçamento — era duas das três linhas não
-    // pertencerem à mesma grelha. Nenhuma leva uma largura própria.
-    expect(NAV).toContain("grid-cols-1");
-    expect(semComentarios(NAV)).not.toContain("max-w-[var(--rc-dock-larga)]");
-    expect(semComentarios(CAPSULA)).not.toContain("max-w-[var(--rc-dock-larga)]");
-    expect(CAPSULA).toContain("flex w-full");
-  });
 
-  it("o cabeçalho tem UMA altura — nada recolhe ao rolar", () => {
-    // ┌───────────────────────────────────────────────────────────────┐
-    // │ DUAS TENTATIVAS DE ENCOLHER, DOIS CUSTOS MAIORES DO QUE OS      │
-    // │ PÍXEIS QUE POUPAVAM                                             │
-    // │                                                                │
-    // │ A primeira recolhia a linha de cima e sumiam a marca, as        │
-    // │ secções, a conta e o «Começar» ao mesmo gesto — um cabeçalho    │
-    // │ que fica no ecrã e se despe às peças lê-se como avaria.         │
-    // │                                                                │
-    // │ A segunda recolhia só a da pesquisa e partia o teclado: com o   │
-    // │ campo em `display:none`, fechar o painel com Escape deixava o   │
-    // │ foco no `<body>`. Está pinado em `verificar-cabecalho.mjs`.     │
-    // └───────────────────────────────────────────────────────────────┘
-    expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]");
-    expect(semComentarios(NAV)).not.toContain("data-compacto");
-    expect(NAV).toContain("h-[var(--rc-header-alto)]");
-    // A altura não entra na transição: só a cor do fundo muda com o scroll.
-    expect(NAV).toContain("transition-[background-color,border-color,box-shadow]");
-  });
 
   it("há UM marco de navegação principal, e é a cápsula", () => {
     // O cabeçalho era `<nav aria-label="Principal">` e a cápsula é outro:
@@ -258,7 +229,7 @@ describe("navegacao:acessibilidade", () => {
     // │ pode depender do tamanho do ecrã.                              │
     // └───────────────────────────────────────────────────────────────┘
     expect(CAPSULA).toContain("aria-label={pilar.label}");
-    expect(CAPSULA).toContain("<span>{pilar.label}</span>");
+    expect(CAPSULA).toContain('<span className="truncate">{pilar.label}</span>');
     // O rótulo curto é da barra do telemóvel — na cápsula seria uma segunda
     // regra a decidir o que se vê, e foi de onde veio a troca de rótulos por
     // largura que a linha própria tornou desnecessária.
@@ -277,10 +248,14 @@ describe("navegacao:acessibilidade", () => {
   });
 
   it("o gatilho do menu declara que abre um diálogo, nas duas superfícies", () => {
-    for (const [nome, fonte] of [["cápsula", CAPSULA], ["linha da marca do telemóvel", MARCA]] as const) {
+    for (const [nome, fonte] of [["cabeçalho", NAV], ["linha da marca do telemóvel", MARCA]] as const) {
       expect(fonte, `${nome}: gatilho sem aria-haspopup`).toContain('aria-haspopup="dialog"');
       expect(fonte, `${nome}: gatilho sem aria-expanded`).toContain("aria-expanded=");
     }
+    // E NÃO dentro da bandeja: «Menu» não é o sexto pilar. Esteve lá,
+    // separado por uma régua, e uma régua é sinal fraco de mais para dizer
+    // «isto é de outra natureza».
+    expect(semComentarios(CAPSULA)).not.toContain("aria-haspopup");
   });
 
   it("cada gatilho do menu tem nome próprio, e não só o papel", () => {
@@ -289,63 +264,68 @@ describe("navegacao:acessibilidade", () => {
     // produto que abrem diálogos — na homepage o «Como funciona» do hero
     // vem antes destes no documento. É o mesmo contrato que a pesquisa já
     // tem em `data-busca-gatilho`.
-    expect(CAPSULA).toContain('data-menu-gatilho="secretaria"');
+    expect(NAV).toContain('data-menu-gatilho="secretaria"');
     expect(MARCA).toContain('data-menu-gatilho="movel"');
   });
 });
 
-describe("navegacao:material-do-cabecalho", () => {
-  const iBase = CSS.indexOf(".rc-cabecalho {");
-  const iSupports = CSS.indexOf("@supports ((backdrop-filter: blur(1px))");
-  const iReduzida = CSS.indexOf("@media (prefers-reduced-transparency: reduce)");
-
-  it("o vidro está no CABEÇALHO, e não na bandeja da navegação", () => {
+describe("navegacao:cartao-do-cabecalho", () => {
+  it("o cabeçalho é um CARTÃO a flutuar, e não uma faixa", () => {
     // ┌───────────────────────────────────────────────────────────────┐
-    // │ ESTEVE NA BANDEJA, E ALI ERA UM DESENHO DE VIDRO               │
+    // │ A FAIXA PUNHA O CABEÇALHO NOUTRO SISTEMA                       │
     // │                                                               │
-    // │ A bandeja vive DENTRO de um cabeçalho opaco: não passa         │
-    // │ conteúdo nenhum por baixo dela, portanto o desfoque custava    │
-    // │ trabalho ao compositor em cada frame para não se ver nada. A   │
-    // │ superfície por baixo da qual a página passa é o cabeçalho.     │
+    // │ Era de extremo a extremo, com uma régua por baixo, enquanto a  │
+    // │ página é uma pilha de cartões brancos sobre papel quente. Duas │
+    // │ gramáticas coladas uma à outra.                                │
     // │                                                               │
-    // │ E a bandeja volta a ser o que é no resto do produto: uma caixa │
-    // │ cinzenta OPACA de onde o segmento activo se levanta — o mesmo  │
-    // │ idioma de `negocio/descoberta/Configurador.tsx`.                │
+    // │ Agora é o primeiro desses cartões: margem à volta, cantos de   │
+    // │ 2 rem, sombra, e o papel da página a passar-lhe ao lado. A     │
+    // │ régua inferior desaparece porque a sombra e a margem já dizem  │
+    // │ onde ele acaba.                                                │
     // └───────────────────────────────────────────────────────────────┘
-    expect(iBase).toBeGreaterThan(-1);
-    expect(NAV).toContain("rc-cabecalho");
-    expect(semComentarios(CAPSULA)).not.toContain("backdrop");
-    expect(semComentarios(CAPSULA)).not.toContain("rc-cabecalho");
+    expect(NAV).toContain("rounded-4xl");
+    // O elemento fixo é só geometria: sem fundo, sem contorno, sem régua.
+    // Quem tem material é o cartão lá dentro.
+    expect(NAV).toContain(
+      'className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block"',
+    );
+    // A margem e o `padding` do cartão entram na conta que o espaçador
+    // reserva — senão o conteúdo nasce por baixo dele.
+    expect(CSS).toContain("--rc-header-margem");
+    expect(CSS).toContain("--rc-cartao-p");
+    expect(CSS).toMatch(/--rc-header-alto:\s*calc\([\s\S]*--rc-header-margem/);
+    expect(CSS).toMatch(/--rc-header-alto:\s*calc\([\s\S]*--rc-cartao-p/);
   });
 
-  it("o fundo SÓLIDO é a regra base, e o vidro só é promovido depois", () => {
-    // `backdrop-filter` falha em silêncio onde não é suportado. Se a regra
-    // do vidro escrever o fundo, o que fica nesses browsers é um cabeçalho
-    // translúcido com o texto da página a ler-se por trás dos rótulos. O
-    // sólido primeiro garante que o pior caso é «sem efeito», nunca
-    // «ilegível». Isto já esteve escrito em classes utilitárias
-    // (`bg-white/70 backdrop-blur-xl`) que não tinham nem uma coisa nem
-    // outra: o efeito estava lá e a disciplina não.
-    expect(iSupports).toBeGreaterThan(iBase);
-    const base = CSS.slice(iBase, iSupports);
-    expect(base).toContain("background: var(--rc-cabecalho-fundo)");
-    expect(semComentarios(NAV)).not.toContain("backdrop-blur");
+  it("as três linhas do cabeçalho têm a mesma largura", () => {
+    // Houve uma versão em que a bandeja e a barra tinham 704 px e a
+    // primeira linha ocupava o contentor todo: num ecrã largo dava um «T»,
+    // e o desequilíbrio não era de espaçamento — era duas das três linhas
+    // não pertencerem à mesma grelha. Nenhuma leva largura própria: são
+    // filhas do cartão, e o cartão é uma coluna só.
+    expect(semComentarios(NAV)).not.toContain("max-w-[var(--rc-dock-larga)]");
+    expect(semComentarios(CAPSULA)).not.toContain("max-w-");
+    expect(CAPSULA).toContain("flex w-full");
   });
 
-  it("a preferência do sistema desliga o vidro E repõe o fundo opaco", () => {
-    // Apagar só o desfoque deixaria a cor a 78% — ou seja, o problema que a
-    // preferência existe para evitar, com um passo a menos.
-    expect(iReduzida).toBeGreaterThan(iSupports);
-    const bloco = CSS.slice(iReduzida, iReduzida + 400);
-    expect(bloco).toContain(".rc-cabecalho");
-    expect(bloco).toContain("backdrop-filter: none");
-    expect(bloco).toContain("background: var(--rc-cabecalho-fundo)");
-  });
-
-  it("o material tem tokens para os dois temas", () => {
-    // Um hexadecimal escrito à mão aqui parte o modo claro ou o escuro na
-    // primeira afinação — e em silêncio, porque nada falha.
-    expect(CSS).toContain("--rc-cabecalho-fundo");
-    expect(CSS).toMatch(/\.dark\s*\{[^}]*--rc-cabecalho-fundo/);
+  it("ao rolar muda a SOMBRA, e mais nada", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ DUAS TENTATIVAS DE ENCOLHER, DOIS CUSTOS MAIORES QUE OS PÍXEIS │
+    // │                                                               │
+    // │ Recolher a primeira linha fazia sumir a marca, as secções, a   │
+    // │ conta e o «Começar» de uma vez — um cabeçalho que fica no ecrã  │
+    // │ e se despe às peças lê-se como avaria.                          │
+    // │                                                               │
+    // │ Recolher só a da pesquisa partia o teclado: com o campo em      │
+    // │ `display:none`, fechar o painel com Escape deixava o foco no    │
+    // │ `<body>`. Está pinado em `verificar-cabecalho.mjs`.             │
+    // │                                                               │
+    // │ Sobra o que o scroll deve mesmo mudar: o cartão ganha sombra    │
+    // │ quando passa conteúdo por baixo dele.                           │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]");
+    expect(NAV).toContain("transition-shadow");
+    expect(NAV).toContain("data-opaco={opaco}");
+    expect(NAV).toContain("shadow-float");
   });
 });

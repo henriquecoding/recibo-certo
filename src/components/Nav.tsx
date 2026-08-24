@@ -5,7 +5,7 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
-import { Logo, ArrowRight } from "@/components/ui/Icons";
+import { Logo, ArrowRight, Menu as MenuIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
 import BarraSecoes from "@/components/navegacao/BarraSecoes";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
@@ -40,6 +40,9 @@ import MenuCompleto from "@/components/navegacao/MenuCompleto";
  * │ máxima — o problema deixa de poder existir.                              │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
+const ACAO =
+  "btn-shine focus-marca inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-5 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float";
+
 export default function Nav() {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
@@ -124,107 +127,105 @@ export default function Nav() {
       {/* Espaçador em fluxo — só no desktop. No telemóvel o cabeçalho vive em
           baixo (ChromeMobile), por isso aqui não reservamos espaço nem
           mostramos este header (evita o «duplo header» no telemóvel).
-          A sentinela de 40 px continua a existir, mas já só decide o FUNDO:
+          A sentinela de 40 px continua a existir, mas já só decide a sombra:
           a altura é uma só. */}
       <div aria-hidden className="relative hidden h-[var(--rc-header-alto)] lg:block">
         <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
       </div>
 
-      {/* `<header>` e já não `<nav>`: o marco de navegação passou a ser a
-          cápsula, que é quem tem os destinos. Dois `<nav aria-label="Principal">`
-          aninhados no mesmo documento dariam dois marcos com o mesmo nome a um
-          leitor de ecrã — e o de fora não tem destino nenhum, só geometria. */}
-      <header
-        data-opaco={opaco}
-        /* O material vive em `.rc-cabecalho` (globals.css) e não em classes
-           utilitárias: o vidro precisa de sólido primeiro, de promoção por
-           `@supports` e de respeitar `prefers-reduced-transparency`, e isso
-           não cabe numa classe do Tailwind. */
-        className="rc-cabecalho fixed inset-x-0 top-0 z-50 hidden h-[var(--rc-header-alto)] transition-[background-color,border-color,box-shadow] duration-300 lg:block"
-      >
-        {/**
-         * ┌───────────────────────────────────────────────────────────────────┐
-         * │ TRÊS LINHAS, UMA COLUNA, E CADA LINHA COM UM TRABALHO SÓ           │
-         * │                                                                   │
-         * │   1  marca · secções · conta e acção   (as pontas)                │
-         * │   2  a cápsula dos cinco pilares       (centrada)                  │
-         * │   3  a barra de pesquisa               (centrada)                  │
-         * │                                                                   │
-         * │ Houve uma versão de duas linhas em que a marca, a navegação e as   │
-         * │ acções disputavam a primeira. Com seis lugares na cápsula isso     │
-         * │ partiu-se: a 1920 px ficava a 3 px do logótipo e o seu centro      │
-         * │ caía em 886 px enquanto a barra logo por baixo estava centrada em  │
-         * │ 960. Dois elementos centrados, empilhados, em eixos diferentes —   │
-         * │ porque a cápsula vivia na coluna do meio de uma grelha cujas       │
-         * │ colunas laterais têm larguras diferentes, e centrava-se no espaço  │
-         * │ que SOBRAVA.                                                       │
-         * │                                                                   │
-         * │ Com UMA coluna o problema deixa de poder existir: as linhas 2 e 3  │
-         * │ centram-se na página, e não umas nas outras.                        │
-         * │                                                                   │
-         * │ A BARRA DE PESQUISA NÃO MUDA DE LINHA. Chegou a subir para o meio  │
-         * │ da primeira ao compactar, e ficava encravada entre a marca e a     │
-         * │ conta — um objecto a saltar de sítio ao fim de 40 px de scroll.    │
-         * │ Fica na terceira, sempre. O que recolhe é a PRIMEIRA, que é a      │
-         * │ única cujo conteúdo está todo noutro lado: as secções, a conta e   │
-         * │ o «Começar» vivem também na folha do «Menu», e a marca leva a      │
-         * │ casa a partir do cabeçalho dessa folha. Nada fica inalcançável.    │
-         * └───────────────────────────────────────────────────────────────────┘
-         */}
-        <div className="mx-auto grid h-full max-w-5xl grid-cols-1 grid-rows-[var(--rc-header-linha)_var(--rc-linha-nav)_var(--rc-linha-busca)] items-center px-6 xl:max-w-6xl">
-          {/* ── Linha 1 — marca · secções | conta · acção ──────────────── */}
-          <div className="row-start-1 flex min-w-0 items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
+      {/**
+       * ┌───────────────────────────────────────────────────────────────────┐
+       * │ UM CARTÃO A FLUTUAR, E TRÊS LINHAS LÁ DENTRO                       │
+       * │                                                                   │
+       * │   1  marca · secções   |   conta · começar · menu                 │
+       * │   2  a bandeja dos cinco pilares                                   │
+       * │   3  a barra de pesquisa                                           │
+       * │                                                                   │
+       * │ Foi uma faixa de extremo a extremo com uma régua por baixo, e isso │
+       * │ punha o cabeçalho num sistema diferente do da página — que é uma   │
+       * │ pilha de cartões brancos sobre papel quente. Agora é o primeiro    │
+       * │ desses cartões.                                                    │
+       * │                                                                   │
+       * │ As três linhas partilham as arestas do cartão por construção: é    │
+       * │ uma coluna só, e nenhuma delas leva largura própria. Houve uma     │
+       * │ versão em que a bandeja e a barra tinham 704 px e a primeira linha │
+       * │ ocupava tudo — num ecrã largo dava um «T», e o desequilíbrio não   │
+       * │ era de espaçamento: era duas das três não pertencerem à mesma      │
+       * │ grelha.                                                            │
+       * │                                                                   │
+       * │ NADA RECOLHE AO ROLAR. Já se tentou recolher a primeira linha      │
+       * │ (sumiam a marca, as secções, a conta e o «Começar» de uma vez) e   │
+       * │ recolher a da pesquisa (o campo ficava em `display:none` e o       │
+       * │ Escape deixava o foco no `<body>`). O que muda com o scroll é a    │
+       * │ sombra do cartão, e mais nada.                                     │
+       * └───────────────────────────────────────────────────────────────────┘
+       */}
+      <header className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block">
+        <div
+          data-opaco={opaco}
+          className={`mx-auto w-full max-w-[92rem] rounded-4xl border bg-white p-[var(--rc-cartao-p)] transition-shadow duration-300 dark:bg-stone-900 ${
+            opaco
+              ? "border-stone-200/70 shadow-float dark:border-stone-800"
+              : "border-stone-100 shadow-card dark:border-stone-800/80"
+          }`}
+        >
+          {/* ── Linha 1 — marca · secções | conta · começar · menu ─────── */}
+          <div className="flex h-[var(--rc-header-linha)] min-w-0 items-center justify-between gap-4 px-2">
+            <div className="flex min-w-0 items-center gap-4">
               <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
                 <Logo />
               </Link>
-              <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
               <BarraSecoes />
             </div>
 
-            {/* Uma entrada de conta/ajuda e UMA acção. O tema vive dentro do
-                menu — ver o quadro em `MenuConta.tsx`. O feedback passou para
-                a barra de secções, ao lado dos destinos que também são «o
-                resto do produto». */}
+            {/* Uma entrada de conta, UMA acção, e o «Menu». O tema vive dentro
+                da folha — ver o quadro em `MenuConta.tsx`. O feedback está na
+                barra de secções, ao lado dos destinos que também são «o resto
+                do produto». */}
             <div className="flex flex-shrink-0 items-center gap-2">
               <MenuConta avatarUrl={avatarUrl} />
 
               <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
                 {user ? (
-                  <Link
-                    href="/dashboard"
-                    className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
-                  >
+                  <Link href="/dashboard" className={ACAO}>
                     Painel
-                    <ArrowRight size={13} aria-hidden />
+                    <ArrowRight size={14} aria-hidden />
                   </Link>
                 ) : disponivel ? (
                   <CTAComecar />
                 ) : (
-                  <Link
-                    href="/dashboard"
-                    className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float"
-                  >
-                    Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
-                    <ArrowRight size={13} aria-hidden />
+                  <Link href="/dashboard" className={ACAO}>
+                    Começar Grátis
+                    <ArrowRight size={14} aria-hidden />
                   </Link>
                 )}
               </m.div>
+
+              {/* «Menu» não é o sexto pilar: vive nesta linha, com a forma de
+                  um controlo com contorno, e não dentro da bandeja. Esteve lá
+                  separado por uma régua, e uma régua é sinal fraco de mais
+                  para dizer «isto é de outra natureza». */}
+              <button
+                type="button"
+                data-menu-gatilho="secretaria"
+                aria-haspopup="dialog"
+                aria-expanded={menuAberto}
+                onClick={() => setMenuAberto(true)}
+                className="focus-marca inline-flex h-11 flex-shrink-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-medium text-stone-600 transition-colors hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:text-brand"
+              >
+                <MenuIcon size={17} className="flex-shrink-0 text-stone-400 dark:text-stone-500" />
+                Menu
+              </button>
             </div>
           </div>
 
-          {/* ── Linha 2 — a cápsula dos cinco pilares ──────────────────── */}
-          <div className="row-start-2 flex min-w-0 items-center">
-            <CapsulaNav aoAbrirMenu={() => setMenuAberto(true)} menuAberto={menuAberto} />
+          {/* ── Linha 2 — a bandeja dos cinco pilares ──────────────────── */}
+          <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
+            <CapsulaNav />
           </div>
 
-          {/* ── Linha 3 — a barra de pesquisa ────────────────────────────
-              A largura da LINHA, como as duas de cima. Chegou a subir para o
-              meio da primeira ao compactar e ficava encravada entre a marca e
-              a conta. Por não mudar de sítio nem de tamanho em estado nenhum,
-              o painel deixou de precisar de aritmética de centragem — ver o
-              quadro em `.rc-dock-painel`. */}
-          <div className="row-start-3 w-full">
+          {/* ── Linha 3 — a barra de pesquisa ──────────────────────────── */}
+          <div className="mt-[var(--rc-cartao-gap)] w-full">
             <LancadorBusca inputId="rc-header-busca" />
           </div>
         </div>
@@ -240,13 +241,9 @@ export default function Nav() {
 function CTAComecar() {
   const { abrirModal } = useAuth();
   return (
-    <button
-      type="button"
-      onClick={() => abrirModal("criar")}
-      className="btn-shine focus-marca inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-4 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
-    >
-      Começar<span className="hidden xl:inline">&nbsp;Grátis</span>
-      <ArrowRight size={13} aria-hidden />
+    <button type="button" onClick={() => abrirModal("criar")} className={ACAO}>
+      Começar Grátis
+      <ArrowRight size={14} aria-hidden />
     </button>
   );
 }
