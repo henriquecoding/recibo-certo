@@ -72,9 +72,14 @@ export default function AbrirEmpresaPage() {
           </div>
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-5">
             <p className="text-xs font-semibold text-brand mb-2">Empresa Online</p>
-            <p className="text-sm text-stone-600 dark:text-stone-400 mb-2">Totalmente digital, em empresanahora.mj.pt.</p>
-            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">1–2 dias úteis</p>
+            <p className="text-sm text-stone-600 dark:text-stone-400 mb-2">Totalmente digital, no Portal da Empresa (gov.pt).</p>
+            {/* O prazo dizia «1–2 dias úteis». O portal do Estado publica outro:
+                o registo é feito em 5 dias com pacto pré-aprovado e em 10 com
+                pacto elaborado pelos interessados. Prometer dois dias a quem
+                está a planear a abertura desloca-lhe o calendário todo. */}
+            <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Registo em 5 dias</p>
             <p className="text-xs text-stone-400 mt-1">Custo: ~220 € (com pacto pré-aprovado)</p>
+            <p className="text-xs text-stone-400 mt-1">Com pacto escrito pelos sócios: ~360 € e 10 dias.</p>
           </div>
         </div>
       </section>

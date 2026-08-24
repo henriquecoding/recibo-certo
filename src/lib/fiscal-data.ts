@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-19" as const;
+export const DATA_LAST_REVIEW = "2026-08-24" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -581,6 +581,11 @@ export const SOURCES = {
   csc: {
     label: "Código das Sociedades Comerciais (DL 262/86) — tipos de sociedade, capital e órgãos sociais · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443975",
+  },
+  rcbe: {
+    label:
+      "Lei n.º 89/2017 — Regime Jurídico do Registo Central do Beneficiário Efetivo (prazo da declaração inicial, coimas e proibição de distribuir lucros) · Diário da República",
+    url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2017-108020590",
   },
   ircObrigacoes: {
     label: "IRC — Guia Fiscal 2026 (taxas, prazos e obrigações declarativas) · PwC Portugal",
@@ -2017,6 +2022,75 @@ export const IRC_TAXA_PME = sv(
   TODAY
 );
 export const IRC_LIMITE_PME = sv(50000, "Art. 87.º CIRC — limiar da taxa reduzida PME", "art87circ", TODAY);
+
+// ─── Constituir a sociedade: quanto custa o registo ────────────────────
+//  ┌──────────────────────────────────────────────────────────────────┐
+//  │ ISTO ESTAVA ERRADO NO SIMULADOR, E ERRADO PARA CIMA.              │
+//  │                                                                  │
+//  │ O simulador dizia «~360–400 €» para as duas vias — balcão e       │
+//  │ online — e usava 360 € como valor por omissão. O emolumento da    │
+//  │ via ONLINE COM PACTO PRÉ-APROVADO é 220 €: quem estava a decidir  │
+//  │ se avançava via o caminho mais barato 64 % mais caro do que é.    │
+//  │                                                                  │
+//  │ São emolumentos públicos, fixados por lei e iguais em todo o      │
+//  │ país — não dependem do contabilista nem do escritório. É por      │
+//  │ isso que pertencem aqui e não a uma constante dentro de um        │
+//  │ componente: têm base legal, fonte e data de verificação como      │
+//  │ qualquer taxa.                                                   │
+//  └──────────────────────────────────────────────────────────────────┘
+const REV_CONSTITUICAO = "2026-08-24";
+
+/** Empresa na Hora (balcão do IRN) e Empresa Online com pacto próprio. */
+export const CUSTO_CONSTITUICAO_BALCAO = sv(
+  360,
+  "Art. 22.º do Regulamento Emolumentar dos Registos e Notariado (DL 322-A/2001) — constituição de pessoas coletivas: 360 €, valor único que inclui a inscrição no Ficheiro Central de Pessoas Coletivas e a publicação obrigatória",
+  "empresaConstituicao",
+  REV_CONSTITUICAO
+);
+
+/** Empresa Online com um dos pactos pré-aprovados publicados pelo IRN. */
+export const CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO = sv(
+  220,
+  "Emolumento reduzido da constituição online quando se adota um pacto social pré-aprovado (gov.pt / IRN) — registo em 5 dias, contra 10 dias com pacto elaborado pelos interessados",
+  "empresaConstituicao",
+  REV_CONSTITUICAO,
+  "Com pacto elaborado pelos sócios, a via online volta a custar 360 €."
+);
+
+// ─── RCBE — o registo que trava os dividendos ─────────────────────────
+//  ┌──────────────────────────────────────────────────────────────────┐
+//  │ O simulador de empresa calcula dividendos. O que não dizia é que  │
+//  │ uma sociedade com o RCBE por declarar está PROIBIDA de os         │
+//  │ distribuir — não é um risco difuso, é uma consequência escrita no │
+//  │ Art. 37.º do regime. Uma ferramenta que promete «evitar multas»   │
+//  │ não pode calcular o líquido de uma distribuição sem nomear a      │
+//  │ obrigação que a permite.                                          │
+//  └──────────────────────────────────────────────────────────────────┘
+
+/** Prazo da declaração inicial, a contar do registo da sociedade. */
+export const RCBE_PRAZO_DIAS = sv(
+  30,
+  "Regime Jurídico do RCBE (Lei n.º 89/2017) — a declaração inicial do beneficiário efetivo é feita no prazo de 30 dias a contar do registo da entidade sujeita a registo comercial",
+  "rcbe",
+  REV_CONSTITUICAO
+);
+
+/** Coima mínima e máxima do incumprimento declarativo. */
+export const RCBE_COIMA = sv(
+  { min: 1_000, max: 50_000 },
+  "Regime Jurídico do RCBE (Lei n.º 89/2017) — o incumprimento das obrigações declarativas é punível com coima entre 1 000 € e 50 000 €",
+  "rcbe",
+  REV_CONSTITUICAO,
+  "Além da coima, o Art. 37.º proíbe distribuir lucros do exercício ou adiantamentos sobre lucros, contratar com o Estado e beneficiar de fundos europeus."
+);
+
+/** Capital social mínimo de uma sociedade por quotas: 1 € por sócio. */
+export const CAPITAL_SOCIAL_MINIMO_POR_SOCIO = sv(
+  1,
+  "Art. 201.º e 219.º, n.º 3 CSC — o capital social é livremente fixado, com o valor nominal mínimo de 1 € por quota",
+  "csc",
+  REV_CONSTITUICAO
+);
 export const DERRAMA_MAX = sv(0.015, "Derrama municipal — taxa máxima legal sobre o lucro tributável", "art87circ", TODAY);
 export const DIVIDENDOS_TAXA = sv(
   0.28,

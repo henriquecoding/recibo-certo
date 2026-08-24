@@ -60,6 +60,7 @@ import {
   Laptop,
   Plane,
   Lightbulb,
+  Invoice,
 } from "@/components/ui/Icons";
 
 const MapaCarregar = () => (
@@ -109,6 +110,11 @@ import {
   IMT_TAXA_COMERCIAL as IMT_TAXA_COMERCIAL_SRC,
   IS_TAXA_AQUISICAO as IS_TAXA_AQUISICAO_SRC,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
+  CUSTO_CONSTITUICAO_BALCAO,
+  CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO,
+  CAPITAL_SOCIAL_MINIMO_POR_SOCIO,
+  RCBE_PRAZO_DIAS,
+  RCBE_COIMA,
 } from "@/lib/fiscal-data";
 import {
   TODAS_LOCALIZACOES,
@@ -146,7 +152,11 @@ const SS_EMP_TAXA = SS_DEPENDENTE.entidade.value;
 const SS_TRAB_TAXA = SS_DEPENDENTE.trabalhador.value;
 const CUSTO_CONTABILIDADE_DEFAULT = 2_400;
 const CUSTO_SOFTWARE_DEFAULT = 300;
-const CUSTO_CONSTITUICAO_DEFAULT = 360;
+// O emolumento vem de `fiscal-data.ts`, com base legal e data de verificação
+// (§1). Era um `360` escrito aqui, e a via online com pacto pré-aprovado —
+// 220 € — não estava em lado nenhum do produto.
+const CUSTO_CONSTITUICAO_DEFAULT = CUSTO_CONSTITUICAO_BALCAO.value;
+const CUSTO_CONSTITUICAO_MIN = CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO.value;
 const SMN_2026 = SMN_SRC.value;
 
 // TA (Art. 88.º CIRC 2026)
@@ -246,6 +256,7 @@ const LEI = {
   art58aEBF: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/bf_rep/Pages/EBF58A.aspx",
   cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-59423292",
   csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443975",
+  rcbe: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2017-108020590",
   empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
   representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/questoes_frequentes/pages/faqs-00307.aspx",
   portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107684448",
@@ -1208,13 +1219,13 @@ export default function ModoGuiadoEmpresa({
                 <div className="mb-6 space-y-3">
                   {[
                     {
-                      titulo: "Empresa na Hora",
-                      desc: "Constituis uma sociedade Lda num balcão do IRN em menos de 1 hora — ou online no Portal da Empresa. Custo: ~360–400€.",
+                      titulo: "Empresa na Hora — ou 220 € online",
+                      desc: `Num balcão do IRN constituis uma Lda em menos de uma hora por ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)}. Online, com um dos pactos sociais pré-aprovados, são ${fmt(CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO.value)} e o registo sai em 5 dias — com pacto escrito pelos sócios volta aos ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)} e demora 10.`,
                       base: { artigo: "Portal da Empresa", url: LEI.empresaOnline },
                     },
                     {
-                      titulo: "Capital social mínimo: 1€",
-                      desc: "Desde 2011 não é necessário um capital elevado. 1€ para Unipessoal, 2€ para Sociedade por Quotas (1€/sócio).",
+                      titulo: `Capital social mínimo: ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value)}`,
+                      desc: `Desde 2011 não é necessário um capital elevado: ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value)} por quota. ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value)} para Unipessoal, ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value * 2)} para Sociedade por Quotas com dois sócios.`,
                       base: { artigo: "Art. 270.º-A ss. CSC", url: LEI.csc },
                     },
                     {
@@ -1258,7 +1269,7 @@ export default function ModoGuiadoEmpresa({
                 <button
                   type="button"
                   onClick={() => setJaTemEmpresa(null)}
-                  className="mt-2 w-full py-2 text-xs font-semibold text-stone-400 hover:text-stone-600 transition-colors"
+                  className="mt-2 min-h-[36px] w-full py-2.5 text-xs font-semibold text-stone-400 transition-colors hover:text-stone-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 >
                   Voltar
                 </button>
@@ -2019,7 +2030,7 @@ export default function ModoGuiadoEmpresa({
                             role="switch"
                             aria-checked={incluirConstituicao}
                             onClick={() => setIncluirConstituicao(!incluirConstituicao)}
-                            className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${incluirConstituicao ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
+                            className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-y-2 before:-inset-x-1 before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-stone-900 ${incluirConstituicao ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
                           >
                             <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${incluirConstituicao ? "translate-x-4" : ""}`} />
                           </button>
@@ -2030,12 +2041,20 @@ export default function ModoGuiadoEmpresa({
                             <NumericSlider
                               label="Custo de constituição (€)"
                               value={custoConstituicao}
-                              min={360}
+                              min={CUSTO_CONSTITUICAO_MIN}
                               max={3_000}
-                              step={100}
+                              step={20}
                               onChange={setCustoConstituicao}
-                              presets={[360, 800, 1_200, 2_000]}
-                              tooltip={<>Empresa na Hora (~360€). Com marca registada, advogado e capital social pode chegar a 2.000€+.</>}
+                              presets={[CUSTO_CONSTITUICAO_MIN, CUSTO_CONSTITUICAO_DEFAULT, 800, 1_500]}
+                              tooltip={
+                                <>
+                                  Emolumentos públicos, iguais em todo o país:{" "}
+                                  {fmt(CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO.value)} online com um pacto
+                                  social pré-aprovado (registo em 5 dias), {fmt(CUSTO_CONSTITUICAO_BALCAO.value)} no
+                                  balcão da Empresa na Hora ou online com pacto elaborado pelos sócios. Marca
+                                  registada, advogado ou entradas em espécie sobem daí para cima.
+                                </>
+                              }
                             />
                             <div>
                               <div className="mb-1.5 text-[11px] font-semibold text-stone-500 dark:text-stone-400">Amortizar em:</div>
@@ -2234,6 +2253,41 @@ export default function ModoGuiadoEmpresa({
                             </p>
                           </div>
                         )}
+                      </div>
+                    )}
+
+                    {/* ── A CONDIÇÃO QUE PERMITE DISTRIBUIR ─────────────
+                        O simulador calcula dividendos e nunca dizia de que
+                        depende poder distribuí-los. O Art. 37.º do regime do
+                        RCBE é explícito: com a declaração em falta, a
+                        sociedade está proibida de distribuir lucros do
+                        exercício ou adiantamentos sobre lucros. Não é um
+                        risco difuso — é a diferença entre este número existir
+                        e não existir. Fica aqui, no passo em que a decisão é
+                        tomada, e não escondido no fim. */}
+                    {distribuirDividendos && (
+                      <div className="mt-4 flex items-start gap-2 rounded-2xl border border-stone-100 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-900/50">
+                        <Shield size={14} className="mt-0.5 flex-shrink-0 text-stone-400" />
+                        <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                          <strong className="text-stone-600 dark:text-stone-300">
+                            Distribuir lucros exige o RCBE em dia.
+                          </strong>{" "}
+                          Com o Registo Central do Beneficiário Efetivo por declarar ou
+                          desatualizado, a sociedade fica proibida de distribuir lucros do
+                          exercício ou adiantamentos sobre lucros — além da coima de{" "}
+                          {fmt(RCBE_COIMA.value.min)} a {fmt(RCBE_COIMA.value.max)}. A declaração
+                          inicial faz-se nos {RCBE_PRAZO_DIAS.value} dias após o registo da
+                          empresa.
+                          <span className="ml-1">
+                            <LeiRef artigo="Lei 89/2017" url={LEI.rcbe} />
+                          </span>{" "}
+                          <Link
+                            href="/guias/obrigacoes-societarias"
+                            className="font-semibold text-stone-600 underline underline-offset-2 hover:text-brand dark:text-stone-300"
+                          >
+                            Ver o calendário societário
+                          </Link>
+                        </p>
                       </div>
                     )}
 
@@ -2532,7 +2586,7 @@ export default function ModoGuiadoEmpresa({
                       )}
                       <div className="flex items-center gap-3 mb-3">
                         <button type="button" role="switch" aria-checked={temImovelEmpresa} onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
-                          className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
+                          className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-y-2 before:-inset-x-1 before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-stone-900 ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
                           <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${temImovelEmpresa ? "translate-x-4" : ""}`} />
                         </button>
                         <span className="text-xs text-stone-600 dark:text-stone-300">A empresa tem ou vai adquirir imóvel próprio</span>
@@ -3012,11 +3066,17 @@ export default function ModoGuiadoEmpresa({
                               ] : []),
                             ] : []),
                             { Icon: FileSign, titulo: "Escolher firma e CAE", desc: "Reservar o nome online no Portal da Empresa e definir o código CAE da atividade." },
-                            { Icon: Building, titulo: "Empresa na Hora (balcão ou online)", desc: "Constituir a sociedade num balcão do IRN (<1h) ou online (1–2 dias úteis). Custo: ~360–400€." },
-                            { Icon: Shield, titulo: "Abrir conta bancária da empresa", desc: "Depositar o capital social (mínimo 1€ para Unipessoal, 2€ para Quotas) e abrir a conta em nome da sociedade." },
+                            { Icon: Building, titulo: "Constituir a sociedade", desc: `Balcão da Empresa na Hora: menos de 1 hora, ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)}. Online no Portal da Empresa: ${fmt(CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO.value)} com pacto pré-aprovado (5 dias) ou ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)} com pacto próprio (10 dias).` },
+                            { Icon: Shield, titulo: "Abrir conta bancária da empresa", desc: `Abrir a conta em nome da sociedade e depositar o capital social — mínimo ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value)} por quota. Se não for entregue no ato, há 5 dias úteis para o fazer.` },
                             { Icon: Rocket, titulo: "Início de atividade nas Finanças", desc: "Declaração de início de atividade no Portal das Finanças: regime de IVA (geralmente trimestral), CAE e sede." },
                             { Icon: Calendar, titulo: "Inscrever na Segurança Social", desc: "Inscrever a empresa e o gerente como MOE (membro de órgão estatutário). SS patronal: 23,75%, gerente: 11%." },
-                            { Icon: Briefcase, titulo: "Contratar contabilista certificado (TOC)", desc: "Obrigatório ter um TOC inscrito na OCC. Custo médio: ~200€/mês. Trata da contabilidade organizada, IRC, IES e IVA." },
+                            { Icon: Briefcase, titulo: "Contratar contabilista certificado (CC)", desc: "Obrigatório ter um Contabilista Certificado inscrito na OCC. Custo médio: ~200€/mês. Trata da contabilidade organizada, IRC, IES e IVA." },
+                            { Icon: Invoice, titulo: "Software de faturação certificado pela AT", desc: "Uma sociedade não pode faturar em Word nem em Excel: o programa tem de ter número de certificação da AT. Está incluído nos custos de estrutura desta simulação." },
+                            // ── O passo que não estava aqui, e que trava os dividendos ──
+                            //  Não é burocracia de somenos: sem RCBE declarado, o
+                            //  Art. 37.º proíbe distribuir lucros — exatamente o
+                            //  número que este simulador acabou de calcular.
+                            { Icon: Shield, titulo: `Declarar o RCBE — ${RCBE_PRAZO_DIAS.value} dias após o registo`, desc: `Quem controla mesmo a sociedade tem de ser declarado no Registo Central do Beneficiário Efetivo. Falhar custa entre ${fmt(RCBE_COIMA.value.min)} e ${fmt(RCBE_COIMA.value.max)} — e, enquanto estiver por declarar, a empresa NÃO pode distribuir lucros nem contratar com o Estado.`, lei: { artigo: "Lei 89/2017", url: LEI.rcbe } },
                             ...(aplicarIFICI ? [
                               { Icon: Sparkle, titulo: "Requerer estatuto IFICI na AT", desc: "Inscrição no regime IFICI (Art. 58.º-A EBF) junto da AT. Taxa IRS flat 20% durante 10 anos. Requer atividade elegível." },
                             ] : []),
@@ -3031,7 +3091,14 @@ export default function ModoGuiadoEmpresa({
                                   <step.Icon size={13} className="flex-shrink-0 text-brand" />
                                   <span className="text-xs font-bold text-stone-700 dark:text-stone-200">{step.titulo}</span>
                                 </div>
-                                <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">{step.desc}</div>
+                                <div className="mt-0.5 text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                                  {step.desc}
+                                  {"lei" in step && step.lei ? (
+                                    <span className="ml-1">
+                                      <LeiRef artigo={step.lei.artigo} url={step.lei.url} />
+                                    </span>
+                                  ) : null}
+                                </div>
                               </div>
                             </div>
                           ))}

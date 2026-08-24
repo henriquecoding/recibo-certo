@@ -30,6 +30,10 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Contraste corrigido no simulador de empresa: os valores em vermelho e âmbar da decomposição do IRC, os rótulos pequenos em verde claro e as etiquetas do mapa não chegavam ao mínimo legível exigido — treze pontos medidos, agora zero. Os créditos e os avisos passam a usar as cores próprias do produto em vez da paleta genérica.",
       "A atribuição do mapa (Leaflet, OpenStreetMap, CARTO) ficava quase invisível sobre o mapa em modo escuro. Passa a ter fundo próprio e a ser legível nos dois temas.",
       "«Decidir e abrir um negócio» passa a ser um percurso com os quatro passos pela ordem em que a decisão acontece — descobrir, formar o preço, comparar regimes e, só se compensar, simular a sociedade.",
+      "Constituir a empresa online com um dos pactos sociais pré-aprovados custa 220 €, e o simulador dizia «~360–400 €» para as duas vias. Pior: o campo do custo de constituição não deixava escrever menos de 360 €, por isso quem seguisse o caminho mais barato não conseguia sequer registá-lo. Passa a distinguir as duas vias, com o preço e o prazo de cada uma (5 dias com pacto pré-aprovado, 10 com pacto escrito pelos sócios) — e o guia «Abrir empresa», que já tinha o valor certo, deixa de prometer 1 a 2 dias úteis.",
+      "O simulador calculava dividendos sem nunca dizer de que depende poder distribuí-los. Com o Registo Central do Beneficiário Efetivo por declarar, a lei proíbe a empresa de distribuir lucros — além da coima de 1 000 € a 50 000 €. O aviso passa a estar no passo em que decides os dividendos, e o RCBE entra na checklist de abertura com o prazo de 30 dias.",
+      "A checklist de abertura ganha também o software de faturação certificado pela AT, que uma sociedade é obrigada a ter e não estava lá.",
+      "Os dois interruptores do simulador (incluir custos de constituição, empresa com imóvel) tinham 20 píxeis de altura — abaixo do mínimo confortável no telemóvel. Passam a ter 36, sem mudar de aspeto, e ganham anel de foco visível para quem navega por teclado.",
     ],
   },
   {
