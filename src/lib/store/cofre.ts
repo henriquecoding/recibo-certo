@@ -73,6 +73,12 @@ export const DOMINIOS = {
   // o contexto — comparar duas análises não pode obrigar a conservar o
   // perfil. Ver `store/perfil-descoberta.ts`.
   "instantaneos-descoberta": "recibocerto:instantaneos-descoberta:v1",
+  // A ponte do motor de descoberta para o estúdio de negócio. Leva duas
+  // coisas — o cenário de preço e o nome da oferta — porque um título
+  // composto a partir das competências de alguém não pode viajar no URL
+  // (§10). TTL curto e consumo único, como qualquer ponte: ver
+  // `store/handoff-descoberta-negocio.ts`.
+  "handoff-descoberta-negocio": "recibocerto:handoff-descoberta-negocio:v1",
 } as const;
 
 /**

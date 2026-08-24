@@ -140,7 +140,27 @@ describe("market: descoberta e pilotos", () => {
     expect(discovery).not.toContain('href="/ferramentas/simulador-empresa"');
     expect(dashboard).toContain("OPPORTUNITY_TEMPLATES.find");
     expect(dashboard).toContain("ofertaInicial=");
-    expect(studio).toContain("seedOpportunityOffer(base, ofertaInicial)");
+    expect(studio).toContain("seedOpportunityOffer(base, oportunidade)");
+  });
+
+  // ── E A HIPÓTESE QUE NINGUÉM ESCREVEU TAMBÉM TEM CONTINUIDADE ──────
+  //  A ponte curada acima viaja no URL porque um id de catálogo é público.
+  //  A maior parte do que este motor produz não tem id nenhum — e enquanto
+  //  a única ponte foi o `?o=`, essas hipóteses acabavam no dossier. Numa
+  //  corrida real com duas apresentadas, uma seguia e a outra não.
+  it("a hipótese composta chega ao estúdio sem pôr o título no URL", () => {
+    const discovery = readFileSync("src/components/negocio/descoberta/Dossier.tsx", "utf8");
+    const studio = readFileSync("src/components/negocio/NegocioStudio.tsx", "utf8");
+
+    // A ponte local existe e é ela que leva a composição.
+    expect(discovery).toContain("guardarSementeOportunidade");
+    expect(studio).toContain("consumirSementeOportunidade()");
+
+    // §10 — a única coisa que pode viajar para o estúdio no URL é o id
+    // curado. O título de uma composição é feito das competências de quem
+    // respondeu; um `?nome=` punha-o no histórico e no `referrer`.
+    expect(discovery).not.toMatch(/\/dashboard\/negocio\?(?!o=)/);
+    expect(discovery).not.toContain("nome=${");
   });
 
   it("entrega a oportunidade ao motor de empresa sem apagar nem duplicar ofertas", () => {

@@ -59,6 +59,7 @@ import {
   Globe,
   Laptop,
   Plane,
+  Lightbulb,
 } from "@/components/ui/Icons";
 
 const MapaCarregar = () => (
@@ -133,6 +134,8 @@ import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
+import { registar } from "@/lib/analytics/cliente";
+import { GuiadoStepper } from "@/components/simulador/guiado-ui";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
 
@@ -1047,7 +1050,30 @@ export default function ModoGuiadoEmpresa({
     setPasso(0);
   }, []);
 
-  const progressLabels = ["Empresa", "Localização", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
+  // ── A BARRA DE PROGRESSO ────────────────────────────────────────────────
+  //  ┌──────────────────────────────────────────────────────────────────┐
+  //  │ ISTO ERA UMA BARRA À MÃO, E ESTAVA ERRADA DE TRÊS MANEIRAS.       │
+  //  │                                                                  │
+  //  │ ① Um passo à frente. Os rótulos eram percorridos com `i` a       │
+  //  │   começar em 0 e comparados com um `passoNum` que começa em 1:   │
+  //  │   em «Que tipo de empresa?» o ecrã dizia «Localização» como      │
+  //  │   passo atual, e no último passo nenhum ficava marcado.          │
+  //  │ ② Scroll horizontal a 360 px. Sete rótulos de palavra inteira    │
+  //  │   («Localização», «Otimização») em colunas `flex-1` sem          │
+  //  │   `min-w-0` empurravam o documento para 417 px — a regra 5b do   │
+  //  │   CLAUDE.md diz que isso não pode acontecer, e acontecia em      │
+  //  │   TODOS os passos a partir do primeiro.                          │
+  //  │ ③ Sem semântica. `<div>`s coloridos: quem navega por leitor de   │
+  //  │   ecrã não tinha como saber que aquilo era progresso, nem em     │
+  //  │   que passo estava.                                              │
+  //  │                                                                  │
+  //  │ `GuiadoStepper` já resolve as três — é a mesma primitiva que o   │
+  //  │ modo guiado de recibos verdes e o de heranças usam, com `<ol     │
+  //  │ aria-label="Progresso">`, `aria-current="step"` e rótulos que    │
+  //  │ só aparecem a partir de `sm:`. Uma barra própria por simulador   │
+  //  │ era três oportunidades de repetir o mesmo erro.                  │
+  //  └──────────────────────────────────────────────────────────────────┘
+  const progressLabels = ["Empresa", "Local", "Receita", "Dividendos", "Otimização", "Resultado", "A seguir"];
   const passoNum = passo === "local" ? 2 : passo === 2 ? 3 : passo === 3 ? 4 : passo === 4 ? 5 : passo === "resultado" ? 6 : passo === "aseguir" ? 7 : (passo as number);
 
   // ─── Passo 0: pergunta inicial ─────────────────────────────────────────────
@@ -1072,11 +1098,12 @@ export default function ModoGuiadoEmpresa({
             {jaTemEmpresa === null && (
               <>
                 <h2 className="font-display mb-2 text-3xl font-semibold text-stone-800 sm:text-4xl dark:text-stone-100">
-                  Já tens empresa ou estás a avaliar?
+                  Em que ponto estás?
                 </h2>
                 <p className="mb-8 text-sm text-stone-500 dark:text-stone-400">
-                  Simula o resultado líquido de uma sociedade (Lda) — IRC,
-                  dividendos e custos reais de operação.
+                  Este simulador calcula o resultado líquido de uma sociedade
+                  (Lda) — IRC, dividendos e custos reais de operação. Para isso
+                  precisa de saber o que a empresa vai vender.
                 </p>
                 <div className="space-y-3">
                   <button
@@ -1120,7 +1147,7 @@ export default function ModoGuiadoEmpresa({
                         Estou a avaliar abrir empresa
                       </span>
                       <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400">
-                        Quero perceber custos e impostos antes de decidir
+                        Sei o que vou vender — quero os custos e os impostos
                       </span>
                     </span>
                     <ArrowRight
@@ -1128,6 +1155,47 @@ export default function ModoGuiadoEmpresa({
                       className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
                     />
                   </button>
+
+                  {/* ── A TERCEIRA PORTA ─────────────────────────────────
+                      Este simulador começa por perguntar quanto vais
+                      faturar. Quem ainda não decidiu o que vai vender não
+                      tem esse número — inventa-o, e sai daqui com uma
+                      estimativa de IRC calculada sobre um palpite, com o ar
+                      de autoridade de uma simulação. A forma jurídica é a
+                      última decisão, não a primeira: o motor de descoberta
+                      é que responde à pergunta que vem antes desta.
+
+                      É um `<Link>` e não um passo: muda de ferramenta, e
+                      fingir o contrário escondia para onde se vai. */}
+                  <Link
+                    href="/ferramentas/descobrir-negocio"
+                    onClick={() =>
+                      registar("simulator_step", {
+                        tool_id: "simulador-empresa",
+                        step_id: "sem_negocio_para_descoberta",
+                        outcome: "ok",
+                      })
+                    }
+                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-dashed border-stone-200 bg-stone-50/60 p-4 text-left transition-all hover:border-brand hover:bg-white hover:shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900/40 dark:hover:bg-stone-900"
+                  >
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand group-hover:text-white dark:bg-stone-800">
+                      <Lightbulb size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
+                        Ainda não sei que negócio vou ter
+                      </span>
+                      <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                        Descobre o que podes vender a partir do que sabes
+                        fazer, com sinais oficiais de mercado — e volta aqui
+                        com números que não são um palpite
+                      </span>
+                    </span>
+                    <ArrowRight
+                      size={16}
+                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
+                    />
+                  </Link>
                 </div>
               </>
             )}
@@ -1194,6 +1262,25 @@ export default function ModoGuiadoEmpresa({
                 >
                   Voltar
                 </button>
+
+                {/* A segunda oportunidade de sair para a pergunta anterior.
+                    Uma linha de texto, não um cartão: quem chegou aqui já
+                    disse que sabe o que vai vender, e repetir a proposta com
+                    o mesmo peso do botão principal seria insistir. Existe
+                    para quem carregou no botão errado — e para quem, ao ler
+                    os custos fixos de uma sociedade, percebe que ainda não
+                    tem receita nenhuma para os pagar. */}
+                <p className="mt-4 border-t border-stone-100 pt-4 text-center text-[11px] leading-relaxed text-stone-400 dark:border-stone-800">
+                  Ainda não decidiste o que a empresa vai vender?{" "}
+                  <Link
+                    href="/ferramentas/descobrir-negocio"
+                    className="font-semibold text-stone-500 underline underline-offset-2 transition-colors hover:text-brand dark:text-stone-400"
+                  >
+                    Descobre o negócio primeiro
+                  </Link>{" "}
+                  — os próximos passos pedem faturação e custos, e um palpite
+                  aqui vale um resultado de palpite.
+                </p>
               </>
             )}
           </div>
@@ -1214,32 +1301,9 @@ export default function ModoGuiadoEmpresa({
           <ImportacaoNegocio handoff={handoffAtivo} aoIgnorar={ignorarImportacao} />
         ) : null}
 
-        {/* Barra de progresso */}
+        {/* Barra de progresso — ver a nota em `passoNum`. */}
         <div className="mb-8">
-          <div className="flex items-center gap-1 mb-2">
-            {progressLabels.map((l, i) => (
-              <div key={l} className="flex-1 flex flex-col items-center">
-                <div
-                  className={`h-1 w-full rounded-full transition-all duration-300 ${
-                    i < passoNum
-                      ? "bg-brand"
-                      : i === passoNum
-                        ? "bg-brand/40"
-                        : "bg-stone-200 dark:bg-stone-800"
-                  }`}
-                />
-                <span
-                  className={`mt-1 text-[9px] font-semibold uppercase tracking-wider ${
-                    i <= passoNum
-                      ? "text-brand"
-                      : "text-stone-300 dark:text-stone-600"
-                  }`}
-                >
-                  {l}
-                </span>
-              </div>
-            ))}
-          </div>
+          <GuiadoStepper passos={progressLabels} atual={passoNum} />
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-5">
@@ -1363,7 +1427,7 @@ export default function ModoGuiadoEmpresa({
                     {perfilFundador === "estrangeiro_extra_ue" && (
                       <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
                         <div className="flex items-start gap-2">
-                          <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                          <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
                           <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
                             <span className="font-semibold">Representante fiscal obrigatório.</span>{" "}
                             Não residentes de fora da UE/EEE devem nomear um representante fiscal em Portugal para efeitos de cumprimento das obrigações tributárias.
@@ -1475,7 +1539,7 @@ export default function ModoGuiadoEmpresa({
                               <Icon size={14} className={ativo ? "text-brand" : "text-stone-400"} />
                               <div>
                                 <div className={`text-[11px] font-bold ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{s.label}</div>
-                                <div className={`text-[9px] ${ativo ? "text-brand/70" : "text-stone-400"}`}>{s.sub}</div>
+                                <div className={`text-[9px] ${ativo ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{s.sub}</div>
                               </div>
                             </div>
                           </button>
@@ -1560,7 +1624,7 @@ export default function ModoGuiadoEmpresa({
                       <div className="absolute left-0 right-0 z-20 mt-1 overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg dark:border-stone-700 dark:bg-stone-900">
                         {erroGeo ? (
                           <div className="flex items-center gap-2 px-4 py-3 text-xs text-stone-500">
-                            <Warning size={13} className="text-amber-500" />
+                            <Warning size={13} className="text-alert-text" />
                             {erroGeo}
                           </div>
                         ) : (
@@ -2076,7 +2140,7 @@ export default function ModoGuiadoEmpresa({
                             <div
                               className={`text-[10px] mt-0.5 ${
                                 distribuirDividendos === v
-                                  ? "text-brand/70"
+                                  ? "text-brand-dark dark:text-brand"
                                   : "text-stone-400"
                               }`}
                             >
@@ -2131,7 +2195,7 @@ export default function ModoGuiadoEmpresa({
                               <div
                                 className={`text-[10px] mt-0.5 ${
                                   opcaoEnglobamento === v
-                                    ? "text-brand/70"
+                                    ? "text-brand-dark dark:text-brand"
                                     : "text-stone-400"
                                 }`}
                               >
@@ -2177,7 +2241,7 @@ export default function ModoGuiadoEmpresa({
                     {distribuirDividendos && aplicarIFICI && (
                       <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
                         <div className="flex items-start gap-2">
-                          <Warning size={14} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                          <Warning size={14} className="mt-0.5 flex-shrink-0 text-alert-text" />
                           <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
                             <strong>Nota sobre o IFICI</strong> (<LeiRef artigo="Art. 58.º-A EBF" url={LEI.art58aEBF} />) — a taxa de {pct(IFICI_TAXA_FLAT)} abrange apenas rendimentos das categorias A e B das atividades elegíveis, durante {IFICI_PRAZO_ANOS.value} anos.
                             Os dividendos NÃO estão incluídos: continuam sujeitos à liberatória de 28% ou ao englobamento, como está calculado acima.
@@ -2250,7 +2314,7 @@ export default function ModoGuiadoEmpresa({
                                 }`}
                               >
                                 <div className={`text-[10px] font-bold leading-tight ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{m.label}</div>
-                                <div className={`text-[9px] mt-0.5 ${tipoViatura === v ? "text-brand/70" : "text-stone-400"}`}>{m.sub}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoViatura === v ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{m.sub}</div>
                               </button>
                             );
                           })}
@@ -2364,7 +2428,7 @@ export default function ModoGuiadoEmpresa({
                               <button key={v} type="button" aria-pressed={rfaiRegiao === v} onClick={() => setRfaiRegiao(v)}
                                 className={`rounded-2xl border-2 p-3 text-left transition-all ${rfaiRegiao === v ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
                                 <div className={`text-xs font-bold ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{l}</div>
-                                <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand/70" : "text-stone-400"}`}>{sub}</div>
+                                <div className={`text-[10px] mt-0.5 ${rfaiRegiao === v ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{sub}</div>
                               </button>
                             ))}
                           </div>
@@ -2383,7 +2447,7 @@ export default function ModoGuiadoEmpresa({
                             <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Crédito potencial RFAI ({pct(RFAI_TAXA[rfaiRegiaoEfetiva])} de {fmt(rfaiInvest)})</span>
                             <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">até {fmt(Math.round(resultado.beneficios.rfai))}</span>
                           </div>
-                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
+                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-800 dark:text-emerald-300">
                             Não aplicado ao IRC desta simulação. CAE, região legal, ativos, emprego, auxílios de Estado e dossier documental têm de ser validados por um profissional.
                           </p>
                         </div>
@@ -2393,7 +2457,7 @@ export default function ModoGuiadoEmpresa({
                     {/* ── ICE (a DLRR foi revogada em 2023) ───────────── */}
                     <Collapsible title="ICE — Capitalização (a DLRR acabou)" defaultOpen={false}>
                       <div className="mb-2 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3 dark:border-amber-800/30 dark:bg-amber-900/10">
-                        <Warning size={13} className="mt-0.5 flex-shrink-0 text-amber-500" />
+                        <Warning size={13} className="mt-0.5 flex-shrink-0 text-alert-text" />
                         <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">
                           {ICE_NOTA}
                         </p>
@@ -2421,7 +2485,7 @@ export default function ModoGuiadoEmpresa({
                               <button key={t} type="button" aria-pressed={tipoSifide === t} onClick={() => setTipoSifide(t)}
                                 className={`rounded-xl border-2 p-2 text-left transition-all ${tipoSifide === t ? "border-brand bg-brand-light/30 dark:bg-brand/5" : "border-stone-100 bg-white hover:border-stone-200 dark:border-stone-800 dark:bg-stone-900"}`}>
                                 <div className={`text-[10px] font-bold ${tipoSifide === t ? "text-brand-dark dark:text-brand" : "text-stone-600 dark:text-stone-300"}`}>{meta.label}</div>
-                                <div className={`text-[9px] mt-0.5 ${tipoSifide === t ? "text-brand/70" : "text-stone-400"}`}>{meta.sub}</div>
+                                <div className={`text-[9px] mt-0.5 ${tipoSifide === t ? "text-brand-dark dark:text-brand" : "text-stone-400"}`}>{meta.sub}</div>
                               </button>
                             );
                           })}
@@ -2436,7 +2500,7 @@ export default function ModoGuiadoEmpresa({
                             <span className="text-[11px] text-emerald-700 dark:text-emerald-300">Crédito potencial SIFIDE ({pct(SIFIDE_META[tipoSifide].taxa)} de {fmt(sifideDespesas)})</span>
                             <span className="text-[11px] font-bold tabular-nums text-emerald-700 dark:text-emerald-300">até {fmt(Math.round(resultado.beneficios.sifide))}</span>
                           </div>
-                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-700/70 dark:text-emerald-300/60">
+                          <p className="mt-1 text-[10px] leading-relaxed text-emerald-800 dark:text-emerald-300">
                             Não aplicado ao IRC desta simulação. A certificação ANI, as despesas elegíveis e os elementos históricos têm de ser confirmados.
                           </p>
                         </div>
@@ -2613,27 +2677,41 @@ export default function ModoGuiadoEmpresa({
                     {[
                       { label: faturacaoComIva ? `Faturação anual (base s/ IVA de ${fmt(faturacaoAnual)})` : "Faturação anual", value: resultado.faturacao, cor: "text-stone-700 dark:text-stone-200" },
                       resultado.despesasOper > 0 ? { label: "Despesas operacionais", value: -resultado.despesasOper, cor: "text-stone-500" } : null,
+                      // ┌──────────────────────────────────────────────────────┐
+                      // │ AS CORES DO DINHEIRO SAÍRAM DA PALETA CRUA           │
+                      // │                                                      │
+                      // │ Estas linhas usavam `text-red-500`, `text-red-400`,  │
+                      // │ `text-amber-500/600` e `text-emerald-500/600` — todas │
+                      // │ abaixo de 4,5:1 sobre branco a 11 px (2,15 a 3,77),  │
+                      // │ e o axe confirmou-as em três passos do simulador. O  │
+                      // │ design system já tinha os tokens certos, com          │
+                      // │ override `.dark`: `clay-text` para o dinheiro que sai │
+                      // │ (5,71:1) — o comentário do `tailwind.config` diz-lhe  │
+                      // │ literalmente «substitui o vermelho agressivo» —,      │
+                      // │ `alert-text` para o que é aviso (6,25:1) e            │
+                      // │ `brand-dark` para o que entra (6,20:1).               │
+                      // └──────────────────────────────────────────────────────┘
                       { label: "Custos estrutura (contabilidade + software)", value: -resultado.custosEstrutura, cor: "text-stone-500" },
                       resultado.custoConstituicao > 0 ? { label: `Constituição (amortizada ${anosAmortizacao} ano${anosAmortizacao > 1 ? "s" : ""})`, value: -resultado.custoConstituicao, cor: "text-stone-500" } : null,
                       resultado.salGerente > 0 ? { label: `Salário gerente (${fmt(salGerenteMensal)}/mês × ${mesesSalarioGerente})`, value: -resultado.salGerente, cor: "text-stone-500" } : null,
-                      resultado.ssSalGerente > 0 ? { label: `SS da entidade sobre o salário (${pct(SS_EMP_TAXA)})`, value: -resultado.ssSalGerente, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.ssSalGerente > 0 ? { label: `SS da entidade sobre o salário (${pct(SS_EMP_TAXA)})`, value: -resultado.ssSalGerente, cor: "text-alert-text" } : null,
                       resultado.custoSedeVirtual > 0 ? { label: `Sede ${tipoSede === "virtual" ? "virtual" : "coworking"} (${fmt(custoSedeVirtual)}/mês × 12)`, value: -resultado.custoSedeVirtual, cor: "text-stone-500" } : null,
-                      resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-amber-600 dark:text-amber-400" } : null,
+                      resultado.custoRepresentanteFiscal > 0 ? { label: "Representante fiscal (Art. 19.º LGT)", value: -resultado.custoRepresentanteFiscal, cor: "text-alert-text" } : null,
                       { label: "Lucro tributável", value: resultado.lucroTributavel, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
-                      { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-red-500 dark:text-red-400" },
-                      resultado.ta.viatura > 0 ? { label: `TA viatura (${pct(TA_TAXAS_GUIADO[tipoViatura])})`, value: -resultado.ta.viatura, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      resultado.ta.naoDocumentadas > 0 ? { label: "TA não documentadas (50%)", value: -resultado.ta.naoDocumentadas, cor: "text-amber-600 dark:text-amber-400" } : null,
-                      { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? DERRAMA_MAX.value)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-red-400" },
-                      resultado.custoMunicipalAnual > 0 ? { label: "IMI + IMT/IS (amortizado)", value: -resultado.custoMunicipalAnual, cor: "text-red-400" } : null,
-                      resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-emerald-600 dark:text-emerald-400", plus: true } : null,
+                      { label: `IRC coleta (${pct(localizacao?.ircPME ?? IRC_TAXA_PME.value)}/${fmt(IRC_LIMITE)} + ${pct(localizacao?.ircGeral ?? IRC_TAXA_GERAL.value)}${localizacao?.interior ? " · interior" : ""})`, value: -resultado.coleta, cor: "text-clay-text" },
+                      resultado.ta.viatura > 0 ? { label: `TA viatura (${pct(TA_TAXAS_GUIADO[tipoViatura])})`, value: -resultado.ta.viatura, cor: "text-alert-text" } : null,
+                      resultado.ta.representacao > 0 ? { label: "TA representação (10%)", value: -resultado.ta.representacao, cor: "text-alert-text" } : null,
+                      resultado.ta.ajudasCusto > 0 ? { label: "TA ajudas de custo (5%)", value: -resultado.ta.ajudasCusto, cor: "text-alert-text" } : null,
+                      resultado.ta.naoDocumentadas > 0 ? { label: "TA não documentadas (50%)", value: -resultado.ta.naoDocumentadas, cor: "text-alert-text" } : null,
+                      { label: `Derrama municipal (~${pct(localizacao?.derramaEstimada ?? DERRAMA_MAX.value)}${localizacao ? " · " + localizacao.nome : ""})`, value: -resultado.derrama, cor: "text-clay-text" },
+                      resultado.custoMunicipalAnual > 0 ? { label: "IMI + IMT/IS (amortizado)", value: -resultado.custoMunicipalAnual, cor: "text-clay-text" } : null,
+                      resultado.poupancaIMI > 0 || resultado.poupancaIMT > 0 ? { label: "Poupança municipal (isenções RFAI)", value: resultado.poupancaIMI + (resultado.poupancaIMT / anosAmortizacaoIMT), cor: "text-brand-dark", plus: true } : null,
                       { label: "Lucro líquido (disponível)", value: resultado.lucroLiquido, cor: "text-stone-700 dark:text-stone-200 font-semibold", sep: true },
                       distribuirDividendos ? {
                         label: opcaoEnglobamento
                           ? `IRS dividendos (englobamento 50% × ${pct(resultado.taxaMarginalGerente)} marginal)`
                           : "IRS dividendos (28% taxa liberatória)",
-                        value: -resultado.irsDividendos, cor: "text-red-500 dark:text-red-400",
+                        value: -resultado.irsDividendos, cor: "text-clay-text",
                       } : null,
                     ]
                       .filter(Boolean)
@@ -2818,7 +2896,7 @@ export default function ModoGuiadoEmpresa({
                         <span className="min-w-0 flex-1">
                           <span className="flex items-center gap-1.5">
                             <span className="text-sm font-bold text-brand-dark dark:text-brand">Onde instalar a empresa</span>
-                            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[9px] font-bold text-brand">Mapa</span>
+                            <span className="rounded-full bg-brand/10 px-1.5 py-0.5 text-[9px] font-bold text-brand-dark dark:text-brand">Mapa</span>
                           </span>
                           <span className="mt-0.5 block text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
                             IRC reduzido no interior, Zona Franca da Madeira, RFAI por
@@ -2829,7 +2907,35 @@ export default function ModoGuiadoEmpresa({
                       </a>
                     )}
 
-                    {/* 2. Comparar com recibos verdes */}
+                    {/* 2. De onde vem a faturação que acabou de ser simulada.
+                        Só para quem está a avaliar: quem já tem empresa
+                        conhece o seu volume de negócios e não precisa de
+                        o construir. Para os outros, o número dos passos
+                        anteriores foi escrito à mão — e o resultado herda
+                        exatamente a confiança que ele tinha. */}
+                    {jaTemEmpresa === "nao" && (
+                      <Link
+                        href="/dashboard/negocio"
+                        className="group flex items-center gap-3 rounded-2xl border-2 border-brand/40 bg-white p-4 text-left transition-all hover:border-brand hover:shadow-card dark:border-brand/20 dark:bg-stone-900"
+                      >
+                        <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
+                          <ChartProjection size={18} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-stone-800 dark:text-stone-100">
+                            Construir o projeto que dá esta faturação
+                          </span>
+                          <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+                            O que vais vender, a que preço e quantas vendas
+                            precisas para chegar a {fmt(faturacaoBase)}. No fim,
+                            o projeto volta para aqui com os números feitos.
+                          </span>
+                        </span>
+                        <ArrowRight size={16} className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand" />
+                      </Link>
+                    )}
+
+                    {/* 3. Comparar com recibos verdes */}
                     <Link
                       href="/dashboard/comparar"
                       className="group flex items-center gap-3 rounded-2xl border-2 border-brand/40 bg-white p-4 text-left transition-all hover:border-brand hover:shadow-card dark:border-brand/20 dark:bg-stone-900"
@@ -2849,7 +2955,7 @@ export default function ModoGuiadoEmpresa({
                       <ArrowRight size={16} className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand" />
                     </Link>
 
-                    {/* 3. Simulador completo */}
+                    {/* 4. Simulador completo */}
                     {onIrParaSimuladorCompleto && (
                       <button
                         type="button"
@@ -2872,7 +2978,7 @@ export default function ModoGuiadoEmpresa({
                       </button>
                     )}
 
-                    {/* 4. Encontrar contabilista */}
+                    {/* 5. Encontrar contabilista */}
                     <Link
                       href="/ferramentas/mapa-contabilistas"
                       className="group flex w-full items-center gap-3 rounded-2xl border-2 border-stone-100 bg-white p-4 text-left transition-all hover:border-stone-200 hover:shadow-card dark:border-stone-800 dark:bg-stone-900"
@@ -3161,10 +3267,10 @@ function PainelResumoEmpresa({
         <div className="space-y-1.5">
           {[
             { label: "Custos + SS gerente", val: -(resultado.totalCustos), cor: "text-stone-500" },
-            { label: "IRC + derrama", val: -(resultado.ircAposBeneficios + resultado.derrama), cor: "text-red-500 dark:text-red-400" },
-            ...(resultado.ta.total > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.ta.total), cor: "text-amber-500" }] : []),
-            ...(resultado.beneficios.total > 0 ? [{ label: "Benefícios fiscais", val: resultado.beneficios.total, cor: "text-emerald-500" }] : []),
-            ...(distribuirDividendos && resultado.irsDividendos > 0 ? [{ label: "IRS dividendos", val: -(resultado.irsDividendos), cor: "text-red-400" }] : []),
+            { label: "IRC + derrama", val: -(resultado.ircAposBeneficios + resultado.derrama), cor: "text-clay-text" },
+            ...(resultado.ta.total > 0 ? [{ label: "Trib. Autónoma", val: -(resultado.ta.total), cor: "text-alert-text" }] : []),
+            ...(resultado.beneficios.total > 0 ? [{ label: "Benefícios fiscais", val: resultado.beneficios.total, cor: "text-brand-dark" }] : []),
+            ...(distribuirDividendos && resultado.irsDividendos > 0 ? [{ label: "IRS dividendos", val: -(resultado.irsDividendos), cor: "text-clay-text" }] : []),
             { label: "Líquido", val: resultado.liquidoGerente, cor: "text-brand font-bold", sep: true },
           ].map(({ label, val, cor, sep }) => (
             <div
@@ -3187,7 +3293,7 @@ function PainelResumoEmpresa({
 
       {/* Dica contextual */}
       <div className="rounded-2xl border border-brand/15 bg-brand-light/20 p-3.5">
-        <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-brand-dark/60">
+        <p className="mb-1 text-[9px] font-bold uppercase tracking-wider text-brand-dark dark:text-brand">
           Dica
         </p>
         <p className="text-[11px] font-semibold text-brand-dark dark:text-brand leading-relaxed">

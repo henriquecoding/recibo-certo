@@ -115,6 +115,27 @@ function corPorNivel(t: number, dark = false): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
+// ── A ESCALA DOS PINS É OUTRA, E TEM DE SER ────────────────────────────────
+//  ┌────────────────────────────────────────────────────────────────────────┐
+//  │ A escala acima pinta POLÍGONOS e amostras de legenda — superfícies sem │
+//  │ texto por cima, onde o extremo claro é uma escolha estética.            │
+//  │                                                                        │
+//  │ O pin não é isso: leva texto branco a 12 px bold lá dentro. Com a mesma │
+//  │ escala, o extremo claro dava 2,48:1 e o axe apanhou 3,16:1 e 4,07:1 em  │
+//  │ pins reais — e no modo escuro NENHUM ponto da escala passava (2,48 a    │
+//  │ 3,32), porque o extremo profundo é lá deliberadamente mais claro.       │
+//  │                                                                        │
+//  │ Esta corre do verde da marca já auditado (#177E5E, 5,02:1 sobre branco) │
+//  │ até ao mesmo extremo profundo: 5,02:1 no ponto mais claro e 9,82:1 no   │
+//  │ mais escuro. Não depende do tema porque o pin traz o seu próprio fundo  │
+//  │ e uma borda branca — o que está por baixo não o alcança.                │
+//  └────────────────────────────────────────────────────────────────────────┘
+const COR_PIN_CLARA: [number, number, number] = [0x17, 0x7e, 0x5e];
+function corPinPorNivel(t: number): string {
+  const c = COR_PIN_CLARA.map((a, i) => Math.round(a + (COR_PROFUNDA[i] - a) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
 /** Nível 0–1 de uma região na camada ativa (alimenta cor de pins/fronteiras). */
 function nivelCamada(filtro: FiltroMapa, regiaoId: string): number {
   if (filtro === "beneficios") {
@@ -164,7 +185,7 @@ function regiaoDeFeature(f?: Feature): string | undefined {
   return NUTS2_REGIAO[codigoNuts(f)];
 }
 function estiloRegiao(filtro: FiltroMapa, regiaoId: string | undefined, selId: string | null): PathOptions {
-  const cor = regiaoId ? corPorNivel(nivelCamada(filtro, regiaoId), isDark()) : "#1D9E75";
+  const cor = regiaoId ? corPorNivel(nivelCamada(filtro, regiaoId), isDark()) : "#177E5E";
   const sel = !!regiaoId && regiaoId === selId;
   return {
     color: cor,
@@ -455,7 +476,7 @@ export default function MapaRegioes({
       const PW = 124;
       const PH = 30;
       REGIOES_PRECO.forEach((r) => {
-        const cor = corPorNivel(nivelCamada(f, r.id), isDark());
+        const cor = corPinPorNivel(nivelCamada(f, r.id));
         const texto = textoPin(f, r);
         const html = `<div style="width:${PW}px;height:${PH}px;display:flex;align-items:center;justify-content:center;pointer-events:none">
           <span style="pointer-events:auto;display:inline-flex;align-items:center;height:26px;padding:0 11px;border-radius:9999px;background:${cor};color:#fff;font:700 12px/1 ui-sans-serif,system-ui,sans-serif;border:2px solid #fff;box-shadow:0 3px 10px rgba(10,74,57,.35);white-space:nowrap;cursor:pointer">${texto}</span></div>`;

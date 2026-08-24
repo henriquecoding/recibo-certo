@@ -14,7 +14,9 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
+import { guardarSementeOportunidade } from "@/lib/store/handoff-descoberta-negocio";
 import { formatarIntervalo, ROTULO_ORIGEM } from "@/lib/negocio/descoberta/proveniencia";
 import { descreverZona, ROTULO_ENTREGA } from "@/lib/negocio/descoberta/motor/gerador";
 import { EXPLICACAO_DIMENSAO, ROTULO_DIMENSAO } from "@/lib/negocio/descoberta/motor/scoring";
@@ -44,6 +46,17 @@ import {
 import { BarraDeIntervalo, Chip, LinhaDimensao } from "./atomos";
 import ProvaLocal from "./ProvaLocal";
 
+/**
+ * O estilo das duas pontes para o estúdio.
+ *
+ * Uma é `<Link>` e a outra `<button>` — a diferença é de mecânica, não de
+ * significado, e o ecrã não a pode mostrar: quem lê vê uma saída só, com
+ * o mesmo peso (terciário — a ação principal do dossier continua a ser
+ * formar o preço).
+ */
+const LIGACAO_ESTUDIO =
+  "inline-flex min-h-[44px] items-center text-[12px] font-medium text-stone-500 underline-offset-4 hover:text-brand-dark hover:underline dark:text-stone-400 dark:hover:text-brand-mint";
+
 const DIMENSOES: readonly (keyof OpportunityScore)[] = [
   "fitPessoal",
   "procura",
@@ -70,6 +83,7 @@ export default function Dossier({
   hipotese?: MarketHypothesis;
   onProva: (proxima: MarketHypothesis) => void;
 }) {
+  const router = useRouter();
   const [comoChegamos, setComoChegamos] = useState(false);
   const objecoesQueProcedem = candidato.objecoes.filter((item) => item.procede);
   const ficha = useRef<HTMLDivElement>(null);
@@ -717,15 +731,45 @@ export default function Dossier({
         >
           <Export size={13} /> Imprimir ou guardar em PDF
         </button>
+        {/* ── A CONTINUIDADE PARA O ESTÚDIO, PARA TODAS AS HIPÓTESES ──
+            Isto existia só para as composições que coincidem com um dos 24
+            dossiers curados, porque a ponte era um `?o=<id do catálogo>` —
+            e um id de catálogo é precisamente a única coisa que uma
+            composição gerada não tem. As hipóteses que este motor existe
+            para compor eram as que acabavam num beco.
+
+            Duas pontes, um destino. A curada continua a viajar no URL: um
+            id público não diz nada sobre quem o escolheu, é indexável e é
+            o que o teste de contrato verifica. A gerada leva o cenário e o
+            nome pelo cofre local, porque um título composto a partir das
+            competências de alguém não pode ficar no histórico do browser
+            (§10). O rótulo é o mesmo nos dois casos: quem lê não tem de
+            saber qual das duas está a atravessar. */}
         {candidato.seedTemplateId ? (
           <Link
             href={`/dashboard/negocio?o=${encodeURIComponent(candidato.seedTemplateId)}`}
             data-print="hide"
-            className="inline-flex min-h-[44px] items-center text-[12px] font-medium text-stone-500 underline-offset-4 hover:text-brand-dark hover:underline dark:text-stone-400 dark:hover:text-brand-mint"
+            className={LIGACAO_ESTUDIO}
           >
             ou construir no estúdio de empresa
           </Link>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            data-print="hide"
+            onClick={() => {
+              guardarSementeOportunidade({ cenario: candidato.cenarioPreco, nome: candidato.titulo });
+              // Navega mesmo sem armazenamento: o estúdio abre na mesma e
+              // a pessoa cria a oferta como sempre criou. Uma ferramenta
+              // que se recusa a abrir porque não guardou uma conveniência
+              // é pior do que a conveniência que perdeu.
+              router.push("/dashboard/negocio");
+            }}
+            className={LIGACAO_ESTUDIO}
+          >
+            ou construir no estúdio de empresa
+          </button>
+        )}
       </div>
     </div>
   );

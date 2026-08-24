@@ -16,6 +16,23 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.114.0",
+    data: "2026-08-24",
+    titulo: "Quem ainda não sabe o que vai vender deixa de começar pelo fim",
+    itens: [
+      "O simulador de empresa abria com duas respostas possíveis: «já tenho empresa» ou «estou a avaliar». Quem escolhia a segunda ia direto para os passos que pedem faturação prevista, custos fixos e salário do gerente — números que quem ainda não decidiu o que vai vender não tem. O resultado era escrever um palpite e receber de volta uma estimativa de IRC com o ar de autoridade de uma simulação.",
+      "Passa a haver uma terceira porta: «Ainda não sei que negócio vou ter». Leva ao motor de descoberta, que compõe hipóteses a partir do que sabes fazer, do que tens e da tua zona, com sinais oficiais de mercado — e volta-se ao simulador com números que vieram de algum lado. Quem já sabe o que vai vender continua a entrar num clique, como antes.",
+      "Ao fim da simulação, quem está a avaliar passa a ser convidado a construir o projeto que dá aquela faturação: o que vender, a que preço e quantas vendas são precisas para lá chegar.",
+      "As hipóteses que o motor compõe já podem seguir para o estúdio de negócio. Até aqui, só as que coincidiam com um dos dossiers escritos à mão tinham essa saída — as outras, que são a maior parte e são o que o motor existe para produzir, acabavam na ficha. O nome da hipótese não viaja no endereço da página: atravessa pelo teu dispositivo e apaga-se a seguir.",
+      "No estúdio de negócio, quem chega sem ideia nenhuma deixa de ter de escolher a porta menos errada — há agora uma ligação para descobrir o negócio primeiro.",
+      "A barra de progresso do simulador de empresa marcava sempre o passo SEGUINTE ao que estava no ecrã: em «Que tipo de empresa?» dizia «Localização», e no último passo não marcava nada. Corrigido, e passa a ser legível por leitor de ecrã.",
+      "No telemóvel, essa mesma barra empurrava a página 57 píxeis para o lado — dava para arrastar o ecrã na horizontal em todos os passos do simulador. Deixou de acontecer.",
+      "Contraste corrigido no simulador de empresa: os valores em vermelho e âmbar da decomposição do IRC, os rótulos pequenos em verde claro e as etiquetas do mapa não chegavam ao mínimo legível exigido — treze pontos medidos, agora zero. Os créditos e os avisos passam a usar as cores próprias do produto em vez da paleta genérica.",
+      "A atribuição do mapa (Leaflet, OpenStreetMap, CARTO) ficava quase invisível sobre o mapa em modo escuro. Passa a ter fundo próprio e a ser legível nos dois temas.",
+      "«Decidir e abrir um negócio» passa a ser um percurso com os quatro passos pela ordem em que a decisão acontece — descobrir, formar o preço, comparar regimes e, só se compensar, simular a sociedade.",
+    ],
+  },
+  {
     version: "2.113.0",
     data: "2026-08-24",
     titulo: "A ponte para o teu contabilista deixou de acabar a meio",

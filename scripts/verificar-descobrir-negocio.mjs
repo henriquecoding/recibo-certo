@@ -463,6 +463,39 @@ try {
       });
       verificar("há uma só ação principal no dossier", acoes === 1, String(acoes));
 
+      // ═══ 5a. TODA a hipótese continua para o estúdio ════════════
+      //  ┌──────────────────────────────────────────────────────────┐
+      //  │ A continuidade para o estúdio era um `?o=<id do          │
+      //  │ catálogo>`, e por isso existia SÓ para as composições que │
+      //  │ coincidem com um dos 24 dossiers curados. Numa corrida    │
+      //  │ real com duas hipóteses apresentadas, uma seguia e a      │
+      //  │ outra acabava ali — e a que acabava era a GERADA, que é   │
+      //  │ o que este motor existe para produzir.                    │
+      //  │                                                          │
+      //  │ Verifica-se por cartão e não no primeiro: era exatamente  │
+      //  │ olhar só para o primeiro que deixava passar isto.         │
+      //  └──────────────────────────────────────────────────────────┘
+      const todosOsCartoes = await pagina.locator("section[aria-label='Oportunidades'] article").all();
+      const semContinuidade = [];
+      for (const artigo of todosOsCartoes) {
+        const cabecalho = artigo.locator("button[aria-expanded]").first();
+        if ((await cabecalho.getAttribute("aria-expanded")) !== "true") {
+          await cabecalho.click();
+          await pagina.waitForTimeout(400);
+        }
+        const saidas =
+          (await artigo.getByRole("link", { name: /construir no estúdio/i }).count()) +
+          (await artigo.getByRole("button", { name: /construir no estúdio/i }).count());
+        if (saidas === 0) {
+          semContinuidade.push((await artigo.locator("strong").first().textContent())?.trim() ?? "?");
+        }
+      }
+      verificar(
+        "toda a hipótese apresentada continua para o estúdio",
+        todosOsCartoes.length > 0 && semContinuidade.length === 0,
+        semContinuidade.join(" | "),
+      );
+
       // ═══ 5b. Voltar ao contexto não perde as respostas ══════════
       await pagina.getByRole("button", { name: /Ajustar contexto/ }).click();
       await pagina.waitForTimeout(400);

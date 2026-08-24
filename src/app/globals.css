@@ -1199,6 +1199,36 @@ input[type="number"]::-webkit-outer-spin-button {
   color: #e2e0d6;
 }
 
+/* A ATRIBUIÇÃO DO LEAFLET — obrigatória por licença, e por isso tem de ser
+   legível. O Leaflet pinta-a com `#0078a8` sobre `rgba(255,255,255,.8)`: sobre
+   um mapa escuro isso compõe para ~#d2d1d1 e dá 3,24:1 — abaixo dos 4,5:1 de
+   texto normal, medido com axe no simulador de empresa nos dois temas.
+
+   A correção é dar-lhe um fundo OPACO em cada tema (o texto deixa de depender
+   do que o mosaico tiver por baixo) e uma cor de ligação que passa nesse
+   fundo: 7,57:1 no claro, 9,58:1 no escuro. Não se esconde nem se encolhe
+   nada — a atribuição continua inteira e clicável. */
+/* ⚠️ A ESPECIFICIDADE AQUI NÃO É EXAGERO. O `leaflet.css` é importado pelos
+   componentes do mapa e entra na página DEPOIS deste ficheiro; com a mesma
+   especificidade (0,1,0) que a regra dele, a nossa perdia o desempate por
+   ordem e o fundo continuava `rgba(255,255,255,.8)` — foi o que aconteceu à
+   primeira tentativa, e o axe voltou a apanhar 1,1:1 no escuro. Com o
+   contentor à frente, (0,2,0) e (0,2,1) ganham sem depender da ordem. */
+.leaflet-container .leaflet-control-attribution {
+  background: #ffffff;
+  color: #4a4640;
+}
+.leaflet-container .leaflet-control-attribution a {
+  color: #005a80;
+}
+html.dark .leaflet-container .leaflet-control-attribution {
+  background: #1e221b;
+  color: #cfcdc3;
+}
+html.dark .leaflet-container .leaflet-control-attribution a {
+  color: #7fd3ee;
+}
+
 /* Acessibilidade: respeitar preferência de movimento reduzido. */
 @media (prefers-reduced-motion: reduce) {
   html {

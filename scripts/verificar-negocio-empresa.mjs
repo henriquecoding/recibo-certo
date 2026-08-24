@@ -248,6 +248,80 @@ try {
       await semErroDeRuntime(pagina, "empresa: importado");
       await semOverflow(pagina, "empresa: importado");
 
+      // ═══ 6. O SIMULADOR GUIADO, PASSO A PASSO ════════════════════
+      //  ┌──────────────────────────────────────────────────────────┐
+      //  │ PORQUE ISTO PASSOU A ESTAR AQUI                           │
+      //  │                                                          │
+      //  │ Este ficheiro já verificava «empresa: importado: sem      │
+      //  │ overflow» — e passava. Passava porque um handoff sem      │
+      //  │ `jaTemEmpresa` abre no PASSO 0, que é o único ecrã do     │
+      //  │ simulador sem barra de progresso. Os passos 1 a 7 nunca   │
+      //  │ chegaram a ser vistos por verificação nenhuma, e tinham   │
+      //  │ 417 px de largura num ecrã de 360.                        │
+      //  │                                                          │
+      //  │ A barra também marcava como «atual» o passo SEGUINTE ao   │
+      //  │ que estava no ecrã. É por isso que se verifica aqui o     │
+      //  │ `aria-current="step"` contra o número esperado: um        │
+      //  │ indicador de progresso que aponta para o sítio errado é   │
+      //  │ pior do que não haver indicador nenhum.                   │
+      //  └──────────────────────────────────────────────────────────┘
+      const passoMarcado = () =>
+        pagina.evaluate(
+          () =>
+            document.querySelector('ol[aria-label="Progresso"] [aria-current="step"]')?.textContent?.trim() ??
+            null,
+        );
+
+      const noPasso0 = await pagina.evaluate(() => document.body.innerText);
+      for (const porta of [
+        "Já tenho empresa constituída",
+        "Estou a avaliar abrir empresa",
+        "Ainda não sei que negócio vou ter",
+      ]) {
+        verificar(`empresa: porta «${porta}» presente`, noPasso0.includes(porta));
+      }
+
+      await pagina.getByRole("button", { name: /Estou a avaliar abrir empresa/ }).click();
+      await pagina.waitForTimeout(600);
+      verificar(
+        "empresa: quem ainda não decidiu o que vender tem saída para a descoberta",
+        (await pagina.getByRole("link", { name: /Descobre o negócio primeiro/ }).count()) > 0,
+      );
+
+      await pagina.getByRole("button", { name: /Simular a minha empresa/ }).click();
+      await pagina.waitForTimeout(800);
+      verificar("empresa: a barra marca o passo em que se está", (await passoMarcado()) === "1", await passoMarcado());
+      await semOverflow(pagina, "empresa: passo 1");
+
+      await pagina.getByRole("button", { name: /Unipessoal/ }).first().click();
+      await pagina.waitForTimeout(300);
+      await pagina.getByRole("button", { name: /^\s*Seguinte\s*$/ }).first().click();
+      await pagina.waitForTimeout(800);
+      verificar("empresa: a barra avança com a pessoa", (await passoMarcado()) === "2", await passoMarcado());
+      await semOverflow(pagina, "empresa: passo local");
+
+      // A lista de regiões não depende de rede nenhuma — o geocodificador é
+      // uma conveniência, não o único caminho.
+      const lisboa = pagina.getByRole("button", { name: /Lisboa/ }).first();
+      if (await lisboa.count()) {
+        await lisboa.click();
+        await pagina.waitForTimeout(400);
+      }
+      for (const etapa of ["receita", "dividendos", "otimização", "resultado", "a seguir"]) {
+        const seguinte = pagina.getByRole("button", { name: /^\s*(Seguinte|Ver resultado)\s*$/ }).first();
+        if ((await seguinte.count()) === 0 || (await seguinte.isDisabled())) break;
+        await seguinte.click();
+        await pagina.waitForTimeout(900);
+        await semOverflow(pagina, `empresa: passo ${etapa}`);
+      }
+
+      const noFim = await pagina.evaluate(() => document.body.innerText);
+      verificar(
+        "empresa: quem está a avaliar é convidado a construir o projeto",
+        noFim.includes("Construir o projeto que dá esta faturação"),
+      );
+      await semErroDeRuntime(pagina, "empresa: percurso guiado");
+
       verificar("sem erros de JavaScript", errosJS.length === 0, errosJS.slice(0, 2).join(" | "));
       await contexto.close();
     }

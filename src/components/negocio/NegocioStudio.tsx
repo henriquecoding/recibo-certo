@@ -58,6 +58,7 @@ import { agregar } from "@/lib/negocio/agregar";
 import { localizacaoDeclarada, regiaoDoNegocio } from "@/lib/negocio/localizacao";
 import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import { gravarRascunhoNegocio, lerRascunhoNegocio, limparRascunhoNegocio } from "@/lib/store/negocio";
+import { consumirSementeOportunidade } from "@/lib/store/handoff-descoberta-negocio";
 import { consumirReabertura } from "@/lib/store/cenarios";
 import type { CenarioInicial, ContextoPreco } from "@/lib/pricing/tipos";
 import { ArrowLeft, RotateCcw } from "@/components/ui/Icons";
@@ -197,14 +198,28 @@ export default function NegocioStudio({ ofertaInicial }: NegocioStudioProps = {}
     if (retomou.current) return;
     retomou.current = true;
 
+    // ── A OPORTUNIDADE PODE VIR DE DOIS SÍTIOS ──────────────────────
+    //  Do URL (`?o=<id curado>`), resolvido no servidor e entregue como
+    //  `ofertaInicial`; ou do cofre local, quando a hipótese foi COMPOSTA
+    //  pelo motor e por isso não tem id de catálogo para viajar num URL
+    //  (§10 — um título composto a partir das competências de alguém não
+    //  fica no histórico do browser).
+    //
+    //  A prop ganha: veio de uma navegação explícita e é a mais recente.
+    //  A leitura do cofre é destrutiva e acontece de qualquer maneira —
+    //  uma semente por consumir voltava a semear a mesma oferta na
+    //  abertura seguinte, a quem já tinha entrado pela barra lateral.
+    const semente = consumirSementeOportunidade();
+    const oportunidade = ofertaInicial ?? semente ?? undefined;
+
     const abrir = (base: ContextoNegocio) => {
-      if (!ofertaInicial) {
+      if (!oportunidade) {
         setContexto(base);
         setCaixaAtiva(Boolean(base.caixa));
         return;
       }
 
-      const { contexto: proximo, oferta } = seedOpportunityOffer(base, ofertaInicial);
+      const { contexto: proximo, oferta } = seedOpportunityOffer(base, oportunidade);
 
       setContexto(proximo);
       setCaixaAtiva(Boolean(proximo.caixa));
@@ -227,7 +242,7 @@ export default function NegocioStudio({ ofertaInicial }: NegocioStudioProps = {}
       return;
     }
 
-    if (ofertaInicial) abrir(contextoNegocioVazio("ideia"));
+    if (oportunidade) abrir(contextoNegocioVazio("ideia"));
   }, [ofertaInicial]);
 
   // ── Autosave LOCAL, e só local ──────────────────────────────────
