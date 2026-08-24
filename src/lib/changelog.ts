@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.114.0",
+    data: "2026-08-25",
+    titulo: "Uma proposta à espera passa a chegar-te ao email",
+    itens: [
+      "Na versão anterior fizemos com que uma proposta pronta acendesse o sino na aplicação — antes não acendia nada. Faltava metade: o aviso ficava no site, e quem não voltasse por iniciativa própria continuava sem saber que tinha uma decisão à espera. Agora também segue por email.",
+      "O mesmo para os casos sem resposta. Ao fim de três dias, quem foi convidado recebe o lembrete na caixa de entrada; ao fim de sete, é o cliente que é avisado de que ninguém respondeu — sem depender de ele calhar voltar ao site nesse dia.",
+      "Continuam a não gerar email as mensagens da conversa, os envios de simulações e os avisos de pagamento e de patamar. São factos que se leem quando se entra, não interrupções — um email por cada linha de conversa seria um motivo para desligar os avisos todos.",
+    ],
+  },
+  {
     version: "2.113.0",
     data: "2026-08-24",
     titulo: "A ponte para o teu contabilista deixou de acabar a meio",
