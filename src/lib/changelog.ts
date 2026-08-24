@@ -39,6 +39,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Os extremos das escalas do simulador de empresa («0 €», «300 000 €+») eram quase invisíveis no modo escuro, e os rótulos dos passos ainda por fazer eram-no no modo claro, em todos os simuladores guiados. Ambos corrigidos, com a hierarquia intacta.",
       "A faixa de confiança do rodapé («Fontes oficiais», «Sem conta obrigatória») estava abaixo do contraste mínimo nos dois temas.",
       "Quem está a contar quanto custa abrir empresa passa a saber que parte disso pode não sair do seu bolso: o PAECPE, o Empreende XXI e o microcrédito apoiam quem cria o próprio emprego, e a candidatura faz-se antes de avançar, não depois. O mesmo aviso aparece no motor de descoberta, ao lado do capital disponível — porque é esse número que elimina hipóteses, e um teto fixado sem saber destes apoios elimina hipóteses a mais. Não simulamos nada disto: as condições mudam e quem decide a elegibilidade é o IEFP.",
+      "No campo de dependentes do simulador de salário, as setas do teclado passam a somar e subtrair, e o Home e o End vão aos extremos. O campo já se anunciava como tendo um intervalo de 0 a 20, mas fazia-o com atributos que uma caixa de texto não pode ter — eram ignorados, e quem navega por teclado não tinha as setas que o anúncio prometia.",
+      "Os números de ordem dos cinco pilares (01 a 05) eram quase invisíveis nos dois temas, e a legenda do parceiro na página inicial ficava a raspar abaixo do contraste mínimo por assentar numa superfície verde e não em branco. Corrigidos.",
     ],
   },
   {

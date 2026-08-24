@@ -113,7 +113,12 @@ export default async function FizFaixaDemo({
           estimativa nossa e o que é execução deles. O cartaz do parceiro vem
           a seguir, e é dele a mensagem comercial. */}
       <p className="text-xs font-semibold text-stone-800 dark:text-stone-100">{titulo}</p>
-      <p className="mt-0.5 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">{sub}</p>
+      {/* Esta faixa assenta em superfícies da marca (`brand-light`, #e8f1ea)
+          e não em branco. Lá, o `text-stone-500` remapeado dá 4,47:1 — passa
+          a raspar ao lado dos 4,5:1 exigidos, e o axe apanha-o na homepage.
+          Um degrau mais escuro dá 6,61:1 na mesma superfície e continua a
+          ser secundário face ao título por cima. */}
+      <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">{sub}</p>
 
       <FizCriativoImagem href={href} className="mt-2.5" />
 
