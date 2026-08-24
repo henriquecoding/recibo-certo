@@ -19,44 +19,153 @@
      cópia divergiria na primeira afinação — em silêncio, porque nada
      parte: o cabeçalho fica apenas ligeiramente errado.
 
-     · --rc-header-linha  a linha da marca/ações. É também a primeira
-       linha da grelha e a altura TOTAL do cabeçalho quando encolhido.
-     · --rc-header-alto   no topo da página: a linha de chrome mais a
-       linha da barra. O espaçador em fluxo reserva sempre este valor.
+     ┌──────────────────────────────────────────────────────────────┐
+     │ TRÊS LINHAS, E CADA UMA COM UM TRABALHO SÓ                    │
+     │                                                              │
+     │ Eram duas, com a marca, a navegação e as acções a disputarem  │
+     │ a primeira. Com seis lugares na cápsula isso deixou de caber: │
+     │ a 1920 px a cápsula ficava a 3 px do logótipo e a 2 px de     │
+     │ «Conta», e — pior — o seu centro caía a 886 px enquanto a     │
+     │ barra de pesquisa por baixo estava centrada a 960. Dois       │
+     │ elementos centrados, empilhados, em eixos diferentes.          │
+     │                                                              │
+     │ A causa era estrutural: a cápsula vivia na coluna do meio de  │
+     │ uma grelha cujas colunas laterais têm larguras diferentes     │
+     │ (marca ~136 px, acções ~233 px), portanto centrava-se no      │
+     │ ESPAÇO QUE SOBRAVA e não na página. Nenhuma afinação de        │
+     │ espaçamento resolve isso — só dar-lhe uma linha inteira.       │
+     │                                                              │
+     │ Agora: marca e acções na primeira, a cápsula na segunda, a    │
+     │ pesquisa na terceira. As duas de baixo atravessam a grelha    │
+     │ toda, portanto partilham o eixo da página por construção.      │
+     └──────────────────────────────────────────────────────────────┘
+
+     ┌──────────────────────────────────────────────────────────────┐
+     │ O CABEÇALHO É UM CARTÃO A FLUTUAR, NÃO UMA FAIXA               │
+     │                                                              │
+     │ Foi uma faixa de extremo a extremo com uma régua por baixo, e │
+     │ isso punha-o num sistema diferente do da página, que é uma    │
+     │ pilha de cartões brancos sobre papel quente. Agora é o        │
+     │ primeiro desses cartões: margem à volta, cantos de 2 rem,     │
+     │ sombra. O papel da página passa-lhe ao lado e por baixo.      │
+     │                                                              │
+     │ É por isso que há uma margem e um `padding` no meio da conta  │
+     │ da altura — os dois entram no que o espaçador reserva.        │
+     └──────────────────────────────────────────────────────────────┘
+
+     · --rc-header-linha   a linha da marca, secções e acções.
+     · --rc-linha-nav      a linha da bandeja dos pilares.
+     · --rc-linha-busca    a linha da barra de pesquisa.
+     · --rc-header-margem  o ar entre o cartão e o topo do ecrã.
+     · --rc-cartao-p       o `padding` do cartão.
+     · --rc-cartao-gap     o ar entre as três linhas.
+     · --rc-linha-alternar a lingueta que abre e fecha o cartão.
+
+     ┌──────────────────────────────────────────────────────────────┐
+     │ DUAS ALTURAS, E O SCROLL NÃO ESCOLHE ENTRE ELAS               │
+     │                                                              │
+     │ O cartão nasce FECHADO — uma linha e a lingueta, 112 px — e   │
+     │ abre quando a pessoa o pede. 206 px permanentes eram          │
+     │ demasiados numa página que é para ler.                        │
+     │                                                              │
+     │ Quem escolhe é sempre a pessoa, nunca a posição de scroll.    │
+     │ Já se tentou ligar isto ao scroll de duas maneiras e as duas  │
+     │ custaram mais do que poupavam: recolher a linha de cima fazia │
+     │ sumir a marca, as secções, a conta e o «Começar» de uma vez;  │
+     │ recolher a da pesquisa punha o campo em `display:none` e o    │
+     │ Escape deixava o foco no `<body>`. Um cabeçalho que muda      │
+     │ sozinho lê-se como avaria; um que muda quando lhe tocam, não. │
+     └──────────────────────────────────────────────────────────────┘
+     · --rc-header-alto   as três linhas. É a ÚNICA altura que este
+       cabeçalho tem: não encolhe ao rolar, e as alturas das linhas
+       estão apertadas de propósito para isso ser suportável.
+
+       Encolher já foi tentado de duas maneiras e as duas custaram
+       mais do que os píxeis que poupavam. Recolher a primeira linha
+       fazia sumir a marca, as secções, a conta e o «Começar» de uma
+       vez — um cabeçalho que fica no ecrã e se despe às peças lê-se
+       como avaria. Recolher só a da pesquisa parecia inofensivo e
+       partia o teclado: o campo ficava em `display:none`, portanto ao
+       fechar o painel com Escape o foco caía no `<body>` em vez de
+       voltar ao lançador. Um cabeçalho previsível vale os 172 px.
      · --rc-dock-h        a altura da barra, aberta ou fechada. A
        primeira linha do painel tem esta altura para o campo não se
        mexer um pixel quando o painel abre por cima dela.
-     · --rc-dock-larga    a largura da barra expandida — e do painel,
-       que TEM de ser a mesma, senão o campo salta ao ser clicado.
+       (A largura da barra deixou de ser um token: a barra ocupa a
+       linha inteira do cabeçalho e o painel ocupa a barra — ver o
+       quadro em `.rc-dock-painel`.)
      ══════════════════════════════════════════════════════════════════ */
-  --rc-header-linha: 72px;
-  --rc-header-alto: 136px;
   --rc-dock-h: 48px;
-  --rc-dock-larga: 44rem;
+  --rc-header-linha: 52px;
+  --rc-linha-nav: 52px;
+  /* A linha da pesquisa é a altura da própria barra: escrever 48 px aqui
+     e ler o token ali bastava para o cartão ficar 2 px errado à primeira
+     afinação, e em silêncio. */
+  --rc-linha-busca: var(--rc-dock-h);
+  --rc-header-margem: 16px;
+  --rc-cartao-p: 10px;
+  --rc-cartao-gap: 8px;
+  --rc-linha-alternar: 20px;
+  /* O contorno do cartão. Entra na conta porque `border-box` não o absorve:
+     um cartão com `padding` E contorno mede 2 px mais do que a soma das
+     linhas, e o espaçador ficava 2 px curto — o conteúdo nascia colado. */
+  --rc-cartao-borda: 1px;
+
+  /* Fechado: a linha da marca mais a lingueta que o abre. */
+  --rc-header-compacto: calc(
+    var(--rc-header-margem) + 2 * var(--rc-cartao-borda) + 2 * var(--rc-cartao-p) +
+      var(--rc-header-linha) + 4px + var(--rc-linha-alternar)
+  );
+  /* Aberto: mais a bandeja e a pesquisa, com o ar entre elas. */
+  --rc-header-alto: calc(
+    var(--rc-header-compacto) + 2 * var(--rc-cartao-gap) + var(--rc-linha-nav) +
+      var(--rc-linha-busca)
+  );
+  /* O que a PÁGINA reserva. Uma variável e não duas contas escritas à mão:
+     o espaçador em fluxo e o desvio das âncoras têm de concordar sempre, e
+     divergiam em silêncio se cada um decidisse por si.
+
+     O padrão é a altura ABERTA, porque é assim que o cartão nasce. Escrever
+     o contrário e corrigir por `:has()` dava um salto no primeiro frame de
+     cada carregamento — o caso comum tem de ser o que já está escrito. */
+  --rc-header-atual: var(--rc-header-alto);
 
   /* ══════════════════════════════════════════════════════════════════
      GEOMETRIA DO CHROME INFERIOR DO TELEMÓVEL (< lg)
 
-     Abaixo de `lg` o cabeçalho vive em BAIXO e são duas superfícies
-     empilhadas: o dock de pesquisa e, colada ao fundo, a barra de
-     navegação. Três coisas leem esta altura — o espaçador em fluxo do
-     `ChromeMobile`, o `bottom` do dock e o do botão «voltar ao topo» —
+     Abaixo de `lg` o cabeçalho vive todo em BAIXO: o dock de pesquisa
+     e, colada ao fundo, uma barra de DUAS linhas — os cinco pilares e,
+     por baixo deles, a marca com o menu e a acção. Essa terceira linha
+     já foi uma barra em fluxo no TOPO da página, e repartia o chrome
+     por duas pontas do ecrã: o polegar trabalha em baixo e a marca e o
+     «Começar» estavam a um scroll de distância. Três coisas leem esta
+     altura — o espaçador em fluxo do `ChromeMobile`, o `bottom` do
+     dock e o do botão «voltar ao topo» —
      e até aqui cada uma trazia o seu número escrito à mão. Já tinham
      divergido: o botão «voltar ao topo» continuava a subir 124 px por
      causa de um dock que entretanto fora removido, e o espaçador
      reservava 76 px sem contar com a área segura — num iPhone a barra
      ocupa 84 px e os últimos 8 px de página ficavam por baixo dela.
 
-     · --rc-barra-h    a barra de navegação, INCLUINDO a área segura do
-       dispositivo. A conta é a do próprio elemento: 44 px de alvo mais
-       6 px acima, mais o maior entre 6 px e o indicador do telemóvel.
+     · --rc-barra-nav    a linha dos cinco pilares: 44 px de alvo mais
+       6 px de ar por cima.
+     · --rc-barra-marca  a linha da marca, do menu e da acção.
+     · --rc-barra-fundo  o que fica por baixo da última linha — o maior
+       entre 6 px e o indicador do telemóvel. No tablet a barra deixa
+       de estar colada ao fundo e este valor absorve também o
+       afastamento (ver a regra `@media` a seguir).
+     · --rc-barra-h    a barra toda, INCLUINDO a área segura. É a soma
+       das três acima.
      · --rc-chrome-movel   a pilha toda (barra + ar + dock + ar). É o
        que qualquer coisa fixa tem de subir para não ficar por baixo do
        chrome, e o que o espaçador reserva no fim do documento.
      ══════════════════════════════════════════════════════════════════ */
   --rc-dock-movel-h: 48px;
   --rc-dock-movel-ar: 8px;
-  --rc-barra-h: calc(50px + max(6px, env(safe-area-inset-bottom, 0px)));
+  --rc-barra-nav: 50px;
+  --rc-barra-marca: 52px;
+  --rc-barra-fundo: max(6px, env(safe-area-inset-bottom, 0px));
+  --rc-barra-h: calc(var(--rc-barra-nav) + var(--rc-barra-marca) + var(--rc-barra-fundo));
   --rc-chrome-movel: calc(
     var(--rc-barra-h) + var(--rc-dock-movel-ar) + var(--rc-dock-movel-h) + var(--rc-dock-movel-ar)
   );
@@ -67,7 +176,7 @@
    do fundo, que absorve a área segura em vez de a somar. */
 @media (min-width: 768px) {
   :root {
-    --rc-barra-h: calc(56px + max(1rem, env(safe-area-inset-bottom, 0px)));
+    --rc-barra-fundo: calc(6px + max(1rem, env(safe-area-inset-bottom, 0px)));
   }
 }
 
@@ -75,43 +184,31 @@
    O PAINEL DE PESQUISA DO CABEÇALHO
 
    ┌──────────────────────────────────────────────────────────────────┐
-   │ CENTRAR UMA CAIXA MAIS LARGA DO QUE AQUILO QUE A CONTÉM           │
+   │ ESTA REGRA JÁ FOI UMA CONTA, E DEIXOU DE PRECISAR DE SER          │
    │                                                                  │
-   │ Este painel é o caso invulgar: com o cabeçalho encolhido, o       │
-   │ invólucro da barra tem ~22 rem e o painel tem 44. E é             │
-   │ intencional — a barra encolhe, os resultados não, porque o título │
-   │ e a descrição de uma ferramenta não cabem em meia largura.        │
+   │ Havia aqui `left: calc(50% - largura/2)` e uma variável para a    │
+   │ largura entrar duas vezes na mesma conta. Existia por uma razão   │
+   │ real: com o cabeçalho encolhido, o invólucro da barra tinha       │
+   │ ~22 rem e o painel tinha 44 — a barra encolhia, os resultados     │
+   │ não. Centrar uma caixa MAIOR do que aquilo que a contém põe fora  │
+   │ de jogo o `margin-inline:auto` (a margem vai a zero e a caixa     │
+   │ encosta à esquerda) e o `translateX(-50%)` (compõe-se com o       │
+   │ `transform` de qualquer animação de entrada).                     │
    │                                                                  │
-   │ Isso põe fora de jogo as duas formas habituais de centrar:        │
-   │                                                                  │
-   │  · `margin-inline: auto` — a especificação manda pôr a margem a   │
-   │    zero quando a largura excede o contentor, e a caixa encosta à  │
-   │    ESQUERDA e transborda para a direita;                          │
-   │  · `left: 50%` com `translateX(-50%)` — funciona, e obriga a uma  │
-   │    transformação permanente que se COMPÕE com qualquer animação   │
-   │    de entrada que também escreva em `transform`, fazendo o painel │
-   │    aparecer deslocado antes de saltar para o lugar.               │
-   │                                                                  │
-   │ `left: calc(50% - largura/2)` não tem nenhum dos dois problemas.  │
-   │ O `50%` resolve contra o invólucro, portanto o painel fica        │
-   │ centrado NELE seja qual for a relação entre as larguras — o valor │
-   │ fica simplesmente negativo quando o painel é maior, o que é       │
-   │ legítimo em posicionamento absoluto. E é posição pura: não há     │
-   │ transformação nenhuma com que compor.                             │
-   │                                                                  │
-   │ A largura entra DUAS vezes na mesma conta, por isso vive numa     │
-   │ variável: escrita à mão nos dois sítios, bastaria afinar uma para │
-   │ o painel ficar descentrado por metade da diferença, e em silêncio.│
+   │ A barra deixou de encolher: vive na terceira linha do cabeçalho,  │
+   │ com a largura do contentor, em qualquer estado. Painel e          │
+   │ invólucro passam a ter exactamente a mesma caixa, e a conta       │
+   │ desaparece — `left: 0` e `width: 100%`. Fica registada aqui       │
+   │ porque a tentação, se a barra voltar a encolher, é repor o        │
+   │ `translateX` e reintroduzir o defeito que ele causa.               │
    └──────────────────────────────────────────────────────────────────┘
    ════════════════════════════════════════════════════════════════════ */
 .rc-dock-painel {
-  --rc-painel-w: min(var(--rc-dock-larga), calc(100vw - 2rem));
-
   position: absolute;
   top: 0;
-  left: calc(50% - var(--rc-painel-w) / 2);
+  left: 0;
   z-index: 60;
-  width: var(--rc-painel-w);
+  width: 100%;
   /* O painel nunca passa do ecrã: acima disto o corpo rola por dentro.
      `dvh` e não `vh` porque no browser móvel a barra de endereço mente. */
   max-height: min(36rem, calc(100dvh - var(--rc-header-alto) - 2rem));
@@ -151,6 +248,66 @@
     --rc-painel-movel-max,
     calc(100dvh - var(--rc-barra-h) - var(--rc-dock-movel-ar) - 1.25rem)
   );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   A FOLHA DO MENU, CENTRADA NO COMPUTADOR
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ `-translate-x-1/2` NÃO SOBREVIVE A UMA ANIMAÇÃO DE ENTRADA        │
+   │                                                                  │
+   │ A folha entra com `motion` a escrever `transform: translateY(…)`. │
+   │ Uma classe de centragem que também escreve em `transform` é       │
+   │ simplesmente substituída — e o resultado não é um erro: é uma     │
+   │ folha meio ecrã à direita, com a última coluna cortada. Foi       │
+   │ exactamente o que aconteceu, e só se vê olhando.                   │
+   │                                                                  │
+   │ É o mesmo problema que o painel da pesquisa já tinha resolvido    │
+   │ (ver `.rc-dock-painel` mais abaixo) e a cura é a mesma: centrar   │
+   │ por POSIÇÃO, `left: calc(50% - largura/2)`, que não compõe com    │
+   │ transformação nenhuma. A largura entra duas vezes na conta, por   │
+   │ isso vive numa variável — escrita à mão nos dois sítios, bastava  │
+   │ afinar uma para a folha ficar descentrada por metade da           │
+   │ diferença, e em silêncio.                                         │
+   │                                                                  │
+   │ Abaixo de `lg` não há regra nenhuma aqui: a folha é inferior, de  │
+   │ margem a margem, e as classes de base do componente bastam.       │
+   └──────────────────────────────────────────────────────────────────┘
+   ════════════════════════════════════════════════════════════════════ */
+@media (min-width: 1024px) {
+  .rc-menu-folha {
+    --rc-menu-w: min(64rem, calc(100vw - 4rem));
+
+    inset-inline: auto;
+    left: calc(50% - var(--rc-menu-w) / 2);
+    top: 5.5rem;
+    bottom: auto;
+    width: var(--rc-menu-w);
+    /* `dvh` e não `vh`: no browser a barra de endereço mente sobre a altura. */
+    max-height: min(34rem, calc(100dvh - 8rem));
+  }
+}
+
+/* O estado do cartão chega ao resto do documento por `:has()`, e não por uma
+   classe posta no `<html>` a partir do React: assim o espaçador em fluxo e o
+   `scroll-margin-top` das âncoras leem a mesma variável no mesmo frame em
+   que o cartão muda, sem um efeito pelo meio a escrever no DOM.
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ LÊ-SE `data-reserva`, E NUNCA `data-expandido`                    │
+   │                                                                  │
+   │ São dois atributos porque são duas perguntas. `data-expandido` é  │
+   │ «o corpo está à vista?» e muda também ao rolar; `data-reserva` é  │
+   │ «quanto espaço a página deixa?» e só muda a clique.               │
+   │                                                                  │
+   │ Ligar isto ao primeiro parece o óbvio e é um defeito: o espaçador │
+   │ está EM FLUXO, portanto encolhê-lo a meio da leitura tira 116 px  │
+   │ ao documento e atira o conteúdo todo para cima enquanto a pessoa  │
+   │ rola. Recolher ao rolar deixa a reserva onde estava — e nessa     │
+   │ altura ela está acima da dobra, onde ninguém a vê.                 │
+   └──────────────────────────────────────────────────────────────────┘ */
+:root:has(header[data-reserva="baixa"]) {
+  --rc-header-atual: var(--rc-header-compacto);
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -218,12 +375,12 @@ html {
      │ de um segundo scroll, e o `scroll-margin-top` nos alvos cobre   │
      │ os que não passam por este caminho.                             │
      └────────────────────────────────────────────────────────────────┘ */
-  scroll-padding-top: calc(var(--rc-header-linha) + 12px);
+  scroll-padding-top: calc(var(--rc-header-atual) + 12px);
 }
 
 [id],
 [data-scroll-target] {
-  scroll-margin-top: calc(var(--rc-header-linha) + 12px);
+  scroll-margin-top: calc(var(--rc-header-atual) + 12px);
 }
 
 body {

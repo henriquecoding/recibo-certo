@@ -136,7 +136,7 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
             e.preventDefault();
             abrir();
           }}
-          className="focus-marca group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white/90 pl-4 pr-3 text-left no-underline shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-lift dark:border-stone-700 dark:bg-stone-900/70 dark:hover:border-brand/40"
+          className="focus-marca group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-full border border-stone-200 bg-white pl-5 pr-2.5 text-left no-underline transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:hover:border-brand/40"
         >
           {/**
            * UMA lupa, e não duas. A barra tinha o ícone à esquerda e um
@@ -152,7 +152,7 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
           {atalho && (
             <span
               aria-hidden
-              className="hidden flex-shrink-0 items-center rounded-md border border-stone-200 px-1.5 py-0.5 text-[10px] font-semibold text-stone-500 xl:inline-flex dark:border-stone-700 dark:text-stone-400"
+              className="hidden flex-shrink-0 items-center rounded-lg bg-stone-100 px-2 py-1 text-[11px] font-semibold text-stone-500 xl:inline-flex dark:bg-stone-800 dark:text-stone-400"
             >
               {atalho}
             </span>

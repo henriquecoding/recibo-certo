@@ -4,6 +4,7 @@ import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import CalculadoraSecao from "@/components/CalculadoraSecao";
 import ExplorarSecao from "@/components/ExplorarSecao";
+import FilaPilares from "@/components/navegacao/FilaPilares";
 import FAQ from "@/components/FAQ";
 import Fontes from "@/components/Fontes";
 import { compararCategorias, calcularVencimento } from "@/lib/fiscal-dependente";
@@ -104,6 +105,25 @@ export default function Home() {
             className="grain border-y border-stone-100 bg-white px-6 py-14 scroll-mt-20 sm:py-20"
           >
             <CalculadoraSecao />
+          </section>
+
+          {/*
+           * ── Os cinco pilares ──────────────────────────────────────────────
+           * A MESMA navegação da cápsula e da barra do telemóvel, aqui com a
+           * linha de resultado que não cabe numa barra. Server Component: são
+           * cinco `<a href>` no HTML servido, e os quatro «pilares» antigos
+           * desta página não eram sequer ligações — eram um valor em
+           * `localStorage` a ramificar o hero no cliente.
+           *
+           * Vive DEPOIS da calculadora e não antes: o simulador é o produto e
+           * continua a ser a primeira coisa a seguir ao hero. Quem quer
+           * navegar já tem os cinco destinos acima da dobra, na cápsula (ou
+           * na barra, no telemóvel); isto é para quem rolou.
+           */}
+          <section className="px-6 pt-14 sm:pt-20">
+            <div className="mx-auto max-w-5xl">
+              <FilaPilares />
+            </div>
           </section>
 
           {/*

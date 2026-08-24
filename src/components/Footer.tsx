@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { m } from "motion/react";
+import { PILARES } from "@/lib/navegacao";
+import { iconeDe } from "@/components/ferramentas/icon-map";
 import { fadeUp, staggerContainer, staggerItem, inViewOnce } from "@/lib/motion";
 import {
   Logo, ShieldCheck, Lock, Clock, CheckTrend, ArrowRight,
-  Receipt, Calendar, Calculator, Scale, Mail,
+  Calendar, Calculator, Scale, Mail,
   Warning, Heart, BookOpen, MapPin, Zap, Briefcase,
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
@@ -18,12 +20,27 @@ const TRUST = [
   { icon: Clock, label: "Atualizado", sub: "Monitorização automática" },
 ];
 
+/**
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ OS CINCO PILARES VÊM DA FONTE, E O RESTO É CURADORIA DO RODAPÉ         │
+ * │                                                                       │
+ * │ O rodapé é a terceira superfície de navegação (com a cápsula e a       │
+ * │ barra do telemóvel) e era a única que não sabia disso: tinha a sua     │
+ * │ própria lista, escrita à mão, onde a primeira entrada — «Calculadora   │
+ * │ de recibos verdes» — apontava para `/#calculadora`, o TOPO da          │
+ * │ homepage. É o defeito P0-02 outra vez: um destino que não é uma        │
+ * │ página, numa lista que promete páginas.                                │
+ * │                                                                       │
+ * │ Os cinco pilares passam a derivar de `lib/navegacao.ts`, com o         │
+ * │ canónico verdadeiro de cada um. O que vem a seguir continua a ser      │
+ * │ curadoria editorial do rodapé — e é legítimo que seja: um rodapé pode  │
+ * │ dizer mais do que uma barra. O que não pode é dizer OUTRA coisa.       │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
 const NAV_FERRAMENTAS = [
-  { label: "Calculadora de recibos verdes", href: "/#calculadora", Icon: Receipt },
+  ...PILARES.map((p) => ({ label: p.label, href: p.href, Icon: iconeDe(p.icone) })),
   { label: "Simulador de IRS anual", href: "/ferramentas/simulador-irs", Icon: Calculator },
-  { label: "Recibo de vencimento", href: "/ferramentas/recibo-vencimento", Icon: Briefcase },
   { label: "Comparador de regimes", href: "/ferramentas/comparar-regimes", Icon: Scale },
-  { label: "Simulador de empresa", href: "/ferramentas/simulador-empresa", Icon: Calculator },
   { label: "Mapa de preços por região", href: "/ferramentas/mapa-contabilistas", Icon: MapPin },
   { label: "Prazos fiscais", href: "/dashboard/prazos", Icon: Calendar },
   { label: "Todas as ferramentas", href: "/ferramentas", Icon: Briefcase },

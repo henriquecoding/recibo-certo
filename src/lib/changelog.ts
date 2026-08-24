@@ -16,6 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.112.0",
+    data: "2026-08-24",
+    titulo: "A navegação passou a contar uma história, e passou a ser a mesma nos dois ecrãs",
+    itens: [
+      "Havia duas navegações e não concordavam uma com a outra. No computador a barra dizia «Simular · Guias · Quiz · Planos · Contabilistas»; no telemóvel dizia «Início · Guias · Quiz · Contabilistas · Conta». Duas listas, dois ficheiros, e nada que as obrigasse a bater certo — ou seja, duas respostas diferentes a «onde posso ir?», conforme o ecrã. Passa a haver uma lista só, e um teste que reprova a alteração quando uma das superfícies deixar de a refletir.",
+      "A barra deixou de perguntar «quem és» e passa a perguntar «em que ponto estás»: Descobrir · Preço · Recibos verdes · Salário · Empresa. É a ordem por que as coisas acontecem — que negócio testar, quanto cobrar, quanto fica de cada recibo, quanto fica do salário, e se compensa uma empresa. Cada um é uma página a sério, com endereço próprio, que se pode partilhar e abrir noutro separador.",
+      "Os dois motores que estavam enterrados entram por aí: o de formação de preço e o de descoberta de negócio. Estavam declarados como fazendo parte da página inicial desde que nasceram e nunca lá apareceram — a declaração não era lida por lado nenhum. Agora aparecem, na barra e na página inicial, e o build falha se a declaração e a realidade voltarem a divergir.",
+      "No telemóvel, o chrome deixou de estar repartido pelas duas pontas do ecrã. A marca, o menu e o «Começar» viviam numa barra no topo, enquanto a pesquisa e a navegação viviam em baixo — e o polegar trabalha em baixo. Passam a ser a terceira linha da mesma barra: procurar, ir, e colada ao fundo a acção.",
+      "Guias, Quiz, Planos, Contabilistas e a conta passam para um «Menu» — a mesma folha no computador e no telemóvel, com a navegação toda em colunas. Nada se perdeu: continuam no rodapé e na pesquisa, que tem largura inteira e está a um clique.",
+      "O cabeçalho do computador passou a ter três linhas, cada uma com um trabalho só: em cima a marca, os atalhos para Simular, Guias, Quiz, Contabilistas, Planos e Sugestões, e a conta; no meio a navegação; em baixo a pesquisa. As três têm a mesma largura e as mesmas margens — antes eram duas, com tudo a disputar a primeira, e num ecrã largo a navegação ficava colada ao logótipo e desalinhada da barra de pesquisa.",
+      "Abre com as três à vista e recolhe para uma quando desces na página. Ficam a marca, os atalhos, a conta e o «Começar»; saem a navegação e a pesquisa. São dois momentos e não têm de ter a mesma resposta: quem chega precisa de ver para onde pode ir, quem já está a ler precisa do ecrã. Voltam com um clique na lingueta por baixo, ou sozinhas quando voltas ao topo. E o atalho de pesquisa (Ctrl+K ou ⌘K) abre o cabeçalho para escreveres, esteja ele como estiver.",
+      "O que NUNCA recolhe é a primeira linha. Já foi tentado, e sumirem a marca, os atalhos, a conta e o «Começar» ao mesmo gesto lê-se como avaria, não como densidade.",
+      "E recolher não mexe um pixel no resto da página. O espaço que o cabeçalho reserva fica onde estava — encolhê-lo a meio da leitura tirava 116 px ao documento e atirava o texto todo para cima, precisamente enquanto o estás a ler. Nessa altura esse espaço está acima da dobra, onde ninguém o vê.",
+      "«Simular» está de volta à primeira linha, à esquerda de «Guias», onde sempre esteve. Tinha saído com o argumento de que o índice das ferramentas já estava a um clique de qualquer pilar. É verdade e é irrelevante: chegar lá A PARTIR de um pilar não é o mesmo que chegar lá sem ter escolhido pilar nenhum — que é exactamente o estado de quem ainda não sabe qual é o seu.",
+      "O cabeçalho passou a ser um cartão a flutuar, com margem à volta e o papel da página a passar-lhe ao lado — em vez de uma faixa de extremo a extremo com uma régua por baixo, que o punha num sistema diferente do resto do site.",
+      "A navegação ganhou o mesmo desenho dos controlos do resto do produto: uma bandeja recuada com o sítio onde estás em relevo, e réguas finas a separar os cinco. Continua a ler-se em preto e branco e sem sombras — a pastilha acesa levanta-se do fundo, não é só de outra cor.",
+      "Correção que só se via a olhar: a folha do menu ficava meio ecrã à direita no computador, com a última coluna cortada. A animação de entrada estava a desfazer a centragem.",
+      "Correção na página inicial: em «Por conta de outrem» e «Abrir empresa» mostravam-se menos ferramentas do que nos outros dois perfis, e a secção saltava de altura ao trocar de perfil.",
+    ],
+  },
+  {
     version: "2.111.1",
     data: "2026-08-24",
     titulo: "O mapa deixa de passar por cima do cabeçalho",

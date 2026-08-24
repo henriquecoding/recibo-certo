@@ -7,7 +7,7 @@ import { LIMIAR, MIN_CARACTERES, TETO_DIALOGO, TETO_POPOVER, agruparPorTipo, pes
 import { distanciaAteUm, normalizar, tokens } from "@/lib/busca/normalizar";
 import { termoGuardavel } from "@/lib/busca/recentes";
 import { sugestoesPorContexto } from "@/lib/busca/sugestoes";
-import { NAV_APRENDER, NAV_FERRAMENTAS, NAV_PRINCIPAL, navAtivo } from "@/components/nav-config";
+import { MENU_GRUPOS, PILARES, SECOES, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
 import { GUIAS } from "@/lib/guias-config";
 import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
 import { PRIORIDADE } from "@/components/overlays/CoordenadorOverlays";
@@ -220,38 +220,103 @@ describe("busca:privacidade", () => {
 });
 
 describe("cabecalho:navegacao", () => {
-  it("cada item acende na rota para onde aponta", () => {
-    for (const item of NAV_PRINCIPAL) {
-      expect(navAtivo(item.href)?.label, `«${item.label}» aponta para ${item.href} e não acende lá`).toBe(item.label);
+  // A barra deixou de ter «Simular · Guias · Quiz · Planos · Contabilistas»
+  // e passou a ter os CINCO PILARES. A mudança foi deliberada e está
+  // explicada em `lib/navegacao.ts`; o que estes testes garantem é que a
+  // regra nova vale nas duas superfícies e não só numa.
+
+  it("cada pilar acende na rota para onde aponta", () => {
+    for (const pilar of PILARES) {
+      expect(hrefAtivo(pilar.href), `«${pilar.label}» aponta para ${pilar.href} e não acende lá`).toBe(pilar.href);
     }
   });
 
-  it("as sub-rotas de ferramentas acendem «Simular»", () => {
-    // P1-01: `/ferramentas/...` não acendia nada, porque o item só ficava
-    // activo na raiz exacta. Dez páginas sem indicador de onde se estava.
-    expect(navAtivo("/ferramentas")?.label).toBe("Simular");
-    expect(navAtivo("/ferramentas/simulador-irs")?.label).toBe("Simular");
-    expect(navAtivo("/ferramentas/classificar-atividade")?.label).toBe("Simular");
-    expect(navAtivo("/guias/iva-recibos-verdes")?.label).toBe("Guias");
-    expect(navAtivo("/quiz-fiscal/iva")?.label).toBe("Quiz");
+  it("cada secção do menu acende na rota para onde aponta", () => {
+    for (const secao of SECOES) {
+      expect(hrefAtivo(secao.href), `«${secao.label}» não acende em ${secao.href}`).toBe(secao.href);
+    }
   });
 
-  it("uma rota sem item não acende nada", () => {
+  it("o pilar ganha à secção que o contém", () => {
+    // `/ferramentas/recibos-verdes` casa com o prefixo do pilar «Recibos
+    // verdes» E com o de «Todas as ferramentas». Sem uma ordem decidida de
+    // uma vez, respondiam os dois que sim — e dois `aria-current="page"` no
+    // mesmo documento dizem a um leitor de ecrã que a pessoa está em dois
+    // sítios ao mesmo tempo.
+    expect(destinoAtivo("/ferramentas/recibos-verdes")?.tipo).toBe("pilar");
+    expect(hrefAtivo("/ferramentas/recibos-verdes")).toBe("/ferramentas/recibos-verdes");
+    expect(hrefAtivo("/ferramentas/calcular-preco")).toBe("/ferramentas/calcular-preco");
+    // Uma ferramenta que NÃO é pilar continua a acender a secção.
+    expect(hrefAtivo("/ferramentas/simulador-irs")).toBe("/ferramentas");
+    expect(hrefAtivo("/ferramentas")).toBe("/ferramentas");
+    expect(hrefAtivo("/guias/iva-recibos-verdes")).toBe("/guias");
+    expect(hrefAtivo("/quiz-fiscal/iva")).toBe("/quiz-fiscal");
+  });
+
+  it("uma rota sem destino não acende nada", () => {
     // Meio caminho é o pior estado: um item aceso numa página a que ele não
     // pertence diz à pessoa que está noutro sítio.
-    expect(navAtivo("/privacidade")).toBeNull();
-    expect(navAtivo("/dashboard")).toBeNull();
-    expect(navAtivo("/")).toBeNull();
+    expect(destinoAtivo("/privacidade")).toBeNull();
+    expect(destinoAtivo("/dashboard")).toBeNull();
+    expect(destinoAtivo("/")).toBeNull();
     // `/precos-especiais` não é `/precos`: um prefixo tem de casar no
     // separador, senão qualquer rota que comece pelas mesmas letras acende.
-    expect(navAtivo("/precos-especiais")).toBeNull();
+    expect(destinoAtivo("/precos-especiais")).toBeNull();
+    // E `/contabilista` (o painel, no singular) não é `/contabilistas`.
+    expect(destinoAtivo("/contabilista")).toBeNull();
   });
 
-  it("nunca há dois itens acesos ao mesmo tempo", () => {
-    const rotas = ["/", "/ferramentas", "/ferramentas/simulador-irs", "/guias", "/guias/x", "/quiz-fiscal", "/precos"];
+  it("nunca há dois destinos acesos ao mesmo tempo", () => {
+    const rotas = [
+      "/", "/ferramentas", "/ferramentas/simulador-irs", "/ferramentas/recibos-verdes",
+      "/ferramentas/calcular-preco", "/ferramentas/descobrir-negocio", "/guias", "/guias/x",
+      "/quiz-fiscal", "/precos", "/contabilistas", "/contabilistas/joao",
+    ];
     for (const rota of rotas) {
-      const acesos = NAV_PRINCIPAL.filter((i) => i.prefixos.some((p) => rota === p || rota.startsWith(`${p}/`)));
-      expect(acesos.length, `${rota} acende ${acesos.length} itens`).toBeLessThanOrEqual(1);
+      const aceso = hrefAtivo(rota);
+      const quantos = [...PILARES, ...SECOES].filter((d) => d.href === aceso).length;
+      expect(quantos, `${rota} acende ${quantos} destinos`).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("são cinco pilares — o número de lugares da barra do telemóvel", () => {
+    // Não é um número redondo escolhido por gosto: é o que cabe na barra
+    // inferior a 360 px com rótulo visível em cada lugar. Ver o quadro em
+    // `chrome-movel.test.ts`. Um sexto pilar obriga a rever ESSE limite
+    // primeiro, e não a espremer os rótulos.
+    expect(PILARES).toHaveLength(5);
+  });
+
+  it("os dois motores são pilares, e não itens enterrados no hub", () => {
+    // Declaravam `surfaces: [..., "homepage", ...]` no catálogo e não
+    // apareciam em lado nenhum fora de `/ferramentas`. Agora são os dois
+    // primeiros lugares da navegação, nas duas superfícies.
+    const ids = PILARES.map((p) => p.id);
+    expect(ids.slice(0, 2)).toEqual(["descobrir", "preco"]);
+    expect(PILARES.map((p) => p.toolId)).toContain("calcular-preco");
+    expect(PILARES.map((p) => p.toolId)).toContain("descobrir-negocio");
+  });
+
+  it("todo o pilar tem rótulo curto que cabe na barra do telemóvel", () => {
+    // Medido a 360 px: cada um dos cinco lugares tem ~64,8 px úteis, e em
+    // DM Sans 10px/600 com `tracking-tight` cabem cerca de doze caracteres.
+    // Nove é o tecto que este projeto assume, com folga deliberada.
+    for (const pilar of PILARES) {
+      expect(pilar.curto.length, `«${pilar.curto}» é comprido de mais para a barra`).toBeLessThanOrEqual(9);
+      expect(pilar.curto.trim().length).toBeGreaterThan(0);
+      expect(pilar.label.trim().length).toBeGreaterThan(0);
+      expect(pilar.resultado.trim().length, `«${pilar.label}» sem linha de resultado`).toBeGreaterThan(0);
+    }
+  });
+
+  it("todo o pilar aponta para o destino canónico de uma ferramenta real", () => {
+    const porId = new Map(CATALOGO_FERRAMENTAS.map((f) => [f.id, f]));
+    for (const pilar of PILARES) {
+      const ferramenta = porId.get(pilar.toolId);
+      expect(ferramenta, `pilar «${pilar.label}» aponta para a ferramenta inexistente ${pilar.toolId}`).toBeDefined();
+      expect(pilar.href, `pilar «${pilar.label}» não usa o canonical do catálogo`).toBe(ferramenta!.canonicalHref);
+      // Nunca uma query da homepage — era o defeito P0-02.
+      expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
     }
   });
 });
@@ -260,10 +325,11 @@ describe("cabecalho:intencao", () => {
   it("navegação e intenção da pesquisa são contratos separados", () => {
     // P1-01: `Quiz` e `Planos` PARECIAM âmbitos da pesquisa e não mudavam
     // corpus nenhum. Agora a intenção não vem da navegação — vem da rota, e
-    // é um eixo próprio.
-    const rotulos = NAV_PRINCIPAL.map((i) => i.label);
+    // é um eixo próprio. Com «Simular» fora da barra, a separação passou a
+    // ser TOTAL: nenhum rótulo de navegação é o nome de uma intenção.
+    const rotulos = [...PILARES.map((p) => p.label), ...SECOES.map((s) => s.label)];
     const intencoes = INTENCOES.map((i) => i.label);
-    expect(rotulos.some((r) => intencoes.includes(r) && r !== "Simular")).toBe(false);
+    expect(rotulos.filter((r) => intencoes.includes(r))).toEqual([]);
   });
 
   it("a intenção sugerida segue a rota", () => {
@@ -306,16 +372,22 @@ describe("busca:estado-inicial", () => {
 });
 
 describe("cabecalho:recursos", () => {
-  it("nenhum destino do antigo menu se perdeu", () => {
-    // O mega-dropdown «Recursos Fiscais» saiu da barra. Isto garante que a
+  it("nada do que saiu da barra se perdeu — mudou de sítio", () => {
+    // «Guias», «Quiz», «Planos» e «Contabilistas» eram itens da barra e
+    // passaram para a folha do menu (e para o rodapé). Isto garante que a
     // mudança foi de SÍTIO e não de conteúdo.
-    const destinos = [...NAV_FERRAMENTAS, ...NAV_APRENDER];
-    expect(destinos.length).toBeGreaterThanOrEqual(9);
+    const destinos = MENU_GRUPOS.flatMap((g) => g.entradas);
+    for (const rota of ["/guias", "/quiz-fiscal", "/precos", "/contabilistas", "/ferramentas"]) {
+      expect(destinos.map((d) => d.href), `${rota} desapareceu da navegação`).toContain(rota);
+    }
     for (const item of destinos) {
       expect(item.href.startsWith("/"), `${item.label} não tem rota absoluta`).toBe(true);
       expect(item.label.trim().length).toBeGreaterThan(0);
-      expect(item.desc.trim().length).toBeGreaterThan(0);
     }
+    // Sem destinos repetidos entre grupos: dois caminhos para o mesmo sítio
+    // na mesma superfície é o defeito, não a conveniência.
+    const hrefs = destinos.map((d) => d.href);
+    expect(new Set(hrefs).size, "há destinos repetidos no menu").toBe(hrefs.length);
   });
 });
 

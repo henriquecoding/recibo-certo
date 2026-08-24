@@ -8,7 +8,7 @@
  * │ Metade das garantias que a auditoria do cabeçalho exige não são      │
  * │ sobre dados nem sobre funções puras — são sobre o que o BROWSER faz: │
  * │ onde o foco aterra, se `inert` fecha o fundo a um leitor de ecrã, se │
- * │ um `⌘+clique` preserva o painel, se o cabeçalho muda de altura, se   │
+ * │ um `⌘+clique` preserva o painel, se o cabeçalho fica quieto, se      │
  * │ há dois `aria-modal` no mesmo documento. Nada disso existe fora de   │
  * │ um motor de renderização.                                            │
  * │                                                                     │
@@ -49,6 +49,21 @@ const APP_VERSION = readFileSync(join(RAIZ, "src", "lib", "version.ts"), "utf8")
 if (!APP_VERSION) throw new Error("Não foi possível ler APP_VERSION de src/lib/version.ts");
 
 const BASE = process.env.RC_BASE_URL ?? "http://localhost:3000";
+
+/* ┌─────────────────────────────────────────────────────────────────────────┐
+   │ PORQUE NÃO SE ESPERA POR `networkidle`                                   │
+   │                                                                         │
+   │ Estava aqui, e passou a bloquear: o router do Next faz prefetch das      │
+   │ ligações à vista, e um cabeçalho com nove destinos (cinco pilares mais   │
+   │ as secções) mantém pedidos `?_rsc=` a sair enquanto houver ligações      │
+   │ novas no ecrã. A rede nunca fica 500 ms parada, e o `goto` esgota o      │
+   │ tempo — não por a página estar lenta, mas por a condição não poder ser   │
+   │ satisfeita. Medido: primeira visita à homepage 1,4 s; a segunda, depois  │
+   │ de passar por um guia, nunca chegava lá.                                 │
+   │                                                                         │
+   │ `domcontentloaded` mais as esperas explícitas que este ficheiro já tem   │
+   │ a seguir a cada `goto` medem a mesma coisa sem depender do tráfego.      │
+   └─────────────────────────────────────────────────────────────────────────┘ */
 const EXECUTAVEL = process.env.PLAYWRIGHT_CHROMIUM;
 
 const linhas = [];
@@ -86,8 +101,24 @@ async function sessao(viewport = { width: 1440, height: 900 }, tema) {
   return { ctx, page };
 }
 
+/**
+ * Abre o painel pelo caminho que estiver disponível.
+ *
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ COM A PÁGINA ROLADA, A BARRA NÃO ESTÁ LÁ PARA SER CLICADA              │
+ * │                                                                       │
+ * │ A linha da pesquisa é a única que recolhe ao rolar, e recolhe          │
+ * │ precisamente porque tem dois caminhos alternativos: o atalho de        │
+ * │ teclado e a página `/pesquisar`. Este ajudante usa o clique quando a   │
+ * │ barra está visível e o atalho quando não está — que é o que uma        │
+ * │ pessoa faz, e o que os testes abaixo precisam de exercitar nos dois    │
+ * │ estados.                                                               │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
 const abrirPainel = async (page) => {
-  await page.locator("#rc-header-busca").click();
+  const barra = page.locator("#rc-header-busca");
+  if (await barra.isVisible()) await barra.click();
+  else await page.keyboard.press("Control+k");
   await page.waitForSelector('[data-busca-painel="aberto"]', { timeout: 10_000 });
 };
 
@@ -95,7 +126,7 @@ const abrirPainel = async (page) => {
 {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(4000);
 
   seccao("Primeira visita — overlays globais");
@@ -115,7 +146,7 @@ const abrirPainel = async (page) => {
 /* ═══ 2. Painel de secretária — contrato de a11y e teclado ══════════ */
 {
   const { ctx, page } = await sessao();
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
   seccao("Painel de secretária (1440×900)");
 
@@ -130,11 +161,13 @@ const abrirPainel = async (page) => {
    * │                                                                   │
    * │ Isto é o que substitui o «abrir não muda a densidade» que estava   │
    * │ aqui — e que era a asserção errada. Medir a altura do cabeçalho    │
-   * │ não diz nada a ninguém; o que interessa é se as abas continuam a   │
-   * │ ser vistas e clicadas enquanto se pesquisa. Com o cabeçalho        │
-   * │ compacto elas estão escondidas, e o painel de 44 rem fica por cima │
-   * │ da faixa onde deviam estar — foi assim que uma regressão real      │
-   * │ passou por um portão verde.                                        │
+   * │ não diz nada a ninguém; o que interessa é se a navegação continua  │
+   * │ a ser vista e clicada enquanto se pesquisa. Houve uma versão em    │
+   * │ que ela vivia na linha que recolhia e o painel ficava por cima da  │
+   * │ faixa onde devia estar — foi assim que uma regressão real passou   │
+   * │ por um portão verde. Hoje a cápsula está ACIMA da barra e o painel │
+   * │ abre para baixo, mas a asserção fica: é ela que reprova se alguém  │
+   * │ voltar a pôr a navegação a recolher.                                │
    * │                                                                   │
    * │ Testa-se rolado, que é o único estado onde isto pode falhar.       │
    * └───────────────────────────────────────────────────────────────────┘
@@ -143,11 +176,13 @@ const abrirPainel = async (page) => {
   await page.waitForTimeout(700);
   await abrirPainel(page);
 
-  const abas = page.locator('nav[data-compacto] a[href="/guias"]').first();
-  reg("com a pesquisa aberta e a página rolada, as abas continuam visíveis", await abas.isVisible());
+  // Um PILAR e já não «Guias»: a barra passou a ser os cinco pilares e os
+  // guias vivem na folha do menu (ver `lib/navegacao.ts`).
+  const abas = page.locator('header a[href="/ferramentas/recibos-verdes"]').first();
+  reg("com a pesquisa aberta e a página rolada, os pilares continuam visíveis", await abas.isVisible());
 
   const sobreposto = await page.evaluate(() => {
-    const aba = document.querySelector('nav[data-compacto] a[href="/guias"]');
+    const aba = document.querySelector('header a[href="/ferramentas/recibos-verdes"]');
     const painel = document.querySelector('[data-busca-painel="aberto"]');
     if (!aba || !painel) return null;
     const a = aba.getBoundingClientRect();
@@ -216,7 +251,7 @@ const abrirPainel = async (page) => {
   const { ctx, page } = await sessao();
   seccao("Regressões de interação");
 
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
   await page.locator("#rc-header-busca").fill("iva recibos");
@@ -229,7 +264,7 @@ const abrirPainel = async (page) => {
   reg("clicar num resultado navega", page.url().endsWith(destino), `${destino}`);
   reg("e o painel fecha", (await page.locator('[data-busca-painel="aberto"]').count()) === 0);
 
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
   await page.locator("#rc-header-busca").fill("iva recibos");
@@ -239,14 +274,14 @@ const abrirPainel = async (page) => {
   reg("⌘/Ctrl+clique preserva o painel", (await page.locator('[data-busca-painel="aberto"]').count()) === 1);
   reg("e não navega na página actual", page.url() === `${BASE}/`);
 
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
-  await page.locator('nav[data-compacto] a[href="/guias"]').first().click();
+  await page.locator('header a[href="/ferramentas/recibos-verdes"]').first().click();
   await page.waitForTimeout(1800);
-  reg("clicar na navegação com o painel aberto navega", page.url().includes("/guias"));
+  reg("clicar na navegação com o painel aberto navega", page.url().includes("/ferramentas/recibos-verdes"));
 
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
   await page.mouse.click(700, 700);
@@ -263,7 +298,7 @@ const abrirPainel = async (page) => {
 /* ═══ 4. Telemóvel — diálogo modal completo (P1-05, P1-06) ══════════ */
 {
   const { ctx, page } = await sessao({ width: 360, height: 780 });
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
   seccao("Telemóvel (360×780)");
 
@@ -282,13 +317,29 @@ const abrirPainel = async (page) => {
 
   await page.locator('[data-busca-gatilho="movel"]').click();
   await page.waitForTimeout(1200);
-  reg("um só diálogo modal", (await page.locator('[aria-modal="true"]').count()) === 1);
+  /* ┌───────────────────────────────────────────────────────────────────┐
+     │ ESTAS DUAS ASSERÇÕES ESTAVAM A MEDIR UMA SUPERFÍCIE QUE JÁ NÃO     │
+     │ EXISTE — e estavam vermelhas desde `66331f0`                       │
+     │                                                                   │
+     │ Nessa altura a pesquisa do telemóvel deixou de ser um             │
+     │ `SuperficieModal` (véu, foco preso, scroll bloqueado) e passou a   │
+     │ ser o MESMO painel ancorado do computador. Um painel ancorado é    │
+     │ uma REGIÃO, não um diálogo: a página continua legível e clicável   │
+     │ por trás, portanto declarar `aria-modal="true"` seria mentir ao    │
+     │ leitor de ecrã, e pôr o fundo `inert` seria cumprir uma promessa   │
+     │ que ninguém fez. Está explicado em `PainelPesquisa.tsx` e pinado   │
+     │ em `chrome-movel.test.ts`.                                         │
+     │                                                                   │
+     │ O script ficou para trás — foi tocado pela última vez em `8534e4b` │
+     │ que é o commit IMEDIATAMENTE ANTERIOR. Passa a medir o contrato    │
+     │ que a superfície tem hoje, e não o que ela tinha antes.            │
+     └───────────────────────────────────────────────────────────────────┘ */
+  reg("é uma região de pesquisa e NÃO um diálogo", (await page.locator('[aria-modal="true"]').count()) === 0);
+  reg("com o papel de pesquisa declarado", (await page.locator('[role="search"]').count()) >= 1);
   reg("o foco vai ao campo", (await page.evaluate(() => document.activeElement?.id)) === "rc-busca-movel");
   reg(
-    "o fundo fica inert",
-    await page.evaluate(() =>
-      [...document.body.children].filter((n) => !n.hasAttribute("data-overlay-modal")).every((n) => n.hasAttribute("inert")),
-    ),
+    "o fundo NÃO fica inert — a página continua a existir por trás",
+    await page.evaluate(() => ![...document.body.children].some((n) => n.hasAttribute("inert"))),
   );
 
   await page.locator("#rc-busca-movel").fill("iva");
@@ -302,17 +353,14 @@ const abrirPainel = async (page) => {
     "o foco volta ao botão Pesquisar",
     (await page.evaluate(() => document.activeElement?.getAttribute("data-busca-gatilho"))) === "movel",
   );
-  reg(
-    "o inert é levantado",
-    await page.evaluate(() => ![...document.body.children].some((n) => n.hasAttribute("inert"))),
-  );
+  reg("e o painel fecha", (await page.locator('[data-busca-painel="aberto"]').count()) === 0);
   await ctx.close();
 }
 
 /* ═══ 5. Tablet — composição própria (P2-05) ════════════════════════ */
 {
   const { ctx, page } = await sessao({ width: 820, height: 1100 });
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   seccao("Tablet (820×1100)");
   const caixa = await page.locator('nav[aria-label="Navegação"]').boundingBox();
@@ -324,7 +372,7 @@ const abrirPainel = async (page) => {
 /* ═══ 6. Âncoras sob cabeçalho fixo (P2-06) ═════════════════════════ */
 {
   const { ctx, page } = await sessao();
-  await page.goto(`${BASE}/#calculadora`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/#calculadora`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
   seccao("Âncora /#calculadora");
 
@@ -366,7 +414,7 @@ const abrirPainel = async (page) => {
 /* ═══ 7. Os dois temas — o claro tem de ficar intacto ═══════════════ */
 for (const tema of [null, "dark"]) {
   const { ctx, page } = await sessao({ width: 1440, height: 900 }, tema);
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
   seccao(`Tema ${tema ?? "claro"}`);
 
@@ -473,16 +521,16 @@ for (const tema of [null, "dark"]) {
     }
   };
 
-  await page.goto(BASE, { waitUntil: "networkidle" });
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
-  await analisar("cabeçalho", ["nav[data-compacto]"]);
+  await analisar("cabeçalho", ["header"]);
 
   await abrirPainel(page);
   await page.locator("#rc-header-busca").fill("iva");
   await page.waitForTimeout(1000);
   await analisar("painel de pesquisa", ['[data-busca-painel="aberto"]']);
 
-  await page.goto(`${BASE}/pesquisar?q=iva`, { waitUntil: "networkidle" });
+  await page.goto(`${BASE}/pesquisar?q=iva`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await analisar("/pesquisar", ["main, .max-w-3xl"]);
 
