@@ -89,6 +89,72 @@ async function semOverflow(pagina, onde) {
   verificar(`${onde}: sem overflow horizontal`, r.scroll <= r.client + 1, `${r.scroll} > ${r.client}`);
 }
 
+
+/**
+ * §5b — o mapa não pode pintar por cima da barra de topo.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ O DEFEITO QUE ISTO PRENDE, VISTO EM PRODUÇÃO                          │
+ * │                                                                      │
+ * │ O CSS do Leaflet põe os painéis em `z-index: 400` e os controlos em  │
+ * │ `1000`; a caixa de pesquisa sobreposta soma outro `1000`. A barra do │
+ * │ site é `fixed … z-50`. Sem contexto de empilhamento próprio, esses   │
+ * │ números competem na RAIZ e o mapa ganha — a pesquisa do mapa passa a │
+ * │ tapar o logótipo ao percorrer a página.                               │
+ * │                                                                      │
+ * │ Medido a 1876 px, antes da correção: 28 pontos tapados na linha da   │
+ * │ barra, de x=416 a x=1064. Um `isolate` no invólucro leva-o a zero.   │
+ * │                                                                      │
+ * │ Isto não é um teste de estilo — é o teste de que o mapa não rouba a  │
+ * │ navegação. Vale para QUALQUER caixa marcada `data-mapa-onde-operar`. │
+ * └──────────────────────────────────────────────────────────────────────┘
+ */
+async function mapaNaoTapaABarra(pagina, onde) {
+  // O mapa é `dynamic({ ssr:false })`: no instante em que a fase A é
+  // avaliada ainda não existe. Esperar por ele é a diferença entre
+  // vigiar a sobreposição e dar-se por satisfeito com a ausência dela.
+  await pagina
+    .locator("[data-mapa-onde-operar] .leaflet-container")
+    .first()
+    .waitFor({ state: "attached", timeout: 8000 })
+    .catch(() => {});
+
+  const r = await pagina.evaluate(() => {
+    const mapa = document.querySelector("[data-mapa-onde-operar]");
+    if (!mapa) return { semMapa: true };
+    const barra = [...document.querySelectorAll("nav, header")].find((n) => {
+      const estilo = getComputedStyle(n);
+      const caixa = n.getBoundingClientRect();
+      return estilo.position === "fixed" && caixa.top <= 1 && caixa.height > 30 && caixa.width > 300;
+    });
+    if (!barra) return { semBarra: true };
+
+    // Pôr o topo do mapa debaixo da barra — é aí que a corrida acontece.
+    mapa.scrollIntoView({ block: "start", behavior: "instant" });
+    window.scrollBy(0, -10);
+
+    const caixa = barra.getBoundingClientRect();
+    const y = Math.round(caixa.top + caixa.height / 2);
+    let tapados = 0;
+    for (let x = 8; x < caixa.width; x += 24) {
+      if (document.elementFromPoint(x, y)?.closest?.("[data-mapa-onde-operar]")) tapados += 1;
+    }
+    return { tapados };
+  });
+  // Um salto silencioso esconderia precisamente o caso que isto vigia.
+  // Se o mapa está no ecrã, a verificação TEM de correr; se não está,
+  // diz-se que não está em vez de se dar por passada.
+  if (r.semMapa) {
+    console.log(`  · ${onde}: mapa ainda não montado, verificação de sobreposição adiada`);
+    return;
+  }
+  if (r.semBarra) {
+    console.log(`  · ${onde}: sem barra fixa neste viewport, nada a sobrepor`);
+    return;
+  }
+  verificar(`${onde}: o mapa não tapa a barra de topo`, r.tapados === 0, `${r.tapados} pontos tapados`);
+}
+
 async function semErroDeRuntime(pagina, onde) {
   const erro = await pagina.evaluate(
     () =>
@@ -192,6 +258,7 @@ try {
       await semErroDeRuntime(pagina, "descoberta: fase A");
       await semOverflow(pagina, "descoberta: fase A");
       await controlosTocaveis(pagina, "descoberta: fase A");
+      await mapaNaoTapaABarra(pagina, "descoberta: fase A");
 
       const faseA = await pagina.evaluate(() => document.body.innerText);
       verificar(
