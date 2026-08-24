@@ -182,6 +182,18 @@ export interface EntradaMenu {
    * tem `topo` continua a existir — na folha, no rodapé e na pesquisa.
    */
   topo?: true;
+  /**
+   * O rótulo da barra do topo, quando é diferente do da folha. Mesmo padrão
+   * que `Pilar.curto`: a folha tem espaço para dizer o nome inteiro e uma
+   * linha de contexto por baixo; a barra tem uma palavra.
+   *
+   * É o nome ACESSÍVEL nessa superfície, e não uma abreviatura por cima de
+   * outro nome — nada de `aria-label` com o rótulo longo. Um nome acessível
+   * que não contém o texto visível é uma falha de WCAG 2.5.3 e, pior, deixa
+   * quem usa comando de voz a dizer «Simular» a um alvo que se chama outra
+   * coisa.
+   */
+  curto?: string;
 }
 
 export interface GrupoMenu {
@@ -205,11 +217,25 @@ export interface GrupoMenu {
  */
 export const SECOES: EntradaMenu[] = [
   {
-    // Sem `topo`: o hub já está a um clique de qualquer pilar (todos
-    // vivem em `/ferramentas/...` e o migalho leva lá) e da fila da página
-    // inicial. Repeti-lo na barra seria o quinto atalho para o mesmo sítio.
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ «SIMULAR» É ESTA ENTRADA, E ESTEVE FORA DA BARRA POR ENGANO    │
+    // │                                                               │
+    // │ Saiu quando a barra passou a levar os pilares, com o argumento │
+    // │ de que o hub já estava a um clique de qualquer um deles. O     │
+    // │ argumento é verdadeiro e é irrelevante: chegar lá A PARTIR de  │
+    // │ um pilar não é o mesmo que chegar lá sem ter escolhido pilar   │
+    // │ nenhum, que é exactamente o estado de quem ainda não sabe qual │
+    // │ é o seu. Os cinco pilares são as cinco perguntas mais comuns;  │
+    // │ este é o índice das outras trinta e tal.                       │
+    // │                                                               │
+    // │ Fica onde sempre esteve — o primeiro da fila, à esquerda de    │
+    // │ «Guias» — porque é a ordem que quem já usa o site tem na       │
+    // │ memória, e mudá-la não pagava nada.                            │
+    // └───────────────────────────────────────────────────────────────┘
     id: "ferramentas",
+    topo: true,
     label: "Todas as ferramentas",
+    curto: "Simular",
     href: "/ferramentas",
     // A contagem DERIVA do catálogo (§2.3). Nunca se escreve à mão.
     desc: `${TOTAL_FERRAMENTAS} simuladores, calculadoras e decisores num só sítio.`,

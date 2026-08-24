@@ -6,10 +6,10 @@
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ SÃO ATALHOS, E O DESENHO TEM DE DIZER ISSO                           │
 //  │                                                                     │
-//  │ Guias, Quiz, Contabilistas e Planos estavam na barra principal e     │
-//  │ saíram de lá quando ela passou a levar os cinco pilares. Estavam a   │
-//  │ ser destinos de primeiro nível ao lado da tarefa, e não são: são o   │
-//  │ resto do produto.                                                    │
+//  │ Simular, Guias, Quiz, Contabilistas e Planos estavam na barra        │
+//  │ principal e saíram de lá quando ela passou a levar os cinco pilares. │
+//  │ Estavam a ser destinos de primeiro nível ao lado da tarefa, e não    │
+//  │ são: são o resto do produto.                                          │
 //  │                                                                     │
 //  │ Voltam — mas um nível acima, e com o peso visual desse nível: texto  │
 //  │ pequeno, sem ícone, sem pastilha, na cor da prosa secundária. A      │
@@ -21,7 +21,7 @@
 //  ┌─────────────────────────────────────────────────────────────────────┐
 //  │ «SUGESTÕES» É UMA ACÇÃO E FICA NO FIM, DEPOIS DE UMA RÉGUA           │
 //  │                                                                     │
-//  │ Os quatro primeiros levam a uma página; este abre uma caixa de       │
+//  │ Os anteriores levam a uma página; este abre uma caixa de             │
 //  │ escrita e não muda de rota. Pô-lo na fila sem separação ensinava     │
 //  │ que era mais um destino — e a pessoa que lhe toca à espera de uma    │
 //  │ página fica com um formulário. A régua é o sinal de que a natureza   │
@@ -70,7 +70,10 @@ export default function BarraSecoes() {
                 : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
             }`}
           >
-            {secao.label}
+            {/* `curto` quando existe, e SEM `aria-label` a repor o longo: o
+                nome acessível tem de conter o texto visível (WCAG 2.5.3) e
+                quem usa comando de voz diz o que lê. Ver `EntradaMenu`. */}
+            {secao.curto ?? secao.label}
           </Link>
         );
       })}

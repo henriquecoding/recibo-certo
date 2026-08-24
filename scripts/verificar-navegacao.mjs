@@ -122,44 +122,55 @@ for (const vp of VIEWPORTS) {
 
   if (vp.width >= 1024) {
     // ┌───────────────────────────────────────────────────────────────────┐
-    // │ O CARTÃO NASCE FECHADO — e é a pessoa que o abre                   │
+    // │ O CARTÃO NASCE ABERTO — e recolhe quando se desce na página        │
     // │                                                                   │
-    // │ 206 px permanentes eram demasiados numa página que é para ler.     │
-    // │ Fechado são 112 px: a linha da marca e a lingueta. Tudo o que vem  │
-    // │ a seguir mede o cartão ABERTO, porque é aí que a geometria das     │
-    // │ três linhas existe para ser verificada.                             │
+    // │ Quem chega precisa de ver para onde pode ir; quem já está a ler    │
+    // │ precisa do ecrã. Tudo o que vem a seguir mede o cartão ABERTO,     │
+    // │ porque é aí que a geometria das três linhas existe.                 │
     // └───────────────────────────────────────────────────────────────────┘
-    const fechado = await page.evaluate(() => {
-      const h = document.querySelector("header");
-      const esp = h.previousElementSibling;
-      return {
-        estado: h.dataset.expandido,
-        corpoVisivel: !!document.querySelector("#rc-cabecalho-corpo")?.offsetParent,
-        espacador: Math.round(esp.getBoundingClientRect().height),
-        lingueta: !!document.querySelector("[data-cabecalho-alternar]")?.offsetParent,
-      };
-    });
-    if (fechado.estado !== "false") mal(`${vp.nome}px: o cartão devia nascer fechado`);
-    else if (fechado.corpoVisivel) mal(`${vp.nome}px: o corpo do cartão está visível com ele fechado`);
-    else if (!fechado.lingueta) mal(`${vp.nome}px: a lingueta de expansão não está visível`);
-    else ok(`${vp.nome}px: cartão fechado — ${fechado.espacador}px reservados, com lingueta`);
+    const medir = () =>
+      page.evaluate(() => {
+        const h = document.querySelector("header");
+        const esp = h.previousElementSibling;
+        return {
+          estado: h.dataset.expandido,
+          reserva: h.dataset.reserva,
+          corpoVisivel: !!document.querySelector("#rc-cabecalho-corpo")?.offsetParent,
+          espacador: Math.round(esp.getBoundingClientRect().height),
+          cartao: Math.round(h.querySelector("div").getBoundingClientRect().height),
+          lingueta: !!document.querySelector("[data-cabecalho-alternar]")?.offsetParent,
+        };
+      });
 
-    await page.click("[data-cabecalho-alternar]");
-    await page.waitForTimeout(400);
-    const aberto = await page.evaluate(() => {
-      const h = document.querySelector("header");
-      return {
-        estado: h.dataset.expandido,
-        espacador: Math.round(h.previousElementSibling.getBoundingClientRect().height),
-        cartao: Math.round(h.querySelector("div").getBoundingClientRect().height),
-      };
-    });
-    if (aberto.estado !== "true") mal(`${vp.nome}px: a lingueta não abriu o cartão`);
+    const aberto = await medir();
+    if (aberto.estado !== "true") mal(`${vp.nome}px: o cartão devia nascer ABERTO`);
+    else if (!aberto.corpoVisivel) mal(`${vp.nome}px: nasceu aberto mas o corpo não está visível`);
+    else if (!aberto.lingueta) mal(`${vp.nome}px: a lingueta não está visível`);
     // O espaçador em fluxo tem de seguir a altura do cartão mais a margem —
     // senão o conteúdo nasce por baixo dele ou com um buraco à frente.
     else if (Math.abs(aberto.espacador - aberto.cartao - 16) > 1) {
       mal(`${vp.nome}px: espaçador (${aberto.espacador}) não acompanha o cartão (${aberto.cartao} + 16)`);
-    } else ok(`${vp.nome}px: cartão aberto — ${aberto.espacador}px reservados, e o espaçador acompanha`);
+    } else ok(`${vp.nome}px: cartão aberto à entrada — ${aberto.espacador}px reservados, e o espaçador acompanha`);
+
+    // ┌───────────────────────────────────────────────────────────────────┐
+    // │ RECOLHER A CLIQUE: O ESPAÇADOR ACOMPANHA                           │
+    // │                                                                   │
+    // │ Um clique é causa directa e pode mexer na reserva — no topo da     │
+    // │ página é a única forma de o espaço voltar a ser da página.          │
+    // └───────────────────────────────────────────────────────────────────┘
+    await page.click("[data-cabecalho-alternar]");
+    await page.waitForTimeout(300);
+    const fechado = await medir();
+    if (fechado.estado !== "false") mal(`${vp.nome}px: a lingueta não recolheu o cartão`);
+    else if (fechado.corpoVisivel) mal(`${vp.nome}px: recolhido, mas o corpo continua visível`);
+    else if (fechado.reserva !== "baixa") mal(`${vp.nome}px: recolhido a clique e a reserva ficou «${fechado.reserva}»`);
+    else if (Math.abs(fechado.espacador - fechado.cartao - 16) > 1) {
+      mal(`${vp.nome}px: espaçador (${fechado.espacador}) não acompanha o cartão fechado (${fechado.cartao} + 16)`);
+    } else ok(`${vp.nome}px: cartão fechado a clique — ${fechado.espacador}px reservados, com lingueta`);
+
+    await page.click("[data-cabecalho-alternar]");
+    await page.waitForTimeout(300);
+    if ((await medir()).estado !== "true") mal(`${vp.nome}px: a lingueta não voltou a abrir o cartão`);
 
     // A cápsula: cinco pilares + Menu, visíveis.
     const capsula = await page.evaluate(() => {
@@ -232,7 +243,7 @@ for (const vp of VIEWPORTS) {
         return {
           linha1: r(linhas[0]),
           bandeja: r(cartao.querySelector('nav[aria-label="Principal"]')),
-          busca: r(linhas[2]),
+          busca: r(cartao.querySelector("#rc-cabecalho-corpo")?.children?.[1]),
           altura: Math.round(cartao.getBoundingClientRect().height),
           colideMarca: cruza(marca, cartao.querySelector('nav[aria-label="Principal"]')),
           colideAccoes: cruza(accoes, cartao.querySelector('nav[aria-label="Principal"]')),
@@ -262,18 +273,63 @@ for (const vp of VIEWPORTS) {
       if (reguas < 1) mal(`${vp.nome}px: a bandeja perdeu as réguas entre os pilares`);
       else ok(`${vp.nome}px: bandeja com ${reguas} réguas entre fatias`);
 
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ AO DESCER RECOLHE — E O CONTEÚDO NÃO PODE SALTAR               │
+      // │                                                               │
+      // │ Este é o defeito que a separação `data-expandido` /            │
+      // │ `data-reserva` existe para impedir. O espaçador está EM FLUXO: │
+      // │ encolhê-lo a meio da leitura tira 116 px ao documento e atira  │
+      // │ tudo para cima debaixo dos olhos de quem rola. Mede-se a       │
+      // │ posição de um elemento real do documento, com o scroll parado, │
+      // │ antes e depois de o cartão recolher.                            │
+      // └───────────────────────────────────────────────────────────────┘
       await page.evaluate(() => window.scrollTo(0, 1200));
-      await page.waitForTimeout(800);
+      await page.waitForTimeout(900);
       const rolado = await page.evaluate(`(${medida})()`);
+      const posDepois = await page.evaluate(() => {
+        const h = document.querySelector("header");
+        return {
+          y: Math.round(window.scrollY),
+          reserva: h.dataset.reserva,
+          estado: h.dataset.expandido,
+          espacador: Math.round(h.previousElementSibling.getBoundingClientRect().height),
+        };
+      });
+
       const igual = (a, b) => a && b && Math.abs(a.e - b.e) <= 1 && Math.abs(a.w - b.w) <= 1;
-      const mexeu = ["linha1", "bandeja", "busca"].filter((k) => !igual(antes[k], rolado[k]));
-      if (mexeu.length) mal(`${vp.nome}px: ao rolar mexeu-se ${mexeu.join(", ")}`);
-      else if (antes.altura !== rolado.altura) {
-        mal(`${vp.nome}px: o cartão muda de altura ao rolar (${antes.altura} → ${rolado.altura})`);
-      } else ok(`${vp.nome}px: ao rolar não muda nada — ${antes.altura}px nos dois estados`);
+      if (posDepois.estado !== "false") {
+        mal(`${vp.nome}px: descer 1200px não recolheu o cartão (estado ${posDepois.estado})`);
+      } else if (!igual(antes.linha1, rolado.linha1)) {
+        // A queixa que originou a regra: «ao fazer scroll some um monte de
+        // coisas». A marca, as secções, a conta e o «Começar» FICAM.
+        mal(`${vp.nome}px: ao rolar mexeu-se a primeira linha`);
+      } else if (posDepois.reserva !== "alta") {
+        mal(`${vp.nome}px: recolher ao rolar mexeu na reserva (${posDepois.reserva}) — o conteúdo salta`);
+      } else if (Math.abs(posDepois.espacador - antes.altura - 16) > 1) {
+        mal(`${vp.nome}px: o espaçador encolheu ao rolar (${posDepois.espacador}) — o conteúdo salta`);
+      } else {
+        ok(
+          `${vp.nome}px: ao descer recolhe (${antes.altura} → ${rolado.altura}px) ` +
+            `sem mexer na primeira linha nem nos ${posDepois.espacador}px reservados`,
+        );
+      }
+
+      // Recolhido pelo scroll, a lingueta ABRE — nunca fecha outra vez.
+      await page.click("[data-cabecalho-alternar]");
+      await page.waitForTimeout(400);
+      const reaberto = await page.evaluate(() => document.querySelector("header").dataset.expandido);
+      if (reaberto !== "true") mal(`${vp.nome}px: a lingueta não reabriu o cartão recolhido pelo scroll`);
+      else ok(`${vp.nome}px: recolhido pelo scroll, a lingueta volta a abrir`);
 
       await page.evaluate(() => window.scrollTo(0, 0));
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(700);
+      const noTopo = await page.evaluate(() => ({
+        estado: document.querySelector("header").dataset.expandido,
+        reserva: document.querySelector("header").dataset.reserva,
+      }));
+      if (noTopo.estado !== "true" || noTopo.reserva !== "alta") {
+        mal(`${vp.nome}px: de volta ao topo o cartão ficou ${noTopo.estado}/${noTopo.reserva}`);
+      } else ok(`${vp.nome}px: de volta ao topo abre outra vez, sem buraco por baixo`);
 
       // ┌───────────────────────────────────────────────────────────────┐
       // │ COM O CARTÃO FECHADO, O ATALHO TEM DE O ABRIR                  │

@@ -121,10 +121,14 @@
     var(--rc-header-compacto) + 2 * var(--rc-cartao-gap) + var(--rc-linha-nav) +
       var(--rc-linha-busca)
   );
-  /* O que ele mede AGORA. Uma variável e não duas contas escritas à mão: o
-     espaçador em fluxo e o desvio das âncoras têm de concordar sempre, e
-     divergiam em silêncio se cada um decidisse por si. */
-  --rc-header-atual: var(--rc-header-compacto);
+  /* O que a PÁGINA reserva. Uma variável e não duas contas escritas à mão:
+     o espaçador em fluxo e o desvio das âncoras têm de concordar sempre, e
+     divergiam em silêncio se cada um decidisse por si.
+
+     O padrão é a altura ABERTA, porque é assim que o cartão nasce. Escrever
+     o contrário e corrigir por `:has()` dava um salto no primeiro frame de
+     cada carregamento — o caso comum tem de ser o que já está escrito. */
+  --rc-header-atual: var(--rc-header-alto);
 
   /* ══════════════════════════════════════════════════════════════════
      GEOMETRIA DO CHROME INFERIOR DO TELEMÓVEL (< lg)
@@ -287,9 +291,23 @@
 /* O estado do cartão chega ao resto do documento por `:has()`, e não por uma
    classe posta no `<html>` a partir do React: assim o espaçador em fluxo e o
    `scroll-margin-top` das âncoras leem a mesma variável no mesmo frame em
-   que o cartão muda, sem um efeito pelo meio a escrever no DOM. */
-:root:has(header[data-expandido="true"]) {
-  --rc-header-atual: var(--rc-header-alto);
+   que o cartão muda, sem um efeito pelo meio a escrever no DOM.
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ LÊ-SE `data-reserva`, E NUNCA `data-expandido`                    │
+   │                                                                  │
+   │ São dois atributos porque são duas perguntas. `data-expandido` é  │
+   │ «o corpo está à vista?» e muda também ao rolar; `data-reserva` é  │
+   │ «quanto espaço a página deixa?» e só muda a clique.               │
+   │                                                                  │
+   │ Ligar isto ao primeiro parece o óbvio e é um defeito: o espaçador │
+   │ está EM FLUXO, portanto encolhê-lo a meio da leitura tira 116 px  │
+   │ ao documento e atira o conteúdo todo para cima enquanto a pessoa  │
+   │ rola. Recolher ao rolar deixa a reserva onde estava — e nessa     │
+   │ altura ela está acima da dobra, onde ninguém a vê.                 │
+   └──────────────────────────────────────────────────────────────────┘ */
+:root:has(header[data-reserva="baixa"]) {
+  --rc-header-atual: var(--rc-header-compacto);
 }
 
 /* ════════════════════════════════════════════════════════════════════

@@ -41,8 +41,6 @@ import MenuCompleto from "@/components/navegacao/MenuCompleto";
  * │ máxima — o problema deixa de poder existir.                              │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
-const CHAVE_EXPANDIDO = "recibocerto:cabecalho-expandido";
-
 const ACAO =
   "btn-shine focus-marca inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-5 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float";
 
@@ -50,7 +48,29 @@ export default function Nav() {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
-  const [expandidoManual, setExpandidoManual] = useState(false);
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ DOIS ESTADOS, PORQUE SÃO DUAS PERGUNTAS — E JUNTÁ-LOS DAVA UM SALTO│
+   * │                                                                   │
+   * │   `abertoManual`        a escolha de quem lá está. Nasce ABERTO.   │
+   * │                        É esta que decide quanto espaço a PÁGINA    │
+   * │                        reserva (`data-reserva`).                   │
+   * │   `recolhidoPorScroll`  um esconder passageiro, por se ter descido │
+   * │                        na página. NUNCA toca no espaço reservado.  │
+   * │                                                                   │
+   * │ Porque não é um estado só: o espaçador está EM FLUXO. Encolhê-lo   │
+   * │ a meio da página tira 116 px ao documento, e todo o conteúdo salta │
+   * │ para cima debaixo dos olhos de quem está a ler — a rolar, que é o  │
+   * │ pior momento possível. Congelar a reserva não custa nada, porque   │
+   * │ nessa altura ela está fora do ecrã, acima da dobra.                │
+   * │                                                                   │
+   * │ O clique pode mexer na reserva: é causa directa, lê-se como o      │
+   * │ cartão a abrir e a fechar, e no topo da página é a única forma de  │
+   * │ o espaço voltar mesmo a ser da página.                             │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  const [abertoManual, setAbertoManual] = useState(true);
+  const [recolhidoPorScroll, setRecolhidoPorScroll] = useState(false);
   const buscaAberta = useBuscaAberta();
 
   /**
@@ -70,54 +90,55 @@ export default function Nav() {
    * │ o que a pessoa espera depois de o ter aberto para procurar.           │
    * └─────────────────────────────────────────────────────────────────────┘
    */
-  const expandido = expandidoManual || buscaAberta;
+  const corpoVisivel = (abertoManual && !recolhidoPorScroll) || buscaAberta;
 
   useEffect(() => {
-    if (buscaAberta) setExpandidoManual(true);
+    if (buscaAberta) {
+      setAbertoManual(true);
+      setRecolhidoPorScroll(false);
+    }
   }, [buscaAberta]);
 
-  // A escolha sobrevive à navegação. `Nav` é montado por cada layout, por
-  // isso o estado em memória perde-se ao mudar de secção — e um cabeçalho
-  // que volta a fechar-se sozinho a cada página é o mesmo que não guardar.
-  useEffect(() => {
-    try {
-      if (window.localStorage.getItem(CHAVE_EXPANDIDO) === "1") setExpandidoManual(true);
-    } catch {
-      /* modo privado ou sem storage */
-    }
-  }, []);
-
+  /**
+   * O clique tem DOIS significados, e ler mal qual deles é fecha o cartão a
+   * quem estava a pedir para o abrir.
+   *
+   * Recolhido por ter descido na página, a lingueta diz «Navegação e
+   * pesquisa» — carregar nela é ABRIR. Alternar `abertoManual` aqui punha-o
+   * a `false` (estava a `true` todo este tempo, só escondido) e o cartão
+   * ficava fechado com o mesmo aspecto, como se o clique não tivesse feito
+   * nada.
+   */
   const alternar = () => {
-    setExpandidoManual((antes) => {
-      const agora = !antes;
-      try {
-        window.localStorage.setItem(CHAVE_EXPANDIDO, agora ? "1" : "0");
-      } catch {
-        /* ignora */
-      }
-      return agora;
-    });
+    if (recolhidoPorScroll) {
+      setRecolhidoPorScroll(false);
+      setAbertoManual(true);
+      return;
+    }
+    setAbertoManual((antes) => !antes);
   };
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────┐
-   * │ ESTE CABEÇALHO NÃO ENCOLHE, E CUSTOU DUAS TENTATIVAS PERCEBER PORQUÊ │
+   * │ O QUE RECOLHE AO ROLAR — E O QUE JÁ SE TENTOU RECOLHER E NÃO PODE    │
    * │                                                                     │
-   * │ A primeira recolhia a LINHA DE CIMA: sumiam a marca, as secções, a   │
-   * │ conta e o «Começar» ao mesmo gesto. Um cabeçalho que fica no ecrã e  │
-   * │ se despe às peças ao fim de 40 px de scroll lê-se como avaria, não   │
-   * │ como densidade.                                                      │
+   * │ Recolhe a NAVEGAÇÃO e a PESQUISA. Fica a linha da marca, com as      │
+   * │ secções, a conta e o «Começar». É a diferença que interessa: já se   │
+   * │ tentou recolher a linha de cima, e sumirem a marca, as secções, a    │
+   * │ conta e o «Começar» ao mesmo gesto lê-se como avaria. Foi a queixa   │
+   * │ que originou a regra, e a regra continua de pé.                       │
    * │                                                                     │
-   * │ A segunda recolhia só a LINHA DA PESQUISA — uma peça, com atalho de  │
-   * │ teclado e página própria. Parecia inofensiva e partia o teclado: com │
-   * │ o campo em `display:none`, fechar o painel com Escape deixava o foco │
-   * │ no `<body>` (o efeito que o devolve chama `focus()` num elemento que │
-   * │ já não é focável). Quem navega assim recomeçava a tabulação no topo  │
-   * │ do documento. O `verificar-cabecalho.mjs` apanhou-o.                  │
+   * │ Recolher a da pesquisa já partiu o teclado uma vez: com o campo em   │
+   * │ `display:none`, fechar o painel com Escape deixava o foco no         │
+   * │ `<body>`, porque o efeito que o devolve chama `focus()` num elemento │
+   * │ que já não é focável. Por isso há aqui DUAS defesas, e não uma:      │
+   * │   · `corpoVisivel` inclui `buscaAberta` — com o painel aberto, o     │
+   * │     campo existe, aconteça o que acontecer ao scroll;                │
+   * │   · o observador abaixo recusa-se a recolher se o foco estiver lá    │
+   * │     dentro. Ninguém perde o cursor por ter rolado a página.           │
    * │                                                                     │
-   * │ Portanto: uma altura só. As três linhas estão apertadas de propósito │
-   * │ (64 + 52 + 56) para 172 px serem suportáveis, e em troca o cabeçalho │
-   * │ é a única coisa da página que nunca muda.                             │
+   * │ O `verificar-cabecalho.mjs` apanhou esse defeito da primeira vez e   │
+   * │ continua a ser quem o guarda.                                         │
    * └─────────────────────────────────────────────────────────────────────┘
    */
 
@@ -133,6 +154,7 @@ export default function Nav() {
 
   const [avatarUrl, setAvatarUrl] = useState("");
   const sentinela = useRef<HTMLDivElement>(null);
+  const sentinelaRecolher = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) {
@@ -173,6 +195,48 @@ export default function Nav() {
     return () => observador.disconnect();
   }, []);
 
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ O LIMIAR É UMA CAIXA, E A CAIXA É A PRÓPRIA FAIXA DO CABEÇALHO       │
+   * │                                                                     │
+   * │ A segunda sentinela tem exactamente `--rc-header-alto` — a altura    │
+   * │ que o cabeçalho aberto reserva. Enquanto essa faixa estiver no ecrã, │
+   * │ o cartão fica aberto; assim que ela sai, recolhe. Não é um número    │
+   * │ escolhido a olho: é o momento em que o cabeçalho deixou de estar     │
+   * │ sobre o seu próprio espaço e passou a estar sobre o texto.            │
+   * │                                                                     │
+   * │ E é uma sentinela, e não um ouvinte de scroll, pela mesma razão que  │
+   * │ a de cima: a pergunta muda duas ou três vezes por sessão e não vale  │
+   * │ trabalho na thread principal a 60 Hz. Também não há realimentação —  │
+   * │ recolher NÃO mexe na altura do documento (ver `data-reserva`), logo  │
+   * │ a sentinela não se move e o limiar não pode oscilar.                  │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  useEffect(() => {
+    const alvo = sentinelaRecolher.current;
+    if (!alvo) return;
+    const observador = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada?.isIntersecting) {
+          // De volta ao topo: o cartão volta a abrir. Sem isto, a reserva
+          // ficava alta com o cartão baixo — um buraco de 116 px por baixo
+          // dele, exactamente onde ele é visível.
+          setRecolhidoPorScroll(false);
+          return;
+        }
+        // Nunca por baixo dos pés de quem está lá dentro: esconder o que
+        // tem o foco atira-o para o `<body>`. Fica aberto até ao próximo
+        // regresso ao topo — custa uns píxeis, poupa o cursor.
+        const corpo = document.getElementById("rc-cabecalho-corpo");
+        if (corpo?.contains(document.activeElement)) return;
+        setRecolhidoPorScroll(true);
+      },
+      { threshold: 0 },
+    );
+    observador.observe(alvo);
+    return () => observador.disconnect();
+  }, []);
+
   return (
     <>
       {/* Espaçador em fluxo — só no desktop. No telemóvel o cabeçalho vive em
@@ -182,6 +246,11 @@ export default function Nav() {
           a altura é uma só. */}
       <div aria-hidden className="relative hidden h-[var(--rc-header-atual)] lg:block">
         <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
+        {/* A segunda sentinela tem altura FIXA — `--rc-header-alto`, e não
+            `--rc-header-atual`. Se seguisse a altura actual, o limiar mudava
+            de sítio de cada vez que o cartão mudava de tamanho, e o gesto
+            para o recolher deixava de ser o mesmo para o voltar a abrir. */}
+        <div ref={sentinelaRecolher} className="absolute inset-x-0 top-0 h-[var(--rc-header-alto)]" />
       </div>
 
       {/**
@@ -212,7 +281,13 @@ export default function Nav() {
        * └───────────────────────────────────────────────────────────────────┘
        */}
       <header
-        data-expandido={expandido}
+        // Dois atributos porque são duas verdades diferentes, e escrever uma
+        // só levava o CSS a encolher o espaçador durante o scroll:
+        //   `data-expandido`  o corpo está à vista AGORA. É o que os testes
+        //                     e o `aria-expanded` leem.
+        //   `data-reserva`    quanto espaço a página deixa. Só muda a clique.
+        data-expandido={corpoVisivel}
+        data-reserva={abertoManual ? "alta" : "baixa"}
         className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block"
       >
         <div
@@ -279,7 +354,7 @@ export default function Nav() {
               `overflow-hidden` no cartão cortava-o ao abrir. É também por
               isso que a mudança é instantânea e não animada — animar a
               altura obrigaria ao mesmo corte durante a transição. */}
-          <div id="rc-cabecalho-corpo" hidden={!expandido}>
+          <div id="rc-cabecalho-corpo" hidden={!corpoVisivel}>
             {/* ── Linha 2 — a bandeja dos cinco pilares ────────────────── */}
             <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
               <CapsulaNav />
@@ -300,17 +375,17 @@ export default function Nav() {
             <button
               type="button"
               data-cabecalho-alternar
-              aria-expanded={expandido}
+              aria-expanded={corpoVisivel}
               aria-controls="rc-cabecalho-corpo"
               onClick={alternar}
               className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
             >
-              {expandido ? "Recolher" : "Navegação e pesquisa"}
+              {corpoVisivel ? "Recolher" : "Navegação e pesquisa"}
               <ChevronDown
                 size={13}
                 aria-hidden
                 className={`flex-shrink-0 transition-transform duration-200 motion-reduce:transition-none ${
-                  expandido ? "rotate-180" : ""
+                  corpoVisivel ? "rotate-180" : ""
                 }`}
               />
             </button>

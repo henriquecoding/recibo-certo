@@ -124,9 +124,44 @@ describe("navegacao:barra-de-seccoes", () => {
     for (const s of SECOES_TOPO) {
       expect(SECOES, `«${s.label}» está na barra do topo e não é uma secção`).toContain(s);
     }
-    // «Todas as ferramentas» fica de fora de propósito: o hub já está a um
-    // clique de qualquer pilar e da fila da página inicial.
-    expect(SECOES_TOPO.map((s) => s.href)).not.toContain("/ferramentas");
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ «SIMULAR» É O PRIMEIRO, E A ORDEM ESTÁ PINADA                  │
+    // │                                                               │
+    // │ Esteve fora da barra, com o argumento de que o hub já estava a │
+    // │ um clique de qualquer pilar. É verdade e é irrelevante: chegar │
+    // │ lá A PARTIR de um pilar não é o mesmo que chegar lá sem ter    │
+    // │ escolhido pilar nenhum — que é o estado de quem ainda não sabe │
+    // │ qual é o seu.                                                  │
+    // │                                                               │
+    // │ Fica à esquerda de «Guias», onde sempre esteve, porque é a     │
+    // │ ordem que quem já usa o site tem na memória.                    │
+    // └───────────────────────────────────────────────────────────────┘
+    const naBarra = SECOES_TOPO.map((s) => s.href);
+    expect(naBarra).toContain("/ferramentas");
+    expect(naBarra.indexOf("/ferramentas")).toBeLessThan(naBarra.indexOf("/guias"));
+  });
+
+  it("«Simular» é o nome VISÍVEL e o nome ACESSÍVEL — não um por cima do outro", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ NADA DE `aria-label` A REPOR O RÓTULO LONGO                    │
+    // │                                                               │
+    // │ A folha diz «Todas as ferramentas» e a barra diz «Simular» —   │
+    // │ dois recortes do mesmo destino, o mesmo padrão de              │
+    // │ `Pilar.curto`. A tentação é pôr o longo num `aria-label` «para │
+    // │ ser mais descritivo», e isso quebra WCAG 2.5.3: o nome         │
+    // │ acessível deixa de conter o texto visível, e quem usa comando  │
+    // │ de voz diz «Simular» a um alvo que se chama outra coisa.        │
+    // └───────────────────────────────────────────────────────────────┘
+    const ferramentas = SECOES.find((s) => s.id === "ferramentas");
+    expect(ferramentas?.curto).toBe("Simular");
+    expect(SECBAR).toContain("{secao.curto ?? secao.label}");
+    // Só nas LIGAÇÕES. O `<nav aria-label="Secções">` é outra coisa — é o
+    // nome do marco, que não tem texto visível nenhum para contradizer.
+    const ligacao = semComentarios(SECBAR).slice(
+      semComentarios(SECBAR).indexOf("<Link"),
+      semComentarios(SECBAR).indexOf("</Link>"),
+    );
+    expect(ligacao).not.toContain("aria-label");
   });
 
   it("é um nível ABAIXO da navegação, e o desenho di-lo", () => {
@@ -309,34 +344,64 @@ describe("navegacao:cartao-do-cabecalho", () => {
     expect(CAPSULA).toContain("flex w-full");
   });
 
-  it("nasce fechado, e quem o abre é a pessoa", () => {
+  it("nasce ABERTO, e recolhe ao descer na página", () => {
     // ┌───────────────────────────────────────────────────────────────┐
-    // │ 206 PX PERMANENTES ERAM DEMASIADOS                             │
+    // │ ABERTO À ENTRADA, RECOLHIDO A LER                              │
     // │                                                               │
-    // │ Fechado são 114: a linha da marca e a lingueta. A bandeja e a  │
-    // │ pesquisa entram quando lhes tocam.                              │
+    // │ Quem chega precisa de ver para onde pode ir; quem já está a    │
+    // │ ler precisa do ecrã. São dois momentos e não têm de ter a      │
+    // │ mesma resposta: o cartão nasce com as três linhas e recolhe    │
+    // │ para uma quando a faixa que ele reserva sai do ecrã.            │
+    // │                                                               │
+    // │ O que NUNCA recolhe é a primeira linha. A marca, as secções,   │
+    // │ a conta e o «Começar» ficam. Um cabeçalho que se despe às      │
+    // │ peças ao rolar já foi tentado e lê-se como avaria.              │
     // │                                                               │
     // │ `hidden` e não altura zero com `overflow-hidden`: o painel da  │
     // │ pesquisa é `position:absolute` dentro do cartão, e um          │
     // │ `overflow-hidden` cortava-o ao abrir. É também por isso que a  │
     // │ mudança é instantânea — animar a altura obrigaria ao mesmo     │
     // │ corte durante a transição.                                     │
-    // │                                                               │
-    // │ E a expansão é DERIVADA de `buscaAberta`, não posta por um     │
-    // │ efeito: pedir a pesquisa tem de abrir o cartão no mesmo render │
-    // │ em que o painel monta, senão o campo ainda está escondido      │
-    // │ quando lhe pedem foco. O efeito que existe faz outra coisa —   │
-    // │ FIXA a expansão, para o Escape não recolher o cartão no commit │
-    // │ em que o foco volta ao campo.                                   │
     // └───────────────────────────────────────────────────────────────┘
-    expect(NAV).toContain("const expandido = expandidoManual || buscaAberta;");
-    expect(NAV).toContain("hidden={!expandido}");
-    expect(NAV).toContain('data-cabecalho-alternar');
+    expect(NAV).toContain("useState(true)");
+    expect(NAV).toContain("const corpoVisivel = (abertoManual && !recolhidoPorScroll) || buscaAberta;");
+    expect(NAV).toContain("hidden={!corpoVisivel}");
+    expect(NAV).toContain("data-cabecalho-alternar");
     expect(NAV).toContain('aria-controls="rc-cabecalho-corpo"');
-    expect(NAV).toContain("aria-expanded={expandido}");
-    // A escolha sobrevive à navegação: `Nav` é montado por cada layout.
-    expect(NAV).toContain("localStorage.setItem(CHAVE_EXPANDIDO");
-    expect(NAV).toContain("if (buscaAberta) setExpandidoManual(true);");
+    expect(NAV).toContain("aria-expanded={corpoVisivel}");
+    // A escolha é do momento e não do aparelho: nada de `localStorage`. Um
+    // cabeçalho que abre fechado porque alguém o fechou há três semanas
+    // contradiz «à entrada aparece aberto».
+    expect(semComentarios(NAV)).not.toContain("localStorage");
+  });
+
+  it("o corpo recolhido NUNCA leva o foco consigo", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ ESCONDER O QUE TEM O FOCO ATIRA-O PARA O `<body>`              │
+    // │                                                               │
+    // │ Já aconteceu: com o campo de pesquisa em `display:none`,       │
+    // │ fechar o painel com Escape deixava o foco no `<body>`, porque  │
+    // │ o efeito que o devolve chama `focus()` num elemento que já não │
+    // │ é focável. Quem navega por teclado recomeçava a tabulação no   │
+    // │ topo do documento. Apanhado pelo `verificar-cabecalho.mjs`.     │
+    // │                                                               │
+    // │ Agora que o scroll também recolhe, há DUAS defesas:            │
+    // │  · `corpoVisivel` inclui `buscaAberta` — com o painel aberto o │
+    // │    campo existe, aconteça o que acontecer ao scroll;           │
+    // │  · o observador recusa recolher se o foco estiver lá dentro.   │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(NAV).toContain("corpo?.contains(document.activeElement)");
+    expect(NAV).toContain("if (buscaAberta) {");
+    expect(NAV).toContain("setRecolhidoPorScroll(false);");
+  });
+
+  it("o clique com o cartão recolhido pelo scroll ABRE — nunca fecha", () => {
+    // A lingueta diz «Navegação e pesquisa» quando está recolhido pelo
+    // scroll, portanto o clique é abrir. Alternar `abertoManual` aqui
+    // punha-o a `false` — estava a `true` todo esse tempo, só escondido —
+    // e o cartão ficava igual, como se o clique não tivesse feito nada.
+    const alternar = NAV.slice(NAV.indexOf("const alternar = () =>"));
+    expect(alternar.slice(0, 220)).toContain("if (recolhidoPorScroll)");
   });
 
   it("o espaçador e as âncoras leem a altura ACTUAL, não uma das duas", () => {
@@ -346,7 +411,17 @@ describe("navegacao:cartao-do-cabecalho", () => {
     // buraco à frente. A ponte é `:has()`, para o valor mudar no MESMO frame
     // em que o cartão muda, sem um efeito a escrever no DOM pelo meio.
     expect(CSS).toContain("--rc-header-atual");
-    expect(CSS).toContain(':root:has(header[data-expandido="true"])');
+    // `data-reserva` e NÃO `data-expandido`: o espaçador está em fluxo, e
+    // encolhê-lo a meio da leitura tira 116 px ao documento e atira o
+    // conteúdo todo para cima enquanto a pessoa rola. Recolher ao rolar
+    // deixa a reserva onde está — acima da dobra, onde ninguém a vê.
+    expect(CSS).toContain(':root:has(header[data-reserva="baixa"])');
+    expect(semComentarios(CSS)).not.toContain('header[data-expandido');
+    expect(NAV).toContain('data-reserva={abertoManual ? "alta" : "baixa"}');
+    // E o padrão é a altura ABERTA, porque é assim que o cartão nasce:
+    // escrever o contrário dava um salto no primeiro frame de cada
+    // carregamento.
+    expect(CSS).toContain("--rc-header-atual: var(--rc-header-alto);");
     expect(CSS).toContain("scroll-padding-top: calc(var(--rc-header-atual)");
     expect(CSS).toContain("scroll-margin-top: calc(var(--rc-header-atual)");
     expect(NAV).toContain("h-[var(--rc-header-atual)]");
@@ -356,7 +431,7 @@ describe("navegacao:cartao-do-cabecalho", () => {
     expect(CSS).toMatch(/--rc-header-compacto:\s*calc\([\s\S]*--rc-cartao-borda/);
   });
 
-  it("ao rolar muda a SOMBRA, e mais nada", () => {
+  it("ao rolar muda a sombra e o CORPO — nunca a primeira linha", () => {
     // ┌───────────────────────────────────────────────────────────────┐
     // │ DUAS TENTATIVAS DE ENCOLHER, DOIS CUSTOS MAIORES QUE OS PÍXEIS │
     // │                                                               │
@@ -368,10 +443,16 @@ describe("navegacao:cartao-do-cabecalho", () => {
     // │ `display:none`, fechar o painel com Escape deixava o foco no    │
     // │ `<body>`. Está pinado em `verificar-cabecalho.mjs`.             │
     // │                                                               │
-    // │ Sobra o que o scroll deve mesmo mudar: o cartão ganha sombra    │
-    // │ quando passa conteúdo por baixo dele.                           │
+    // │ Sobra o que o scroll pode mudar: a sombra do cartão, e o corpo  │
+    // │ (navegação + pesquisa) — que tem lingueta própria para voltar.  │
+    // │ A primeira linha é a que fica.                                   │
     // └───────────────────────────────────────────────────────────────┘
     expect(semComentarios(NAV)).not.toContain("group-data-[compacto=true]");
+    // A sentinela do recolher é uma CAIXA com a altura que o cabeçalho
+    // aberto reserva — e altura fixa, não a actual: se seguisse a actual, o
+    // limiar mudava de sítio de cada vez que o cartão mudava de tamanho.
+    expect(NAV).toContain("h-[var(--rc-header-alto)]");
+    expect(NAV).toContain("sentinelaRecolher");
     expect(NAV).toContain("transition-shadow");
     expect(NAV).toContain("data-opaco={opaco}");
     expect(NAV).toContain("shadow-float");

@@ -92,9 +92,6 @@ export const FORA_DO_COFRE: Record<string, string> = {
   "recibocerto:abrir-cookies": "Sinal interno para reabrir o painel de cookies.",
   "recibocerto:atribuicao": "Atribuição de campanha, deliberadamente do aparelho e sem identidade.",
   "recibocerto:export-usos:v1": "Contador de exportações por aparelho, sem conteúdo nenhum.",
-  "recibocerto:cabecalho-expandido":
-    "Se o cabeçalho de secretária fica aberto. Preferência do aparelho, como o tema: " +
-    "num cofre, o site mudava de forma ao entrar na conta. Não é um dado de ninguém.",
 };
 
 export type Dominio = keyof typeof DOMINIOS;
