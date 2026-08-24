@@ -16,9 +16,10 @@
 //  inteiro existe para corrigir.
 // ═══════════════════════════════════════════════════════════════════════
 
+import Link from "next/link";
 import { m } from "motion/react";
 import { EASE } from "@/lib/motion";
-import { ArrowRight, Building, Lightbulb, Receipt } from "@/components/ui/Icons";
+import { ArrowRight, Building, Lightbulb, Receipt, Search } from "@/components/ui/Icons";
 import type { MaturidadeNegocio } from "@/lib/negocio/tipos";
 
 const PORTAS: {
@@ -106,6 +107,29 @@ export default function SeletorMaturidade({
           </li>
         ))}
       </ul>
+
+      {/* ── A PORTA QUE FALTAVA, E QUE NÃO É UMA PORTA ────────────────
+          As três portas acima assumem todas que já existe uma ideia — a
+          primeira até se chama «Tenho uma ideia». Quem chega sem ela
+          escolhia a menos errada e começava a inventar uma oferta para ter
+          por onde continuar, que é o defeito que o motor de descoberta
+          existe para corrigir.
+
+          É uma ligação e não um quarto botão de propósito: as três portas
+          abrem esta ferramenta, esta muda de ferramenta, e dar-lhes o mesmo
+          peso escondia essa diferença. */}
+      <p className="mt-5 border-t border-stone-100 pt-4 text-[12px] leading-relaxed text-stone-500 dark:border-stone-800 dark:text-stone-400">
+        <Search size={13} className="mr-1.5 inline-block align-[-2px] text-brand" aria-hidden />
+        Ainda não sabes o que vais vender?{" "}
+        <Link
+          href="/ferramentas/descobrir-negocio"
+          className="font-semibold text-brand-dark underline underline-offset-2 transition-colors hover:text-brand dark:text-brand-mint"
+        >
+          Descobre o negócio primeiro
+        </Link>{" "}
+        — o motor compõe hipóteses a partir do que sabes fazer e da tua zona, e a
+        que escolheres volta para aqui como oferta.
+      </p>
     </m.section>
   );
 }

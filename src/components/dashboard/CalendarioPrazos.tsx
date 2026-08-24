@@ -89,9 +89,28 @@ export default function CalendarioPrazos({ prazos }: { prazos: Prazo[] }) {
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1" role="grid">
+        {/* ┌──────────────────────────────────────────────────────────────┐
+            │ ISTO NÃO É UMA GRELHA, E DIZER QUE ERA PARTIA O ANÚNCIO.      │
+            │                                                              │
+            │ Tinha `role="grid"`, que promete linhas (`row`), células     │
+            │ (`gridcell`) e navegação por setas. Não há nada disso: são   │
+            │ botões de alternância soltos numa grelha de CSS. O axe       │
+            │ apanha-o como `aria-required-children` — «tem filhos que não │
+            │ são permitidos» —, e o efeito real é pior do que o aviso:    │
+            │ um leitor de ecrã anuncia uma tabela de dados e depois não   │
+            │ encontra linha nenhuma para percorrer.                        │
+            │                                                              │
+            │ Um `group` com nome diz a verdade sobre o que isto é. Cada   │
+            │ botão já traz o seu próprio `aria-label` («14 — 2 prazos») e │
+            │ o estado em `aria-pressed`, por isso não se perde nada ao    │
+            │ deixar cair a promessa que não era cumprida.                  │
+            └──────────────────────────────────────────────────────────────┘ */}
+        <div className="grid grid-cols-7 gap-1" role="group" aria-label={`Dias de ${tituloMes}`}>
           {celulas.map((dia, i) => {
-            if (dia === null) return <div key={`v-${i}`} className="aspect-square" />;
+            // As células antes do dia 1 são enchimento visual: não têm
+            // conteúdo nem foco, e anunciá-las seria contar dias que não
+            // existem naquele mês.
+            if (dia === null) return <div key={`v-${i}`} aria-hidden className="aspect-square" />;
             const iso = isoOf(ano, mes, dia);
             const doDia = porData.get(iso) ?? [];
             const ehHoje = iso === hoje;

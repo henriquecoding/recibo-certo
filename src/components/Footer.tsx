@@ -102,7 +102,24 @@ export default function Footer() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-bold leading-tight text-stone-100 truncate">{p.label}</p>
-                    <p className="text-[10px] font-medium leading-tight text-stone-500 truncate">{p.sub}</p>
+                    {/* ┌────────────────────────────────────────────────┐
+                        │ ESTA FAIXA É ESCURA NOS DOIS TEMAS — e é isso   │
+                        │ que torna qualquer `stone-*` a escolha errada.  │
+                        │                                                │
+                        │ `text-stone-500` é remapeado para #736c68 (um  │
+                        │ tom para fundos CLAROS): 3,38:1 aqui. Trocar   │
+                        │ por `stone-300` resolveu no claro e partiu no  │
+                        │ escuro, onde a camada `.dark` também o remapeia │
+                        │ — 3,12:1. Perseguir a paleta neutra numa       │
+                        │ superfície que não muda com o tema é correr    │
+                        │ atrás dos dois remapeamentos ao mesmo tempo.   │
+                        │                                                │
+                        │ `text-white` é a única cor que o design system │
+                        │ declara nunca remapear (é a dos CTA de marca). │
+                        │ A 70% dá 8,98:1 sobre o `ink` e fica um degrau │
+                        │ abaixo do rótulo, que é o que o desenho pedia. │
+                        └────────────────────────────────────────────────┘ */}
+                    <p className="truncate text-[10px] font-medium leading-tight text-white/70">{p.sub}</p>
                   </div>
                 </m.div>
               );

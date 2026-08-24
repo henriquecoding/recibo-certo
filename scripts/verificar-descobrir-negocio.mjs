@@ -279,6 +279,25 @@ try {
 
       const botaoDescobrir = pagina.getByRole("button", { name: /Descobrir oportunidades/ });
       verificar("o botão de descoberta existe", (await botaoDescobrir.count()) > 0);
+
+      // ── O TETO DE CAPITAL É UM ELIMINADOR, E PODE NÃO SER O REAL ──
+      //  Este campo não ordena: apaga modelos que não arrancam com o que
+      //  a pessoa declarou. Quem desconhece os apoios públicos fixa aqui
+      //  um teto mais baixo do que o que lhe é acessível e perde
+      //  hipóteses por uma razão que não é verdadeira. O aviso vem ANTES
+      //  de responder — e nomeia programas, nunca valores, porque as
+      //  condições mudam e a elegibilidade é decidida no IEFP.
+      const notaCapital = await pagina.evaluate(() => {
+        const texto = document.querySelector("#ferramenta")?.innerText ?? "";
+        const linha = texto.split("\n").find((l) => /Antes de fixares o teto/.test(l));
+        return linha ?? "";
+      });
+      verificar("o teto de capital avisa que há apoios públicos", notaCapital.length > 0);
+      verificar(
+        "e esse aviso nomeia programas, nunca valores",
+        notaCapital.length > 0 && !/\d[\d\s.,]*\s*(€|%)/.test(notaCapital),
+        notaCapital.slice(0, 160),
+      );
       verificar(
         "e está desativado enquanto não houver o mínimo",
         await botaoDescobrir.first().isDisabled(),
@@ -462,6 +481,39 @@ try {
         return principais.length;
       });
       verificar("há uma só ação principal no dossier", acoes === 1, String(acoes));
+
+      // ═══ 5a. TODA a hipótese continua para o estúdio ════════════
+      //  ┌──────────────────────────────────────────────────────────┐
+      //  │ A continuidade para o estúdio era um `?o=<id do          │
+      //  │ catálogo>`, e por isso existia SÓ para as composições que │
+      //  │ coincidem com um dos 24 dossiers curados. Numa corrida    │
+      //  │ real com duas hipóteses apresentadas, uma seguia e a      │
+      //  │ outra acabava ali — e a que acabava era a GERADA, que é   │
+      //  │ o que este motor existe para produzir.                    │
+      //  │                                                          │
+      //  │ Verifica-se por cartão e não no primeiro: era exatamente  │
+      //  │ olhar só para o primeiro que deixava passar isto.         │
+      //  └──────────────────────────────────────────────────────────┘
+      const todosOsCartoes = await pagina.locator("section[aria-label='Oportunidades'] article").all();
+      const semContinuidade = [];
+      for (const artigo of todosOsCartoes) {
+        const cabecalho = artigo.locator("button[aria-expanded]").first();
+        if ((await cabecalho.getAttribute("aria-expanded")) !== "true") {
+          await cabecalho.click();
+          await pagina.waitForTimeout(400);
+        }
+        const saidas =
+          (await artigo.getByRole("link", { name: /construir no estúdio/i }).count()) +
+          (await artigo.getByRole("button", { name: /construir no estúdio/i }).count());
+        if (saidas === 0) {
+          semContinuidade.push((await artigo.locator("strong").first().textContent())?.trim() ?? "?");
+        }
+      }
+      verificar(
+        "toda a hipótese apresentada continua para o estúdio",
+        todosOsCartoes.length > 0 && semContinuidade.length === 0,
+        semContinuidade.join(" | "),
+      );
 
       // ═══ 5b. Voltar ao contexto não perde as respostas ══════════
       await pagina.getByRole("button", { name: /Ajustar contexto/ }).click();

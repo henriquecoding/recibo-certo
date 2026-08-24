@@ -157,9 +157,40 @@ function Stepper({ id, value, min, max, onChange, decreaseLabel, increaseLabel }
           const parsed = parseNumericDraft(sanitizeNumericDraft(event.target.value, { maxDecimals: 0 }), { maxDecimals: 0 });
           onChange(parsed === null ? min : clamp(Math.floor(parsed)));
         }}
+        // ┌────────────────────────────────────────────────────────────┐
+        // │ O `aria-value*` NÃO É VÁLIDO NUMA CAIXA DE TEXTO.           │
+        // │                                                            │
+        // │ Estes três atributos só existem para papéis com intervalo   │
+        // │ — `spinbutton`, `slider`, `progressbar`. Num `textbox` são  │
+        // │ ignorados pelas tecnologias de apoio, e o axe apanha-os     │
+        // │ como `aria-allowed-attr`. Ou seja: o intervalo estava       │
+        // │ escrito e não chegava a ninguém.                            │
+        // │                                                            │
+        // │ Declarar o papel torna-os válidos — mas um `spinbutton`     │
+        // │ promete responder às setas, e por isso as setas passam a    │
+        // │ funcionar. Declarar o papel sem as implementar seria trocar │
+        // │ um aviso de ferramenta por uma promessa falsa a quem        │
+        // │ navega por teclado.                                         │
+        // └────────────────────────────────────────────────────────────┘
+        role="spinbutton"
         aria-valuemin={min}
         aria-valuemax={max}
         aria-valuenow={value}
+        onKeyDown={(event) => {
+          if (event.key === "ArrowUp") {
+            event.preventDefault();
+            onChange(clamp(value + 1));
+          } else if (event.key === "ArrowDown") {
+            event.preventDefault();
+            onChange(clamp(value - 1));
+          } else if (event.key === "Home") {
+            event.preventDefault();
+            onChange(min);
+          } else if (event.key === "End") {
+            event.preventDefault();
+            onChange(max);
+          }
+        }}
         className="h-9 w-12 rounded-lg border border-stone-200 bg-white text-center text-sm font-bold tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
       />
       <button type="button" aria-label={increaseLabel} onClick={() => onChange(clamp(value + 1))} disabled={value >= max} className={button}>+</button>

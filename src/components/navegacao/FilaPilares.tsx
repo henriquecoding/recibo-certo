@@ -70,9 +70,16 @@ export default function FilaPilares() {
                         iguais leem-se como cinco opções alternativas — e não
                         são: são etapas, e a maior parte das pessoas passa por
                         elas por esta ordem. */}
+                    {/* `aria-hidden` esconde-o do leitor de ecrã, não dos
+                        olhos — e por isso continua a ter de cumprir
+                        contraste. `text-stone-300` dava 1,49:1 no claro e
+                        o `dark:text-stone-600` dava 2,29:1 no escuro: o
+                        número da ordem estava lá para o desenho e não
+                        chegava a quem o devia ler. Os tons remapeados em
+                        `globals.css` dão 5,15:1 e 7,16:1. */}
                     <span
                       aria-hidden
-                      className="font-mono text-[11px] font-semibold tabular-nums text-stone-300 dark:text-stone-600"
+                      className="font-mono text-[11px] font-semibold tabular-nums text-stone-500 dark:text-stone-400"
                     >
                       {String(i + 1).padStart(2, "0")}
                     </span>

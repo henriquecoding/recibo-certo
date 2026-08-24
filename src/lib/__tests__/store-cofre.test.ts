@@ -3,7 +3,8 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import {
   DOMINIOS, FORA_DO_COFRE, COFRE_ANONIMO, nomeDoCofre, chaveNoCofre, chavesDoCofre,
-  migrarParaCofre, esvaziarCofre, type Dominio,
+  migrarParaCofre, esvaziarCofre, definirCofre, chaveAtiva, reporCofreParaTestes,
+  type Dominio,
 } from "@/lib/store/cofre";
 
 /** Um `localStorage` de mentira, suficiente para o que estes testes fazem. */
@@ -143,5 +144,68 @@ describe("RC-COFRE-004 · a lista de chaves é uma só", () => {
       }
     }
     expect(soltas, "chaves de dados fora de DOMINIOS — declara-as no cofre").toEqual([]);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  RC-COFRE-002 · a migração tem de correr para quem NÃO tem conta
+//  ---------------------------------------------------------------------
+//  `migrarParaCofre` sempre esteve certa — e é a única coisa que estes
+//  testes exercitavam. O defeito estava no CHAMADOR: `definirCofre`
+//  comparava o cofre novo com o atual e saía quando eram iguais. Para um
+//  visitante anónimo são sempre iguais («anonimo» é o valor inicial), por
+//  isso a migração nunca corria, e as chaves pré-cofre ficavam invisíveis
+//  para sempre. Medido no painel de prazos: o perfil fiscal gravado antes
+//  do cofre existir deixava de ser lido, e a pessoa via as declarações de
+//  IVA de que está isenta.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("RC-COFRE-002 · quem não tem conta também é migrado", () => {
+  let mapa: Map<string, string>;
+  beforeEach(() => {
+    mapa = montarLocalStorage();
+    reporCofreParaTestes();
+  });
+
+  it("a primeira chamada migra, mesmo sem o cofre mudar de nome", () => {
+    mapa.set(DOMINIOS["perfil-fiscal"], '{"v":2,"regimeIVA":"isento"}');
+
+    definirCofre(null);
+
+    expect(mapa.get(DOMINIOS["perfil-fiscal"]), "a chave antiga tem de sair").toBeUndefined();
+    expect(mapa.get(chaveNoCofre("perfil-fiscal", null))).toBe('{"v":2,"regimeIVA":"isento"}');
+    // E é essa a chave que os repositórios vão ler.
+    expect(chaveAtiva("perfil-fiscal")).toBe(chaveNoCofre("perfil-fiscal", null));
+  });
+
+  it("chamar outra vez não repete trabalho nem ressuscita nada", () => {
+    mapa.set(DOMINIOS.recibos, "[1]");
+    definirCofre(null);
+    expect(mapa.get(chaveNoCofre("recibos", null))).toBe("[1]");
+
+    // Alguém volta a escrever na chave antiga (uma aba velha, um script
+    // antigo em cache). A segunda chamada com o mesmo cofre não migra —
+    // é o comportamento que o guarda original queria proteger.
+    mapa.set(DOMINIOS.recibos, "[999]");
+    definirCofre(null);
+    expect(mapa.get(chaveNoCofre("recibos", null)), "o cofre não é sobreposto").toBe("[1]");
+  });
+
+  it("entrar na conta depois de anónimo continua a migrar para o cofre certo", () => {
+    mapa.set(DOMINIOS.recibos, "[1]");
+    definirCofre(null);
+    expect(mapa.get(chaveNoCofre("recibos", null))).toBe("[1]");
+
+    mapa.set(DOMINIOS.cenarios, '["do tempo em que não havia cofre"]');
+    definirCofre(ANA);
+    expect(chaveAtiva("cenarios")).toBe(chaveNoCofre("cenarios", ANA));
+    expect(mapa.get(chaveNoCofre("cenarios", ANA))).toBe('["do tempo em que não havia cofre"]');
+    // O que já estava no cofre anónimo NÃO viaja para o da Ana.
+    expect(mapa.get(chaveNoCofre("recibos", ANA))).toBeUndefined();
+  });
+
+  it("o cofre por omissão, antes de a autenticação responder, é o anónimo", () => {
+    expect(chaveAtiva("recibos")).toBe(chaveNoCofre("recibos", null));
+    expect(nomeDoCofre(null)).toBe(COFRE_ANONIMO);
   });
 });

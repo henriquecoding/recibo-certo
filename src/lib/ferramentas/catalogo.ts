@@ -322,7 +322,12 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     reviewedAt: REVISTO,
     dashboardHref: "/dashboard/empresa",
     cta: "Simular empresa",
-    relatedToolIds: ["comparar-regimes", "recibos-verdes", "mapa-contabilistas"],
+    // `descobrir-negocio` à cabeça, e não por simpatia: esta ferramenta
+    // abre a pedir faturação prevista. Quem ainda não decidiu o que vai
+    // vender não tem esse número — e a relação estava declarada só num
+    // sentido (o motor de descoberta apontava para aqui, aqui não
+    // apontava para lá).
+    relatedToolIds: ["descobrir-negocio", "comparar-regimes", "recibos-verdes", "mapa-contabilistas"],
     relatedGuideSlugs: ["abrir-empresa", "unipessoal-vs-eni", "tributacao-autonoma"],
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 88,
@@ -650,6 +655,30 @@ export const PERCURSOS: ToolPathway[] = [
       { toolId: "calcular-preco", note: "O preço que cobre custos, comissões e impostos." },
       { toolId: "regime-simplificado", note: "Confirma o coeficiente que se aplica ao que faturas." },
       { toolId: "recibos-verdes", note: "Vê o líquido de cada recibo a esse preço." },
+    ],
+  },
+  {
+    // ┌──────────────────────────────────────────────────────────────┐
+    // │ Nenhuma das duas ferramentas de negócio pertencia a percurso  │
+    // │ nenhum: `percursosCom("descobrir-negocio")` e                 │
+    // │ `percursosCom("simulador-empresa")` devolviam ambos uma lista │
+    // │ vazia, e por isso a secção «Esta ferramenta faz parte de» não │
+    // │ aparecia em nenhuma das duas páginas. Eram dois extremos de   │
+    // │ uma decisão sem nada declarado a ligá-los.                    │
+    // │                                                              │
+    // │ A ordem é a da decisão real, e a forma jurídica fica no fim   │
+    // │ de propósito: comparar regimes ANTES do simulador de empresa  │
+    // │ deixa em aberto a resposta «não abras sociedade nenhuma», que │
+    // │ é a certa para a maior parte de quem começa.                  │
+    // └──────────────────────────────────────────────────────────────┘
+    id: "abrir-um-negocio",
+    title: "Decidir e abrir um negócio",
+    outcome: "Sais com uma hipótese que podes provar, um preço que fecha as contas e a forma legal que te fica melhor.",
+    steps: [
+      { toolId: "descobrir-negocio", note: "Compõe hipóteses a partir do que sabes fazer e da tua zona." },
+      { toolId: "calcular-preco", note: "Fixa o preço que cobre custos, impostos e margem." },
+      { toolId: "comparar-regimes", note: "Recibos verdes ou sociedade — com o ponto de viragem." },
+      { toolId: "simulador-empresa", note: "Se compensar a sociedade: IRC, dividendos e custos de operação." },
     ],
   },
   {
