@@ -34,6 +34,9 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "A navegação ganhou o mesmo desenho dos controlos do resto do produto: uma bandeja recuada com o sítio onde estás em relevo, e réguas finas a separar os cinco. Continua a ler-se em preto e branco e sem sombras — a pastilha acesa levanta-se do fundo, não é só de outra cor.",
       "Correção que só se via a olhar: a folha do menu ficava meio ecrã à direita no computador, com a última coluna cortada. A animação de entrada estava a desfazer a centragem.",
       "Correção na página inicial: em «Por conta de outrem» e «Abrir empresa» mostravam-se menos ferramentas do que nos outros dois perfis, e a secção saltava de altura ao trocar de perfil.",
+    ],
+  },
+  {
     version: "2.111.1",
     data: "2026-08-24",
     titulo: "O mapa deixa de passar por cima do cabeçalho",
