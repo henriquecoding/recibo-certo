@@ -43,6 +43,7 @@ import {
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_BEBE,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  ABONO_PARA_FALHAS,
   SS_DEPENDENTE,
   SUBSIDIO_REFEICAO,
   AJUDAS_CUSTO,
@@ -54,6 +55,7 @@ import {
   RETENCAO_CONJUGE_DEFICIENTE,
   RETENCAO_UNICO_TITULAR_FRACAO,
   RETENCAO_SUPLEMENTAR_FATOR,
+  RETENCAO_TAXA_OPCIONAL,
   DEDUCAO_ESPECIFICA_DEPENDENTE,
   DEDUCAO_DESP_GERAIS,
   DEDUCAO_SAUDE,
@@ -179,6 +181,7 @@ export function GET() {
       trabalhoDependente: {
         ssTrabalhador: expose(SS_DEPENDENTE.trabalhador),
         ssEntidade: expose(SS_DEPENDENTE.entidade),
+        ssEntidadeIpss: expose(SS_DEPENDENTE.ipss),
         horarioSemanalCompleto: expose(HORARIO_SEMANAL_COMPLETO),
         subsidioRefeicaoDinheiro: expose(SUBSIDIO_REFEICAO.dinheiro),
         subsidioRefeicaoCartao: expose(SUBSIDIO_REFEICAO.cartao),
@@ -186,6 +189,10 @@ export function GET() {
         ajudasCustoEstrangeiro: expose(AJUDAS_CUSTO.estrangeiroDia),
         ajudasCustoNacionalDirecao: expose(AJUDAS_CUSTO.nacionalDiaDirecao),
         ajudasCustoEstrangeiroDirecao: expose(AJUDAS_CUSTO.estrangeiroDiaDirecao),
+        // O quilómetro tem limite PRÓPRIO e unidade própria: quem consome esta
+        // API a partir das ajudas de custo diárias erraria por um fator de 100.
+        kmAutomovelProprio: expose(AJUDAS_CUSTO.kmAutomovelProprio),
+        abonoParaFalhas: expose(ABONO_PARA_FALHAS),
         deducaoEspecifica: expose(DEDUCAO_ESPECIFICA_DEPENDENTE),
         retencao: {
           limiarIsencao: expose(RETENCAO_DEP_ISENCAO),
@@ -195,6 +202,13 @@ export function GET() {
           parcelaConjugeComIncapacidade: expose(RETENCAO_CONJUGE_DEFICIENTE),
           fracaoUnicoTitular: expose(RETENCAO_UNICO_TITULAR_FRACAO),
           fatorTrabalhoSuplementar: expose(RETENCAO_SUPLEMENTAR_FATOR),
+          // Opção do titular por taxa superior (Art. 98.º, n.º 6 CIRS): o
+          // direito, o que muda no cálculo, e o passo em pontos inteiros.
+          taxaOpcional: {
+            direito: expose(RETENCAO_TAXA_OPCIONAL.direito),
+            efeitoNoCalculo: expose(RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo),
+            passoEmPontos: expose(RETENCAO_TAXA_OPCIONAL.passoEmPontos),
+          },
         },
       },
       deducoesColeta: {

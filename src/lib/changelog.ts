@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.116.0",
+    data: "2026-08-25",
+    titulo: "Os parâmetros novos passam a estar à vista de quem os quiser conferir",
+    itens: [
+      "Publicamos em /api/fiscal-data todos os parâmetros fiscais que usamos, cada um com a sua base legal e a data em que foi verificado — é assim que se confere um cálculo nosso sem ter de acreditar em nós. Os quatro que entraram na versão anterior tinham ficado de fora dessa lista: o limite por quilómetro, o abono para falhas, a taxa contributiva das IPSS e a opção por taxa de retenção superior. Já lá estão.",
+      "O do quilómetro é o que mais fazia falta: quem lesse a nossa API a partir das ajudas de custo diárias podia tomar 65,89 € por dia como se fosse o limite dos quilómetros, e errar por um fator de mais de cem.",
+    ],
+  },
+  {
     version: "2.115.0",
     data: "2026-08-25",
     titulo: "O simulador de salário passa a fazer três coisas que a lei prevê e ele não fazia",
