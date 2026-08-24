@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.111.1",
+    data: "2026-08-24",
+    titulo: "O mapa deixa de passar por cima do cabeçalho",
+    itens: [
+      "Ao percorrer a página com o mapa de «onde vais operar» aberto, a caixa de pesquisa do mapa passava por cima da barra de topo e tapava o logótipo. Corrigido: o mapa passa a viver na sua própria camada, por baixo da barra, onde tem de estar.",
+      "Fica preso por um teste que mede o problema em vez de o descrever: varre a linha da barra ponto a ponto e falha se algum deles pertencer ao mapa. Antes da correção eram 28 pontos tapados; agora são zero.",
+    ],
+  },
+  {
     version: "2.111.0",
     data: "2026-08-23",
     titulo: "Onde vais operar passa a ser um mapa — e o motor passa a lê-lo",

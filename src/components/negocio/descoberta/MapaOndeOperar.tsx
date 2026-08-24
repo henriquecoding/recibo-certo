@@ -453,7 +453,43 @@ export default function MapaOndeOperar({
   const listaDaRegiao = useMemo(() => concelhosDaRegiao(regiao), [regiao]);
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-stone-100 shadow-card dark:border-stone-800">
+    // ── PORQUE ESTE `isolate` NÃO É DECORAÇÃO ──────────────────────────
+    //  O CSS do Leaflet põe os painéis do mapa em `z-index: 400` e os
+    //  controlos em `1000`, e as sobreposições desta caixa somam-lhes
+    //  outro `1000`. A barra de topo do site é `fixed … z-50`. Sem um
+    //  contexto de empilhamento próprio, esses números competem no
+    //  contexto da raiz e o mapa GANHA — passa a pintar por cima do
+    //  cabeçalho ao percorrer a página, que foi o que aconteceu em
+    //  produção assim que isto foi para o ar.
+    //
+    //  `isolate` fecha o assunto na origem: cria o contexto aqui, os
+    //  z-index de dentro passam a ser relativos a esta caixa, e a caixa
+    //  fica em `z-0` — debaixo do cabeçalho, onde tem de estar. É
+    //  preferível a subir o z-index do cabeçalho, que só empurraria a
+    //  mesma corrida para o próximo componente que use Leaflet.
+    // ── PORQUE ESTE `isolate` NÃO É DECORAÇÃO ──────────────────────────
+    //  O CSS do Leaflet põe os painéis do mapa em `z-index: 400` e os
+    //  controlos em `1000`, e as sobreposições desta caixa — a pesquisa e
+    //  os botões — somam-lhes outro `1000`. A barra de topo do site é
+    //  `fixed … z-50`. Sem um contexto de empilhamento próprio, esses
+    //  números competem no contexto da RAIZ e o mapa ganha: ao percorrer
+    //  a página, a caixa de pesquisa do mapa passa a pintar por cima do
+    //  logótipo e da pesquisa do site. Medido a 1876 px, com o topo do
+    //  mapa debaixo da barra: 28 pontos tapados, de x=416 a x=1064.
+    //
+    //  `isolate` fecha o assunto na origem — cria o contexto aqui, os
+    //  z-index de dentro passam a ser relativos a esta caixa, e a caixa
+    //  fica em `z-0`, debaixo da barra. É melhor do que subir o z-index
+    //  da barra, que só empurraria a mesma corrida para o componente
+    //  seguinte que use Leaflet.
+    //
+    //  `data-mapa-onde-operar` é o gancho do teste que prende isto:
+    //  `scripts/verificar-descobrir-negocio.mjs` varre a linha da barra
+    //  e falha se algum ponto dela pertencer a esta caixa.
+    <div
+      data-mapa-onde-operar
+      className="relative isolate z-0 overflow-hidden rounded-3xl border border-stone-100 shadow-card dark:border-stone-800"
+    >
       <div className="relative">
         <div
           ref={caixaRef}
