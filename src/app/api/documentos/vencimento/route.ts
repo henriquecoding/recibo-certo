@@ -80,6 +80,7 @@ export async function POST(pedido: Request) {
     estadoCivil: contexto.maritalStatus,
     deficiencia: contexto.disability,
     regiao: contexto.region,
+    taxaRetencaoOpcional: contexto.optionalWithholdingRate,
     irsJovemAno: contexto.youthIrsBenefitYear,
     subsidioRefeicaoDia: contexto.meal.enabled ? contexto.meal.dailyAmount : 0,
     subsidioRefeicaoCartao: contexto.meal.card,
@@ -102,6 +103,8 @@ export async function POST(pedido: Request) {
       { norma: "Art. 2.º, n.º 3 CIRS", determina: "Limites isentos do subsídio de refeição e das ajudas de custo", verificadoEm: DATA_LAST_REVIEW },
       { norma: "Art. 99.º-C CIRS", determina: "Retenção autónoma dos subsídios e do trabalho suplementar", verificadoEm: DATA_LAST_REVIEW },
       { norma: "CT arts. 262.º e 271.º", determina: "Retribuição horária que valoriza horas extra, trabalho noturno e faltas", verificadoEm: DATA_LAST_REVIEW },
+      { norma: "Despacho n.º 233-A/2026, n.º 10", determina: "Taxa efetiva de retenção apresentada em separado por cada remuneração paga no mês", verificadoEm: DATA_LAST_REVIEW },
+      { norma: "Art. 98.º, n.º 6 CIRS", determina: "Opção do titular por taxa inteira de retenção superior à legalmente aplicável", verificadoEm: DATA_LAST_REVIEW },
     ],
     ambito: [
       "Não substitui o recibo emitido pela entidade empregadora.",

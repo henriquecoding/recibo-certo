@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.115.0",
+    data: "2026-08-25",
+    titulo: "O simulador de salário passa a fazer três coisas que a lei prevê e ele não fazia",
+    itens: [
+      "Fomos a cada botão do simulador de salário líquido confirmar que muda mesmo o resultado — os dezanove tipos de rubrica, os dez anos do IRS Jovem, as três situações familiares, as três regiões, os seis escalões de horas extra, o modo «quero receber». Ficou tudo preso em teste: um controlo que deixe de chegar ao resultado passa a partir a construção em vez de ficar lá, calado, a não fazer nada.",
+      "Podes agora pedir que te retenham a mais. É um direito do Art. 98.º, n.º 6 do Código do IRS — comunicas à entidade que pagas por uma taxa inteira superior à da tabela — e serve a quem prefere descontar mais todos os meses a receber uma nota de cobrança em maio. O simulador diz-te qual é a taxa da tabela, quais as taxas superiores que podes escolher e quanto é que cada uma retém a mais este mês.",
+      "Um recibo com subsídio de férias ou de Natal tem várias remunerações no mesmo pagamento, e a lei obriga a entidade a mostrar a taxa efetiva de CADA uma em separado, nunca uma taxa única. Nós mostrávamos a taxa única. Agora, no separador «Cálculo», estão as taxas como devem constar do teu recibo — e vão também no relatório, na folha de cálculo e no CSV.",
+      "Quem trabalha numa IPSS ou noutra entidade sem fins lucrativos via o custo da empresa calculado como se fosse uma empresa comum. A taxa é outra, e agora podes escolhê-la: o separador «Empresa» passa a mostrar a taxa certa e a diferença que ela faz.",
+      "Se o vencimento base que introduzires ficar abaixo da retribuição mínima garantida, dizemos-to. E dizemo-lo bem para quem trabalha a tempo parcial: aí o mínimo é proporcional ao horário, e comparar meio horário com o salário mínimo inteiro seria um alarme falso.",
+    ],
+  },
+  {
     version: "2.114.0",
     data: "2026-08-25",
     titulo: "Uma proposta à espera passa a chegar-te ao email",

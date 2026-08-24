@@ -30,6 +30,8 @@ import {
   limiteAjudasCusto,
   parcelaIncapacidadeFamiliar,
   tabelaRetencaoDependente,
+  taxaMarginalMaximaTabela,
+  taxaRetencaoOpcionalValida,
   type EscalaoRetencao,
   type EscalaoAjudasCusto,
   type EstadoCivilRet,
@@ -116,17 +118,51 @@ export function retencaoIRSDependente(
   dependentes = 0,
   tabela: EscalaoRetencao[] = RETENCAO_DEP_CONTINENTE_T1.value,
   parcelaDependente: number = RETENCAO_DEP_POR_DEPENDENTE.value,
-  abatimentoIncapacidade = 0
+  abatimentoIncapacidade = 0,
+  taxaOpcional?: number
 ): number {
   const R = Math.max(0, salarioBruto);
   const dep = Math.max(0, dependentes);
   const esc = tabela.find((e) => R <= e.ate) ?? tabela[tabela.length - 1];
-  if (esc.taxa === 0) return 0;
   // n.º 5 al. h): 3+ dependentes → −1 p.p. na taxa marginal (parcela inalterada).
-  const taxa = dep >= 3 ? Math.max(0, esc.taxa - RETENCAO_DEP_REDUCAO_3MAIS.value) : esc.taxa;
+  const taxaLegal = dep >= 3 ? Math.max(0, esc.taxa - RETENCAO_DEP_REDUCAO_3MAIS.value) : esc.taxa;
+  // n.º 5 al. e): a opção do titular (Art. 98.º, n.º 6 CIRS) substitui APENAS a
+  // taxa marginal. Aplica-se ainda que o escalão legal seja de 0% — é
+  // precisamente quem está isento que mais recorre a esta opção para não ficar
+  // com imposto a pagar no acerto.
+  const escolhida = taxaRetencaoOpcionalValida(taxaOpcional, taxaLegal, tabela);
+  const taxa = escolhida ?? taxaLegal;
+  if (taxa === 0) return 0;
   const ret =
     R * taxa - parcelaAbater(esc, R) - parcelaDependente * dep - Math.max(0, abatimentoIncapacidade);
   return Math.max(0, cent(ret));
+}
+
+/**
+ * Taxa marginal máxima que a tabela aplicaria a esta remuneração e situação —
+ * já com a redução de 1 p.p. dos 3+ dependentes (n.º 5, al. h).
+ *
+ * É a taxa «legalmente aplicável» a que o n.º 6 do Art. 98.º se refere: a opção
+ * do titular tem de ser SUPERIOR a ela. Sem esta função, a interface teria de
+ * adivinhar o piso da opção — e adivinhar aqui é oferecer ao utilizador uma
+ * taxa que a lei não permite.
+ */
+export function taxaMarginalRetencao(
+  remuneracao: number,
+  input: SituacaoRetencao = {}
+): { taxa: number; taxaMaximaTabela: number } {
+  const situacao = resolverSituacao(input);
+  const tab = tabelaRetencaoDependente(
+    situacao.estadoCivil,
+    situacao.dependentes,
+    situacao.deficiencia,
+    situacao.regiao
+  );
+  const R = Math.max(0, remuneracao);
+  const esc = tab.escaloes.find((e) => R <= e.ate) ?? tab.escaloes[tab.escaloes.length - 1];
+  const taxa =
+    situacao.dependentes >= 3 ? Math.max(0, esc.taxa - RETENCAO_DEP_REDUCAO_3MAIS.value) : esc.taxa;
+  return { taxa, taxaMaximaTabela: taxaMarginalMaximaTabela(tab.escaloes) };
 }
 
 /**
@@ -144,6 +180,12 @@ export interface SituacaoRetencao extends IncapacidadeFamiliarRet {
   /** Grau de incapacidade ≥ 60% do PRÓPRIO titular (tabelas IV-VII). */
   deficiencia?: boolean;
   regiao?: Regiao;
+  /**
+   * Taxa inteira SUPERIOR à legalmente aplicável, comunicada à entidade
+   * pagadora em declaração (Art. 98.º, n.º 6 CIRS). Em fração: 0,25 = 25%.
+   * Substitui apenas a taxa marginal máxima (Despacho 233-A/2026, n.º 5, al. e).
+   */
+  taxaRetencaoOpcional?: number;
 }
 
 interface SituacaoResolvida {
@@ -154,6 +196,8 @@ interface SituacaoResolvida {
   dependentesDeficientes: number;
   fatorDependenteDeficiente: number;
   conjugeDeficiente: boolean;
+  /** Opção do Art. 98.º, n.º 6 CIRS, em fração. `undefined` = sem opção. */
+  taxaRetencaoOpcional?: number;
 }
 
 /**
@@ -180,6 +224,12 @@ export function resolverSituacao(input: SituacaoRetencao = {}): SituacaoResolvid
     dependentesDeficientes,
     fatorDependenteDeficiente,
     conjugeDeficiente: (input.conjugeDeficiente ?? false) && estadoCivil === "casadoUnico",
+    // A validade da opção depende da tabela aplicável, que só se resolve em
+    // `retencaoPorSituacao`. Aqui apenas se descarta o que não é um número.
+    taxaRetencaoOpcional:
+      typeof input.taxaRetencaoOpcional === "number" && input.taxaRetencaoOpcional > 0
+        ? input.taxaRetencaoOpcional
+        : undefined,
   };
 }
 
@@ -232,7 +282,8 @@ function retencaoPorSituacao(salarioBruto: number, situacao: SituacaoResolvida):
     situacao.dependentes,
     tab.escaloes,
     tab.parcelaDependente,
-    incapacidade
+    incapacidade,
+    situacao.taxaRetencaoOpcional
   );
 }
 
@@ -363,6 +414,14 @@ export function calcularVencimento(input: VencimentoInput): VencimentoResult {
 //  É ESTIMATIVA — não substitui o recibo oficial.
 // ─────────────────────────────────────────────────────────────────────
 
+/** Regime contributivo da entidade empregadora (lado patronal). */
+export type RegimeEntidade = "geral" | "ipss";
+
+/** Taxa contributiva da entidade empregadora do regime indicado. */
+export function taxaEntidadeDoRegime(regime: RegimeEntidade = "geral"): number {
+  return regime === "ipss" ? SS_DEPENDENTE.ipss.value : SS_DEPENDENTE.entidade.value;
+}
+
 /** Uma deslocação: dias, valor diário e escalão que fixa o limite isento. */
 export interface AjudaCustoLinha {
   dias: number;
@@ -410,6 +469,13 @@ export interface ReciboMensalInput extends SituacaoRetencao {
   subsidioNatalDireitoTotal?: number;
   /** Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades, etc.). */
   outrosRendimentosSujeitos?: number;
+  /**
+   * Regime contributivo da ENTIDADE empregadora. As IPSS e demais entidades sem
+   * fins lucrativos contribuem a taxa própria (Código Contributivo), não à TSU
+   * do regime geral — o custo da empresa é outro, e era o único número do
+   * simulador que não sabia distingui-los.
+   */
+  regimeEntidade?: RegimeEntidade;
   // Ajudas de custo (deslocações)
   /**
    * Deslocações linha a linha. O limite diário isento aplica-se a CADA
@@ -501,6 +567,30 @@ export interface ReciboMensalResult {
   custoEmpresaComSeguro: number;
   /** True se há algum rendimento adicional ou falta (para a UI decidir mostrar). */
   temExtras: boolean;
+  /** Taxa contributiva da entidade empregadora aplicada (regime geral ou IPSS). */
+  taxaEntidade: number;
+  /**
+   * Taxa efetiva mensal de retenção de CADA remuneração, em separado.
+   *
+   * Não é um enfeite: o n.º 10 do Despacho 233-A/2026 OBRIGA a entidade
+   * pagadora a apresentar estas taxas em separado sempre que o pagamento inclua
+   * mais do que uma remuneração — é o caso dos meses de subsídio de férias e de
+   * Natal. Uma taxa única e misturada é exatamente o que a norma proíbe, e era
+   * o único número que o simulador sabia mostrar.
+   */
+  taxasEfetivasRetencao: TaxaEfetivaRemuneracao[];
+}
+
+/** Uma remuneração do mês e a taxa efetiva com que foi retida (n.º 10). */
+export interface TaxaEfetivaRemuneracao {
+  /** Chave estável — para testes e exportações não dependerem do rótulo. */
+  codigo: "mensal" | "suplementar" | "ferias" | "natal";
+  rotulo: string;
+  base: number;
+  retencao: number;
+  /** `retencao / base`, em fração. */
+  taxa: number;
+  fonte: string;
 }
 
 export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResult {
@@ -663,7 +753,8 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   // meses. Num salário de 1 000 € com cartão de 10,46 €/dia × 22 dias, o número
   // saía 1 237,50 € quando o custo real é 1 467,62 €: 19% abaixo, num valor que
   // é precisamente o argumento de quem negoceia um aumento.
-  const custoEmpresa = cent(brutoTotal + baseSS * SS_DEPENDENTE.entidade.value);
+  const taxaEntidade = taxaEntidadeDoRegime(input.regimeEntidade);
+  const custoEmpresa = cent(brutoTotal + baseSS * taxaEntidade);
   // Seguro de acidentes de trabalho: obrigatório desde o primeiro dia
   // (Art. 79.º da Lei 98/2009), mas o prémio depende da atividade e da
   // seguradora — fica como ESTIMATIVA separada, para não misturar um valor
@@ -674,6 +765,43 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   // transição — inventar aqui uma taxa seria pior do que a omissão declarada.
   const seguroAcidentesEstimado = cent(baseSS * SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA.value);
   const custoEmpresaComSeguro = cent(custoEmpresa + seguroAcidentesEstimado);
+
+  // n.º 10 do Despacho: cada remuneração paga no mês com a SUA taxa efetiva.
+  const taxaEfetivaDe = (base: number, retencao: number) => (base > 0 ? retencao / base : 0);
+  const taxasEfetivasRetencao: TaxaEfetivaRemuneracao[] = [
+    {
+      codigo: "mensal" as const,
+      rotulo: "Remuneração mensal",
+      base: remMensal,
+      retencao: irsBaseMensal,
+      taxa: taxaEfetivaDe(remMensal, irsBaseMensal),
+      fonte: "Despacho 233-A/2026, n.º 3",
+    },
+    {
+      codigo: "suplementar" as const,
+      rotulo: "Trabalho suplementar",
+      base: suplementarTotal,
+      retencao: suplementarIRS,
+      taxa: taxaEfetivaDe(suplementarTotal, suplementarIRS),
+      fonte: "Despacho 233-A/2026, n.º 5, al. f)",
+    },
+    {
+      codigo: "ferias" as const,
+      rotulo: "Subsídio de férias",
+      base: subsidioFerias,
+      retencao: irsFerias,
+      taxa: taxaEfetivaDe(subsidioFerias, irsFerias),
+      fonte: "Art. 99.º-C CIRS",
+    },
+    {
+      codigo: "natal" as const,
+      rotulo: "Subsídio de Natal",
+      base: subsidioNatal,
+      retencao: irsNatal,
+      taxa: taxaEfetivaDe(subsidioNatal, irsNatal),
+      fonte: "Art. 99.º-C CIRS",
+    },
+  ].filter((linha) => linha.base > 0);
 
   const temExtras =
     descontoFaltas > 0 ||
@@ -731,6 +859,8 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     seguroAcidentesEstimado,
     custoEmpresaComSeguro,
     temExtras,
+    taxaEntidade,
+    taxasEfetivasRetencao,
   };
 }
 

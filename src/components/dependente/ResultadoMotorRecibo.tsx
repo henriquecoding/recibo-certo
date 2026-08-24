@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Building, Calculator, Check, Heart, Receipt, ShieldCheck, Warning, Wallet } from "@/components/ui/Icons";
 import { SegBar, SegLegend, type Seg } from "@/components/dependente/ui";
-import { fmt, pct } from "@/lib/format";
+import { fmt, pct, pctExato } from "@/lib/format";
 import {
   SS_DEPENDENTE,
   SUBSIDIO_REFEICAO,
@@ -13,7 +13,7 @@ import {
   parcelaIncapacidadeFamiliar,
   type EstadoCivilRet,
 } from "@/lib/fiscal-data";
-import type { ReciboMensalResult, VencimentoAnualResult } from "@/lib/fiscal-dependente";
+import type { ReciboMensalResult, TaxaEfetivaRemuneracao, VencimentoAnualResult } from "@/lib/fiscal-dependente";
 import type { PayrollDisplayLine } from "@/lib/payroll-simulator-legacy-adapter";
 
 type ResultTab = "month" | "year" | "employer" | "memory";
@@ -181,22 +181,67 @@ function IncapacidadeRetencao({ estadoCivil, dependentesDeficientes, fator, conj
 }
 
 function EmployerBreakdown({ result, cost }: { result: ReciboMensalResult; cost: number }) {
-  const employerSS = Math.round(result.baseSS * SS_DEPENDENTE.entidade.value * 100) / 100;
+  // A taxa vem do RESULTADO, não de uma constante: uma IPSS contribui a taxa
+  // própria e, enquanto este número era fixo, o ecrã afirmava 23,75% enquanto o
+  // cálculo já usava outra coisa.
+  const employerSS = Math.round(result.baseSS * result.taxaEntidade * 100) / 100;
+  const regimeReduzido = result.taxaEntidade < SS_DEPENDENTE.entidade.value;
   return (
     <div className="space-y-4">
       <div className="rounded-2xl bg-ink p-5 text-white dark:bg-stone-800">
         {/* Chamar-lhe «custo total» prometia mais do que o número contém: fica
             de fora o seguro obrigatório de acidentes de trabalho (estimado à
             parte), formação e custos indiretos. O nome passa a dizer o que é. */}
-        <div className="flex items-center gap-2 text-white/70"><Building size={15} /><span className="text-[11px] font-semibold uppercase tracking-wide">Custo salarial direto — regime geral</span></div>
+        <div className="flex items-center gap-2 text-white/70"><Building size={15} /><span className="text-[11px] font-semibold uppercase tracking-wide">Custo salarial direto — {regimeReduzido ? "IPSS / sem fins lucrativos" : "regime geral"}</span></div>
         <p className="mt-2 font-display text-3xl font-semibold tabular-nums">{fmt(cost)}</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-white/60">Tudo o que recebes mais a contribuição patronal do regime geral. NÃO inclui o seguro obrigatório de acidentes de trabalho ({fmt(result.seguroAcidentesEstimado)} estimados), formação nem outros custos indiretos.</p>
+        <p className="mt-1 text-[11px] leading-relaxed text-white/60">Tudo o que recebes mais a contribuição patronal {regimeReduzido ? "das entidades sem fins lucrativos" : "do regime geral"}. NÃO inclui o seguro obrigatório de acidentes de trabalho ({fmt(result.seguroAcidentesEstimado)} estimados), formação nem outros custos indiretos.</p>
       </div>
       <div className="grid grid-cols-2 gap-2">
         <Metric label="Remunerações e abonos" value={fmt(result.brutoTotal)} />
-        <Metric label="SS da empresa" value={fmt(employerSS)} hint={`${pct(SS_DEPENDENTE.entidade.value)} sobre ${fmt(result.baseSS)}`} />
+        <Metric label="SS da empresa" value={fmt(employerSS)} hint={`${pctExato(result.taxaEntidade)} sobre ${fmt(result.baseSS)}`} />
         <Metric label="Custo / líquido" value={result.liquido > 0 ? `${(cost / result.liquido).toFixed(2).replace(".", ",")}×` : "—"} />
         <Metric label="Com seguro estimado" value={fmt(result.custoEmpresaComSeguro)} hint="estimativa: o prémio depende da atividade e da seguradora" />
+      </div>
+      {regimeReduzido && (
+        <p className="rounded-2xl border border-stone-100 p-3.5 text-[11px] leading-relaxed text-stone-400 dark:border-stone-800">
+          Taxa contributiva de {pctExato(result.taxaEntidade)} em vez dos {pctExato(SS_DEPENDENTE.entidade.value)} do regime geral — poupança de {fmt(Math.round(result.baseSS * (SS_DEPENDENTE.entidade.value - result.taxaEntidade) * 100) / 100)} neste mês. A taxa reduzida depende do enquadramento da entidade na Segurança Social, não da vontade das partes.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * As taxas efetivas de retenção de cada remuneração, EM SEPARADO.
+ *
+ * O n.º 10 do Despacho 233-A/2026 obriga a entidade pagadora a apresentá-las
+ * assim sempre que o pagamento inclui mais do que uma remuneração — os meses de
+ * subsídio de férias e de Natal, tipicamente. Quem confere o recibo precisa de
+ * as ver da mesma forma para poder comparar linha a linha; uma taxa média, que
+ * era tudo o que este ecrã sabia mostrar, não corresponde a nada no recibo.
+ */
+function TaxasEfetivasSeparadas({ linhas }: { linhas: readonly TaxaEfetivaRemuneracao[] }) {
+  if (linhas.length === 0) return null;
+  return (
+    <div className="overflow-hidden rounded-2xl border border-stone-100 dark:border-stone-800">
+      <div className="border-b border-stone-100 bg-stone-50/80 px-3.5 py-3 dark:border-stone-800 dark:bg-stone-950/30">
+        <h4 className="text-xs font-semibold text-stone-700 dark:text-stone-200">Taxa efetiva de cada remuneração</h4>
+        <p className="mt-0.5 text-[11px] leading-relaxed text-stone-400">
+          {linhas.length > 1
+            ? "Com mais do que uma remuneração no mesmo pagamento, a entidade tem de apresentar a taxa de cada uma em separado (Despacho 233-A/2026, n.º 10). É assim que devem aparecer no recibo."
+            : "A taxa com que esta remuneração foi retida (Despacho 233-A/2026, n.º 10)."}
+        </p>
+      </div>
+      <div className="divide-y divide-stone-100 dark:divide-stone-800">
+        {linhas.map((linha) => (
+          <div key={linha.codigo} className="flex items-start justify-between gap-3 px-3.5 py-2.5">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-stone-700 dark:text-stone-200">{linha.rotulo}</p>
+              <p className="mt-0.5 text-[10px] leading-relaxed text-stone-400">{fmt(linha.retencao)} sobre {fmt(linha.base)} · {linha.fonte}</p>
+            </div>
+            <strong className="flex-none text-sm tabular-nums text-stone-800 dark:text-stone-100">{pct(linha.taxa)}</strong>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -221,6 +266,7 @@ function Memory({ result }: { result: ReciboMensalResult }) {
           <p className="mt-1.5 text-[10px] text-stone-400">{source}</p>
         </div>
       ))}
+      <TaxasEfetivasSeparadas linhas={result.taxasEfetivasRetencao} />
       <div className="rounded-2xl border border-stone-100 p-3.5 text-[11px] leading-relaxed text-stone-400 dark:border-stone-800">
         Refeição: {fmt(SUBSIDIO_REFEICAO.dinheiro.value)}/dia em dinheiro ou {fmt(SUBSIDIO_REFEICAO.cartao.value)}/dia em cartão. O excesso integra IRS e SS.
       </div>

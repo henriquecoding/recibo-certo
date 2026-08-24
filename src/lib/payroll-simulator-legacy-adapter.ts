@@ -5,12 +5,13 @@
  */
 import {
   calcularReciboMensal,
+  taxaEntidadeDoRegime,
   type AjudaCustoLinha,
   type ReciboMensalInput,
   type ReciboMensalResult,
+  type RegimeEntidade,
 } from "./fiscal-dependente";
 import {
-  SS_DEPENDENTE,
   SUBSIDIO_REFEICAO,
   limiteAjudasCusto,
   type EscalaoAjudasCusto,
@@ -78,6 +79,13 @@ export interface PayrollSimulatorContext {
   spouseDisability?: boolean;
   youthIrsBenefitYear?: number;
   meal: { enabled: boolean; days: number; dailyAmount: number; card: boolean };
+  /**
+   * Taxa inteira SUPERIOR à legalmente aplicável, comunicada por declaração à
+   * entidade pagadora (Art. 98.º, n.º 6 CIRS). Em fração: 0,25 = 25%.
+   */
+  optionalWithholdingRate?: number;
+  /** Regime contributivo da entidade empregadora (regime geral ou IPSS). */
+  employerRegime?: RegimeEntidade;
 }
 
 export interface PayrollRubricMeta {
@@ -272,6 +280,8 @@ export function buildLegacyPayrollInput(
     fatorDependenteDeficiente: context.disabilityFactor,
     conjugeDeficiente: context.spouseDisability,
     regiao: context.region,
+    taxaRetencaoOpcional: context.optionalWithholdingRate,
+    regimeEntidade: context.employerRegime,
     irsJovemAno: context.youthIrsBenefitYear,
     horasSemanais: Math.max(1, context.weeklyHours),
     complementosRetributivos: complements,
@@ -566,8 +576,20 @@ export function validateContext(context: PayrollSimulatorContext): string[] {
   return issues;
 }
 
+/**
+ * Custo salarial direto da entidade empregadora.
+ *
+ * Lê o número que o motor já apurou em vez de o recalcular. Enquanto a fórmula
+ * viveu aqui duplicada, a taxa da entidade estava presa ao regime geral: uma
+ * IPSS via o custo de uma empresa comum e nada no ecrã dizia porquê.
+ */
 export function employerCost(result: ReciboMensalResult): number {
-  return cent(result.brutoTotal + result.baseSS * SS_DEPENDENTE.entidade.value);
+  return result.custoEmpresa;
+}
+
+/** Taxa contributiva patronal do regime, para a UI a poder mostrar e explicar. */
+export function employerRate(regime: RegimeEntidade = "geral"): number {
+  return taxaEntidadeDoRegime(regime);
 }
 
 export function mealLimit(card: boolean): number {
