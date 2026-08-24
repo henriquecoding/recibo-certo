@@ -5,7 +5,8 @@ import Link from "next/link";
 import { m } from "motion/react";
 import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
-import { Logo, ArrowRight, Menu as MenuIcon } from "@/components/ui/Icons";
+import { useBuscaAberta } from "@/components/busca/motor";
+import { Logo, ArrowRight, ChevronDown, Menu as MenuIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
 import BarraSecoes from "@/components/navegacao/BarraSecoes";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
@@ -40,6 +41,8 @@ import MenuCompleto from "@/components/navegacao/MenuCompleto";
  * │ máxima — o problema deixa de poder existir.                              │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
+const CHAVE_EXPANDIDO = "recibocerto:cabecalho-expandido";
+
 const ACAO =
   "btn-shine focus-marca inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-5 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float";
 
@@ -47,6 +50,54 @@ export default function Nav() {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [expandidoManual, setExpandidoManual] = useState(false);
+  const buscaAberta = useBuscaAberta();
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ DERIVADO, E NÃO UM EFEITO — E A DIFERENÇA É UM DEFEITO DE FOCO       │
+   * │                                                                     │
+   * │ Pedir a pesquisa tem de abrir o cartão no MESMO render, porque é     │
+   * │ nesse render que o painel monta e vai buscar o campo. Com um efeito  │
+   * │ a fazer a expansão, haveria um commit em que `aberto` já é verdade e │
+   * │ o campo ainda está em `hidden` — e um elemento escondido não aceita  │
+   * │ foco. Derivar resolve-o por construção.                              │
+   * │                                                                     │
+   * │ O efeito abaixo é outra coisa: FIXA a expansão. Sem ele, fechar o    │
+   * │ painel com Escape recolhia o cartão no mesmo commit em que o         │
+   * │ `LancadorBusca` devolve o foco ao campo — e o campo já não estaria   │
+   * │ lá. Usar a pesquisa passa a deixar o cabeçalho aberto, que é também  │
+   * │ o que a pessoa espera depois de o ter aberto para procurar.           │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const expandido = expandidoManual || buscaAberta;
+
+  useEffect(() => {
+    if (buscaAberta) setExpandidoManual(true);
+  }, [buscaAberta]);
+
+  // A escolha sobrevive à navegação. `Nav` é montado por cada layout, por
+  // isso o estado em memória perde-se ao mudar de secção — e um cabeçalho
+  // que volta a fechar-se sozinho a cada página é o mesmo que não guardar.
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(CHAVE_EXPANDIDO) === "1") setExpandidoManual(true);
+    } catch {
+      /* modo privado ou sem storage */
+    }
+  }, []);
+
+  const alternar = () => {
+    setExpandidoManual((antes) => {
+      const agora = !antes;
+      try {
+        window.localStorage.setItem(CHAVE_EXPANDIDO, agora ? "1" : "0");
+      } catch {
+        /* ignora */
+      }
+      return agora;
+    });
+  };
 
   /**
    * ┌─────────────────────────────────────────────────────────────────────┐
@@ -129,7 +180,7 @@ export default function Nav() {
           mostramos este header (evita o «duplo header» no telemóvel).
           A sentinela de 40 px continua a existir, mas já só decide a sombra:
           a altura é uma só. */}
-      <div aria-hidden className="relative hidden h-[var(--rc-header-alto)] lg:block">
+      <div aria-hidden className="relative hidden h-[var(--rc-header-atual)] lg:block">
         <div ref={sentinela} className="absolute inset-x-0 top-0 h-10" />
       </div>
 
@@ -160,7 +211,10 @@ export default function Nav() {
        * │ sombra do cartão, e mais nada.                                     │
        * └───────────────────────────────────────────────────────────────────┘
        */}
-      <header className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block">
+      <header
+        data-expandido={expandido}
+        className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block"
+      >
         <div
           data-opaco={opaco}
           className={`mx-auto w-full max-w-[92rem] rounded-4xl border bg-white p-[var(--rc-cartao-p)] transition-shadow duration-300 dark:bg-stone-900 ${
@@ -219,14 +273,47 @@ export default function Nav() {
             </div>
           </div>
 
-          {/* ── Linha 2 — a bandeja dos cinco pilares ──────────────────── */}
-          <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
-            <CapsulaNav />
+          {/* ── Linhas 2 e 3 — só quando a pessoa as pede ────────────────
+              `hidden` e não uma altura zero com `overflow-hidden`: o painel
+              da pesquisa é `position:absolute` dentro desta caixa, e um
+              `overflow-hidden` no cartão cortava-o ao abrir. É também por
+              isso que a mudança é instantânea e não animada — animar a
+              altura obrigaria ao mesmo corte durante a transição. */}
+          <div id="rc-cabecalho-corpo" hidden={!expandido}>
+            {/* ── Linha 2 — a bandeja dos cinco pilares ────────────────── */}
+            <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
+              <CapsulaNav />
+            </div>
+
+            {/* ── Linha 3 — a barra de pesquisa ────────────────────────── */}
+            <div className="mt-[var(--rc-cartao-gap)] w-full">
+              <LancadorBusca inputId="rc-header-busca" />
+            </div>
           </div>
 
-          {/* ── Linha 3 — a barra de pesquisa ──────────────────────────── */}
-          <div className="mt-[var(--rc-cartao-gap)] w-full">
-            <LancadorBusca inputId="rc-header-busca" />
+          {/* ── A lingueta ───────────────────────────────────────────────
+              Fica SEMPRE por baixo da primeira linha, aberta ou fechada, para
+              não haver um alvo que aparece e desaparece. Diz o que faz por
+              palavras: uma seta sozinha seria uma adivinha num sítio onde o
+              custo de errar é abrir uma coisa que não se queria. */}
+          <div className="mt-1 flex h-[var(--rc-linha-alternar)] items-center justify-center">
+            <button
+              type="button"
+              data-cabecalho-alternar
+              aria-expanded={expandido}
+              aria-controls="rc-cabecalho-corpo"
+              onClick={alternar}
+              className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+            >
+              {expandido ? "Recolher" : "Navegação e pesquisa"}
+              <ChevronDown
+                size={13}
+                aria-hidden
+                className={`flex-shrink-0 transition-transform duration-200 motion-reduce:transition-none ${
+                  expandido ? "rotate-180" : ""
+                }`}
+              />
+            </button>
           </div>
         </div>
       </header>

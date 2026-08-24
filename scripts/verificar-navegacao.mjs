@@ -121,6 +121,46 @@ for (const vp of VIEWPORTS) {
   await page.waitForTimeout(1200);
 
   if (vp.width >= 1024) {
+    // ┌───────────────────────────────────────────────────────────────────┐
+    // │ O CARTÃO NASCE FECHADO — e é a pessoa que o abre                   │
+    // │                                                                   │
+    // │ 206 px permanentes eram demasiados numa página que é para ler.     │
+    // │ Fechado são 112 px: a linha da marca e a lingueta. Tudo o que vem  │
+    // │ a seguir mede o cartão ABERTO, porque é aí que a geometria das     │
+    // │ três linhas existe para ser verificada.                             │
+    // └───────────────────────────────────────────────────────────────────┘
+    const fechado = await page.evaluate(() => {
+      const h = document.querySelector("header");
+      const esp = h.previousElementSibling;
+      return {
+        estado: h.dataset.expandido,
+        corpoVisivel: !!document.querySelector("#rc-cabecalho-corpo")?.offsetParent,
+        espacador: Math.round(esp.getBoundingClientRect().height),
+        lingueta: !!document.querySelector("[data-cabecalho-alternar]")?.offsetParent,
+      };
+    });
+    if (fechado.estado !== "false") mal(`${vp.nome}px: o cartão devia nascer fechado`);
+    else if (fechado.corpoVisivel) mal(`${vp.nome}px: o corpo do cartão está visível com ele fechado`);
+    else if (!fechado.lingueta) mal(`${vp.nome}px: a lingueta de expansão não está visível`);
+    else ok(`${vp.nome}px: cartão fechado — ${fechado.espacador}px reservados, com lingueta`);
+
+    await page.click("[data-cabecalho-alternar]");
+    await page.waitForTimeout(400);
+    const aberto = await page.evaluate(() => {
+      const h = document.querySelector("header");
+      return {
+        estado: h.dataset.expandido,
+        espacador: Math.round(h.previousElementSibling.getBoundingClientRect().height),
+        cartao: Math.round(h.querySelector("div").getBoundingClientRect().height),
+      };
+    });
+    if (aberto.estado !== "true") mal(`${vp.nome}px: a lingueta não abriu o cartão`);
+    // O espaçador em fluxo tem de seguir a altura do cartão mais a margem —
+    // senão o conteúdo nasce por baixo dele ou com um buraco à frente.
+    else if (Math.abs(aberto.espacador - aberto.cartao - 16) > 1) {
+      mal(`${vp.nome}px: espaçador (${aberto.espacador}) não acompanha o cartão (${aberto.cartao} + 16)`);
+    } else ok(`${vp.nome}px: cartão aberto — ${aberto.espacador}px reservados, e o espaçador acompanha`);
+
     // A cápsula: cinco pilares + Menu, visíveis.
     const capsula = await page.evaluate(() => {
       const nav = document.querySelector('nav[aria-label="Principal"]');
@@ -232,20 +272,42 @@ for (const vp of VIEWPORTS) {
         mal(`${vp.nome}px: o cartão muda de altura ao rolar (${antes.altura} → ${rolado.altura})`);
       } else ok(`${vp.nome}px: ao rolar não muda nada — ${antes.altura}px nos dois estados`);
 
-      // E a pesquisa continua a responder ao atalho com a página rolada.
-      await page.keyboard.press("Control+k");
-      await page.waitForTimeout(900);
-      const focado = await page.evaluate(() => document.activeElement?.id ?? "");
-      if (focado !== "rc-header-busca") mal(`${vp.nome}px: ⌘K não põe o foco no campo (foco em «${focado}»)`);
-      else ok(`${vp.nome}px: ⌘K põe o foco no campo com a página rolada`);
-      await page.keyboard.press("Escape");
-      await page.waitForTimeout(500);
-      const depoisDeEscape = await page.evaluate(() => document.activeElement?.id ?? "");
-      if (depoisDeEscape !== "rc-header-busca") {
-        mal(`${vp.nome}px: Escape deixa o foco em «${depoisDeEscape}» em vez do lançador`);
-      } else ok(`${vp.nome}px: Escape devolve o foco ao lançador`);
       await page.evaluate(() => window.scrollTo(0, 0));
       await page.waitForTimeout(500);
+
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ COM O CARTÃO FECHADO, O ATALHO TEM DE O ABRIR                  │
+      // │                                                               │
+      // │ A linha da pesquisa vive dentro de um `hidden`, e um elemento  │
+      // │ escondido não aceita foco. Foi assim que uma tentativa          │
+      // │ anterior de encolher o cabeçalho partiu o teclado: o Escape     │
+      // │ deixava o foco no `<body>`.                                     │
+      // │                                                               │
+      // │ A cura é derivar a expansão de `buscaAberta` no MESMO render, e │
+      // │ FIXÁ-LA quando a pesquisa abre — senão fechar o painel          │
+      // │ recolhia o cartão no commit em que o foco volta ao campo.        │
+      // └───────────────────────────────────────────────────────────────┘
+      await page.click("[data-cabecalho-alternar]");
+      await page.waitForTimeout(400);
+      const antesDoAtalho = await page.evaluate(() => document.querySelector("header").dataset.expandido);
+      await page.keyboard.press("Control+k");
+      await page.waitForTimeout(900);
+      const comAtalho = await page.evaluate(() => ({
+        estado: document.querySelector("header").dataset.expandido,
+        foco: document.activeElement?.id ?? "",
+      }));
+      await page.keyboard.press("Escape");
+      await page.waitForTimeout(600);
+      const depois = await page.evaluate(() => ({
+        estado: document.querySelector("header").dataset.expandido,
+        foco: document.activeElement?.id ?? "",
+      }));
+      if (antesDoAtalho !== "false") mal(`${vp.nome}px: a lingueta não voltou a fechar o cartão`);
+      else if (comAtalho.estado !== "true" || comAtalho.foco !== "rc-header-busca") {
+        mal(`${vp.nome}px: ⌘K com o cartão fechado — estado ${comAtalho.estado}, foco «${comAtalho.foco}»`);
+      } else if (depois.foco !== "rc-header-busca") {
+        mal(`${vp.nome}px: Escape deixa o foco em «${depois.foco}» em vez do lançador`);
+      } else ok(`${vp.nome}px: ⌘K abre o cartão fechado e o Escape mantém o foco no campo`);
     }
   } else {
     // A barra do telemóvel: cinco lugares, cada um com ícone E texto.

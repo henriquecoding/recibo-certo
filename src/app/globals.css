@@ -59,6 +59,23 @@
      · --rc-header-margem  o ar entre o cartão e o topo do ecrã.
      · --rc-cartao-p       o `padding` do cartão.
      · --rc-cartao-gap     o ar entre as três linhas.
+     · --rc-linha-alternar a lingueta que abre e fecha o cartão.
+
+     ┌──────────────────────────────────────────────────────────────┐
+     │ DUAS ALTURAS, E O SCROLL NÃO ESCOLHE ENTRE ELAS               │
+     │                                                              │
+     │ O cartão nasce FECHADO — uma linha e a lingueta, 112 px — e   │
+     │ abre quando a pessoa o pede. 206 px permanentes eram          │
+     │ demasiados numa página que é para ler.                        │
+     │                                                              │
+     │ Quem escolhe é sempre a pessoa, nunca a posição de scroll.    │
+     │ Já se tentou ligar isto ao scroll de duas maneiras e as duas  │
+     │ custaram mais do que poupavam: recolher a linha de cima fazia │
+     │ sumir a marca, as secções, a conta e o «Começar» de uma vez;  │
+     │ recolher a da pesquisa punha o campo em `display:none` e o    │
+     │ Escape deixava o foco no `<body>`. Um cabeçalho que muda      │
+     │ sozinho lê-se como avaria; um que muda quando lhe tocam, não. │
+     └──────────────────────────────────────────────────────────────┘
      · --rc-header-alto   as três linhas. É a ÚNICA altura que este
        cabeçalho tem: não encolhe ao rolar, e as alturas das linhas
        estão apertadas de propósito para isso ser suportável.
@@ -88,10 +105,26 @@
   --rc-header-margem: 16px;
   --rc-cartao-p: 10px;
   --rc-cartao-gap: 8px;
-  --rc-header-alto: calc(
-    var(--rc-header-margem) + 2 * var(--rc-cartao-p) + 2 * var(--rc-cartao-gap) +
-      var(--rc-header-linha) + var(--rc-linha-nav) + var(--rc-linha-busca)
+  --rc-linha-alternar: 20px;
+  /* O contorno do cartão. Entra na conta porque `border-box` não o absorve:
+     um cartão com `padding` E contorno mede 2 px mais do que a soma das
+     linhas, e o espaçador ficava 2 px curto — o conteúdo nascia colado. */
+  --rc-cartao-borda: 1px;
+
+  /* Fechado: a linha da marca mais a lingueta que o abre. */
+  --rc-header-compacto: calc(
+    var(--rc-header-margem) + 2 * var(--rc-cartao-borda) + 2 * var(--rc-cartao-p) +
+      var(--rc-header-linha) + 4px + var(--rc-linha-alternar)
   );
+  /* Aberto: mais a bandeja e a pesquisa, com o ar entre elas. */
+  --rc-header-alto: calc(
+    var(--rc-header-compacto) + 2 * var(--rc-cartao-gap) + var(--rc-linha-nav) +
+      var(--rc-linha-busca)
+  );
+  /* O que ele mede AGORA. Uma variável e não duas contas escritas à mão: o
+     espaçador em fluxo e o desvio das âncoras têm de concordar sempre, e
+     divergiam em silêncio se cada um decidisse por si. */
+  --rc-header-atual: var(--rc-header-compacto);
 
   /* ══════════════════════════════════════════════════════════════════
      GEOMETRIA DO CHROME INFERIOR DO TELEMÓVEL (< lg)
@@ -251,6 +284,14 @@
   }
 }
 
+/* O estado do cartão chega ao resto do documento por `:has()`, e não por uma
+   classe posta no `<html>` a partir do React: assim o espaçador em fluxo e o
+   `scroll-margin-top` das âncoras leem a mesma variável no mesmo frame em
+   que o cartão muda, sem um efeito pelo meio a escrever no DOM. */
+:root:has(header[data-expandido="true"]) {
+  --rc-header-atual: var(--rc-header-alto);
+}
+
 /* ════════════════════════════════════════════════════════════════════
    O FOCO VISÍVEL DO CABEÇALHO E DA PESQUISA
 
@@ -316,12 +357,12 @@ html {
      │ de um segundo scroll, e o `scroll-margin-top` nos alvos cobre   │
      │ os que não passam por este caminho.                             │
      └────────────────────────────────────────────────────────────────┘ */
-  scroll-padding-top: calc(var(--rc-header-alto) + 12px);
+  scroll-padding-top: calc(var(--rc-header-atual) + 12px);
 }
 
 [id],
 [data-scroll-target] {
-  scroll-margin-top: calc(var(--rc-header-alto) + 12px);
+  scroll-margin-top: calc(var(--rc-header-atual) + 12px);
 }
 
 body {

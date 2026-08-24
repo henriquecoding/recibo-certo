@@ -291,10 +291,11 @@ describe("navegacao:cartao-do-cabecalho", () => {
     );
     // A margem e o `padding` do cartão entram na conta que o espaçador
     // reserva — senão o conteúdo nasce por baixo dele.
-    expect(CSS).toContain("--rc-header-margem");
-    expect(CSS).toContain("--rc-cartao-p");
-    expect(CSS).toMatch(/--rc-header-alto:\s*calc\([\s\S]*--rc-header-margem/);
-    expect(CSS).toMatch(/--rc-header-alto:\s*calc\([\s\S]*--rc-cartao-p/);
+    expect(CSS).toMatch(/--rc-header-compacto:\s*calc\([\s\S]*--rc-header-margem/);
+    expect(CSS).toMatch(/--rc-header-compacto:\s*calc\([\s\S]*--rc-cartao-p/);
+    // E a altura aberta cresce a partir da fechada, em vez de repetir a
+    // conta: duas somas independentes divergiriam à primeira afinação.
+    expect(CSS).toMatch(/--rc-header-alto:\s*calc\([\s\S]*--rc-header-compacto/);
   });
 
   it("as três linhas do cabeçalho têm a mesma largura", () => {
@@ -306,6 +307,53 @@ describe("navegacao:cartao-do-cabecalho", () => {
     expect(semComentarios(NAV)).not.toContain("max-w-[var(--rc-dock-larga)]");
     expect(semComentarios(CAPSULA)).not.toContain("max-w-");
     expect(CAPSULA).toContain("flex w-full");
+  });
+
+  it("nasce fechado, e quem o abre é a pessoa", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ 206 PX PERMANENTES ERAM DEMASIADOS                             │
+    // │                                                               │
+    // │ Fechado são 114: a linha da marca e a lingueta. A bandeja e a  │
+    // │ pesquisa entram quando lhes tocam.                              │
+    // │                                                               │
+    // │ `hidden` e não altura zero com `overflow-hidden`: o painel da  │
+    // │ pesquisa é `position:absolute` dentro do cartão, e um          │
+    // │ `overflow-hidden` cortava-o ao abrir. É também por isso que a  │
+    // │ mudança é instantânea — animar a altura obrigaria ao mesmo     │
+    // │ corte durante a transição.                                     │
+    // │                                                               │
+    // │ E a expansão é DERIVADA de `buscaAberta`, não posta por um     │
+    // │ efeito: pedir a pesquisa tem de abrir o cartão no mesmo render │
+    // │ em que o painel monta, senão o campo ainda está escondido      │
+    // │ quando lhe pedem foco. O efeito que existe faz outra coisa —   │
+    // │ FIXA a expansão, para o Escape não recolher o cartão no commit │
+    // │ em que o foco volta ao campo.                                   │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(NAV).toContain("const expandido = expandidoManual || buscaAberta;");
+    expect(NAV).toContain("hidden={!expandido}");
+    expect(NAV).toContain('data-cabecalho-alternar');
+    expect(NAV).toContain('aria-controls="rc-cabecalho-corpo"');
+    expect(NAV).toContain("aria-expanded={expandido}");
+    // A escolha sobrevive à navegação: `Nav` é montado por cada layout.
+    expect(NAV).toContain("localStorage.setItem(CHAVE_EXPANDIDO");
+    expect(NAV).toContain("if (buscaAberta) setExpandidoManual(true);");
+  });
+
+  it("o espaçador e as âncoras leem a altura ACTUAL, não uma das duas", () => {
+    // Duas alturas e três interessados — o espaçador em fluxo, o
+    // `scroll-padding-top` e o `scroll-margin-top`. Cada um a decidir por si
+    // divergia em silêncio: o conteúdo nascia por baixo do cartão, ou com um
+    // buraco à frente. A ponte é `:has()`, para o valor mudar no MESMO frame
+    // em que o cartão muda, sem um efeito a escrever no DOM pelo meio.
+    expect(CSS).toContain("--rc-header-atual");
+    expect(CSS).toContain(':root:has(header[data-expandido="true"])');
+    expect(CSS).toContain("scroll-padding-top: calc(var(--rc-header-atual)");
+    expect(CSS).toContain("scroll-margin-top: calc(var(--rc-header-atual)");
+    expect(NAV).toContain("h-[var(--rc-header-atual)]");
+    // O contorno do cartão entra na conta: `border-box` não o absorve, e o
+    // espaçador ficava 2 px curto — medido, e o `navegacao:e2e` reprova-o.
+    expect(CSS).toContain("--rc-cartao-borda");
+    expect(CSS).toMatch(/--rc-header-compacto:\s*calc\([\s\S]*--rc-cartao-borda/);
   });
 
   it("ao rolar muda a SOMBRA, e mais nada", () => {
