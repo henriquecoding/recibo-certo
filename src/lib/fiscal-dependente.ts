@@ -21,6 +21,8 @@ import {
   DEDUCAO_DEPENDENTE,
   DEDUCAO_DEPENDENTE_3MAIS,
   DEDUCAO_DEPENDENTE_DEFICIENCIA,
+  ABONO_PARA_FALHAS,
+  AJUDAS_CUSTO,
   HORARIO_SEMANAL_COMPLETO,
   TRABALHO_SUPLEMENTAR,
   RETENCAO_SUPLEMENTAR_FATOR,
@@ -422,13 +424,33 @@ export function taxaEntidadeDoRegime(regime: RegimeEntidade = "geral"): number {
   return regime === "ipss" ? SS_DEPENDENTE.ipss.value : SS_DEPENDENTE.entidade.value;
 }
 
-/** Uma deslocação: dias, valor diário e escalão que fixa o limite isento. */
+/**
+ * Uma deslocação: unidades, valor por unidade e escalão que fixa o limite.
+ *
+ * A UNIDADE é o que distingue os dois casos da alínea d) do n.º 3 do Art. 2.º:
+ * a ajuda de custo tem um limite por DIA e o subsídio de transporte um limite
+ * por QUILÓMETRO. A mecânica de isenção é a mesma — limite × unidades, excesso
+ * tributado — e por isso partilham este tipo em vez de terem dois caminhos que
+ * podiam divergir.
+ */
 export interface AjudaCustoLinha {
+  /** Dias de deslocação, ou quilómetros quando `unidade` é «km». */
   dias: number;
+  /** Valor por dia, ou por quilómetro quando `unidade` é «km». */
   valorDia: number;
   estrangeiro?: boolean;
-  /** Escalão de ajudas de custo aplicável (default: trabalhador). */
+  /** Escalão de ajudas de custo aplicável (default: trabalhador). Ignorado em «km». */
   escalao?: EscalaoAjudasCusto;
+  /** Unidade do limite legal. Default «dia». */
+  unidade?: "dia" | "km";
+}
+
+/** Limite legal isento de uma linha de deslocação, na sua própria unidade. */
+export function limiteDaLinha(linha: AjudaCustoLinha): number {
+  // O quilómetro tem valor único: ao contrário das diárias, não distingue
+  // escalão nem destino.
+  if (linha.unidade === "km") return AJUDAS_CUSTO.kmAutomovelProprio.value;
+  return limiteAjudasCusto(!!linha.estrangeiro, linha.escalao);
 }
 
 export interface ReciboMensalInput extends SituacaoRetencao {
@@ -469,6 +491,15 @@ export interface ReciboMensalInput extends SituacaoRetencao {
   subsidioNatalDireitoTotal?: number;
   /** Outros rendimentos sujeitos a IRS/SS (feriados, diuturnidades, etc.). */
   outrosRendimentosSujeitos?: number;
+  /** Abono para falhas pago no mês (Art. 2.º, n.º 3, al. c) CIRS). */
+  abonoFalhas?: number;
+  /**
+   * Remuneração mensal FIXA sobre a qual se mede o limite isento do abono para
+   * falhas. Sem ela usa-se o vencimento base mais os complementos retributivos
+   * — mas quem conhece os complementos fixos todos (função, turno, isenção de
+   * horário) deve passá-los, porque a fração de 5% incide sobre o conjunto.
+   */
+  remuneracaoFixaMensal?: number;
   /**
    * Regime contributivo da ENTIDADE empregadora. As IPSS e demais entidades sem
    * fins lucrativos contribuem a taxa própria (Código Contributivo), não à TSU
@@ -528,7 +559,15 @@ export interface ReciboMensalResult {
     total: number;
     isento: number;
     tributado: number;
+    /** «dia» para ajudas de custo, «km» para o subsídio de transporte. */
+    unidade: "dia" | "km";
   }[];
+  // Abono para falhas
+  abonoFalhasTotal: number;
+  abonoFalhasIsento: number;
+  abonoFalhasTributado: number;
+  /** Fração da remuneração fixa até à qual o abono é isento, em euros. */
+  abonoFalhasLimite: number;
   // Subsídio de refeição
   subsidioRefeicaoTotal: number;
   subsidioRefeicaoIsento: number;
@@ -654,7 +693,7 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const ajudasDetalhe = ajudas.map((linha) => {
     const dias = Math.max(0, linha.dias);
     const valorDia = Math.max(0, linha.valorDia);
-    const limite = limiteAjudasCusto(!!linha.estrangeiro, linha.escalao);
+    const limite = limiteDaLinha(linha);
     const total = cent(dias * valorDia);
     const isento = cent(dias * Math.min(valorDia, limite));
     return { ...linha, dias, valorDia, limiteDia: limite, total, isento, tributado: cent(total - isento) };
@@ -662,6 +701,18 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
   const ajudasTotal = cent(ajudasDetalhe.reduce((s, x) => s + x.total, 0));
   const ajudasIsentas = cent(ajudasDetalhe.reduce((s, x) => s + x.isento, 0));
   const ajudasTributadas = cent(ajudasTotal - ajudasIsentas);
+
+  // Abono para falhas — Art. 2.º, n.º 3, al. c) CIRS. Não tem um valor em
+  // euros: tem uma FRAÇÃO da remuneração mensal fixa. Só o que exceder essa
+  // fração é rendimento do trabalho, e é isso que entra nas duas bases.
+  const remuneracaoFixaMensal = Math.max(
+    0,
+    input.remuneracaoFixaMensal ?? (salarioBase + Math.max(0, input.complementosRetributivos ?? 0)),
+  );
+  const abonoFalhasTotal = cent(Math.max(0, input.abonoFalhas ?? 0));
+  const abonoFalhasLimite = cent(remuneracaoFixaMensal * ABONO_PARA_FALHAS.value);
+  const abonoFalhasIsento = cent(Math.min(abonoFalhasTotal, abonoFalhasLimite));
+  const abonoFalhasTributado = cent(abonoFalhasTotal - abonoFalhasIsento);
 
   // Subsídio de refeição.
   const dias = Math.max(0, input.diasSubsidio ?? 22);
@@ -681,13 +732,16 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
       subsidioNatal +
       outrosSujeitos +
       ajudasTributadas +
+      abonoFalhasTributado +
       subsidioRefeicaoTributado
   );
   const ssTrabalhador = cent(baseSS * SS_DEPENDENTE.trabalhador.value);
 
   // IRS — retenção da remuneração mensal (tabela) sobre base + prémio + excessos.
   // O IRS Jovem isenta parte da remuneração; a tabela incide só sobre o tributável.
-  const remMensal = cent(baseRemunerada + premio + outrosSujeitos + ajudasTributadas + subsidioRefeicaoTributado);
+  const remMensal = cent(
+    baseRemunerada + premio + outrosSujeitos + ajudasTributadas + abonoFalhasTributado + subsidioRefeicaoTributado,
+  );
   const ano = input.irsJovemAno;
   const jovemMes = isencaoJovemRemuneracao(remMensal, ano);
   const irsBaseMensal = retencaoJovem(remMensal, situacao, ano);
@@ -739,10 +793,11 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
 
   // Totais.
   const brutoTotal = cent(
-    baseRemunerada + suplementarTotal + premio + subsidioFerias + subsidioNatal + outrosSujeitos + ajudasTotal + subsidioRefeicaoTotal
+    baseRemunerada + suplementarTotal + premio + subsidioFerias + subsidioNatal + outrosSujeitos
+      + ajudasTotal + abonoFalhasTotal + subsidioRefeicaoTotal
   );
   const liquido = cent(brutoTotal - ssTrabalhador - irsTotal);
-  const rendimentoSujeito = cent(brutoTotal - ajudasIsentas - subsidioRefeicaoIsento);
+  const rendimentoSujeito = cent(brutoTotal - ajudasIsentas - abonoFalhasIsento - subsidioRefeicaoIsento);
   const taxaEfetiva = rendimentoSujeito > 0 ? (ssTrabalhador + irsTotal) / rendimentoSujeito : 0;
 
   // Custo para a entidade empregadora = TUDO o que sai da empresa por este
@@ -810,7 +865,8 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
     subsidioFerias > 0 ||
     subsidioNatal > 0 ||
     outrosSujeitos > 0 ||
-    ajudasTotal > 0;
+    ajudasTotal > 0 ||
+    abonoFalhasTotal > 0;
 
   return {
     salarioBase,
@@ -840,7 +896,12 @@ export function calcularReciboMensal(input: ReciboMensalInput): ReciboMensalResu
       total: linha.total,
       isento: linha.isento,
       tributado: linha.tributado,
+      unidade: linha.unidade ?? "dia",
     })),
+    abonoFalhasTotal,
+    abonoFalhasIsento,
+    abonoFalhasTributado,
+    abonoFalhasLimite,
     subsidioRefeicaoTotal,
     subsidioRefeicaoIsento,
     subsidioRefeicaoTributado,

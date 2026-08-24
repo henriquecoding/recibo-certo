@@ -13,7 +13,7 @@ import {
   parseNumericDraft,
   sanitizeNumericDraft,
 } from "@/lib/numeric-input";
-import { limiteAjudasCusto } from "@/lib/fiscal-data";
+import { AJUDAS_CUSTO, limiteAjudasCusto } from "@/lib/fiscal-data";
 import { fmt as eur } from "@/lib/format";
 
 const CATEGORY_LABEL = {
@@ -93,6 +93,10 @@ function RubricEditor({ rubric, onChange, onRemove }: {
 }) {
   const meta = RUBRIC_META[rubric.type];
   const estrangeiro = rubric.type === "travel_foreign";
+  // Os quilómetros usam o mesmo editor das ajudas de custo, mas a unidade é
+  // outra: contam-se ao quilómetro (com decimais), o limite é por quilómetro e
+  // é único — não há escalão de trabalhador nem de administração.
+  const porKm = rubric.type === "travel_km";
   const incomplete =
     (meta.editor === "amount" && rubric.amount <= 0)
     || (meta.editor === "hours" && rubric.hours <= 0 && !(rubric.type === "night_work" && rubric.amount > 0))
@@ -129,7 +133,16 @@ function RubricEditor({ rubric, onChange, onRemove }: {
         {meta.editor === "hours" && (
           <Field label="Horas" suffix="h" value={rubric.hours} onChange={(hours) => onChange({ ...rubric, hours })} />
         )}
-        {meta.editor === "travel" && (
+        {meta.editor === "travel" && porKm && (
+          <>
+            <Field label="Quilómetros" suffix="km" value={rubric.days} onChange={(days) => onChange({ ...rubric, days })} />
+            <Field label="Valor por km" suffix="€" value={rubric.dailyAmount} onChange={(dailyAmount) => onChange({ ...rubric, dailyAmount })} />
+            <p className="text-[10px] leading-relaxed text-stone-400 sm:col-span-2">
+              Isento até {eur(AJUDAS_CUSTO.kmAutomovelProprio.value)}/km — o mesmo limite para toda a gente, sem escalões. Portagens e estacionamento não entram neste valor: reembolsam-se à parte, contra documento.
+            </p>
+          </>
+        )}
+        {meta.editor === "travel" && !porKm && (
           <>
             <Field label="Dias" suffix="dias" value={rubric.days} inputMode="numeric" onChange={(days) => onChange({ ...rubric, days: Math.floor(days) })} />
             <Field label="Valor por dia" suffix="€" value={rubric.dailyAmount} onChange={(dailyAmount) => onChange({ ...rubric, dailyAmount })} />

@@ -28,6 +28,8 @@ import {
 import { solveNetToGross } from "../payroll-inverse";
 import { calcularVencimentoAnual, taxaMarginalRetencao } from "../fiscal-dependente";
 import {
+  ABONO_PARA_FALHAS,
+  AJUDAS_CUSTO,
   RETENCAO_DEP_CONTINENTE_T1,
   SMN,
   SS_DEPENDENTE,
@@ -669,5 +671,104 @@ describe("simulador de vencimento · retribuição mínima garantida", () => {
 
   it("um horário acima do máximo legal não inflaciona o mínimo", () => {
     expect(calcularTempoParcial(SMN.value, 60).retribuicaoMinimaProporcional).toBeCloseTo(SMN.value, 2);
+  });
+});
+
+
+describe("simulador de vencimento · quilómetros em automóvel próprio (Art. 2.º, n.º 3, al. d) CIRS)", () => {
+  const LIMITE = AJUDAS_CUSTO.kmAutomovelProprio.value;
+
+  it("abaixo do limite por quilómetro fica tudo isento", () => {
+    const { result } = correr({}, [rubrica("travel_km", { days: 300, dailyAmount: LIMITE })]);
+    expect(result.ajudasTotal).toBeCloseTo(300 * LIMITE, 2);
+    expect(result.ajudasIsentas).toBeCloseTo(300 * LIMITE, 2);
+    expect(result.ajudasTributadas).toBe(0);
+    expect(result.irsTotal).toBe(BASE.result.irsTotal);
+    expect(result.ssTrabalhador).toBe(BASE.result.ssTrabalhador);
+  });
+
+  it("o excesso por quilómetro entra nas duas bases", () => {
+    const excesso = 0.1;
+    const { result } = correr({}, [rubrica("travel_km", { days: 300, dailyAmount: LIMITE + excesso })]);
+    expect(result.ajudasTributadas).toBeCloseTo(300 * excesso, 2);
+    expect(result.ssTrabalhador).toBeGreaterThan(BASE.result.ssTrabalhador);
+    expect(result.irsTotal).toBeGreaterThan(BASE.result.irsTotal);
+  });
+
+  it("o limite é POR QUILÓMETRO, não por dia — e não é o das ajudas de custo", () => {
+    const { result } = correr({}, [rubrica("travel_km", { days: 100, dailyAmount: 1 })]);
+    expect(result.ajudasDetalhe[0].unidade).toBe("km");
+    expect(result.ajudasDetalhe[0].limiteDia).toBe(LIMITE);
+    expect(LIMITE).toBeLessThan(limiteAjudasCusto(false, "trabalhador"));
+  });
+
+  it("o escalão não conta nos quilómetros: o limite é o mesmo para toda a gente", () => {
+    const trabalhador = correr({}, [rubrica("travel_km", { days: 500, dailyAmount: 0.6, travelTier: "trabalhador" })]);
+    const direcao = correr({}, [rubrica("travel_km", { days: 500, dailyAmount: 0.6, travelTier: "direcao" })]);
+    expect(direcao.result.ajudasIsentas).toBe(trabalhador.result.ajudasIsentas);
+    expect(direcao.result.ajudasTributadas).toBe(trabalhador.result.ajudasTributadas);
+  });
+
+  it("os quilómetros contam-se com decimais, ao contrário dos dias", () => {
+    const km = correr({}, [rubrica("travel_km", { days: 120.5, dailyAmount: LIMITE })]);
+    expect(km.result.ajudasTotal).toBeCloseTo(120.5 * LIMITE, 2);
+    const dias = correr({}, [rubrica("travel_national", { days: 2.9, dailyAmount: 50 })]);
+    expect(dias.result.ajudasDetalhe[0].dias).toBe(2);
+  });
+
+  it("uma deslocação em dias e outra em quilómetros convivem no mesmo mês", () => {
+    const { result } = correr({}, [
+      rubrica("travel_national", { id: "d", days: 3, dailyAmount: 80 }),
+      rubrica("travel_km", { id: "k", days: 200, dailyAmount: 0.5 }),
+    ]);
+    expect(result.ajudasDetalhe).toHaveLength(2);
+    expect(result.ajudasDetalhe.map((linha) => linha.unidade)).toEqual(["dia", "km"]);
+  });
+});
+
+describe("simulador de vencimento · abono para falhas (Art. 2.º, n.º 3, al. c) CIRS)", () => {
+  it("o limite é uma FRAÇÃO da remuneração fixa, não um valor em euros", () => {
+    const { result } = correr({ baseSalary: 2000 }, [rubrica("cash_handling_allowance", { amount: 50 })]);
+    expect(result.abonoFalhasLimite).toBeCloseTo(2000 * ABONO_PARA_FALHAS.value, 2);
+  });
+
+  it("abaixo do limite fica isento e não toca em IRS nem SS", () => {
+    const semAbono = correr({ baseSalary: 2000 });
+    const comAbono = correr({ baseSalary: 2000 }, [rubrica("cash_handling_allowance", { amount: 50 })]);
+    expect(comAbono.result.abonoFalhasTributado).toBe(0);
+    expect(comAbono.result.irsTotal).toBe(semAbono.result.irsTotal);
+    expect(comAbono.result.ssTrabalhador).toBe(semAbono.result.ssTrabalhador);
+    expect(comAbono.result.liquido).toBeCloseTo(semAbono.result.liquido + 50, 2);
+  });
+
+  it("só o excesso é tributado", () => {
+    const excesso = 30;
+    const { result } = correr({ baseSalary: 2000 }, [
+      rubrica("cash_handling_allowance", { amount: 2000 * ABONO_PARA_FALHAS.value + excesso }),
+    ]);
+    expect(result.abonoFalhasTributado).toBeCloseTo(excesso, 2);
+    expect(result.baseSS).toBeCloseTo(correr({ baseSalary: 2000 }).result.baseSS + excesso, 2);
+  });
+
+  it("os complementos FIXOS sobem o limite; as comissões não", () => {
+    const soBase = correr({ baseSalary: 2000 }, [rubrica("cash_handling_allowance", { amount: 10 })]);
+    const comFixos = correr({ baseSalary: 2000 }, [
+      rubrica("cash_handling_allowance", { amount: 10 }),
+      rubrica("function_allowance", { id: "f", amount: 400 }),
+    ]);
+    const comComissoes = correr({ baseSalary: 2000 }, [
+      rubrica("cash_handling_allowance", { amount: 10 }),
+      rubrica("commission", { id: "c", amount: 400 }),
+    ]);
+    expect(comFixos.result.abonoFalhasLimite).toBeCloseTo(2400 * ABONO_PARA_FALHAS.value, 2);
+    expect(comComissoes.result.abonoFalhasLimite).toBeCloseTo(soBase.result.abonoFalhasLimite, 2);
+  });
+
+  it("a parte isenta não conta para a taxa efetiva nem para o custo da empresa", () => {
+    const semAbono = correr({ baseSalary: 2000 });
+    const comAbono = correr({ baseSalary: 2000 }, [rubrica("cash_handling_allowance", { amount: 80 })]);
+    // Sai da empresa (entra no custo) mas não entra na base contributiva.
+    expect(employerCost(comAbono.result)).toBeCloseTo(employerCost(semAbono.result) + 80, 2);
+    expect(comAbono.result.baseSS).toBeCloseTo(semAbono.result.baseSS, 2);
   });
 });

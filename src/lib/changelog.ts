@@ -25,6 +25,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Um recibo com subsídio de férias ou de Natal tem várias remunerações no mesmo pagamento, e a lei obriga a entidade a mostrar a taxa efetiva de CADA uma em separado, nunca uma taxa única. Nós mostrávamos a taxa única. Agora, no separador «Cálculo», estão as taxas como devem constar do teu recibo — e vão também no relatório, na folha de cálculo e no CSV.",
       "Quem trabalha numa IPSS ou noutra entidade sem fins lucrativos via o custo da empresa calculado como se fosse uma empresa comum. A taxa é outra, e agora podes escolhê-la: o separador «Empresa» passa a mostrar a taxa certa e a diferença que ela faz.",
       "Se o vencimento base que introduzires ficar abaixo da retribuição mínima garantida, dizemos-to. E dizemo-lo bem para quem trabalha a tempo parcial: aí o mínimo é proporcional ao horário, e comparar meio horário com o salário mínimo inteiro seria um alarme falso.",
+      "Duas rubricas que faltavam ao construtor do recibo. Os quilómetros em automóvel próprio, com o limite isento a contar ao quilómetro e não ao dia — e igual para toda a gente, sem os escalões que as ajudas de custo têm. E o abono para falhas, de quem movimenta numerário: esse não tem um limite em euros, é isento até 5% da tua remuneração mensal fixa, por isso o simulador diz-te sempre qual foi a base a que chegou.",
+      "As taxas da Segurança Social deixam de aparecer arredondadas. A contribuição da entidade é de 23,75% e via-se «23,8%»; a Taxa Social Única é 34,75% e via-se «34,8%». São números que se procuram para conferir com um recibo — meio ponto percentual a mais chega para a comparação falhar.",
     ],
   },
   {

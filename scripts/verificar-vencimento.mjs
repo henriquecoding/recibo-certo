@@ -271,6 +271,30 @@ try {
   await p.getByLabel("Remover Ajuda de custo · Portugal").click();
   await p.waitForTimeout(300);
 
+  // Quilómetros: o limite é POR QUILÓMETRO e o editor tem de o dizer.
+  await p.getByRole("button", { name: "Adicionar rubrica" }).click();
+  await p.getByRole("button", { name: /^Quilómetros em automóvel próprio/ }).click();
+  const km = p.locator("article", { hasText: "Quilómetros em automóvel próprio" });
+  await mexe("quilómetros acima do limite entram nas bases", async () => {
+    await km.locator('input[inputmode="decimal"]').first().fill("500");
+    await km.locator('input[inputmode="decimal"]').nth(1).fill("0,60");
+  });
+  verificar("o editor de quilómetros conta ao km, não ao dia", (await km.innerText()).includes("/km"));
+  verificar("e não oferece escalões, que aqui não existem", !(await km.innerText()).includes("Administração"));
+  await p.getByLabel("Remover Quilómetros em automóvel próprio").click();
+  await p.waitForTimeout(300);
+
+  // Abono para falhas: o limite é 5% da remuneração fixa, e a linha diz qual.
+  await p.getByRole("button", { name: "Adicionar rubrica" }).click();
+  await p.getByRole("button", { name: /^Abono para falhas/ }).click();
+  await p.locator("article", { hasText: "Abono para falhas" }).locator('input[inputmode="decimal"]').first().fill("400");
+  await p.waitForTimeout(450);
+  await p.getByRole("tab", { name: "Mês" }).click();
+  await p.waitForTimeout(300);
+  verificar("o abono mostra a base dos 5% em vez de um limite anónimo", /isento até .* da remuneração fixa/.test(await painel()));
+  await p.getByLabel("Remover Abono para falhas").click();
+  await p.waitForTimeout(300);
+
   await p.getByRole("button", { name: "Adicionar rubrica" }).click();
   await p.getByRole("button", { name: /Viatura de empresa/ }).click();
   await p.waitForTimeout(300);

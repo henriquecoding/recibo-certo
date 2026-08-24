@@ -578,7 +578,7 @@ export function MotorReciboVencimento() {
       memoria: [
         { rubrica: "Retribuição horária", formula: "(retribuição mensal × 12) ÷ (52 × horas semanais)", valor: calculation.result.retribuicaoHoraria, fonte: "CT art. 271.º" },
         { rubrica: "Base de incidência da SS", formula: "soma das rubricas contributivas do mês", valor: calculation.result.baseSS, fonte: "CRC arts. 44.º-48.º" },
-        { rubrica: "Segurança Social do trabalhador", formula: `base × ${pct(SS_DEPENDENTE.trabalhador.value)}`, valor: calculation.result.ssTrabalhador, fonte: "CRC art. 53.º" },
+        { rubrica: "Segurança Social do trabalhador", formula: `base × ${pctExato(SS_DEPENDENTE.trabalhador.value)}`, valor: calculation.result.ssTrabalhador, fonte: "CRC art. 53.º" },
         { rubrica: "Retenção da remuneração mensal", formula: "R × taxa marginal − parcela a abater − parcelas por dependente e por incapacidade", valor: calculation.result.irsBaseMensal, fonte: "Despacho 233-A/2026" },
         { rubrica: "Retenção do trabalho suplementar", formula: "suplementar × 50% da taxa efetiva do mês", valor: calculation.result.suplementarIRS, fonte: "Despacho 233-A/2026, n.º 5 al. f)" },
         { rubrica: "Retenção dos subsídios", formula: "imposto do direito completo × fração paga", valor: calculation.result.irsSubsidios, fonte: "Art. 99.º-C, n.º 6 CIRS" },

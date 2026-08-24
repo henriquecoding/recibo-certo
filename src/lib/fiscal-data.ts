@@ -312,6 +312,10 @@ export const SOURCES = {
     label: "IVA — Taxas em Portugal continental e regiões autónomas · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/iva-taxas-em-portugal-continental-e-acores",
   },
+  occAjudasCusto: {
+    label: "Atualização das ajudas de custo e do subsídio de transporte (DL n.º 1/2025) · Ordem dos Contabilistas Certificados",
+    url: "https://www.occ.pt/pt-pt/noticias/atualizacao-de-ajudas-de-custo-para-2025",
+  },
   occRegimeSimplificado: {
     label: "IRS — Regime simplificado (coeficientes e regra dos 15%) · OCC",
     url: "https://www.occ.pt/pt-pt/noticias/irs-regime-simplificado-1",
@@ -5396,6 +5400,23 @@ export const AJUDAS_CUSTO = {
     "ajudasCusto2026",
     REV_RETENCAO_INCAPACIDADE
   ),
+  /**
+   * Utilização de automóvel PRÓPRIO em serviço. A mesma alínea d) que fixa as
+   * ajudas de custo cobre os quilómetros, mas com uma diferença que se perde
+   * com facilidade: o Decreto-Lei n.º 1/2025 atualizou as ajudas de custo
+   * diárias em 5% e NÃO tocou no valor por quilómetro, que ficou onde estava.
+   * Aplicar-lhe a mesma subida daria 0,42 €/km e um excesso tributável a menos.
+   *
+   * O escalão não conta aqui: ao contrário das diárias, o valor por quilómetro
+   * é único — um administrador e um trabalhador têm o mesmo limite.
+   */
+  kmAutomovelProprio: sv(
+    0.40,
+    "Art. 2.º, n.º 3, al. d) CIRS — limite isento por quilómetro em automóvel próprio (subsídio de transporte dos servidores do Estado)",
+    "occAjudasCusto",
+    DATA_LAST_REVIEW,
+    "Não inclui portagens nem estacionamento, que são reembolsáveis à parte contra documento. Mantido pelo DL n.º 1/2025, que subiu apenas as ajudas de custo diárias."
+  ),
 };
 
 /** Escalão de ajudas de custo aplicável a quem se desloca. */
@@ -6666,6 +6687,7 @@ export const PARAMETROS_AUDITADOS: readonly Sourced<unknown>[] = [
     AJUDAS_CUSTO.estrangeiroDia,
     AJUDAS_CUSTO.nacionalDiaDirecao,
     AJUDAS_CUSTO.estrangeiroDiaDirecao,
+    AJUDAS_CUSTO.kmAutomovelProprio,
     DEDUCAO_ESPECIFICA_DEPENDENTE,
     ...Object.values(RETENCAO),
     DISPENSA_RETENCAO_LIMITE,
@@ -7316,6 +7338,15 @@ export function assertFiscalDataIntegrity(): void {
       && AJUDAS_CUSTO.estrangeiroDiaDirecao.value > AJUDAS_CUSTO.estrangeiroDia.value)
   ) {
     erros.push("Ajudas de custo: o escalão de direção deve exceder o do trabalhador em ambos os destinos.");
+  }
+  // O quilómetro é um limite POR UNIDADE PERCORRIDA, não uma diária: se algum
+  // dia alguém lhe aplicar a subida das diárias por engano, a ordem de grandeza
+  // denuncia-o antes de chegar ao ecrã.
+  if (!(AJUDAS_CUSTO.kmAutomovelProprio.value > 0 && AJUDAS_CUSTO.kmAutomovelProprio.value < 5)) {
+    erros.push("Limite por quilómetro em automóvel próprio fora do intervalo plausível (0; 5) €.");
+  }
+  if (!(ABONO_PARA_FALHAS.value > 0 && ABONO_PARA_FALHAS.value < 1)) {
+    erros.push("Abono para falhas: a fração isenta da remuneração fixa tem de estar em (0; 1).");
   }
   if (!(RETENCAO_DEP_ISENCAO.value > 0)) erros.push("Limiar de isenção de retenção (cat. A) não positivo.");
   if (!(RETENCAO_DEP_POR_DEPENDENTE.value > 0)) erros.push("Parcela por dependente (cat. A) não positiva.");

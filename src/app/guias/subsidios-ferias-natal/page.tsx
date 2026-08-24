@@ -4,7 +4,7 @@ import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
 import InfoTip from "@/components/ui/InfoTip";
 import { SS_DEPENDENTE, RETENCAO_DEP_ISENCAO } from "@/lib/fiscal-data";
-import { pct, fmt } from "@/lib/format";
+import { pctExato } from "@/lib/format";
 import { ArrowRight } from "@/components/ui/Icons";
 
 export const metadata: Metadata = metadataDoGuia("subsidios-ferias-natal");
@@ -58,7 +58,7 @@ export default function SubsidiosFeriasNatalPage() {
                 <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Segurança Social</p>
                 <p className="text-xs text-stone-500 mt-0.5">Incide sobre ambos os subsídios.</p>
               </div>
-              <p className="text-lg font-semibold text-brand">{pct(SS_DEPENDENTE.trabalhador.value)}</p>
+              <p className="text-lg font-semibold text-brand">{pctExato(SS_DEPENDENTE.trabalhador.value)}</p>
             </div>
           </div>
           <div className="rounded-2xl border border-stone-100 dark:border-stone-800 bg-white dark:bg-stone-900 p-4">
