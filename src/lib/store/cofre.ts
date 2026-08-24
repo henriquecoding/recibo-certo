@@ -183,12 +183,53 @@ export function esvaziarCofre(userId: string | null | undefined): void {
 // pessoa não é.
 let cofreAtual: string = COFRE_ANONIMO;
 
+/**
+ * Já correu a migração das chaves antigas nesta sessão de página?
+ *
+ * ┌──────────────────────────────────────────────────────────────────┐
+ * │ ISTO É O QUE FAZIA A MIGRAÇÃO NUNCA CORRER PARA QUEM NÃO TEM      │
+ * │ CONTA — que é a maior parte de quem usa isto.                     │
+ * │                                                                  │
+ * │ O guarda era `if (novo === cofreAtual) return`. Para um visitante │
+ * │ anónimo, `nomeDoCofre(null)` é `"anonimo"` — exatamente o valor   │
+ * │ inicial de `cofreAtual`. A comparação dava igual à primeira       │
+ * │ chamada e a função saía ANTES de migrar seja o que for.           │
+ * │                                                                  │
+ * │ O `auth.tsx` até tem um comentário a dizer «sem esta chamada, a   │
+ * │ migração das chaves antigas nunca corria para quem usa a          │
+ * │ aplicação sem conta» — a chamada foi acrescentada, o guarda       │
+ * │ engoliu-a, e ninguém reparou porque os testes exercitam           │
+ * │ `migrarParaCofre` diretamente e essa sempre esteve certa.         │
+ * │                                                                  │
+ * │ O efeito, medido: quem tinha o perfil fiscal gravado na chave     │
+ * │ pré-cofre continuava a ver «diz-nos qual é o teu regime de IVA»   │
+ * │ depois de o ter dito, e o painel de prazos mostrava-lhe as        │
+ * │ declarações de IVA de que está isento. O mesmo valia para         │
+ * │ recibos, cenários e tudo o resto que viveu fora do cofre.         │
+ * │                                                                  │
+ * │ A flag mantém o que o guarda queria (não repetir trabalho a cada  │
+ * │ render) sem o que ele fazia por acidente (nunca o fazer).         │
+ * └──────────────────────────────────────────────────────────────────┘
+ */
+let migracaoCorrida = false;
+
 /** Quem está a usar, agora. Chamado pela camada de autenticação. */
 export function definirCofre(userId: string | null | undefined): void {
   const novo = nomeDoCofre(userId);
-  if (novo === cofreAtual) return;
+  // A primeira chamada migra SEMPRE, mesmo que o cofre não mude de nome.
+  if (novo === cofreAtual && migracaoCorrida) return;
   cofreAtual = novo;
+  migracaoCorrida = true;
   migrarParaCofre(userId);
+}
+
+/**
+ * Repõe o estado do módulo. Existe para os testes — sem isto, o primeiro
+ * `definirCofre` de um ficheiro deixava a flag ligada para os seguintes.
+ */
+export function reporCofreParaTestes(): void {
+  cofreAtual = COFRE_ANONIMO;
+  migracaoCorrida = false;
 }
 
 export const cofreAtivo = (): string => cofreAtual;

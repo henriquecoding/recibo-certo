@@ -587,6 +587,16 @@ export const SOURCES = {
       "Lei n.º 89/2017 — Regime Jurídico do Registo Central do Beneficiário Efetivo (prazo da declaração inicial, coimas e proibição de distribuir lucros) · Diário da República",
     url: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2017-108020590",
   },
+  // ⚠️ ALTA MANUTENÇÃO. As medidas de apoio mudam de nome, de dotação e de
+  // condições quase todos os anos — é a mesma nota que o guia dos apoios à
+  // contratação já traz. Por isso esta fonte serve para LIGAR à página
+  // oficial, e o produto não fixa valores nem regras de elegibilidade em
+  // lado nenhum: quem decide se alguém tem direito é o IEFP, não nós.
+  iefpEmpreendedorismo: {
+    label:
+      "Programa de Apoio ao Empreendedorismo e à Criação do Próprio Emprego (PAECPE), Empreende XXI e Microcrédito · IEFP",
+    url: "https://www.iefp.pt/empreendedorismo",
+  },
   ircObrigacoes: {
     label: "IRC — Guia Fiscal 2026 (taxas, prazos e obrigações declarativas) · PwC Portugal",
     url: "https://www.pwc.pt/pt/pwcinforfisco/guia-fiscal/2026/irc.html",

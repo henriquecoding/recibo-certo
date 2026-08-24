@@ -279,6 +279,25 @@ try {
 
       const botaoDescobrir = pagina.getByRole("button", { name: /Descobrir oportunidades/ });
       verificar("o botão de descoberta existe", (await botaoDescobrir.count()) > 0);
+
+      // ── O TETO DE CAPITAL É UM ELIMINADOR, E PODE NÃO SER O REAL ──
+      //  Este campo não ordena: apaga modelos que não arrancam com o que
+      //  a pessoa declarou. Quem desconhece os apoios públicos fixa aqui
+      //  um teto mais baixo do que o que lhe é acessível e perde
+      //  hipóteses por uma razão que não é verdadeira. O aviso vem ANTES
+      //  de responder — e nomeia programas, nunca valores, porque as
+      //  condições mudam e a elegibilidade é decidida no IEFP.
+      const notaCapital = await pagina.evaluate(() => {
+        const texto = document.querySelector("#ferramenta")?.innerText ?? "";
+        const linha = texto.split("\n").find((l) => /Antes de fixares o teto/.test(l));
+        return linha ?? "";
+      });
+      verificar("o teto de capital avisa que há apoios públicos", notaCapital.length > 0);
+      verificar(
+        "e esse aviso nomeia programas, nunca valores",
+        notaCapital.length > 0 && !/\d[\d\s.,]*\s*(€|%)/.test(notaCapital),
+        notaCapital.slice(0, 160),
+      );
       verificar(
         "e está desativado enquanto não houver o mínimo",
         await botaoDescobrir.first().isDisabled(),

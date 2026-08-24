@@ -61,6 +61,7 @@ import {
   Plane,
   Lightbulb,
   Invoice,
+  Coin,
 } from "@/components/ui/Icons";
 
 const MapaCarregar = () => (
@@ -257,6 +258,7 @@ const LEI = {
   cfi: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/2014-59423292",
   csc: "https://diariodarepublica.pt/dr/legislacao-consolidada/decreto-lei/1986-34443975",
   rcbe: "https://diariodarepublica.pt/dr/legislacao-consolidada/lei/2017-108020590",
+  iefpEmpreendedorismo: "https://www.iefp.pt/empreendedorismo",
   empresaOnline: "https://www2.gov.pt/espaco-empresa/empresa-online",
   representanteFiscal: "https://info.portaldasfinancas.gov.pt/pt/apoio_contribuinte/questoes_frequentes/pages/faqs-00307.aspx",
   portaria208: "https://diariodarepublica.pt/dr/detalhe/portaria/208-2017-107684448",
@@ -551,7 +553,11 @@ function NumericSlider({
       </div>
 
       {/* Min / Max labels */}
-      <div className="relative h-3.5 text-[10px] text-stone-400 dark:text-stone-600">
+      {/* `dark:text-stone-600` dava 2,58:1 sobre a superfície escura — os
+          extremos da escala eram ilegíveis no modo escuro, medido com axe.
+          `stone-400` é remapeado em `globals.css` para um tom legível nos
+          dois temas; `stone-600` nunca esteve nessa lista. */}
+      <div className="relative h-3.5 text-[10px] text-stone-400 dark:text-stone-400">
         <span className="absolute left-0">
           {min.toLocaleString("pt-PT")} {unit}
         </span>
@@ -2029,12 +2035,22 @@ export default function ModoGuiadoEmpresa({
                             type="button"
                             role="switch"
                             aria-checked={incluirConstituicao}
+                            // ── O NOME QUE O LEITOR DE ECRÃ NÃO TINHA ──
+                            //  Um `role="switch"` sem texto dentro é
+                            //  anunciado como «interruptor, ligado» e mais
+                            //  nada: quem não vê o ecrã fica sem saber
+                            //  ligado O QUÊ. O rótulo está ao lado, num
+                            //  `<span>` que não lhe pertence — por isso é
+                            //  preciso apontá-lo com `aria-labelledby`, e
+                            //  não duplicar o texto num `aria-label` que
+                            //  depois se desencontra do que está escrito.
+                            aria-labelledby="rot-incluir-constituicao"
                             onClick={() => setIncluirConstituicao(!incluirConstituicao)}
                             className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-y-2 before:-inset-x-1 before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-stone-900 ${incluirConstituicao ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}
                           >
                             <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${incluirConstituicao ? "translate-x-4" : ""}`} />
                           </button>
-                          <span className="text-xs text-stone-600 dark:text-stone-300">Incluir custos de constituição</span>
+                          <span id="rot-incluir-constituicao" className="text-xs text-stone-600 dark:text-stone-300">Incluir custos de constituição</span>
                         </div>
                         {incluirConstituicao && (
                           <>
@@ -2075,6 +2091,37 @@ export default function ModoGuiadoEmpresa({
                                   </button>
                                 ))}
                               </div>
+                            </div>
+
+                            {/* ── O DINHEIRO QUE PODE NÃO SER TEU ──────────
+                                Quem está a somar emolumentos, contabilista e
+                                software está a decidir se ISTO É PAGÁVEL. Há
+                                apoios públicos desenhados exatamente para
+                                esse momento e o produto nunca os nomeava —
+                                cobria os apoios à CONTRATAÇÃO, que é outra
+                                coisa e vem depois.
+
+                                Nomes de programas, e nada mais: nem valores,
+                                nem regras de elegibilidade. Mudam quase todos
+                                os anos, quem decide é o IEFP, e um número
+                                errado aqui valeria mais do que o silêncio. */}
+                            <div className="rounded-2xl border border-stone-100 bg-stone-50 p-3 dark:border-stone-800 dark:bg-stone-900/50">
+                              <p className="flex items-start gap-2 text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                                <Coin size={13} className="mt-0.5 flex-shrink-0 text-stone-400" aria-hidden />
+                                <span>
+                                  <strong className="text-stone-600 dark:text-stone-300">
+                                    Parte disto pode não sair do teu bolso.
+                                  </strong>{" "}
+                                  Quem está a receber subsídio de desemprego pode pedi-lo de uma só vez
+                                  para criar o próprio emprego, e há linhas de crédito com garantia e
+                                  juro reduzido, microcrédito e apoio técnico gratuito para montar o
+                                  plano — tudo no PAECPE e no Empreende XXI. Não simulamos nada disto:
+                                  as condições mudam e quem decide a elegibilidade é o IEFP.
+                                  <span className="ml-1">
+                                    <LeiRef artigo="Ver no IEFP" url={LEI.iefpEmpreendedorismo} />
+                                  </span>
+                                </span>
+                              </p>
                             </div>
                           </>
                         )}
@@ -2585,11 +2632,11 @@ export default function ModoGuiadoEmpresa({
                         </div>
                       )}
                       <div className="flex items-center gap-3 mb-3">
-                        <button type="button" role="switch" aria-checked={temImovelEmpresa} onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
+                        <button type="button" role="switch" aria-checked={temImovelEmpresa} aria-labelledby="rot-tem-imovel" onClick={() => setTemImovelEmpresa(!temImovelEmpresa)}
                           className={`relative h-5 w-9 flex-shrink-0 rounded-full transition-colors before:absolute before:-inset-y-2 before:-inset-x-1 before:content-[''] focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:focus-visible:ring-offset-stone-900 ${temImovelEmpresa ? "bg-brand" : "bg-stone-300 dark:bg-stone-700"}`}>
                           <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${temImovelEmpresa ? "translate-x-4" : ""}`} />
                         </button>
-                        <span className="text-xs text-stone-600 dark:text-stone-300">A empresa tem ou vai adquirir imóvel próprio</span>
+                        <span id="rot-tem-imovel" className="text-xs text-stone-600 dark:text-stone-300">A empresa tem ou vai adquirir imóvel próprio</span>
                       </div>
                       {temImovelEmpresa && (
                         <div className="space-y-4">
@@ -3065,6 +3112,11 @@ export default function ModoGuiadoEmpresa({
                                 { Icon: Plane, titulo: "Nomear representante fiscal", desc: `Obrigatório para residentes fora da UE/EEE (Art. 19.º LGT). Custo estimado: ${fmt(CUSTO_REPRESENTANTE_FISCAL_DEFAULT)}/mês.` },
                               ] : []),
                             ] : []),
+                            // Antes de gastar: é a ordem certa. Um apoio à
+                            // criação do próprio emprego pede candidatura
+                            // ANTES, e depois de a empresa estar constituída
+                            // já não há nada a fazer.
+                            { Icon: Coin, titulo: "Ver se tens direito a apoios antes de gastar", desc: "PAECPE, Empreende XXI e microcrédito apoiam quem cria o próprio emprego — e a candidatura faz-se antes de avançar, não depois. Confirma a elegibilidade no IEFP.", lei: { artigo: "IEFP", url: LEI.iefpEmpreendedorismo } },
                             { Icon: FileSign, titulo: "Escolher firma e CAE", desc: "Reservar o nome online no Portal da Empresa e definir o código CAE da atividade." },
                             { Icon: Building, titulo: "Constituir a sociedade", desc: `Balcão da Empresa na Hora: menos de 1 hora, ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)}. Online no Portal da Empresa: ${fmt(CUSTO_CONSTITUICAO_ONLINE_PACTO_APROVADO.value)} com pacto pré-aprovado (5 dias) ou ${fmt(CUSTO_CONSTITUICAO_BALCAO.value)} com pacto próprio (10 dias).` },
                             { Icon: Shield, titulo: "Abrir conta bancária da empresa", desc: `Abrir a conta em nome da sociedade e depositar o capital social — mínimo ${fmt(CAPITAL_SOCIAL_MINIMO_POR_SOCIO.value)} por quota. Se não for entregue no ato, há 5 dias úteis para o fazer.` },

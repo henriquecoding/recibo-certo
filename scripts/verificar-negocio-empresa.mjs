@@ -320,6 +320,33 @@ try {
         "empresa: quem está a avaliar é convidado a construir o projeto",
         noFim.includes("Construir o projeto que dá esta faturação"),
       );
+
+      // ── OS APOIOS SÃO UM PONTEIRO, E TÊM DE CONTINUAR A SÊ-LO ──
+      //  As medidas do IEFP mudam de nome, de dotação e de condições
+      //  quase todos os anos — é a nota que o guia dos apoios à
+      //  contratação já traz. Por isso o produto nomeia os programas e
+      //  liga à página oficial, e NÃO escreve valores nem regras de
+      //  elegibilidade: quem decide quem tem direito é o IEFP.
+      //
+      //  Esta verificação existe para o dia em que alguém, de boa fé,
+      //  achar que «ajudava dizer quanto é». Um número aqui envelhece
+      //  em silêncio e vale menos do que não estar nada escrito.
+      verificar(
+        "empresa: a checklist manda confirmar os apoios ANTES de gastar",
+        noFim.includes("Ver se tens direito a apoios antes de gastar"),
+      );
+      const blocosApoio = await pagina.evaluate(() => {
+        const texto = document.querySelector("#ferramenta")?.innerText ?? "";
+        return texto
+          .split("\n")
+          .filter((linha) => /PAECPE|Empreende XXI|próprio emprego/i.test(linha))
+          .join(" | ");
+      });
+      verificar(
+        "empresa: os apoios nomeiam programas, nunca valores",
+        blocosApoio.length > 0 && !/\d[\d\s.,]*\s*(€|%)/.test(blocosApoio),
+        blocosApoio.slice(0, 160),
+      );
       await semErroDeRuntime(pagina, "empresa: percurso guiado");
 
       verificar("sem erros de JavaScript", errosJS.length === 0, errosJS.slice(0, 2).join(" | "));

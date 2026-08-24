@@ -37,13 +37,30 @@ export function GuiadoStepper({ passos, atual }: { passos: string[]; atual: numb
               >
                 {done ? <Check size={12} /> : n}
               </span>
+              {/* ┌──────────────────────────────────────────────────────┐
+                  │ O RÓTULO DO PASSO POR FAZER ERA INVISÍVEL.            │
+                  │                                                      │
+                  │ `text-stone-300` é #d6d3d1: sobre branco dá 1,48:1,  │
+                  │ medido com axe. Não é «esbatido», é ilegível — e      │
+                  │ este stepper é partilhado pelos três modos guiados,   │
+                  │ por isso falhava nos três ao mesmo tempo, em          │
+                  │ qualquer ecrã a partir de `sm:` (abaixo disso o       │
+                  │ rótulo está escondido e ninguém dava por ela).        │
+                  │                                                      │
+                  │ A hierarquia mantém-se, agora com tons que passam:    │
+                  │ o passo atual na cor da marca, os feitos mais         │
+                  │ escuros (7,4:1) e os que faltam no cinzento           │
+                  │ remapeado por `globals.css` (5,15:1). A distinção     │
+                  │ principal nunca foi a cor do texto — é o círculo,     │
+                  │ com o visto e o anel.                                 │
+                  └──────────────────────────────────────────────────────┘ */}
               <span
                 className={`hidden whitespace-nowrap text-[10px] font-semibold uppercase tracking-wide transition-colors sm:block ${
                   active
                     ? "text-brand-dark dark:text-brand"
                     : done
-                      ? "text-stone-500 dark:text-stone-400"
-                      : "text-stone-300 dark:text-stone-600"
+                      ? "text-stone-600 dark:text-stone-300"
+                      : "text-stone-500 dark:text-stone-400"
                 }`}
               >
                 {label}

@@ -805,6 +805,34 @@ export default function Configurador({
                 </Opcao>
               ))}
             </div>
+            {/* ── O TETO PODE NÃO SER O QUE PENSAS ─────────────────────
+                Este campo não ordena: ELIMINA. Um modelo que raramente
+                arranca abaixo de 5 000 € desaparece de quem declarou
+                1 000 — e desaparece com razão, porque o motor não
+                inventa meios que não existem.
+
+                Mas há dinheiro público desenhado exatamente para este
+                momento, e uma pessoa que o desconheça fixa aqui um teto
+                mais baixo do que o real e perde hipóteses que lhe eram
+                acessíveis. Dizê-lo ANTES de responder é a diferença.
+
+                Nomes de programas e mais nada: sem valores, sem regras de
+                elegibilidade. Mudam quase todos os anos e quem decide é o
+                IEFP — inventar um número aqui seria pior do que calar. */}
+            <p className="mt-2 text-[11px] leading-snug text-stone-500">
+              Antes de fixares o teto: quem está a receber subsídio de desemprego pode recebê-lo
+              de uma só vez para criar o próprio emprego, e há microcrédito e linhas com garantia
+              pública (PAECPE, Empreende XXI).{" "}
+              <a
+                href="https://www.iefp.pt/empreendedorismo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-brand-dark underline underline-offset-2 hover:text-brand dark:text-brand-mint"
+              >
+                Confirmar no IEFP
+              </a>
+              . Não entra no motor — as condições mudam e a elegibilidade é decidida lá, não aqui.
+            </p>
           </Campo>
 
           <div className="mt-4">

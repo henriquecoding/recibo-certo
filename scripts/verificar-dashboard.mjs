@@ -220,10 +220,39 @@ try {
     }
     verificar("consentimento recusado ⇒ zero pedidos a /api/analytics", pedidos.length === 0, pedidos[0]);
 
+    // ┌──────────────────────────────────────────────────────────────────┐
+    // │ O PADRÃO `anon` DEIXOU DE SERVIR QUANDO O COFRE APARECEU.         │
+    // │                                                                  │
+    // │ As chaves do cofre terminam em `::anonimo` — o NOME DO COFRE de   │
+    // │ quem não tem sessão, não um identificador de ninguém. Um filtro   │
+    // │ por `anon` passou a apanhá-las e a acusar uma fuga de privacidade │
+    // │ onde só há dados locais da própria pessoa, no sítio certo.        │
+    // │                                                                  │
+    // │ Passa a verificar o que a promessa diz mesmo: sem consentimento   │
+    // │ de estatística, nenhuma das chaves de IDENTIDADE de medição é     │
+    // │ escrita. Os nomes vêm de `analytics/identidade.ts`, e o sufixo do │
+    // │ cofre é excluído explicitamente para o padrão não voltar a        │
+    // │ confundir uma coisa com a outra.                                  │
+    // └──────────────────────────────────────────────────────────────────┘
     const identidade = await p.evaluate(() =>
-      Object.keys(localStorage).filter((k) => /anon|ator|actor|analytics/i.test(k)),
+      Object.keys(localStorage)
+        .filter((k) => !k.includes("::"))
+        .filter((k) => /anonymous_id|atribuicao|ator|actor|analytics/i.test(k)),
     );
     verificar("consentimento recusado ⇒ nenhum identificador anónimo guardado", identidade.length === 0, identidade.join(", "));
+
+    // E o cofre continua a ser um cofre: nada do que lá está pode ser um
+    // identificador de medição disfarçado de dados locais.
+    const dentroDoCofre = await p.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((k) => k.includes("::"))
+        .filter((k) => /anonymous_id|atribuicao|analytics/i.test(k.split("::")[0])),
+    );
+    verificar(
+      "e nenhum identificador de medição se esconde dentro do cofre",
+      dentroDoCofre.length === 0,
+      dentroDoCofre.join(", "),
+    );
 
     // Uma simulação anónima continua a ser calculada NO DISPOSITIVO.
     const pedidosSimulacao = [];
