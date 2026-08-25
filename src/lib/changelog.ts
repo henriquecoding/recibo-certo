@@ -16,6 +16,14 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.122.2",
+    data: "2026-08-25",
+    titulo: "O monitor de privacidade passa a provar a própria configuração",
+    itens: [
+      "Alterar a definição do monitor diário não o executava: só mudanças na base, no contrato do diretório ou no script disparavam a prova. A partir de agora, mexer no próprio workflow também obriga a consultar a base de produção. Assim uma correção de configuração não pode ficar à espera do agendamento seguinte nem ser dada como validada sem ter feito o pedido anónimo real.",
+    ],
+  },
+  {
     version: "2.122.1",
     data: "2026-08-25",
     titulo: "A prova diária da fronteira pública volta a chegar à base de dados real",
