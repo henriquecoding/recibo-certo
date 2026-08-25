@@ -16,6 +16,29 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.123.0",
+    data: "2026-08-25",
+    titulo: "«Tenho carrinha» deixou de ser uma resposta: a viatura passa a ter idade, quilos e medidas",
+    itens: [
+      "Dizeres que tens carta e carrinha valia tanto para uma carrinha de 2023 como para uma de 2004 com dois lugares. Agora perguntamos o ano da primeira matrícula, e sem ele a viatura fica por confirmar — por mais que o resto esteja respondido. Não é burocracia: é o que decide se a inspeção já é anual.",
+      "A carga útil deixou de viver só em «reduzida / média / elevada». Se souberes os quilos, escreve-os — e são os quilos que mandam. Uma carrinha declarada como «média» mas com 150 kg de carga útil deixa de aparecer em trabalho que precisa de 200, mesmo que a faixa dissesse que sim.",
+      "A zona de carga passa a medir-se em centímetros. Transportar volume pede uma viatura onde caiba uma palete europeia (120 × 80 cm, norma EN 13698-1); se as medidas que declarares não chegarem, o motor diz exatamente qual é o eixo que falha em vez de te recomendar um trabalho que não consegues fazer.",
+      "Passamos a perguntar se a viatura circula em qualquer lado ou se está limitada em centro urbano. É o que declarares — nunca inferido da matrícula nem da idade, porque as regras municipais mudam e não as inventamos.",
+      "Pela idade que declarares, dizemos-te se a inspeção já é anual, com a base legal ao lado (Decreto-Lei n.º 144/2017). Uma viatura de mercadorias entra nesse regime aos 2 anos; um carro de passageiros só aos 8 — e isso é custo e um dia sem viatura, todos os anos.",
+      "Cada meio passa a poder ter um custo mensal declarado — prestação, aluguer, seguro, manutenção — e esse valor entra nas contas de viabilidade. O que deixares em branco não vira zero: fica escrito como por orçamentar, que é a diferença entre o mês fechar e não fechar.",
+      "Não teres assinalado «computador» deixou de te eliminar. Havia oito capacidades — organizar processos, tratar dados, escrever para vender, construir software, produzir conteúdo, montar ferramentas digitais, tratar papelada, atrair clientes — que exigiam um computador declarado a quem estava a usar esta ferramenta num computador. Um programador que escolhesse «Programação» e mais nada batia numa parede sem porta.",
+      "Passa a haver duas respostas diferentes para «não tenho». Uma cozinha licenciada, um armazém, uma carta de condução ou uma carteira de clientes não se arranjam na semana em que decides abrir: continuam a eliminar. Um computador, um jogo de ferramentas, uma bancada ou uma câmara são despesa de arranque: deixam de eliminar, ficam nomeados como coisa a comprar antes de começar, e nunca são dados por resolvidos.",
+      "O que falta comprar não é orçamentado — e isso é de propósito. Não temos fonte para o preço de «um computador de trabalho», e inventá-lo seria pior do que não o dizer. Aparece escrito o que falta e que falta, para entrares com esse número tu.",
+      "Comentários no código que diziam números errados — «vinte e duas competências» quando são vinte e oito, «sete dimensões de risco» quando são oito, «vinte e cinco dos vinte e oito problemas» quando são vinte e oito de trinta e um. Nada disto partia a aplicação; tudo isto dizia a quem lesse, com toda a confiança, um número que já não era verdade. Corrigidos, e passa a haver uma verificação automática que impede a divergência de voltar.",
+      "O que já provaste passa a mudar o que te é sugerido a seguir. Registavas entrevistas, orçamentos aceites, pré-vendas, pilotos pagos e vendas — e isso ficava numa linha do tempo sem nunca voltar ao motor. Agora uma venda tua sobe a hipótese que a produziu, e aproxima as que servem o mesmo tipo de cliente na mesma forma de entrega: já provaste que consegues vender ali. Uma entrevista continua a valer zero, porque ouvir «era capaz de comprar» não é uma venda.",
+      "Um modelo de receita que não fechou as contas contigo no motor de preço passa a descer — e desce o MODELO, não o setor. O problema pode ser bom e a forma de cobrar não ser.",
+      "Nada disto inventa mercado. Uma venda tua é informação sobre ti, não uma série oficial: muda a ordem por que te aparecem as hipóteses, e nunca a procura, a oferta, a evidência, a confiança ou a pontuação publicada. E uma prova com mais de seis meses deixa de reordenar seja o que for.",
+      "Havia sete formas de ler a lista — melhor combinação, maior afinidade, menor investimento, receita mais rápida, menor risco, com mais evidência, fora do óbvio — e todas as sete eram, à sua maneira, conservadoras. Faltava a ambiciosa. Passa a haver «Maior potencial»: a hipótese que menos depende das tuas horas para crescer. Não é a que dá mais dinheiro — é a que não fica presa ao tempo que tens.",
+      "Zero resultados deixou de ser um beco. Quando as tuas recusas fecham o espaço todo, passas a ver o que abre se mudares uma coisa — e o número ao lado foi contado a correr o motor outra vez com essa mudança feita, não estimado. Se nenhuma mudança sozinha chegar, dizemos qual é o par que chega, em vez de te deixarmos a adivinhar.",
+      "Medido: de cada quatro pessoas, uma saía daqui sem uma única hipótese. Passou a ser uma em vinte. Testado a competência a competência, isoladas: eram doze em vinte e duas a devolver zero, passaram a ser três em vinte e oito — e as três são barreiras a sério (carta e viatura, cozinha licenciada, e «línguas», que é reforço de outra competência e não caminho próprio).",
+    ],
+  },
+  {
     version: "2.122.4",
     data: "2026-08-25",
     titulo: "O calendário fiscal passa a dizer as datas certas — e o acerto de IRS não é em junho",

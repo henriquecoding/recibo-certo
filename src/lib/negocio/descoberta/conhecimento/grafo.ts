@@ -21,7 +21,12 @@ import type { Capacidade, GrafoConhecimento, ModeloReceita, Problema } from "./t
 import type { AtivoId, OpportunityContext } from "../contexto/tipos";
 import type { MarketRegion } from "@/lib/negocio/market/geografia";
 import { forcaDe, nivelDe } from "../contexto/tipos";
-import { ativoImpedeExecucao, avaliarAtivosDaCapacidade, type AvaliacaoRequisitoAtivo } from "./adequacao-ativos";
+import {
+  ativoImpedeExecucao,
+  avaliarAtivosDaCapacidade,
+  meiosPorAdquirir,
+  type AvaliacaoRequisitoAtivo,
+} from "./adequacao-ativos";
 
 export const GRAFO: GrafoConhecimento = Object.freeze({
   competencias: COMPETENCIAS,
@@ -174,6 +179,8 @@ export interface CapacidadeAlcancada {
   ativosEmFalta: readonly AtivoId[];
   ativosInadequados: readonly AtivoId[];
   ativosPorConfirmar: readonly AtivoId[];
+  /** Meios compráveis que faltam. Não impedem — custam. */
+  ativosPorAdquirir: readonly AtivoId[];
   /** Estado e razão de cada requisito, incluindo grupos alternativos (OU). */
   avaliacoesAtivos: readonly AvaliacaoRequisitoAtivo[];
   /** 0–1. Presença desconhecida nunca vale adequação completa. */
@@ -215,6 +222,7 @@ export function capacidadesAlcancadas(
           .flatMap((item) => (item.ativo ? [item.ativo] : [])),
       ),
     ];
+    const ativosPorAdquirir = meiosPorAdquirir(avaliacoesAtivos);
     const adequacaoAtivos =
       avaliacoesAtivos.length === 0
         ? 1
@@ -253,6 +261,7 @@ export function capacidadesAlcancadas(
       ativosEmFalta,
       ativosInadequados,
       ativosPorConfirmar,
+      ativosPorAdquirir,
       avaliacoesAtivos,
       adequacaoAtivos,
     });

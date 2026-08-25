@@ -36,12 +36,20 @@ export function estadoDaAdequacaoDeclarada(
     return "por-confirmar";
   }
 
+  // Uma viatura só conta como confirmada quando se sabe o que ela é: a
+  // configuração, os lugares, quanto leva, de que ano é e se pode circular
+  // onde o trabalho acontece. Faltar um destes é «ainda não perguntámos» —
+  // que foi exatamente o buraco por onde «tenho carrinha» passava.
   if (
     VIATURAS.has(id) &&
     (!detalhe.veiculo?.configuracao ||
       detalhe.veiculo.configuracao === "por-confirmar" ||
       detalhe.veiculo.lugares === undefined ||
-      detalhe.veiculo.capacidadeCarga === undefined ||
+      (detalhe.veiculo.capacidadeCarga === undefined &&
+        detalhe.veiculo.cargaUtilKg === undefined) ||
+      detalhe.veiculo.anoMatricula === undefined ||
+      detalhe.veiculo.restricoesCirculacao === undefined ||
+      detalhe.veiculo.restricoesCirculacao === "por-confirmar" ||
       detalhe.veiculo.inspecao !== "valida")
   ) {
     return "por-confirmar";
@@ -51,6 +59,7 @@ export function estadoDaAdequacaoDeclarada(
     detalhe.estado === "funcional-com-limitacoes" ||
     detalhe.disponibilidade === "ocasional" ||
     detalhe.acesso !== "proprio" ||
+    detalhe.veiculo?.restricoesCirculacao === "centro-urbano-limitado" ||
     (detalhe.limitacoes?.length ?? 0) > 0
   ) {
     return "limitado";

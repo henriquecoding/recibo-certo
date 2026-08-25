@@ -103,6 +103,7 @@ export function calcularFit(
       : avaliacoesUteis.reduce((total, item) => total + item.forca, 0) / avaliacoesUteis.length;
   const parteAtivos = requisitos.length > 0 ? 0.8 * parteObrigatoria + 0.2 * parteUtil : 0.5 + 0.5 * parteUtil;
   const emFalta = requisitos.filter((item) => item.estado === "em-falta" || item.estado === "inadequado");
+  const porAdquirir = requisitos.filter((item) => item.estado === "por-adquirir");
   const porConfirmar = requisitos.filter((item) => item.estado === "por-confirmar");
   const limitados = [...requisitos, ...avaliacoesUteis].filter((item) => item.estado === "limitado");
   const uteisQueTem = avaliacoesUteis.filter((item) => item.forca > 0);
@@ -113,13 +114,15 @@ export function calcularFit(
     nota:
       emFalta.length > 0
         ? "Falta, ou não é adequado, pelo menos um meio que este trabalho exige."
-        : porConfirmar.length > 0
-          ? `${porConfirmar.length === 1 ? "Há um meio" : `Há ${porConfirmar.length} meios`} por confirmar antes de tratar esta hipótese como executável.`
-          : limitados.length > 0
-            ? "Os meios existem, mas as limitações declaradas reduzem a capacidade real de execução."
-            : uteisQueTem.length > 0
-              ? `O que já tens serve: ${uteisQueTem.length} ${uteisQueTem.length === 1 ? "meio aproveitado" : "meios aproveitados"}.`
-              : "Não exige meios que não tenhas.",
+        : porAdquirir.length > 0
+          ? `${porAdquirir.length === 1 ? "Há equipamento" : `Há ${porAdquirir.length} equipamentos`} que este trabalho pede e que ainda não declaraste ter. Não impede — compra-se — mas conta no arranque.`
+          : porConfirmar.length > 0
+            ? `${porConfirmar.length === 1 ? "Há um meio" : `Há ${porConfirmar.length} meios`} por confirmar antes de tratar esta hipótese como executável.`
+            : limitados.length > 0
+              ? "Os meios existem, mas as limitações declaradas reduzem a capacidade real de execução."
+              : uteisQueTem.length > 0
+                ? `O que já tens serve: ${uteisQueTem.length} ${uteisQueTem.length === 1 ? "meio aproveitado" : "meios aproveitados"}.`
+                : "Não exige meios que não tenhas.",
   });
 
   // ── Experiência ───────────────────────────────────────────────────

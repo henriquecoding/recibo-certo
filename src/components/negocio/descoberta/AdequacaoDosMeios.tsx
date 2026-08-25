@@ -8,6 +8,10 @@ import type {
   DetalhesAtivos,
 } from "@/lib/negocio/descoberta/contexto/tipos";
 import { estadoDaAdequacaoDeclarada } from "@/lib/negocio/descoberta/contexto/adequacao-declarada";
+import {
+  faixaDaCargaUtil,
+  inspecaoJaEAnual,
+} from "@/lib/negocio/descoberta/conhecimento/veiculos";
 import { Check, ChevronDown } from "@/components/ui/Icons";
 
 const ESTADOS = [
@@ -33,6 +37,27 @@ const VIATURAS: ReadonlySet<AtivoId> = new Set([
 const BASE: DetalheAtivo = {
   estado: "por-confirmar",
   usoProfissional: "por-confirmar",
+};
+
+const ANO_ATUAL = new Date().getFullYear();
+
+/** Campo vazio é «não perguntámos», nunca zero. */
+function numeroOuIndefinido(
+  valor: string,
+  minimo: number,
+  maximo: number,
+): number | undefined {
+  if (valor.trim() === "") return undefined;
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return undefined;
+  return Math.max(minimo, Math.min(maximo, Math.round(numero)));
+}
+
+const FAIXA_ROTULO: Readonly<Record<string, string>> = {
+  "muito-reduzida": "muito reduzida",
+  reduzida: "reduzida",
+  media: "média",
+  elevada: "elevada",
 };
 
 function estadoDo(id: AtivoId, detalhe: DetalheAtivo | undefined) {
@@ -232,7 +257,8 @@ export default function AdequacaoDosMeios({
                       </legend>
                       <p className="mt-0.5 text-[10px] leading-snug text-stone-500">
                         Uma carrinha antiga, de dois lugares ou com pouca carga
-                        pode servir algumas rotas e não outras.
+                        serve algumas rotas e não outras. Os quilos e os
+                        centímetros que escreveres mandam sobre a faixa.
                       </p>
                       <div className="mt-2 grid gap-3 sm:grid-cols-2">
                         <label className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
@@ -337,9 +363,193 @@ export default function AdequacaoDosMeios({
                             <option value="nao-valida">Não válida</option>
                           </select>
                         </label>
+                        <label className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                          Ano da primeira matrícula
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={1950}
+                            max={ANO_ATUAL}
+                            value={detalhe?.veiculo?.anoMatricula ?? ""}
+                            onChange={(evento) =>
+                              alterar(id, {
+                                veiculo: {
+                                  ...detalhe?.veiculo,
+                                  anoMatricula: numeroOuIndefinido(
+                                    evento.target.value,
+                                    1950,
+                                    ANO_ATUAL,
+                                  ),
+                                },
+                              })
+                            }
+                            placeholder="Por confirmar"
+                            className={estiloCampo}
+                          />
+                        </label>
+                        <label className="text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                          Carga útil, se souberes (kg)
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={3500}
+                            value={detalhe?.veiculo?.cargaUtilKg ?? ""}
+                            onChange={(evento) =>
+                              alterar(id, {
+                                veiculo: {
+                                  ...detalhe?.veiculo,
+                                  cargaUtilKg: numeroOuIndefinido(
+                                    evento.target.value,
+                                    0,
+                                    3500,
+                                  ),
+                                },
+                              })
+                            }
+                            placeholder="Prevalece sobre a faixa"
+                            className={estiloCampo}
+                          />
+                        </label>
+                        <label className="text-[11px] font-semibold text-stone-600 dark:text-stone-300 sm:col-span-2">
+                          Circulação
+                          <select
+                            value={
+                              detalhe?.veiculo?.restricoesCirculacao ??
+                              "por-confirmar"
+                            }
+                            onChange={(evento) =>
+                              alterar(id, {
+                                veiculo: {
+                                  ...detalhe?.veiculo,
+                                  restricoesCirculacao: evento.target
+                                    .value as NonNullable<
+                                    DetalheAtivo["veiculo"]
+                                  >["restricoesCirculacao"],
+                                },
+                              })
+                            }
+                            className={estiloCampo}
+                          >
+                            <option value="por-confirmar">Por confirmar</option>
+                            <option value="sem-restricoes">
+                              Circula em qualquer lado
+                            </option>
+                            <option value="centro-urbano-limitado">
+                              Limitada em centro urbano
+                            </option>
+                          </select>
+                        </label>
                       </div>
+
+                      <p className="mt-2 text-[11px] font-semibold text-stone-600 dark:text-stone-300">
+                        Zona de carga, em centímetros
+                      </p>
+                      <div className="mt-1 grid grid-cols-3 gap-2">
+                        {(
+                          [
+                            ["comprimento", "Comp."],
+                            ["largura", "Larg."],
+                            ["altura", "Alt."],
+                          ] as const
+                        ).map(([eixo, rotulo]) => (
+                          <label
+                            key={eixo}
+                            className="text-[10px] font-semibold text-stone-500 dark:text-stone-400"
+                          >
+                            {rotulo}
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              max={800}
+                              aria-label={`${rotulo === "Comp." ? "Comprimento" : rotulo === "Larg." ? "Largura" : "Altura"} da zona de carga, em centímetros`}
+                              value={
+                                detalhe?.veiculo?.dimensoesCargaCm?.[eixo] ?? ""
+                              }
+                              onChange={(evento) =>
+                                alterar(id, {
+                                  veiculo: {
+                                    ...detalhe?.veiculo,
+                                    dimensoesCargaCm: {
+                                      ...detalhe?.veiculo?.dimensoesCargaCm,
+                                      [eixo]: numeroOuIndefinido(
+                                        evento.target.value,
+                                        0,
+                                        800,
+                                      ),
+                                    },
+                                  },
+                                })
+                              }
+                              placeholder="—"
+                              className={estiloCampo}
+                            />
+                          </label>
+                        ))}
+                      </div>
+
+                      {(() => {
+                        const dados = detalhe?.veiculo;
+                        const anual = inspecaoJaEAnual(
+                          dados?.anoMatricula,
+                          dados?.configuracao,
+                          ANO_ATUAL,
+                        );
+                        const kg = dados?.cargaUtilKg;
+                        const avisos: string[] = [];
+                        if (anual === true) {
+                          avisos.push(
+                            `Com ${ANO_ATUAL - (dados?.anoMatricula ?? ANO_ATUAL)} anos, a inspeção desta viatura já é anual (DL 144/2017).`,
+                          );
+                        }
+                        if (
+                          kg !== undefined &&
+                          dados?.capacidadeCarga !== undefined &&
+                          faixaDaCargaUtil(kg) !== dados.capacidadeCarga
+                        ) {
+                          avisos.push(
+                            `${kg} kg corresponde a carga ${FAIXA_ROTULO[faixaDaCargaUtil(kg)]} — são os quilos que contam, não a faixa escolhida.`,
+                          );
+                        }
+                        if (avisos.length === 0) return null;
+                        return (
+                          <p
+                            data-leitura-viatura
+                            className="mt-2 rounded-2xl bg-stone-50 px-3 py-2 text-[10px] leading-snug text-stone-600 dark:bg-stone-800/60 dark:text-stone-300"
+                          >
+                            {avisos.join(" ")}
+                          </p>
+                        );
+                      })()}
                     </fieldset>
                   ) : null}
+
+                  <label className="mt-3 block border-t border-stone-100 pt-3 text-[11px] font-semibold text-stone-600 dark:border-stone-800 dark:text-stone-300">
+                    Quanto te custa por mês (€)
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={20000}
+                      value={detalhe?.custoMensalEur ?? ""}
+                      onChange={(evento) =>
+                        alterar(id, {
+                          custoMensalEur: numeroOuIndefinido(
+                            evento.target.value,
+                            0,
+                            20000,
+                          ),
+                        })
+                      }
+                      placeholder="Prestação, aluguer, seguro, manutenção"
+                      className={estiloCampo}
+                    />
+                    <span className="mt-1 block text-[10px] font-normal leading-snug text-stone-500">
+                      Deixar em branco não é zero: fica escrito como por
+                      orçamentar no cálculo de viabilidade.
+                    </span>
+                  </label>
 
                   <fieldset className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
                     <legend className="text-[11px] font-semibold text-stone-700 dark:text-stone-200">

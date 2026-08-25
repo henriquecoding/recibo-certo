@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  RISCO — sete dimensões, avaliadas em separado
+//  RISCO — oito dimensões, avaliadas em separado
 //  ---------------------------------------------------------------------
 //  Uma etiqueta só — «moderado» — esconde que a mesma pessoa pode aceitar
 //  volatilidade de receita e não aceitar nenhum risco regulatório. Aqui

@@ -43,8 +43,9 @@ export const NIVEIS: readonly { id: NivelConfiguracao; rotulo: string; nota: str
 //  ┌──────────────────────────────────────────────────────────────────┐
 //  │ O AGRUPAMENTO É DADO, NÃO DESENHO                                 │
 //  │                                                                  │
-//  │ Vinte e duas competências, catorze meios e quinze recusas numa   │
-//  │ grelha plana são cinquenta e um cartões seguidos: a página fica  │
+//  │ Vinte e oito competências, catorze meios e quinze recusas numa   │
+//  │ grelha plana são cinquenta e sete cartões seguidos: a página     │
+//  │ fica                                                             │
 //  │ verdadeira e ilegível ao mesmo tempo. Agrupar resolve — e o       │
 //  │ agrupamento vive aqui, com o resto do questionário, para o        │
 //  │ componente não passar a ter uma segunda taxonomia sua que        │
@@ -78,23 +79,73 @@ export const GRUPOS_ATIVOS: readonly { id: GrupoAtivo; rotulo: string }[] = Obje
   { id: "negocio", rotulo: "Já do negócio" },
 ]);
 
-export const ATIVOS: readonly { id: AtivoId; grupo: GrupoAtivo; rotulo: string; nota: string }[] =
-  Object.freeze([
-    { id: "carta-conducao", grupo: "mobilidade", rotulo: "Carta de condução", nota: "Abre tudo o que envolva rota ou deslocação." },
-    { id: "veiculo-ligeiro", grupo: "mobilidade", rotulo: "Viatura ligeira", nota: "Serve deslocações e recolhas pequenas." },
-    { id: "veiculo-carga", grupo: "mobilidade", rotulo: "Viatura de carga", nota: "Muda o que é possível: volume, mudanças, entregas B2B." },
-    { id: "computador", grupo: "equipamento", rotulo: "Computador de trabalho", nota: "Condição de qualquer trabalho digital." },
-    { id: "ferramentas", grupo: "equipamento", rotulo: "Ferramentas", nota: "Trabalho manual, instalação e reparação." },
-    { id: "equipamento-tecnico", grupo: "equipamento", rotulo: "Equipamento técnico", nota: "Diagnóstico, medição ou bancada." },
-    { id: "camara-video", grupo: "equipamento", rotulo: "Equipamento de imagem", nota: "Fotografia e vídeo com qualidade vendável." },
-    { id: "espaco-comercial", grupo: "espaco", rotulo: "Espaço comercial", nota: "Um sítio aberto ao público." },
-    { id: "armazem", grupo: "espaco", rotulo: "Armazém", nota: "Guardar volume entre recolha e entrega." },
-    { id: "oficina", grupo: "espaco", rotulo: "Oficina", nota: "Espaço próprio de trabalho técnico." },
-    { id: "cozinha-licenciada", grupo: "espaco", rotulo: "Cozinha licenciada", nota: "Condição de qualquer produção alimentar legal." },
-    { id: "terreno", grupo: "espaco", rotulo: "Terreno", nota: "Produção agrícola ou atividade ao ar livre." },
-    { id: "stock", grupo: "negocio", rotulo: "Stock", nota: "Produto já comprado, à espera de ser vendido." },
-    { id: "carteira-clientes", grupo: "negocio", rotulo: "Carteira de clientes", nota: "O ativo mais subestimado: encurta meses de aquisição." },
+/**
+ * Não ter um meio nem sempre quer dizer a mesma coisa.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ O DEFEITO QUE ISTO CORRIGE                                            │
+ * │                                                                      │
+ * │ `ativosNecessarios` era uma porta dura para TODOS os meios, e oito    │
+ * │ capacidades — organizar processos, tratar dados, escrever para       │
+ * │ vender, construir software, produzir conteúdo, montar ferramentas    │
+ * │ digitais, tratar requisitos formais, atrair clientes — exigiam       │
+ * │ «computador». Quem chega a esta ferramenta pela web tem computador.  │
+ * │ O que faltava era a CAIXA ASSINALADA, não o computador.              │
+ * │                                                                      │
+ * │ Medido a 25/08/2026: de 225 perfis sintéticos sem qualquer           │
+ * │ resultado, 184 morriam em «meios em falta» e 195 nem sequer          │
+ * │ alcançavam uma capacidade. Não era o grafo ser pequeno — era a porta │
+ * │ estar fechada à chave por um portátil.                               │
+ * └──────────────────────────────────────────────────────────────────────┘
+ *
+ * A distinção é uma pergunta só: **não ter isto impede, ou custa?**
+ *
+ *  · `estrutural` — impede. Uma cozinha licenciada, um armazém, uma carta
+ *    de condução ou uma carteira de clientes não se compram na semana em
+ *    que se decide abrir. A ausência ELIMINA, e continua a eliminar.
+ *  · `aquisivel` — custa. Um computador, um jogo de ferramentas, uma
+ *    bancada ou uma câmara são despesa de arranque como outra qualquer.
+ *    A ausência não elimina: fica NOMEADA como coisa a adquirir antes de
+ *    começar, pesa no encaixe, e nunca é apresentada como já resolvida.
+ *
+ * O que este ficheiro NÃO faz é dizer quanto custa adquirir. Não há fonte
+ * nossa para o preço de «um computador de trabalho», e inventá-lo seria a
+ * exceção que enfraquece a regra inteira — a mesma razão pela qual a renda
+ * não é estimada em `viabilidade.ts`. Nomeia-se, não se orça.
+ */
+export type BarreiraAtivo = "estrutural" | "aquisivel";
+
+export const ATIVOS: readonly {
+  id: AtivoId;
+  grupo: GrupoAtivo;
+  rotulo: string;
+  nota: string;
+  barreira: BarreiraAtivo;
+}[] = Object.freeze([
+    { id: "carta-conducao", grupo: "mobilidade", rotulo: "Carta de condução", nota: "Abre tudo o que envolva rota ou deslocação.", barreira: "estrutural" },
+    { id: "veiculo-ligeiro", grupo: "mobilidade", rotulo: "Viatura ligeira", nota: "Serve deslocações e recolhas pequenas.", barreira: "estrutural" },
+    { id: "veiculo-carga", grupo: "mobilidade", rotulo: "Viatura de carga", nota: "Muda o que é possível: volume, mudanças, entregas B2B.", barreira: "estrutural" },
+    { id: "computador", grupo: "equipamento", rotulo: "Computador de trabalho", nota: "Condição de qualquer trabalho digital.", barreira: "aquisivel" },
+    { id: "ferramentas", grupo: "equipamento", rotulo: "Ferramentas", nota: "Trabalho manual, instalação e reparação.", barreira: "aquisivel" },
+    { id: "equipamento-tecnico", grupo: "equipamento", rotulo: "Equipamento técnico", nota: "Diagnóstico, medição ou bancada.", barreira: "aquisivel" },
+    { id: "camara-video", grupo: "equipamento", rotulo: "Equipamento de imagem", nota: "Fotografia e vídeo com qualidade vendável.", barreira: "aquisivel" },
+    { id: "espaco-comercial", grupo: "espaco", rotulo: "Espaço comercial", nota: "Um sítio aberto ao público.", barreira: "estrutural" },
+    { id: "armazem", grupo: "espaco", rotulo: "Armazém", nota: "Guardar volume entre recolha e entrega.", barreira: "estrutural" },
+    { id: "oficina", grupo: "espaco", rotulo: "Oficina", nota: "Espaço próprio de trabalho técnico.", barreira: "estrutural" },
+    { id: "cozinha-licenciada", grupo: "espaco", rotulo: "Cozinha licenciada", nota: "Condição de qualquer produção alimentar legal.", barreira: "estrutural" },
+    { id: "terreno", grupo: "espaco", rotulo: "Terreno", nota: "Produção agrícola ou atividade ao ar livre.", barreira: "estrutural" },
+    { id: "stock", grupo: "negocio", rotulo: "Stock", nota: "Produto já comprado, à espera de ser vendido.", barreira: "estrutural" },
+    { id: "carteira-clientes", grupo: "negocio", rotulo: "Carteira de clientes", nota: "O ativo mais subestimado: encurta meses de aquisição.", barreira: "estrutural" },
   ]);
+
+const BARREIRA_POR_ATIVO: ReadonlyMap<AtivoId, BarreiraAtivo> = new Map(
+  ATIVOS.map((item) => [item.id, item.barreira]),
+);
+
+/** Meio desconhecido conta como estrutural: errar por excesso de cuidado. */
+export function barreiraDoAtivo(id: AtivoId): BarreiraAtivo {
+  return BARREIRA_POR_ATIVO.get(id) ?? "estrutural";
+}
 
 // ── RESTRIÇÕES ───────────────────────────────────────────────────────
 

@@ -114,13 +114,47 @@ export type EstadoInspecaoVeiculo = "valida" | "por-confirmar" | "nao-valida";
 export type AdaptacaoVeiculo =
   "separacao-carga" | "prateleiras" | "refrigeracao" | "rampa" | "interior-lavavel" | "transporte-animais";
 
+/**
+ * O que a pessoa sabe sobre a circulação da viatura, e nada mais.
+ *
+ * NÃO é inferido da idade nem da matrícula: as zonas de emissões reduzidas
+ * têm regras municipais que mudam, e o motor não as afirma. Pergunta-se, e
+ * `por-confirmar` continua a significar «ainda não perguntámos».
+ */
+export type RestricoesCirculacao = "sem-restricoes" | "centro-urbano-limitado" | "por-confirmar";
+
+/** Zona de carga útil, em centímetros. O que lá cabe decide o trabalho. */
+export interface DimensoesCargaCm {
+  comprimento?: number;
+  largura?: number;
+  altura?: number;
+}
+
 export interface DetalheVeiculo {
   /** Homologação/configuração — não a aparência da viatura. */
   configuracao?: ConfiguracaoVeiculo;
   lugares?: number;
-  /** Faixa operacional, sem inventar quilogramas que não conhecemos. */
+  /**
+   * Faixa operacional, para quem não sabe os quilos de cor. É um RÓTULO de
+   * um intervalo de carga útil (ver `KG_DA_FAIXA`), não uma medição.
+   */
   capacidadeCarga?: CapacidadeCargaVeiculo;
+  /**
+   * Carga útil declarada, em quilogramas — a linha F.2/G do certificado de
+   * matrícula menos a tara. Quando existe, MANDA sobre a faixa: 320 kg são
+   * 320 kg, mesmo que a pessoa tenha escolhido «média» ao lado.
+   */
+  cargaUtilKg?: number;
+  /** Zona de carga em centímetros. Uma máquina de lavar não negoceia. */
+  dimensoesCargaCm?: DimensoesCargaCm;
+  /**
+   * Ano da primeira matrícula. Não é veredito — é o que permite dizer com
+   * que periodicidade a inspeção passa a ser obrigatória (DL 144/2017).
+   */
+  anoMatricula?: number;
   inspecao?: EstadoInspecaoVeiculo;
+  /** Declarado pela pessoa. Nunca inferido da idade nem da matrícula. */
+  restricoesCirculacao?: RestricoesCirculacao;
   adaptacoes?: readonly AdaptacaoVeiculo[];
 }
 
@@ -130,6 +164,12 @@ export interface DetalheAtivo {
   acesso?: AcessoAtivo;
   usoProfissional?: UsoProfissionalAtivo;
   veiculo?: DetalheVeiculo;
+  /**
+   * O que este meio custa por mês, em euros, já declarado pela pessoa —
+   * prestação, aluguer, seguro, manutenção. Um meio que se tem não é um
+   * meio que sai de graça, e a viabilidade tem de o saber.
+   */
+  custoMensalEur?: number;
   /** Limitações escolhidas numa lista; nunca inferidas pelo motor. */
   limitacoes?: readonly string[];
 }
@@ -247,7 +287,7 @@ export type RestricaoId =
 export type PerfilRisco = "muito-conservador" | "conservador" | "moderado" | "arrojado" | "muito-arrojado";
 
 /**
- * As sete dimensões de risco, avaliadas em separado.
+ * As oito dimensões de risco, avaliadas em separado.
  *
  * Uma etiqueta só — «moderado» — esconde que a mesma pessoa pode aceitar
  * volatilidade de receita e não aceitar nenhum risco regulatório. Cada

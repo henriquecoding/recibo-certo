@@ -335,12 +335,50 @@ try {
       await viatura.getByLabel("Lugares").fill("2");
       await viatura.getByLabel("Capacidade de carga útil").selectOption("media");
       await viatura.getByLabel("Inspeção").selectOption("valida");
+
+      // Antes de o ano, a circulação e as medidas serem respondidos, a
+      // viatura NÃO pode contar como confirmada. É a regressão de «tenho
+      // carrinha»: uma carrinha de 2004, de dois lugares e com uma zona de
+      // carga onde não entra uma palete não faz o mesmo trabalho que uma
+      // de 2023, e o motor tratava-as como o mesmo meio.
+      await pagina.waitForTimeout(200);
+      verificar(
+        "sem ano, circulação e medidas, a viatura ainda não está confirmada",
+        (await pagina.getByText("Confirmado", { exact: true }).count()) < 2,
+      );
+
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2019");
+      await viatura.getByLabel("Circulação").selectOption("sem-restricoes");
+      await viatura
+        .getByLabel("Comprimento da zona de carga, em centímetros")
+        .fill("180");
+      await viatura
+        .getByLabel("Largura da zona de carga, em centímetros")
+        .fill("110");
+      await viatura.getByLabel("Altura da zona de carga, em centímetros").fill("120");
       await pagina.waitForTimeout(300);
 
       verificar(
         "carta e viatura só contam depois de confirmar adequação",
         (await pagina.getByText("Confirmado", { exact: true }).count()) >= 2,
       );
+
+      // O emblema responde a «já disseste?», não a «serve para este
+      // trabalho?». Se a zona de carga for pequena de mais para uma palete,
+      // a viatura continua declarada — o que muda é a hipótese que o motor
+      // deixa de apresentar, e isso está fixado nos testes de unidade
+      // (`negocio-descoberta-personalizacao-adaptativa`). Aqui só se
+      // verifica que a leitura da idade aparece no ecrã com a base legal.
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2010");
+      await pagina.waitForTimeout(300);
+      verificar(
+        "a idade declarada traz a periodicidade legal da inspeção",
+        /inspeção desta viatura já é anual/.test(
+          await viatura.innerText(),
+        ),
+      );
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2019");
+      await pagina.waitForTimeout(300);
 
       const profundidade = await pagina.evaluate(
         () => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? "0",
@@ -485,7 +523,41 @@ try {
         "a pontuação vai publicada com a incerteza ao lado",
         /Pontuação \d+/.test(texto) && (/entre \d+ e \d+/.test(texto) || /não há intervalo/.test(texto)),
       );
-      verificar("diz o que não teve base para ser avaliado", /sem base para avaliar/.test(texto));
+      // ┌────────────────────────────────────────────────────────────┐
+      // │ A GARANTIA É «NUNCA EM BRANCO», NÃO «HÁ SEMPRE UMA LACUNA»  │
+      // │                                                            │
+      // │ Isto assertava `/sem base para avaliar/` no dossier, o que  │
+      // │ exigia que a hipótese aberta TIVESSE uma dimensão por       │
+      // │ avaliar. Passou a falhar quando o motor deixou de eliminar  │
+      // │ por meios compráveis e a hipótese de topo passou a ter as   │
+      // │ oito dimensões com leitura — ou seja, falhava por ter       │
+      // │ melhorado, que é o pior motivo para um teste falhar.        │
+      // │                                                            │
+      // │ O que interessa proteger é outro: uma dimensão sem base     │
+      // │ NUNCA pode aparecer vazia nem valer zero por omissão. Cada  │
+      // │ uma das oito mostra um número ou di-lo por palavras.        │
+      // └────────────────────────────────────────────────────────────┘
+      const painel = texto.slice(texto.indexOf("AS OITO DIMENSÕES"));
+      const semLeitura = [
+        "Compatibilidade contigo",
+        "Procura",
+        "Lacuna de oferta",
+        "Cabe no capital e no prazo",
+        "Exequibilidade",
+        "Barreira regulatória",
+        "Risco dentro da tua tolerância",
+        "Adequação geográfica",
+      ].filter((dimensao) => {
+        const seguinte = painel.match(
+          new RegExp(`${dimensao.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\n([^\\n]*)`),
+        );
+        return !seguinte || !(/^\d+$/.test(seguinte[1].trim()) || /sem base para avaliar/.test(seguinte[1]));
+      });
+      verificar(
+        "nenhuma das oito dimensões aparece em branco",
+        semLeitura.length === 0,
+        semLeitura.join(", "),
+      );
       verificar("publica o plano de investigação por executar", /por ligar/.test(texto));
 
       await semViolacoesAxe(pagina, "descoberta: dossier aberto");
@@ -544,19 +616,41 @@ try {
       //  │ Verifica-se por cartão e não no primeiro: era exatamente  │
       //  │ olhar só para o primeiro que deixava passar isto.         │
       //  └──────────────────────────────────────────────────────────┘
+      //  ── Esperar pelo dossier, não pelo relógio ─────────────────
+      //  Isto esperava 400 ms fixos depois de cada clique e contava a
+      //  saída logo a seguir. Com poucos cartões chegava; com mais — e
+      //  passou a haver mais — o quinto dossier ainda não tinha
+      //  renderizado quando a contagem corria, e o guião concluía que
+      //  faltava a saída. Pior: tentava depois ler o título para dizer
+      //  QUAL cartão falhava, e morria nesse `textContent` com um
+      //  timeout de trinta segundos. Uma verificação que rebenta em vez
+      //  de falhar não diz o que encontrou.
+      //
+      //  A saída é incondicional dentro do dossier (`Dossier.tsx`): se
+      //  ele abriu, ela existe. Esperar por ELA é portanto a mesma
+      //  pergunta, feita sem cronómetro.
       const todosOsCartoes = await pagina.locator("section[aria-label='Oportunidades'] article").all();
       const semContinuidade = [];
       for (const artigo of todosOsCartoes) {
         const cabecalho = artigo.locator("button[aria-expanded]").first();
         if ((await cabecalho.getAttribute("aria-expanded")) !== "true") {
           await cabecalho.click();
-          await pagina.waitForTimeout(400);
         }
-        const saidas =
-          (await artigo.getByRole("link", { name: /construir no estúdio/i }).count()) +
-          (await artigo.getByRole("button", { name: /construir no estúdio/i }).count());
-        if (saidas === 0) {
-          semContinuidade.push((await artigo.locator("strong").first().textContent())?.trim() ?? "?");
+        const saida = artigo
+          .getByRole("link", { name: /construir no estúdio/i })
+          .or(artigo.getByRole("button", { name: /construir no estúdio/i }))
+          .first();
+        const abriu = await saida
+          .waitFor({ state: "attached", timeout: 10000 })
+          .then(() => true)
+          .catch(() => false);
+        if (!abriu) {
+          const titulo = await artigo
+            .locator("strong")
+            .first()
+            .textContent({ timeout: 2000 })
+            .catch(() => null);
+          semContinuidade.push(titulo?.trim() ?? "(cartão sem título legível)");
         }
       }
       verificar(

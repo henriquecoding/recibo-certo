@@ -293,12 +293,19 @@ describe("utilidade · a ordem apresentada é defensável", () => {
 
 describe("utilidade · a ferramenta responde a quem lhe pergunta", () => {
   it("a fatia de perfis que sai de mãos vazias não sobe", () => {
-    // Medido hoje: 24,3 %. É um número de PRODUTO, não de motor — o
-    // `diagnosticoVazio` explica bem a causa a quem lá chega — mas um em
-    // cada quatro perfis sem uma única hipótese é muito, e este limiar
-    // existe para não piorar enquanto não melhora.
+    // ┌────────────────────────────────────────────────────────────────┐
+    // │ 24,3 % → 5,3 %                                                 │
+    // │                                                                │
+    // │ Era «um em cada quatro perfis sem uma única hipótese», e este   │
+    // │ limiar existia para não piorar enquanto não melhorava. Melhorou:│
+    // │ a causa era `ativosNecessarios` ser porta dura para meios que   │
+    // │ se COMPRAM. Oito capacidades exigiam «computador» a quem estava │
+    // │ a usar a ferramenta num computador. Ver `BarreiraAtivo`.        │
+    // │                                                                │
+    // │ A cerca desce com a medição — é assim que uma cerca se usa.     │
+    // └────────────────────────────────────────────────────────────────┘
     const vazios = CORRIDAS.filter((item) => item.candidatos.length === 0).length;
-    expect(fracao(vazios, CORRIDAS.length)).toBeLessThan(0.3);
+    expect(fracao(vazios, CORRIDAS.length)).toBeLessThan(0.08);
   });
 
   it("quem sai de mãos vazias recebe sempre uma explicação", () => {
@@ -309,12 +316,19 @@ describe("utilidade · a ferramenta responde a quem lhe pergunta", () => {
   });
 
   it("o modo condicional torna a base explorável sem promover impossibilidades", () => {
-    // Medido: 12 de 300 perfis continuam vazios (4 %), contra 85 no modo
+    // Medido: 12 de 300 perfis continuam vazios (4 %), contra 16 no modo
     // estritamente compatível. É uma exploração separada, nunca um atalho:
     // qualquer meio em falta ou inadequado mantém objeção fatal.
+    //
+    // O múltiplo caiu de 1,5× para 1,17×, e caiu por bom motivo: o modo
+    // normal deixou de estar artificialmente esfomeado. Um meio comprável
+    // em falta já não fecha a porta no caminho principal, e portanto o
+    // condicional tem muito menos para acrescentar. Continua a acrescentar
+    // — o que se exige aqui é isso, e não uma distância que só existia
+    // enquanto o caminho normal estava partido.
     const vazios = CORRIDAS_CONDICIONAIS.filter((item) => item.candidatos.length === 0).length;
     expect(fracao(vazios, CORRIDAS_CONDICIONAIS.length)).toBeLessThan(0.1);
-    expect(CANDIDATOS_CONDICIONAIS.length).toBeGreaterThan(CANDIDATOS.length * 1.5);
+    expect(CANDIDATOS_CONDICIONAIS.length).toBeGreaterThan(CANDIDATOS.length);
     expect(
       CANDIDATOS_CONDICIONAIS.some((candidato) =>
         candidato.objecoes.some((item) => item.id === "entrada" && item.fatal && item.procede),

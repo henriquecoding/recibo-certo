@@ -159,8 +159,12 @@ export default function DescobrirNegocioApp() {
         limite: incluirForaDoPerfil ? 12 : 10,
         sessao: memoria,
         incluirForaDePerfil: incluirForaDoPerfil,
+        // O que a pessoa já provou volta ao motor. É o que fecha o ciclo
+        // testar → aprender → recomendar; sem isto, uma pré-venda ficava
+        // numa linha do tempo e não mudava a sugestão seguinte.
+        hipoteses,
       }),
-    [evidencia, oferta],
+    [evidencia, oferta, hipoteses],
   );
 
   useEffect(() => {
@@ -245,6 +249,16 @@ export default function DescobrirNegocioApp() {
     const cenario = CENARIOS_WHATIF.find((item) => item.id === cenarioId);
     if (!cenario) return;
     const proximo = cenario.aplicar(contexto);
+    setContexto(proximo);
+    setPerfilGuardado(false);
+    analisar(proximo);
+  };
+
+  // Aceitar um compromisso medido a partir de um resultado vazio. O
+  // contexto já vem calculado pelo motor com a mudança feita — aplicar
+  // aqui uma segunda vez daria a mesma coisa com mais uma oportunidade de
+  // divergir do número que foi prometido no ecrã.
+  const aplicarRelaxamento = (proximo: OpportunityContext) => {
     setContexto(proximo);
     setPerfilGuardado(false);
     analisar(proximo);
@@ -370,6 +384,7 @@ export default function DescobrirNegocioApp() {
         onAplicarWhatIf={aplicarWhatIf}
         diferenca={diferenca}
         onReverMeios={reverMeios}
+        onAplicarRelaxamento={aplicarRelaxamento}
         onFeedback={darFeedback}
         onPedirOutras={pedirOutras}
         onReporAprendizagem={reporAprendizagem}

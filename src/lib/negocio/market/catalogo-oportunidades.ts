@@ -7,7 +7,7 @@
 //  Cinco hipóteses que declaravam UM só valor em `structures` e UM só em
 //  `regions` não podem separar seis perguntas: duas delas não alteravam
 //  absolutamente nada, em nenhum perfil, e uma das cinco competências
-//  oferecidas não existia em template nenhum.
+//  oferecidas de então não existia em template nenhum.
 //
 //  ── AS REGRAS DE ADMISSÃO, QUE SÃO TESTADAS ────────────────────────
 //   1. Nenhuma hipótese pode ter assinatura de fit igual a outra. Duas

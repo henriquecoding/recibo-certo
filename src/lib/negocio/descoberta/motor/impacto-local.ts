@@ -305,7 +305,7 @@ function efeitoDaZona(entrada: Entrada, atual: readonly OpportunityCandidate[]):
   };
   const mediana = medianaDe(ganhos);
   // ── HIPÓTESES QUE SÓ EXISTEM DEPOIS DE HAVER ZONA ─────────────────
-  //  Vinte e cinco dos vinte e oito problemas são nacionais, mas três
+  //  Vinte e oito dos trinta e um problemas são nacionais, mas três
   //  não são: `terreno-por-manter` declara Alentejo, Centro, Norte e
   //  Algarve, e exclui Lisboa de propósito — terreno de proprietário
   //  ausente é um problema do interior. Para quem só declara jardinagem,

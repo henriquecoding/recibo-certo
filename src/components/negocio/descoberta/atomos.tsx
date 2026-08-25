@@ -284,7 +284,7 @@ export function LinhaDimensao({
  * │ PORQUE A DESCRIÇÃO É OPCIONAL E NÃO OBRIGATÓRIA                     │
  * │                                                                    │
  * │ A versão anterior desenhava sempre duas linhas — rótulo e nota — e │
- * │ vinte e duas competências passavam a quarenta e quatro linhas de   │
+ * │ as competências de então passavam a quarenta e quatro linhas de    │
  * │ texto antes da primeira decisão. As notas são boas («não é          │
  * │ bricolage» evita que alguém se declare eletricista), mas todas ao  │
  * │ mesmo tempo são um muro.                                           │
@@ -486,7 +486,7 @@ export function Seccao({
 //  LISTA FILTRÁVEL — a mesma gramática de filtros do hub de ferramentas
 //  ---------------------------------------------------------------------
 //  Agrupar em categorias resolveu a leitura. Não resolveu a procura: com
-//  vinte e duas competências, catorze meios e quinze recusas, quem sabe o
+//  vinte e oito competências, catorze meios e quinze recusas, quem sabe o
 //  que quer continua a percorrer tudo com os olhos.
 //
 //  Isto é o mesmo sistema que o `/ferramentas` já tinha, e de propósito —

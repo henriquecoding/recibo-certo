@@ -21,7 +21,7 @@
 //
 //  Isso resolvia o número de perguntas e não resolvia a densidade — que
 //  era o defeito seguinte, e o mais visível de todos: mesmo no nível
-//  essencial a primeira coisa que aparecia eram vinte e duas competências
+//  essencial a primeira coisa que aparecia eram as competências de então
 //  numa grelha plana, cada uma com título e descrição, quarenta e quatro
 //  linhas de texto antes da primeira decisão. Uma página verdadeira e
 //  ilegível ao mesmo tempo.

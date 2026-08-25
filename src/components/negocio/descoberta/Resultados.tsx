@@ -70,6 +70,8 @@ import {
 import { BarraDeIntervalo, Chip } from "./atomos";
 import Dossier from "./Dossier";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import type { Relaxamento } from "@/lib/negocio/descoberta/motor/relaxamento";
+import type { OpportunityContext } from "@/lib/negocio/descoberta/contexto/tipos";
 
 /**
  * Uma etapa contada na unidade em que ela conta.
@@ -199,6 +201,8 @@ export interface ResultadosProps {
   efeitosWhatIf: readonly EfeitoWhatIf[];
   onAplicarWhatIf: (cenarioId: string) => void;
   diferenca: DiferencaAnalise | null;
+  /** Aceitar um compromisso medido a partir de um resultado vazio. */
+  onAplicarRelaxamento: (contexto: OpportunityContext) => void;
   /** Declarar meios em falta e voltar a correr. Ver `SaidaDoVazio`. */
   onReverMeios: (ativos: readonly AtivoId[]) => void;
   onFeedback: (
@@ -232,6 +236,7 @@ export default function Resultados({
   onAplicarWhatIf,
   diferenca,
   onReverMeios,
+  onAplicarRelaxamento,
   onFeedback,
   onPedirOutras,
   onReporAprendizagem,
@@ -940,6 +945,8 @@ export default function Resultados({
           resultado.candidatos.length === 0 ? (
             <SaidaDoVazio
               bloqueios={resultado.bloqueiosPorMeio}
+              relaxamentos={resultado.relaxamentos}
+              onAplicarRelaxamento={onAplicarRelaxamento}
               diagnostico={resultado.diagnosticoVazio}
               descartadas={
                 resultado.descartados.filter(
@@ -1383,6 +1390,8 @@ function Comparador({
  */
 function SaidaDoVazio({
   bloqueios,
+  relaxamentos,
+  onAplicarRelaxamento,
   diagnostico,
   descartadas,
   onReverMeios,
@@ -1391,6 +1400,8 @@ function SaidaDoVazio({
   onExplorarMudancas,
 }: {
   bloqueios: readonly BloqueioPorMeio[];
+  relaxamentos: readonly Relaxamento[];
+  onAplicarRelaxamento: (contexto: OpportunityContext) => void;
   diagnostico: DiagnosticoVazio | null;
   descartadas: number;
   onReverMeios: (ativos: readonly AtivoId[]) => void;
@@ -1405,6 +1416,63 @@ function SaidaDoVazio({
           .slice(0, -1)
           .map((item) => `«${item}»`)
           .join(", ")} e «${rotulos[rotulos.length - 1]}»`;
+
+  // ┌──────────────────────────────────────────────────────────────────┐
+  // │ O QUE ABRE, CONTADO                                               │
+  // │                                                                  │
+  // │ Zero resultados dizia POR QUE É QUE estava vazio e terminava a   │
+  // │ conversa. A pessoa ficava a saber que as suas recusas apagaram   │
+  // │ tudo, e não ficava a saber QUAL delas nem quanto custava mudar   │
+  // │ de ideias. Cada número aqui vem de correr o motor outra vez com  │
+  // │ a mudança aplicada — nunca de uma estimativa sobre o grafo.      │
+  // │                                                                  │
+  // │ Lista vazia é uma resposta legítima e aparece como tal: encher   │
+  // │ isto com opções que não abrem nada seria a versão educada de     │
+  // │ mentir. Ver `motor/relaxamento.ts`.                              │
+  // └──────────────────────────────────────────────────────────────────┘
+  const painelDeRelaxamentos =
+    relaxamentos.length === 0 ? null : (
+      <section
+        data-relaxamentos
+        className="mt-5 rounded-3xl border border-brand/20 bg-brand-light/30 p-4 dark:border-brand/20 dark:bg-brand/5"
+      >
+        <h4 className="font-display text-sm font-semibold text-ink">
+          O que abre, se mudares uma coisa
+        </h4>
+        <p className="mt-1 text-[11px] leading-snug text-stone-500">
+          Cada número foi contado a correr o motor outra vez com a mudança
+          feita. Não é uma promessa — é o que passa a aparecer.
+        </p>
+        <ul className="mt-3 space-y-2">
+          {relaxamentos.map((relaxamento) => (
+            <li
+              key={relaxamento.id}
+              className="rounded-2xl border border-stone-100 bg-white p-3 dark:border-stone-800 dark:bg-stone-900"
+            >
+              <p className="text-[12px] font-semibold text-stone-700 dark:text-stone-200">
+                {relaxamento.rotulo}
+              </p>
+              <p className="mt-0.5 text-[11px] leading-snug text-stone-500">
+                {relaxamento.porque}
+              </p>
+              <button
+                type="button"
+                onClick={() => onAplicarRelaxamento(relaxamento.contexto)}
+                className="mt-2 inline-flex min-h-[38px] items-center gap-1.5 rounded-full border border-brand/30 bg-white px-3 text-[11px] font-semibold text-brand-dark hover:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:bg-stone-900 dark:text-brand-mint"
+              >
+                Abre{" "}
+                <span className="font-semibold">
+                  {relaxamento.hipotesesQueAbriria}{" "}
+                  {relaxamento.hipotesesQueAbriria === 1 ? "hipótese" : "hipóteses"}
+                </span>
+                <ArrowRight size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+    );
+
   return (
     <div className="rounded-4xl border border-dashed border-stone-200 p-5 dark:border-stone-700 sm:p-6">
       {bloqueios.length > 0 ? (
@@ -1572,6 +1640,7 @@ function SaidaDoVazio({
           </button>
         </>
       )}
+      {painelDeRelaxamentos}
     </div>
   );
 }

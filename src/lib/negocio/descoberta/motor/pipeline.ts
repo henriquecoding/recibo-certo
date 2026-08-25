@@ -40,6 +40,8 @@ import { avaliarViabilidade } from "./viabilidade";
 import type { CandidatoDescartado, OpportunityCandidate } from "./tipos";
 import { aplicarAprendizagem, type AjusteAprendido } from "../sessao/aprendizagem";
 import type { FeedbackDescoberta, ModoSessao, SessaoDescoberta } from "../sessao/tipos";
+import { calcularRelaxamentos, type Relaxamento } from "./relaxamento";
+import type { MarketHypothesis } from "@/lib/negocio/market/hipoteses";
 
 // ── ETAPAS ───────────────────────────────────────────────────────────
 
@@ -126,6 +128,13 @@ export interface ResultadoDescoberta {
   bloqueiosPorMeio: readonly BloqueioPorMeio[];
   /** Preenchido só quando não há candidatos. `null` quando há. */
   diagnosticoVazio: DiagnosticoVazio | null;
+  /**
+   * Saídas medidas para um resultado vazio. Vazio quando há candidatos,
+   * e TAMBÉM quando nenhuma mudança razoável abriria alguma coisa —
+   * encher isto com opções que não funcionam seria a versão educada de
+   * mentir. Ver `motor/relaxamento.ts`.
+   */
+  relaxamentos: readonly Relaxamento[];
   aprendizagem: {
     modo: ModoSessao;
     feedbackAplicado: number;
@@ -148,13 +157,14 @@ export interface ResultadoDescoberta {
  * ┌────────────────────────────────────────────────────────────────────┐
  * │ O DEFEITO QUE ISTO CORRIGE, MEDIDO                                  │
  * │                                                                    │
- * │ Quinze das vinte e cinco capacidades exigem um meio declarado, e   │
- * │ dez delas exigem «computador» ou «ferramentas» — coisas que quase  │
- * │ toda a gente tem e ninguém se lembra de declarar. Resultado: DOZE  │
- * │ das vinte e duas competências, escolhidas sozinhas, geravam ZERO   │
- * │ hipóteses, e o ecrã respondia «nada passou os critérios · abre o   │
- * │ que descartámos» — um painel que nesse estado não existe, porque   │
- * │ não houve descarte nenhum: não houve geração.                      │
+ * │ Medido em 2026-08-23, com o inventário de então: quinze das vinte │
+ * │ e cinco capacidades exigiam um meio declarado, e dez delas         │
+ * │ exigiam «computador» ou «ferramentas» — coisas que quase toda a    │
+ * │ gente tem e ninguém se lembra de declarar. Resultado: DOZE das     │
+ * │ vinte e duas competências de então, escolhidas sozinhas, geravam   │
+ * │ ZERO hipóteses, e o ecrã respondia «nada passou os critérios ·     │
+ * │ abre o que descartámos» — um painel que nesse estado não existe,   │
+ * │ porque não houve descarte nenhum: não houve geração.               │
  * │                                                                    │
  * │ O motor sempre soube o que faltava (`capacidadesBloqueadasPorAtivo`│
  * │ está lá desde o início). Só o deitava fora antes de chegar ao ecrã.│
@@ -192,7 +202,9 @@ export interface BloqueioPorMeio {
  * existe. São problemas diferentes e têm saídas diferentes:
  *
  *  · `meios-em-falta`  — o grafo tem o que fazer, falta declarar a
- *    ferramenta. É a causa de doze das vinte e duas competências.
+ *    ferramenta. Foi a causa de doze das vinte e duas competências de
+ *    então; com `BarreiraAtivo` a fechar só o que é barreira a sério,
+ *    são três em vinte e oito, e as três são meios estruturais.
  *  · `competencia-de-apoio` — a competência declarada reforça outras e
  *    não sustenta um negócio sozinha (é o caso das línguas, que aparecem
  *    sempre como competência ÚTIL e nunca como necessária). Não é uma
@@ -224,6 +236,15 @@ export interface OpcoesDescoberta {
   incluirForaDePerfil?: boolean;
   /** Preferências e recusas desta visita; nunca persistidas pelo motor. */
   sessao?: SessaoDescoberta;
+  /**
+   * As hipóteses que a pessoa já guardou, com as provas que registou.
+   *
+   * É a ligação que faltava entre o laboratório e o motor: sem ela,
+   * confirmar ou refutar uma ideia não mudava a ordenação seguinte. O
+   * que entra é só o que a PESSOA registou — nada disto vira evidência
+   * de mercado. Ver `sessao/aprendizagem.ts`.
+   */
+  hipoteses?: readonly MarketHypothesis[];
   agora?: () => string;
   /**
    * Travão de recursão. Calcular os bloqueios exige correr o motor outra
@@ -231,6 +252,12 @@ export interface OpcoesDescoberta {
    * Interno — não faz parte da API de quem chama de fora.
    */
   semBloqueios?: boolean;
+  /**
+   * O mesmo travão, para as relaxações: medir o efeito de uma exige
+   * correr o motor com a mudança aplicada, e essa passagem não pode
+   * voltar a medir relaxações.
+   */
+  semRelaxamentos?: boolean;
 }
 
 /**
@@ -247,8 +274,10 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     incluirForaDePerfil = false,
     agora = () => new Date().toISOString(),
     semBloqueios = false,
+    semRelaxamentos = false,
     oferta,
     sessao,
+    hipoteses = [],
   } = opcoes;
 
   const etapas: ContagemEtapa[] = [];
@@ -401,7 +430,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
 
   // ── 8. Deduplicação e diversificação ──────────────────────────────
   const dedup = deduplicar(avaliados);
-  const aprendizagem = aplicarAprendizagem(dedup.candidatos, sessao);
+  const aprendizagem = aplicarAprendizagem(dedup.candidatos, sessao, hipoteses, agora());
   if (sessao && (sessao.feedback.length > 0 || sessao.vistos.length > 0 || sessao.modo !== "normal")) {
     etapas.push({
       etapa: "personalizacao",
@@ -439,6 +468,26 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     (candidato) => !candidato.objecoes.some((objecao) => objecao.fatal && objecao.procede),
   );
 
+  // ── Saídas para um resultado vazio ────────────────────────────────
+  //  Só se calculam quando não há nada a mostrar. Custam uma passagem do
+  //  motor por cada mudança testada, e num resultado com candidatos isso
+  //  seria trabalho para deitar fora.
+  const relaxamentos =
+    semRelaxamentos || ordenados.length > 0
+      ? []
+      : calcularRelaxamentos(contexto, (proximo) =>
+          descobrir(proximo, {
+            evidencia,
+            limite,
+            oferta,
+            incluirForaDePerfil,
+            sessao,
+            agora,
+            semBloqueios: true,
+            semRelaxamentos: true,
+          }).candidatos.length,
+        );
+
   return {
     candidatos: ordenados,
     descartados,
@@ -447,6 +496,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     destaques: destaques(passaramStress),
     planos,
     bloqueiosPorMeio: bloqueios,
+    relaxamentos,
     diagnosticoVazio:
       ordenados.length > 0
         ? null
