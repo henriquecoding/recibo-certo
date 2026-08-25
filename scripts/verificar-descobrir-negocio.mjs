@@ -616,19 +616,41 @@ try {
       //  │ Verifica-se por cartão e não no primeiro: era exatamente  │
       //  │ olhar só para o primeiro que deixava passar isto.         │
       //  └──────────────────────────────────────────────────────────┘
+      //  ── Esperar pelo dossier, não pelo relógio ─────────────────
+      //  Isto esperava 400 ms fixos depois de cada clique e contava a
+      //  saída logo a seguir. Com poucos cartões chegava; com mais — e
+      //  passou a haver mais — o quinto dossier ainda não tinha
+      //  renderizado quando a contagem corria, e o guião concluía que
+      //  faltava a saída. Pior: tentava depois ler o título para dizer
+      //  QUAL cartão falhava, e morria nesse `textContent` com um
+      //  timeout de trinta segundos. Uma verificação que rebenta em vez
+      //  de falhar não diz o que encontrou.
+      //
+      //  A saída é incondicional dentro do dossier (`Dossier.tsx`): se
+      //  ele abriu, ela existe. Esperar por ELA é portanto a mesma
+      //  pergunta, feita sem cronómetro.
       const todosOsCartoes = await pagina.locator("section[aria-label='Oportunidades'] article").all();
       const semContinuidade = [];
       for (const artigo of todosOsCartoes) {
         const cabecalho = artigo.locator("button[aria-expanded]").first();
         if ((await cabecalho.getAttribute("aria-expanded")) !== "true") {
           await cabecalho.click();
-          await pagina.waitForTimeout(400);
         }
-        const saidas =
-          (await artigo.getByRole("link", { name: /construir no estúdio/i }).count()) +
-          (await artigo.getByRole("button", { name: /construir no estúdio/i }).count());
-        if (saidas === 0) {
-          semContinuidade.push((await artigo.locator("strong").first().textContent())?.trim() ?? "?");
+        const saida = artigo
+          .getByRole("link", { name: /construir no estúdio/i })
+          .or(artigo.getByRole("button", { name: /construir no estúdio/i }))
+          .first();
+        const abriu = await saida
+          .waitFor({ state: "attached", timeout: 10000 })
+          .then(() => true)
+          .catch(() => false);
+        if (!abriu) {
+          const titulo = await artigo
+            .locator("strong")
+            .first()
+            .textContent({ timeout: 2000 })
+            .catch(() => null);
+          semContinuidade.push(titulo?.trim() ?? "(cartão sem título legível)");
         }
       }
       verificar(
