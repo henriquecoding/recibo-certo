@@ -16,6 +16,14 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.122.3",
+    data: "2026-08-25",
+    titulo: "Um resultado aberto deixa de desaparecer quando chegam os dados de mercado",
+    itens: [
+      "Os sinais de procura e oferta chegam de forma independente e podem reclassificar uma hipótese enquanto estás a lê-la. Quando a hipótese aberta passava a ter uma objeção fatal, saía da lista principal mas o ecrã continuava a apontar para o seu identificador invisível: o dossier e os controlos desapareciam a meio da interação. A seleção passa a acompanhar a lista realmente visível e abre a primeira alternativa válida, sem deixar o ecrã num estado impossível.",
+    ],
+  },
+  {
     version: "2.122.2",
     data: "2026-08-25",
     titulo: "O monitor de privacidade passa a provar a própria configuração",
