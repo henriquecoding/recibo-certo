@@ -9,6 +9,7 @@ export * from "./contexto/profundidade";
 export * from "./conhecimento/tipos";
 export * from "./conhecimento/grafo";
 export * from "./conhecimento/adequacao-ativos";
+export * from "./conhecimento/veiculos";
 export * from "./conhecimento/seeds";
 export * from "./motor/tipos";
 export * from "./motor/gerador";

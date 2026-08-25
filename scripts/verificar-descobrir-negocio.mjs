@@ -335,12 +335,50 @@ try {
       await viatura.getByLabel("Lugares").fill("2");
       await viatura.getByLabel("Capacidade de carga útil").selectOption("media");
       await viatura.getByLabel("Inspeção").selectOption("valida");
+
+      // Antes de o ano, a circulação e as medidas serem respondidos, a
+      // viatura NÃO pode contar como confirmada. É a regressão de «tenho
+      // carrinha»: uma carrinha de 2004, de dois lugares e com uma zona de
+      // carga onde não entra uma palete não faz o mesmo trabalho que uma
+      // de 2023, e o motor tratava-as como o mesmo meio.
+      await pagina.waitForTimeout(200);
+      verificar(
+        "sem ano, circulação e medidas, a viatura ainda não está confirmada",
+        (await pagina.getByText("Confirmado", { exact: true }).count()) < 2,
+      );
+
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2019");
+      await viatura.getByLabel("Circulação").selectOption("sem-restricoes");
+      await viatura
+        .getByLabel("Comprimento da zona de carga, em centímetros")
+        .fill("180");
+      await viatura
+        .getByLabel("Largura da zona de carga, em centímetros")
+        .fill("110");
+      await viatura.getByLabel("Altura da zona de carga, em centímetros").fill("120");
       await pagina.waitForTimeout(300);
 
       verificar(
         "carta e viatura só contam depois de confirmar adequação",
         (await pagina.getByText("Confirmado", { exact: true }).count()) >= 2,
       );
+
+      // O emblema responde a «já disseste?», não a «serve para este
+      // trabalho?». Se a zona de carga for pequena de mais para uma palete,
+      // a viatura continua declarada — o que muda é a hipótese que o motor
+      // deixa de apresentar, e isso está fixado nos testes de unidade
+      // (`negocio-descoberta-personalizacao-adaptativa`). Aqui só se
+      // verifica que a leitura da idade aparece no ecrã com a base legal.
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2010");
+      await pagina.waitForTimeout(300);
+      verificar(
+        "a idade declarada traz a periodicidade legal da inspeção",
+        /inspeção desta viatura já é anual/.test(
+          await viatura.innerText(),
+        ),
+      );
+      await viatura.getByLabel("Ano da primeira matrícula").fill("2019");
+      await pagina.waitForTimeout(300);
 
       const profundidade = await pagina.evaluate(
         () => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? "0",

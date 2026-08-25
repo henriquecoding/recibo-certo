@@ -33,6 +33,9 @@ import { SMN, SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { intervalo, somarIntervalos, type Intervalo } from "../proveniencia";
 import { tetoDeCapital, type OpportunityContext } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
+import { custoMensalDeclaradoDosMeios } from "../conhecimento/adequacao-ativos";
+import { inspecaoJaEAnual } from "../conhecimento/veiculos";
+import type { AtivoId } from "../contexto/tipos";
 import type { AvaliacaoViabilidade } from "./tipos";
 
 /** Custo estimado de cumprir requisitos regulatórios, por severidade. */
@@ -162,7 +165,72 @@ export function avaliarViabilidade(
   const fracaoPrazoCoberta = fracaoCoberta(tempo, prazo);
 
   // ── Custo fixo mensal: só quando é derivável, e sempre com método ──
-  const custoMensal = candidato.modelo.precisaEquipa ? custoDeEquipa(2) : null;
+  //
+  //  ┌──────────────────────────────────────────────────────────────────┐
+  //  │ UM MEIO QUE SE TEM NÃO É UM MEIO QUE SAI DE GRAÇA                 │
+  //  │                                                                  │
+  //  │ O investimento inicial já não orçamenta o que a pessoa tem — e    │
+  //  │ isso está certo, quem tem carrinha não compra carrinha. Mas o     │
+  //  │ mês seguinte não estava em lado nenhum: prestação, seguro,        │
+  //  │ manutenção e inspeção de uma carrinha existem todos os meses, e   │
+  //  │ o motor tratava-os como zero por omissão.                        │
+  //  │                                                                  │
+  //  │ Passa a somar o que a PESSOA declarou, com proveniência de        │
+  //  │ hipótese — é o número dela, não uma estimativa nossa. O que ela   │
+  //  │ não declarou não vira zero: fica escrito como por orçamentar.     │
+  //  └──────────────────────────────────────────────────────────────────┘
+  const meiosUsados = avaliacoesAtivos
+    .map((item) => item.ativo)
+    .filter((item): item is AtivoId => item !== undefined);
+  const custoDosMeios = custoMensalDeclaradoDosMeios(contexto, meiosUsados);
+
+  const parcelasMensais: Intervalo[] = [];
+  if (candidato.modelo.precisaEquipa) parcelasMensais.push(custoDeEquipa(2));
+  if (custoDosMeios.total > 0) {
+    parcelasMensais.push(
+      intervalo(custoDosMeios.total, custoDosMeios.total, "€", {
+        origem: "hipotese",
+        fonte: "Custo mensal que declaraste para os meios que esta operação usa",
+        limitacao:
+          "É o número que escreveste, não uma observação de mercado. Cobre o que declaraste — prestação, aluguer, seguro ou manutenção — e mais nada.",
+      }),
+    );
+  }
+  // Uma só parcela passa intacta: somá-la consigo mesma trocaria a fonte
+  // que a produziu — a RMMG, no caso da equipa — por um rótulo de soma, e
+  // a auditoria de proveniência deixaria de conseguir seguir o número até
+  // ao dado que o gerou. Quando há mais do que uma, a fonte nomeia todas.
+  const custoMensal =
+    parcelasMensais.length === 0
+      ? null
+      : parcelasMensais.length === 1
+        ? parcelasMensais[0]!
+        : somarIntervalos(
+            parcelasMensais,
+            parcelasMensais.map((item) => item.proveniencia.fonte).join(" + "),
+          );
+
+  if (custoDosMeios.porDeclarar.length > 0) {
+    limitacoes.push(
+      `${custoDosMeios.porDeclarar.length === 1 ? "Um meio que esta operação usa não tem" : `${custoDosMeios.porDeclarar.length} meios que esta operação usa não têm`} custo mensal declarado. Não é zero — é por orçamentar, e é o que faz a diferença entre o mês fechar e não fechar.`,
+    );
+  }
+
+  // A idade da viatura tem uma consequência legal e recorrente: a partir
+  // de certa altura a inspeção passa a ser anual (DL 144/2017). Dizê-lo é
+  // ler a lei; inventar quanto custa manter uma viatura velha não é.
+  const anoAtual = new Date().getFullYear();
+  const comInspecaoAnual = meiosUsados.some((id) => {
+    const veiculo = contexto.detalhesAtivos?.[id]?.veiculo;
+    return (
+      inspecaoJaEAnual(veiculo?.anoMatricula, veiculo?.configuracao, anoAtual) === true
+    );
+  });
+  if (comInspecaoAnual) {
+    limitacoes.push(
+      "Pela idade que declaraste, a inspeção de pelo menos uma viatura já é anual (DL 144/2017). Conta com a taxa todos os anos e com um dia sem viatura.",
+    );
+  }
 
   if (candidato.modelo.precisaLojaFisica) {
     limitacoes.push(
@@ -170,7 +238,7 @@ export function avaliarViabilidade(
     );
   } else if (custoMensal === null) {
     limitacoes.push(
-      "Sem espaço nem equipa, o custo fixo mensal é sobretudo o teu tempo — e esse entra no preço, não no arranque.",
+      "Sem espaço, equipa nem custo declarado de meios, o custo fixo mensal é sobretudo o teu tempo — e esse entra no preço, não no arranque.",
     );
   }
 

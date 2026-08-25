@@ -11,6 +11,7 @@
 //  isto que «não tenho carro» elimina rotas em vez de as penalizar.
 // ═══════════════════════════════════════════════════════════════════════
 import type { Capacidade } from "../tipos";
+import { PALETE_EUROPEIA_CM } from "../veiculos";
 
 export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
@@ -60,12 +61,16 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
       {
         qualquerUmDe: ["veiculo-carga"],
         finalidade:
-          "Viatura homologada e com capacidade para transportar carga",
+          "Viatura homologada, com carga útil e zona de carga onde caiba uma palete europeia (120 × 80 cm)",
         confirmarAntesDeRecomendar: true,
         veiculo: {
           prontoParaUsoProfissional: true,
           configuracoesAceites: ["mercadorias", "misto"],
           capacidadeCargaMinima: "reduzida",
+          // A palete europeia (EN 13698-1) é a unidade em que o transporte
+          // de mercadorias se mede em Portugal. Uma viatura onde ela não
+          // entra pode servir para muita coisa, mas não para isto.
+          dimensaoMinimaCargaCm: PALETE_EUROPEIA_CM,
         },
       },
     ],

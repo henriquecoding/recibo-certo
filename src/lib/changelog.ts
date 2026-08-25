@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.123.0",
+    data: "2026-08-25",
+    titulo: "«Tenho carrinha» deixou de ser uma resposta: a viatura passa a ter idade, quilos e medidas",
+    itens: [
+      "Dizeres que tens carta e carrinha valia tanto para uma carrinha de 2023 como para uma de 2004 com dois lugares. Agora perguntamos o ano da primeira matrícula, e sem ele a viatura fica por confirmar — por mais que o resto esteja respondido. Não é burocracia: é o que decide se a inspeção já é anual.",
+      "A carga útil deixou de viver só em «reduzida / média / elevada». Se souberes os quilos, escreve-os — e são os quilos que mandam. Uma carrinha declarada como «média» mas com 150 kg de carga útil deixa de aparecer em trabalho que precisa de 200, mesmo que a faixa dissesse que sim.",
+      "A zona de carga passa a medir-se em centímetros. Transportar volume pede uma viatura onde caiba uma palete europeia (120 × 80 cm, norma EN 13698-1); se as medidas que declarares não chegarem, o motor diz exatamente qual é o eixo que falha em vez de te recomendar um trabalho que não consegues fazer.",
+      "Passamos a perguntar se a viatura circula em qualquer lado ou se está limitada em centro urbano. É o que declarares — nunca inferido da matrícula nem da idade, porque as regras municipais mudam e não as inventamos.",
+      "Pela idade que declarares, dizemos-te se a inspeção já é anual, com a base legal ao lado (Decreto-Lei n.º 144/2017). Uma viatura de mercadorias entra nesse regime aos 2 anos; um carro de passageiros só aos 8 — e isso é custo e um dia sem viatura, todos os anos.",
+      "Cada meio passa a poder ter um custo mensal declarado — prestação, aluguer, seguro, manutenção — e esse valor entra nas contas de viabilidade. O que deixares em branco não vira zero: fica escrito como por orçamentar, que é a diferença entre o mês fechar e não fechar.",
+    ],
+  },
+  {
     version: "2.122.4",
     data: "2026-08-25",
     titulo: "O calendário fiscal passa a dizer as datas certas — e o acerto de IRS não é em junho",

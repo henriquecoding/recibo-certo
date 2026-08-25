@@ -66,10 +66,24 @@ export interface Competencia {
 
 export interface RequisitoVeiculo {
   configuracoesAceites?: readonly ConfiguracaoVeiculo[];
+  /**
+   * Faixa mínima de carga. Quando a pessoa declarar quilos, é o piso em
+   * quilos da faixa que conta — a faixa nunca inventa um número, apenas
+   * nomeia um intervalo (ver `KG_DA_FAIXA`).
+   */
   capacidadeCargaMinima?: CapacidadeCargaVeiculo;
   lugaresMinimos?: number;
   /** Abaixo disto continua possível, mas a operação fica limitada. */
   lugaresRecomendados?: number;
+  /**
+   * Zona de carga mínima, em centímetros. Só se declara quando o trabalho
+   * é literalmente sobre volume, e com a referência escrita em `finalidade`.
+   */
+  dimensaoMinimaCargaCm?: {
+    comprimento?: number;
+    largura?: number;
+    altura?: number;
+  };
   adaptacoesNecessarias?: readonly AdaptacaoVeiculo[];
   /** Inspeção válida e uso profissional têm de ser confirmados. */
   prontoParaUsoProfissional?: boolean;
