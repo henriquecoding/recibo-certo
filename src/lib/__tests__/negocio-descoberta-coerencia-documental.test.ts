@@ -137,11 +137,37 @@ interface Divergencia {
   real: number;
 }
 
-function divergencias(): readonly Divergencia[] {
-  const encontradas: Divergencia[] = [];
+/**
+ * Os padrões compilados uma vez, e os inventários lidos uma vez.
+ *
+ * A primeira versão chamava `inventarios()` DENTRO do ciclo por linha —
+ * relia e reparseava `tipos.ts` para cada linha de cada ficheiro, e
+ * recompilava sete expressões regulares de cada vez. Passava em 5,0 s na
+ * minha máquina e estourou o limite de 5 s do vitest no runner do CI.
+ *
+ * O erro não é o limite ser apertado: é o trabalho ser absurdo. Ler o
+ * mesmo ficheiro dez mil vezes não fica certo com mais tempo.
+ */
+function padroes() {
   const alternativas = Object.keys(NUMERAIS)
     .sort((a, b) => b.length - a.length)
     .join("|");
+  return inventarios().flatMap(({ nomes, real }) =>
+    nomes.map((nome) => ({
+      real,
+      // «<n> de/dos/das <total> <inventário>»: o segundo número é o
+      // universo, e é só esse que se verifica.
+      padrao: new RegExp(
+        `\\b(?:${alternativas})\\s+d(?:e|os|as)\\s+(${alternativas})\\s+${nome}\\b`,
+        "gi",
+      ),
+    })),
+  );
+}
+
+function divergencias(): readonly Divergencia[] {
+  const encontradas: Divergencia[] = [];
+  const compilados = padroes();
 
   for (const ficheiro of ficheiros("src")) {
     const linhas = readFileSync(ficheiro, "utf8").split("\n");
@@ -159,25 +185,18 @@ function divergencias(): readonly Divergencia[] {
         .toLocaleLowerCase("pt-PT");
       if (MARCAS_DE_HISTORIA.some((marca) => janela.includes(marca))) return;
 
-      for (const { nomes, real } of inventarios()) {
-        for (const nome of nomes) {
-          // «<n> de/dos/das <total> <inventário>»: o segundo número é o
-          // universo, e é só esse que se verifica.
-          const padrao = new RegExp(
-            `\\b(?:${alternativas})\\s+d(?:e|os|as)\\s+(${alternativas})\\s+${nome}\\b`,
-            "gi",
-          );
-          for (const jogo of minuscula.matchAll(padrao)) {
-            const disse = NUMERAIS[jogo[1]!.toLocaleLowerCase("pt-PT")];
-            if (disse === undefined || disse === real) continue;
-            encontradas.push({
-              ficheiro,
-              linha: indice + 1,
-              texto: linha.trim().slice(0, 90),
-              disse,
-              real,
-            });
-          }
+      for (const { padrao, real } of compilados) {
+        padrao.lastIndex = 0;
+        for (const jogo of minuscula.matchAll(padrao)) {
+          const disse = NUMERAIS[jogo[1]!.toLocaleLowerCase("pt-PT")];
+          if (disse === undefined || disse === real) continue;
+          encontradas.push({
+            ficheiro,
+            linha: indice + 1,
+            texto: linha.trim().slice(0, 90),
+            disse,
+            real,
+          });
         }
       }
     });
