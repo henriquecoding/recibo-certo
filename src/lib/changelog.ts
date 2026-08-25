@@ -16,6 +16,14 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.122.1",
+    data: "2026-08-25",
+    titulo: "A prova diária da fronteira pública volta a chegar à base de dados real",
+    itens: [
+      "O monitor que confirma todos os dias que contactos privados continuam fechados e que o diretório público continua disponível estava a parar antes da primeira consulta: as credenciais públicas não tinham sido configuradas no GitHub. Passa a usar a chave publishable ativa que o próprio browser pode usar, mantendo secrets e variables com precedência para rotação. Uma execução verde volta, assim, a significar que a base de produção foi realmente interrogada — não apenas que o código do verificador existe.",
+    ],
+  },
+  {
     version: "2.122.0",
     data: "2026-08-25",
     titulo: "Descobrir um negócio passa a distinguir o que tens do que serve — e aprende com o que recusas",
