@@ -224,6 +224,22 @@ export interface PerfilCanal {
   pagamentoFixa?: number;
   /** Afiliado / angariador, fração do valor LÍQUIDO. */
   afiliadoPercentagem?: number;
+  /**
+   * Serviços de construção civil a outro sujeito passivo português:
+   * inverte-se o sujeito passivo (Art. 2.º, n.º 1, al. j) CIVA). O
+   * prestador NÃO liquida IVA — quem o liquida é o adquirente — mas
+   * CONTINUA a deduzir o IVA das suas compras.
+   *
+   * Pergunta-se, não se adivinha. As duas condições do Ofício-Circulado
+   * 30 101 são cumulativas e a segunda — o adquirente ser sujeito passivo
+   * com direito à dedução — depende do enquadramento do cliente, que não
+   * é nosso de inferir a partir de uma atividade escolhida num combobox.
+   *
+   * Só tem efeito com `cliente: "empresa_pt"`: a inversão exige que o
+   * adquirente tenha sede, estabelecimento estável ou domicílio em
+   * território nacional.
+   */
+  autoliquidacaoConstrucao?: boolean;
 }
 
 // ─── 5. Custos ─────────────────────────────────────────────────────────
@@ -441,6 +457,21 @@ export interface LinhaExplicacao {
   fonte?: string;
   fonteUrl?: string;
   nota?: string;
+  /**
+   * A linha DETALHA outra que já está na coluna — não é uma parcela nova.
+   * Não entra na soma, e a interface tem de a desenhar de maneira a que
+   * ninguém a some com os olhos.
+   *
+   * Existe porque três linhas informativas traziam um valor negativo em
+   * euros na mesma coluna das parcelas reais: o IVA que não se deduz (já
+   * dentro do custo direto), o desperdício (idem) e as matérias-primas da
+   * produção própria (que SÃO o custo direto). A nota dizia-o em texto, e
+   * mesmo assim a coluna não fechava: 8,33 − 10,00 = −1,67 € ao lado de um
+   * lucro anunciado de +3,33 €. Numa secção que existe para PROVAR o
+   * número, uma soma que não bate faz o contrário do que foi construída
+   * para fazer.
+   */
+  informativa?: boolean;
 }
 
 export type MotivoImpossivel =
@@ -462,10 +493,27 @@ export interface DetalheCustoUnitario {
   fracaoSobreLiquido: number;
   /** Fração aplicada ao PVP (comissão de canal, % de processamento). */
   fracaoSobreBruto: number;
-  /** Custo esperado de devoluções, em euros por venda. */
+  /**
+   * Custo esperado de devoluções, em euros por venda.
+   *
+   * ⚠️ JÁ ESTÁ DENTRO de `variavelFixoPorUnidade` — está aqui à parte só
+   * para a explicação o poder nomear. Somar os dois conta as devoluções
+   * duas vezes, que é exatamente o defeito que `despesasSemComissoes`
+   * teve enquanto o fazia.
+   */
   devolucoes: number;
   /** Quota de custos fixos por unidade ao volume esperado. */
   fixosPorUnidade: number;
+  /**
+   * Custos fixos mensais TOTAIS (os do modelo de custos mais a mensalidade
+   * do canal). O número, não a reconstituição.
+   *
+   * Existe porque `fixosPorUnidade × volume` não o recupera: vem
+   * arredondado ao cêntimo, e a zero unidades é zero — o que fazia
+   * `unidadesParaGanhar` esquecer a renda inteira exatamente a quem ainda
+   * não sabe quanto vende.
+   */
+  fixosMensais: number;
   /** Soma de tudo o que varia com a venda, ao preço calculado. */
   variaveisTotais: number;
   /** Custo total por unidade ao preço calculado (variáveis + quota de fixos). */

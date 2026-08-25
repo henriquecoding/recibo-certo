@@ -185,23 +185,36 @@ export default function SimuladorPreco({
   // tudo no mesmo sítio. Para quem lá estava, o botão simplesmente não
   // fazia nada. Retomar é uma decisão de ENTRADA, não uma reação a ficar
   // sem cenário: quem sai de um cenário está a sair dele de propósito.
+  //
+  // ⚠️ E A GUARDA NÃO PODE SER «HÁ CENÁRIO». Foi, e custou os dados de
+  // toda a gente: escolher um cenário escreve `?c=` no URL (é o que faz o
+  // «voltar» do telemóvel funcionar), portanto a partir daí o cenário vem
+  // SEMPRE preenchido da query — o cofre nunca era lido, o efeito seguinte
+  // montava o contexto de exemplo e a gravação escrevia-o por cima do
+  // trabalho guardado. Recarregar a página apagava tudo, sem aviso e sem
+  // volta. A pergunta certa é «este cofre é DESTE cenário?».
   useEffect(() => {
     if (retomou.current) return;
     retomou.current = true;
     // Embutida, o cofre não é desta composição: quem retoma é o estúdio,
     // e o que ele passa em `contextoInicial` já é o trabalho da pessoa.
     if (embutido) return;
-    if (cenario) return;
+    // Um cenário passado de fora (o estúdio, um teste) é trabalho já dado:
+    // não se lhe sobrepõe o cofre.
+    if (contextoInicial) return;
     const lido = lerEnvelopePreco<ContextoPreco>(1);
-    if (lido?.contexto.cenario) {
-      setCenario(lido.contexto.cenario);
-      setContexto(lido.contexto);
-      // O que vem do cofre é trabalho já feito por esta pessoa, não um
-      // exemplo nosso. Um cofre da v1 não sabe QUAIS campos foram
-      // respondidos — só que houve trabalho —, por isso o resultado
-      // apresenta-se como estimativa até a pessoa voltar a tocar neles.
-      setRespondidos(new Set(lido.respondidos));
-    }
+    if (!lido?.contexto.cenario) return;
+    // Sem cenário no URL, retoma-se o que estava. Com cenário no URL, só se
+    // for o MESMO — quem abre um link para outro cenário está a pedir esse,
+    // não o que ficou por acabar.
+    if (cenario && lido.contexto.cenario !== cenario) return;
+    setCenario(lido.contexto.cenario);
+    setContexto(lido.contexto);
+    // O que vem do cofre é trabalho já feito por esta pessoa, não um
+    // exemplo nosso. Um cofre da v1 não sabe QUAIS campos foram
+    // respondidos — só que houve trabalho —, por isso o resultado
+    // apresenta-se como estimativa até a pessoa voltar a tocar neles.
+    setRespondidos(new Set(lido.respondidos));
   }, [cenario]);
 
   // ── O cenário vive na URL ──────────────────────────────────────────

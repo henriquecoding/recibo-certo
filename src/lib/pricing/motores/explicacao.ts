@@ -133,6 +133,8 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
     linhas.push({
       rotulo: "IVA que não consegues deduzir",
       valor: -cent(e.custos.ivaPresoNoCusto),
+      // Já está dentro do custo direto: nomeia-se, não se volta a subtrair.
+      informativa: true,
       confianca: "oficial",
       fonte: "Art. 53.º n.º 3 CIVA — a isenção exclui o direito à dedução",
       fonteUrl: URL_CIVA_53,
@@ -144,13 +146,25 @@ export function construirExplicacao(e: EntradaExplicacao): LinhaExplicacao[] {
     linhas.push({
       rotulo: "Desperdício / quebra",
       valor: -cent(e.custos.custoDoDesperdicio),
+      // Idem: o custo direto já vem dividido por (1 − w).
+      informativa: true,
       confianca: "estimativa",
       nota: "Cada unidade vendida carrega o custo das que se perderam. Já está no custo direto.",
     });
   }
 
   for (const v of e.custos.variaveisDetalhe) {
-    linhas.push({ rotulo: v.rotulo, valor: -cent(v.valor), confianca: "estimativa" });
+    linhas.push({
+      rotulo: v.rotulo,
+      valor: -cent(v.valor),
+      // As linhas da produção própria decompõem o custo direto — somá-las
+      // outra vez contava as matérias-primas duas vezes.
+      informativa: v.detalhaCustoDireto === true,
+      confianca: "estimativa",
+      nota: v.detalhaCustoDireto
+        ? "Entra no custo direto acima — está aqui para se ver de onde ele vem."
+        : undefined,
+    });
   }
 
   for (const c of e.comissoes.detalhe) {

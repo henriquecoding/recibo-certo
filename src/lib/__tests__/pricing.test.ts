@@ -16,6 +16,7 @@ import {
   calcularTesouraria,
   type ContextoPreco,
   type EntradaSolver,
+  CENARIOS_INICIAIS,
 } from "@/lib/pricing";
 import {
   IVA_TAXAS,
@@ -2206,5 +2207,293 @@ describe("auditoria · as comissões são despesa dedutível em organizada", () 
     const b = precificar(ctxCanal(0.2));
     expect(a.precoLiquido).toBe(b.precoLiquido);
     expect(a.fiscal.irsFracao).toBe(b.fiscal.irsFracao);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  AUDITORIA DE AGOSTO DE 2026 — os cinco buracos que a deixaram passar
+//  ---------------------------------------------------------------------
+//  Cada um destes testes falha na versão anterior à auditoria. Não estão
+//  aqui por simetria: estão aqui porque a suite tinha 3 752 testes e
+//  nenhum deles reparou em nada disto.
+//
+//  Ver `docs/auditorias/CALCULAR-PRECO-AUDITORIA-2026-08.md`.
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("auditoria 2026-08 · regressões", () => {
+  /** TI em contabilidade organizada, com contas fixas — onde τ > 0. */
+  const ctxOrganizada = (patch: (c: ContextoPreco) => void = () => {}): ContextoPreco => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "normal",
+      regiao: "continente",
+      atividade: "art151",
+      faturacaoAnualPrevista: 40000,
+      regimeContabilidade: "organizada",
+      anoAtividade: 3,
+    };
+    c.produto = { natureza: "bem", escalaoVenda: "normal" };
+    c.canal = { canal: "loja_online", cliente: "consumidor" };
+    c.custos = {
+      direto: { valor: 10, incluiIVA: false, escalao: "normal" },
+      variaveis: [],
+      fixos: [{ id: "renda", rotulo: "Renda", mensal: 600 }],
+    };
+    c.volume = { unidadesMes: 100 };
+    c.objetivo = { modo: "margem", percentagem: 0.35 };
+    patch(c);
+    return c;
+  };
+
+  // ── B2 ───────────────────────────────────────────────────────────
+  it("o bloco de desconto mede a margem com o MESMO solver que o cartão", () => {
+    // Media-a com `solver` (sem fixos) e subtraía os fixos por fora, o que
+    // perdia o escudo fiscal deles: 31,4% no desconto ao lado de 35,0% no
+    // cartão, para o mesmo preço, no mesmo ecrã.
+    for (const regime of ["simplificado", "organizada"] as const) {
+      const r = precificar(
+        ctxOrganizada((c) => {
+          c.vendedor.regimeContabilidade = regime;
+          c.desconto = { tipo: "promocao", percentagem: 0.1 };
+        }),
+      );
+      expect(r.desconto).toBeDefined();
+      expect(r.desconto!.margemAntes).toBeCloseTo(r.margem.margem, 9);
+      // Ao cêntimo, que é a unidade em que os dois aparecem no ecrã:
+      // `margem.lucroUnidade` já vem arredondado, este não.
+      expect(r.desconto!.lucroAntes).toBeCloseTo(r.margem.lucroUnidade, 2);
+    }
+  });
+
+  // ── B3 ───────────────────────────────────────────────────────────
+  it("a memória de cálculo FECHA em todos os cenários", () => {
+    // Três linhas informativas traziam um valor negativo na mesma coluna
+    // das parcelas reais — o IVA não dedutível, o desperdício e as
+    // matérias-primas da produção própria. A coluna dava −1,67 € ao lado
+    // de um lucro anunciado de +3,33 €.
+    for (const chave of CENARIOS_INICIAIS) {
+      const r = precificar(cenarioPorChave(chave).contexto());
+      if (!r.ok) continue;
+      const iPVP = r.explicacao.findIndex((l) => l.rotulo.startsWith("Preço ao cliente"));
+      const iFim = r.explicacao.findIndex(
+        (l) => l.rotulo.includes("O que te fica") || l.rotulo.includes("Lucro por venda"),
+      );
+      expect(iPVP, `${chave}: sem linha de PVP`).toBeGreaterThanOrEqual(0);
+      expect(iFim, `${chave}: sem linha de resultado`).toBeGreaterThan(iPVP);
+
+      const soma = r.explicacao
+        .slice(iPVP + 1, iFim)
+        .filter((l) => !l.informativa)
+        .reduce((t, l) => t + l.valor, 0);
+
+      expect(r.precoLiquido + soma, `a memória não fecha no cenário «${chave}»`).toBeCloseTo(
+        r.margem.lucroUnidade,
+        1,
+      );
+    }
+  });
+
+  it("as linhas informativas da memória são as que detalham outra parcela", () => {
+    const r = precificar(
+      ctxOrganizada((c) => {
+        c.custos.direto = { valor: 12.3, incluiIVA: true, escalao: "normal" };
+        c.custos.desperdicio = 0.2;
+        c.vendedor.regimeIVA = "isento_art53";
+        c.vendedor.faturacaoAnualPrevista = 12000;
+      }),
+    );
+    const informativas = r.explicacao.filter((l) => l.informativa).map((l) => l.rotulo);
+    expect(informativas).toContain("IVA que não consegues deduzir");
+    expect(informativas).toContain("Desperdício / quebra");
+  });
+
+  // ── B4 ───────────────────────────────────────────────────────────
+  it("as devoluções entram UMA vez nas despesas que formam o IRS marginal", () => {
+    // `custos.variaveisFixos` já as inclui; `despesasSemComissoes` somava
+    // `custos.devolucoes` outra vez. Despesa a mais → IRS marginal a menos
+    // → preço abaixo do sustentável, e logo a quem tem mais devoluções.
+    const semDevolucoes = precificar(
+      ctxOrganizada((c) => {
+        c.custos.portesAbsorvidos = 4;
+      }),
+    );
+    const comDevolucoes = precificar(
+      ctxOrganizada((c) => {
+        c.custos.portesAbsorvidos = 4;
+        c.custos.taxaDevolucao = 0.2;
+        c.custos.custoDevolucao = 6;
+      }),
+    );
+    // Invariante 13: acrescentar um custo nunca baixa o preço.
+    expect(comDevolucoes.precoLiquido).toBeGreaterThan(semDevolucoes.precoLiquido);
+    // E o custo variável por unidade sobe exatamente o custo esperado da
+    // devolução — 0,2 × (6 + 4) = 2 €, não 4.
+    expect(comDevolucoes.custo.variavelFixoPorUnidade - semDevolucoes.custo.variavelFixoPorUnidade)
+      .toBeCloseTo(2, 2);
+  });
+
+  // ── B5 ───────────────────────────────────────────────────────────
+  it("«quantas preciso de vender» não depende do volume declarado", () => {
+    // `fixosPorUnidade × volume` era zero a volume zero: 1 000 €/mês de
+    // renda desapareciam e a resposta saía 80 onde são precisas 240.
+    const base = (q: number): ContextoPreco => {
+      const c = contextoBase();
+      c.vendedor = { tipo: "empresa", regimeIVA: "normal", regiao: "continente" };
+      c.produto = { natureza: "bem", escalaoVenda: "normal" };
+      c.canal = { canal: "loja_fisica", cliente: "consumidor" };
+      c.custos = {
+        direto: { valor: 10, incluiIVA: false, escalao: "normal" },
+        variaveis: [],
+        fixos: [{ id: "renda", rotulo: "Renda", mensal: 1000 }],
+      };
+      c.volume = { unidadesMes: q };
+      c.objetivo = { modo: "margem", percentagem: 0.3 };
+      return c;
+    };
+    const respostas = [0, 1, 7, 50, 300].map(
+      (q) => unidadesParaGanhar(base(q), 20, 500).unidadesNecessarias,
+    );
+    expect(new Set(respostas).size, `respostas divergentes: ${respostas.join(", ")}`).toBe(1);
+    // E a resposta certa conta mesmo com a renda.
+    expect(respostas[0]).toBe(240);
+  });
+
+  it("`fixosMensais` é o total, não a reconstituição arredondada", () => {
+    const r = precificar(
+      ctxOrganizada((c) => {
+        c.volume = { unidadesMes: 7 };
+      }),
+    );
+    expect(r.custo.fixosMensais).toBe(600);
+    // A reconstituição que estava a ser usada erra por arredondamento.
+    expect(r.custo.fixosPorUnidade * 7).not.toBe(600);
+  });
+
+  // ── 4.1 · autoliquidação na construção civil ─────────────────────
+  it("na construção civil não se liquida IVA — mas continua a deduzir-se", () => {
+    // É a combinação que nenhuma isenção tem, e a razão de ter ramo
+    // próprio: quem está isento pelo Art. 53.º tem o custo COM IVA; aqui
+    // o custo é SEM IVA, porque o direito à dedução mantém-se.
+    const ctx = (auto: boolean): ContextoPreco => {
+      const c = contextoBase();
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao: "continente",
+        atividade: "art151",
+        faturacaoAnualPrevista: 30000,
+      };
+      c.produto = { natureza: "servico", escalaoVenda: "normal" };
+      c.canal = { canal: "orcamento", cliente: "empresa_pt", autoliquidacaoConstrucao: auto };
+      c.custos = { direto: { valor: 123, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
+      c.volume = { unidadesMes: 5 };
+      c.objetivo = { modo: "margem", percentagem: 0.3 };
+      return c;
+    };
+
+    const normal = precificar(ctx(false));
+    const invertido = precificar(ctx(true));
+
+    // Sem IVA na fatura: o cliente paga o líquido.
+    expect(invertido.taxaIVA).toBe(0);
+    expect(invertido.pvp).toBeCloseTo(invertido.precoLiquido, 2);
+    expect(normal.pvp).toBeGreaterThan(normal.precoLiquido);
+
+    // O custo continua a ser o valor SEM IVA nos dois casos — é isto que
+    // separa a inversão da isenção do Art. 53.º.
+    expect(invertido.custo.direto).toBeCloseTo(normal.custo.direto, 2);
+    expect(invertido.custo.direto).toBeCloseTo(100, 2);
+
+    // E nada de IVA a entregar, mas o aviso tem de estar lá.
+    expect(invertido.avisos.some((a) => a.id === "autoliquidacao-construcao")).toBe(true);
+  });
+
+  it("a inversão só se aplica a cliente empresa portuguesa", () => {
+    const c = contextoBase();
+    c.vendedor = { tipo: "ti", regimeIVA: "normal", regiao: "continente", atividade: "art151" };
+    c.produto = { natureza: "servico", escalaoVenda: "normal" };
+    c.canal = { canal: "orcamento", cliente: "consumidor", autoliquidacaoConstrucao: true };
+    c.custos = { direto: { valor: 0, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 5 };
+    c.objetivo = { modo: "margem", percentagem: 0.3 };
+    const r = precificar(c);
+    expect(r.taxaIVA).toBe(IVA_NORMAL);
+    expect(r.avisos.some((a) => a.id === "autoliquidacao-construcao")).toBe(false);
+  });
+
+  it("quem está isento pelo Art. 53.º não ganha dedução por invocar a inversão", () => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "isento_art53",
+      regiao: "continente",
+      atividade: "art151",
+      faturacaoAnualPrevista: 10000,
+    };
+    c.produto = { natureza: "servico", escalaoVenda: "normal" };
+    c.canal = { canal: "orcamento", cliente: "empresa_pt", autoliquidacaoConstrucao: true };
+    c.custos = { direto: { valor: 123, incluiIVA: true, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 5 };
+    c.objetivo = { modo: "margem", percentagem: 0.3 };
+    const r = precificar(c);
+    // Continua isento, e o custo continua a ser o valor COM IVA (n.º 3).
+    expect(r.regimeIVA).toBe("isento_art53");
+    expect(r.custo.direto).toBeCloseTo(123, 2);
+  });
+
+  // ── 4.2 · regime transfronteiriço «EX» ───────────────────────────
+  it("quem está isento e vende na UE é avisado do número «EX»", () => {
+    const c = contextoBase();
+    c.vendedor = {
+      tipo: "ti",
+      regimeIVA: "isento_art53",
+      regiao: "continente",
+      atividade: "art151",
+      faturacaoAnualPrevista: 10000,
+    };
+    c.produto = { natureza: "servico", escalaoVenda: "normal" };
+    c.canal = { canal: "orcamento", cliente: "empresa_ue" };
+    c.custos = { direto: { valor: 0, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+    c.volume = { unidadesMes: 5 };
+    c.objetivo = { modo: "margem", percentagem: 0.3 };
+    const r = precificar(c);
+    const aviso = r.avisos.find((a) => a.id === "isencao-transfronteirica-ex");
+    expect(aviso).toBeDefined();
+    expect(aviso!.texto).toContain("EX");
+    // Quem NÃO está isento não tem nada a ver com este regime.
+    c.vendedor.regimeIVA = "normal";
+    expect(precificar(c).avisos.some((a) => a.id === "isencao-transfronteirica-ex")).toBe(false);
+  });
+
+  // ── 4.3 · residência fiscal ──────────────────────────────────────
+  it("a residência fiscal governa o IRS; a região governa o IVA", () => {
+    const ctx = (regiao: "continente" | "madeira", residencia?: "continente" | "madeira") => {
+      const c = contextoBase();
+      c.vendedor = {
+        tipo: "ti",
+        regimeIVA: "normal",
+        regiao,
+        residenciaFiscal: residencia,
+        atividade: "art151",
+        faturacaoAnualPrevista: 40000,
+      };
+      c.produto = { natureza: "servico", escalaoVenda: "normal" };
+      c.canal = { canal: "orcamento", cliente: "consumidor" };
+      c.custos = { direto: { valor: 0, incluiIVA: false, escalao: "normal" }, variaveis: [], fixos: [] };
+      c.volume = { unidadesMes: 10 };
+      c.objetivo = { modo: "margem", percentagem: 0.3 };
+      return precificar(c);
+    };
+
+    // Atividade na Madeira, residência no continente: IVA da Madeira (22%)
+    // e IRS continental — mais alto do que o da Madeira.
+    const madeiraResideContinente = ctx("madeira", "continente");
+    const madeiraResideMadeira = ctx("madeira");
+    expect(madeiraResideContinente.taxaIVA).toBe(IVA_TAXAS.madeira.value.normal);
+    expect(madeiraResideMadeira.taxaIVA).toBe(IVA_TAXAS.madeira.value.normal);
+    expect(madeiraResideContinente.fiscal.irsFracao).toBeGreaterThan(
+      madeiraResideMadeira.fiscal.irsFracao,
+    );
   });
 });

@@ -73,6 +73,11 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     tipoVendedor: contexto.vendedor.tipo,
     primeiroAno: (contexto.vendedor.anoAtividade ?? 3) === 1,
     atoIsolado: contexto.cenario === "ato_isolado",
+    // A inversão exige que o adquirente seja sujeito passivo NACIONAL com
+    // direito à dedução (Ofício-Circulado 30 101). A primeira condição
+    // verifica-se aqui; a segunda é declarada por quem sabe — o vendedor.
+    autoliquidacaoConstrucao:
+      !!contexto.canal.autoliquidacaoConstrucao && contexto.canal.cliente === "empresa_pt",
   });
 
   // ── 2. Custos ──────────────────────────────────────────────────────
@@ -107,8 +112,13 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   //  qualquer outra. As comissões PERCENTUAIS não cabem aqui porque
   //  dependem do preço, que ainda não existe: entram na segunda passagem,
   //  logo abaixo.
+  //  ⚠️ `custos.variaveisFixos` JÁ INCLUI as devoluções (ver `custos.ts`,
+  //  que as soma antes de devolver e as expõe à parte só para a
+  //  explicação). Somar `custos.devolucoes` outra vez sobrestimava as
+  //  despesas dedutíveis, subestimava a taxa marginal de IRS e devolvia um
+  //  preço abaixo do sustentável — precisamente a quem tem mais devoluções.
   const despesasSemComissoes =
-    (custos.diretoAjustado + custos.variaveisFixos + custos.devolucoes + comissoes.fixos) * q * 12 +
+    (custos.diretoAjustado + custos.variaveisFixos + comissoes.fixos) * q * 12 +
     fixosMensaisTotais * 12;
 
   //  O conversor líquido ↔ PVP, com o regime lá dentro. Toda a engine passa
@@ -300,6 +310,7 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     fracaoSobreBruto: solver.fracaoBruto,
     devolucoes: cent(custos.devolucoes),
     fixosPorUnidade: cent(fixosPorUnidade),
+    fixosMensais: cent(fixosMensaisTotais),
     variaveisTotais: cent(variaveisTotais),
     total: cent(variaveisTotais + fixosPorUnidade),
   };
@@ -399,7 +410,13 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
     contexto,
     ivaPorUnidade: ivaEntregue,
     ssPorUnidade: fiscal.ssPorUnidade,
-    liquidaIVA: iva.liquida,
+    // Na autoliquidação não SAI IVA (o adquirente é que o entrega), mas a
+    // declaração periódica continua a ser devida: quem inverte o sujeito
+    // passivo não passa a isento, e `prazos.ts` dispensa a declaração a
+    // quem é isento. Dizer-lhe «isento» faria desaparecer do calendário
+    // uma obrigação que continua a existir — e o valor já vai a zero por
+    // `ivaEntregue`, portanto não há nada a duplicar.
+    liquidaIVA: iva.liquida || iva.autoliquidacao,
     periodicidade: iva.periodicidade,
   });
 
@@ -407,11 +424,14 @@ export function precificar(contexto: ContextoPreco): ResultadoPreco {
   const desconto =
     contexto.desconto && contexto.desconto.percentagem > 0 && saida.ok
       ? calcularDesconto({
+          // `solver` (sem fixos) para o piso e a contribuição; `solverComFixos`
+          // para o lucro e a margem — que é o que o cartão de resultado
+          // mostra e o que este bloco tem de repetir ao cêntimo.
           solver,
+          solverComFixos,
           conversor,
           precoLiquido,
           pvp,
-          fixosPorUnidade,
           unidadesMes: q,
           desconto: contexto.desconto,
         })

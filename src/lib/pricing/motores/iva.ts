@@ -72,6 +72,11 @@ export interface SituacaoIVAPreco {
   deduz: boolean;
   /** IVA incide só sobre a margem (DL 199/96)? */
   regimeMargem: boolean;
+  /**
+   * Inversão do sujeito passivo (Art. 2.º, n.º 1, al. j) CIVA): não
+   * liquida, mas DEDUZ. É a combinação que nenhuma isenção tem.
+   */
+  autoliquidacao: boolean;
   regime: RegimeIVAVendedor;
   explicacao: string;
 
@@ -125,6 +130,11 @@ export interface EntradaSituacaoIVAPreco {
   tipoVendedor?: TipoVendedor;
   /** Art. 53.º n.º 5: no primeiro ano conta a estimativa do ano corrente. */
   primeiroAno?: boolean;
+  /**
+   * Serviços de construção civil a um sujeito passivo nacional com direito
+   * à dedução: inverte-se o sujeito passivo. Ver `AUTOLIQUIDACAO_CONSTRUCAO`.
+   */
+  autoliquidacaoConstrucao?: boolean;
 }
 
 /**
@@ -265,6 +275,7 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
       liquida: true,
       deduz: false,
       regimeMargem: true,
+      autoliquidacao: false,
       regime,
       explicacao:
         "Regime da margem (DL 199/96): o IVA incide sobre a diferença entre o preço de venda e o de compra, não sobre o preço total.",
@@ -280,6 +291,11 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
       liquida: false,
       deduz: false,
       regimeMargem: false,
+      // Quem já não liquida por estar isento não «inverte» nada: a fatura
+      // sai sem imposto pelo Art. 53.º, e o direito à dedução continua a
+      // não existir (n.º 3). Marcar aqui autoliquidação daria a esta
+      // pessoa um custo sem IVA que ela não tem.
+      autoliquidacao: false,
       regime: porNatureza ? "isento_art9" : "isento_art53",
       explicacao: porNatureza
         ? "Isento pela natureza da operação (Art. 9.º do CIVA). Não há limiar de faturação, mas também não há dedução do IVA suportado."
@@ -291,6 +307,30 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
   const escalaoEfetivo: EscalaoIVA =
     derivada.regimeEfetivo === "isento" ? escalaoVenda : derivada.regimeEfetivo;
 
+  // ── Inversão do sujeito passivo (construção civil) ──────────────────
+  //  NÃO É UMA ISENÇÃO, e é por isso que tem ramo próprio. O prestador não
+  //  liquida — quem liquida é o adquirente — mas continua a DEDUZIR o IVA
+  //  das compras nos termos gerais (arts. 19.º a 26.º). Tratar isto como
+  //  «taxa = 0» reutilizando o ramo da isenção punha o custo dele COM IVA,
+  //  inflando a base de custo em até 23% e o preço com ela.
+  //
+  //  Só aqui, depois de a isenção estar afastada: quem está isento pelo
+  //  Art. 53.º já não liquidava, e a inversão não lhe devolve a dedução.
+  if (entrada.autoliquidacaoConstrucao) {
+    return {
+      ...comum,
+      escalaoVenda: escalaoEfetivo,
+      taxaVenda: 0,
+      liquida: false,
+      deduz: true,
+      regimeMargem: false,
+      autoliquidacao: true,
+      regime: "normal",
+      explicacao:
+        "Serviços de construção civil a um sujeito passivo nacional: inverte-se o sujeito passivo (Art. 2.º, n.º 1, al. j) CIVA). A fatura sai sem IVA, com a menção «IVA — autoliquidação», e é o teu cliente que o liquida e entrega. Não é isenção: continuas a deduzir o IVA das tuas compras, e por isso o teu custo é o valor SEM IVA.",
+    };
+  }
+
   return {
     ...comum,
     escalaoVenda: escalaoEfetivo,
@@ -298,6 +338,7 @@ export function situacaoIVAPreco(entrada: EntradaSituacaoIVAPreco): SituacaoIVAP
     liquida: true,
     deduz: true,
     regimeMargem: false,
+    autoliquidacao: false,
     regime: "normal",
     explicacao: corrigidaPeloLimiar
       ? `Disseste que estás isento, mas com ${Math.round(faturacaoConsiderada).toLocaleString("pt-PT")} € de faturação anual já ultrapassaste os ${derivada.limiarImediato.toLocaleString("pt-PT")} € do Art. 58.º n.º 2 b) — a isenção cessa de imediato. O preço está calculado com IVA, que é o que vais ter de entregar.`

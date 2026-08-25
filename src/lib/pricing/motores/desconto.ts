@@ -24,12 +24,26 @@ import type { ConversorPreco } from "./iva";
 import { dividir, fracao, num, unidades } from "../numeros";
 
 export interface EntradaDesconto {
+  /**
+   * O solver SEM custos fixos. É ele que define o piso absoluto e a margem
+   * de contribuição — as duas coisas que, por definição, se medem antes da
+   * estrutura (especificação §7).
+   */
   solver: EntradaSolver;
+  /**
+   * O MESMO solver com que o orquestrador resolveu o preço: custos fixos
+   * por dentro, e com eles o escudo fiscal de τ.
+   *
+   * Tem de vir de fora. Medir o lucro como `lucroAoPreco(solver, P) −
+   * fixos` perde esse escudo, e o bloco de desconto passava a anunciar uma
+   * margem diferente da do cartão de resultado — 31,4% ao lado de 35,0%,
+   * no mesmo ecrã, para o mesmo preço. É o invariante 11.
+   */
+  solverComFixos: EntradaSolver;
   /** Líquido ↔ PVP com o regime lá dentro. */
   conversor: ConversorPreco;
   precoLiquido: number;
   pvp: number;
-  fixosPorUnidade: number;
   unidadesMes: number;
   desconto: ModeloDesconto;
 }
@@ -44,8 +58,12 @@ export function calcularDesconto(e: EntradaDesconto): ResultadoDesconto {
   // desce também o IVA, porque a margem tributável encolheu.
   const precoLiquidoComDesconto = e.conversor.paraLiquido(pvpComDesconto);
 
-  const lucroAntes = lucroAoPreco(e.solver, num(e.precoLiquido)) - num(e.fixosPorUnidade);
-  const lucroDepois = lucroAoPreco(e.solver, precoLiquidoComDesconto) - num(e.fixosPorUnidade);
+  // Do MESMO solver que resolveu o preço, com os fixos lá dentro. A cópia
+  // anterior subtraía `fixosPorUnidade` por fora, e em contabilidade
+  // organizada isso perdia o escudo fiscal deles — τ × fixos de diferença
+  // entre este bloco e o cartão de resultado.
+  const lucroAntes = lucroAoPreco(e.solverComFixos, num(e.precoLiquido));
+  const lucroDepois = lucroAoPreco(e.solverComFixos, precoLiquidoComDesconto);
 
   const margemAntes = e.precoLiquido > 0 ? dividir(lucroAntes, num(e.precoLiquido)) : 0;
   const margemDepois =

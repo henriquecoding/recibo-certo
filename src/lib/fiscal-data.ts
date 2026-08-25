@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-24" as const;
+export const DATA_LAST_REVIEW = "2026-08-25" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -147,6 +147,11 @@ export const SOURCES = {
   civa36: {
     label: "Art. 36.º CIVA — Prazo de emissão e formalidades das faturas: 5.º dia útil, 15.º dia do mês seguinte nas intracomunitárias, data do recebimento nos adiantamentos · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva36.aspx",
+  },
+  civa2: {
+    label:
+      "Art. 2.º, n.º 1, al. j) CIVA — Inversão do sujeito passivo nos serviços de construção civil: é o ADQUIRENTE que liquida o imposto · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva2.aspx",
   },
   civa53: {
     label: "Art. 53.º CIVA — Âmbito de aplicação no território nacional: limiar de 15 000 €, e o regime transfronteiriço com o limiar de 100 000 € na União e o número EX · Portal das Finanças (AT)",
@@ -1319,6 +1324,48 @@ export const REGULARIZACAO_IVA = {
     "Art. 78.º, n.º 4 CIVA — o adquirente sujeito passivo corrige a dedução efetuada",
     "civa78",
     REV_FATURACAO
+  ),
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════
+//  INVERSÃO DO SUJEITO PASSIVO — serviços de construção civil
+//  ---------------------------------------------------------------------
+//  Quem presta serviços de construção civil a outro sujeito passivo
+//  português NÃO liquida IVA: quem o liquida é o ADQUIRENTE. A fatura sai
+//  a zero com a menção «IVA — autoliquidação».
+//
+//  ⚠️ E ISTO NÃO É UMA ISENÇÃO. A diferença é a que separa dois números:
+//  quem está isento pelo Art. 53.º também não deduz o IVA das compras
+//  (n.º 3), e por isso o custo dele é o valor COM IVA. Aqui o prestador
+//  continua a ser sujeito passivo com direito à dedução nos termos gerais
+//  (arts. 19.º a 26.º) — o custo dele é o valor SEM IVA. Tratar os dois
+//  casos como o mesmo erra o custo em até 23%, para o lado errado.
+//
+//  As duas condições do Ofício-Circulado n.º 30 101 são CUMULATIVAS, e a
+//  segunda não é nossa de verificar: depende do enquadramento do cliente.
+//  Por isso a engine pergunta em vez de adivinhar.
+// ═══════════════════════════════════════════════════════════════════════
+export const AUTOLIQUIDACAO_CONSTRUCAO = {
+  /** O prestador não liquida; liquida o adquirente. */
+  inverteSujeitoPassivo: sv(
+    true,
+    "Art. 2.º, n.º 1, al. j) CIVA — são sujeitos passivos as pessoas singulares ou coletivas com sede, estabelecimento estável ou domicílio em território nacional que pratiquem operações com direito à dedução total ou parcial, quando adquirentes de serviços de construção civil, incluindo remodelação, reparação, manutenção, conservação e demolição de bens imóveis, em regime de empreitada ou subempreitada",
+    "civa2",
+    "2026-08-25"
+  ),
+  /** O prestador MANTÉM o direito à dedução — ao contrário do Art. 53.º. */
+  mantemDireitoADeducao: sv(
+    true,
+    "Ofício-Circulado n.º 30 101, de 24/05/2007, DSIVA — cabe ao adquirente a liquidação e entrega do imposto devido, «sem prejuízo do seu direito à dedução, nos termos gerais do CIVA, designadamente dos seus artigos 19.º a 26.º»",
+    "civa2",
+    "2026-08-25"
+  ),
+  /** A menção obrigatória na fatura. */
+  mencaoNaFatura: sv(
+    "IVA — autoliquidação",
+    "Art. 36.º, n.º 5, al. f) CIVA — a fatura emite-se sem imposto, com a menção «IVA — autoliquidação»",
+    "civa2",
+    "2026-08-25"
   ),
 } as const;
 

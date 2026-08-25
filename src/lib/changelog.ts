@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.121.0",
+    data: "2026-08-25",
+    titulo: "A calculadora de preço deixa de perder o teu trabalho — e de dar dois números para a mesma venda",
+    itens: [
+      "Se estavas a meio de um cálculo de preço e recarregavas a página, perdias tudo. O trabalho estava guardado no teu dispositivo, mas a ferramenta não voltava a lê-lo assim que o endereço tinha o cenário lá dentro — e, pior, escrevia os valores de exemplo por cima do que lá estava. Quem tinha passado meia hora a introduzir custos de fornecedor encontrava o formulário vazio, sem explicação e sem volta. Corrigido: recarregar retoma o que estavas a fazer, e o botão «Mudar» continua a limpar tudo quando é isso que pedes.",
+      "O cartão do preço dizia «35,0% de margem, ficam-te 17,80 € por venda» e, no mesmo ecrã, o bloco do desconto dizia «31,4%, 15,95 €» — para o mesmo preço, antes de qualquer desconto. Um dos dois estava a medir o lucro sem contar que as contas fixas são despesa dedutível em contabilidade organizada. Passam a ser o mesmo número, sempre.",
+      "A secção «Como se chegou a este número» não fechava. Em três casos comuns — produto que fazes tu, custo com IVA que não deduzes, e desperdício — a mesma parcela aparecia duas vezes na coluna, e quem somasse à mão via um prejuízo onde a ferramenta anunciava lucro. As linhas que só explicam uma parcela que já lá está passam a ser desenhadas como o que são, e a coluna fecha.",
+      "«Quantas tenho de vender para ganhar X?» respondia 80 onde a resposta certa era 240, se ainda não tivesses dito quantas vendes por mês — as contas fixas desapareciam da conta. É justamente quem ainda não sabe o volume que faz esta pergunta.",
+      "As devoluções esperadas estavam a ser contadas duas vezes nas despesas que formam a tua taxa de IRS, o que dava um preço recomendado abaixo do sustentável — e dava-o precisamente a quem tem mais devoluções, ou seja, a quem vende online.",
+      "Obras e remodelações: se prestas serviços de construção civil a outra empresa portuguesa, a fatura vai sem IVA — quem o entrega é o teu cliente (Art. 2.º, n.º 1, al. j) do CIVA). A calculadora mostrava-te um preço com 23% de IVA por cima, que é um preço que não podes faturar. Passa a haver a pergunta, o preço certo e o aviso com a menção que a fatura tem de levar. Atenção a uma diferença que se confunde: isto não é isenção — continuas a deduzir o IVA das tuas compras.",
+      "Estando isento pelo Art. 53.º e vendendo para outros países da União, podes fazê-lo sem lá cobrar IVA desde julho de 2025, se o teu volume de negócios em toda a UE não passar de 100 000 € por ano e tiveres pedido o número com o sufixo «EX». A calculadora passa a dizê-lo a quem está nessa situação.",
+      "O IVA segue a operação e o IRS segue a pessoa. A ferramenta avisava quem reside nas regiões autónomas de que podia dizer-nos se reside num sítio e trabalha noutro — e não havia onde o dizer. Passa a haver.",
+    ],
+  },
+  {
     version: "2.120.0",
     data: "2026-08-25",
     titulo: "O modo claro passa a ter chão",

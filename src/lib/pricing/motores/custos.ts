@@ -49,7 +49,16 @@ export interface ResultadoCustos {
   /** Euros por unidade que não dependem do preço. */
   variaveisFixos: number;
   /** Detalhe para a explicação. */
-  variaveisDetalhe: { rotulo: string; valor: number }[];
+  /**
+   * Linhas para a explicação.
+   *
+   * `detalhaCustoDireto` marca as que DECOMPÕEM o custo direto em vez de
+   * acrescentarem alguma coisa — as matérias-primas, a mão de obra e a
+   * depreciação da produção própria já ESTÃO em `diretoAjustado`. Sem a
+   * marca, a memória de cálculo mostrava «Custo direto −5,00 €» seguido de
+   * «Tecido −5,00 €» e subtraía os mesmos 5 € duas vezes.
+   */
+  variaveisDetalhe: { rotulo: string; valor: number; detalhaCustoDireto?: boolean }[];
   /** Custo esperado de devoluções por venda. */
   devolucoes: number;
   /** Custos fixos mensais, somados. */
@@ -253,7 +262,15 @@ export function calcularCustos(input: {
     custoDoDesperdicio,
     variaveisFixos: variaveisFixos + devolucoes,
     variaveisDetalhe: producaoRes.detalhe.length > 0
-      ? [...producaoRes.detalhe.map((d) => ({ ...d, valor: cent(d.valor) })), ...variaveisDetalhe]
+      ? [
+          // Decompõem o custo direto; não se somam a ele.
+          ...producaoRes.detalhe.map((d) => ({
+            ...d,
+            valor: cent(d.valor),
+            detalhaCustoDireto: true as const,
+          })),
+          ...variaveisDetalhe,
+        ]
       : variaveisDetalhe,
     devolucoes,
     fixosMensais,

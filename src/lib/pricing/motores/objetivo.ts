@@ -29,7 +29,6 @@
 
 import type { ContextoPreco, LinhaExplicacao, ResultadoObjetivo } from "../tipos";
 import { precificar } from "../motor";
-import { custosVariaveisAoPreco, lucroAoPreco } from "./preco";
 import { cent, dividir, fracao, naoNegativo, num, unidades } from "../numeros";
 
 /**
@@ -145,7 +144,13 @@ export function unidadesParaGanhar(
   const lucroNecessario = alvo;
 
   const contribuicao = r.margem.contribuicaoUnidade;
-  const fixos = r.custo.fixosPorUnidade * Math.max(1, num(contexto.volume.unidadesMes));
+  // O total mensal, não a reconstituição a partir do valor por unidade.
+  // `fixosPorUnidade × volume` falhava de duas maneiras: vem arredondado ao
+  // cêntimo (1 000 €/mês em 7 unidades voltavam como 1 000,02 €) e, a
+  // volume ZERO, é zero — as contas fixas desapareciam inteiras. Quem
+  // pergunta «quantas tenho de vender?» é justamente quem ainda não
+  // declarou volume, e a resposta saía três vezes mais baixa.
+  const fixos = r.custo.fixosMensais;
 
   if (contribuicao <= 0) {
     return {
@@ -208,24 +213,5 @@ export function resultadoAoPreco(
     lucroMensal: cent(r.margem.lucroMensal),
     liquidoPessoalMensal: cent(r.margem.lucroMensal),
     margem: r.margem.margem,
-  };
-}
-
-/** Utilitário para o slider: lucro por unidade a um PVP arbitrário. */
-export function lucroAoPVP(
-  solver: Parameters<typeof lucroAoPreco>[0],
-  pvp: number,
-  taxaIVA: number,
-  fixosPorUnidade: number,
-): { lucro: number; margem: number; contribuicao: number } {
-  // Sem regime da margem à vista: quem tem um conversor deve convertê-lo
-  // antes de chamar isto. Fica a conversão simples porque é o caso de 99%
-  // dos chamadores e não há aqui contexto para saber o custo de aquisição.
-  const liquido = dividir(num(pvp), 1 + fracao(taxaIVA, 0, 1), num(pvp));
-  const lucro = lucroAoPreco(solver, liquido) - num(fixosPorUnidade);
-  return {
-    lucro: cent(lucro),
-    margem: liquido > 0 ? dividir(lucro, liquido) : 0,
-    contribuicao: cent(liquido - custosVariaveisAoPreco(solver, liquido)),
   };
 }
