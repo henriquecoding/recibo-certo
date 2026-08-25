@@ -3,7 +3,11 @@
 @tailwind utilities;
 
 :root {
-  --background: #f5f4f0;
+  /* O papel da página. Segue o token `cream` do `tailwind.config.ts` — ver
+     lá a nota longa sobre porque desceu de #F5F4F0 (era o degrau que
+     faltava, e não as bordas). Escrito aqui à mão porque o `body` precisa
+     dele antes de qualquer utilitário existir. */
+  --background: #edeae0;
   /* Cores de categoria do calendário de prazos (SS/IVA/IRS) — ver
      src/lib/prazos.ts. Em .dark, o IVA e o IRS ganham override (o
      castanho-oliva original fica ilegível sobre um cartão escuro). */
@@ -551,8 +555,12 @@ input[type="number"]::-webkit-outer-spin-button {
    │ que pode escurecer sem tecto de acessibilidade nenhum, e é por      │
    │ isso que tem uma regra própria em vez de um token.                   │
    │                                                                    │
-   │ 1,143:1 contra o papel e 1,258:1 contra um cartão branco — as duas  │
-   │ situações em que aparece. `html:not(.dark)` porque no escuro o      │
+   │ 1,128:1 contra o papel e 1,358:1 contra um cartão branco — as duas  │
+   │ situações em que aparece. (Subiu quando o papel desceu para         │
+   │ #EDEAE0: o valor anterior ficava a 1,045:1 do papel novo, outra vez │
+   │ abaixo do limiar. Um esqueleto mede-se sempre contra o que está por │
+   │ baixo dele, não contra um número fixo.)                             │
+   │ `html:not(.dark)` porque no escuro o                                │
    │ `.dark .bg-stone-100` já resolve, e (0,2,1)/(0,3,1) ganham ao       │
    │ (0,1,0) do utilitário sem precisar de `!important`.                 │
    │                                                                    │
@@ -569,7 +577,7 @@ input[type="number"]::-webkit-outer-spin-button {
    └────────────────────────────────────────────────────────────────────┘ */
 html:not(.dark) .animate-pulse.bg-stone-100,
 html:not(.dark) .animate-pulse .bg-stone-100 {
-  background-color: #e9e5db;
+  background-color: #e2ddce;
 }
 
 /* Botão tátil — brilho que percorre ao passar o rato. */
@@ -822,6 +830,14 @@ html:not(.dark) .animate-pulse .bg-stone-100 {
   .dark [class*="text-brand-dark/"] {
     color: rgb(111 206 172 / 0.88);
   }
+  /* NÃO há aqui um `[class*="text-brand/"]`, e a ausência é deliberada.
+     Foi escrito, medido e retirado: os únicos elementos que o `text-brand`
+     com opacidade apanha sem um `dark:` ao lado estão no RODAPÉ, que é
+     `bg-ink` — escuro nos DOIS temas. Remapeá-los para o verde-menta do
+     escuro punha o mesmo coração de duas cores conforme o tema, sem
+     ninguém ter pedido; e o seletor por substring ainda apanhava um
+     `text-white/80` vizinho pelo caminho. Um remapeamento que não corrige
+     nada e mexe no tema que já estava bem não vale a linha. */
   .dark [class*="bg-brand-light/"] {
     background-color: rgb(18 63 46 / 0.7);
   }
@@ -1311,12 +1327,13 @@ html.dark .leaflet-container .leaflet-control-attribution a {
    `@tailwind utilities` — ver a nota longa lá em cima sobre porquê.
    ══════════════════════════════════════════════════════════════════════ */
 
-/* ① Texto pequeno legível no claro. Branco 5,15:1 · cream 4,68:1 ·
-      stone-100 4,73:1 — com folga de propósito: a 4,5 exactos qualquer
-      afinação futura do fundo volta a fazer falhar. */
+/* ① Texto pequeno legível no claro. Desceu de #736C68 quando o papel
+      desceu para #EDEAE0: sobre o papel novo o valor antigo dava 4,28:1 e
+      falhava. Agora branco 5,57:1 · papel 4,63:1 · stone-100 5,11:1 — com
+      folga de propósito, que foi o que aqui faltou da última vez. */
 .text-stone-400,
 .text-stone-500 {
-  color: #736c68;
+  color: #6a6460;
 }
 
 /* ② As variantes `dark:` que a camada `.dark` não alcança. */

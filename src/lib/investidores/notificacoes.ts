@@ -36,7 +36,7 @@ export interface DadosNotificacao {
 
 /** Envelope comum, no tom do resto dos emails do produto. */
 function moldura(titulo: string, corpo: string): string {
-  return `<!doctype html><html lang="pt-PT"><body style="margin:0;padding:24px;background:#f5f4f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a17">
+  return `<!doctype html><html lang="pt-PT"><body style="margin:0;padding:24px;background:#edeae0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a17">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px">
     <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0f6e56">ReciboCerto</p>
     <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">${titulo}</h1>

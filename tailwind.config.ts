@@ -1,5 +1,21 @@
 import type { Config } from "tailwindcss";
 
+/** A família da marca, numa variável e não escrita duas vezes.
+ *
+ *  `textColor.brand` (lá em baixo) precisa de reescrever o DEFAULT e de
+ *  manter os outros quatro degraus. Copiá-los para lá parece inofensivo e
+ *  não é: `theme.extend` SUBSTITUI o valor inteiro quando o que se lhe dá
+ *  não é um objecto a fundir, portanto a cópia teria de estar completa — e
+ *  bastava afinar `brand-dark` aqui para `text-brand-dark` ficar no valor
+ *  antigo, em silêncio. Escrito uma vez, espalhado a partir daqui. */
+const MARCA = {
+  DEFAULT: "#177E5E",
+  dark: "#0F6E56",
+  deep: "#0A4A39",
+  light: "#E1F5EE",
+  mint: "#9FE1CB",
+} as const;
+
 const config: Config = {
   content: ["./src/**/*.{ts,tsx}"],
   darkMode: "class",
@@ -19,14 +35,38 @@ const config: Config = {
           // fundo, o que passa AA para texto normal nos dois casos. É o
           // escurecimento MÍNIMO que lá chega com folga — 20% — escolhido
           // assim de propósito para mexer o menos possível na identidade.
-          DEFAULT: "#177E5E",
-          dark: "#0F6E56",
-          deep: "#0A4A39",
-          light: "#E1F5EE",
-          mint: "#9FE1CB",
+          ...MARCA,
         },
-        cream: "#F5F4F0",
-        sand: "#EDEAE2",
+        // ── O PAPEL DA PÁGINA ──────────────────────────────────────────
+        //
+        // ┌──────────────────────────────────────────────────────────────┐
+        // │ ERA #F5F4F0, E ERA AQUI QUE ESTAVA O PROBLEMA TODO            │
+        // │                                                              │
+        // │ A primeira tentativa de arranjar o modo claro foi dar bordas  │
+        // │ a sério aos cartões e deixar o papel quieto — porque mexer no │
+        // │ papel obrigava a mexer no verde da marca, e isso parecia caro │
+        // │ de mais. O resultado passou a medição inteira e, posto ao     │
+        // │ lado do anterior, era indistinguível. Uma linha de 1 px numa  │
+        // │ página que é toda quase-branca não constrói estrutura         │
+        // │ nenhuma: o olho continua a ver um campo só.                    │
+        // │                                                              │
+        // │ Provado por eliminação, com a mesma região renderizada oito   │
+        // │ vezes: bordas mais escuras — igual. Sombra ao nível da        │
+        // │ Stripe — quase igual (uma sombra precisa de chão onde cair, e │
+        // │ um papel a 1,10:1 do cartão não é chão). Papel mais fundo —   │
+        // │ noite e dia, mesmo com as bordas fracas de origem.            │
+        // │                                                              │
+        // │ #EDEAE0 põe o cartão branco a 1,204:1 do papel, contra os     │
+        // │ 1,101:1 de antes. É o que faz um cartão parecer pousado sobre │
+        // │ alguma coisa em vez de recortado no nada.                      │
+        // └──────────────────────────────────────────────────────────────┘
+        //
+        // O preço, pago em `textColor.brand` mais abaixo: `text-brand`
+        // sobre este papel caía para 4,17:1. Não há como escurecer o papel
+        // sem isso — a folga do verde sobre o papel antigo era de 0,06.
+        cream: "#EDEAE0",
+        // Segue o papel para manter a relação que tinha (1,08:1 acima dele).
+        sand: "#E6E2D5",
         ink: "#1A1A17",
         // ── O DEGRAU BAIXO DA ESCALA NEUTRA, NO CLARO ──────────────────
         //
@@ -180,13 +220,26 @@ const config: Config = {
       // deixem de ser obrigados a ser a mesma cor: um é um fundo com
       // tecto de acessibilidade, o outro é uma linha sem tecto nenhum.
       //
-      // Os valores estão calibrados contra o modo escuro, que é a
-      // referência a atingir (contraste contra a superfície própria):
+      // ┌──────────────────────────────────────────────────────────────┐
+      // │ UMA BORDA TEM DOIS LADOS, E OS DOIS CONTAM                    │
+      // │                                                              │
+      // │ A primeira escada foi afinada só contra o cartão BRANCO, com  │
+      // │ o papel ainda em #F5F4F0. Quando o papel desceu para #EDEAE0, │
+      // │ metade das páginas voltou a falhar a medição — e por uma      │
+      // │ razão que só se vê medindo: `border-stone-100` a #EBE7DE dava │
+      // │ 1,234:1 contra o branco e 1,025:1 contra o papel novo. As     │
+      // │ listas e as faixas que vivem DIRECTAMENTE no papel (o rodapé  │
+      // │ móvel, os separadores dos formulários, as tabelas dos guias)  │
+      // │ ficaram outra vez sem aresta nenhuma.                          │
+      // │                                                              │
+      // │ Uma borda não separa «de branco»: separa do que estiver dos   │
+      // │ dois lados dela. Estes valores passam ambos os testes.         │
+      // └──────────────────────────────────────────────────────────────┘
       //
-      //          escuro (cartão #1E221B)      claro (cartão branco)
-      //   100        1,178:1                     1,234:1
-      //   200        1,248:1                     1,354:1
-      //   300        1,510:1                     1,651:1
+      //            contra o branco     contra o papel     escuro (ref.)
+      //   100         1,331:1             1,106:1            1,178:1
+      //   200         1,424:1             1,183:1            1,248:1
+      //   300         1,687:1             1,402:1            1,510:1
       //
       // O claro fica um pouco acima de propósito: uma aresta escura sobre
       // superfície clara lê-se com menos força do que uma aresta clara
@@ -199,26 +252,60 @@ const config: Config = {
       // ══════════════════════════════════════════════════════════════════
       borderColor: {
         stone: {
-          50: "#EFECE4",
-          100: "#EBE7DE",
-          200: "#E2DDD2",
-          300: "#CFC9BA",
+          50: "#E7E2D6",
+          100: "#E4DFD1",
+          200: "#DED8C6",
+          300: "#D0C7AC",
         },
-        // A mesma correção na paleta do parceiro. `border-fiz-200` sobre
-        // `bg-fiz-50` dava 1,046:1 — o cartão da FIZ na landing era uma
-        // caixa sem contorno, e é justamente o elemento que tem de se ler
-        // como território de OUTRA marca. Sobe para 1,225:1 contra o
-        // amarelo-pálido da superfície e 1,145:1 contra o papel da
-        // página, alinhado com o degrau dos neutros.
+        // A mesma correção na paleta do parceiro, e com a mesma lição: o
+        // cartão da FIZ na landing não tem fundo próprio — assenta no
+        // papel. `border-fiz-200` de origem dava 1,046:1 contra ele, e a
+        // primeira tentativa (#FBE49A) deu exactamente o mesmo, porque o
+        // papel entretanto desceu e foi ao encontro do amarelo. Aqui os
+        // dois lados são o papel e o amarelo-pálido das superfícies FIZ:
+        // 1,137:1 e 1,331:1.
         //
         // Continua a não ser cor de texto (a regra da paleta FIZ é essa: o
         // amarelo da marca nunca escreve), portanto não há tecto de
         // acessibilidade a respeitar. No escuro, `.dark .border-fiz-200`
         // e `.border-fiz-300` já têm o seu próprio castanho-âmbar.
         fiz: {
-          200: "#FBE49A",
-          300: "#F8DA82",
+          200: "#F8DA82",
+          300: "#F5D06B",
         },
+      },
+      // ══════════════════════════════════════════════════════════════════
+      // O VERDE ESCREVE UM TOM ABAIXO DO VERDE QUE PREENCHE
+      //
+      // ┌──────────────────────────────────────────────────────────────┐
+      // │ DOIS TRABALHOS, DUAS RÉGUAS                                   │
+      // │                                                              │
+      // │ `bg-brand` é a marca a ser vista: o botão, o logótipo, os     │
+      // │ blocos verdes cheios. A régua dele é o BRANCO por cima —      │
+      // │ 5,02:1, e escurecer só melhoraria.                             │
+      // │                                                              │
+      // │ `text-brand` é a marca a ser LIDA: rótulos de 12 px sobre o   │
+      // │ papel. A régua é 4,5:1 de texto pequeno, e com o papel a      │
+      // │ #EDEAE0 o #177E5E dá 4,17 — falha.                             │
+      // │                                                              │
+      // │ Separar os dois é o que permite escurecer o papel sem tocar   │
+      // │ na cor que as pessoas reconhecem como a marca. #157859 é 10%  │
+      // │ menos luminoso e, a olho, o mesmo verde: passa a 4,52:1 sobre │
+      // │ o papel e 5,44:1 sobre um cartão branco.                       │
+      // │                                                              │
+      // │ Fica de fora tudo o que não é texto — `bg-brand`,             │
+      // │ `border-brand`, `ring-brand`, `fill/stroke-brand` continuam   │
+      // │ em #177E5E pelo `colors` acima. Gráficos regem-se por 3:1,    │
+      // │ que o original cumpre com folga.                               │
+      // └──────────────────────────────────────────────────────────────┘
+      //
+      // No escuro nada disto chega: `globals.css` remapeia `.text-brand`
+      // e `.dark\:text-brand` para o verde-menta próprio do tema.
+      textColor: {
+        // Os outros quatro degraus vêm de `MARCA` — só o DEFAULT muda. Dar
+        // aqui um valor solto substituía a família inteira e apagava
+        // `text-brand-dark`, `-deep`, `-light` e `-mint` do CSS gerado.
+        brand: { ...MARCA, DEFAULT: "#147455" },
       },
       fontFamily: {
         display: ["var(--font-playfair)", "Georgia", "serif"],
@@ -254,9 +341,15 @@ const config: Config = {
         // Tudo isto é quente (rgba(28,25,23)) e vale só para o claro: o
         // `globals.css` substitui `shadow-card`, `shadow-lift` e
         // `shadow-soft` inteiras na camada `.dark`.
-        soft: "0 1px 2px rgba(28,25,23,0.04), 0 12px 38px -12px rgba(28,25,23,0.14)",
-        card: "0 0 0 1px rgba(28,25,23,0.04), 0 1px 2px rgba(28,25,23,0.06), 0 12px 28px -14px rgba(28,25,23,0.18)",
-        lift: "0 0 0 1px rgba(28,25,23,0.05), 0 2px 6px rgba(28,25,23,0.07), 0 22px 44px -18px rgba(28,25,23,0.26)",
+        // Em camadas, e não numa só: uma sombra real tem um contacto
+        // curto e escuro junto à aresta e um halo largo e claro por baixo.
+        // Uma camada só tem de escolher entre os dois e acaba a não ser
+        // nenhum — era o que havia, e por isso os cartões estavam colados
+        // ao papel em vez de pousados nele. Agora que o papel é mais fundo
+        // (ver `cream`), a sombra tem chão onde cair.
+        soft: "0 1px 2px rgba(28,25,23,0.05), 0 6px 14px -4px rgba(28,25,23,0.07), 0 16px 36px -12px rgba(28,25,23,0.14)",
+        card: "0 0 0 1px rgba(28,25,23,0.05), 0 1px 2px rgba(28,25,23,0.08), 0 4px 10px -2px rgba(28,25,23,0.08), 0 18px 32px -12px rgba(28,25,23,0.16)",
+        lift: "0 0 0 1px rgba(28,25,23,0.06), 0 2px 4px -1px rgba(28,25,23,0.10), 0 8px 16px -4px rgba(28,25,23,0.12), 0 26px 44px -14px rgba(28,25,23,0.24)",
         float: "0 30px 60px -24px rgba(15,110,86,0.28)",
         glow: "0 0 0 1px rgba(29,158,117,0.12), 0 20px 50px -20px rgba(29,158,117,0.30)",
       },

@@ -20,27 +20,41 @@ Marca (verde humano, não néon):
 - `brand-light` `#E1F5EE` · `brand-mint` `#9FE1CB`
 
 Superfícies / neutros (quentes):
-- `cream` `#F5F4F0` (fundo app) · `sand` `#EDEAE2` · `ink` `#1A1A17`
+- `cream` `#EDEAE0` (papel da página) · `sand` `#E6E2D5` · `ink` `#1A1A17`
 - escala `stone` para texto, preenchimentos e bordas — com o degrau baixo
   redefinido em `tailwind.config.ts` (ver a seguir)
 
-**Preenchimento e borda são tokens SEPARADOS** (`colors.stone` vs
-`borderColor.stone`). Não é duplicação: um preenchimento leva texto por cima e
-tem tecto de acessibilidade (`bg-stone-100` está a 4,60:1 do verde da marca —
-escurecê-lo falha AA em 185 sítios); uma borda não leva texto e não tem tecto
-nenhum. Foi de lá que veio a hierarquia do modo claro.
+**O papel é o degrau que carrega o modo claro.** Era `#F5F4F0` e punha o cartão
+branco a 1,101:1 do fundo — no limiar do percetível. A `#EDEAE0` são 1,204:1, e
+é isso que faz um cartão parecer pousado em vez de recortado. Provado por
+eliminação: bordas mais escuras sozinhas não mudam a leitura, e sombras mais
+fortes também não (uma sombra precisa de chão onde cair).
 
-| degrau | preenchimento | contraste s/ branco | borda | contraste s/ branco |
-| --- | --- | --- | --- | --- |
-| 50 | `#F8F6F1` | 1,08:1 | `#EFECE4` | 1,18:1 |
-| 100 | `#F7F5EE` | 1,09:1 | `#EBE7DE` | 1,23:1 |
-| 200 | `#E7E5DE` | 1,26:1 | `#E2DDD2` | 1,35:1 |
-| 300 | (Tailwind) | — | `#CFC9BA` | 1,65:1 |
+**Três tokens separados para a mesma família**, porque têm réguas diferentes:
 
-Calibrados contra o modo escuro, que é a referência: lá o cartão destaca-se do
-fundo (1,13:1) **e** a borda destaca-se do cartão (1,18:1). No claro havia só o
-degrau branco-sobre-papel — metade das pistas. Medido por
-`npm run hierarquia:e2e`.
+| | preenchimento (`colors`) | borda (`borderColor`) | texto (`textColor`) |
+| --- | --- | --- | --- |
+| leva texto por cima? | sim → tecto AA | não | é texto → AA |
+| `brand` | `#177E5E` | `#177E5E` | **`#147455`** |
+| `stone-50` | `#F8F6F1` | `#E7E2D6` | — |
+| `stone-100` | `#F7F5EE` | `#E4DFD1` | — |
+| `stone-200` | `#E7E5DE` | `#DED8C6` | — |
+| `stone-300` | (Tailwind) | `#D0C7AC` | — |
+
+`bg-stone-100` está a 4,60:1 do verde — escurecê-lo falharia AA em 185 sítios.
+`bg-brand` é a marca a ser vista (régua: o branco por cima, 5,02:1);
+`text-brand` é a marca a ser lida (régua: 4,5:1 sobre o papel). Separá-los é o
+que permitiu escurecer o papel sem mexer na cor dos botões e do logótipo.
+
+**Uma borda tem dois lados.** As bordas contrastam contra o branco do cartão
+(1,33 / 1,42 / 1,69) **e** contra o papel (1,11 / 1,18 / 1,40). Afinar só contra
+o branco parte tudo o que vive directamente no papel — listas, faixas, o rodapé
+móvel. Referência: no escuro, cartão↔borda é 1,18 / 1,25 / 1,51.
+
+**Calibrar contra o pior COMPOSTO, não contra o token.** O texto que falhou AA
+depois de o papel descer não estava sobre o papel: estava sobre os halos verdes
+decorativos (`bg-brand/[0.03…0.05]`) compostos com ele, que dão `#E3E6DB`. É esse
+o fundo a usar na conta. Medido por `npm run hierarquia:e2e` + axe.
 
 Semânticas:
 - Aviso (amarelo pastel): `alert-bg` `#FEFBD0` · `alert` `#FFF8A0` · `alert-border` `#E8D97A` · `alert-text` `#7A5C00`

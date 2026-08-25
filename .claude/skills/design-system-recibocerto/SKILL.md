@@ -13,31 +13,44 @@ Mostrar o dinheiro antes do imposto · reduzir ansiedade · ação > informaçã
 clareza > esperteza · divulgação progressiva (toggles) · premium é contenção.
 
 ## Tokens (em `tailwind.config.ts` + `globals.css`)
-- Marca: `brand #177E5E` (escurecido em 2026-08 para passar AA — o mínimo que lá
-  chega, não voltar a mexer sem medir), `brand-dark #0F6E56`, `brand-deep`,
+- Marca: `brand #177E5E` em preenchimento e borda; **`#147455` em TEXTO**
+  (`textColor.brand`) — ver a seguir. `brand-dark #0F6E56`, `brand-deep`,
   `brand-light #E1F5EE`, `brand-mint`.
-- Neutros quentes: `cream #F5F4F0` (fundo), `sand`, `ink #1A1A17`, escala `stone`.
+- Neutros quentes: `cream #EDEAE0` (papel da página), `sand #E6E2D5`,
+  `ink #1A1A17`, escala `stone`.
 - Aviso (amarelo pastel, NÃO âmbar): `alert-bg #FEFBD0`, `alert`, `alert-border`, `alert-text #7A5C00`.
 - Sombras quentes: `shadow-card / lift / float / glow`. Raio: até `rounded-4xl` (2rem). Textura: `.grain`.
 - Tipografia: Playfair Display (`.font-display`, títulos) + DM Sans (corpo). Display fluido `.display-1/2`. `.eyebrow` para rótulos. Números com `tabular-nums`.
 
-### Preenchimento e borda são tokens SEPARADOS
-`colors.stone.{50,100,200}` (preenchimentos) e `borderColor.stone.{50,100,200,300}`
-(bordas) têm valores diferentes de propósito, e a razão é dura:
+### Preenchimento, borda e texto são tokens SEPARADOS
+`colors` (preenchimento), `borderColor` e `textColor` têm valores diferentes de
+propósito, e a razão é dura — cada um tem uma régua diferente:
 
-- um preenchimento LEVA TEXTO e tem tecto de acessibilidade — `bg-stone-100` está
-  a 4,60:1 do verde da marca, com 0,10 de folga sobre AA; escurecê-lo um degrau
+- um preenchimento LEVA TEXTO por cima e tem tecto de acessibilidade —
+  `bg-stone-100` está a 4,60:1 do verde, com 0,10 de folga; escurecê-lo um degrau
   falha em 185 sítios de uma vez;
-- uma borda NÃO leva texto e não tem tecto nenhum.
+- uma borda NÃO leva texto e não tem tecto nenhum;
+- `bg-brand` é a marca a ser VISTA (régua: o branco por cima, 5,02:1);
+  `text-brand` é a marca a ser LIDA (régua: 4,5:1 sobre o papel). Por isso são
+  #177E5E e #147455. Foi essa separação que permitiu escurecer o papel sem tocar
+  na cor dos botões nem do logótipo.
 
-Toda a hierarquia do modo claro veio daí. **Precisas de mais separação? Vai à
-borda, não ao fundo.** Se mesmo assim precisares de um fundo mais escuro, tem de
-ser uma superfície que comprovadamente nunca leva texto (ex.: os esqueletos de
-carregamento, que têm regra própria em `globals.css`).
+### O papel é o degrau que carrega o modo claro
+`cream` era `#F5F4F0` e punha o cartão branco a 1,101:1 do fundo — no limiar do
+percetível. É `#EDEAE0` (1,204:1) porque **nada mais funciona**: bordas mais
+escuras sozinhas não mudam a leitura, e sombras mais fortes também não (uma
+sombra precisa de chão onde cair). Provado por eliminação, com a mesma zona
+renderizada oito vezes. Se voltares a achar o claro «chato», é aqui que se mexe —
+e só depois de perceber que mexer aqui obriga a mexer no verde de texto e no
+tier terciário.
 
-O papel da página (`cream`) é intocável: `#736C68` (o tier terciário) e o verde
-da marca estão os dois a menos de 0,2 de AA sobre ele. Escurecer o fundo um único
-degrau parte o site inteiro.
+### Duas regras que só se aprendem a partir uma vez
+1. **Uma borda tem dois lados.** Afinar só contra o cartão branco parte tudo o
+   que vive directamente no papel (listas, faixas, o rodapé móvel). Medir os dois.
+2. **Calibrar contra o pior COMPOSTO, não contra o token.** O texto que falhou AA
+   quando o papel desceu não estava sobre o papel — estava sobre os halos verdes
+   decorativos (`bg-brand/[0.03…0.05]`) compostos com ele: `#E3E6DB`. É esse o
+   fundo que entra na conta. O axe apanha isto; a aritmética sobre o token não.
 
 ## Regras de UI
 - **Mobile-first (inegociável).** Base = telemóvel; `sm:`/`lg:` só ampliam. Testar a ~360px: sem overflow horizontal, grelhas empilham (`grid-cols-1` → `sm:grid-cols-*`), alvos ≥ 36px. Modais = folha inferior no telemóvel (`items-end` + `rounded-t-4xl`), corpo scrollável com **`min-h-0 flex-1 overflow-y-auto`** dentro de `max-h-[90dvh]`, e `env(safe-area-inset-*)`. Mapas/gráficos pesados via `next/dynamic({ ssr:false })` + `ErrorBoundary` (`src/components/ui/ErrorBoundary.tsx`) para nunca deixarem a página em branco.
@@ -87,3 +100,10 @@ superfícies invisíveis nem ficar mais de 3 pontos atrás da mesma página no
 escuro. Foi assim que se apanhou `border-stone-100` — a classe de borda mais
 usada do projeto, a 1,016:1 contra o papel, invisível em 804 sítios durante meses
 sem ninguém conseguir apontar o que estava errado.
+
+**Mas o portão não substitui os olhos.** A primeira correção passou a medição
+inteira (0% de superfícies invisíveis em todas as páginas) e, posta ao lado do
+antes, era indistinguível — porque o limiar de 1,05 diz «vê-se se procurares», e
+não «a página tem estrutura». Depois de a medição passar, renderiza a mesma zona
+com dois ou três candidatos deliberadamente EXAGERADOS e escolhe entre eles: para
+achar o limiar da percepção é preciso passá-lo, não aproximar-se dele por baixo.
