@@ -69,15 +69,27 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
   });
 
   // ── A pessoa consegue mesmo entrar? ───────────────────────────────
-  const semMeios = candidato.capacidades.some((item) => item.ativosEmFalta.length > 0);
+  const meios = candidato.capacidades.flatMap((item) => item.avaliacoesAtivos);
+  const meiosEmFaltaOuInadequados = meios.filter((item) => item.estado === "em-falta" || item.estado === "inadequado");
+  const semMeios = meiosEmFaltaOuInadequados.length > 0;
+  const meiosCriticosPorConfirmar = meios.filter(
+    (item) => item.estado === "por-confirmar" && item.requisito.confirmarAntesDeRecomendar,
+  );
+  const meiosLimitados = meios.filter((item) => item.estado === "limitado");
+  const notasDosMeios = (itens: typeof meios) => [...new Set(itens.map((item) => item.nota))].slice(0, 2).join(" ");
+  const adequacaoPorResolver = semMeios || meiosCriticosPorConfirmar.length > 0 || meiosLimitados.length > 0;
   objecoes.push({
     id: "entrada",
     pergunta: "Consegues mesmo entrar neste mercado?",
-    procede: semMeios,
-    fatal: semMeios,
+    procede: adequacaoPorResolver,
+    fatal: semMeios || meiosCriticosPorConfirmar.length > 0,
     resposta: semMeios
-      ? "Falta pelo menos um meio que este trabalho exige. Enquanto faltar, isto não é executável — é um objetivo."
-      : "Tens as competências e os meios que a execução pede.",
+      ? `Falta pelo menos um meio, ou um dos meios declarados não é adequado. Enquanto isso não mudar, isto não é executável — é um objetivo. ${[...new Set(meiosEmFaltaOuInadequados.map((item) => `${item.requisito.finalidade}: ${item.nota}`))].slice(0, 2).join(" ")}`
+      : meiosCriticosPorConfirmar.length > 0
+        ? `O meio existe, mas a adequação profissional ainda não foi confirmada. A hipótese não é promovida até confirmares estado, disponibilidade, acesso e limites. ${notasDosMeios(meiosCriticosPorConfirmar)}`
+        : meiosLimitados.length > 0
+          ? `Os meios existem, mas há limitações declaradas. ${notasDosMeios(meiosLimitados)}`
+          : "Tens as competências e meios confirmados que a execução pede.",
   });
 
   // ── Barreira regulatória ──────────────────────────────────────────
@@ -124,9 +136,7 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
   // ── Tesouraria ────────────────────────────────────────────────────
   const teto = tetoDeCapital(contexto);
   const apertado =
-    teto !== undefined &&
-    viabilidade.investimentoInicial !== null &&
-    viabilidade.investimentoInicial.max > teto;
+    teto !== undefined && viabilidade.investimentoInicial !== null && viabilidade.investimentoInicial.max > teto;
   objecoes.push({
     id: "tesouraria",
     pergunta: "A tesouraria aguenta o tempo até à primeira receita?",
@@ -202,8 +212,7 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
   //  responde, com a fonte legal ao lado. O que o motor faz é notar que
   //  a pergunta se levanta — e é uma pergunta que só se levanta em
   //  modelos com equipa, espaço ou stock.
-  const pesado =
-    candidato.modelo.precisaEquipa || candidato.modelo.precisaLojaFisica || candidato.modelo.precisaStock;
+  const pesado = candidato.modelo.precisaEquipa || candidato.modelo.precisaLojaFisica || candidato.modelo.precisaStock;
   if (contexto.estrutura === "recibos-verdes" && pesado) {
     objecoes.push({
       id: "estrutura",
@@ -254,7 +263,9 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
         ? "Nenhuma dimensão de risco excede a tolerância que declaraste."
         : `${fora.length} ${fora.length === 1 ? "dimensão excede" : "dimensões excedem"} a tua tolerância: ${fora
             .map((item) => `${item.dimensao} (nível ${item.nivel})`)
-            .join(", ")}.${decisivo ? " Pelo menos uma é decisiva." : " Nenhuma é decisiva — são riscos de fundo, presentes em quase todo o negócio."}`,
+            .join(
+              ", ",
+            )}.${decisivo ? " Pelo menos uma é decisiva." : " Nenhuma é decisiva — são riscos de fundo, presentes em quase todo o negócio."}`,
   });
 
   if (toleranciaImpossivel) {

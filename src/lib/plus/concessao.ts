@@ -32,10 +32,7 @@ export function concessaoValida(
   if (!(ESTADOS_COM_PLUS as readonly string[]).includes(estado)) return false;
   if (linha.concessao_termina_em && new Date(linha.concessao_termina_em) <= agora) return false;
   if (estado === "past_due") {
-    return Boolean(
-      linha.periodo_graca_termina_em
-      && new Date(linha.periodo_graca_termina_em) > agora,
-    );
+    return Boolean(linha.periodo_graca_termina_em && new Date(linha.periodo_graca_termina_em) > agora);
   }
   return true;
 }
@@ -43,6 +40,15 @@ export function concessaoValida(
 /** Fim de uma concessão de N meses a contar de agora. */
 export function fimDaConcessao(meses: number, inicio: Date = new Date()): Date {
   const fim = new Date(inicio);
-  fim.setMonth(fim.getMonth() + meses);
+  // A concessão é um prazo de calendário, não um prazo no fuso da
+  // máquina que estiver a processá-la. `setMonth` local atravessava a
+  // mudança para a hora de verão e transformava 1 de abril UTC em 31 de
+  // março. Fixar o dia em 1 antes de mudar de mês também evita que 31 de
+  // janeiro salte para março; no destino, limita-se ao último dia real.
+  const dia = fim.getUTCDate();
+  fim.setUTCDate(1);
+  fim.setUTCMonth(fim.getUTCMonth() + meses);
+  const ultimoDia = new Date(Date.UTC(fim.getUTCFullYear(), fim.getUTCMonth() + 1, 0)).getUTCDate();
+  fim.setUTCDate(Math.min(dia, ultimoDia));
   return fim;
 }

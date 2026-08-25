@@ -36,18 +36,37 @@ import {
   type DeliveryPreference,
   type RecurrencePreference,
 } from "@/lib/negocio/market/opportunities";
-import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
+import {
+  MARKET_REGIONS,
+  type MarketRegion,
+} from "@/lib/negocio/market/geografia";
 
-const STRUCTURES: BusinessStructurePreference[] = ["recibos-verdes", "empresa", "por-decidir"];
+const STRUCTURES: BusinessStructurePreference[] = [
+  "recibos-verdes",
+  "empresa",
+  "por-decidir",
+];
 const DELIVERIES: DeliveryPreference[] = ["local", "remoto", "hibrido"];
 const CAPITALS: CapitalBand[] = ["ate-500", "500-3000", "mais-3000"];
-const RECURRENCES: RecurrencePreference[] = ["pontual", "recorrente", "indiferente"];
-const STRENGTHS: BusinessStrength[] = ["comercial", "digital", "operacoes", "cuidado", "tecnico"];
+const RECURRENCES: RecurrencePreference[] = [
+  "pontual",
+  "recorrente",
+  "indiferente",
+];
+const STRENGTHS: BusinessStrength[] = [
+  "comercial",
+  "digital",
+  "operacoes",
+  "cuidado",
+  "tecnico",
+];
 const REGIONS: MarketRegion[] = MARKET_REGIONS.map((region) => region.id);
 
 const CONJUNTOS_DE_FORCAS: BusinessStrength[][] = [];
 for (let mascara = 0; mascara < 1 << STRENGTHS.length; mascara += 1) {
-  CONJUNTOS_DE_FORCAS.push(STRENGTHS.filter((_, indice) => mascara & (1 << indice)));
+  CONJUNTOS_DE_FORCAS.push(
+    STRENGTHS.filter((_, indice) => mascara & (1 << indice)),
+  );
 }
 
 function* todosOsPerfis(): Generator<BusinessDiscoveryProfile> {
@@ -57,7 +76,14 @@ function* todosOsPerfis(): Generator<BusinessDiscoveryProfile> {
         for (const recurrence of RECURRENCES)
           for (const region of REGIONS)
             for (const strengths of CONJUNTOS_DE_FORCAS)
-              yield { structure, delivery, capital, recurrence, region, strengths };
+              yield {
+                structure,
+                delivery,
+                capital,
+                recurrence,
+                region,
+                strengths,
+              };
 }
 
 const PERFIS = [...todosOsPerfis()];
@@ -91,9 +117,16 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
     // alternativa: ordena sempre do mesmo lado da outra e não acrescenta
     // resposta nenhuma ao espaço.
     for (const template of OPPORTUNITY_TEMPLATES) {
-      const maisProxima = OPPORTUNITY_TEMPLATES.filter((outra) => outra.id !== template.id)
-        .map((outra) => ({ outra, distancia: fitSignatureDistance(template, outra) }))
-        .sort((esquerda, direita) => esquerda.distancia - direita.distancia)[0]!;
+      const maisProxima = OPPORTUNITY_TEMPLATES.filter(
+        (outra) => outra.id !== template.id,
+      )
+        .map((outra) => ({
+          outra,
+          distancia: fitSignatureDistance(template, outra),
+        }))
+        .sort(
+          (esquerda, direita) => esquerda.distancia - direita.distancia,
+        )[0]!;
       expect(
         maisProxima.distancia,
         `${template.id} só difere de ${maisProxima.outra.id} em ${maisProxima.distancia} eixo`,
@@ -102,9 +135,14 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
   });
 
   it("cada hipótese do catálogo chega a primeiro em pelo menos um perfil", () => {
-    const primeiros = new Set(PERFIS.map((perfil) => rankOpportunityTemplates(perfil)[0]!.template.id));
+    const primeiros = new Set(
+      PERFIS.map((perfil) => rankOpportunityTemplates(perfil)[0]!.template.id),
+    );
     for (const template of OPPORTUNITY_TEMPLATES) {
-      expect(primeiros.has(template.id), `${template.id} nunca é apresentada em primeiro`).toBe(true);
+      expect(
+        primeiros.has(template.id),
+        `${template.id} nunca é apresentada em primeiro`,
+      ).toBe(true);
     }
   });
 
@@ -141,7 +179,8 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
       (perfil) => rankOpportunityTemplates(perfil)[0]!.tiedWith === 1,
     ).length;
     const maiorEmpate = decididos.reduce(
-      (maior, perfil) => Math.max(maior, rankOpportunityTemplates(perfil)[0]!.tiedWith),
+      (maior, perfil) =>
+        Math.max(maior, rankOpportunityTemplates(perfil)[0]!.tiedWith),
       0,
     );
     expect(exclusivos / decididos.length).toBeGreaterThan(0.65);
@@ -153,11 +192,14 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
     for (const perfil of AMOSTRA) {
       const ordenado = rankOpportunityTemplates(perfil);
       const porRank = new Map<number, number>();
-      for (const item of ordenado) porRank.set(item.rank, (porRank.get(item.rank) ?? 0) + 1);
+      for (const item of ordenado)
+        porRank.set(item.rank, (porRank.get(item.rank) ?? 0) + 1);
       for (const item of ordenado) {
         expect(item.tiedWith).toBe(porRank.get(item.rank));
         // Rank partilhado implica score partilhado, e vice-versa.
-        const mesmoScore = ordenado.filter((outro) => outro.fit.score === item.fit.score).length;
+        const mesmoScore = ordenado.filter(
+          (outro) => outro.fit.score === item.fit.score,
+        ).length;
         expect(item.tiedWith).toBe(mesmoScore);
       }
     }
@@ -169,7 +211,10 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
     // um só valor em cada uma. Uma pergunta que não pode mudar o resultado
     // não deve ser feita com o mesmo peso visual das outras.
     for (const dimensao of FIT_DIMENSIONS) {
-      expect(fitDimensionIsInert(dimensao), `a dimensão «${dimensao}» não separa nada`).toBe(false);
+      expect(
+        fitDimensionIsInert(dimensao),
+        `a dimensão «${dimensao}» não separa nada`,
+      ).toBe(false);
     }
   });
 
@@ -178,7 +223,10 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
     // templates a declarava, e selecioná-la não mudava rigorosamente nada.
     const usadas = strengthsUsedInCatalogue();
     for (const forca of STRENGTHS) {
-      expect(usadas.has(forca), `a competência «${forca}» não existe no catálogo`).toBe(true);
+      expect(
+        usadas.has(forca),
+        `a competência «${forca}» não existe no catálogo`,
+      ).toBe(true);
     }
   });
 
@@ -198,7 +246,10 @@ describe("market:fit-audit — o catálogo consegue responder de forma diferente
         ).join(",");
         return antes !== depois;
       });
-      expect(muda, `a competência «${forca}» não faz nada em perfil nenhum`).toBe(true);
+      expect(
+        muda,
+        `a competência «${forca}» não faz nada em perfil nenhum`,
+      ).toBe(true);
     }
   });
 
@@ -239,34 +290,71 @@ describe("market:fit-audit — a escala diz alguma coisa", () => {
     // Um erro silencioso de aritmética aqui produziria uma percentagem que
     // não corresponde à decomposição mostrada no ecrã — que é precisamente
     // a coisa que torna o número acreditável.
+    const dimensoesEsperadas = [...FIT_DIMENSIONS];
+    let verificados = 0;
     for (const perfil of AMOSTRA) {
       for (const template of OPPORTUNITY_TEMPLATES) {
         const fit = calculateOpportunityFit(template, perfil);
-        const soma = fit.breakdown.reduce((total, item) => total + item.earned, 0);
-        expect(Math.round(soma)).toBe(fit.score);
-        expect(fit.breakdown.map((item) => item.dimension)).toEqual([...FIT_DIMENSIONS]);
-        expect(fit.breakdown.reduce((total, item) => total + item.max, 0)).toBe(100);
+        const soma = fit.breakdown.reduce(
+          (total, item) => total + item.earned,
+          0,
+        );
+        if (Math.round(soma) !== fit.score) {
+          throw new Error(
+            `${template.id}: a repartição soma ${soma}, mas o score é ${fit.score}`,
+          );
+        }
+
+        const dimensoes = fit.breakdown.map((item) => item.dimension);
+        if (
+          dimensoes.length !== dimensoesEsperadas.length ||
+          dimensoes.some(
+            (dimensao, indice) => dimensao !== dimensoesEsperadas[indice],
+          )
+        ) {
+          throw new Error(
+            `${template.id}: dimensões inesperadas (${dimensoes.join(", ")})`,
+          );
+        }
+
+        const maximo = fit.breakdown.reduce(
+          (total, item) => total + item.max,
+          0,
+        );
+        if (maximo !== 100) {
+          throw new Error(
+            `${template.id}: a repartição totaliza ${maximo}, em vez de 100`,
+          );
+        }
+        verificados += 1;
       }
     }
+    expect(verificados).toBe(AMOSTRA.length * OPPORTUNITY_TEMPLATES.length);
   });
 
   it("o rótulo «forte» continua a separar alguma coisa", () => {
     let fortes = 0;
     for (const perfil of AMOSTRA) {
       for (const template of OPPORTUNITY_TEMPLATES) {
-        if (calculateOpportunityFit(template, perfil).label === "forte") fortes += 1;
+        if (calculateOpportunityFit(template, perfil).label === "forte")
+          fortes += 1;
       }
     }
     // Era 59,3 % no catálogo de cinco. Um rótulo que cobre três quintos de
     // tudo não classifica — limiar de produto, não lei da natureza.
-    expect(fortes / (AMOSTRA.length * OPPORTUNITY_TEMPLATES.length)).toBeLessThan(0.4);
+    expect(
+      fortes / (AMOSTRA.length * OPPORTUNITY_TEMPLATES.length),
+    ).toBeLessThan(0.4);
   });
 
   it("perfis iguais produzem repartições iguais", () => {
     const perfil = AMOSTRA[100]!;
     for (const template of OPPORTUNITY_TEMPLATES) {
       expect(calculateOpportunityFit(template, perfil)).toEqual(
-        calculateOpportunityFit(template, { ...perfil, strengths: [...perfil.strengths] }),
+        calculateOpportunityFit(template, {
+          ...perfil,
+          strengths: [...perfil.strengths],
+        }),
       );
     }
   });

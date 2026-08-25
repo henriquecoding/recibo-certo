@@ -86,11 +86,7 @@ function entregasPossiveis(capacidades: readonly CapacidadeAlcancada[]): readonl
  * só depois o modelo. «Rotas de recolha e entrega para oficinas, por
  * avença» lê-se; «Serviço B2B de logística» não diz nada a ninguém.
  */
-function comporTitulo(
-  dominante: Capacidade,
-  problema: Problema,
-  modelo: ModeloReceita,
-): string {
+function comporTitulo(dominante: Capacidade, problema: Problema, modelo: ModeloReceita): string {
   const cliente = problema.clientes[0] ?? "quem tem este problema";
   const clienteEmMinuscula = cliente.charAt(0).toLocaleLowerCase("pt-PT") + cliente.slice(1);
   const sufixo: Readonly<Record<string, string>> = {
@@ -145,10 +141,7 @@ function zonaDoCandidato(problema: Problema, contexto: OpportunityContext): Mark
  * boa. É a mesma regra que `splitObservationsByRegion` aplica às
  * observações, aplicada à geografia da pessoa.
  */
-function concelhoDaZona(
-  contexto: OpportunityContext,
-  regiao: MarketRegion,
-): string | undefined {
+function concelhoDaZona(contexto: OpportunityContext, regiao: MarketRegion): string | undefined {
   const codigo = contexto.localizacao.concelho;
   if (codigo === undefined) return undefined;
   const concelho = CONCELHO_POR_CODIGO.get(codigo);
@@ -222,17 +215,18 @@ export interface ResultadoGeracao {
  * presencial → híbrido → remoto. O mesmo contexto produz sempre a mesma
  * sequência, o que torna o resto do pipeline reproduzível.
  */
-export function generateCandidates(
-  contexto: OpportunityContext,
-  opcoes: OpcoesGeracao = {},
-): ResultadoGeracao {
+export function generateCandidates(contexto: OpportunityContext, opcoes: OpcoesGeracao = {}): ResultadoGeracao {
   const { incluirForaDePerfil = false, maximo = 400 } = opcoes;
 
   const comAtivos = capacidadesAlcancadas(contexto, { exigirAtivos: true });
-  const semExigirAtivos = capacidadesAlcancadas(contexto, { exigirAtivos: false });
+  const semExigirAtivos = capacidadesAlcancadas(contexto, {
+    exigirAtivos: false,
+  });
   const idsComAtivos = new Set(comAtivos.map((item) => item.capacidade.id));
   const bloqueadasPorAtivo = semExigirAtivos.filter(
-    (item) => !idsComAtivos.has(item.capacidade.id) && item.ativosEmFalta.length > 0,
+    (item) =>
+      !idsComAtivos.has(item.capacidade.id) &&
+      item.avaliacoesAtivos.some((avaliacao) => avaliacao.estado === "em-falta" || avaliacao.estado === "inadequado"),
   );
 
   const base = incluirForaDePerfil ? semExigirAtivos : comAtivos;

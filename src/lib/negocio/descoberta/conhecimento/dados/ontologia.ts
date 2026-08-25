@@ -82,6 +82,13 @@ export const CONCEITOS_OPERADOR: readonly ConceitoOperador[] = Object.freeze([
       "A divisão 49 inclui transporte de passageiros e transporte por condutas, não só mercadorias.",
   },
   {
+    capacidadeId: "transportar-pessoas",
+    cae: ["49"],
+    precisao: "larga",
+    ressalva:
+      "A divisão 49 inclui transporte de mercadorias e transporte por condutas, não só deslocações de passageiros.",
+  },
+  {
     capacidadeId: "limpar-e-repor",
     cae: ["81"],
     precisao: "larga",

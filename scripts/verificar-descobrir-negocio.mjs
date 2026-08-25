@@ -41,9 +41,7 @@ import AxeBuilder from "@axe-core/playwright";
 const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BASE = process.env.RC_BASE_URL ?? "http://localhost:3000";
 
-const VERSAO = readFileSync(join(RAIZ, "src/lib/version.ts"), "utf8").match(
-  /APP_VERSION\s*=\s*"([^"]+)"/,
-)?.[1];
+const VERSAO = readFileSync(join(RAIZ, "src/lib/version.ts"), "utf8").match(/APP_VERSION\s*=\s*"([^"]+)"/)?.[1];
 
 const falhas = [];
 const ok = (nome) => console.log(`  ✓ ${nome}`);
@@ -88,7 +86,6 @@ async function semOverflow(pagina, onde) {
   }));
   verificar(`${onde}: sem overflow horizontal`, r.scroll <= r.client + 1, `${r.scroll} > ${r.client}`);
 }
-
 
 /**
  * §5b — o mapa não pode pintar por cima da barra de topo.
@@ -298,19 +295,52 @@ try {
         notaCapital.length > 0 && !/\d[\d\s.,]*\s*(€|%)/.test(notaCapital),
         notaCapital.slice(0, 160),
       );
-      verificar(
-        "e está desativado enquanto não houver o mínimo",
-        await botaoDescobrir.first().isDisabled(),
-      );
+      verificar("e está desativado enquanto não houver o mínimo", await botaoDescobrir.first().isDisabled());
 
       // ═══ 2. Responder o essencial ═══════════════════════════════
-      await pagina.getByRole("button", { name: /Logística e transporte/ }).first().click();
-      await pagina.getByRole("button", { name: /Organizar e executar/ }).first().click();
+      await pagina
+        .getByRole("button", { name: /Logística e transporte/ })
+        .first()
+        .click();
+      await pagina
+        .getByRole("button", { name: /Organizar e executar/ })
+        .first()
+        .click();
       await pagina.selectOption("#ode-regiao", "grande-lisboa");
       await pagina.getByRole("button", { name: "1 000 – 5 000 €", exact: true }).first().click();
-      await pagina.getByRole("button", { name: /Carta de condução/ }).first().click();
-      await pagina.getByRole("button", { name: /Viatura de carga/ }).first().click();
+      await pagina
+        .getByRole("button", { name: /Carta de condução/ })
+        .first()
+        .click();
+      await pagina
+        .getByRole("button", { name: /Viatura de carga/ })
+        .first()
+        .click();
+
+      // Presença não chega. Confirma-se cada dimensão que o motor usa —
+      // esta é a regressão da carrinha “existe, logo serve”.
+      const carta = pagina.locator('[data-adequacao-meios] [data-ativo="carta-conducao"]');
+      await carta.getByLabel("Estado real").selectOption("adequado");
+      await carta.getByLabel("Disponibilidade").selectOption("sempre");
+      await carta.getByLabel("Forma de acesso").selectOption("proprio");
+      await carta.getByLabel("Pode ser usado profissionalmente?").selectOption("confirmado");
+
+      const viatura = pagina.locator('[data-adequacao-meios] [data-ativo="veiculo-carga"]');
+      await viatura.locator("button[aria-expanded]").click();
+      await viatura.getByLabel("Estado real").selectOption("adequado");
+      await viatura.getByLabel("Disponibilidade").selectOption("sempre");
+      await viatura.getByLabel("Forma de acesso").selectOption("proprio");
+      await viatura.getByLabel("Pode ser usado profissionalmente?").selectOption("confirmado");
+      await viatura.getByLabel("Configuração").selectOption("mercadorias");
+      await viatura.getByLabel("Lugares").fill("2");
+      await viatura.getByLabel("Capacidade de carga útil").selectOption("media");
+      await viatura.getByLabel("Inspeção").selectOption("valida");
       await pagina.waitForTimeout(300);
+
+      verificar(
+        "carta e viatura só contam depois de confirmar adequação",
+        (await pagina.getByText("Confirmado", { exact: true }).count()) >= 2,
+      );
 
       const profundidade = await pagina.evaluate(
         () => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? "0",
@@ -413,8 +443,14 @@ try {
         marcas.length > 0 && marcas.every((origem) => ORIGENS.includes(origem)),
         `${marcas.length} marcas: ${[...new Set(marcas)].join(", ")}`,
       );
-      verificar("nunca lê ausência de concorrentes como oportunidade", !/pouca oferta/i.test(texto) || /por apurar/i.test(texto));
-      verificar("traz plano de validação com critério", /Validar esta oportunidade/.test(texto) && /Feito quando:/.test(texto));
+      verificar(
+        "nunca lê ausência de concorrentes como oportunidade",
+        !/pouca oferta/i.test(texto) || /por apurar/i.test(texto),
+      );
+      verificar(
+        "traz plano de validação com critério",
+        /Validar esta oportunidade/.test(texto) && /Feito quando:/.test(texto),
+      );
 
       // «Como chegámos a esta conclusão?»
       await cartao.getByRole("button", { name: /Como chegámos a esta conclusão/ }).click();
@@ -433,13 +469,9 @@ try {
       );
       verificar(
         "a pontuação vai publicada com a incerteza ao lado",
-        /Pontuação \d+/.test(texto) &&
-          (/entre \d+ e \d+/.test(texto) || /não há intervalo/.test(texto)),
+        /Pontuação \d+/.test(texto) && (/entre \d+ e \d+/.test(texto) || /não há intervalo/.test(texto)),
       );
-      verificar(
-        "diz o que não teve base para ser avaliado",
-        /sem base para avaliar/.test(texto),
-      );
+      verificar("diz o que não teve base para ser avaliado", /sem base para avaliar/.test(texto));
       verificar("publica o plano de investigação por executar", /por ligar/.test(texto));
 
       await semViolacoesAxe(pagina, "descoberta: dossier aberto");
@@ -450,7 +482,11 @@ try {
       await cartao.getByRole("button", { name: /Registar/ }).click();
       await pagina.waitForTimeout(500);
       texto = await cartao.innerText();
-      verificar("um piloto pago é registado como prova de mercado", /prova de mercado/.test(texto), texto.slice(0, 160));
+      verificar(
+        "um piloto pago é registado como prova de mercado",
+        /prova de mercado/.test(texto),
+        texto.slice(0, 160),
+      );
       verificar("e a entrevista continua a não promover", /Enquanto não houver prova paga|alguém pagou/.test(texto));
 
       // ═══ 4c. O que descartámos ══════════════════════════════════
@@ -515,7 +551,25 @@ try {
         semContinuidade.join(" | "),
       );
 
-      // ═══ 5b. Voltar ao contexto não perde as respostas ══════════
+      // ═══ 5b. A lista aprende, explica e desfaz ═════════════════
+      const primeiroAntesDoFeedback = pagina.locator("section[aria-label='Oportunidades'] article").first();
+      await primeiroAntesDoFeedback.getByRole("button", { name: /Não é para mim/ }).click();
+      await primeiroAntesDoFeedback.getByRole("button", { name: "Não quero este setor", exact: true }).click();
+      await pagina.getByText(/Já respeitámos 1 escolha/).waitFor({ timeout: 5000 });
+      verificar(
+        "uma recusa muda a seleção e fica explicada",
+        (await pagina.getByText(/Já respeitámos 1 escolha/).count()) === 1 &&
+          (await pagina.getByText("Não quero este setor", { exact: true }).count()) >= 1,
+      );
+      await pagina.getByRole("button", { name: /Desfazer última/ }).click();
+      await pagina.waitForTimeout(300);
+      verificar(
+        "a última escolha pode ser desfeita",
+        (await pagina.getByText(/Já respeitámos 1 escolha/).count()) === 0 &&
+          (await pagina.locator("section[aria-label='Oportunidades'] article").count()) > 0,
+      );
+
+      // ═══ 5c. Voltar ao contexto não perde as respostas ══════════
       await pagina.getByRole("button", { name: /Ajustar contexto/ }).click();
       await pagina.waitForTimeout(400);
       const devolta = await pagina.evaluate(() => document.body.innerText);
@@ -523,7 +577,10 @@ try {
         "voltar ao contexto conserva o que já foi respondido",
         /O teu perfil está a formar-se/.test(devolta) && /2 competências/.test(devolta),
       );
-      await pagina.getByRole("button", { name: /Voltar a analisar/ }).first().click();
+      await pagina
+        .getByRole("button", { name: /Voltar a analisar/ })
+        .first()
+        .click();
       await pagina.locator("#resultado-descoberta").waitFor({ timeout: 20000 });
 
       // ═══ 6. O preço que chega ao recibo é MENSAL (regressão) ════
@@ -567,7 +624,13 @@ try {
             Number(m[1].replace(/[\s. ]/g, "").replace(",", ".")),
           );
           const valores = [...document.querySelectorAll("input")]
-            .map((input) => Number(String(input.value).replace(/[\s. ]/g, "").replace(",", ".")))
+            .map((input) =>
+              Number(
+                String(input.value)
+                  .replace(/[\s. ]/g, "")
+                  .replace(",", "."),
+              ),
+            )
             .filter((valor) => Number.isFinite(valor) && valor > 0);
           return { euros, valores };
         });
@@ -609,11 +672,7 @@ try {
         () => (document.body.innerText.match(/Operações locais para alojamento turístico/g) ?? []).length,
       );
       const primeira = (estudio.match(/Operações locais para alojamento turístico/g) ?? []).length;
-      verificar(
-        "atualizar a página não duplica a oferta",
-        repetido === primeira,
-        `${primeira} → ${repetido}`,
-      );
+      verificar("atualizar a página não duplica a oferta", repetido === primeira, `${primeira} → ${repetido}`);
 
       // ═══ 8. O conteúdo essencial existe sem JavaScript ══════════
       //  A parte personalizada é, por natureza, dinâmica: depende de um
@@ -645,10 +704,7 @@ try {
         "sem JavaScript: os 24 dossiers curados estão no HTML",
         (textoSemJs.match(/Teste que pode matar a ideia|Problema:/g) ?? []).length >= 20,
       );
-      verificar(
-        "sem JavaScript: não promete análise que não fez",
-        !/passaram os critérios/.test(textoSemJs),
-      );
+      verificar("sem JavaScript: não promete análise que não fez", !/passaram os critérios/.test(textoSemJs));
       await contextoSemJs.close();
 
       verificar("sem erros de JavaScript", errosJS.length === 0, errosJS.slice(0, 2).join(" | "));

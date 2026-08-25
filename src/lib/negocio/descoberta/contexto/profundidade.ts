@@ -49,10 +49,23 @@ export const CAMPOS_PROFUNDIDADE: readonly CampoDeProfundidade[] = Object.freeze
   },
   {
     id: "ativos",
-    rotulo: "O que já tens",
+    rotulo: "Adequação do que já tens",
     peso: 12,
-    respondido: (contexto) => contexto.ativos.length > 0,
-    efeito: "Uma carrinha, um terreno ou uma cozinha licenciada abrem hipóteses que não existem sem eles.",
+    respondido: (contexto) =>
+      contexto.ativos.length > 0 &&
+      contexto.ativos.every((id) => {
+        const detalhe = contexto.detalhesAtivos?.[id];
+        return (
+          detalhe !== undefined &&
+          detalhe.estado !== "por-confirmar" &&
+          detalhe.disponibilidade !== undefined &&
+          detalhe.acesso !== undefined &&
+          detalhe.usoProfissional !== undefined &&
+          detalhe.usoProfissional !== "por-confirmar"
+        );
+      }),
+    efeito:
+      "Estado, acesso, disponibilidade e capacidade decidem se uma carrinha, terreno ou cozinha abrem mesmo uma hipótese — presença sozinha não chega.",
   },
   {
     id: "tempo",

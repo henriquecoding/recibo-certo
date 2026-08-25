@@ -43,7 +43,13 @@
 //  ainda não está aberto.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useMemo, useState, type ComponentType, type ReactNode } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+  type ReactNode,
+} from "react";
 import {
   ATIVOS,
   DEDICACOES,
@@ -72,16 +78,23 @@ import type {
   CompetenciaDeclarada,
   DimensaoRisco,
   NivelCompetencia,
+  NaturezaOferta,
   OpportunityContext,
   PerfilRisco,
   PublicoAlvo,
   RestricaoId,
   TipoExperiencia,
 } from "@/lib/negocio/descoberta/contexto/tipos";
-import { MARKET_REGIONS, type MarketRegion } from "@/lib/negocio/market/geografia";
+import {
+  MARKET_REGIONS,
+  type MarketRegion,
+} from "@/lib/negocio/market/geografia";
 import { concelhosDaRegiao } from "@/lib/negocio/market/concelhos";
 import MapaOndeOperarLazy from "./MapaOndeOperarLazy";
-import { impactoDaLocalizacao, type EfeitoDeCampo } from "@/lib/negocio/descoberta/motor/impacto-local";
+import {
+  impactoDaLocalizacao,
+  type EfeitoDeCampo,
+} from "@/lib/negocio/descoberta/motor/impacto-local";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { PackOferta } from "@/lib/negocio/market/oferta";
 import { ROTULO_RISCO } from "@/lib/negocio/descoberta/motor/risco";
@@ -115,12 +128,15 @@ import {
   type OpcaoFiltravel,
 } from "./atomos";
 import ExplorarSemCompetencias from "./ExplorarSemCompetencias";
+import AdequacaoDosMeios from "./AdequacaoDosMeios";
+import { estadoDaAdequacaoDeclarada } from "@/lib/negocio/descoberta/contexto/adequacao-declarada";
 
-const NIVEIS_COMPETENCIA: readonly { id: NivelCompetencia; rotulo: string }[] = [
-  { id: "basico", rotulo: "Básico" },
-  { id: "intermedio", rotulo: "Intermédio" },
-  { id: "avancado", rotulo: "Avançado" },
-];
+const NIVEIS_COMPETENCIA: readonly { id: NivelCompetencia; rotulo: string }[] =
+  [
+    { id: "basico", rotulo: "Básico" },
+    { id: "intermedio", rotulo: "Intermédio" },
+    { id: "avancado", rotulo: "Avançado" },
+  ];
 
 const EXPERIENCIAS: readonly { id: TipoExperiencia; rotulo: string }[] = [
   { id: "interesse", rotulo: "Nunca fiz, tenho interesse" },
@@ -141,10 +157,25 @@ const PERFIS_RISCO: readonly { id: PerfilRisco; rotulo: string }[] = [
 
 const DIMENSOES_RISCO: readonly DimensaoRisco[] = [
   "financeiro",
+  "procura",
   "regulatorio",
+  "operacional",
   "sazonalidade",
   "volatilidade",
+  "dependencia-clientes",
+  "concorrencia",
 ];
+
+const NATUREZAS: readonly { id: NaturezaOferta; rotulo: string }[] = [
+  { id: "servico", rotulo: "Serviço" },
+  { id: "produto", rotulo: "Produto" },
+  { id: "intermediacao", rotulo: "Intermediação" },
+  { id: "producao", rotulo: "Produção" },
+  { id: "comercio", rotulo: "Comércio" },
+];
+
+const CAMPO_NUMERICO =
+  "mt-1 h-10 w-full rounded-xl border border-stone-200 bg-white px-3 text-xs font-semibold text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-100";
 
 /** As secções dobráveis, por ordem de aparecimento. */
 type SeccaoId = SeccaoConfigurador;
@@ -152,21 +183,27 @@ type SeccaoId = SeccaoConfigurador;
 // As três listas grandes, na forma que o filtro entende. Fora do
 // componente porque são constantes: recalcular isto a cada tecla escrita
 // na caixa de procura seria trabalho por nada.
-const COMPETENCIAS_FILTRAVEIS: readonly OpcaoFiltravel[] = COMPETENCIAS_OFERECIDAS.map(
-  (item) => ({ id: item.id, rotulo: item.rotulo, nota: item.descricao, grupo: item.familia }),
-);
+const COMPETENCIAS_FILTRAVEIS: readonly OpcaoFiltravel[] =
+  COMPETENCIAS_OFERECIDAS.map((item) => ({
+    id: item.id,
+    rotulo: item.rotulo,
+    nota: item.descricao,
+    grupo: item.familia,
+  }));
 const ATIVOS_FILTRAVEIS: readonly OpcaoFiltravel[] = ATIVOS.map((item) => ({
   id: item.id,
   rotulo: item.rotulo,
   nota: item.nota,
   grupo: item.grupo,
 }));
-const RESTRICOES_FILTRAVEIS: readonly OpcaoFiltravel[] = RESTRICOES.map((item) => ({
-  id: item.id,
-  rotulo: item.rotulo,
-  nota: item.nota,
-  grupo: item.grupo,
-}));
+const RESTRICOES_FILTRAVEIS: readonly OpcaoFiltravel[] = RESTRICOES.map(
+  (item) => ({
+    id: item.id,
+    rotulo: item.rotulo,
+    nota: item.nota,
+    grupo: item.grupo,
+  }),
+);
 
 const plural = (quantidade: number, singular: string, muitos: string) =>
   `${quantidade} ${quantidade === 1 ? singular : muitos}`;
@@ -188,6 +225,8 @@ export interface ConfiguradorProps {
    */
   evidencia?: readonly MarketPilotEvidence[];
   oferta?: PackOferta;
+  /** Incrementado quando um resultado pede para confirmar meios. */
+  focarMeios?: number;
 }
 
 export default function Configurador({
@@ -198,15 +237,35 @@ export default function Configurador({
   jaAnalisou,
   evidencia,
   oferta,
+  focarMeios = 0,
 }: ConfiguradorProps) {
   const [nivel, setNivel] = useState<NivelConfiguracao>("essencial");
   // Guarda-se o que está FECHADO, não o que está aberto: assim uma secção
   // que só nasce ao subir de nível nasce aberta, sem ninguém ter de a
   // registar em lado nenhum.
-  const [fechadas, setFechadas] = useState<ReadonlySet<SeccaoId>>(() => new Set<SeccaoId>());
+  const [fechadas, setFechadas] = useState<ReadonlySet<SeccaoId>>(
+    () => new Set<SeccaoId>(),
+  );
   const [descricoes, setDescricoes] = useState(false);
 
-  const profundidade = useMemo(() => profundidadeDoContexto(contexto), [contexto]);
+  useEffect(() => {
+    if (focarMeios <= 0) return;
+    setFechadas((anterior) => {
+      const proximo = new Set(anterior);
+      proximo.delete("recursos");
+      return proximo;
+    });
+    window.requestAnimationFrame(() =>
+      document
+        .getElementById("ode-recursos")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
+  }, [focarMeios]);
+
+  const profundidade = useMemo(
+    () => profundidadeDoContexto(contexto),
+    [contexto],
+  );
   const idsDeclarados = useMemo(
     () => new Set(contexto.competencias.map((item) => item.id)),
     [contexto.competencias],
@@ -267,26 +326,59 @@ export default function Configurador({
     return partes.join(" · ");
   }, [impacto]);
 
-  const alterar = (parcial: Partial<OpportunityContext>) => onChange({ ...contexto, ...parcial });
+  const alterar = (parcial: Partial<OpportunityContext>) =>
+    onChange({ ...contexto, ...parcial });
 
   const alternarCompetencia = (id: string) => {
     const existe = contexto.competencias.some((item) => item.id === id);
     alterar({
       competencias: existe
         ? contexto.competencias.filter((item) => item.id !== id)
-        : [...contexto.competencias, { id, nivel: "intermedio" } satisfies CompetenciaDeclarada],
+        : [
+            ...contexto.competencias,
+            { id, nivel: "intermedio" } satisfies CompetenciaDeclarada,
+          ],
     });
   };
 
-  const atualizarCompetencia = (id: string, parcial: Partial<CompetenciaDeclarada>) =>
+  const atualizarCompetencia = (
+    id: string,
+    parcial: Partial<CompetenciaDeclarada>,
+  ) =>
     alterar({
       competencias: contexto.competencias.map((item) =>
         item.id === id ? { ...item, ...parcial } : item,
       ),
     });
 
+  const alternarAtivo = (id: AtivoId) => {
+    const existe = contexto.ativos.includes(id);
+    if (!existe) {
+      alterar({
+        ativos: [...contexto.ativos, id],
+        detalhesAtivos: {
+          ...contexto.detalhesAtivos,
+          [id]: {
+            estado: "por-confirmar",
+            usoProfissional: "por-confirmar",
+          },
+        },
+      });
+      return;
+    }
+
+    const detalhesAtivos = { ...contexto.detalhesAtivos };
+    delete detalhesAtivos[id];
+    alterar({
+      ativos: contexto.ativos.filter((item) => item !== id),
+      detalhesAtivos,
+    });
+  };
+
   const alternarLista = <T,>(lista: readonly T[], valor: T): T[] =>
-    lista.includes(valor) ? lista.filter((item) => item !== valor) : [...lista, valor];
+    lista.includes(valor)
+      ? lista.filter((item) => item !== valor)
+      : [...lista, valor];
 
   const mostrar = (deste: NivelConfiguracao) =>
     deste === "essencial" ||
@@ -312,14 +404,17 @@ export default function Configurador({
 
   const todasFechadas = visiveis.every((id) => fechadas.has(id));
   const alternarTodas = () =>
-    setFechadas(todasFechadas ? new Set<SeccaoId>() : new Set<SeccaoId>(visiveis));
+    setFechadas(
+      todasFechadas ? new Set<SeccaoId>() : new Set<SeccaoId>(visiveis),
+    );
 
   /** Levar alguém à resposta que falta — abrindo o nível e a secção. */
   const irPara = (campoId: string) => {
     const destino = ONDE_SE_RESPONDE[campoId];
     if (!destino) return;
     if (destino.nivel === "avancado") setNivel("avancado");
-    else if (destino.nivel === "personalizado" && nivel === "essencial") setNivel("personalizado");
+    else if (destino.nivel === "personalizado" && nivel === "essencial")
+      setNivel("personalizado");
     setFechadas((anterior) => {
       const proximo = new Set(anterior);
       proximo.delete(destino.seccao);
@@ -341,7 +436,21 @@ export default function Configurador({
     () => new Set(contexto.competencias.map((item) => item.id)),
     [contexto.competencias],
   );
-  const ativosEscolhidos = useMemo(() => new Set<string>(contexto.ativos), [contexto.ativos]);
+  const ativosEscolhidos = useMemo(
+    () => new Set<string>(contexto.ativos),
+    [contexto.ativos],
+  );
+  const ativosComEstado = contexto.ativos.filter((id) => {
+    const detalhe = contexto.detalhesAtivos?.[id];
+    return (
+      detalhe !== undefined &&
+      detalhe.estado !== "por-confirmar" &&
+      detalhe.disponibilidade !== undefined &&
+      detalhe.acesso !== undefined &&
+      detalhe.usoProfissional !== undefined &&
+      detalhe.usoProfissional !== "por-confirmar"
+    );
+  }).length;
   const restricoesEscolhidas = useMemo(
     () => new Set<string>(contexto.restricoes),
     [contexto.restricoes],
@@ -352,9 +461,14 @@ export default function Configurador({
   );
 
   // ── Os resumos que cada secção fechada mostra ─────────────────────
-  const zona = MARKET_REGIONS.find((item) => item.id === contexto.localizacao.regiao)?.label ?? "";
-  const dedicacao = DEDICACOES.find((item) => item.id === contexto.tempo.dedicacao)?.rotulo ?? "";
-  const equipa = EQUIPAS.find((item) => item.id === contexto.equipa.forma)?.rotulo ?? "";
+  const zona =
+    MARKET_REGIONS.find((item) => item.id === contexto.localizacao.regiao)
+      ?.label ?? "";
+  const dedicacao =
+    DEDICACOES.find((item) => item.id === contexto.tempo.dedicacao)?.rotulo ??
+    "";
+  const equipa =
+    EQUIPAS.find((item) => item.id === contexto.equipa.forma)?.rotulo ?? "";
   const capital =
     contexto.capital.disponivelAgora === undefined
       ? "capital por declarar"
@@ -365,21 +479,33 @@ export default function Configurador({
       escolhidasEmOrdem.length === 0
         ? "Por responder — é aqui que o motor começa"
         : escolhidasEmOrdem.map((item) => item.rotulo).join(" · "),
-    local: [zona, contexto.localizacao.alcance === "online" ? "só online" : null]
+    local: [
+      zona,
+      contexto.localizacao.alcance === "online" ? "só online" : null,
+    ]
       .filter(Boolean)
       .join(" · "),
     recursos: [
       capital,
-      contexto.ativos.length === 0 ? "nenhum meio declarado" : plural(contexto.ativos.length, "meio", "meios"),
+      contexto.ativos.length === 0
+        ? "nenhum meio declarado"
+        : `${ativosComEstado}/${contexto.ativos.length} com estado confirmado`,
     ].join(" · "),
     tempo: [dedicacao, equipa].filter(Boolean).join(" · "),
     preferencias:
-      MERCADOS.find((item) => item.id === contexto.preferencias.mercado)?.rotulo ?? "Tanto faz",
+      MERCADOS.find((item) => item.id === contexto.preferencias.mercado)
+        ?.rotulo ?? "Tanto faz",
     limites:
       contexto.restricoes.length === 0
         ? "Nenhuma declarada"
-        : plural(contexto.restricoes.length, "recusa declarada", "recusas declaradas"),
-    risco: PERFIS_RISCO.find((item) => item.id === contexto.risco.perfil)?.rotulo ?? "",
+        : plural(
+            contexto.restricoes.length,
+            "recusa declarada",
+            "recusas declaradas",
+          ),
+    risco:
+      PERFIS_RISCO.find((item) => item.id === contexto.risco.perfil)?.rotulo ??
+      "",
   };
 
   const props = (id: SeccaoId) => ({
@@ -395,12 +521,16 @@ export default function Configurador({
       <div className="space-y-3 lg:col-span-8">
         {/* ── Como queres responder ───────────────────────────── */}
         <div className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
-          <h2 id="contexto-descoberta" className="font-display text-lg font-semibold text-ink">
+          <h2
+            id="contexto-descoberta"
+            className="font-display text-lg font-semibold text-ink"
+          >
             Constrói o teu contexto
           </h2>
           <p className="mt-1 text-[12px] leading-relaxed text-stone-500">
-            Quanto mais o motor souber, mais diferente é a resposta que te dá. Nada do que escreves
-            sai deste dispositivo, e só é guardado se o pedires.
+            Quanto mais o motor souber, mais diferente é a resposta que te dá.
+            Nada do que escreves sai deste dispositivo, e só é guardado se o
+            pedires.
           </p>
 
           <div
@@ -436,17 +566,27 @@ export default function Configurador({
             >
               {descricoes ? "Ocultar descrições" : "Mostrar descrições"}
             </BotaoDiscreto>
-            <BotaoDiscreto onClick={alternarTodas} icone={todasFechadas ? Plus : Minus}>
-              {todasFechadas ? "Abrir todas as secções" : "Fechar todas as secções"}
+            <BotaoDiscreto
+              onClick={alternarTodas}
+              icone={todasFechadas ? Plus : Minus}
+            >
+              {todasFechadas
+                ? "Abrir todas as secções"
+                : "Fechar todas as secções"}
             </BotaoDiscreto>
           </div>
         </div>
 
         {/* ── 1. O que sabes fazer ────────────────────────────── */}
-        <Seccao titulo="O que sabes fazer" icone={Briefcase} {...props("competencias")}>
+        <Seccao
+          titulo="O que sabes fazer"
+          icone={Briefcase}
+          {...props("competencias")}
+        >
           <p className="mb-3 text-[11px] leading-relaxed text-stone-500">
-            É por aqui que o motor começa: sem isto não consegue compor hipótese nenhuma. Escolhe o
-            que farias por dinheiro amanhã, não o que gostavas de aprender.
+            É por aqui que o motor começa: sem isto não consegue compor hipótese
+            nenhuma. Escolhe o que farias por dinheiro amanhã, não o que
+            gostavas de aprender.
           </p>
 
           {/* Quem chega sem saber o que sabe fazer não fica com um botão
@@ -478,11 +618,14 @@ export default function Configurador({
           {mostrar("personalizado") && escolhidasEmOrdem.length > 0 ? (
             <div className="mt-4 rounded-2xl border border-stone-100 bg-cream/70 p-3 dark:border-stone-800 dark:bg-stone-950/40">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-stone-500">
-                A que nível{mostrar("avancado") ? " — e com que experiência" : ""}
+                A que nível
+                {mostrar("avancado") ? " — e com que experiência" : ""}
               </p>
               <ul className="mt-2 space-y-2">
                 {escolhidasEmOrdem.map((competencia) => {
-                  const declarada = contexto.competencias.find((item) => item.id === competencia.id);
+                  const declarada = contexto.competencias.find(
+                    (item) => item.id === competencia.id,
+                  );
                   if (!declarada) return null;
                   return (
                     <li
@@ -499,7 +642,11 @@ export default function Configurador({
                             type="button"
                             aria-pressed={declarada.nivel === item.id}
                             aria-label={`${competencia.rotulo}: nível ${item.rotulo}`}
-                            onClick={() => atualizarCompetencia(competencia.id, { nivel: item.id })}
+                            onClick={() =>
+                              atualizarCompetencia(competencia.id, {
+                                nivel: item.id,
+                              })
+                            }
                             className={`min-h-[38px] rounded-full border px-2.5 text-[11px] font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${
                               declarada.nivel === item.id
                                 ? "border-brand bg-brand-light text-brand-deep dark:bg-brand/15 dark:text-brand-mint"
@@ -516,9 +663,8 @@ export default function Configurador({
                           value={declarada.experiencia ?? ""}
                           onChange={(evento) =>
                             atualizarCompetencia(competencia.id, {
-                              experiencia: (evento.target.value || undefined) as
-                                | TipoExperiencia
-                                | undefined,
+                              experiencia: (evento.target.value ||
+                                undefined) as TipoExperiencia | undefined,
                             })
                           }
                           className="h-10 max-w-full rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-600 focus:border-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-950 dark:text-stone-300"
@@ -546,44 +692,45 @@ export default function Configurador({
               deu origem a isto — «parece que não altera em nada» —
               estava meia certa: o motor altera tudo, e a interface não
               dizia nada. Agora diz, com o número. */}
-          {impacto?.proximoPasso ? (
-            (() => {
-              // O campo pode viver num nível que ainda não está aberto —
-              // apontar para «território» com o território escondido
-              // seria mandar alguém a um sítio que não existe no ecrã.
-              // `irPara` já sabe abrir o nível e a secção certos; aqui
-              // só se decide se é preciso.
-              const passo = impacto.proximoPasso;
-              const campoId = passo.campo === "zona" ? "regiao" : passo.campo;
-              const destino = ONDE_SE_RESPONDE[campoId];
-              const escondido = destino ? !mostrar(destino.nivel) : false;
-              const conteudo = (
-                <>
-                  <Crosshair size={13} className="mt-0.5 flex-none" />
-                  <span className="min-w-0">
-                    <strong className="font-semibold">
-                      A resposta que mais muda a tua análise: {passo.rotulo.toLowerCase()}.
-                    </strong>{" "}
-                    {passo.frase}
-                    {escondido ? " Toca para abrir esta pergunta." : ""}
-                  </span>
-                </>
-              );
-              const classe =
-                "mb-3 flex w-full items-start gap-2 rounded-2xl border border-brand/25 bg-brand-light/50 px-3 py-2 text-left text-[11px] leading-snug text-brand-deep dark:border-brand/25 dark:bg-brand/10 dark:text-brand-mint";
-              return escondido ? (
-                <button
-                  type="button"
-                  onClick={() => irPara(campoId)}
-                  className={`${classe} min-h-[44px] transition-colors hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/15`}
-                >
-                  {conteudo}
-                </button>
-              ) : (
-                <p className={classe}>{conteudo}</p>
-              );
-            })()
-          ) : null}
+          {impacto?.proximoPasso
+            ? (() => {
+                // O campo pode viver num nível que ainda não está aberto —
+                // apontar para «território» com o território escondido
+                // seria mandar alguém a um sítio que não existe no ecrã.
+                // `irPara` já sabe abrir o nível e a secção certos; aqui
+                // só se decide se é preciso.
+                const passo = impacto.proximoPasso;
+                const campoId = passo.campo === "zona" ? "regiao" : passo.campo;
+                const destino = ONDE_SE_RESPONDE[campoId];
+                const escondido = destino ? !mostrar(destino.nivel) : false;
+                const conteudo = (
+                  <>
+                    <Crosshair size={13} className="mt-0.5 flex-none" />
+                    <span className="min-w-0">
+                      <strong className="font-semibold">
+                        A resposta que mais muda a tua análise:{" "}
+                        {passo.rotulo.toLowerCase()}.
+                      </strong>{" "}
+                      {passo.frase}
+                      {escondido ? " Toca para abrir esta pergunta." : ""}
+                    </span>
+                  </>
+                );
+                const classe =
+                  "mb-3 flex w-full items-start gap-2 rounded-2xl border border-brand/25 bg-brand-light/50 px-3 py-2 text-left text-[11px] leading-snug text-brand-deep dark:border-brand/25 dark:bg-brand/10 dark:text-brand-mint";
+                return escondido ? (
+                  <button
+                    type="button"
+                    onClick={() => irPara(campoId)}
+                    className={`${classe} min-h-[44px] transition-colors hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:hover:bg-brand/15`}
+                  >
+                    {conteudo}
+                  </button>
+                ) : (
+                  <p className={classe}>{conteudo}</p>
+                );
+              })()
+            : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
@@ -626,10 +773,10 @@ export default function Configurador({
                 </EfeitoMedido>
               ) : (
                 <p className="mt-1.5 text-[11px] leading-snug text-stone-500">
-                  Decide que leituras oficiais são da tua zona e quais entram como contexto nacional.
+                  Decide que leituras oficiais são da tua zona e quais entram
+                  como contexto nacional.
                 </p>
               )}
-
             </div>
             <Campo rotulo="Alcance">
               <div className="flex flex-wrap gap-1.5">
@@ -644,7 +791,14 @@ export default function Configurador({
                   <Opcao
                     key={valor}
                     ativo={contexto.localizacao.alcance === valor}
-                    onClick={() => alterar({ localizacao: { ...contexto.localizacao, alcance: valor } })}
+                    onClick={() =>
+                      alterar({
+                        localizacao: {
+                          ...contexto.localizacao,
+                          alcance: valor,
+                        },
+                      })
+                    }
                   >
                     {rotulo}
                   </Opcao>
@@ -691,7 +845,9 @@ export default function Configurador({
               raioKm={contexto.localizacao.raioKm}
               resumo={resumoDoTerritorio}
               onEscolher={({ regiao, concelho }) =>
-                alterar({ localizacao: { ...contexto.localizacao, regiao, concelho } })
+                alterar({
+                  localizacao: { ...contexto.localizacao, regiao, concelho },
+                })
               }
             />
             {efeito("concelho") ? (
@@ -723,7 +879,10 @@ export default function Configurador({
                         alterar({
                           localizacao: {
                             ...contexto.localizacao,
-                            territorio: contexto.localizacao.territorio === valor ? undefined : valor,
+                            territorio:
+                              contexto.localizacao.territorio === valor
+                                ? undefined
+                                : valor,
                           },
                         })
                       }
@@ -757,7 +916,10 @@ export default function Configurador({
                         alterar({
                           localizacao: {
                             ...contexto.localizacao,
-                            raioKm: contexto.localizacao.raioKm === km ? undefined : km,
+                            raioKm:
+                              contexto.localizacao.raioKm === km
+                                ? undefined
+                                : km,
                           },
                         })
                       }
@@ -796,7 +958,8 @@ export default function Configurador({
                       capital: {
                         ...contexto.capital,
                         disponivelAgora: faixa.valor,
-                        precisaComecarSemCapital: faixa.valor === 200 ? true : undefined,
+                        precisaComecarSemCapital:
+                          faixa.valor === 200 ? true : undefined,
                       },
                     })
                   }
@@ -820,9 +983,10 @@ export default function Configurador({
                 elegibilidade. Mudam quase todos os anos e quem decide é o
                 IEFP — inventar um número aqui seria pior do que calar. */}
             <p className="mt-2 text-[11px] leading-snug text-stone-500">
-              Antes de fixares o teto: quem está a receber subsídio de desemprego pode recebê-lo
-              de uma só vez para criar o próprio emprego, e há microcrédito e linhas com garantia
-              pública (PAECPE, Empreende XXI).{" "}
+              Antes de fixares o teto: quem está a receber subsídio de
+              desemprego pode recebê-lo de uma só vez para criar o próprio
+              emprego, e há microcrédito e linhas com garantia pública (PAECPE,
+              Empreende XXI).{" "}
               <a
                 href="https://www.iefp.pt/empreendedorismo"
                 target="_blank"
@@ -831,7 +995,8 @@ export default function Configurador({
               >
                 Confirmar no IEFP
               </a>
-              . Não entra no motor — as condições mudam e a elegibilidade é decidida lá, não aqui.
+              . Não entra no motor — as condições mudam e a elegibilidade é
+              decidida lá, não aqui.
             </p>
           </Campo>
 
@@ -844,13 +1009,19 @@ export default function Configurador({
                 opcoes={ATIVOS_FILTRAVEIS}
                 grupos={GRUPOS_ATIVOS}
                 escolhidas={ativosEscolhidos}
-                onAlternar={(id) => alterar({ ativos: alternarLista(contexto.ativos, id as AtivoId) })}
+                onAlternar={(id) => alternarAtivo(id as AtivoId)}
                 descricoes={descricoes}
                 intro={
                   <p className="mb-2 text-[11px] leading-snug text-stone-500">
-                    Uma carrinha ou um terreno abrem hipóteses que não existem sem eles.
+                    Uma carrinha ou um terreno só abrem hipóteses depois de
+                    confirmares que servem para a operação.
                   </p>
                 }
+              />
+              <AdequacaoDosMeios
+                ativos={contexto.ativos}
+                detalhes={contexto.detalhesAtivos}
+                onChange={(detalhesAtivos) => alterar({ detalhesAtivos })}
               />
             </Campo>
           </div>
@@ -861,7 +1032,10 @@ export default function Configurador({
                 ativo={contexto.capital.aberturaCredito === true}
                 onClick={() =>
                   alterar({
-                    capital: { ...contexto.capital, aberturaCredito: !contexto.capital.aberturaCredito },
+                    capital: {
+                      ...contexto.capital,
+                      aberturaCredito: !contexto.capital.aberturaCredito,
+                    },
                   })
                 }
                 rotulo="Aceito recorrer a crédito"
@@ -873,13 +1047,77 @@ export default function Configurador({
                   alterar({
                     capital: {
                       ...contexto.capital,
-                      aberturaInvestidores: !contexto.capital.aberturaInvestidores,
+                      aberturaInvestidores:
+                        !contexto.capital.aberturaInvestidores,
                     },
                   })
                 }
                 rotulo="Aceito investidores"
                 nota="Muda a ambição possível, e a quem prestas contas."
               />
+            </div>
+          ) : null}
+
+          {mostrar("avancado") ? (
+            <div className="mt-4 grid gap-4 border-t border-stone-100 pt-4 dark:border-stone-800 sm:grid-cols-2">
+              <Campo
+                rotulo="Teto absoluto de investimento"
+                nota="É o máximo que aceitas expor, mesmo que tenhas mais disponível. Elimina acima deste valor."
+              >
+                <label className="sr-only" htmlFor="capital-maximo">
+                  Teto absoluto em euros
+                </label>
+                <input
+                  id="capital-maximo"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={100}
+                  value={contexto.capital.maximo ?? ""}
+                  onChange={(evento) =>
+                    alterar({
+                      capital: {
+                        ...contexto.capital,
+                        maximo:
+                          evento.target.value === ""
+                            ? undefined
+                            : Number(evento.target.value),
+                      },
+                    })
+                  }
+                  placeholder="Por exemplo, 7 500"
+                  className={CAMPO_NUMERICO}
+                />
+              </Campo>
+              <Campo
+                rotulo="Quanto consegues reinvestir por mês"
+                nota="É confrontado com o custo fixo nos meses em que a receita ainda não chegou."
+              >
+                <label className="sr-only" htmlFor="capital-mensal">
+                  Reinvestimento mensal em euros
+                </label>
+                <input
+                  id="capital-mensal"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={50}
+                  value={contexto.capital.mensal ?? ""}
+                  onChange={(evento) =>
+                    alterar({
+                      capital: {
+                        ...contexto.capital,
+                        mensal:
+                          evento.target.value === ""
+                            ? undefined
+                            : Number(evento.target.value),
+                      },
+                    })
+                  }
+                  placeholder="Por exemplo, 400"
+                  className={CAMPO_NUMERICO}
+                />
+              </Campo>
             </div>
           ) : null}
         </Seccao>
@@ -894,7 +1132,13 @@ export default function Configurador({
                     key={item.id}
                     ativo={contexto.tempo.dedicacao === item.id}
                     onClick={() =>
-                      alterar({ tempo: { ...contexto.tempo, dedicacao: item.id, horasSemana: undefined } })
+                      alterar({
+                        tempo: {
+                          ...contexto.tempo,
+                          dedicacao: item.id,
+                          horasSemana: undefined,
+                        },
+                      })
                     }
                   >
                     {item.rotulo}
@@ -908,7 +1152,15 @@ export default function Configurador({
                   <Opcao
                     key={item.id}
                     ativo={contexto.equipa.forma === item.id}
-                    onClick={() => alterar({ equipa: { ...contexto.equipa, forma: item.id, pessoas: undefined } })}
+                    onClick={() =>
+                      alterar({
+                        equipa: {
+                          ...contexto.equipa,
+                          forma: item.id,
+                          pessoas: undefined,
+                        },
+                      })
+                    }
                   >
                     {item.rotulo}
                   </Opcao>
@@ -927,9 +1179,17 @@ export default function Configurador({
                   {PRAZOS_RECEITA.map((item) => (
                     <Opcao
                       key={item.rotulo}
-                      ativo={contexto.tempo.prazoMaxPrimeiraReceitaMeses === item.meses}
+                      ativo={
+                        contexto.tempo.prazoMaxPrimeiraReceitaMeses ===
+                        item.meses
+                      }
                       onClick={() =>
-                        alterar({ tempo: { ...contexto.tempo, prazoMaxPrimeiraReceitaMeses: item.meses } })
+                        alterar({
+                          tempo: {
+                            ...contexto.tempo,
+                            prazoMaxPrimeiraReceitaMeses: item.meses,
+                          },
+                        })
                       }
                     >
                       {item.rotulo}
@@ -944,7 +1204,8 @@ export default function Configurador({
                     alterar({
                       equipa: {
                         ...contexto.equipa,
-                        disponibilidadeContratar: !contexto.equipa.disponibilidadeContratar,
+                        disponibilidadeContratar:
+                          !contexto.equipa.disponibilidadeContratar,
                       },
                     })
                   }
@@ -954,11 +1215,129 @@ export default function Configurador({
               </div>
             </div>
           ) : null}
+
+          {mostrar("avancado") ? (
+            <div className="mt-4 grid gap-4 border-t border-stone-100 pt-4 dark:border-stone-800 sm:grid-cols-2">
+              <Campo
+                rotulo="Horas reais por semana"
+                nota="Substitui a aproximação da dedicação no motor."
+              >
+                <label className="sr-only" htmlFor="horas-semana">
+                  Horas reais por semana
+                </label>
+                <input
+                  id="horas-semana"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={80}
+                  value={contexto.tempo.horasSemana ?? ""}
+                  onChange={(evento) =>
+                    alterar({
+                      tempo: {
+                        ...contexto.tempo,
+                        horasSemana:
+                          evento.target.value === ""
+                            ? undefined
+                            : Number(evento.target.value),
+                      },
+                    })
+                  }
+                  placeholder="Por exemplo, 12"
+                  className={CAMPO_NUMERICO}
+                />
+              </Campo>
+              <Campo
+                rotulo="Pessoas disponíveis agora"
+                nota="Conta contigo. Modelos com equipa usam este número."
+              >
+                <label className="sr-only" htmlFor="pessoas-equipa">
+                  Pessoas disponíveis agora
+                </label>
+                <input
+                  id="pessoas-equipa"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={50}
+                  value={contexto.equipa.pessoas ?? ""}
+                  onChange={(evento) =>
+                    alterar({
+                      equipa: {
+                        ...contexto.equipa,
+                        pessoas:
+                          evento.target.value === ""
+                            ? undefined
+                            : Number(evento.target.value),
+                      },
+                    })
+                  }
+                  placeholder="Por exemplo, 2"
+                  className={CAMPO_NUMERICO}
+                />
+              </Campo>
+              <Campo
+                rotulo="Quando consegues arrancar"
+                nota="Soma-se ao tempo típico até à primeira receita; não é confundido com ele."
+              >
+                <label className="sr-only" htmlFor="prazo-arranque">
+                  Meses até ao arranque
+                </label>
+                <input
+                  id="prazo-arranque"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={60}
+                  value={contexto.tempo.prazoArranqueMeses ?? ""}
+                  onChange={(evento) =>
+                    alterar({
+                      tempo: {
+                        ...contexto.tempo,
+                        prazoArranqueMeses:
+                          evento.target.value === ""
+                            ? undefined
+                            : Number(evento.target.value),
+                      },
+                    })
+                  }
+                  placeholder="Meses a contar de hoje"
+                  className={CAMPO_NUMERICO}
+                />
+              </Campo>
+              <Campo
+                rotulo="Estrutura em que pensas começar"
+                nota="Sinaliza modelos que levantam uma decisão societária."
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      ["por-decidir", "Por decidir"],
+                      ["recibos-verdes", "Recibos verdes"],
+                      ["empresa", "Empresa"],
+                    ] as const
+                  ).map(([valor, rotulo]) => (
+                    <Opcao
+                      key={valor}
+                      ativo={contexto.estrutura === valor}
+                      onClick={() => alterar({ estrutura: valor })}
+                    >
+                      {rotulo}
+                    </Opcao>
+                  ))}
+                </div>
+              </Campo>
+            </div>
+          ) : null}
         </Seccao>
 
         {/* ── 5. Que negócio aceitas ──────────────────────────── */}
         {mostrar("personalizado") ? (
-          <Seccao titulo="Que tipo de negócio aceitas" icone={Search} {...props("preferencias")}>
+          <Seccao
+            titulo="Que tipo de negócio aceitas"
+            icone={Search}
+            {...props("preferencias")}
+          >
             <div className="grid gap-4 sm:grid-cols-2">
               <Campo rotulo="Quem compra">
                 <div className="flex flex-wrap gap-1.5">
@@ -966,7 +1345,14 @@ export default function Configurador({
                     <Opcao
                       key={item.id}
                       ativo={contexto.preferencias.mercado === item.id}
-                      onClick={() => alterar({ preferencias: { ...contexto.preferencias, mercado: item.id } })}
+                      onClick={() =>
+                        alterar({
+                          preferencias: {
+                            ...contexto.preferencias,
+                            mercado: item.id,
+                          },
+                        })
+                      }
                     >
                       {item.rotulo}
                     </Opcao>
@@ -985,9 +1371,42 @@ export default function Configurador({
                     <Opcao
                       key={valor}
                       ativo={contexto.preferencias.formato === valor}
-                      onClick={() => alterar({ preferencias: { ...contexto.preferencias, formato: valor } })}
+                      onClick={() =>
+                        alterar({
+                          preferencias: {
+                            ...contexto.preferencias,
+                            formato: valor,
+                          },
+                        })
+                      }
                     >
                       {rotulo}
+                    </Opcao>
+                  ))}
+                </div>
+              </Campo>
+              <Campo
+                rotulo="O que queres vender"
+                nota="Vazio = tanto faz. Uma escolha elimina naturezas incompatíveis, por isso assinala apenas recusas reais."
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {NATUREZAS.map((item) => (
+                    <Opcao
+                      key={item.id}
+                      ativo={contexto.preferencias.naturezas.includes(item.id)}
+                      onClick={() =>
+                        alterar({
+                          preferencias: {
+                            ...contexto.preferencias,
+                            naturezas: alternarLista(
+                              contexto.preferencias.naturezas,
+                              item.id,
+                            ),
+                          },
+                        })
+                      }
+                    >
+                      {item.rotulo}
                     </Opcao>
                   ))}
                 </div>
@@ -1005,7 +1424,14 @@ export default function Configurador({
                     <Opcao
                       key={valor}
                       ativo={contexto.preferencias.receita === valor}
-                      onClick={() => alterar({ preferencias: { ...contexto.preferencias, receita: valor } })}
+                      onClick={() =>
+                        alterar({
+                          preferencias: {
+                            ...contexto.preferencias,
+                            receita: valor,
+                          },
+                        })
+                      }
                     >
                       {rotulo}
                     </Opcao>
@@ -1017,7 +1443,9 @@ export default function Configurador({
                   {PUBLICOS.map((item) => (
                     <Opcao
                       key={item.id}
-                      ativo={contexto.preferencias.publicosPreferidos.includes(item.id)}
+                      ativo={contexto.preferencias.publicosPreferidos.includes(
+                        item.id,
+                      )}
                       onClick={() =>
                         alterar({
                           preferencias: {
@@ -1039,17 +1467,25 @@ export default function Configurador({
 
             {mostrar("avancado") ? (
               <div className="mt-4">
-                <Campo rotulo="Setores que te interessam" nota="Vazio = todos. Escolher restringe a sério.">
+                <Campo
+                  rotulo="Setores que te interessam"
+                  nota="Vazio = todos. Escolher restringe a sério."
+                >
                   <div className="flex flex-wrap gap-1.5">
                     {SETORES_OFERECIDOS.map((setor) => (
                       <Opcao
                         key={setor.id}
-                        ativo={contexto.preferencias.setoresPreferidos.includes(setor.id)}
+                        ativo={contexto.preferencias.setoresPreferidos.includes(
+                          setor.id,
+                        )}
                         onClick={() =>
                           alterar({
                             preferencias: {
                               ...contexto.preferencias,
-                              setoresPreferidos: alternarLista(contexto.preferencias.setoresPreferidos, setor.id),
+                              setoresPreferidos: alternarLista(
+                                contexto.preferencias.setoresPreferidos,
+                                setor.id,
+                              ),
                             },
                           })
                         }
@@ -1066,11 +1502,18 @@ export default function Configurador({
 
         {/* ── 6. Restrições ───────────────────────────────────── */}
         {mostrar("personalizado") ? (
-          <Seccao titulo="O que não queres ou não podes" icone={Lock} {...props("limites")}>
+          <Seccao
+            titulo="O que não queres ou não podes"
+            icone={Lock}
+            {...props("limites")}
+          >
             <p className="mb-3 text-[11px] leading-relaxed text-stone-500">
               Estas não são preferências fracas:{" "}
-              <strong className="font-semibold text-stone-700 dark:text-stone-200">eliminam</strong>. O
-              motor passa a recusar em vez de ordenar, e diz-te o que recusou e porquê.
+              <strong className="font-semibold text-stone-700 dark:text-stone-200">
+                eliminam
+              </strong>
+              . O motor passa a recusar em vez de ordenar, e diz-te o que
+              recusou e porquê.
             </p>
             <ListaFiltravel
               nome="limites"
@@ -1080,7 +1523,12 @@ export default function Configurador({
               grupos={GRUPOS_RESTRICOES}
               escolhidas={restricoesEscolhidas}
               onAlternar={(id) =>
-                alterar({ restricoes: alternarLista(contexto.restricoes, id as RestricaoId) })
+                alterar({
+                  restricoes: alternarLista(
+                    contexto.restricoes,
+                    id as RestricaoId,
+                  ),
+                })
               }
               descricoes={descricoes}
             />
@@ -1096,7 +1544,9 @@ export default function Configurador({
                   <Opcao
                     key={item.id}
                     ativo={contexto.risco.perfil === item.id}
-                    onClick={() => alterar({ risco: { ...contexto.risco, perfil: item.id } })}
+                    onClick={() =>
+                      alterar({ risco: { ...contexto.risco, perfil: item.id } })
+                    }
                   >
                     {item.rotulo}
                   </Opcao>
@@ -1111,7 +1561,10 @@ export default function Configurador({
               >
                 <div className="grid gap-2 sm:grid-cols-2">
                   {DIMENSOES_RISCO.map((dimensao) => (
-                    <div key={dimensao} className="flex flex-wrap items-center gap-2">
+                    <div
+                      key={dimensao}
+                      className="flex flex-wrap items-center gap-2"
+                    >
                       <label
                         htmlFor={`risco-${dimensao}`}
                         className="min-w-[7rem] flex-1 text-[12px] text-stone-600 dark:text-stone-300"
@@ -1120,16 +1573,23 @@ export default function Configurador({
                       </label>
                       <select
                         id={`risco-${dimensao}`}
-                        value={contexto.risco.toleranciaPorDimensao?.[dimensao] ?? ""}
+                        value={
+                          contexto.risco.toleranciaPorDimensao?.[dimensao] ?? ""
+                        }
                         onChange={(evento) => {
                           const valor = evento.target.value as PerfilRisco | "";
-                          const proximo = { ...(contexto.risco.toleranciaPorDimensao ?? {}) };
+                          const proximo = {
+                            ...(contexto.risco.toleranciaPorDimensao ?? {}),
+                          };
                           if (valor === "") delete proximo[dimensao];
                           else proximo[dimensao] = valor;
                           alterar({
                             risco: {
                               ...contexto.risco,
-                              toleranciaPorDimensao: Object.keys(proximo).length > 0 ? proximo : undefined,
+                              toleranciaPorDimensao:
+                                Object.keys(proximo).length > 0
+                                  ? proximo
+                                  : undefined,
                             },
                           });
                         }}
@@ -1162,7 +1622,14 @@ export default function Configurador({
                     <Opcao
                       key={valor}
                       ativo={contexto.rendimento.ambicao === valor}
-                      onClick={() => alterar({ rendimento: { ...contexto.rendimento, ambicao: valor } })}
+                      onClick={() =>
+                        alterar({
+                          rendimento: {
+                            ...contexto.rendimento,
+                            ambicao: valor,
+                          },
+                        })
+                      }
                     >
                       {rotulo}
                     </Opcao>
@@ -1175,9 +1642,18 @@ export default function Configurador({
                     <Opcao
                       key={String(valor)}
                       ativo={contexto.rendimento.minimoMensal === valor}
-                      onClick={() => alterar({ rendimento: { ...contexto.rendimento, minimoMensal: valor } })}
+                      onClick={() =>
+                        alterar({
+                          rendimento: {
+                            ...contexto.rendimento,
+                            minimoMensal: valor,
+                          },
+                        })
+                      }
                     >
-                      {valor === undefined ? "Ainda não sei" : `${valor.toLocaleString("pt-PT")} €`}
+                      {valor === undefined
+                        ? "Ainda não sei"
+                        : `${valor.toLocaleString("pt-PT")} €`}
                     </Opcao>
                   ))}
                 </div>
@@ -1197,7 +1673,9 @@ export default function Configurador({
             onRepor={onRepor}
             jaAnalisou={jaAnalisou}
             onIrPara={irPara}
-            onAbrirNivel={() => setNivel(nivel === "essencial" ? "personalizado" : "avancado")}
+            onAbrirNivel={() =>
+              setNivel(nivel === "essencial" ? "personalizado" : "avancado")
+            }
             nivel={nivel}
           />
         </div>
@@ -1262,7 +1740,15 @@ function ResumoDoPerfil({
   onAbrirNivel: () => void;
   nivel: NivelConfiguracao;
 }) {
-  const zona = MARKET_REGIONS.find((item) => item.id === contexto.localizacao.regiao)?.label ?? "";
+  const zona =
+    MARKET_REGIONS.find((item) => item.id === contexto.localizacao.regiao)
+      ?.label ?? "";
+  const meiosConfirmados = contexto.ativos.filter((id) => {
+    return (
+      estadoDaAdequacaoDeclarada(id, contexto.detalhesAtivos?.[id]) ===
+      "confirmado"
+    );
+  }).length;
   const linhas: readonly [string, string][] = [
     [
       "Sabes fazer",
@@ -1279,16 +1765,33 @@ function ResumoDoPerfil({
     ],
     [
       "Meios",
-      contexto.ativos.length === 0 ? "nenhum declarado" : plural(contexto.ativos.length, "meio", "meios"),
+      contexto.ativos.length === 0
+        ? "nenhum declarado"
+        : `${meiosConfirmados}/${contexto.ativos.length} confirmados`,
     ],
-    ["Tempo", DEDICACOES.find((item) => item.id === contexto.tempo.dedicacao)?.rotulo ?? ""],
-    ["Restrições", contexto.restricoes.length === 0 ? "nenhuma" : `${contexto.restricoes.length} declaradas`],
-    ["Risco", PERFIS_RISCO.find((item) => item.id === contexto.risco.perfil)?.rotulo ?? ""],
+    [
+      "Tempo",
+      DEDICACOES.find((item) => item.id === contexto.tempo.dedicacao)?.rotulo ??
+        "",
+    ],
+    [
+      "Restrições",
+      contexto.restricoes.length === 0
+        ? "nenhuma"
+        : `${contexto.restricoes.length} declaradas`,
+    ],
+    [
+      "Risco",
+      PERFIS_RISCO.find((item) => item.id === contexto.risco.perfil)?.rotulo ??
+        "",
+    ],
   ];
 
   return (
     <div className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
-      <h2 className="font-display text-base font-semibold text-ink">O teu perfil está a formar-se</h2>
+      <h2 className="font-display text-base font-semibold text-ink">
+        O teu perfil está a formar-se
+      </h2>
 
       <div className="mt-3">
         <BarraProfundidade percentagem={profundidade.percentagem} />
@@ -1296,7 +1799,10 @@ function ResumoDoPerfil({
 
       <dl className="mt-4 space-y-1.5 border-t border-stone-100 pt-3 dark:border-stone-800">
         {linhas.map(([rotulo, valor]) => (
-          <div key={rotulo} className="flex items-baseline justify-between gap-2 text-[12px]">
+          <div
+            key={rotulo}
+            className="flex items-baseline justify-between gap-2 text-[12px]"
+          >
             <dt className="flex-none text-stone-500">{rotulo}</dt>
             <dd className="min-w-0 truncate text-right font-medium text-stone-700 dark:text-stone-200">
               {valor}
@@ -1348,17 +1854,20 @@ function ResumoDoPerfil({
           disabled={!profundidade.suficienteParaCorrer}
           className="btn-shine inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-full bg-brand px-5 text-sm font-semibold text-white shadow-card transition-shadow hover:shadow-lift disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
         >
-          {jaAnalisou ? "Voltar a analisar" : "Descobrir oportunidades"} <ArrowRight size={15} />
+          {jaAnalisou ? "Voltar a analisar" : "Descobrir oportunidades"}{" "}
+          <ArrowRight size={15} />
         </button>
         {!profundidade.suficienteParaCorrer ? (
           <p className="text-[11px] leading-snug text-stone-500">
-            Escolhe pelo menos uma coisa que sabes fazer. Sem isso o motor não tem por onde começar —
-            e preferimos dizer isto a devolver uma lista genérica.
+            Escolhe pelo menos uma coisa que sabes fazer. Sem isso o motor não
+            tem por onde começar — e preferimos dizer isto a devolver uma lista
+            genérica.
           </p>
         ) : (
           <p className="flex items-start gap-1.5 text-[11px] leading-snug text-stone-500">
             <Check size={12} className="mt-0.5 flex-none text-brand" />
-            Já dá para correr. Cada resposta que acrescentares muda o que sai — e o que é descartado.
+            Já dá para correr. Cada resposta que acrescentares muda o que sai —
+            e o que é descartado.
           </p>
         )}
         <button
@@ -1373,8 +1882,8 @@ function ResumoDoPerfil({
       <p className="mt-3 flex items-start gap-1.5 border-t border-stone-100 pt-3 text-[11px] leading-snug text-stone-500 dark:border-stone-800">
         <Lock size={12} className="mt-0.5 flex-none text-brand" />
         <span>
-          <Chip>Local</Chip> Nada disto sai do dispositivo. O perfil só é guardado se carregares em
-          «Guardar o meu perfil», depois da análise.
+          <Chip>Local</Chip> Nada disto sai do dispositivo. O perfil só é
+          guardado se carregares em «Guardar o meu perfil», depois da análise.
         </span>
       </p>
     </div>
