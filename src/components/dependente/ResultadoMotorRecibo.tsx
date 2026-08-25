@@ -339,16 +339,42 @@ export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasM
           </div>
         )}
 
+        {/* ┌──────────────────────────────────────────────────────────────┐
+            │ `role="tab"` É UM CONTRATO, NÃO UM RÓTULO.                    │
+            │                                                              │
+            │ Estava declarado sem nada do que promete: sem `aria-controls` │
+            │ a ligar cada separador ao painel, sem `role="tabpanel"` do    │
+            │ outro lado, e com os quatro botões a apanhar Tab um a um em   │
+            │ vez de responderem às setas. Quem usa leitor de ecrã ouvia    │
+            │ «separador» e não encontrava o painel; quem usa teclado       │
+            │ ouvia a promessa das setas e não obtinha nada. O axe não      │
+            │ apanha isto — nenhum destes atributos é *obrigatório* — mas   │
+            │ o padrão ARIA só existe inteiro.                              │
+            └──────────────────────────────────────────────────────────────┘ */}
         <div className="border-b border-stone-100 p-2 dark:border-stone-800">
           <div className="grid grid-cols-4 gap-1 rounded-xl bg-stone-100 p-1 dark:bg-stone-800" role="tablist" aria-label="Vistas do resultado">
-            {tabs.map((item) => (
+            {tabs.map((item, indice) => (
               <button
                 key={item.id}
                 type="button"
                 role="tab"
+                id={`recibo-tab-${item.id}`}
                 aria-selected={tab === item.id}
+                aria-controls={`recibo-painel-${item.id}`}
+                // Tabulação móvel: o grupo inteiro é uma paragem de Tab, e as
+                // setas percorrem-no por dentro — como manda o padrão.
+                tabIndex={tab === item.id ? 0 : -1}
+                onKeyDown={(evento) => {
+                  const passo = evento.key === "ArrowRight" ? 1 : evento.key === "ArrowLeft" ? -1 : 0;
+                  const salto = evento.key === "Home" ? 0 : evento.key === "End" ? tabs.length - 1 : null;
+                  const destino = salto ?? (passo !== 0 ? (indice + passo + tabs.length) % tabs.length : null);
+                  if (destino === null) return;
+                  evento.preventDefault();
+                  setTab(tabs[destino].id);
+                  document.getElementById(`recibo-tab-${tabs[destino].id}`)?.focus();
+                }}
                 onClick={() => setTab(item.id)}
-                className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-1.5 py-2 text-[11px] font-semibold transition ${tab === item.id ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`}
+                className={`flex min-h-[38px] items-center justify-center gap-1.5 rounded-lg px-1.5 py-2 text-[11px] font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 ${tab === item.id ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`}
               >
                 <span className="hidden sm:inline">{item.icon}</span><span>{item.label}</span>
               </button>
@@ -356,7 +382,13 @@ export function ResultadoMotorRecibo({ result, lines, annual, employerCost, hasM
           </div>
         </div>
 
-        <div className="p-4 sm:p-5">
+        <div
+          role="tabpanel"
+          id={`recibo-painel-${tab}`}
+          aria-labelledby={`recibo-tab-${tab}`}
+          tabIndex={0}
+          className="p-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand/40 sm:p-5"
+        >
           {tab === "month" && (
             <MonthlyBreakdown
               lines={lines}

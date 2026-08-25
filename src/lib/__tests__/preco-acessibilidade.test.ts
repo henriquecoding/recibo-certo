@@ -101,6 +101,61 @@ describe("preco-acessibilidade:infotip", () => {
     expect(INFOTIP).toContain("before:-inset-2.5");
     expect(INFOTIP).toMatch(/before:absolute|before:content-\[''\]/);
   });
+
+  // ┌────────────────────────────────────────────────────────────────────┐
+  // │ OS TRÊS DEFEITOS QUE ESTE PAINEL TEVE — E QUE VOLTAM SOZINHOS.      │
+  // │                                                                    │
+  // │ Nenhum dá erro. Nenhum é apanhado pelo axe (as três verificações    │
+  // │ abaixo correram-se com zero violações em cima do código partido).   │
+  // │ E os três só se veem num ecrã estreito ou com um dedo — que é       │
+  // │ precisamente o que não se usa a desenvolver.                        │
+  // └────────────────────────────────────────────────────────────────────┘
+  it("é colocado em relação ao ecrã, não centrado no botão", () => {
+    // `absolute left-1/2 -translate-x-1/2 w-60` punha 240px SEMPRE centrados
+    // no botão. Num ecrã de 360px, um botão à direita fazia o painel acabar
+    // 54px fora do ecrã — cortado a meio da frase. Medido no simulador de
+    // salário: 5 dos 7 painéis da página saíam do viewport.
+    //
+    // A correção não é uma classe: é medir o botão e prender o painel ao
+    // viewport. Daí exigir-se o portal (escapa a `overflow-hidden` e a
+    // contextos de empilhamento) e a posição fixa.
+    const fonte = semComentarios(INFOTIP);
+    expect(fonte).toContain("createPortal");
+    expect(fonte).toMatch(/getBoundingClientRect/);
+    expect(fonte).toMatch(/role="tooltip"[\s\S]{0,900}?className="fixed/);
+    // Se estas voltarem, voltou o painel de largura fixa centrado no botão.
+    expect(fonte).not.toMatch(/absolute[^"]*left-1\/2/);
+    expect(fonte).not.toMatch(/\bw-60\b/);
+  });
+
+  it("abre ao PRIMEIRO toque num ecrã tátil", () => {
+    // Um toque despacha `mouseenter` antes do `click`. Com o hover a abrir e
+    // o clique a alternar, o primeiro toque abria e fechava no mesmo gesto —
+    // e TODOS os painéis da aplicação exigiam dois toques. A distinção tem de
+    // ser pela modalidade do ponteiro; sem ela o defeito volta inteiro.
+    //
+    // Ancorado ao `onPointerEnter`: é ELE que abre. Uma asserção solta por
+    // `pointerType` passava com o guarda só no `onPointerLeave` — que é
+    // exatamente metade da correção, e a metade que não conta.
+    const fonte = semComentarios(INFOTIP);
+    const abreAoEntrar = fonte.match(/onPointerEnter=\{[\s\S]*?\n\s*\}\}/)?.[0];
+    expect(abreAoEntrar).toBeDefined();
+    expect(abreAoEntrar).toMatch(/pointerType === "mouse"/);
+    // E o foco não pode abrir quando vem de um ponteiro, ou o `click` que se
+    // segue fecha outra vez — o mesmo defeito por outro caminho.
+    const abreAoFocar = fonte.match(/onFocus=\{[\s\S]*?\n\s*\}\}/)?.[0];
+    expect(abreAoFocar).toBeDefined();
+    expect(abreAoFocar).toMatch(/focoDePonteiro/);
+    expect(fonte).toMatch(/onPointerDown=\{\(\) => \{\s*focoDePonteiro\.current = true;/);
+  });
+
+  it("não herda as maiúsculas do rótulo que o acompanha", () => {
+    // O painel vive dentro de rótulos `uppercase tracking-wide` — que é onde
+    // está a maioria dos ~250 usos. Sem neutralizar, parágrafos inteiros de
+    // texto legal saíam EM MAIÚSCULAS COM AS LETRAS AFASTADAS.
+    expect(semComentarios(INFOTIP)).toMatch(/normal-case/);
+    expect(semComentarios(INFOTIP)).toMatch(/tracking-normal/);
+  });
 });
 
 describe("preco-acessibilidade:foco-nas-camadas", () => {
