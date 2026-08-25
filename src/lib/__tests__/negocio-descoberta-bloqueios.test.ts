@@ -19,6 +19,23 @@
 //   2. o número prometido ao lado de «declara este meio» é o número que
 //      aparece depois de declarar — contado, não estimado;
 //   3. um bloqueio que exige dois meios pede os dois.
+//
+//  ── 2026-08-25: A PAREDE DEIXOU DE SER DE TIJOLO ───────────────────
+//  O painel de bloqueios tratava o sintoma: dizia à pessoa qual a caixa
+//  que lhe faltava assinalar. A causa era outra — `ativosNecessarios`
+//  eliminava por igual uma cozinha licenciada e um computador, e só uma
+//  dessas duas coisas é uma barreira a sério.
+//
+//  Com `BarreiraAtivo` (ver `contexto/perguntas.ts`), um meio COMPRÁVEL
+//  em falta deixa de fechar a porta: fica nomeado como coisa a adquirir,
+//  pesa no encaixe e nunca é dado por resolvido. Medido a competência a
+//  competência, isoladas: de DOZE em vinte e duas a devolver zero, para
+//  TRÊS em vinte e oito — e cada uma das três é uma barreira real e
+//  explicada (carta e viatura, cozinha licenciada, e «línguas», que é
+//  competência de reforço e não caminho principal).
+//
+//  O painel continua a existir e continua a ser exato. O que mudou é que
+//  agora só aparece onde há mesmo uma parede.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { describe, expect, it } from "vitest";
@@ -61,9 +78,31 @@ describe("descoberta: um resultado vazio explica-se sempre", () => {
 });
 
 describe("descoberta: o que um meio destranca é contado, não estimado", () => {
+  it("um meio comprável já não é parede — o programador sem computador tem resposta", () => {
+    // O caso original da auditoria. Assertava-se `toHaveLength(0)`, o que
+    // era medir o defeito e chamar-lhe garantia: um programador que não
+    // se lembrou de assinalar «Computador de trabalho» batia numa parede.
+    const resultado = descobrir(so("programacao"), { evidencia: [], limite: 20 });
+    expect(resultado.candidatos.length).toBeGreaterThan(0);
+
+    // E o que falta continua dito em voz alta, sem ser dado por resolvido.
+    const meios = resultado.candidatos.flatMap((candidato) =>
+      candidato.capacidadesUsadas.flatMap((capacidade) => capacidade.ativosNecessarios),
+    );
+    expect(meios).toContain("computador");
+    expect(
+      resultado.candidatos.some((candidato) =>
+        candidato.objecoes.some(
+          (objecao) => objecao.id === "entrada" && objecao.procede && !objecao.fatal,
+        ),
+      ),
+    ).toBe(true);
+  });
+
   it("declarar os meios prometidos dá exatamente as hipóteses prometidas", () => {
-    // O programador sem computador declarado: o caso da auditoria.
-    const base = so("programacao");
+    // Uma barreira ESTRUTURAL: carta de condução e viatura de carga não se
+    // compram na semana em que se decide abrir, e continuam a eliminar.
+    const base = so("logistica");
     const resultado = descobrir(base, { evidencia: [], limite: 20 });
     expect(resultado.candidatos).toHaveLength(0);
     expect(resultado.bloqueiosPorMeio.length).toBeGreaterThan(0);
@@ -114,18 +153,31 @@ describe("descoberta: o que um meio destranca é contado, não estimado", () => 
   });
 
   it("uma capacidade que exige dois meios pede os dois, não um", () => {
-    // `intervencao-eletrica` exige ferramentas E equipamento técnico.
-    // A primeira versão desta correção agrupava meio a meio e concluía
-    // que nenhum deles destrancava nada — deixando a competência sem
-    // explicação outra vez.
-    const capacidade = CAPACIDADES.find((item) => item.id === "intervencao-eletrica");
+    // `transporte-carga` exige viatura de carga E carta de condução, e as
+    // duas são estruturais — é o caso que continua a fazer parede. A
+    // primeira versão desta correção agrupava meio a meio e concluía que
+    // nenhum deles destrancava nada, deixando a competência sem explicação.
+    //
+    // (Era `intervencao-eletrica`. Deixou de servir de exemplo por bom
+    // motivo: ferramentas e equipamento técnico compram-se, e a capacidade
+    // passou a ser alcançável sem eles — com a compra nomeada.)
+    const capacidade = CAPACIDADES.find((item) => item.id === "transporte-carga");
     expect(capacidade?.ativosNecessarios.length).toBeGreaterThan(1);
 
-    const resultado = descobrir(so("eletrica"), { evidencia: [], limite: 20 });
+    const resultado = descobrir(so("logistica"), { evidencia: [], limite: 20 });
     expect(resultado.candidatos).toHaveLength(0);
     const conjunto = resultado.bloqueiosPorMeio.find((item) => item.ativos.length > 1);
     expect(conjunto).toBeDefined();
     expect(conjunto!.rotulos.length).toBe(conjunto!.ativos.length);
+  });
+
+  it("uma competência cujo único meio é comprável já não produz bloqueio nenhum", () => {
+    // `eletrica` era o exemplo anterior. Ferramentas e equipamento técnico
+    // são despesa de arranque, não barreira — e portanto não há parede a
+    // anunciar. A hipótese aparece, com a compra por fazer escrita nela.
+    const resultado = descobrir(so("eletrica"), { evidencia: [], limite: 20 });
+    expect(resultado.candidatos.length).toBeGreaterThan(0);
+    expect(resultado.bloqueiosPorMeio).toHaveLength(0);
   });
 
   it("os bloqueios são determinísticos, como o resto do motor", () => {

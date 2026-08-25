@@ -242,26 +242,40 @@ function varrer(quantos: number, sementeInicial: number): Medicao {
  * o trabalho por fazer, e fica à vista em vez de ficar num documento.
  */
 const LIMIARES = Object.freeze({
-  /** Medido 56,3% em 2026-08-25. Alvo do relatório: < 5%. */
-  taxaVazioMaxima: 0.58,
-  /** Medido 1,68. Não é meta — encher a página é o anti-objetivo. */
-  mediaApresentadaMinima: 1.55,
   /**
-   * Medido: média 1,97, MEDIANA 0.
+   * Medido 56,3% na primeira passagem; 14,0% depois de `BarreiraAtivo`.
    *
-   * A mediana a zero é o achado, não um detalhe: mais de metade dos
-   * perfis não tem um único candidato aprovado antes da diversificação.
-   * O limite de dez cartões nunca foi o estrangulamento — o pool é que
-   * está vazio. Por isso a cerca é sobre a MÉDIA, que ao menos se move;
-   * a mediana fica publicada à espera de deixar de ser zero.
+   * A cerca desceu com a medição. O que a fez descer não foi mexer no
+   * limiar: foi parar de eliminar quem não declarou ter um computador.
+   * Alvo do relatório: < 5%.
    */
-  poolMedioMinimo: 1.8,
-  /** Medido 387 candidatos distintos em 400 perfis. */
-  candidatosDistintosMinimos: 360,
-  /** Medido 21 problemas distintos em primeiro lugar, de 31 possíveis. */
-  problemasNaPrimeiraMinimos: 19,
-  /** Medido 22,9% (picos-operacionais-alojamento). Alvo: ≤ 15%. */
-  dominanciaMaxima: 0.25,
+  taxaVazioMaxima: 0.16,
+  /** Medido 1,68 → 3,39. Não é meta — encher a página é o anti-objetivo. */
+  mediaApresentadaMinima: 3.1,
+  /** Medido 1,97 → 3,85. */
+  poolMedioMinimo: 3.5,
+  /**
+   * Medido 0 → 3.
+   *
+   * A mediana a ZERO era o achado que fechava a discussão sobre o limite
+   * de dez cartões: mais de metade dos perfis não tinha um único candidato
+   * aprovado antes da diversificação, e portanto não havia nada escondido
+   * atrás do limite. Deixou de ser zero. Continua longe dos 20 do
+   * relatório, e é aí que a expansão do grafo ainda tem trabalho.
+   */
+  medianaPoolMinima: 2,
+  /** Medido 387 → 590 candidatos distintos em 400 perfis. */
+  candidatosDistintosMinimos: 550,
+  /** Medido 21 → 22 problemas distintos em primeiro lugar, de 31. */
+  problemasNaPrimeiraMinimos: 20,
+  /**
+   * Medido 22,9% → 16,0%.
+   *
+   * A família dominante mudou de «picos operacionais no alojamento» para
+   * «comércio local sem canal» — o domínio diluiu-se porque passou a haver
+   * variedade a montante, não porque se tenha mexido no ranking. Alvo: ≤ 15%.
+   */
+  dominanciaMaxima: 0.18,
 });
 
 // Um corpo pequeno o suficiente para o CI e grande o suficiente para a
@@ -299,6 +313,7 @@ describe("descoberta: cobertura estrutural do espaço de resultados", () => {
 
   it("o pool antes da diversificação não encolhe", () => {
     expect(MEDICAO.poolMedio).toBeGreaterThanOrEqual(LIMIARES.poolMedioMinimo);
+    expect(MEDICAO.medianaPool).toBeGreaterThanOrEqual(LIMIARES.medianaPoolMinima);
     expect(MEDICAO.mediaApresentada).toBeGreaterThanOrEqual(LIMIARES.mediaApresentadaMinima);
   });
 

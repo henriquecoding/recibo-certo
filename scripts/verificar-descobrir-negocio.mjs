@@ -523,7 +523,41 @@ try {
         "a pontuação vai publicada com a incerteza ao lado",
         /Pontuação \d+/.test(texto) && (/entre \d+ e \d+/.test(texto) || /não há intervalo/.test(texto)),
       );
-      verificar("diz o que não teve base para ser avaliado", /sem base para avaliar/.test(texto));
+      // ┌────────────────────────────────────────────────────────────┐
+      // │ A GARANTIA É «NUNCA EM BRANCO», NÃO «HÁ SEMPRE UMA LACUNA»  │
+      // │                                                            │
+      // │ Isto assertava `/sem base para avaliar/` no dossier, o que  │
+      // │ exigia que a hipótese aberta TIVESSE uma dimensão por       │
+      // │ avaliar. Passou a falhar quando o motor deixou de eliminar  │
+      // │ por meios compráveis e a hipótese de topo passou a ter as   │
+      // │ oito dimensões com leitura — ou seja, falhava por ter       │
+      // │ melhorado, que é o pior motivo para um teste falhar.        │
+      // │                                                            │
+      // │ O que interessa proteger é outro: uma dimensão sem base     │
+      // │ NUNCA pode aparecer vazia nem valer zero por omissão. Cada  │
+      // │ uma das oito mostra um número ou di-lo por palavras.        │
+      // └────────────────────────────────────────────────────────────┘
+      const painel = texto.slice(texto.indexOf("AS OITO DIMENSÕES"));
+      const semLeitura = [
+        "Compatibilidade contigo",
+        "Procura",
+        "Lacuna de oferta",
+        "Cabe no capital e no prazo",
+        "Exequibilidade",
+        "Barreira regulatória",
+        "Risco dentro da tua tolerância",
+        "Adequação geográfica",
+      ].filter((dimensao) => {
+        const seguinte = painel.match(
+          new RegExp(`${dimensao.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*\\n([^\\n]*)`),
+        );
+        return !seguinte || !(/^\d+$/.test(seguinte[1].trim()) || /sem base para avaliar/.test(seguinte[1]));
+      });
+      verificar(
+        "nenhuma das oito dimensões aparece em branco",
+        semLeitura.length === 0,
+        semLeitura.join(", "),
+      );
       verificar("publica o plano de investigação por executar", /por ligar/.test(texto));
 
       await semViolacoesAxe(pagina, "descoberta: dossier aberto");

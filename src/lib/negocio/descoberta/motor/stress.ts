@@ -76,8 +76,16 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
     (item) => item.estado === "por-confirmar" && item.requisito.confirmarAntesDeRecomendar,
   );
   const meiosLimitados = meios.filter((item) => item.estado === "limitado");
+  // Compráveis em falta: NÃO são fatais, e por isso entram na objeção sem
+  // a tornarem mortal. Continuam a ser dito em voz alta — a hipótese só é
+  // executável depois de a compra estar feita, e essa compra é dinheiro.
+  const meiosPorComprar = meios.filter((item) => item.estado === "por-adquirir");
   const notasDosMeios = (itens: typeof meios) => [...new Set(itens.map((item) => item.nota))].slice(0, 2).join(" ");
-  const adequacaoPorResolver = semMeios || meiosCriticosPorConfirmar.length > 0 || meiosLimitados.length > 0;
+  const adequacaoPorResolver =
+    semMeios ||
+    meiosCriticosPorConfirmar.length > 0 ||
+    meiosLimitados.length > 0 ||
+    meiosPorComprar.length > 0;
   objecoes.push({
     id: "entrada",
     pergunta: "Consegues mesmo entrar neste mercado?",
@@ -87,9 +95,11 @@ export function correrStressTest(entrada: EntradaStress): readonly ObjecaoStress
       ? `Falta pelo menos um meio, ou um dos meios declarados não é adequado. Enquanto isso não mudar, isto não é executável — é um objetivo. ${[...new Set(meiosEmFaltaOuInadequados.map((item) => `${item.requisito.finalidade}: ${item.nota}`))].slice(0, 2).join(" ")}`
       : meiosCriticosPorConfirmar.length > 0
         ? `O meio existe, mas a adequação profissional ainda não foi confirmada. A hipótese não é promovida até confirmares estado, disponibilidade, acesso e limites. ${notasDosMeios(meiosCriticosPorConfirmar)}`
-        : meiosLimitados.length > 0
-          ? `Os meios existem, mas há limitações declaradas. ${notasDosMeios(meiosLimitados)}`
-          : "Tens as competências e meios confirmados que a execução pede.",
+        : meiosPorComprar.length > 0
+          ? `Há equipamento por comprar antes disto arrancar. Não impede a hipótese — muda o arranque, e o custo não está orçamentado. ${notasDosMeios(meiosPorComprar)}`
+          : meiosLimitados.length > 0
+            ? `Os meios existem, mas há limitações declaradas. ${notasDosMeios(meiosLimitados)}`
+            : "Tens as competências e meios confirmados que a execução pede.",
   });
 
   // ── Barreira regulatória ──────────────────────────────────────────

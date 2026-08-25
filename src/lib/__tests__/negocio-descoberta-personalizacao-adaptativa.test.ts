@@ -9,6 +9,9 @@ import {
   descobrir,
   CAPACIDADE_POR_ID,
   avaliarAtivosDaCapacidade,
+  ativoImpedeExecucao,
+  avaliarRequisitoAtivo,
+  barreiraDoAtivo,
   estadoDaAdequacaoDeclarada,
   faixaDaCargaUtil,
   idadeDaViatura,
@@ -596,5 +599,91 @@ describe("descoberta: uma carrinha velha, pequena e cara não é «uma carrinha�
     ).toBe(true);
     expect(com!.viabilidade.custoMensal?.min).toBeGreaterThanOrEqual(480);
     expect(com!.viabilidade.custoMensal?.proveniencia.origem).toBe("hipotese");
+  });
+});
+
+describe("descoberta: não ter um meio não quer sempre dizer a mesma coisa", () => {
+  const semNada = (): OpportunityContext => ({
+    ...CONTEXTO_INICIAL,
+    competencias: [{ id: "programacao", nivel: "avancado" }],
+  });
+
+  it("um meio comprável em falta fica por adquirir, e não fecha a porta", () => {
+    const avaliacao = avaliarRequisitoAtivo(semNada(), {
+      qualquerUmDe: ["computador"],
+      finalidade: "Computador para o trabalho digital",
+    });
+    expect(avaliacao.estado).toBe("por-adquirir");
+    expect(avaliacao.forca).toBe(0);
+    expect(ativoImpedeExecucao(avaliacao)).toBe(false);
+    expect(avaliacao.nota).toMatch(/compra/i);
+  });
+
+  it("um meio estrutural em falta continua a fechar a porta", () => {
+    const avaliacao = avaliarRequisitoAtivo(semNada(), {
+      qualquerUmDe: ["cozinha-licenciada"],
+      finalidade: "Cozinha licenciada para produção alimentar",
+    });
+    expect(avaliacao.estado).toBe("em-falta");
+    expect(ativoImpedeExecucao(avaliacao)).toBe(true);
+  });
+
+  it("um requisito com alternativas vale pela MENOR barreira", () => {
+    // Se uma das saídas se compra, a operação não está fechada — está por
+    // equipar. Valer pela maior barreira mandaria a pessoa embora por causa
+    // da alternativa cara, com a barata ao lado.
+    const avaliacao = avaliarRequisitoAtivo(semNada(), {
+      qualquerUmDe: ["oficina", "ferramentas"],
+      finalidade: "Sítio ou meios para trabalhar",
+    });
+    expect(avaliacao.estado).toBe("por-adquirir");
+    expect(ativoImpedeExecucao(avaliacao)).toBe(false);
+  });
+
+  it("declarar que um meio comprável NÃO serve continua a ser um não", () => {
+    // Não ter declarado nada e ter declarado que não presta são respostas
+    // diferentes. A segunda é uma decisão da pessoa, e respeita-se.
+    const contexto: OpportunityContext = {
+      ...semNada(),
+      ativos: ["computador"],
+      detalhesAtivos: { computador: { estado: "precisa-reparacao" } },
+    };
+    const avaliacao = avaliarRequisitoAtivo(contexto, {
+      qualquerUmDe: ["computador"],
+      finalidade: "Computador para o trabalho digital",
+    });
+    expect(avaliacao.estado).toBe("inadequado");
+    expect(ativoImpedeExecucao(avaliacao)).toBe(true);
+  });
+
+  it("a classificação de barreira cobre todos os meios e erra por excesso de cuidado", () => {
+    expect(barreiraDoAtivo("computador")).toBe("aquisivel");
+    expect(barreiraDoAtivo("ferramentas")).toBe("aquisivel");
+    expect(barreiraDoAtivo("equipamento-tecnico")).toBe("aquisivel");
+    expect(barreiraDoAtivo("camara-video")).toBe("aquisivel");
+    // Nada que se não compre na semana em que se decide abrir.
+    for (const id of [
+      "carta-conducao",
+      "veiculo-ligeiro",
+      "veiculo-carga",
+      "cozinha-licenciada",
+      "espaco-comercial",
+      "armazem",
+      "oficina",
+      "terreno",
+      "stock",
+      "carteira-clientes",
+    ] as const) {
+      expect(barreiraDoAtivo(id)).toBe("estrutural");
+    }
+  });
+
+  it("a viabilidade nomeia o que falta comprar, e recusa-se a orçá-lo", () => {
+    const resultado = descobrir(semNada(), { limite: 20 });
+    const candidato = resultado.candidatos[0];
+    expect(candidato).toBeDefined();
+    const limitacoes = candidato!.viabilidade.limitacoes.join(" ");
+    expect(limitacoes).toMatch(/equipamento que ainda não tens/);
+    expect(limitacoes).toMatch(/Não o orçamentamos/);
   });
 });

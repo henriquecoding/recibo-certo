@@ -33,9 +33,10 @@ import { SMN, SS_DEPENDENTE } from "@/lib/fiscal-data";
 import { intervalo, somarIntervalos, type Intervalo } from "../proveniencia";
 import { tetoDeCapital, type OpportunityContext } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
-import { custoMensalDeclaradoDosMeios } from "../conhecimento/adequacao-ativos";
+import { custoMensalDeclaradoDosMeios, meiosPorAdquirir } from "../conhecimento/adequacao-ativos";
 import { inspecaoJaEAnual } from "../conhecimento/veiculos";
 import type { AtivoId } from "../contexto/tipos";
+import { ATIVOS } from "../contexto/perguntas";
 import type { AvaliacaoViabilidade } from "./tipos";
 
 /** Custo estimado de cumprir requisitos regulatórios, por severidade. */
@@ -131,6 +132,20 @@ export function avaliarViabilidade(
       `Não estão orçamentados ${emFalta.length} ${emFalta.length === 1 ? "meio em falta ou inadequado" : "meios em falta ou inadequados"} que este trabalho exige.`,
     );
   }
+  // Equipamento comprável em falta. NÃO se orça: não há fonte nossa para o
+  // preço de «um computador de trabalho», e inventá-la era a exceção que
+  // enfraquecia a regra — a mesma razão pela qual a renda fica por estimar
+  // umas linhas abaixo. Nomeia-se o que falta e diz-se que falta.
+  const porAdquirir = meiosPorAdquirir(avaliacoesAtivos);
+  if (porAdquirir.length > 0) {
+    const rotulos = porAdquirir
+      .map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id)
+      .join(", ");
+    limitacoes.push(
+      `O arranque não inclui equipamento que ainda não tens e que este trabalho pede: ${rotulos}. Não o orçamentamos — o preço depende do que compres e em que estado — mas tem de entrar na conta antes de decidires.`,
+    );
+  }
+
   const porConfirmar = avaliacoesAtivos.filter((item) => item.estado === "por-confirmar");
   if (porConfirmar.length > 0) {
     limitacoes.push(

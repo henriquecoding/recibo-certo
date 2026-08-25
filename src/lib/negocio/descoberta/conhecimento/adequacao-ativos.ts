@@ -32,7 +32,7 @@ import type {
   DimensoesCargaCm,
   OpportunityContext,
 } from "../contexto/tipos";
-import { ATIVOS } from "../contexto/perguntas";
+import { ATIVOS, barreiraDoAtivo } from "../contexto/perguntas";
 import type { Capacidade, RequisitoAtivo } from "./tipos";
 import {
   ORDEM_CARGA,
@@ -41,8 +41,13 @@ import {
   kgMinimosDaFaixa,
 } from "./veiculos";
 
+/**
+ * `em-falta` e `por-adquirir` são ambos «não tens», e é essa a diferença
+ * inteira: o primeiro fecha a porta, o segundo abre-a com uma conta por
+ * pagar. Ver `BarreiraAtivo` em `contexto/perguntas.ts` para a razão.
+ */
 export type EstadoAdequacaoAtivo =
-  "adequado" | "limitado" | "por-confirmar" | "em-falta" | "inadequado";
+  "adequado" | "limitado" | "por-confirmar" | "por-adquirir" | "em-falta" | "inadequado";
 
 export interface AvaliacaoRequisitoAtivo {
   requisito: RequisitoAtivo;
@@ -391,6 +396,23 @@ export function avaliarRequisitoAtivo(
     contexto.ativos.includes(id),
   );
   if (presentes.length === 0) {
+    // Um requisito com alternativas vale pela MENOR barreira: se uma das
+    // saídas é comprável, a operação não está fechada — está por equipar.
+    const aquisivel = requisito.qualquerUmDe.some(
+      (id) => barreiraDoAtivo(id) === "aquisivel",
+    );
+    const rotulos = requisito.qualquerUmDe
+      .map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id)
+      .join(" ou ");
+    if (aquisivel) {
+      return {
+        requisito,
+        alternativas: requisito.qualquerUmDe,
+        estado: "por-adquirir",
+        forca: 0,
+        nota: `Não declaraste ter ${rotulos.toLocaleLowerCase("pt-PT")}. Não impede — é equipamento que se compra — mas tem de entrar no arranque antes de isto ser executável.`,
+      };
+    }
     return {
       requisito,
       alternativas: requisito.qualquerUmDe,
@@ -422,10 +444,33 @@ export function avaliarAtivosDaCapacidade(
   );
 }
 
+/**
+ * O que fecha a porta. `por-adquirir` NÃO fecha — é a diferença toda.
+ *
+ * `inadequado` continua a fechar mesmo para um meio comprável: quem
+ * declarou que a sua bancada não serve não fica melhor servido por lhe
+ * dizerem que compre outra sem o ter pedido. Declarar que não serve é uma
+ * resposta; não ter declarado nada é outra.
+ */
 export function ativoImpedeExecucao(
   avaliacao: AvaliacaoRequisitoAtivo,
 ): boolean {
   return avaliacao.estado === "em-falta" || avaliacao.estado === "inadequado";
+}
+
+/** Os meios que é preciso comprar antes de a hipótese ser executável. */
+export function meiosPorAdquirir(
+  avaliacoes: readonly AvaliacaoRequisitoAtivo[],
+): readonly AtivoId[] {
+  return [
+    ...new Set(
+      avaliacoes
+        .filter((item) => item.estado === "por-adquirir")
+        .flatMap((item) =>
+          item.alternativas.filter((id) => barreiraDoAtivo(id) === "aquisivel"),
+        ),
+    ),
+  ];
 }
 
 /**
