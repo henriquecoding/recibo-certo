@@ -178,7 +178,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                             três linhas da MESMA superfície fixa em baixo. A
                             linha da marca já foi uma barra em fluxo no topo —
                             ver o quadro em `ChromeMobileMarca.tsx`. */}
-                        <ChromeMobile />
+                        {/* `ChromeMobile` lê `foco` da query string para
+                            acender o modo adaptativo. Esse valor só existe no
+                            pedido; sem uma fronteira própria, `useSearchParams`
+                            fazia o Suspense exterior substituir também o
+                            conteúdo da página durante a pré-renderização. O
+                            resultado era grave: os dossiers de Descobrir
+                            desapareciam do HTML sem JavaScript. A fronteira
+                            local limita o adiamento ao chrome — o rodapé
+                            continua a garantir navegação sem JavaScript. */}
+                        <Suspense fallback={null}>
+                          <ChromeMobile />
+                        </Suspense>
                         {/* Voltar ao topo — global em todo o site público;
                             esconde-se sozinho no /dashboard e no /admin. */}
                         <BotaoTopo />
