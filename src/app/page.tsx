@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Nav from "@/components/Nav";
 
 import Hero from "@/components/Hero";
@@ -14,7 +15,12 @@ import { ATIVIDADES } from "@/lib/fiscal-data";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
+import HomepageDescobrir from "@/components/descobrir/HomepageDescobrir";
 import { faqs } from "@/lib/faq";
+import { normalizarFocoHomepage } from "@/lib/foco-homepage";
+import { COMPETENCIA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/competencias";
+import { MODELO_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/modelos";
+import { PROBLEMA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/problemas";
 import {
   generateWebSiteSchema,
   generateOrganizationSchema,
@@ -23,16 +29,55 @@ import {
   generateFAQSchema,
 } from "@/lib/seo";
 
-const jsonLd = {
+const jsonLdBase = [
+  generateWebSiteSchema(),
+  generateOrganizationSchema(),
+  generateSoftwareApplicationSchema(),
+  generateBreadcrumbSchema([{ name: "Início", url: "/" }]),
+];
+
+const jsonLdComFaq = {
   "@context": "https://schema.org",
-  "@graph": [
-    generateWebSiteSchema(),
-    generateOrganizationSchema(),
-    generateSoftwareApplicationSchema(),
-    generateBreadcrumbSchema([{ name: "Início", url: "/" }]),
-    generateFAQSchema(faqs),
-  ],
+  "@graph": [...jsonLdBase, generateFAQSchema(faqs)],
 };
+
+const problemaExemplo = PROBLEMA_POR_ID.get("processos-dispersos-micro");
+const modeloExemplo = MODELO_POR_ID.get("avenca");
+const competenciaExemplo = COMPETENCIA_POR_ID.get("organizacao");
+const primeiroTesteExemplo = problemaExemplo?.comoValidar[1] ?? problemaExemplo?.comoValidar[0];
+
+if (!problemaExemplo || !modeloExemplo || !competenciaExemplo || !primeiroTesteExemplo) {
+  throw new Error("O exemplo editorial da homepage deixou de existir no grafo de descoberta.");
+}
+
+/**
+ * O palco não inventa um negócio nem um teste: as quatro linhas vêm do
+ * mesmo grafo que alimenta a ferramenta completa. Só atravessam a fronteira
+ * servidor/cliente as strings que a demonstração desenha.
+ */
+const exemploDescoberta = Object.freeze({
+  competencia: competenciaExemplo.rotulo,
+  problema: problemaExemplo.enunciado,
+  modelo: modeloExemplo.rotulo,
+  primeiroTeste: primeiroTesteExemplo,
+  testeDeFalsificacao: problemaExemplo.testeDeFalsificacao,
+});
+
+type HomeProps = {
+  searchParams: Promise<{ foco?: string | string[] }>;
+};
+
+export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
+  const foco = normalizarFocoHomepage((await searchParams).foco);
+  if (foco !== "descobrir") return {};
+
+  return {
+    title: "Descobrir que negócio testar em Portugal",
+    description:
+      "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.",
+    alternates: { canonical: "/" },
+  };
+}
 
 // ── Números do Hero — todos calculados no servidor (build) ────────────────
 // Com o motor fiscal verificado, passados como props. Mantém
@@ -69,7 +114,12 @@ const landingVencimento = calcularVencimento({
   dependentes: 0,
 });
 
-export default function Home() {
+export default async function Home({ searchParams }: HomeProps) {
+  const foco = normalizarFocoHomepage((await searchParams).foco);
+  const jsonLd = foco === "descobrir"
+    ? { "@context": "https://schema.org", "@graph": jsonLdBase }
+    : jsonLdComFaq;
+
   return (
     <>
       <script
@@ -77,8 +127,12 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div id="top">
-        <Nav />
+        <Nav foco={foco} />
         <main>
+          {foco === "descobrir" ? (
+            <HomepageDescobrir exemplo={exemploDescoberta} />
+          ) : (
+            <>
           <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />
           {/* Ver a nota em `FizFaixaDemo`: o ato da demo é o extra, isto é o
               piso — renderizado no servidor, imóvel, e o único caminho para
@@ -145,6 +199,8 @@ export default function Home() {
           <FAQ />
 
           <Fontes />
+            </>
+          )}
         </main>
         <Footer />
       </div>

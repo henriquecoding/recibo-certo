@@ -22,7 +22,7 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ OS PILARES DEIXAM DE SER UM INTERRUPTOR E PASSAM A SER DESTINOS      │
+//  │ O CANÓNICO E A EXPERIÊNCIA DA HOMEPAGE SÃO DUAS PORTAS DIFERENTES    │
 //  │                                                                     │
 //  │ Os quatro pilares da homepage — recibos verdes, por conta de outrem, │
 //  │ empresa, comparar — nunca foram navegação. Eram um valor em          │
@@ -31,12 +31,13 @@
 //  │ barra, não estavam no menu, e não havia URL que abrisse um deles     │
 //  │ sem passar pelo topo da homepage.                                    │
 //  │                                                                     │
-//  │ Cada pilar é agora um destino real, com a rota canónica que a        │
-//  │ ferramenta já tinha em `/ferramentas/<slug>` — indexável,            │
-//  │ partilhável e alcançável sem JavaScript. O interruptor continua a    │
-//  │ existir onde é legítimo: dentro da secção `#calculadora`, a          │
-//  │ escolher o que AQUELE simulador calcula. São duas perguntas          │
-//  │ diferentes e deixam de partilhar um controlo.                        │
+//  │ Cada pilar continua a ter uma rota canónica da ferramenta, indexável │
+//  │ e alcançável sem JavaScript. Quando a homepage já sabe contar essa   │
+//  │ etapa por inteiro, as superfícies de descoberta podem abrir também   │
+//  │ uma experiência editorial em `/?foco=…`; o CTA dessa experiência é   │
+//  │ que entra no motor completo. O rodapé, o menu e a pesquisa continuam │
+//  │ a apontar para o canónico. Duas portas explícitas, nunca um URL que   │
+//  │ muda de significado por baixo da pessoa.                             │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
@@ -69,8 +70,9 @@
 //     Coberto por `busca-fronteira.test.ts`.
 //   · O ícone é uma CHAVE (`components/ferramentas/icon-map.tsx` resolve-a),
 //     pela mesma razão que o catálogo das ferramentas o faz.
-//   · Todo o pilar aponta para o destino CANÓNICO da ferramenta. Nunca
-//     para `/?modo=…`, que era mandar a pessoa para o topo da homepage.
+//   · `href` é sempre o destino CANÓNICO da ferramenta. `homepageHref` é
+//     opcional e só existe quando a homepage já implementa esse modo de
+//     ponta a ponta. Nunca se confunde com `?modo=…`, que escolhe perfil.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { TOTAL_FERRAMENTAS } from "@/lib/ferramentas";
@@ -80,6 +82,8 @@ export interface Pilar {
   id: string;
   /** Rota canónica. É sempre a da ferramenta, nunca uma query da homepage. */
   href: string;
+  /** Experiência editorial da homepage, quando já está implementada. */
+  homepageHref?: `/?foco=${string}`;
   /** O nome completo. É SEMPRE o nome acessível, em qualquer largura. */
   label: string;
   /**
@@ -116,6 +120,7 @@ export const PILARES: Pilar[] = [
   {
     id: "descobrir",
     href: "/ferramentas/descobrir-negocio",
+    homepageHref: "/?foco=descobrir",
     label: "Descobrir",
     curto: "Descobrir",
     resultado: "Que negócio testar, a partir do que sabes fazer e de sinais oficiais.",
@@ -164,6 +169,15 @@ export const PILARES: Pilar[] = [
     toolId: "simulador-empresa",
   },
 ];
+
+/**
+ * Nas superfícies que apresentam o percurso, abre primeiro a homepage
+ * adaptada quando ela existe. Tudo o que é índice, pesquisa ou SEO continua
+ * a ler `pilar.href`, o canónico da ferramenta.
+ */
+export function hrefDaSuperficiePilar(pilar: Pilar): string {
+  return pilar.homepageHref ?? pilar.href;
+}
 
 /** Uma entrada do menu completo. */
 export interface EntradaMenu {

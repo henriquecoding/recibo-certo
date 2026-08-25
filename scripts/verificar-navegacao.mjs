@@ -59,7 +59,14 @@ const VIEWPORTS = [
   { nome: "1440", width: 1440, height: 900 },
 ];
 
-const ROTAS = ["/", "/ferramentas/calcular-preco", "/ferramentas/descobrir-negocio", "/guias", "/ferramentas"];
+const ROTAS = [
+  "/",
+  "/?foco=descobrir",
+  "/ferramentas/calcular-preco",
+  "/ferramentas/descobrir-negocio",
+  "/guias",
+  "/ferramentas",
+];
 
 const browser = await chromium.launch(EXECUTAVEL ? { executablePath: EXECUTAVEL } : {});
 

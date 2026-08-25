@@ -53,14 +53,15 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useReducedMotion } from "motion/react";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { PILARES } from "@/lib/navegacao";
+import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { DockMovel } from "@/components/busca/DockMovel";
 import ChromeMobileMarca from "@/components/ChromeMobileMarca";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
+import { normalizarFocoHomepage } from "@/lib/foco-homepage";
 
 /**
  * Os cinco lugares. A ordem vem da fonte e é fixa; o significado nunca
@@ -80,12 +81,16 @@ const SLOTS = PILARES.map((p) => ({
   id: p.id,
   label: p.curto,
   nomeCompleto: p.label,
-  href: p.href,
+  href: hrefDaSuperficiePilar(p),
+  hrefCanonico: p.href,
+  homepageHref: p.homepageHref,
   icone: p.icone,
 }));
 
 export default function ChromeMobile() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const foco = normalizarFocoHomepage(searchParams.get("foco"));
   const reduzMovimento = useReducedMotion();
 
   // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
@@ -144,7 +149,9 @@ export default function ChromeMobile() {
           className="flex items-stretch justify-between gap-0.5 px-1 pt-1.5 md:gap-1 md:px-2"
         >
           {SLOTS.map((slot) => {
-            const on = ativo(slot.href);
+            const on =
+              (pathname === "/" && foco === slot.id && Boolean(slot.homepageHref)) ||
+              ativo(slot.hrefCanonico);
             const Icon = iconeDe(slot.icone);
             /**
              * `min-w-0` e não um mínimo em `rem` — e é o que impede o
@@ -191,7 +198,9 @@ export default function ChromeMobile() {
              * │ levar à página do pilar, que é outra página.                │
              * └───────────────────────────────────────────────────────────┘
              */
-            const naRotaExacta = pathname === slot.href;
+            const naRotaExacta = slot.homepageHref
+              ? pathname === "/" && foco === slot.id
+              : pathname === slot.href;
 
             return (
               <Link

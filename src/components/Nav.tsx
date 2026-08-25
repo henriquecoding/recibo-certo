@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/supabase/auth";
 import BarraSecoes from "@/components/navegacao/BarraSecoes";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
 import MenuCompleto from "@/components/navegacao/MenuCompleto";
+import type { FocoHomepage } from "@/lib/foco-homepage";
 
 /**
  * O cabeçalho de secretária — três linhas, sempre as mesmas.
@@ -44,7 +45,7 @@ import MenuCompleto from "@/components/navegacao/MenuCompleto";
 const ACAO =
   "btn-shine focus-marca inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-5 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float";
 
-export default function Nav() {
+export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -357,7 +358,7 @@ export default function Nav() {
           <div id="rc-cabecalho-corpo" hidden={!corpoVisivel}>
             {/* ── Linha 2 — a bandeja dos cinco pilares ────────────────── */}
             <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
-              <CapsulaNav />
+              <CapsulaNav foco={foco} />
             </div>
 
             {/* ── Linha 3 — a barra de pesquisa ────────────────────────── */}

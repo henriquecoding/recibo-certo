@@ -38,8 +38,9 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { PILARES, hrefAtivo } from "@/lib/navegacao";
+import { PILARES, hrefAtivo, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { medirNavegacao } from "@/lib/busca/medicao";
+import type { FocoHomepage } from "@/lib/foco-homepage";
 
 const ITEM =
   "focus-marca flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-3 text-sm transition-colors";
@@ -48,7 +49,7 @@ const INATIVO = "font-medium text-stone-600 hover:text-stone-900 dark:text-stone
 
 const ATIVO = "font-semibold bg-white text-brand-dark shadow-card dark:bg-stone-950 dark:text-brand";
 
-export default function CapsulaNav() {
+export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null }) {
   const pathname = usePathname();
   const aceso = hrefAtivo(pathname);
 
@@ -59,15 +60,18 @@ export default function CapsulaNav() {
     >
       {PILARES.map((pilar, i) => {
         const Icon = iconeDe(pilar.icone);
-        const ativo = aceso === pilar.href;
-        const anteriorAceso = i > 0 && aceso === PILARES[i - 1].href;
+        const ativo = foco === pilar.id || aceso === pilar.href;
+        const anterior = i > 0 ? PILARES[i - 1] : null;
+        const anteriorAceso = Boolean(
+          anterior && (foco === anterior.id || aceso === anterior.href),
+        );
         return (
           <Fragment key={pilar.id}>
             {i > 0 && !ativo && !anteriorAceso && (
               <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
             )}
             <Link
-              href={pilar.href}
+              href={hrefDaSuperficiePilar(pilar)}
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
               onClick={() => medirNavegacao(pilar.id, "secretaria")}

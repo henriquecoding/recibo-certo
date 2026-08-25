@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.124.0",
+    data: "2026-08-25",
+    titulo: "«Descobrir» deixa de ser um atalho e passa a transformar a homepage",
+    itens: [
+      "Carregar em «Descobrir» no percurso principal passa a abrir uma homepage dedicada, com URL partilhável, em vez de te atirar imediatamente para a ferramenta completa. A ferramenta mantém a sua página própria e abre quando decides começar a análise.",
+      "O primeiro ecrã passa a mostrar o raciocínio do motor em movimento: lê o que trazes, aplica o que não pode acontecer, separa evidência de lacunas e só depois compõe uma hipótese. A demonstração pode ser pausada, percorrida por etapas e respeita a preferência de movimento reduzido.",
+      "O exemplo visível deixou de ser copy inventada para a homepage. Competência, problema, modelo de receita, primeiro teste e critério para abandonar a hipótese vêm do mesmo grafo que alimenta o motor completo.",
+      "Passas a poder ligar e desligar restrições numa demonstração curta e ver o que sai do caminho sem receber uma falsa pontuação de mercado. A página distingue sempre observado, estimado e ainda por descobrir.",
+      "O percurso seguinte fica explícito: validar a hipótese, definir o preço e só então escolher entre recibos verdes e empresa. Salário aparece separado, porque pode coexistir com um negócio e não é uma etapa de o abrir.",
+      "Cabeçalho, barra móvel e fila de pilares reconhecem a experiência ativa sem trocar a rota canónica da ferramenta. O perfil profissional continua separado da tarefa «Descobrir» — não passas a ser outra pessoa por mudares a pergunta da homepage.",
+    ],
+  },
+  {
     version: "2.123.0",
     data: "2026-08-25",
     titulo: "«Tenho carrinha» deixou de ser uma resposta: a viatura passa a ter idade, quilos e medidas",

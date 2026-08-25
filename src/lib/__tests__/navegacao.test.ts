@@ -216,6 +216,13 @@ describe("navegacao:contrato-dos-destinos", () => {
     }
   });
 
+  it("uma experiência editorial nunca substitui o canónico da ferramenta", () => {
+    const adaptativos = PILARES.filter((pilar) => pilar.homepageHref);
+    expect(adaptativos.map((pilar) => pilar.id)).toEqual(["descobrir"]);
+    expect(adaptativos[0]?.homepageHref).toBe("/?foco=descobrir");
+    expect(adaptativos[0]?.href).toBe("/ferramentas/descobrir-negocio");
+  });
+
   it("não há um único destino repetido em toda a navegação", () => {
     // Dois caminhos para o mesmo sítio na mesma superfície ensinam duas
     // convenções para a mesma coisa.
