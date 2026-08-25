@@ -251,12 +251,6 @@ export default function Resultados({
   );
   const [aRecusar, setARecusar] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (resultado.candidatos.some((item) => item.id === aberto)) return;
-    setAberto(resultado.candidatos[0]?.id ?? "");
-    setARecusar(null);
-  }, [resultado.candidatos, aberto]);
-
   const resumo = resumoDoTrabalho(resultado.telemetria);
   const resumoHistorico = diferenca ? resumoDaDiferenca(diferenca) : null;
 
@@ -323,6 +317,16 @@ export default function Resultados({
     const id = porAngulo.get(anguloAtivo);
     return resultado.candidatos.filter((item) => item.id === id);
   }, [anguloAtivo, porAngulo, passaram, resultado.candidatos]);
+
+  // Uma fonte de mercado pode chegar depois de o dossier abrir e transformar
+  // a hipótese em bloqueada. Nesse caso ela sai da lista principal. O estado
+  // tem de seguir o que está realmente visível; manter o ID antigo deixava o
+  // ecrã sem nenhum dossier aberto a meio de uma interação.
+  useEffect(() => {
+    if (visiveis.some((item) => item.id === aberto)) return;
+    setAberto(visiveis[0]?.id ?? "");
+    setARecusar(null);
+  }, [visiveis, aberto]);
 
   const paraComparar = resultado.candidatos.filter((item) =>
     comparar.includes(item.id),
