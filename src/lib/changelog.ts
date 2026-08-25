@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.118.0",
+    data: "2026-08-25",
+    titulo: "No modo claro, cada caixa volta a ter contorno",
+    itens: [
+      "No modo claro, o site parecia uma mancha só: os cartões eram brancos sobre papel quase branco e a linha que os devia separar tinha exatamente a cor do fundo. Não era subtileza — era uma borda que o ecrã nunca chegou a desenhar. No modo escuro nunca se notou, porque lá o cartão e a borda destacam-se ambos do fundo.",
+      "As bordas passam a ser bordas. Medido em catorze páginas e duas larguras: numa delas, seis em cada dez superfícies não tinham nenhuma pista visível a delimitá-las; agora não há nenhuma página assim, e o modo claro deixa de estar atrás do escuro em qualquer uma.",
+      "Os tons cinzentos das superfícies passam a ser quentes, a condizer com o papel da página em vez de puxarem para o azul ao lado dele. A luminosidade é a mesma ao centésimo, de propósito: nenhum texto ficou com menos contraste do que tinha.",
+      "Os cartões ganham um pouco mais de profundidade e um contorno mais leve — a aresta passa a ser da borda, e a sombra passa a ser só altura.",
+      "Os blocos cinzentos que aparecem enquanto uma ferramenta carrega eram indistinguíveis do fundo: durante o carregamento a página parecia vazia em vez de parecer a carregar. Passam a ver-se.",
+      "No telemóvel, o separador aceso da barra de baixo — a única indicação de onde estás — não se distinguia dos outros no modo claro. Passa a ter contorno próprio.",
+      "O cartão do parceiro na página inicial não tinha contorno visível, o que é justamente o que o devia distinguir como território de outra marca.",
+      "O modo escuro fica exatamente como estava: verificado elemento a elemento, com os estilos calculados de dezoito páginas comparados antes e depois. Os títulos do tema escuro deixam de depender de um valor afinado para o tema claro, que era a porta por onde uma afinação do claro lhes podia mexer sem ninguém dar por isso.",
+    ],
+  },
+  {
     version: "2.117.0",
     data: "2026-08-24",
     titulo: "Quem ainda não sabe o que vai vender deixa de começar pelo fim",

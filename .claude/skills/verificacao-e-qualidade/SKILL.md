@@ -40,6 +40,21 @@ npm run fiscal:check
   por DOM via `eval` (ler texto, classes, ausência de overlay de erro do Next).
   Limpar `node` e `server*.log` no fim.
 
+## 4b. Hierarquia visual (quando mexes em cor, borda ou sombra)
+```
+npm run start            (noutro terminal)
+npm run hierarquia:e2e
+```
+Mede a separação real de cada superfície nos dois temas — ver a skill
+`design-system-recibocerto`. «Está bonito» não é verificação: a diferença entre
+uma borda a 1,02:1 e uma a 1,09:1 é exactamente a que o olho não distingue com
+confiança, e é toda a diferença entre uma página que se lê e uma mancha só.
+
+E se o token que mexeste for lido por algum utilitário `dark:`, comparar os
+estilos COMPUTADOS antes/depois (não pixels — animações e conteúdo vivo fazem-nos
+variar). Foi o que apanhou 378 nós de texto do modo escuro a mudar de cor por
+causa de uma afinação do modo claro.
+
 ## 5. Checklist final (gate)
 - [ ] Requisito resolvido; casos-limite e estados (vazio/erro/carregamento) tratados
 - [ ] Modo claro intacto; dark mode coerente; responsivo (mobile→desktop)
