@@ -16,8 +16,10 @@ import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 import HomepageDescobrir from "@/components/descobrir/HomepageDescobrir";
+import HomepagePreco from "@/components/preco/HomepagePreco";
 import { faqs } from "@/lib/faq";
 import { normalizarFocoHomepage } from "@/lib/foco-homepage";
+import { cenariosDemoPreco, parametrosDemoPreco } from "@/lib/pricing/demo-homepage.servidor";
 import { COMPETENCIA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/competencias";
 import { MODELO_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/modelos";
 import { PROBLEMA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/problemas";
@@ -63,20 +65,41 @@ const exemploDescoberta = Object.freeze({
   testeDeFalsificacao: problemaExemplo.testeDeFalsificacao,
 });
 
+/**
+ * A demonstração de «Preço» é resolvida pela engine a sério, aqui, uma vez
+ * por processo — como os exemplos do Hero mais abaixo. Para o cliente
+ * atravessam só a taxa de IVA, as duas frações de imposto pessoal e os
+ * quatro cenários já calculados; `precificar()` e os dezoito motores ficam
+ * deste lado da fronteira.
+ */
+const parametrosPreco = parametrosDemoPreco();
+const cenariosPreco = cenariosDemoPreco();
+
 type HomeProps = {
   searchParams: Promise<{ foco?: string | string[] }>;
 };
 
-export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
-  const foco = normalizarFocoHomepage((await searchParams).foco);
-  if (foco !== "descobrir") return {};
-
-  return {
+const METADADOS_POR_FOCO = {
+  descobrir: {
     title: "Descobrir que negócio testar em Portugal",
     description:
       "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.",
-    alternates: { canonical: "/" },
-  };
+  },
+  preco: {
+    title: "Formar um preço que sustenta o negócio",
+    description:
+      "Custos, tempo, comissões, IVA e margem numa só composição — e o que muda no preço consoante vendas direto, num marketplace, isento ou a recibos verdes.",
+  },
+} as const;
+
+export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
+  const foco = normalizarFocoHomepage((await searchParams).foco);
+  if (!foco) return {};
+
+  // A canonical continua a ser `/`: a experiência editorial é uma leitura da
+  // homepage, não uma página nova. A rota indexável de cada ferramenta é a
+  // que vive em `/ferramentas/<slug>` e não passa por aqui.
+  return { ...METADADOS_POR_FOCO[foco], alternates: { canonical: "/" } };
 }
 
 // ── Números do Hero — todos calculados no servidor (build) ────────────────
@@ -116,7 +139,11 @@ const landingVencimento = calcularVencimento({
 
 export default async function Home({ searchParams }: HomeProps) {
   const foco = normalizarFocoHomepage((await searchParams).foco);
-  const jsonLd = foco === "descobrir"
+  // O `FAQPage` descreve as perguntas de `faqs`, que só existem na homepage
+  // normal. Cada foco traz o seu próprio FAQ, com outras perguntas — emitir
+  // aquele esquema aqui seria declarar à pesquisa perguntas que a página não
+  // tem.
+  const jsonLd = foco
     ? { "@context": "https://schema.org", "@graph": jsonLdBase }
     : jsonLdComFaq;
 
@@ -131,6 +158,8 @@ export default async function Home({ searchParams }: HomeProps) {
         <main>
           {foco === "descobrir" ? (
             <HomepageDescobrir exemplo={exemploDescoberta} />
+          ) : foco === "preco" ? (
+            <HomepagePreco parametros={parametrosPreco} cenarios={cenariosPreco} />
           ) : (
             <>
           <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />

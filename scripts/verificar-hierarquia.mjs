@@ -80,6 +80,7 @@ const LIMIAR_FRACO = 1.09;
 const PAGINAS = [
   { nome: "landing", url: "/" },
   { nome: "landing-descobrir", url: "/?foco=descobrir" },
+  { nome: "landing-preco", url: "/?foco=preco" },
   { nome: "precos", url: "/precos" },
   { nome: "guias", url: "/guias" },
   { nome: "ferramentas", url: "/ferramentas" },

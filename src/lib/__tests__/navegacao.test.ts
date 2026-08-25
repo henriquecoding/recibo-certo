@@ -218,9 +218,17 @@ describe("navegacao:contrato-dos-destinos", () => {
 
   it("uma experiência editorial nunca substitui o canónico da ferramenta", () => {
     const adaptativos = PILARES.filter((pilar) => pilar.homepageHref);
-    expect(adaptativos.map((pilar) => pilar.id)).toEqual(["descobrir"]);
-    expect(adaptativos[0]?.homepageHref).toBe("/?foco=descobrir");
-    expect(adaptativos[0]?.href).toBe("/ferramentas/descobrir-negocio");
+    expect(adaptativos.map((pilar) => pilar.id)).toEqual(["descobrir", "preco"]);
+
+    for (const pilar of adaptativos) {
+      // A porta editorial é uma query da homepage; o canónico é a rota da
+      // ferramenta. Se um dia o `homepageHref` passasse a apontar para
+      // `/ferramentas/…`, o menu, o rodapé e a pesquisa deixavam de ter um
+      // destino distinto — e a homepage adaptada deixava de ser alcançável.
+      expect(pilar.homepageHref).toBe(`/?foco=${pilar.id}`);
+      expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
+      expect(pilar.href).not.toContain("?");
+    }
   });
 
   it("não há um único destino repetido em toda a navegação", () => {

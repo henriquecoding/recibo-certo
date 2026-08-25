@@ -62,6 +62,7 @@ const VIEWPORTS = [
 const ROTAS = [
   "/",
   "/?foco=descobrir",
+  "/?foco=preco",
   "/ferramentas/calcular-preco",
   "/ferramentas/descobrir-negocio",
   "/guias",
@@ -465,16 +466,31 @@ for (const vp of VIEWPORTS) {
       if (OUT) await page.screenshot({ path: `${OUT}/home-${vp.nome}.png` });
 
   // A fila dos pilares na homepage — cinco ligações REAIS, servidas.
+  //
+  // O seletor contava só `/ferramentas/…`, o que era o mesmo que dizer «um
+  // pilar é uma ferramenta». Deixou de ser: quando a homepage sabe contar a
+  // etapa por inteiro, o pilar abre `/?foco=…` e o CTA dessa página é que
+  // entra no motor completo. Contar só uma das duas portas dava 3 de 5 e
+  // dizia que faltavam pilares que estavam todos lá.
+  //
+  // O que continua a valer — e é o que esta verificação existe para
+  // proteger — é que são CINCO, que cada um é uma ligação servida e que
+  // nenhum aponta para `?modo=`, que escolhe perfil e não etapa.
   await page.evaluate(() => document.querySelector("#pilares")?.scrollIntoView({ block: "center" }));
   await page.waitForTimeout(700);
   const fila = await page.evaluate(() => {
     const sec = document.querySelector("#pilares");
     if (!sec) return null;
-    return [...sec.querySelectorAll("a[href^='/ferramentas/']")].map((a) => a.getAttribute("href"));
+    return [...sec.querySelectorAll("a[href^='/ferramentas/'], a[href^='/?foco=']")].map((a) =>
+      a.getAttribute("href"),
+    );
   });
   if (!fila) mal(`${vp.nome}px: fila de pilares ausente na homepage`);
   else if (fila.length !== 5) mal(`${vp.nome}px: fila com ${fila.length} pilares`);
-  else ok(`${vp.nome}px: fila da homepage com os 5 pilares`);
+  else if (new Set(fila).size !== 5) mal(`${vp.nome}px: fila com destinos repetidos — ${fila.join(", ")}`);
+  else if (fila.some((h) => h.includes("modo=")))
+    mal(`${vp.nome}px: um pilar aponta para um perfil, não para uma etapa — ${fila.join(", ")}`);
+  else ok(`${vp.nome}px: fila da homepage com os 5 pilares (${fila.join(" · ")})`);
       if (OUT) await page.screenshot({ path: `${OUT}/pilares-${vp.nome}.png` });
 
   // Uma rota de pilar, com o destino aceso e a página rolada (o vidro só é

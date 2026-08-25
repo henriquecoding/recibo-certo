@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.125.0",
+    data: "2026-08-25",
+    titulo: "«Preço» passa a mostrar o preço a formar-se, parcela a parcela",
+    itens: [
+      "Carregar em «Preço» no percurso principal abre agora uma homepage própria, com URL partilhável, em vez de te levar direto para a calculadora completa. A ferramenta continua na sua página e abre quando quiseres calcular com os teus números.",
+      "O primeiro ecrã mostra o preço a ser construído em quatro passos: reunir os custos, apurar a base, aplicar markup e IVA, e fixar o preço. Podes pausar, repetir ou saltar para qualquer passo.",
+      "Materiais, trabalho, custos fixos e markup são valores que podes arrastar com o rato ou o dedo — ou alterar com as setas do teclado. Toda a conta responde: a base, o IVA, o lucro, a margem, a régua e a barra da composição.",
+      "Deixámos de chamar «margem» ao markup. São coisas diferentes e a diferença é grande: 40,4% de markup sobre os custos são 28,8% de margem sobre o preço líquido. A página mostra os dois números, cada um com o seu nome.",
+      "A mesma peça, operada de outra forma, precisa de outro preço. Podes trocar entre sociedade e recibos verdes e ver porquê: a Segurança Social e o IRS do simplificado saem de cada fatura, por isso o mesmo lucro por unidade exige cobrar mais.",
+      "Um laboratório com quatro situações reais — venda direta, marketplace com comissão, isento do Art. 53.º e recibos verdes — explica o que muda o preço e porquê. Uma comissão de 15% do valor com IVA obriga o preço a subir mais do que 15%, e a isenção de IVA não é margem grátis: também deixas de deduzir o IVA das compras.",
+      "Todos os números desta página são calculados pelo mesmo motor da calculadora completa, e a taxa de IVA vem do Art. 18.º do CIVA. Não há um único valor escrito à mão para a demonstração ficar bonita.",
+      "A página abre já com o resultado visível — mesmo sem JavaScript ou antes de a animação começar — e assenta calmamente no preço em vez de reiniciar em ciclo. Quem prefere movimento reduzido recebe o resultado completo, sem coreografia.",
+    ],
+  },
+  {
     version: "2.124.0",
     data: "2026-08-25",
     titulo: "«Descobrir» deixa de ser um atalho e passa a transformar a homepage",

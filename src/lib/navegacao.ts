@@ -131,6 +131,7 @@ export const PILARES: Pilar[] = [
   {
     id: "preco",
     href: "/ferramentas/calcular-preco",
+    homepageHref: "/?foco=preco",
     label: "Preço",
     curto: "Preço",
     resultado: "Quanto cobrar para cobrir custos, comissões e impostos.",
