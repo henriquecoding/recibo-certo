@@ -16,6 +16,23 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.120.0",
+    data: "2026-08-25",
+    titulo: "O modo claro passa a ter chão",
+    itens: [
+      "No modo claro, o site parecia uma mancha só: cartões brancos sobre um papel quase branco, e a linha que os devia separar tinha exatamente a cor do fundo. No escuro isso nunca se notou, porque lá o cartão destaca-se do fundo e a borda destaca-se do cartão — duas pistas a desenhar cada caixa. No claro havia meia.",
+      "O papel da página passa a ser um bege mais fundo. É a mudança que se vê: um cartão branco fica agora claramente pousado sobre alguma coisa, em vez de recortado no nada. Foi provado por eliminação, com a mesma zona da página desenhada oito vezes — bordas mais escuras não chegavam, sombras mais fortes também não (uma sombra precisa de chão onde cair).",
+      "As bordas passam a ser bordas, e agora contam dos dois lados: contra o branco do cartão por cima e contra o papel por baixo.",
+      "Os cartões ganham profundidade a sério — sombra em camadas, com um contacto curto junto à aresta e um halo largo por baixo, em vez de um borrão só.",
+      "O verde do TEXTO desce um tom para continuar a passar o mínimo de legibilidade exigido sobre o papel novo. O verde dos botões, do logótipo e dos blocos cheios não muda: é onde a marca se vê a sério.",
+      "O cinzento do texto secundário também desce um pouco, pelo mesmo motivo. No conjunto, o site fica com MENOS problemas de contraste do que tinha antes desta atualização, não mais.",
+      "Os blocos cinzentos que aparecem enquanto uma ferramenta carrega eram indistinguíveis do fundo: a página parecia vazia em vez de parecer a carregar. Passam a ver-se.",
+      "No telemóvel, o separador aceso da barra de baixo — a única indicação de onde estás — não se distinguia dos apagados. Passa a ter contorno próprio.",
+      "O cartão do parceiro na página inicial não tinha contorno visível, que é justamente o que o devia marcar como território de outra marca.",
+      "O modo escuro fica como estava: verificado elemento a elemento, com os estilos calculados de dezoito páginas comparados antes e depois. Os títulos do tema escuro deixam de depender de um valor afinado para o tema claro — era a porta por onde uma afinação do claro lhes mexia sem ninguém dar por isso.",
+    ],
+  },
+  {
     version: "2.119.0",
     data: "2026-08-25",
     titulo: "O simulador de salário no telemóvel: as explicações deixam de sair do ecrã e abrem ao primeiro toque",
