@@ -141,3 +141,48 @@ describe("descoberta: um resultado vazio oferece saídas, e são contadas", () =
     );
   });
 });
+
+describe("descoberta: as faixas de leitura cobrem também a ambição", () => {
+  const generoso = perfil({
+    competencias: [
+      { id: "organizacao", nivel: "avancado" },
+      { id: "vendas", nivel: "avancado" },
+      { id: "marketing", nivel: "intermedio" },
+    ],
+    capital: { disponivelAgora: 20_000 },
+    rendimento: { ambicao: "escalar" },
+  });
+
+  it("existe uma faixa de maior potencial, e não é a mesma que menor risco", () => {
+    const resultado = descobrir(generoso, { limite: 10 });
+    const potencial = resultado.destaques.find((item) => item.angulo === "maior-potencial");
+    const risco = resultado.destaques.find((item) => item.angulo === "menor-risco");
+    expect(potencial).toBeDefined();
+    if (risco) expect(potencial!.candidato.id).not.toBe(risco.candidato.id);
+  });
+
+  it("a faixa de maior potencial escolhe pela escalabilidade declarada do modelo", () => {
+    const resultado = descobrir(generoso, { limite: 10 });
+    const potencial = resultado.destaques.find((item) => item.angulo === "maior-potencial");
+    expect(potencial).toBeDefined();
+    // Nenhum candidato disponível quando o ângulo foi atribuído podia ter
+    // escalabilidade maior. Os já usados por ângulos anteriores estão
+    // legitimamente fora, por isso compara-se contra o próprio destaque.
+    const escala = potencial!.candidato.modelo.escalabilidade;
+    const usadosAntes = new Set(
+      resultado.destaques
+        .slice(0, resultado.destaques.findIndex((item) => item.angulo === "maior-potencial"))
+        .map((item) => item.candidato.id),
+    );
+    for (const candidato of resultado.candidatos) {
+      if (usadosAntes.has(candidato.id)) continue;
+      if (candidato.objecoes.some((objecao) => objecao.fatal && objecao.procede)) continue;
+      expect(candidato.modelo.escalabilidade).toBeLessThanOrEqual(escala);
+    }
+  });
+
+  it("nenhum ângulo repete candidatos, mesmo com o novo", () => {
+    const ids = descobrir(generoso, { limite: 10 }).destaques.map((item) => item.candidato.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+});

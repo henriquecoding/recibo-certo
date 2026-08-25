@@ -184,6 +184,7 @@ export type AnguloDeLeitura =
   | "maior-afinidade"
   | "menor-investimento"
   | "receita-mais-rapida"
+  | "maior-potencial"
   | "menor-risco"
   | "mais-evidencia"
   | "fora-do-obvio";
@@ -193,6 +194,7 @@ export const ROTULO_ANGULO: Readonly<Record<AnguloDeLeitura, string>> = Object.f
   "maior-afinidade": "Maior afinidade contigo",
   "menor-investimento": "Menor investimento",
   "receita-mais-rapida": "Receita mais rápida",
+  "maior-potencial": "Maior potencial",
   "menor-risco": "Menor risco",
   "mais-evidencia": "Com mais evidência",
   "fora-do-obvio": "Fora do óbvio",
@@ -204,6 +206,8 @@ export const EXPLICACAO_ANGULO: Readonly<Record<AnguloDeLeitura, string>> = Obje
     "A que mais aproveita o que sabes fazer e o que já tens — mesmo quando o mercado é o menos conhecido.",
   "menor-investimento": "A que arranca com menos capital exposto.",
   "receita-mais-rapida": "A que chega mais depressa à primeira fatura.",
+  "maior-potencial":
+    "A que menos depende das tuas horas para crescer. Não é a que dá mais dinheiro — é a que não fica presa ao tempo que tens.",
   "menor-risco": "A que menos excede a tolerância de risco que declaraste.",
   "mais-evidencia": "A que tem mais leituras oficiais por trás.",
   "fora-do-obvio": "Um problema pouco disputado, com procura repetida e barreira operacional suportável.",
@@ -247,6 +251,26 @@ export function destaques(candidatos: readonly OpportunityCandidate[]): readonly
     const meses = (item: OpportunityCandidate) => item.viabilidade.tempoAteReceitaMeses?.min ?? Number.MAX_SAFE_INTEGER;
     return meses(a) - meses(b) || b.pontuacaoGlobal - a.pontuacaoGlobal;
   });
+  // ── O ângulo que faltava ──────────────────────────────────────────
+  //  Os outros seis são todos, à sua maneira, conservadores: o mais
+  //  equilibrado, o que melhor te encaixa, o mais barato, o mais rápido,
+  //  o menos arriscado, o mais provado. Nenhum escolhia o AMBICIOSO, e um
+  //  motor que nunca o mostra empurra toda a gente para o mesmo canto.
+  //
+  //  `escalabilidade` já existe no modelo, declarada com significado: 0 é
+  //  trocar horas por dinheiro, 3 é crescer sem custo proporcional. Este
+  //  ângulo lê-a e não inventa nada — em particular, não promete receita.
+  //  «Maior potencial» aqui quer dizer «o teto não são as tuas horas», que
+  //  é uma propriedade do modelo, não uma previsão sobre o negócio.
+  //
+  //  As recusas duras já eliminaram tudo o que a pessoa não aceita antes
+  //  de chegar aqui, por isso ambicioso nunca quer dizer proibido.
+  escolher(
+    "maior-potencial",
+    (a, b) =>
+      b.modelo.escalabilidade - a.modelo.escalabilidade ||
+      b.pontuacaoGlobal - a.pontuacaoGlobal,
+  );
   escolher("menor-risco", (a, b) => {
     // Só riscos APURADOS decidem quem leva o selo. Com `!`, uma hipótese
     // penalizada por riscos que ninguém mediu perdia-o para outra com
