@@ -28,6 +28,22 @@
 -- objeto nenhum. Um caminho vazio deixa de depender do que estiver no
 -- `search_path` de quem chama.
 --
+-- ── PORQUE É QUE ISTO É TODO CONDICIONAL ────────────────────────────
+--
+-- As três funções nascem nas migrações 035 e 036, que são ANTERIORES à
+-- 042 e por isso não entram no ficheiro junto da plataforma de
+-- contabilistas — o arreio de RLS aplica esse ficheiro contra um
+-- PostgreSQL vazio, onde `lugares_vitalicios()` legitimamente não existe.
+-- A primeira versão desta migração assumiu que existiam e rebentou o
+-- arreio com «function public.lugares_vitalicios() does not exist».
+--
+-- Guardar cada instrução atrás de `to_regprocedure(...) IS NOT NULL`
+-- resolve as duas situações com o mesmo ficheiro: no projeto real, onde
+-- a 035 e a 036 estão aplicadas, endurece; num esquema onde elas não
+-- entraram, não faz nada e não mente sobre isso. Uma migração que só
+-- funciona quando aplicada na ordem certa a partir do zero é uma
+-- migração que o CI não consegue verificar.
+--
 -- NÃO muda quem consegue chamar o quê. Quem lê a página de planos sem
 -- conta continua a ler; o bloco de verificação no fim prova-o.
 --
@@ -35,38 +51,39 @@
 
 BEGIN;
 
-ALTER FUNCTION public.lugares_vitalicios()       SET search_path = '';
-ALTER FUNCTION public.lugares_vitalicios_total() SET search_path = '';
-ALTER FUNCTION public.dias_ate_purga()           SET search_path = '';
-
-REVOKE EXECUTE ON FUNCTION public.lugares_vitalicios()       FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.lugares_vitalicios_total() FROM PUBLIC;
-REVOKE EXECUTE ON FUNCTION public.dias_ate_purga()           FROM PUBLIC;
-
-GRANT EXECUTE ON FUNCTION public.lugares_vitalicios()
-  TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.lugares_vitalicios_total()
-  TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.dias_ate_purga()
-  TO anon, authenticated, service_role;
-
--- ── A prova de que o alcance não mudou ──────────────────────────────
---
--- Revogar de `PUBLIC` e conceder a três papéis nomeados só está certo se
--- os três papéis continuarem a conseguir executar. Uma migração que
--- endurece e parte a página de planos é pior do que a herança que veio
--- corrigir, por isso não se sai daqui sem verificar.
-DO $verificacao$
+DO $endurecer$
 DECLARE
+  alvo       text;
   assinatura regprocedure;
   papel      text;
 BEGIN
-  FOREACH assinatura IN ARRAY ARRAY[
-    'public.lugares_vitalicios()'::regprocedure,
-    'public.lugares_vitalicios_total()'::regprocedure,
-    'public.dias_ate_purga()'::regprocedure
+  FOREACH alvo IN ARRAY ARRAY[
+    'public.lugares_vitalicios()',
+    'public.lugares_vitalicios_total()',
+    'public.dias_ate_purga()'
   ]
   LOOP
+    assinatura := to_regprocedure(alvo);
+
+    -- A função pode não existir neste esquema. Ver a nota acima.
+    IF assinatura IS NULL THEN
+      RAISE NOTICE '% não existe neste esquema — nada a endurecer', alvo;
+      CONTINUE;
+    END IF;
+
+    EXECUTE format('ALTER FUNCTION %s SET search_path = %L', assinatura, '');
+    EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC', assinatura);
+    EXECUTE format(
+      'GRANT EXECUTE ON FUNCTION %s TO anon, authenticated, service_role',
+      assinatura
+    );
+
+    -- ── A prova de que o alcance não mudou ────────────────────────
+    --
+    -- Revogar de `PUBLIC` e conceder a três papéis nomeados só está certo
+    -- se os três continuarem a conseguir executar. Uma migração que
+    -- endurece e parte a página de planos é pior do que a herança que
+    -- veio corrigir, por isso não se sai daqui sem verificar.
     IF has_function_privilege('public', assinatura, 'EXECUTE') THEN
       RAISE EXCEPTION
         '% continua executável por PUBLIC — a revogação não pegou', assinatura;
@@ -74,6 +91,10 @@ BEGIN
 
     FOREACH papel IN ARRAY ARRAY['anon', 'authenticated', 'service_role']
     LOOP
+      -- Num esquema de ensaio os papéis do Supabase podem não existir.
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = papel) THEN
+        CONTINUE;
+      END IF;
       IF NOT has_function_privilege(papel, assinatura, 'EXECUTE') THEN
         RAISE EXCEPTION
           '% deixou de ser executável por % — os contadores são públicos de propósito',
@@ -82,6 +103,6 @@ BEGIN
     END LOOP;
   END LOOP;
 END
-$verificacao$;
+$endurecer$;
 
 COMMIT;

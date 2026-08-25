@@ -65,6 +65,30 @@ function migracoes(): readonly { nome: string; sql: string }[] {
     .map((nome) => ({ nome, sql: readFileSync(join(DIR, nome), "utf8") }));
 }
 
+/**
+ * As assinaturas que um bloco de endurecimento trata por SQL dinâmico.
+ *
+ * Uma migração pode conceder função a função — `GRANT … ON FUNCTION
+ * public.x() TO anon` — ou percorrer uma lista com `format()`, que é o
+ * que a 20260825120000 faz para poder saltar funções que não existem no
+ * esquema em que corre. As duas formas contam; ler só a primeira dava um
+ * inventário que se anunciava completo e não era.
+ */
+function assinaturasDeBloco(sql: string, verbo: "GRANT" | "REVOKE"): readonly string[] {
+  const temVerbo = new RegExp(
+    verbo === "GRANT"
+      ? String.raw`format\(\s*['"]GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+%s\s+TO\s+([^'"]*)['"]`
+      : String.raw`format\(\s*['"]REVOKE\s+EXECUTE\s+ON\s+FUNCTION\s+%s\s+FROM\s+([^'"]*)['"]`,
+    "i",
+  );
+  const jogo = temVerbo.exec(sql);
+  if (!jogo) return [];
+  const alvo = verbo === "GRANT" ? /\banon\b/i : /\bPUBLIC\b/i;
+  if (!alvo.test(jogo[1] ?? "")) return [];
+
+  return [...sql.matchAll(/'(public\.[a-z0-9_]+)\s*\([^)]*\)'/gi)].map((item) => item[1]!);
+}
+
 /** Toda a função que alguma migração concede a `anon`. */
 function concedidasAAnon(): readonly Concessao[] {
   const encontradas = new Map<string, string>();
@@ -72,11 +96,32 @@ function concedidasAAnon(): readonly Concessao[] {
     const padrao = /GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+([^\s;(]+)\s*(?:\([^)]*\))?\s+TO\s+([^;]+);/gi;
     for (const jogo of sql.matchAll(padrao)) {
       const [, funcao, papeis] = jogo;
+      // `%s` é o marcador de `format()`, não um nome de função.
+      if (funcao === "%s") continue;
       if (!/\banon\b/i.test(papeis!)) continue;
       encontradas.set(funcao!.trim(), nome);
     }
+    for (const assinatura of assinaturasDeBloco(sql, "GRANT")) {
+      encontradas.set(assinatura, nome);
+    }
   }
   return [...encontradas].map(([funcao, ficheiro]) => ({ funcao, ficheiro }));
+}
+
+/** Toda a função que alguma migração revoga de `PUBLIC`. */
+function revogadasDePublic(): ReadonlySet<string> {
+  const encontradas = new Set<string>();
+  for (const { sql } of migracoes()) {
+    const padrao = /REVOKE\s+EXECUTE\s+ON\s+FUNCTION\s+(public\.[a-z0-9_]+)\s*(?:\([^)]*\))?\s+FROM\s+([^;]+);/gi;
+    for (const jogo of sql.matchAll(padrao)) {
+      if (!/\bPUBLIC\b/i.test(jogo[2] ?? "")) continue;
+      encontradas.add(jogo[1]!.trim());
+    }
+    for (const assinatura of assinaturasDeBloco(sql, "REVOKE")) {
+      encontradas.add(assinatura);
+    }
+  }
+  return encontradas;
 }
 
 /** A última definição de uma função, que é a que vale. */
@@ -143,17 +188,9 @@ describe("supabase: quem pode chamar o quê sem conta", () => {
     // `EXECUTE` é concedido a `PUBLIC` por omissão. Conceder a `anon` sem
     // revogar de `PUBLIC` não substitui a herança — soma-se a ela, e
     // qualquer papel futuro entra sem ninguém decidir que devia.
-    const todas = migracoes()
-      .map((item) => item.sql)
-      .join("\n");
+    const revogadas = revogadasDePublic();
     const semRevogacao = concedidasAAnon()
-      .filter(({ funcao }) => {
-        const curto = funcao.replace(/^public\./, "");
-        return !new RegExp(
-          `REVOKE\\s+EXECUTE\\s+ON\\s+FUNCTION\\s+public\\.${curto}\\s*(?:\\([^)]*\\))?\\s+FROM\\s+[^;]*\\bPUBLIC\\b`,
-          "i",
-        ).test(todas);
-      })
+      .filter(({ funcao }) => !revogadas.has(funcao))
       .map(({ funcao }) => funcao);
     expect(semRevogacao).toEqual([]);
   });
