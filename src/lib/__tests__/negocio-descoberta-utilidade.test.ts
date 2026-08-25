@@ -34,6 +34,7 @@
 import { describe, expect, it } from "vitest";
 import { CONTEXTO_INICIAL, type AtivoId, type OpportunityContext } from "@/lib/negocio/descoberta/contexto/tipos";
 import { COMPETENCIAS } from "@/lib/negocio/descoberta/conhecimento/dados/competencias";
+import { PROBLEMAS } from "@/lib/negocio/descoberta/conhecimento/dados/problemas";
 import { descobrir } from "@/lib/negocio/descoberta/motor/pipeline";
 import { PESOS_SCORE } from "@/lib/negocio/descoberta/motor/scoring";
 import { MARKET_REGIONS } from "@/lib/negocio/market/geografia";
@@ -88,7 +89,7 @@ const ATIVOS_POSSIVEIS: readonly AtivoId[] = [
 function contextosSinteticos(quantos: number): readonly OpportunityContext[] {
   const dados = aleatorio(20_260_823);
   const proximo = () => dados.next().value as number;
-  const escolher = <T,>(lista: readonly T[]): T => lista[Math.floor(proximo() * lista.length)]!;
+  const escolher = <T>(lista: readonly T[]): T => lista[Math.floor(proximo() * lista.length)]!;
 
   const contextos: OpportunityContext[] = [];
   for (let indice = 0; indice < quantos; indice += 1) {
@@ -155,6 +156,16 @@ const CORRIDAS = PERFIS.map((contexto) =>
 );
 
 const CANDIDATOS: readonly OpportunityCandidate[] = CORRIDAS.flatMap((item) => item.candidatos);
+const CORRIDAS_CONDICIONAIS = PERFIS.map((contexto) =>
+  descobrir(contexto, {
+    agora: () => AGORA,
+    limite: 20,
+    evidencia: EVIDENCIA_COMMITADA,
+    oferta: PACK_COMMITADO,
+    incluirForaDePerfil: true,
+  }),
+);
+const CANDIDATOS_CONDICIONAIS = CORRIDAS_CONDICIONAIS.flatMap((item) => item.candidatos);
 const SOMA_PESOS = Object.values(PESOS_SCORE).reduce((total, peso) => total + peso, 0);
 const fracao = (parte: number, todo: number) => (todo === 0 ? 0 : parte / todo);
 
@@ -271,8 +282,7 @@ describe("utilidade · a ordem apresentada é defensável", () => {
     const invertidas = CORRIDAS.filter((corrida) => {
       const [primeira, segunda] = corrida.candidatos;
       if (!primeira || !segunda) return false;
-      const fatal = (item: OpportunityCandidate) =>
-        item.objecoes.some((objecao) => objecao.fatal && objecao.procede);
+      const fatal = (item: OpportunityCandidate) => item.objecoes.some((objecao) => objecao.fatal && objecao.procede);
       // Uma objeção fatal empurra para baixo por motivo próprio.
       if (fatal(primeira) !== fatal(segunda)) return false;
       return primeira.confianca.nivel === "insuficiente" && segunda.confianca.nivel === "alta";
@@ -296,5 +306,24 @@ describe("utilidade · a ferramenta responde a quem lhe pergunta", () => {
       if (corrida.candidatos.length > 0) continue;
       expect(corrida.diagnosticoVazio, "um resultado vazio sem diagnóstico é um ecrã em branco").toBeTruthy();
     }
+  });
+
+  it("o modo condicional torna a base explorável sem promover impossibilidades", () => {
+    // Medido: 12 de 300 perfis continuam vazios (4 %), contra 85 no modo
+    // estritamente compatível. É uma exploração separada, nunca um atalho:
+    // qualquer meio em falta ou inadequado mantém objeção fatal.
+    const vazios = CORRIDAS_CONDICIONAIS.filter((item) => item.candidatos.length === 0).length;
+    expect(fracao(vazios, CORRIDAS_CONDICIONAIS.length)).toBeLessThan(0.1);
+    expect(CANDIDATOS_CONDICIONAIS.length).toBeGreaterThan(CANDIDATOS.length * 1.5);
+    expect(
+      CANDIDATOS_CONDICIONAIS.some((candidato) =>
+        candidato.objecoes.some((item) => item.id === "entrada" && item.fatal && item.procede),
+      ),
+    ).toBe(true);
+  });
+
+  it("a exploração condicional chega a todos os problemas do grafo", () => {
+    const distintos = new Set(CANDIDATOS_CONDICIONAIS.map((item) => item.problema.id));
+    expect(distintos.size).toBe(PROBLEMAS.length);
   });
 });

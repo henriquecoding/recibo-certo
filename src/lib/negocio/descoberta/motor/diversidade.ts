@@ -85,7 +85,14 @@ export function diversificar(
     lambda = 0.75,
     limite = candidatos.length,
     maxPorProblema = 2,
-  }: { lambda?: number; limite?: number; maxPorProblema?: number } = {},
+    ajuste = () => 0,
+  }: {
+    lambda?: number;
+    limite?: number;
+    maxPorProblema?: number;
+    /** Preferência aprendida nesta visita; não altera o score publicado. */
+    ajuste?: (candidato: OpportunityCandidate) => number;
+  } = {},
 ): readonly OpportunityCandidate[] {
   // ── ORDENAR PELO QUE SE PROVA, NÃO PELO QUE SE ESTIMA ─────────────
   //  ┌────────────────────────────────────────────────────────────────┐
@@ -117,7 +124,7 @@ export function diversificar(
     return (
       fatal(esquerda) - fatal(direita) ||
       forcaDaConfianca(direita.confianca.nivel) - forcaDaConfianca(esquerda.confianca.nivel) ||
-      direita.intervaloPontuacao.min - esquerda.intervaloPontuacao.min ||
+      direita.intervaloPontuacao.min + ajuste(direita) - (esquerda.intervaloPontuacao.min + ajuste(esquerda)) ||
       direita.pontuacaoGlobal - esquerda.pontuacaoGlobal ||
       esquerda.titulo.localeCompare(direita.titulo, "pt-PT")
     );
@@ -146,14 +153,11 @@ export function diversificar(
         const candidato = restantes[indice]!;
         if ((porProblema.get(candidato.problema.id) ?? 0) >= tetoPorProblema) continue;
         const repeticao =
-          escolhidos.length === 0
-            ? 0
-            : Math.max(...escolhidos.map((escolhido) => semelhanca(escolhido, candidato)));
+          escolhidos.length === 0 ? 0 : Math.max(...escolhidos.map((escolhido) => semelhanca(escolhido, candidato)));
         // O MMR usa o MESMO número defensável da chave de partida. Com
         // `pontuacaoGlobal` aqui, a ordenação por evidência acima era
         // desfeita logo a seguir — o ponto central voltava a mandar.
-        const valor =
-          lambda * candidato.intervaloPontuacao.min - (1 - lambda) * repeticao * 100;
+        const valor = lambda * (candidato.intervaloPontuacao.min + ajuste(candidato)) - (1 - lambda) * repeticao * 100;
         if (valor > melhorValor) {
           melhorValor = valor;
           melhorIndice = indice;
@@ -196,7 +200,8 @@ export const ROTULO_ANGULO: Readonly<Record<AnguloDeLeitura, string>> = Object.f
 
 export const EXPLICACAO_ANGULO: Readonly<Record<AnguloDeLeitura, string>> = Object.freeze({
   "melhor-combinacao": "A que melhor equilibra tudo o que declaraste.",
-  "maior-afinidade": "A que mais aproveita o que sabes fazer e o que já tens — mesmo quando o mercado é o menos conhecido.",
+  "maior-afinidade":
+    "A que mais aproveita o que sabes fazer e o que já tens — mesmo quando o mercado é o menos conhecido.",
   "menor-investimento": "A que arranca com menos capital exposto.",
   "receita-mais-rapida": "A que chega mais depressa à primeira fatura.",
   "menor-risco": "A que menos excede a tolerância de risco que declaraste.",
@@ -221,7 +226,10 @@ export function destaques(candidatos: readonly OpportunityCandidate[]): readonly
   const usados = new Set<string>();
   const resultado: Destaque[] = [];
 
-  const escolher = (angulo: AnguloDeLeitura, comparar: (a: OpportunityCandidate, b: OpportunityCandidate) => number) => {
+  const escolher = (
+    angulo: AnguloDeLeitura,
+    comparar: (a: OpportunityCandidate, b: OpportunityCandidate) => number,
+  ) => {
     const disponivel = candidatos.filter((item) => !usados.has(item.id));
     if (disponivel.length === 0) return;
     const melhor = [...disponivel].sort(comparar)[0]!;
@@ -247,7 +255,10 @@ export function destaques(candidatos: readonly OpportunityCandidate[]): readonly
       item.riscos.filter((risco) => risco.dentroDaTolerancia === false).length;
     return fora(a) - fora(b) || b.pontuacaoGlobal - a.pontuacaoGlobal;
   });
-  escolher("mais-evidencia", (a, b) => b.evidencias.length - a.evidencias.length || b.pontuacaoGlobal - a.pontuacaoGlobal);
+  escolher(
+    "mais-evidencia",
+    (a, b) => b.evidencias.length - a.evidencias.length || b.pontuacaoGlobal - a.pontuacaoGlobal,
+  );
   escolher("fora-do-obvio", (a, b) => {
     // Contrarian: problema com recorrência natural, B2B, poucos requisitos
     // e — sobretudo — que NÃO tem dossier curado. O que ninguém escreveu.

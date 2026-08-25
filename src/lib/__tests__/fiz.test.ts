@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -83,7 +83,11 @@ describe("verificação de webhooks", () => {
     const ts = String(Math.floor(Date.now() / 1000));
 
     const r = verificarEvento(
-      cabecalhos({ "fiz-webhook-id": "evt_1", "fiz-webhook-timestamp": ts, "fiz-webhook-signature": assinar(corpo, ts) }),
+      cabecalhos({
+        "fiz-webhook-id": "evt_1",
+        "fiz-webhook-timestamp": ts,
+        "fiz-webhook-signature": assinar(corpo, ts),
+      }),
       corpo,
     );
     expect(r.valido).toBe(true);
@@ -112,7 +116,11 @@ describe("verificação de webhooks", () => {
     const antigo = String(Math.floor(Date.now() / 1000) - 3600);
 
     const r = verificarEvento(
-      cabecalhos({ "fiz-webhook-id": "evt_1", "fiz-webhook-timestamp": antigo, "fiz-webhook-signature": assinar(corpo, antigo) }),
+      cabecalhos({
+        "fiz-webhook-id": "evt_1",
+        "fiz-webhook-timestamp": antigo,
+        "fiz-webhook-signature": assinar(corpo, antigo),
+      }),
       corpo,
     );
     expect(r.valido).toBe(false);
@@ -138,7 +146,11 @@ describe("verificação de webhooks", () => {
     const ts = String(Math.floor(Date.now() / 1000));
 
     const r = verificarEvento(
-      cabecalhos({ "fiz-webhook-id": "evt_1", "fiz-webhook-timestamp": ts, "fiz-webhook-signature": assinar(corpo, ts) }),
+      cabecalhos({
+        "fiz-webhook-id": "evt_1",
+        "fiz-webhook-timestamp": ts,
+        "fiz-webhook-signature": assinar(corpo, ts),
+      }),
       corpo,
     );
     expect(r.valido).toBe(false);
@@ -203,11 +215,30 @@ describe("consentimento do handoff", () => {
 
   it("a identificação só sai com consentimento campo a campo", async () => {
     const { criarHandoff } = await import("@/lib/fiz/handoff.server");
+    const { limparTokenParceiro } = await import("@/lib/fiz/client.server");
     // Sem autorizar `taxpayerNumber`, o NIF proposto tem de ficar para trás.
-    // A chamada falha por falta de credenciais, mas o que interessa é que
-    // nunca chegue a montar um pedido com o NIF lá dentro.
-    await expect(
-      criarHandoff(
+    // A API é simulada: este teste de fronteira nunca depende da rede e
+    // inspeciona o pedido que sairia realmente do servidor.
+    limparTokenParceiro();
+    const fetchAnterior = globalThis.fetch;
+    const fetchSimulado = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: "token-de-teste", expires_in: 300 }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: "h_1", url: "https://app.fiz.co/handoffs/h_1" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    globalThis.fetch = fetchSimulado as typeof fetch;
+
+    try {
+      await criarHandoff(
         {
           intent: "CONFIGURE_VAT",
           campos: ["entityType", "taxpayerNumber"],
@@ -215,17 +246,25 @@ describe("consentimento do handoff", () => {
           identity: { taxpayerNumber: "123456789" },
         },
         ["entityType"],
-      ),
-    ).rejects.toBeTruthy();
+      );
+      expect(fetchSimulado).toHaveBeenCalledTimes(2);
+      const pedido = JSON.parse(String(fetchSimulado.mock.calls[1]?.[1]?.body)) as Record<string, unknown>;
+      expect(pedido.profile).toEqual({ entityType: "INDIVIDUAL" });
+      expect(pedido).not.toHaveProperty("identity");
+      expect(JSON.stringify(pedido)).not.toContain("123456789");
+    } finally {
+      globalThis.fetch = fetchAnterior;
+      limparTokenParceiro();
+    }
   });
 
   it("recusa autorizar um campo que nunca foi apresentado", async () => {
     const { criarHandoff } = await import("@/lib/fiz/handoff.server");
     await expect(
-      criarHandoff(
-        { intent: "CONFIGURE_VAT", campos: ["entityType"], profile: { entityType: "INDIVIDUAL" } },
-        ["entityType", "taxpayerNumber"],
-      ),
+      criarHandoff({ intent: "CONFIGURE_VAT", campos: ["entityType"], profile: { entityType: "INDIVIDUAL" } }, [
+        "entityType",
+        "taxpayerNumber",
+      ]),
     ).rejects.toThrow(/não foram apresentados/i);
   });
 
@@ -235,7 +274,7 @@ describe("consentimento do handoff", () => {
     expect(nifValido("123456789")).toBe(true);
     expect(nifValido("123 456 789")).toBe(true);
     expect(nifValido("123456788")).toBe(false); // controlo errado
-    expect(nifValido("12345678")).toBe(false);  // curto demais
+    expect(nifValido("12345678")).toBe(false); // curto demais
     expect(nifValido("abcdefghi")).toBe(false);
   });
 
@@ -249,7 +288,10 @@ describe("consentimento do handoff", () => {
     }
     // E todo o grupo declarado tem de ter pelo menos um campo.
     for (const g of GRUPOS) {
-      expect(CAMPOS_VALIDOS.some((c) => CAMPOS[c].grupo === g.id), g.id).toBe(true);
+      expect(
+        CAMPOS_VALIDOS.some((c) => CAMPOS[c].grupo === g.id),
+        g.id,
+      ).toBe(true);
     }
   });
 
@@ -540,9 +582,17 @@ describe("estado de autorização OAuth", () => {
     const { regressoSeguro } = await import("@/lib/fiz/oauth.server");
     const NOSSA = "https://www.recibocerto.pt";
     const tentativas = [
-      "/dashboard", "//evil.com", "/\\evil.com", "/\\/evil.com", "https://evil.com",
-      "/..//evil.com", "/dashboard?next=https://evil.com", "javascript:alert(1)",
-      "/dashboard\u0009/evil", "  /dashboard", "/",
+      "/dashboard",
+      "//evil.com",
+      "/\\evil.com",
+      "/\\/evil.com",
+      "https://evil.com",
+      "/..//evil.com",
+      "/dashboard?next=https://evil.com",
+      "javascript:alert(1)",
+      "/dashboard\u0009/evil",
+      "  /dashboard",
+      "/",
     ];
     for (const t of tentativas) {
       const destino = new URL(regressoSeguro(t), NOSSA);

@@ -49,9 +49,13 @@ export function explicar(entrada: EntradaExplicacao): Explicacao {
     .filter((item): item is string => item !== undefined);
   if (competenciasUsadas.length > 0) razoes.push(`declaraste ${competenciasUsadas.join(" e ")}`);
 
+  // Só uma adequação confirmada ou uma limitação explicitamente
+  // declarada permite dizer «tens viatura». Presença sem detalhe fica no
+  // stress test como «por confirmar» e nunca vira argumento a favor.
   const ativosUsados = candidato.capacidades
-    .flatMap((item) => item.capacidade.ativosUteis)
-    .filter((ativo) => contexto.ativos.includes(ativo));
+    .flatMap((item) => item.avaliacoesAtivos)
+    .filter((item) => item.estado === "adequado" || item.estado === "limitado")
+    .flatMap((item) => (item.ativo ? [item.ativo] : []));
   if (ativosUsados.length > 0) {
     const nomes: Readonly<Record<string, string>> = {
       "veiculo-ligeiro": "tens viatura",
@@ -151,7 +155,9 @@ export function explicar(entrada: EntradaExplicacao): Explicacao {
   }
   if (geo.valor < 0.7) contra.push(geo.nota);
   if (horasSemanais(contexto) < 10 && candidato.modelo.padrao !== "pontual") {
-    contra.push("Um modelo recorrente com poucas horas por semana enche a agenda depressa e depois não tem para onde crescer.");
+    contra.push(
+      "Um modelo recorrente com poucas horas por semana enche a agenda depressa e depois não tem para onde crescer.",
+    );
   }
 
   // Sem repetições, e com um teto: uma lista de catorze linhas não se lê.

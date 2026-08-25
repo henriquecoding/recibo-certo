@@ -36,14 +36,10 @@
 //  uma vez num sifão.
 // ═══════════════════════════════════════════════════════════════════════
 
-import {
-  ESCALABILIDADE_PRETENDIDA,
-  experienciaForca,
-  temRestricao,
-  type OpportunityContext,
-} from "../contexto/tipos";
+import { ESCALABILIDADE_PRETENDIDA, experienciaForca, temRestricao, type OpportunityContext } from "../contexto/tipos";
 import type { CandidatoBruto } from "./gerador";
 import type { ContribuicaoFit } from "./tipos";
+import { avaliarRequisitoAtivo } from "../conhecimento/adequacao-ativos";
 
 /**
  * Os pesos, e a razão de cada um. Somam 100.
@@ -91,22 +87,39 @@ export function calcularFit(
   });
 
   // ── Ativos ────────────────────────────────────────────────────────
-  const ativos = new Set(contexto.ativos);
-  const uteis = candidato.capacidades.flatMap((item) => item.capacidade.ativosUteis);
-  const uteisQueTem = uteis.filter((ativo) => ativos.has(ativo));
-  const emFalta = candidato.capacidades.flatMap((item) => item.ativosEmFalta);
-  const parteAtivos =
-    emFalta.length > 0 ? 0 : uteis.length === 0 ? 1 : 0.5 + 0.5 * (uteisQueTem.length / uteis.length);
+  const requisitos = candidato.capacidades.flatMap((item) => item.avaliacoesAtivos);
+  const uteis = [...new Set(candidato.capacidades.flatMap((item) => item.capacidade.ativosUteis))];
+  const avaliacoesUteis = uteis.map((ativo) =>
+    avaliarRequisitoAtivo(contexto, {
+      qualquerUmDe: [ativo],
+      finalidade: "Meio útil para executar com mais folga",
+    }),
+  );
+  const parteObrigatoria =
+    requisitos.length === 0 ? 1 : requisitos.reduce((total, item) => total + item.forca, 0) / requisitos.length;
+  const parteUtil =
+    avaliacoesUteis.length === 0
+      ? 1
+      : avaliacoesUteis.reduce((total, item) => total + item.forca, 0) / avaliacoesUteis.length;
+  const parteAtivos = requisitos.length > 0 ? 0.8 * parteObrigatoria + 0.2 * parteUtil : 0.5 + 0.5 * parteUtil;
+  const emFalta = requisitos.filter((item) => item.estado === "em-falta" || item.estado === "inadequado");
+  const porConfirmar = requisitos.filter((item) => item.estado === "por-confirmar");
+  const limitados = [...requisitos, ...avaliacoesUteis].filter((item) => item.estado === "limitado");
+  const uteisQueTem = avaliacoesUteis.filter((item) => item.forca > 0);
   detalhe.push({
     eixo: "ativos",
     obtido: Math.round(PESOS_FIT.ativos * parteAtivos),
     maximo: PESOS_FIT.ativos,
     nota:
       emFalta.length > 0
-        ? "Falta pelo menos um meio que este trabalho exige."
-        : uteisQueTem.length > 0
-          ? `O que já tens serve: ${uteisQueTem.length} ${uteisQueTem.length === 1 ? "meio aproveitado" : "meios aproveitados"}.`
-          : "Não exige meios que não tenhas.",
+        ? "Falta, ou não é adequado, pelo menos um meio que este trabalho exige."
+        : porConfirmar.length > 0
+          ? `${porConfirmar.length === 1 ? "Há um meio" : `Há ${porConfirmar.length} meios`} por confirmar antes de tratar esta hipótese como executável.`
+          : limitados.length > 0
+            ? "Os meios existem, mas as limitações declaradas reduzem a capacidade real de execução."
+            : uteisQueTem.length > 0
+              ? `O que já tens serve: ${uteisQueTem.length} ${uteisQueTem.length === 1 ? "meio aproveitado" : "meios aproveitados"}.`
+              : "Não exige meios que não tenhas.",
   });
 
   // ── Experiência ───────────────────────────────────────────────────
@@ -145,11 +158,23 @@ export function calcularFit(
     possiveis += 1;
     if (acertou) acertos += 1;
   };
-  registar(contexto.preferencias.mercado !== "indiferente", candidato.problema.mercado === contexto.preferencias.mercado);
+  registar(
+    contexto.preferencias.mercado !== "indiferente",
+    candidato.problema.mercado === contexto.preferencias.mercado,
+  );
   registar(contexto.preferencias.receita !== "indiferente", candidato.modelo.padrao === contexto.preferencias.receita);
-  registar(contexto.preferencias.formato !== "hibrido", candidato.entrega === (contexto.preferencias.formato === "digital" ? "remoto" : "presencial"));
-  registar(contexto.preferencias.publicosPreferidos.length > 0, candidato.problema.publicos.some((item) => contexto.preferencias.publicosPreferidos.includes(item)));
-  registar(contexto.preferencias.setoresPreferidos.length > 0, contexto.preferencias.setoresPreferidos.includes(candidato.problema.setor));
+  registar(
+    contexto.preferencias.formato !== "hibrido",
+    candidato.entrega === (contexto.preferencias.formato === "digital" ? "remoto" : "presencial"),
+  );
+  registar(
+    contexto.preferencias.publicosPreferidos.length > 0,
+    candidato.problema.publicos.some((item) => contexto.preferencias.publicosPreferidos.includes(item)),
+  );
+  registar(
+    contexto.preferencias.setoresPreferidos.length > 0,
+    contexto.preferencias.setoresPreferidos.includes(candidato.problema.setor),
+  );
   const parteprefs = possiveis === 0 ? 0.6 : acertos / possiveis;
   detalhe.push({
     eixo: "preferencias",

@@ -16,29 +16,98 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "rota-recolha-entrega",
     rotulo: "Fazer rotas de recolha e entrega",
-    descricao: "Passar por vários pontos no mesmo dia com um horário que se cumpre.",
+    descricao:
+      "Passar por vários pontos no mesmo dia com um horário que se cumpre.",
     competenciasNecessarias: ["logistica"],
     competenciasUteis: ["organizacao", "atendimento"],
     ativosNecessarios: ["carta-conducao"],
-    ativosUteis: ["veiculo-ligeiro", "veiculo-carga"],
+    ativosUteis: [],
+    requisitosAtivos: [
+      {
+        qualquerUmDe: ["carta-conducao"],
+        finalidade: "Carta válida para a viatura usada na rota",
+        confirmarAntesDeRecomendar: true,
+      },
+      {
+        qualquerUmDe: ["veiculo-ligeiro", "veiculo-carga"],
+        finalidade: "Viatura disponível e adequada às recolhas e entregas",
+        confirmarAntesDeRecomendar: true,
+        veiculo: {
+          prontoParaUsoProfissional: true,
+          configuracoesAceites: ["passageiros", "misto", "mercadorias"],
+          capacidadeCargaMinima: "muito-reduzida",
+        },
+      },
+    ],
     esforcoFisico: true,
     presencial: true,
   },
   {
     id: "transporte-carga",
     rotulo: "Transportar volume e carga",
-    descricao: "Mover coisas pesadas ou volumosas entre sítios, com meios próprios.",
+    descricao:
+      "Mover coisas pesadas ou volumosas entre sítios, com meios próprios.",
     competenciasNecessarias: ["logistica"],
     competenciasUteis: ["organizacao"],
     ativosNecessarios: ["veiculo-carga", "carta-conducao"],
     ativosUteis: ["armazem"],
+    requisitosAtivos: [
+      {
+        qualquerUmDe: ["carta-conducao"],
+        finalidade: "Carta válida para a viatura de carga",
+        confirmarAntesDeRecomendar: true,
+      },
+      {
+        qualquerUmDe: ["veiculo-carga"],
+        finalidade:
+          "Viatura homologada e com capacidade para transportar carga",
+        confirmarAntesDeRecomendar: true,
+        veiculo: {
+          prontoParaUsoProfissional: true,
+          configuracoesAceites: ["mercadorias", "misto"],
+          capacidadeCargaMinima: "reduzida",
+        },
+      },
+    ],
     esforcoFisico: true,
+    presencial: true,
+  },
+  {
+    id: "transportar-pessoas",
+    rotulo: "Acompanhar pessoas em deslocações",
+    descricao:
+      "Levar uma pessoa a serviços e trazê-la de volta, com margem para acompanhante e limites legais.",
+    competenciasNecessarias: ["logistica"],
+    competenciasUteis: ["cuidar", "organizacao", "atendimento"],
+    ativosNecessarios: ["carta-conducao"],
+    ativosUteis: [],
+    requisitosAtivos: [
+      {
+        qualquerUmDe: ["carta-conducao"],
+        finalidade: "Carta válida para a viatura usada no acompanhamento",
+        confirmarAntesDeRecomendar: true,
+      },
+      {
+        qualquerUmDe: ["veiculo-ligeiro", "veiculo-carga"],
+        finalidade:
+          "Viatura adequada para transportar uma pessoa com segurança",
+        confirmarAntesDeRecomendar: true,
+        veiculo: {
+          prontoParaUsoProfissional: true,
+          configuracoesAceites: ["passageiros", "misto"],
+          lugaresMinimos: 2,
+          lugaresRecomendados: 3,
+        },
+      },
+    ],
+    esforcoFisico: false,
     presencial: true,
   },
   {
     id: "operar-no-local",
     rotulo: "Operar em casa ou instalações do cliente",
-    descricao: "Trabalho presencial no espaço de outra pessoa, com chave e confiança.",
+    descricao:
+      "Trabalho presencial no espaço de outra pessoa, com chave e confiança.",
     competenciasNecessarias: ["organizacao"],
     competenciasUteis: ["limpeza", "atendimento"],
     ativosNecessarios: [],
@@ -49,7 +118,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "limpar-e-repor",
     rotulo: "Limpar, repor e preparar espaços",
-    descricao: "Deixar um espaço pronto a usar, com padrão constante e prazo curto.",
+    descricao:
+      "Deixar um espaço pronto a usar, com padrão constante e prazo curto.",
     competenciasNecessarias: ["limpeza"],
     competenciasUteis: ["organizacao", "logistica"],
     ativosNecessarios: [],
@@ -60,7 +130,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "organizar-processos",
     rotulo: "Organizar processos e informação",
-    descricao: "Pôr pedidos, prazos, documentos e respostas num sistema que se aguenta.",
+    descricao:
+      "Pôr pedidos, prazos, documentos e respostas num sistema que se aguenta.",
     competenciasNecessarias: ["organizacao"],
     competenciasUteis: ["dados", "escrita", "burocracia"],
     ativosNecessarios: ["computador"],
@@ -71,7 +142,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "montar-ferramentas-digitais",
     rotulo: "Montar e manter ferramentas digitais",
-    descricao: "Escolher, configurar e ensinar software a quem o vai usar todos os dias.",
+    descricao:
+      "Escolher, configurar e ensinar software a quem o vai usar todos os dias.",
     competenciasNecessarias: ["informatica"],
     competenciasUteis: ["organizacao", "ensinar", "dados"],
     ativosNecessarios: ["computador"],
@@ -82,7 +154,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "tratar-dados",
     rotulo: "Limpar, cruzar e migrar dados",
-    descricao: "Pegar em informação desarrumada e entregá-la utilizável, com o que ficou de fora listado.",
+    descricao:
+      "Pegar em informação desarrumada e entregá-la utilizável, com o que ficou de fora listado.",
     competenciasNecessarias: ["dados"],
     competenciasUteis: ["programacao", "organizacao"],
     ativosNecessarios: ["computador"],
@@ -93,7 +166,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "construir-software",
     rotulo: "Construir e manter software",
-    descricao: "Escrever, publicar e continuar a manter aquilo que se escreveu.",
+    descricao:
+      "Escrever, publicar e continuar a manter aquilo que se escreveu.",
     competenciasNecessarias: ["programacao"],
     competenciasUteis: ["design", "dados"],
     ativosNecessarios: ["computador"],
@@ -104,7 +178,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "instalar-configurar",
     rotulo: "Instalar e configurar equipamento",
-    descricao: "Pôr equipamento a funcionar em casa ou empresa de outra pessoa, e explicá-lo.",
+    descricao:
+      "Pôr equipamento a funcionar em casa ou empresa de outra pessoa, e explicá-lo.",
     competenciasNecessarias: ["informatica"],
     competenciasUteis: ["tecnica-equipamento", "ensinar", "eletrica"],
     ativosNecessarios: ["ferramentas"],
@@ -126,7 +201,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "intervencao-eletrica",
     rotulo: "Intervir em instalações elétricas",
-    descricao: "Trabalho elétrico com habilitação e responsabilidade técnica declarada.",
+    descricao:
+      "Trabalho elétrico com habilitação e responsabilidade técnica declarada.",
     competenciasNecessarias: ["eletrica"],
     competenciasUteis: ["tecnica-equipamento", "coordenacao"],
     ativosNecessarios: ["ferramentas", "equipamento-tecnico"],
@@ -137,7 +213,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "executar-obra",
     rotulo: "Executar obra e acabamentos",
-    descricao: "Trabalho de construção, remodelação ou acabamento feito por si.",
+    descricao:
+      "Trabalho de construção, remodelação ou acabamento feito por si.",
     competenciasNecessarias: ["construcao"],
     competenciasUteis: ["coordenacao", "eletrica"],
     ativosNecessarios: ["ferramentas"],
@@ -148,7 +225,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "coordenar-fornecedores",
     rotulo: "Coordenar fornecedores e calendários",
-    descricao: "Pôr várias empresas a cumprir o mesmo prazo sem o cliente ter de as perseguir.",
+    descricao:
+      "Pôr várias empresas a cumprir o mesmo prazo sem o cliente ter de as perseguir.",
     competenciasNecessarias: ["coordenacao"],
     competenciasUteis: ["organizacao", "vendas", "construcao"],
     ativosNecessarios: [],
@@ -159,7 +237,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "acompanhar-pessoas",
     rotulo: "Acompanhar pessoas",
-    descricao: "Estar presente com regularidade para quem precisa de apoio, com limites escritos.",
+    descricao:
+      "Estar presente com regularidade para quem precisa de apoio, com limites escritos.",
     competenciasNecessarias: ["cuidar"],
     competenciasUteis: ["organizacao", "ensinar", "informatica"],
     ativosNecessarios: [],
@@ -170,7 +249,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "ensinar-e-treinar",
     rotulo: "Ensinar e treinar",
-    descricao: "Levar alguém de não sabe a sabe, com programa e com prova disso.",
+    descricao:
+      "Levar alguém de não sabe a sabe, com programa e com prova disso.",
     competenciasNecessarias: ["ensinar"],
     competenciasUteis: ["escrita", "linguas", "design"],
     ativosNecessarios: [],
@@ -181,7 +261,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "cuidar-animais",
     rotulo: "Cuidar de animais",
-    descricao: "Acompanhar animais de outras pessoas com rotina e responsabilidade.",
+    descricao:
+      "Acompanhar animais de outras pessoas com rotina e responsabilidade.",
     competenciasNecessarias: ["animais"],
     competenciasUteis: ["organizacao", "cuidar"],
     ativosNecessarios: [],
@@ -192,7 +273,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "produzir-alimentos",
     rotulo: "Produzir alimentos com regularidade",
-    descricao: "Produção repetível, com regras de segurança alimentar e rótulo conforme.",
+    descricao:
+      "Produção repetível, com regras de segurança alimentar e rótulo conforme.",
     competenciasNecessarias: ["cozinha"],
     competenciasUteis: ["organizacao", "vendas"],
     ativosNecessarios: ["cozinha-licenciada"],
@@ -203,7 +285,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "trabalhar-terreno",
     rotulo: "Trabalhar e manter terreno",
-    descricao: "Cultivo, limpeza e manutenção de terreno, próprio ou de terceiros.",
+    descricao:
+      "Cultivo, limpeza e manutenção de terreno, próprio ou de terceiros.",
     competenciasNecessarias: ["agricultura"],
     competenciasUteis: ["logistica", "vendas"],
     ativosNecessarios: ["ferramentas"],
@@ -214,7 +297,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "receber-e-guiar",
     rotulo: "Receber e guiar visitantes",
-    descricao: "Estar à frente de pessoas que não conhecem o sítio e fazer valer a pena.",
+    descricao:
+      "Estar à frente de pessoas que não conhecem o sítio e fazer valer a pena.",
     competenciasNecessarias: ["atendimento"],
     competenciasUteis: ["linguas", "cuidar", "vendas"],
     ativosNecessarios: [],
@@ -225,7 +309,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "vender-para-empresas",
     rotulo: "Vender a empresas",
-    descricao: "Chegar a quem decide numa empresa e conduzir uma venda que demora semanas.",
+    descricao:
+      "Chegar a quem decide numa empresa e conduzir uma venda que demora semanas.",
     competenciasNecessarias: ["vendas"],
     competenciasUteis: ["escrita", "gestao", "linguas"],
     ativosNecessarios: [],
@@ -236,7 +321,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "produzir-conteudo",
     rotulo: "Produzir conteúdo e imagem",
-    descricao: "Fotografia, vídeo e texto com ritmo de publicação que não se esgota.",
+    descricao:
+      "Fotografia, vídeo e texto com ritmo de publicação que não se esgota.",
     competenciasNecessarias: ["design"],
     competenciasUteis: ["escrita", "vendas"],
     ativosNecessarios: ["computador"],
@@ -247,7 +333,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "escrever-para-vender",
     rotulo: "Escrever para vender",
-    descricao: "Textos comerciais, propostas e páginas que convertem sem prometer o que não há.",
+    descricao:
+      "Textos comerciais, propostas e páginas que convertem sem prometer o que não há.",
     competenciasNecessarias: ["escrita"],
     competenciasUteis: ["vendas", "design"],
     ativosNecessarios: ["computador"],
@@ -258,7 +345,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "tratar-requisitos-formais",
     rotulo: "Tratar requisitos formais e prazos",
-    descricao: "Ler peças, cruzar requisitos, montar dossiers e não perder datas.",
+    descricao:
+      "Ler peças, cruzar requisitos, montar dossiers e não perder datas.",
     competenciasNecessarias: ["burocracia"],
     competenciasUteis: ["organizacao", "escrita", "dados"],
     ativosNecessarios: ["computador"],
@@ -269,7 +357,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "gerir-operacao",
     rotulo: "Gerir uma operação com equipa",
-    descricao: "Escalas, substituições, custo real do trabalho e alguém que aparece ao sábado.",
+    descricao:
+      "Escalas, substituições, custo real do trabalho e alguém que aparece ao sábado.",
     competenciasNecessarias: ["gestao"],
     competenciasUteis: ["coordenacao", "vendas", "cuidar"],
     ativosNecessarios: [],
@@ -296,7 +385,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "tratar-espacos-verdes",
     rotulo: "Manter jardins e terreno",
-    descricao: "Cortar, podar e limpar terreno com regularidade, incluindo o que a lei obriga antes do verão.",
+    descricao:
+      "Cortar, podar e limpar terreno com regularidade, incluindo o que a lei obriga antes do verão.",
     competenciasNecessarias: ["jardinagem"],
     competenciasUteis: ["logistica", "organizacao"],
     // Sem forma de levar máquina ao terreno não há serviço nenhum.
@@ -308,7 +398,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "cuidar-da-imagem",
     rotulo: "Tratar do cabelo, unhas e estética",
-    descricao: "Serviço de imagem feito a uma pessoa de cada vez, com material próprio e higiene garantida.",
+    descricao:
+      "Serviço de imagem feito a uma pessoa de cada vez, com material próprio e higiene garantida.",
     competenciasNecessarias: ["estetica"],
     competenciasUteis: ["atendimento", "cuidar"],
     ativosNecessarios: ["ferramentas"],
@@ -319,7 +410,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "orientar-treino",
     rotulo: "Orientar exercício físico",
-    descricao: "Acompanhar quem treina, com plano e correção. Em instalação de fitness exige título profissional.",
+    descricao:
+      "Acompanhar quem treina, com plano e correção. Em instalação de fitness exige título profissional.",
     competenciasNecessarias: ["treino"],
     competenciasUteis: ["cuidar", "ensinar"],
     ativosNecessarios: [],
@@ -330,7 +422,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "arranjar-texteis",
     rotulo: "Arranjar e adaptar roupa",
-    descricao: "Bainhas, ajustes, reparações e transformações que devolvem uma peça ao uso.",
+    descricao:
+      "Bainhas, ajustes, reparações e transformações que devolvem uma peça ao uso.",
     competenciasNecessarias: ["costura"],
     competenciasUteis: ["organizacao", "atendimento"],
     ativosNecessarios: ["ferramentas"],
@@ -341,7 +434,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "registar-em-imagem",
     rotulo: "Fotografar e filmar para vender",
-    descricao: "Produzir imagem que serve para vender — produto, espaço ou serviço —, tratada e pronta a publicar.",
+    descricao:
+      "Produzir imagem que serve para vender — produto, espaço ou serviço —, tratada e pronta a publicar.",
     competenciasNecessarias: ["fotografia"],
     competenciasUteis: ["design", "escrita"],
     ativosNecessarios: ["camara-video"],
@@ -352,7 +446,8 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   {
     id: "atrair-clientes",
     rotulo: "Pôr um negócio a aparecer",
-    descricao: "Presença, anúncios e conteúdo com objetivo declarado — e a medição que diz se resultou.",
+    descricao:
+      "Presença, anúncios e conteúdo com objetivo declarado — e a medição que diz se resultou.",
     competenciasNecessarias: ["marketing"],
     competenciasUteis: ["escrita", "design", "vendas", "dados"],
     ativosNecessarios: ["computador"],
@@ -362,4 +457,6 @@ export const CAPACIDADES: readonly Capacidade[] = Object.freeze([
   },
 ] as const);
 
-export const CAPACIDADE_POR_ID = new Map(CAPACIDADES.map((item) => [item.id, item]));
+export const CAPACIDADE_POR_ID = new Map(
+  CAPACIDADES.map((item) => [item.id, item]),
+);
