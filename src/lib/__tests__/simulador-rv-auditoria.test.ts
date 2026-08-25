@@ -15,7 +15,9 @@ import {
   pagamentosPorContaIRS,
   calcular,
 } from "@/lib/fiscal";
+import { simularEmpresaOpcoes } from "@/lib/fiscal-empresa";
 import {
+  DIVIDENDOS_TAXA,
   ATIVIDADES,
   efeitoFiscal,
   BASE_SS_POR_TIPO,
@@ -157,6 +159,40 @@ describe("pagamentos por conta de IRS (Art. 102.º CIRS)", () => {
       coleta: 6_000, retencoesCatB: 0,
       rendimentoLiquidoCatB: 0, rendimentoLiquidoTotal: 30_000,
     }).total).toBe(0);
+  });
+});
+
+describe("IFICI do gerente (Art. 58.º-A EBF)", () => {
+  // O toggle visível no modo empresa alimentava só texto; o motor lia outro
+  // estado, cuja caixa está escondida nesse modo. Estes testes fixam o que
+  // torna o defeito impossível: a flag TEM de mover o número, e a taxa de 20%
+  // não pode encostar aos dividendos.
+  const cenario = (ifici: boolean) =>
+    simularEmpresaOpcoes({
+      faturacao: 120_000,
+      despesasOper: 20_000,
+      salarioGerenteMensal: 4_000,
+      mesesSalarioGerente: 14,
+      distribuirDividendos: true,
+      perfil: { dependentes: 0, conjunta: false, regiao: "continente", ifici },
+    });
+
+  it("ligar o IFICI muda mesmo o IRS do gerente", () => {
+    const sem = cenario(false);
+    const com = cenario(true);
+    expect(com.irsSalarioGerente).not.toBeCloseTo(sem.irsSalarioGerente, 2);
+    // Com um salário nestes valores, a taxa flat de 20% fica abaixo dos
+    // escalões progressivos — se não ficasse, o benefício não era benefício.
+    expect(com.irsSalarioGerente).toBeLessThan(sem.irsSalarioGerente);
+  });
+
+  it("a taxa de 20% não abrange os dividendos", () => {
+    const com = cenario(true);
+    // Os dividendos continuam pela liberatória do Art. 71.º: 28%.
+    expect(com.irsDividendosLiberatoria).toBeCloseTo(
+      com.dividendos * DIVIDENDOS_TAXA.value,
+      2,
+    );
   });
 });
 

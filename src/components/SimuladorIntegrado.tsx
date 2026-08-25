@@ -3700,6 +3700,29 @@ export default function SimuladorIntegrado({
     ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
     : brutoAnual;
 
+  /**
+   * O IFICI do gerente — e QUAL dos dois estados o decide.
+   *
+   * Havia duas caixas para o mesmo facto. A do painel de empresa
+   * (`aplicarIFICICompleto`) é a única visível neste modo, e alimentava
+   * apenas texto: um badge «IFICI ativo» e uma nota de âmbito. O motor lia
+   * `ifici`, que é a caixa do painel de recibos verdes — escondida em empresa
+   * completo. Resultado: ligar o IFICI não mexia um cêntimo no IRS do gerente,
+   * e o que o mexia era uma caixa que a pessoa não via.
+   *
+   * É o mesmo defeito que o guiado de empresa já tinha corrigido (ver a nota
+   * em `coletaIRSGerente`, `fiscal-empresa.ts`); faltava a paridade aqui.
+   *
+   * O `perfilFundadorCompleto !== "residente"` não é um extra: a caixa só
+   * aparece a fundadores não residentes, e sem esta guarda um valor `true`
+   * deixado para trás continuava a aplicar a taxa de 20% depois de a pessoa
+   * voltar a «residente» — com a caixa outra vez fora do ecrã.
+   */
+  const ificiDoGerente =
+    cenario === "empresa"
+      ? aplicarIFICICompleto && perfilFundadorCompleto !== "residente"
+      : ifici;
+
   // Objeto de opções em vez de 20 argumentos posicionais.
   //
   // Aqui a lista de dependências estava completa — mas a assinatura posicional
@@ -3734,7 +3757,7 @@ export default function SimuladorIntegrado({
         dependentes: numDep3plus + numDep3minus + numDep2_6 + numDepDefic,
         conjunta,
         regiao,
-        ifici,
+        ifici: ificiDoGerente,
       },
     }),
     [
@@ -3744,7 +3767,8 @@ export default function SimuladorIntegrado({
       naoDocumentadas, emPrejuizo, excecaoPrejuizo, rfaiInvest, regiaoRFAI,
       sifideDespesas, tipoSifide, primeirosAnos, custoConstituicaoAnual,
       rfaiContratualValor,
-      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao, ifici,
+      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao,
+      ificiDoGerente,
     ],
   );
 
@@ -6223,7 +6247,15 @@ export default function SimuladorIntegrado({
                     localizacao={null}
                     localNome=""
                     onTipoSedeChange={setTipoSedeCompleto}
-                    onPerfilFundadorChange={setPerfilFundadorCompleto}
+                    onPerfilFundadorChange={(v) => {
+                      setPerfilFundadorCompleto(v);
+                      // A caixa do IFICI só existe para não residentes. Sem
+                      // este reposicionamento, voltar a «residente» escondia-a
+                      // ligada — e o motor continuava a aplicar a taxa de 20%
+                      // a alguém que já não a pode pedir. É o mesmo cuidado
+                      // que o guiado de empresa já tinha.
+                      if (v === "residente") setAplicarIFICICompleto(false);
+                    }}
                     onAplicarIFICIChange={setAplicarIFICICompleto}
                     onCustoSedeVirtualChange={setCustoSedeVirtualCompleto}
                     despesasOper={despesasOper}
@@ -7363,7 +7395,7 @@ export default function SimuladorIntegrado({
                                   : "Art. 71.º CIRS — taxa liberatória final"
                               }
                             />
-                            {aplicarIFICICompleto && (
+                            {ificiDoGerente && (
                               <p className="px-4 py-1.5 text-[11px] leading-relaxed text-stone-400">
                                 Nota IFICI (Art. 58.º-A EBF): a taxa de {pct(IFICI_TAXA_FLAT)} abrange apenas
                                 rendimentos das categorias A e B elegíveis — não os dividendos.
