@@ -26,6 +26,7 @@ export * from "./motor/diversidade";
 export * from "./motor/explicacao";
 export * from "./motor/validacao";
 export * from "./motor/planeador";
+export * from "./motor/relaxamento";
 export * from "./motor/pipeline";
 export * from "./motor/whatif";
 export * from "./sessao/tipos";

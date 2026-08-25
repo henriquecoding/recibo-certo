@@ -250,6 +250,16 @@ export default function DescobrirNegocioApp() {
     analisar(proximo);
   };
 
+  // Aceitar um compromisso medido a partir de um resultado vazio. O
+  // contexto já vem calculado pelo motor com a mudança feita — aplicar
+  // aqui uma segunda vez daria a mesma coisa com mais uma oportunidade de
+  // divergir do número que foi prometido no ecrã.
+  const aplicarRelaxamento = (proximo: OpportunityContext) => {
+    setContexto(proximo);
+    setPerfilGuardado(false);
+    analisar(proximo);
+  };
+
   // Nunca transformar «tenho isto» em «serve para o trabalho». O atalho
   // volta à secção certa, onde presença, estado e limites são confirmados.
   const reverMeios = (_ativos: readonly AtivoId[]) => {
@@ -370,6 +380,7 @@ export default function DescobrirNegocioApp() {
         onAplicarWhatIf={aplicarWhatIf}
         diferenca={diferenca}
         onReverMeios={reverMeios}
+        onAplicarRelaxamento={aplicarRelaxamento}
         onFeedback={darFeedback}
         onPedirOutras={pedirOutras}
         onReporAprendizagem={reporAprendizagem}

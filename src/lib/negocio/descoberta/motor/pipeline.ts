@@ -40,6 +40,7 @@ import { avaliarViabilidade } from "./viabilidade";
 import type { CandidatoDescartado, OpportunityCandidate } from "./tipos";
 import { aplicarAprendizagem, type AjusteAprendido } from "../sessao/aprendizagem";
 import type { FeedbackDescoberta, ModoSessao, SessaoDescoberta } from "../sessao/tipos";
+import { calcularRelaxamentos, type Relaxamento } from "./relaxamento";
 
 // ── ETAPAS ───────────────────────────────────────────────────────────
 
@@ -126,6 +127,13 @@ export interface ResultadoDescoberta {
   bloqueiosPorMeio: readonly BloqueioPorMeio[];
   /** Preenchido só quando não há candidatos. `null` quando há. */
   diagnosticoVazio: DiagnosticoVazio | null;
+  /**
+   * Saídas medidas para um resultado vazio. Vazio quando há candidatos,
+   * e TAMBÉM quando nenhuma mudança razoável abriria alguma coisa —
+   * encher isto com opções que não funcionam seria a versão educada de
+   * mentir. Ver `motor/relaxamento.ts`.
+   */
+  relaxamentos: readonly Relaxamento[];
   aprendizagem: {
     modo: ModoSessao;
     feedbackAplicado: number;
@@ -231,6 +239,12 @@ export interface OpcoesDescoberta {
    * Interno — não faz parte da API de quem chama de fora.
    */
   semBloqueios?: boolean;
+  /**
+   * O mesmo travão, para as relaxações: medir o efeito de uma exige
+   * correr o motor com a mudança aplicada, e essa passagem não pode
+   * voltar a medir relaxações.
+   */
+  semRelaxamentos?: boolean;
 }
 
 /**
@@ -247,6 +261,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     incluirForaDePerfil = false,
     agora = () => new Date().toISOString(),
     semBloqueios = false,
+    semRelaxamentos = false,
     oferta,
     sessao,
   } = opcoes;
@@ -439,6 +454,26 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     (candidato) => !candidato.objecoes.some((objecao) => objecao.fatal && objecao.procede),
   );
 
+  // ── Saídas para um resultado vazio ────────────────────────────────
+  //  Só se calculam quando não há nada a mostrar. Custam uma passagem do
+  //  motor por cada mudança testada, e num resultado com candidatos isso
+  //  seria trabalho para deitar fora.
+  const relaxamentos =
+    semRelaxamentos || ordenados.length > 0
+      ? []
+      : calcularRelaxamentos(contexto, (proximo) =>
+          descobrir(proximo, {
+            evidencia,
+            limite,
+            oferta,
+            incluirForaDePerfil,
+            sessao,
+            agora,
+            semBloqueios: true,
+            semRelaxamentos: true,
+          }).candidatos.length,
+        );
+
   return {
     candidatos: ordenados,
     descartados,
@@ -447,6 +482,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     destaques: destaques(passaramStress),
     planos,
     bloqueiosPorMeio: bloqueios,
+    relaxamentos,
     diagnosticoVazio:
       ordenados.length > 0
         ? null
