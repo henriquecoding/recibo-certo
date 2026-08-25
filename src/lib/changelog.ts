@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.119.0",
+    data: "2026-08-25",
+    titulo: "O simulador de salário no telemóvel: as explicações deixam de sair do ecrã e abrem ao primeiro toque",
+    itens: [
+      "Os botões de ajuda espalhados por todo o site abriam um painel de largura fixa sempre centrado no próprio botão. Num telemóvel de 360px, um botão encostado à direita punha o painel a acabar 54px fora do ecrã — e o texto ficava cortado a meio da frase. No simulador de salário, cinco dos sete painéis da página saíam do ecrã: dois pela direita, um pela esquerda e dois por baixo. O painel passa a ser colocado onde há espaço, sempre dentro do ecrã, com um bico a apontar ao botão de onde veio.",
+      "E abriam ao SEGUNDO toque. Num ecrã tátil, tocar num botão despacha primeiro o equivalente a passar o rato por cima: o painel abria com esse e fechava logo a seguir com o toque. Media-se em todos os painéis da aplicação. Agora um toque abre, outro fecha.",
+      "O texto desses painéis vinha em MAIÚSCULAS com as letras afastadas sempre que a ajuda estava ao lado de um rótulo — que é a maioria dos casos. Herdava o estilo do rótulo. Um parágrafo inteiro de lei em maiúsculas é quase ilegível; passa a ler-se como texto normal.",
+      "Um painel de ajuda aberto perto do fundo do ecrã ficava por baixo da barra de pesquisa e da navegação do telemóvel. Deixou de ficar. Se o painel for maior do que o espaço disponível, ganha rolamento próprio em vez de ser cortado.",
+      "No «Passo 01» do simulador de salário, os controlos de «Situação familiar» e «Entidade empregadora» colapsavam no telemóvel: as opções ficavam empilhadas, centradas e sem contorno nenhum dentro do mesmo retângulo cinzento, sem se perceber qual estava escolhida. Passam a ser opções com identidade própria — rótulo à esquerda, marca de selecionado à direita — e voltam a ser um controlo horizontal em ecrãs largos.",
+      "O mesmo passo era uma lista corrida de nove perguntas ao mesmo nível. Ganha títulos: o recibo, quem recebe, quem paga e onde, e o que foi declarado à entidade empregadora. A última distinção é a que mais erros causava: o IRS Jovem, a taxa de retenção superior e os duodécimos não se aplicam por serem verdadeiros — aplicam-se por terem sido comunicados à empresa.",
+      "O número de dependentes e o número de dependentes com incapacidade eram dois cartões seguidos com contorno próprio; passam a ser o mesmo cartão, porque são a mesma pergunta em dois graus de detalhe.",
+      "Carregar em «Adicionar rubrica» no telemóvel abria a lista abaixo da dobra, tapada pela barra de navegação: do lado de quem usava, não acontecia nada. A lista passa a ser trazida ao ecrã.",
+      "Os separadores «Mês · Ano · Empresa · Cálculo» do resultado diziam-se separadores sem cumprir o que isso promete: não estavam ligados ao painel que abrem e não respondiam às setas do teclado. Passam a responder às setas, ao Início e ao Fim, e a anunciar corretamente o painel a que pertencem.",
+      "Os botões «Guardar», «Folha de cálculo», «PDF», «CSV» e «Desbloquear com o Plus» tinham menos de 36px de altura — abaixo do alvo de toque confortável que o resto da aplicação cumpre. Corrigido.",
+      "A explicação da opção por taxa de retenção superior colava duas citações da lei uma à outra, sem pontuação e ambas começadas em minúscula: lia-se como uma frase sem princípio nem fim. Passam a estar marcadas como citações, cada uma com a sua base legal à frente.",
+    ],
+  },
+  {
     version: "2.118.0",
     data: "2026-08-25",
     titulo: "Auditoria ao simulador de recibos verdes: a região passa a contar, e aparece a conta que ninguém te avisava",
