@@ -43,8 +43,9 @@ export const NIVEIS: readonly { id: NivelConfiguracao; rotulo: string; nota: str
 //  ┌──────────────────────────────────────────────────────────────────┐
 //  │ O AGRUPAMENTO É DADO, NÃO DESENHO                                 │
 //  │                                                                  │
-//  │ Vinte e duas competências, catorze meios e quinze recusas numa   │
-//  │ grelha plana são cinquenta e um cartões seguidos: a página fica  │
+//  │ Vinte e oito competências, catorze meios e quinze recusas numa   │
+//  │ grelha plana são cinquenta e sete cartões seguidos: a página     │
+//  │ fica                                                             │
 //  │ verdadeira e ilegível ao mesmo tempo. Agrupar resolve — e o       │
 //  │ agrupamento vive aqui, com o resto do questionário, para o        │
 //  │ componente não passar a ter uma segunda taxonomia sua que        │

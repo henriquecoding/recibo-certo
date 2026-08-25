@@ -287,7 +287,7 @@ export type RestricaoId =
 export type PerfilRisco = "muito-conservador" | "conservador" | "moderado" | "arrojado" | "muito-arrojado";
 
 /**
- * As sete dimensões de risco, avaliadas em separado.
+ * As oito dimensões de risco, avaliadas em separado.
  *
  * Uma etiqueta só — «moderado» — esconde que a mesma pessoa pode aceitar
  * volatilidade de receita e não aceitar nenhum risco regulatório. Cada

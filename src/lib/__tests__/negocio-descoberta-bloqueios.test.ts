@@ -2,9 +2,9 @@
 //  O BECO SEM SAÍDA — e a garantia de que não volta
 //  ---------------------------------------------------------------------
 //  Auditoria de 2026-08-23, medida a correr o motor competência a
-//  competência: DOZE das vinte e duas competências, escolhidas sozinhas,
+//  competência: DOZE das vinte e duas competências de então, escolhidas
 //  devolviam ZERO hipóteses. Não por falta de grafo — por falta de um
-//  meio declarado. Quinze das vinte e cinco capacidades exigem um, e dez
+//  meio declarado. Quinze das vinte e cinco capacidades de então exigiam
 //  delas exigem «computador» ou «ferramentas», que quase toda a gente tem
 //  e ninguém se lembra de declarar.
 //

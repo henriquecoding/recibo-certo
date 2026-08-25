@@ -157,13 +157,14 @@ export interface ResultadoDescoberta {
  * ┌────────────────────────────────────────────────────────────────────┐
  * │ O DEFEITO QUE ISTO CORRIGE, MEDIDO                                  │
  * │                                                                    │
- * │ Quinze das vinte e cinco capacidades exigem um meio declarado, e   │
- * │ dez delas exigem «computador» ou «ferramentas» — coisas que quase  │
- * │ toda a gente tem e ninguém se lembra de declarar. Resultado: DOZE  │
- * │ das vinte e duas competências, escolhidas sozinhas, geravam ZERO   │
- * │ hipóteses, e o ecrã respondia «nada passou os critérios · abre o   │
- * │ que descartámos» — um painel que nesse estado não existe, porque   │
- * │ não houve descarte nenhum: não houve geração.                      │
+ * │ Medido em 2026-08-23, com o inventário de então: quinze das vinte │
+ * │ e cinco capacidades exigiam um meio declarado, e dez delas         │
+ * │ exigiam «computador» ou «ferramentas» — coisas que quase toda a    │
+ * │ gente tem e ninguém se lembra de declarar. Resultado: DOZE das     │
+ * │ vinte e duas competências de então, escolhidas sozinhas, geravam   │
+ * │ ZERO hipóteses, e o ecrã respondia «nada passou os critérios ·     │
+ * │ abre o que descartámos» — um painel que nesse estado não existe,   │
+ * │ porque não houve descarte nenhum: não houve geração.               │
  * │                                                                    │
  * │ O motor sempre soube o que faltava (`capacidadesBloqueadasPorAtivo`│
  * │ está lá desde o início). Só o deitava fora antes de chegar ao ecrã.│
@@ -201,7 +202,9 @@ export interface BloqueioPorMeio {
  * existe. São problemas diferentes e têm saídas diferentes:
  *
  *  · `meios-em-falta`  — o grafo tem o que fazer, falta declarar a
- *    ferramenta. É a causa de doze das vinte e duas competências.
+ *    ferramenta. Foi a causa de doze das vinte e duas competências de
+ *    então; com `BarreiraAtivo` a fechar só o que é barreira a sério,
+ *    são três em vinte e oito, e as três são meios estruturais.
  *  · `competencia-de-apoio` — a competência declarada reforça outras e
  *    não sustenta um negócio sozinha (é o caso das línguas, que aparecem
  *    sempre como competência ÚTIL e nunca como necessária). Não é uma
