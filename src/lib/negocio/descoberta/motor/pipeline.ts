@@ -41,6 +41,7 @@ import type { CandidatoDescartado, OpportunityCandidate } from "./tipos";
 import { aplicarAprendizagem, type AjusteAprendido } from "../sessao/aprendizagem";
 import type { FeedbackDescoberta, ModoSessao, SessaoDescoberta } from "../sessao/tipos";
 import { calcularRelaxamentos, type Relaxamento } from "./relaxamento";
+import type { MarketHypothesis } from "@/lib/negocio/market/hipoteses";
 
 // ── ETAPAS ───────────────────────────────────────────────────────────
 
@@ -232,6 +233,15 @@ export interface OpcoesDescoberta {
   incluirForaDePerfil?: boolean;
   /** Preferências e recusas desta visita; nunca persistidas pelo motor. */
   sessao?: SessaoDescoberta;
+  /**
+   * As hipóteses que a pessoa já guardou, com as provas que registou.
+   *
+   * É a ligação que faltava entre o laboratório e o motor: sem ela,
+   * confirmar ou refutar uma ideia não mudava a ordenação seguinte. O
+   * que entra é só o que a PESSOA registou — nada disto vira evidência
+   * de mercado. Ver `sessao/aprendizagem.ts`.
+   */
+  hipoteses?: readonly MarketHypothesis[];
   agora?: () => string;
   /**
    * Travão de recursão. Calcular os bloqueios exige correr o motor outra
@@ -264,6 +274,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
     semRelaxamentos = false,
     oferta,
     sessao,
+    hipoteses = [],
   } = opcoes;
 
   const etapas: ContagemEtapa[] = [];
@@ -416,7 +427,7 @@ export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta
 
   // ── 8. Deduplicação e diversificação ──────────────────────────────
   const dedup = deduplicar(avaliados);
-  const aprendizagem = aplicarAprendizagem(dedup.candidatos, sessao);
+  const aprendizagem = aplicarAprendizagem(dedup.candidatos, sessao, hipoteses, agora());
   if (sessao && (sessao.feedback.length > 0 || sessao.vistos.length > 0 || sessao.modo !== "normal")) {
     etapas.push({
       etapa: "personalizacao",

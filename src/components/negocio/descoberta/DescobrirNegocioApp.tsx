@@ -159,8 +159,12 @@ export default function DescobrirNegocioApp() {
         limite: incluirForaDoPerfil ? 12 : 10,
         sessao: memoria,
         incluirForaDePerfil: incluirForaDoPerfil,
+        // O que a pessoa já provou volta ao motor. É o que fecha o ciclo
+        // testar → aprender → recomendar; sem isto, uma pré-venda ficava
+        // numa linha do tempo e não mudava a sugestão seguinte.
+        hipoteses,
       }),
-    [evidencia, oferta],
+    [evidencia, oferta, hipoteses],
   );
 
   useEffect(() => {
