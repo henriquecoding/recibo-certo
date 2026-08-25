@@ -16,6 +16,24 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.118.0",
+    data: "2026-08-25",
+    titulo: "Auditoria ao simulador de recibos verdes: a região passa a contar, e aparece a conta que ninguém te avisava",
+    itens: [
+      "O simulador tinha um seletor de região desde sempre — e não o usava para o IRS. Quem reside na Madeira ou nos Açores tem os escalões do Art. 68.º reduzidos em 30%, e o simulador apurava-lhe o imposto pelas taxas do continente nos dois modos: no guiado a região nunca chegava ao motor, no completo o resultado anual ficava congelado quando se trocava de região. Para 30 000 € de faturação eram 1 183,79 € de imposto a mais por ano — anunciados por um ecrã que promete o líquido real.",
+      "Quem vende bens via dois números diferentes de Segurança Social no mesmo ecrã: o cabeçalho dizia 64,20 €/mês e o fluxo de caixa do mesmo recibo mandava reservar 224,70 €. O fluxo estava a usar a base de 70% dos serviços em vez dos 20% do Art. 162.º do Código Contributivo. Passa a ser um só número.",
+      "Atividades agrícolas, silvícolas, pecuárias, aquícolas e apícolas contribuem sobre 20% do rendimento, mas o motor anual só sabia olhar para a categoria fiscal — e a categoria delas diz 70%. Resultado: três vezes e meia a Segurança Social devida, nos dois modos. O motor passa a aceitar a base real da atividade.",
+      "Escolher no simulador completo uma atividade com regras próprias — alojamento local, TVDE, subsídios, transparência fiscal — mudava o coeficiente e deixava para trás a retenção, a regra dos 15% e a base de Segurança Social. Quem não tem retenção nenhuma via na mesma a promessa de um reembolso de retenções que nunca foram feitas.",
+      "Advogados e solicitadores na CPAS: o modo guiado mostrava «Segurança Social: —» e depois calculava o IRS como se as contribuições do Regime Geral tivessem sido pagas. Aos 60 000 €/ano eram 1 939,50 € de diferença entre o guiado e o completo, para o mesmo caso, no mesmo site.",
+      "Quem factura muito em poucos meses do ano tinha a Segurança Social anual mal contada no modo guiado: 15 000 €/mês durante 6 meses davam 8 276 € quando a conta real são 13 482 €.",
+      "As despesas que abatem ao IRS estavam com os limites errados. O campo das rendas parava nos 3 347 €, que corresponde ao teto antigo de 502 € — o de 2026 é 900 €, e quem paga 500 € de renda por mês não conseguia sequer escrever o que paga. No modo guiado, o resumo somava as deduções sem teto nenhum: 5 000 € de despesas gerais anunciavam 1 750 € de poupança quando a lei dá 250 €. Taxas e limites passam a vir todos da fonte fiscal.",
+      "O calendário dizia «Sem acerto — a retenção cobre o IRS» a quem tinha 2 237 € de reembolso à espera. O reembolso passa a aparecer, com o mês em que chega.",
+      "«Isento de IVA (abaixo de 15 000 €/ano)» aparecia ao lado do painel que dizia «faturaste 18 000 € — vais perder a isenção em janeiro». Entre os 15 000 € e os 18 750 € continuas isento, mas não é por estares abaixo do limiar; a frase passa a dizer a razão certa.",
+      "NOVO — Pagamentos por conta de IRS (Art. 102.º CIRS). A retenção sai do recibo e vê-se; estes não saem de lado nenhum. São três prestações até 20 de julho, setembro e dezembro, e apanham de surpresa exatamente quem não tem retenção durante o ano: vendas, alojamento local, TVDE, plataformas e clientes estrangeiros. Os dois modos passam a estimá-las e a dizer quando chegam.",
+      "NOVO — Ajustar a base da Segurança Social (Art. 163.º do Código Contributivo). Na declaração trimestral podes fixar um rendimento relevante até 25% acima ou abaixo do apurado, em intervalos de 5%. É a única alavanca que tens sobre a tua contribuição, e o simulador mostra os dois lados: quanto poupas agora e quanto sobe o IRS, porque as contribuições pagas abatem pela regra dos 15%.",
+    ],
+  },
+  {
     version: "2.117.0",
     data: "2026-08-24",
     titulo: "Quem ainda não sabe o que vai vender deixa de começar pelo fim",
