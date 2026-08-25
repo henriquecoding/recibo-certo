@@ -88,17 +88,12 @@ function custoDeEquipa(pessoas: number): Intervalo {
   // Catorze meses de retribuição repartidos por doze de tesouraria: os
   // subsídios são devidos e ignorá-los subavaliava o custo em ~17 %.
   const comSubsidios = (mensalPorPessoa * 14) / 12;
-  return intervalo(
-    Math.round(comSubsidios),
-    Math.round(comSubsidios * pessoas),
-    "€/mês",
-    {
-      origem: "calculo",
-      fonte: `RMMG ${SMN.value.toLocaleString("pt-PT")} € + TSU da entidade ${(SS_DEPENDENTE.entidade.value * 100).toLocaleString("pt-PT")} %`,
-      url: "https://www.seg-social.pt/entidades-contratantes",
-      limitacao: `Uma a ${pessoas} pessoas ao mínimo legal, com os catorze meses repartidos por doze. Não inclui subsídio de refeição, seguro de acidentes de trabalho, formação obrigatória nem substituições. É o piso, não o custo real.`,
-    },
-  );
+  return intervalo(Math.round(comSubsidios), Math.round(comSubsidios * pessoas), "€/mês", {
+    origem: "calculo",
+    fonte: `RMMG ${SMN.value.toLocaleString("pt-PT")} € + TSU da entidade ${(SS_DEPENDENTE.entidade.value * 100).toLocaleString("pt-PT")} %`,
+    url: "https://www.seg-social.pt/entidades-contratantes",
+    limitacao: `Uma a ${pessoas} pessoas ao mínimo legal, com os catorze meses repartidos por doze. Não inclui subsídio de refeição, seguro de acidentes de trabalho, formação obrigatória nem substituições. É o piso, não o custo real.`,
+  });
 }
 
 export function avaliarViabilidade(
@@ -126,20 +121,27 @@ export function avaliarViabilidade(
   // Ativos que a pessoa JÁ TEM não voltam a ser orçamentados. É a
   // diferença entre uma estimativa e um preçário: quem já tem carrinha
   // não precisa de comprar carrinha.
-  const ativos = new Set(contexto.ativos);
-  const emFalta = candidato.capacidades
-    .flatMap((item) => item.capacidade.ativosNecessarios)
-    .filter((ativo) => !ativos.has(ativo));
+  const avaliacoesAtivos = candidato.capacidades.flatMap((item) => item.avaliacoesAtivos);
+  const emFalta = avaliacoesAtivos.filter((item) => item.estado === "em-falta" || item.estado === "inadequado");
   if (emFalta.length > 0) {
     limitacoes.push(
-      `Não estão orçamentados ${emFalta.length} ${emFalta.length === 1 ? "ativo" : "ativos"} que este trabalho exige e que não declaraste ter.`,
+      `Não estão orçamentados ${emFalta.length} ${emFalta.length === 1 ? "meio em falta ou inadequado" : "meios em falta ou inadequados"} que este trabalho exige.`,
     );
   }
+  const porConfirmar = avaliacoesAtivos.filter((item) => item.estado === "por-confirmar");
+  if (porConfirmar.length > 0) {
+    limitacoes.push(
+      `${porConfirmar.length === 1 ? "Um meio declarado ainda não tem" : `${porConfirmar.length} meios declarados ainda não têm`} estado, disponibilidade e adequação confirmados; uma adaptação, reparação ou substituição pode alterar o investimento.`,
+    );
+  }
+  const limitados = [
+    ...new Set(avaliacoesAtivos.filter((item) => item.estado === "limitado").map((item) => item.nota)),
+  ];
+  if (limitados.length > 0) {
+    limitacoes.push(...limitados);
+  }
 
-  const investimentoInicial = somarIntervalos(
-    parcelas,
-    "Modelo de receita + requisitos regulatórios",
-  );
+  const investimentoInicial = somarIntervalos(parcelas, "Modelo de receita + requisitos regulatórios");
 
   limitacoes.push(
     "O intervalo vem da estrutura do modelo de receita, não de preços observados no teu mercado. É ordem de grandeza para decidir se avança, não um orçamento.",
@@ -151,8 +153,7 @@ export function avaliarViabilidade(
   }
 
   const teto = tetoDeCapital(contexto);
-  const cabeNoCapital =
-    teto === undefined || investimentoInicial === null ? null : investimentoInicial.min <= teto;
+  const cabeNoCapital = teto === undefined || investimentoInicial === null ? null : investimentoInicial.min <= teto;
   const fracaoCapitalCoberta = fracaoCoberta(investimentoInicial, teto);
 
   const prazo = contexto.tempo.prazoMaxPrimeiraReceitaMeses;

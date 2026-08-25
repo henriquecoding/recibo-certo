@@ -31,7 +31,10 @@ import type { CenarioInicial } from "@/lib/pricing";
 import type { MarketRegion } from "@/lib/negocio/market/geografia";
 import type { Intervalo, Proveniencia } from "../proveniencia";
 import type {
+  AdaptacaoVeiculo,
   AtivoId,
+  CapacidadeCargaVeiculo,
+  ConfiguracaoVeiculo,
   DimensaoRisco,
   MercadoAlvo,
   NaturezaOferta,
@@ -61,6 +64,31 @@ export interface Competencia {
 
 // ── CAPACIDADES ──────────────────────────────────────────────────────
 
+export interface RequisitoVeiculo {
+  configuracoesAceites?: readonly ConfiguracaoVeiculo[];
+  capacidadeCargaMinima?: CapacidadeCargaVeiculo;
+  lugaresMinimos?: number;
+  /** Abaixo disto continua possível, mas a operação fica limitada. */
+  lugaresRecomendados?: number;
+  adaptacoesNecessarias?: readonly AdaptacaoVeiculo[];
+  /** Inspeção válida e uso profissional têm de ser confirmados. */
+  prontoParaUsoProfissional?: boolean;
+}
+
+/**
+ * Um requisito pode aceitar alternativas — por exemplo, viatura ligeira
+ * OU de carga. `ativosNecessarios` continua a existir como contrato de
+ * compatibilidade; os requisitos refinam-no quando simples presença não
+ * chega para provar que o meio serve.
+ */
+export interface RequisitoAtivo {
+  qualquerUmDe: readonly AtivoId[];
+  finalidade: string;
+  veiculo?: RequisitoVeiculo;
+  /** Se desconhecido, a hipótese existe mas não pode ser promovida. */
+  confirmarAntesDeRecomendar?: boolean;
+}
+
 /**
  * O que uma pessoa CONSEGUE FAZER, dado o que sabe e o que tem.
  *
@@ -76,6 +104,8 @@ export interface Capacidade {
   competenciasUteis: readonly string[];
   ativosNecessarios: readonly AtivoId[];
   ativosUteis: readonly AtivoId[];
+  /** Regras de adequação que vão além de «o id está na lista». */
+  requisitosAtivos?: readonly RequisitoAtivo[];
   /** Exige esforço físico continuado? Cruza com a restrição de peso. */
   esforcoFisico: boolean;
   /** Exige presença no local do cliente? */

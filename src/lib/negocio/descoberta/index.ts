@@ -3,10 +3,12 @@
 // etapa, e mudar a arrumação interna não parte a interface.
 export * from "./proveniencia";
 export * from "./contexto/tipos";
+export * from "./contexto/adequacao-declarada";
 export * from "./contexto/perguntas";
 export * from "./contexto/profundidade";
 export * from "./conhecimento/tipos";
 export * from "./conhecimento/grafo";
+export * from "./conhecimento/adequacao-ativos";
 export * from "./conhecimento/seeds";
 export * from "./motor/tipos";
 export * from "./motor/gerador";
@@ -25,4 +27,6 @@ export * from "./motor/validacao";
 export * from "./motor/planeador";
 export * from "./motor/pipeline";
 export * from "./motor/whatif";
+export * from "./sessao/tipos";
+export * from "./sessao/aprendizagem";
 export * from "./historico/instantaneos";

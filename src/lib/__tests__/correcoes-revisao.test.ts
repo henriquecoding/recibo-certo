@@ -19,12 +19,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import {
-  detetarDelimitador,
-  dividirLinha,
-  lerCsv,
-  lerMontante,
-} from "@/lib/parcerias/csv-comissoes";
+import { detetarDelimitador, dividirLinha, lerCsv, lerMontante } from "@/lib/parcerias/csv-comissoes";
 import { construirLinkAfiliado } from "@/lib/parcerias/link.server";
 import { superficieValida, SUPERFICIES } from "@/content/parcerias-destinos";
 import { concessaoValida, fimDaConcessao } from "@/lib/plus/concessao";
@@ -111,9 +106,7 @@ describe("revisao:csv — um delimitador só, e montantes à portuguesa", () => 
   it("um CSV português com 1.234,56 não desalinha as colunas", () => {
     // Este é o caso que o `split(/[,;]/)` original partia: a vírgula decimal
     // criava uma coluna a mais e empurrava a data para o lugar do plano.
-    const csv = ["id;estado;liquido;comissao;plano;data", "c-1;confirmada;1.234,56;370,37;anual;2026-07-01"].join(
-      "\n",
-    );
+    const csv = ["id;estado;liquido;comissao;plano;data", "c-1;confirmada;1.234,56;370,37;anual;2026-07-01"].join("\n");
     const { linhas, erro } = lerCsv(csv);
 
     expect(erro).toBeUndefined();
@@ -128,9 +121,7 @@ describe("revisao:csv — um delimitador só, e montantes à portuguesa", () => 
   });
 
   it("o mesmo relatório à inglesa dá exatamente os mesmos números", () => {
-    const csv = ["id,estado,liquido,comissao,plano,data", "c-1,confirmada,1234.56,370.37,anual,2026-07-01"].join(
-      "\n",
-    );
+    const csv = ["id,estado,liquido,comissao,plano,data", "c-1,confirmada,1234.56,370.37,anual,2026-07-01"].join("\n");
     const { linhas } = lerCsv(csv);
     expect(linhas[0].valor_liquido).toBe(1234.56);
     expect(linhas[0].valor_comissao).toBe(370.37);
@@ -386,37 +377,41 @@ describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
     });
 
     it("uma concessão dentro do prazo vale", () => {
-      expect(
-        concessaoValida({ status: "active", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora),
-      ).toBe(true);
+      expect(concessaoValida({ status: "active", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora)).toBe(true);
     });
 
     it("uma concessão fora do prazo NÃO vale", () => {
-      expect(
-        concessaoValida({ status: "active", concessao_termina_em: "2026-06-30T12:00:00Z" }, agora),
-      ).toBe(false);
+      expect(concessaoValida({ status: "active", concessao_termina_em: "2026-06-30T12:00:00Z" }, agora)).toBe(false);
     });
 
     it("estado cancelado nunca vale, mesmo dentro do prazo", () => {
-      expect(
-        concessaoValida({ status: "canceled", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora),
-      ).toBe(false);
+      expect(concessaoValida({ status: "canceled", concessao_termina_em: "2026-10-30T12:00:00Z" }, agora)).toBe(false);
     });
 
     it("past_due só mantém acesso dentro da janela de graça explícita", () => {
-      expect(concessaoValida({
-        status: "past_due",
-        concessao_termina_em: null,
-        periodo_graca_termina_em: "2026-08-14T12:00:00Z",
-      }, agora)).toBe(true);
+      expect(
+        concessaoValida(
+          {
+            status: "past_due",
+            concessao_termina_em: null,
+            periodo_graca_termina_em: "2026-08-14T12:00:00Z",
+          },
+          agora,
+        ),
+      ).toBe(true);
       // `agora` e 30-07-2026: a graca tem de ter terminado ANTES disso para
       // negar acesso. A versao anterior usava 12-08-2026 — uma data futura —
       // e exigia que uma graca ainda a decorrer fosse tratada como expirada.
-      expect(concessaoValida({
-        status: "past_due",
-        concessao_termina_em: null,
-        periodo_graca_termina_em: "2026-07-29T12:00:00Z",
-      }, agora)).toBe(false);
+      expect(
+        concessaoValida(
+          {
+            status: "past_due",
+            concessao_termina_em: null,
+            periodo_graca_termina_em: "2026-07-29T12:00:00Z",
+          },
+          agora,
+        ),
+      ).toBe(false);
       expect(concessaoValida({ status: "past_due", concessao_termina_em: null }, agora)).toBe(false);
     });
   });
@@ -432,6 +427,11 @@ describe("revisao:cupoes — o prémio entrega-se e ACABA", () => {
     it("atravessa a fronteira do ano", () => {
       const fim = fimDaConcessao(3, new Date("2026-11-15T00:00:00Z"));
       expect(fim.toISOString().slice(0, 10)).toBe("2027-02-15");
+    });
+
+    it("limita o dia ao fim do mês em vez de saltar um mês", () => {
+      const fim = fimDaConcessao(1, new Date("2026-01-31T10:30:00Z"));
+      expect(fim.toISOString()).toBe("2026-02-28T10:30:00.000Z");
     });
   });
 });
@@ -542,9 +542,7 @@ describe("revisao:anuncios — o admin passa a mandar no site", () => {
     // Compara-se dentro do CORPO da função: `placementDaSuperficie` aparece
     // primeiro no bloco de imports, no topo do ficheiro.
     const corpo = fonte.slice(fonte.indexOf("export default async function AnuncioSlot"));
-    expect(corpo.indexOf('config.estado === "desligado"')).toBeLessThan(
-      corpo.indexOf("await placementDaSuperficie"),
-    );
+    expect(corpo.indexOf('config.estado === "desligado"')).toBeLessThan(corpo.indexOf("await placementDaSuperficie"));
   });
 
   it("a consulta lê também as linhas inativas", () => {
@@ -569,4 +567,3 @@ describe("revisao:anuncios — o admin passa a mandar no site", () => {
     });
   });
 });
-

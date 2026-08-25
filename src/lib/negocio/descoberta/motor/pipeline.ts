@@ -20,6 +20,7 @@ import type { PackOferta } from "@/lib/negocio/market/oferta";
 import { ATIVOS } from "../contexto/perguntas";
 import { CAPACIDADES } from "../conhecimento/dados/capacidades";
 import { COMPETENCIA_POR_ID } from "../conhecimento/dados/competencias";
+import type { CapacidadeAlcancada } from "../conhecimento/grafo";
 import type { AtivoId, OpportunityContext } from "../contexto/tipos";
 import type { Evidencia, LacunaDeEvidencia } from "../proveniencia";
 import { avaliarConfianca } from "./confianca";
@@ -37,6 +38,8 @@ import { correrStressTest } from "./stress";
 import { planoDeValidacao } from "./validacao";
 import { avaliarViabilidade } from "./viabilidade";
 import type { CandidatoDescartado, OpportunityCandidate } from "./tipos";
+import { aplicarAprendizagem, type AjusteAprendido } from "../sessao/aprendizagem";
+import type { FeedbackDescoberta, ModoSessao, SessaoDescoberta } from "../sessao/tipos";
 
 // ── ETAPAS ───────────────────────────────────────────────────────────
 
@@ -49,6 +52,7 @@ export type EtapaPipeline =
   | "risco"
   | "scoring"
   | "stress"
+  | "personalizacao"
   | "diversificacao";
 
 export const ROTULO_ETAPA: Readonly<Record<EtapaPipeline, string>> = Object.freeze({
@@ -60,6 +64,7 @@ export const ROTULO_ETAPA: Readonly<Record<EtapaPipeline, string>> = Object.free
   risco: "A avaliar riscos e requisitos",
   scoring: "A pontuar cada dimensão em separado",
   stress: "A tentar destruir as melhores hipóteses",
+  personalizacao: "A respeitar o que disseste sobre os resultados",
   diversificacao: "A escolher resultados que não sejam todos iguais",
 });
 
@@ -121,6 +126,17 @@ export interface ResultadoDescoberta {
   bloqueiosPorMeio: readonly BloqueioPorMeio[];
   /** Preenchido só quando não há candidatos. `null` quando há. */
   diagnosticoVazio: DiagnosticoVazio | null;
+  aprendizagem: {
+    modo: ModoSessao;
+    feedbackAplicado: number;
+    excluidos: number;
+    ocultosPorJaVistos: number;
+    rejeitadosPelasEscolhas: number;
+    totalElegiveis: number;
+    haMais: boolean;
+    ajustes: ReadonlyMap<string, AjusteAprendido>;
+    decisoes: readonly FeedbackDescoberta[];
+  };
   telemetria: TelemetriaDescoberta;
   /** Instante de referência da análise. Entra nos instantâneos. */
   geradoEm: string;
@@ -157,6 +173,9 @@ export interface ResultadoDescoberta {
 export interface BloqueioPorMeio {
   /** Os meios que têm de existir, todos, para isto destrancar. */
   ativos: readonly AtivoId[];
+  /** Cada linha é OU; linhas diferentes são E. */
+  gruposAlternativos: readonly (readonly AtivoId[])[];
+  rotulosAlternativos: readonly (readonly string[])[];
   /** Como se chamam na lista «Meios que já tens». */
   rotulos: readonly string[];
   /** As capacidades que este conjunto destranca. */
@@ -183,8 +202,10 @@ export interface BloqueioPorMeio {
  */
 export type DiagnosticoVazio =
   | { tipo: "meios-em-falta" }
+  | { tipo: "meios-inadequados" }
   | { tipo: "competencia-de-apoio"; competencias: readonly string[] }
   | { tipo: "restricoes"; quantas: number }
+  | { tipo: "sessao-esgotada" }
   | { tipo: "sem-causa-identificada" };
 
 export interface OpcoesDescoberta {
@@ -201,6 +222,8 @@ export interface OpcoesDescoberta {
   limite?: number;
   /** Incluir hipóteses que exigiriam um meio que a pessoa não tem. */
   incluirForaDePerfil?: boolean;
+  /** Preferências e recusas desta visita; nunca persistidas pelo motor. */
+  sessao?: SessaoDescoberta;
   agora?: () => string;
   /**
    * Travão de recursão. Calcular os bloqueios exige correr o motor outra
@@ -217,10 +240,7 @@ export interface OpcoesDescoberta {
  * browser. A evidência entra como argumento — quem a foi buscar foi o
  * pack público, que já existia e não muda.
  */
-export function descobrir(
-  contexto: OpportunityContext,
-  opcoes: OpcoesDescoberta = {},
-): ResultadoDescoberta {
+export function descobrir(contexto: OpportunityContext, opcoes: OpcoesDescoberta = {}): ResultadoDescoberta {
   const {
     evidencia = [],
     limite = 12,
@@ -228,6 +248,7 @@ export function descobrir(
     agora = () => new Date().toISOString(),
     semBloqueios = false,
     oferta,
+    sessao,
   } = opcoes;
 
   const etapas: ContagemEtapa[] = [];
@@ -266,15 +287,44 @@ export function descobrir(
 
   for (const bruto of restricoes.aprovados) {
     const regulacao = avaliarRegulacao(bruto);
-    const procura = avaliarProcura({ candidato: bruto, evidencePorTemplate, oferta, agora: instante });
+    const procura = avaliarProcura({
+      candidato: bruto,
+      evidencePorTemplate,
+      oferta,
+      agora: instante,
+    });
     const viabilidade = avaliarViabilidade(bruto, contexto, regulacao.barreira);
     const riscos = avaliarRiscos(bruto, contexto, regulacao, procura);
     const { total: fit, detalhe: fitDetalhe } = calcularFit(bruto, contexto);
 
-    const scores = calcularScores({ candidato: bruto, contexto, fit, viabilidade, regulacao, procura, riscos });
-    const objecoes = correrStressTest({ candidato: bruto, contexto, viabilidade, regulacao, procura, riscos });
+    const scores = calcularScores({
+      candidato: bruto,
+      contexto,
+      fit,
+      viabilidade,
+      regulacao,
+      procura,
+      riscos,
+    });
+    const objecoes = correrStressTest({
+      candidato: bruto,
+      contexto,
+      viabilidade,
+      regulacao,
+      procura,
+      riscos,
+    });
     const confianca = avaliarConfianca(bruto, scores, procura, regulacao);
-    const explicacao = explicar({ candidato: bruto, contexto, fitDetalhe, viabilidade, regulacao, procura, riscos, objecoes });
+    const explicacao = explicar({
+      candidato: bruto,
+      contexto,
+      fitDetalhe,
+      viabilidade,
+      regulacao,
+      procura,
+      riscos,
+      objecoes,
+    });
     const plano = buildResearchPlan(bruto);
     planos.set(bruto.id, plano);
     consultasPorLigar += plano.consultas.filter((consulta) => !consulta.ligada).length;
@@ -351,7 +401,20 @@ export function descobrir(
 
   // ── 8. Deduplicação e diversificação ──────────────────────────────
   const dedup = deduplicar(avaliados);
-  const ordenados = diversificar(dedup.candidatos, { limite });
+  const aprendizagem = aplicarAprendizagem(dedup.candidatos, sessao);
+  if (sessao && (sessao.feedback.length > 0 || sessao.vistos.length > 0 || sessao.modo !== "normal")) {
+    etapas.push({
+      etapa: "personalizacao",
+      entraram: dedup.candidatos.length,
+      sairam: aprendizagem.candidatos.length,
+      unidadeEntrada: "hipoteses",
+      unidadeSaida: "hipoteses",
+    });
+  }
+  const ordenados = diversificar(aprendizagem.candidatos, {
+    limite,
+    ajuste: (candidato) => aprendizagem.ajustes.get(candidato.id)?.ajuste ?? 0,
+  });
   etapas.push({
     etapa: "diversificacao",
     entraram: dedup.candidatos.length,
@@ -361,24 +424,46 @@ export function descobrir(
   });
 
   const descartados = [...restricoes.descartados, ...dedup.descartados];
+  const bloqueios =
+    semBloqueios || incluirForaDePerfil
+      ? []
+      : bloqueiosPorMeio(contexto, geracao.capacidadesBloqueadasPorAtivo, ordenados.length, {
+          evidencia,
+          limite,
+          oferta,
+        });
+  const bloqueadasPorInadequacao = geracao.capacidadesBloqueadasPorAtivo.filter((item) =>
+    item.avaliacoesAtivos.some((avaliacao) => avaliacao.estado === "inadequado"),
+  ).length;
+  const passaramStress = ordenados.filter(
+    (candidato) => !candidato.objecoes.some((objecao) => objecao.fatal && objecao.procede),
+  );
 
   return {
     candidatos: ordenados,
     descartados,
-    destaques: destaques(ordenados),
+    // Uma hipótese condicional ou destruída pelo stress não pode voltar
+    // à lista principal pela porta lateral de um “ângulo de leitura”.
+    destaques: destaques(passaramStress),
     planos,
-    bloqueiosPorMeio:
-      semBloqueios || incluirForaDePerfil
-        ? []
-        : bloqueiosPorMeio(contexto, geracao.capacidadesBloqueadasPorAtivo, ordenados.length, {
-            evidencia,
-            limite,
-            oferta,
-          }),
+    bloqueiosPorMeio: bloqueios,
     diagnosticoVazio:
       ordenados.length > 0
         ? null
-        : diagnosticar(contexto, geracao.capacidadesBloqueadasPorAtivo.length, restricoes.descartados.length),
+        : dedup.candidatos.length > 0 && aprendizagem.candidatos.length === 0
+          ? { tipo: "sessao-esgotada" }
+          : diagnosticar(contexto, bloqueios.length, bloqueadasPorInadequacao, restricoes.descartados.length),
+    aprendizagem: {
+      modo: sessao?.modo ?? "normal",
+      feedbackAplicado: sessao?.feedback.length ?? 0,
+      excluidos: aprendizagem.excluidos,
+      ocultosPorJaVistos: aprendizagem.ocultosPorJaVistos,
+      rejeitadosPelasEscolhas: aprendizagem.rejeitadosPelasEscolhas,
+      totalElegiveis: aprendizagem.candidatos.length,
+      haMais: aprendizagem.candidatos.length > ordenados.length,
+      ajustes: aprendizagem.ajustes,
+      decisoes: sessao?.feedback ?? [],
+    },
     geradoEm: instante,
     telemetria: {
       etapas,
@@ -406,9 +491,11 @@ export function descobrir(
 function diagnosticar(
   contexto: OpportunityContext,
   bloqueadas: number,
+  inadequadas: number,
   descartadas: number,
 ): DiagnosticoVazio {
   if (bloqueadas > 0) return { tipo: "meios-em-falta" };
+  if (inadequadas > 0) return { tipo: "meios-inadequados" };
   if (descartadas > 0) return { tipo: "restricoes", quantas: descartadas };
 
   // Uma competência que o grafo só conhece como reforço de outras nunca
@@ -423,9 +510,7 @@ function diagnosticar(
   if (soDeApoio.length > 0 && soDeApoio.length === declaradas.length) {
     return {
       tipo: "competencia-de-apoio",
-      competencias: soDeApoio.map(
-        (id) => COMPETENCIA_POR_ID.get(id)?.rotulo ?? id,
-      ),
+      competencias: soDeApoio.map((id) => COMPETENCIA_POR_ID.get(id)?.rotulo ?? id),
     };
   }
 
@@ -444,37 +529,73 @@ function diagnosticar(
  */
 function bloqueiosPorMeio(
   contexto: OpportunityContext,
-  bloqueadas: readonly { capacidade: { rotulo: string }; ativosEmFalta: readonly AtivoId[] }[],
+  bloqueadas: readonly CapacidadeAlcancada[],
   jaVisiveis: number,
-  opcoes: { evidencia: readonly MarketPilotEvidence[]; limite: number; oferta?: PackOferta },
+  opcoes: {
+    evidencia: readonly MarketPilotEvidence[];
+    limite: number;
+    oferta?: PackOferta;
+  },
 ): readonly BloqueioPorMeio[] {
   if (bloqueadas.length === 0) return [];
 
-  // A chave é o conjunto ordenado — «ferramentas+equipamento-tecnico» é
-  // um bloqueio só, não dois meios bloqueios.
-  const porConjunto = new Map<string, { ativos: AtivoId[]; capacidades: string[] }>();
+  // Cada grupo interno é OU; grupos diferentes são E. Isto evita dizer
+  // que alguém precisa de uma viatura ligeira E de carga quando qualquer
+  // uma das duas serve para uma rota.
+  const porConjunto = new Map<string, { gruposAlternativos: AtivoId[][]; capacidades: string[] }>();
   for (const bloqueada of bloqueadas) {
-    if (bloqueada.ativosEmFalta.length === 0) continue;
-    const ativos = [...bloqueada.ativosEmFalta].sort();
-    const chave = ativos.join("+");
-    const entrada = porConjunto.get(chave) ?? { ativos, capacidades: [] };
+    const gruposAlternativos = bloqueada.avaliacoesAtivos
+      .flatMap((avaliacao) => {
+        if (avaliacao.estado === "em-falta") return [[...avaliacao.alternativas].sort()] as AtivoId[][];
+        if (avaliacao.estado !== "inadequado") return [];
+        // Se uma alternativa presente é inadequada, só sugerimos OUTRA.
+        // Voltar a acrescentar o mesmo id não repararia nada.
+        const outras = avaliacao.alternativas.filter((id) => !contexto.ativos.includes(id)).sort();
+        return outras.length > 0 ? [outras] : [];
+      })
+      .sort((a, b) => a.join("|").localeCompare(b.join("|")));
+    if (gruposAlternativos.length === 0) continue;
+    const chave = gruposAlternativos.map((grupo) => grupo.join("|")).join("+");
+    const entrada = porConjunto.get(chave) ?? {
+      gruposAlternativos,
+      capacidades: [],
+    };
     entrada.capacidades.push(bloqueada.capacidade.rotulo);
     porConjunto.set(chave, entrada);
   }
 
   const resultado: BloqueioPorMeio[] = [];
-  for (const { ativos, capacidades } of porConjunto.values()) {
-    const comEstes = descobrir(
-      { ...contexto, ativos: [...contexto.ativos, ...ativos] },
-      { ...opcoes, semBloqueios: true },
+  for (const { gruposAlternativos, capacidades } of porConjunto.values()) {
+    // Produto cartesiano pequeno: uma escolha por grupo alternativo.
+    const combinacoes = gruposAlternativos.reduce<AtivoId[][]>(
+      (parciais, grupo) => parciais.flatMap((parcial) => grupo.map((id) => [...new Set([...parcial, id])])),
+      [[]],
     );
-    const abre = comEstes.candidatos.length - jaVisiveis;
-    if (abre <= 0) continue;
+    let melhor: { ativos: AtivoId[]; abre: number } | null = null;
+    for (const ativos of combinacoes) {
+      const comEstes = descobrir(
+        { ...contexto, ativos: [...new Set([...contexto.ativos, ...ativos])] },
+        { ...opcoes, semBloqueios: true },
+      );
+      const abre = comEstes.candidatos.length - jaVisiveis;
+      if (
+        melhor === null ||
+        abre > melhor.abre ||
+        (abre === melhor.abre && ativos.join().localeCompare(melhor.ativos.join()) < 0)
+      ) {
+        melhor = { ativos, abre };
+      }
+    }
+    if (!melhor || melhor.abre <= 0) continue;
     resultado.push({
-      ativos,
-      rotulos: ativos.map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id),
+      ativos: melhor.ativos,
+      gruposAlternativos,
+      rotulosAlternativos: gruposAlternativos.map((grupo) =>
+        grupo.map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id),
+      ),
+      rotulos: melhor.ativos.map((id) => ATIVOS.find((item) => item.id === id)?.rotulo ?? id),
       capacidades,
-      hipotesesQueAbriria: abre,
+      hipotesesQueAbriria: melhor.abre,
     });
   }
 

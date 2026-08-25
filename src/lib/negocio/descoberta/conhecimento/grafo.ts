@@ -21,6 +21,7 @@ import type { Capacidade, GrafoConhecimento, ModeloReceita, Problema } from "./t
 import type { AtivoId, OpportunityContext } from "../contexto/tipos";
 import type { MarketRegion } from "@/lib/negocio/market/geografia";
 import { forcaDe, nivelDe } from "../contexto/tipos";
+import { ativoImpedeExecucao, avaliarAtivosDaCapacidade, type AvaliacaoRequisitoAtivo } from "./adequacao-ativos";
 
 export const GRAFO: GrafoConhecimento = Object.freeze({
   competencias: COMPETENCIAS,
@@ -63,10 +64,22 @@ export function verificarGrafo(): readonly string[] {
       vistos.add(id);
     }
   };
-  unico("competencias", COMPETENCIAS.map((item) => item.id));
-  unico("capacidades", CAPACIDADES.map((item) => item.id));
-  unico("problemas", PROBLEMAS.map((item) => item.id));
-  unico("modelos", MODELOS_RECEITA.map((item) => item.id));
+  unico(
+    "competencias",
+    COMPETENCIAS.map((item) => item.id),
+  );
+  unico(
+    "capacidades",
+    CAPACIDADES.map((item) => item.id),
+  );
+  unico(
+    "problemas",
+    PROBLEMAS.map((item) => item.id),
+  );
+  unico(
+    "modelos",
+    MODELOS_RECEITA.map((item) => item.id),
+  );
 
   for (const capacidade of CAPACIDADES) {
     for (const id of [...capacidade.competenciasNecessarias, ...capacidade.competenciasUteis]) {
@@ -95,7 +108,8 @@ export function verificarGrafo(): readonly string[] {
     }
     if (problema.capacidades.length === 0) erros.push(`problema ${problema.id}: sem capacidade que o resolva`);
     if (problema.modelos.length === 0) erros.push(`problema ${problema.id}: sem modelo de receita viável`);
-    if (problema.comoValidar.length < 2) erros.push(`problema ${problema.id}: precisa de pelo menos dois passos de validação`);
+    if (problema.comoValidar.length < 2)
+      erros.push(`problema ${problema.id}: precisa de pelo menos dois passos de validação`);
     if (problema.testeDeFalsificacao.trim().length < 40) {
       erros.push(`problema ${problema.id}: teste de falsificação demasiado vago para poder falhar`);
     }
@@ -156,7 +170,14 @@ export interface CapacidadeAlcancada {
   cobertura: number;
   /** O que falta para a capacidade estar completa. */
   competenciasEmFalta: readonly string[];
+  /** Mantido para consumidores legados; alternativas aparecem em `avaliacoesAtivos`. */
   ativosEmFalta: readonly AtivoId[];
+  ativosInadequados: readonly AtivoId[];
+  ativosPorConfirmar: readonly AtivoId[];
+  /** Estado e razão de cada requisito, incluindo grupos alternativos (OU). */
+  avaliacoesAtivos: readonly AvaliacaoRequisitoAtivo[];
+  /** 0–1. Presença desconhecida nunca vale adequação completa. */
+  adequacaoAtivos: number;
 }
 
 /**
@@ -170,12 +191,34 @@ export function capacidadesAlcancadas(
   contexto: OpportunityContext,
   { exigirAtivos = true }: { exigirAtivos?: boolean } = {},
 ): readonly CapacidadeAlcancada[] {
-  const ativos = new Set(contexto.ativos);
   const alcancadas: CapacidadeAlcancada[] = [];
 
   for (const capacidade of CAPACIDADES) {
-    const ativosEmFalta = capacidade.ativosNecessarios.filter((id) => !ativos.has(id));
-    if (exigirAtivos && ativosEmFalta.length > 0) continue;
+    const avaliacoesAtivos = avaliarAtivosDaCapacidade(contexto, capacidade);
+    const impeditivas = avaliacoesAtivos.filter(ativoImpedeExecucao);
+    if (exigirAtivos && impeditivas.length > 0) continue;
+
+    const ativosEmFalta = [
+      ...new Set(avaliacoesAtivos.filter((item) => item.estado === "em-falta").flatMap((item) => item.alternativas)),
+    ];
+    const ativosInadequados = [
+      ...new Set(
+        avaliacoesAtivos
+          .filter((item) => item.estado === "inadequado")
+          .flatMap((item) => (item.ativo ? [item.ativo] : [])),
+      ),
+    ];
+    const ativosPorConfirmar = [
+      ...new Set(
+        avaliacoesAtivos
+          .filter((item) => item.estado === "por-confirmar")
+          .flatMap((item) => (item.ativo ? [item.ativo] : [])),
+      ),
+    ];
+    const adequacaoAtivos =
+      avaliacoesAtivos.length === 0
+        ? 1
+        : avaliacoesAtivos.reduce((total, item) => total + item.forca, 0) / avaliacoesAtivos.length;
 
     const necessarias = capacidade.competenciasNecessarias;
     const temNecessarias = necessarias.filter((id) => nivelDe(contexto, id) > 0);
@@ -200,9 +243,7 @@ export function capacidadesAlcancadas(
         ? 1
         : necessarias.reduce((total, id) => total + forcaDe(contexto, id), 0) / necessarias.length;
     const parteUtil =
-      uteis.length === 0
-        ? 1
-        : uteis.reduce((total, id) => total + forcaDe(contexto, id), 0) / uteis.length;
+      uteis.length === 0 ? 1 : uteis.reduce((total, id) => total + forcaDe(contexto, id), 0) / uteis.length;
     const cobertura = 0.75 * parteNecessaria + 0.25 * parteUtil;
 
     alcancadas.push({
@@ -210,6 +251,10 @@ export function capacidadesAlcancadas(
       cobertura,
       competenciasEmFalta: necessarias.filter((id) => nivelDe(contexto, id) === 0),
       ativosEmFalta,
+      ativosInadequados,
+      ativosPorConfirmar,
+      avaliacoesAtivos,
+      adequacaoAtivos,
     });
   }
 
@@ -217,11 +262,15 @@ export function capacidadesAlcancadas(
 }
 
 /** Os problemas que alguma das capacidades alcançadas consegue atacar. */
-export function problemasAlcancaveis(
-  alcancadas: readonly CapacidadeAlcancada[],
-): readonly { problema: Problema; capacidades: readonly CapacidadeAlcancada[] }[] {
+export function problemasAlcancaveis(alcancadas: readonly CapacidadeAlcancada[]): readonly {
+  problema: Problema;
+  capacidades: readonly CapacidadeAlcancada[];
+}[] {
   const porId = new Map(alcancadas.map((item) => [item.capacidade.id, item]));
-  const resultado: { problema: Problema; capacidades: CapacidadeAlcancada[] }[] = [];
+  const resultado: {
+    problema: Problema;
+    capacidades: CapacidadeAlcancada[];
+  }[] = [];
 
   for (const problema of PROBLEMAS) {
     const usadas = problema.capacidades
@@ -302,9 +351,7 @@ export function explorarPorSetor(regiao: MarketRegion): readonly SetorParaExplor
 
   for (const problema of PROBLEMAS) {
     const existeAqui =
-      regiao === "portugal" ||
-      problema.regioes.includes("portugal") ||
-      problema.regioes.includes(regiao);
+      regiao === "portugal" || problema.regioes.includes("portugal") || problema.regioes.includes(regiao);
     if (!existeAqui) continue;
 
     const capacidades = problema.capacidades

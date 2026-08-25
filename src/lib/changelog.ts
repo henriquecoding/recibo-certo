@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.122.0",
+    version: "2.122.4",
     data: "2026-08-25",
     titulo: "O calendário fiscal passa a dizer as datas certas — e o acerto de IRS não é em junho",
     itens: [
@@ -29,6 +29,48 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "O total do ano passa a mostrar também o custo líquido: o que sai, menos o reembolso que entra.",
       "A barra do ano contava meses inteiros e dizia «67% do ano» logo a 1 de agosto. Passa a contar dias.",
       "O calendário navega-se pelo teclado — setas entre meses, Início e Fim para janeiro e dezembro — e anuncia a cada mês o que lá está, para quem usa leitor de ecrã.",
+    ],
+  },
+  {
+    version: "2.122.3",
+    data: "2026-08-25",
+    titulo: "Um resultado aberto deixa de desaparecer quando chegam os dados de mercado",
+    itens: [
+      "Os sinais de procura e oferta chegam de forma independente e podem reclassificar uma hipótese enquanto estás a lê-la. Quando a hipótese aberta passava a ter uma objeção fatal, saía da lista principal mas o ecrã continuava a apontar para o seu identificador invisível: o dossier e os controlos desapareciam a meio da interação. A seleção passa a acompanhar a lista realmente visível e abre a primeira alternativa válida, sem deixar o ecrã num estado impossível.",
+    ],
+  },
+  {
+    version: "2.122.2",
+    data: "2026-08-25",
+    titulo: "O monitor de privacidade passa a provar a própria configuração",
+    itens: [
+      "Alterar a definição do monitor diário não o executava: só mudanças na base, no contrato do diretório ou no script disparavam a prova. A partir de agora, mexer no próprio workflow também obriga a consultar a base de produção. Assim uma correção de configuração não pode ficar à espera do agendamento seguinte nem ser dada como validada sem ter feito o pedido anónimo real.",
+    ],
+  },
+  {
+    version: "2.122.1",
+    data: "2026-08-25",
+    titulo: "A prova diária da fronteira pública volta a chegar à base de dados real",
+    itens: [
+      "O monitor que confirma todos os dias que contactos privados continuam fechados e que o diretório público continua disponível estava a parar antes da primeira consulta: as credenciais públicas não tinham sido configuradas no GitHub. Passa a usar a chave publishable ativa que o próprio browser pode usar, mantendo secrets e variables com precedência para rotação. Uma execução verde volta, assim, a significar que a base de produção foi realmente interrogada — não apenas que o código do verificador existe.",
+    ],
+  },
+  {
+    version: "2.122.0",
+    data: "2026-08-25",
+    titulo: "Descobrir um negócio passa a distinguir o que tens do que serve — e aprende com o que recusas",
+    itens: [
+      "Ter carta e carrinha deixou de equivaler a poder fazer qualquer rota. Cada meio pode agora ser confirmado por estado real, disponibilidade, forma de acesso, utilização profissional e limitações. Nas viaturas entram ainda configuração, lugares, capacidade de carga e inspeção. Uma carrinha antiga, de passageiros ou com carga reduzida pode servir uma operação e bloquear outra — o motor deixa de adivinhar.",
+      "As rotas de recolha e entrega passam a exigir carta E uma viatura adequada; a viatura pode ser ligeira OU de carga. Transporte de carga exige configuração e capacidade compatíveis. Nas deslocações acompanhadas, um lugar bloqueia a execução, dois permitem mas limitam a margem para acompanhante e três cumprem a margem recomendada. As alternativas são tratadas como alternativas, nunca como se a pessoa precisasse de comprar as duas.",
+      "O resultado aprende durante a visita. Em cada hipótese podes dizer «Interessa-me», «Mais deste género» ou «Não é para mim» e indicar se falhou o trabalho, setor, clientes, modelo de receita, investimento, tempo, esforço, risco ou localização. A escolha seguinte muda no alcance certo — uma recusa de setor afasta o setor; uma limitação de investimento afasta apenas aquela composição.",
+      "Esse feedback não altera pontuações, evidência ou confiança e não é guardado no dispositivo, na conta ou na base de dados. Pode ser desfeito ou reposto; fechar ou recarregar a página apaga-o.",
+      "«Mostrar outras» deixa de repetir a primeira página. O motor acompanha o que já viste, pagina pelas combinações restantes e avisa quando esgotou o contexto. Podes pedir algo diferente ou mais próximo de uma hipótese sem transformar preferência em facto de mercado.",
+      "A base que ficava escondida atrás de meios em falta passa a ser explorável. Mesmo quando já existem resultados, mostramos quantas hipóteses cada conjunto de meios pode abrir, contado a voltar a correr o motor. Há ainda um modo separado de possibilidades condicionais: amplia a exploração, mas tudo o que exige um meio em falta ou inadequado continua marcado como objeção fatal e nunca aparece como recomendação.",
+      "A personalização avançada passa a expor o que o motor já sabe usar: oito dimensões de risco, natureza da oferta, teto e reinvestimento mensal, horas reais, pessoas disponíveis, data de arranque e estrutura pretendida. Os campos estão agrupados pela consequência — pontuar, limitar ou eliminar — em vez de uma lista plana de perguntas.",
+      "Se as fontes de procura ou oferta falharem, a ferramenta deixa de confundir falha técnica com ausência de mercado. Mostra o modo degradado, identifica o eixo por apurar, permite repetir a consulta e recalcula o resultado quando a fonte chega, sem duplicar o histórico.",
+      "Perfis antigos ou manipulados passam por normalização profunda antes de entrar no motor. Campos internos em falta recebem o valor neutro e um meio sem detalhe válido volta a «por confirmar» — nunca a adequado por omissão.",
+      "Na base de dados, funções internas de trigger deixam de ser executáveis como RPC por utilizadores públicos e as funções auxiliares fixam explicitamente o caminho de pesquisa. A projeção pública dos contabilistas mantém a fronteira de colunas e as políticas que já a protegiam.",
+      "Uma concessão Plus de meses de calendário deixava de acabar no mesmo dia quando o servidor atravessava a mudança para a hora de verão — 1 de abril podia tornar-se 31 de março em UTC. O cálculo passa a ser independente do fuso e datas como 31 de janeiro terminam no último dia real de fevereiro, sem saltar para março.",
     ],
   },
   {
@@ -84,7 +126,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
     version: "2.118.0",
     data: "2026-08-25",
-    titulo: "Auditoria ao simulador de recibos verdes: a região passa a contar, e aparece a conta que ninguém te avisava",
+    titulo:
+      "Auditoria ao simulador de recibos verdes: a região passa a contar, e aparece a conta que ninguém te avisava",
     itens: [
       "O simulador tinha um seletor de região desde sempre — e não o usava para o IRS. Quem reside na Madeira ou nos Açores tem os escalões do Art. 68.º reduzidos em 30%, e o simulador apurava-lhe o imposto pelas taxas do continente nos dois modos: no guiado a região nunca chegava ao motor, no completo o resultado anual ficava congelado quando se trocava de região. Para 30 000 € de faturação eram 1 183,79 € de imposto a mais por ano — anunciados por um ecrã que promete o líquido real.",
       "Quem vende bens via dois números diferentes de Segurança Social no mesmo ecrã: o cabeçalho dizia 64,20 €/mês e o fluxo de caixa do mesmo recibo mandava reservar 224,70 €. O fluxo estava a usar a base de 70% dos serviços em vez dos 20% do Art. 162.º do Código Contributivo. Passa a ser um só número.",
@@ -478,7 +521,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
     version: "2.96.0",
     data: "2026-08-22",
-    titulo: "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",
+    titulo:
+      "A ferramenta de descoberta deixou de escolher de uma lista — passa a compor hipóteses a partir do que sabes fazer",
     itens: [
       "Até agora a pergunta era «das ideias que conhecemos, quais combinam contigo?», e o universo de respostas era literalmente o tamanho de uma lista. Agora a pergunta é outra: que problemas económicos é que alguém com as tuas competências, os teus meios, na tua zona e com as tuas restrições consegue atacar.",
       "As hipóteses passam a ser compostas, não escolhidas. O motor cruza problema, modelo de receita, forma de entrega e zona a partir de um grafo de competências, capacidades e problemas — e a maior parte do que devolve não está escrita em lado nenhum. Uma pessoa com carrinha e experiência de logística recebe coisas que nenhum catálogo teria previsto para ela.",
@@ -499,7 +543,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
     version: "2.95.0",
     data: "2026-08-22",
-    titulo: "A ferramenta de descoberta passa de cinco hipóteses para vinte e quatro — e deixa de dar a mesma resposta a toda a gente",
+    titulo:
+      "A ferramenta de descoberta passa de cinco hipóteses para vinte e quatro — e deixa de dar a mesma resposta a toda a gente",
     itens: [
       "O catálogo cresceu de cinco para vinte e quatro hipóteses, em oito áreas: turismo, micro e pequenas empresas, pessoas e famílias, casa e património, técnico e manutenção, digital e conteúdo, território e proximidade, alimentar e produção.",
       "As perguntas passaram a servir para alguma coisa. «Estrutura» e «zona» não alteravam o resultado em nenhuma das 25 920 maneiras possíveis de responder ao formulário — eram duas perguntas inertes com o mesmo peso visual das outras. Agora há hipóteses que só fazem sentido em empresa, outras que só fazem sentido a recibos verdes, e outras que dependem mesmo de estares nos Açores, na Madeira, no Alentejo ou no Douro.",
@@ -810,7 +855,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
     version: "2.78.0",
     data: "2026-08-18",
-    titulo: "Uma ferramenta nova para decidir quanto cobrar — feita para as regras portuguesas, não traduzida do Brasil",
+    titulo:
+      "Uma ferramenta nova para decidir quanto cobrar — feita para as regras portuguesas, não traduzida do Brasil",
     itens: [
       "Quem pesquisa em português como calcular um preço de venda encontra quase sempre conteúdo brasileiro: a matemática está certa, o enquadramento é de outro país. Passa a haver uma ferramenta que faz a conta com as regras daqui, em «Calcular o preço de venda».",
       "Começa por perguntar o que estás a vender — um produto para revender, um bolo por encomenda, uma hora de consultoria — e só depois pergunta números. As perguntas mudam com a resposta, e o resultado aparece desde o primeiro segundo: não há botão de calcular, há um número que reage.",
@@ -1215,7 +1261,7 @@ function assertChangelogIntegrity(): void {
     erros.push("CHANGELOG vazio.");
   } else if (CHANGELOG[0].version !== APP_VERSION) {
     erros.push(
-      `A entrada mais recente do CHANGELOG (v${CHANGELOG[0].version}) não corresponde a APP_VERSION (${APP_VERSION}). Atualiza ambos.`
+      `A entrada mais recente do CHANGELOG (v${CHANGELOG[0].version}) não corresponde a APP_VERSION (${APP_VERSION}). Atualiza ambos.`,
     );
   }
 

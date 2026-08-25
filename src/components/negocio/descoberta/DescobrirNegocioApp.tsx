@@ -21,31 +21,29 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { MarketPilotEvidence } from "@/lib/negocio/market/opportunities";
 import type { PackOferta } from "@/lib/negocio/market/oferta";
-import {
-  CONTEXTO_INICIAL,
-  type AtivoId,
-  type OpportunityContext,
-} from "@/lib/negocio/descoberta/contexto/tipos";
+import { CONTEXTO_INICIAL, type AtivoId, type OpportunityContext } from "@/lib/negocio/descoberta/contexto/tipos";
 import { descobrir, type ResultadoDescoberta } from "@/lib/negocio/descoberta/motor/pipeline";
-import {
-  CENARIOS_WHATIF,
-  compararCenario,
-  type EfeitoWhatIf,
-} from "@/lib/negocio/descoberta/motor/whatif";
+import { CENARIOS_WHATIF, compararCenario, type EfeitoWhatIf } from "@/lib/negocio/descoberta/motor/whatif";
 import {
   comoInstantaneo,
   compararAnalises,
   type DiferencaAnalise,
 } from "@/lib/negocio/descoberta/historico/instantaneos";
 import type { OpportunityCandidate } from "@/lib/negocio/descoberta/motor/tipos";
+import {
+  SESSAO_INICIAL,
+  comFeedback,
+  comVistos,
+  type AcaoFeedback,
+  type EscopoFeedback,
+  type MotivoFeedback,
+  type ModoSessao,
+  type SessaoDescoberta,
+} from "@/lib/negocio/descoberta/sessao/tipos";
+import { assinaturaDe } from "@/lib/negocio/descoberta/sessao/aprendizagem";
 import { newHypothesis, type MarketHypothesis } from "@/lib/negocio/market/hipoteses";
 import { guardarHipotese, lerHipoteses } from "@/lib/store/hipoteses-mercado";
-import {
-  guardarInstantaneo,
-  guardarPerfil,
-  lerInstantaneos,
-  lerPerfilGuardado,
-} from "@/lib/store/perfil-descoberta";
+import { guardarInstantaneo, guardarPerfil, lerInstantaneos, lerPerfilGuardado } from "@/lib/store/perfil-descoberta";
 import { registarProvaGuardada, useMedicaoDescoberta } from "../medicao-descoberta";
 import Configurador from "./Configurador";
 import Resultados from "./Resultados";
@@ -59,57 +57,89 @@ export default function DescobrirNegocioApp() {
   const [resultado, setResultado] = useState<ResultadoDescoberta | null>(null);
   const [evidencia, setEvidencia] = useState<readonly MarketPilotEvidence[]>([]);
   const [oferta, setOferta] = useState<PackOferta | undefined>(undefined);
-  const [aConsultar, setAConsultar] = useState(true);
+  const [aConsultarEvidencia, setAConsultarEvidencia] = useState(true);
+  const [aConsultarOferta, setAConsultarOferta] = useState(true);
+  const [erroEvidencia, setErroEvidencia] = useState(false);
+  const [erroOferta, setErroOferta] = useState(false);
+  const [recalcularAposFontes, setRecalcularAposFontes] = useState(false);
   const [aAnalisar, setAAnalisar] = useState(false);
   const [hipoteses, setHipoteses] = useState<readonly MarketHypothesis[]>([]);
   const [perfilGuardado, setPerfilGuardado] = useState(false);
   const [diferenca, setDiferenca] = useState<DiferencaAnalise | null>(null);
   const [montado, setMontado] = useState(false);
+  const [sessao, setSessao] = useState<SessaoDescoberta>(SESSAO_INICIAL);
+  const [aExplorarMudancas, setAExplorarMudancas] = useState(false);
+  const [focarMeios, setFocarMeios] = useState(0);
+  const aConsultar = aConsultarEvidencia || aConsultarOferta;
 
   useEffect(() => setMontado(true), []);
+
+  const consultarEvidencia = useCallback(async (signal?: AbortSignal) => {
+    setAConsultarEvidencia(true);
+    try {
+      const resposta = await fetch("/api/market/pilots", {
+        signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+      const payload = (await resposta.json()) as { pilots: MarketPilotEvidence[] };
+      if (!Array.isArray(payload?.pilots)) throw new Error("Resposta de procura inválida");
+      setEvidencia(payload.pilots);
+      setErroEvidencia(false);
+    } catch (erro) {
+      if (erro instanceof DOMException && erro.name === "AbortError") return;
+      // Falha de transporte não é ausência de mercado e fica visível.
+      setEvidencia([]);
+      setErroEvidencia(true);
+    } finally {
+      if (!signal?.aborted) setAConsultarEvidencia(false);
+    }
+  }, []);
 
   // ── O pack público, uma vez por sessão ────────────────────────────
   useEffect(() => {
     const controlador = new AbortController();
-    fetch("/api/market/pilots", { signal: controlador.signal, headers: { Accept: "application/json" } })
-      .then((resposta) => {
-        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-        return resposta.json() as Promise<{ pilots: MarketPilotEvidence[] }>;
-      })
-      .then((payload) => setEvidencia(Array.isArray(payload.pilots) ? payload.pilots : []))
-      .catch((erro) => {
-        // Uma falha de transporte NÃO é ausência de mercado. O motor corre
-        // na mesma e cada dossier diz que não tem leitura ligada.
-        if (!(erro instanceof DOMException && erro.name === "AbortError")) setEvidencia([]);
-      })
-      .finally(() => setAConsultar(false));
+    void consultarEvidencia(controlador.signal);
     return () => controlador.abort();
-  }, []);
+  }, [consultarEvidencia]);
 
   // ── O pack de OFERTA, também uma vez por sessão ───────────────────
   //  Independente do de pilotos de propósito: são eixos diferentes e
   //  falham de maneiras diferentes. Se a oferta não vier, o motor corre
   //  na mesma e volta a dizer «lacuna por apurar» — que é o que dizia
   //  antes de esta fonte existir.
+  const consultarOferta = useCallback(async (signal?: AbortSignal) => {
+    setAConsultarOferta(true);
+    try {
+      const resposta = await fetch("/api/market/oferta", {
+        signal,
+        headers: { Accept: "application/json" },
+      });
+      if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+      const payload = (await resposta.json()) as PackOferta;
+      // Um pack serve se trouxer QUALQUER das duas leituras. A matriz
+      // ao concelho vem de um instantâneo commitado e sobrevive a uma
+      // falha do INE — exigir as duas fazia a leitura ao concelho ser
+      // deitada fora por causa da outra.
+      const temRegioes = Array.isArray(payload?.divisoes) && payload.divisoes.length > 0;
+      const temConcelhos = Array.isArray(payload?.concelhos?.ordem) && payload.concelhos.ordem.length > 0;
+      if (!temRegioes && !temConcelhos) throw new Error("Resposta de oferta inválida");
+      setOferta(temRegioes || temConcelhos ? payload : undefined);
+      setErroOferta(false);
+    } catch (erro) {
+      if (erro instanceof DOMException && erro.name === "AbortError") return;
+      setOferta(undefined);
+      setErroOferta(true);
+    } finally {
+      if (!signal?.aborted) setAConsultarOferta(false);
+    }
+  }, []);
+
   useEffect(() => {
     const controlador = new AbortController();
-    fetch("/api/market/oferta", { signal: controlador.signal, headers: { Accept: "application/json" } })
-      .then((resposta) => {
-        if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-        return resposta.json() as Promise<PackOferta>;
-      })
-      .then((payload) => {
-        // Um pack serve se trouxer QUALQUER das duas leituras. A matriz
-        // ao concelho vem de um instantâneo commitado e sobrevive a uma
-        // falha do INE — exigir as duas fazia a leitura ao concelho ser
-        // deitada fora por causa da outra.
-        const temRegioes = Array.isArray(payload?.divisoes) && payload.divisoes.length > 0;
-        const temConcelhos = Array.isArray(payload?.concelhos?.ordem) && payload.concelhos.ordem.length > 0;
-        setOferta(temRegioes || temConcelhos ? payload : undefined);
-      })
-      .catch(() => setOferta(undefined));
+    void consultarOferta(controlador.signal);
     return () => controlador.abort();
-  }, []);
+  }, [consultarOferta]);
 
   // ── O que já está guardado, lido depois da montagem ───────────────
   useEffect(() => {
@@ -122,14 +152,39 @@ export default function DescobrirNegocioApp() {
   }, []);
 
   const correr = useCallback(
-    (paraContexto: OpportunityContext) => descobrir(paraContexto, { evidencia, oferta, limite: 10 }),
+    (paraContexto: OpportunityContext, memoria?: SessaoDescoberta, incluirForaDoPerfil = false) =>
+      descobrir(paraContexto, {
+        evidencia,
+        oferta,
+        limite: incluirForaDoPerfil ? 12 : 10,
+        sessao: memoria,
+        incluirForaDePerfil: incluirForaDoPerfil,
+      }),
     [evidencia, oferta],
   );
+
+  useEffect(() => {
+    if (!recalcularAposFontes || aConsultar) return;
+    setResultado(correr(contexto, sessao, aExplorarMudancas));
+    setRecalcularAposFontes(false);
+  }, [aConsultar, aExplorarMudancas, contexto, correr, recalcularAposFontes, sessao]);
+
+  const repetirFontes = () => {
+    setRecalcularAposFontes(true);
+    void Promise.all([consultarEvidencia(), consultarOferta()]);
+  };
 
   const analisar = useCallback(
     (proximoContexto: OpportunityContext) => {
       setAAnalisar(true);
-      const novo = correr(proximoContexto);
+      const memoria = SESSAO_INICIAL;
+      setSessao(memoria);
+      setAExplorarMudancas(false);
+      const novo = correr(proximoContexto, memoria, false);
+      // Se a pessoa chegou antes das fontes, este primeiro resultado é
+      // deliberadamente conservador. Assim que ambas terminarem (com
+      // sucesso ou erro visível), recalcula-se sem criar novo histórico.
+      if (aConsultar) setRecalcularAposFontes(true);
 
       // A comparação com a análise anterior é feita ANTES de guardar a
       // nova — senão comparava-se consigo própria.
@@ -148,7 +203,7 @@ export default function DescobrirNegocioApp() {
         );
       }
     },
-    [correr],
+    [aConsultar, correr],
   );
 
   // ── E se? Corre o motor sobre o contexto alterado ─────────────────
@@ -170,7 +225,10 @@ export default function DescobrirNegocioApp() {
   //  │ ordena-se pelo que abre, e mostram-se os quatro melhores.     │
   //  └──────────────────────────────────────────────────────────────┘
   const efeitosWhatIf: readonly EfeitoWhatIf[] = useMemo(() => {
-    if (!resultado) return [];
+    // O modo condicional inclui deliberadamente hipóteses fora do perfil.
+    // Compará-lo com cenários compatíveis misturaria universos e faria a
+    // contagem parecer maior ou menor por causa do modo, não da mudança.
+    if (!resultado || aExplorarMudancas) return [];
     return CENARIOS_WHATIF.filter((cenario) => cenario.aplicavel(contexto))
       .map((cenario) => compararCenario(cenario, resultado, correr(cenario.aplicar(contexto))))
       .sort(
@@ -181,7 +239,7 @@ export default function DescobrirNegocioApp() {
           esquerda.cenario.id.localeCompare(direita.cenario.id),
       )
       .slice(0, 4);
-  }, [resultado, contexto, correr]);
+  }, [aExplorarMudancas, resultado, contexto, correr]);
 
   const aplicarWhatIf = (cenarioId: string) => {
     const cenario = CENARIOS_WHATIF.find((item) => item.id === cenarioId);
@@ -192,29 +250,74 @@ export default function DescobrirNegocioApp() {
     analisar(proximo);
   };
 
-  // ── Declarar um meio a partir do resultado vazio ──────────────────
-  //  O motor diz «declara "Computador de trabalho" e abres 1 hipótese».
-  //  A pessoa não devia ter de voltar atrás, encontrar a secção certa e
-  //  procurar a pastilha: carrega, o meio entra no contexto e o motor
-  //  corre outra vez. O perfil deixa de estar guardado, como em qualquer
-  //  outra alteração ao contexto.
-  const declararMeios = (ativos: readonly AtivoId[]) => {
-    const novos = ativos.filter((id) => !contexto.ativos.includes(id));
-    if (novos.length === 0) return;
-    const proximo = { ...contexto, ativos: [...contexto.ativos, ...novos] };
-    setContexto(proximo);
-    setPerfilGuardado(false);
-    analisar(proximo);
+  // Nunca transformar «tenho isto» em «serve para o trabalho». O atalho
+  // volta à secção certa, onde presença, estado e limites são confirmados.
+  const reverMeios = (_ativos: readonly AtivoId[]) => {
+    setFase("contexto");
+    setFocarMeios((valor) => valor + 1);
   };
 
-  const hipotesesGuardadas = useMemo(
-    () => new Set(hipoteses.map((item) => item.templateId)),
-    [hipoteses],
-  );
-  const hipotesePorId = useMemo(
-    () => new Map(hipoteses.map((item) => [item.templateId, item])),
-    [hipoteses],
-  );
+  const reapresentar = (proximaSessao: SessaoDescoberta) => {
+    setSessao(proximaSessao);
+    setResultado(correr(contexto, proximaSessao, aExplorarMudancas));
+  };
+
+  const alternarExploracaoDeMudancas = () => {
+    const proximoModo = !aExplorarMudancas;
+    // Mantém recusas e preferências, mas uma nova coleção começa na
+    // primeira página. Reaproveitar `vistos` esconderia precisamente as
+    // hipóteses compatíveis que servem de referência neste modo.
+    const proximaSessao: SessaoDescoberta = {
+      ...sessao,
+      vistos: [],
+      modo: "normal",
+      ancora: undefined,
+    };
+    setAExplorarMudancas(proximoModo);
+    setSessao(proximaSessao);
+    setResultado(correr(contexto, proximaSessao, proximoModo));
+  };
+
+  const darFeedback = (
+    candidato: OpportunityCandidate,
+    acao: AcaoFeedback,
+    motivo: MotivoFeedback | undefined,
+    escopo: EscopoFeedback,
+  ) => {
+    const comPaginaVista = comVistos(sessao, resultado?.candidatos.map((item) => item.id) ?? []);
+    const atualizado = comFeedback(comPaginaVista, {
+      acao,
+      motivo,
+      escopo,
+      assinatura: assinaturaDe(candidato),
+    });
+    reapresentar({
+      ...atualizado,
+      modo: acao === "mais-como-isto" ? "mais-como-isto" : acao === "interessa" ? "normal" : "continuar",
+      ancora: acao === "mais-como-isto" ? assinaturaDe(candidato) : atualizado.ancora,
+    });
+  };
+
+  const pedirOutras = (modo: Exclude<ModoSessao, "normal" | "mais-como-isto">) => {
+    const vistos = comVistos(sessao, resultado?.candidatos.map((item) => item.id) ?? []);
+    reapresentar({
+      ...vistos,
+      modo,
+      ancora: resultado?.candidatos[0] ? assinaturaDe(resultado.candidatos[0]) : vistos.ancora,
+    });
+  };
+
+  const reporAprendizagem = () => reapresentar(SESSAO_INICIAL);
+  const desfazerUltimaEscolha = () =>
+    reapresentar({
+      ...sessao,
+      feedback: sessao.feedback.slice(0, -1),
+      modo: "normal",
+      ancora: undefined,
+    });
+
+  const hipotesesGuardadas = useMemo(() => new Set(hipoteses.map((item) => item.templateId)), [hipoteses]);
+  const hipotesePorId = useMemo(() => new Map(hipoteses.map((item) => [item.templateId, item])), [hipoteses]);
 
   const guardarComoHipotese = (candidato: OpportunityCandidate) => {
     // As hipóteses locais são indexadas pelo dossier curado quando existe;
@@ -244,9 +347,7 @@ export default function DescobrirNegocioApp() {
       [resultado],
     ),
     hipotesesComProva: hipoteses.filter((item) => item.proofs.length > 0).length,
-    hipotesesComProvaPaga: hipoteses.filter((item) =>
-      item.proofs.some((prova) => prova.kind !== "interview"),
-    ).length,
+    hipotesesComProvaPaga: hipoteses.filter((item) => item.proofs.some((prova) => prova.kind !== "interview")).length,
     temPrecoConcluido: hipoteses.some((item) => item.pricing !== undefined),
     temRequisitosRevistos: hipoteses.some((item) => item.requirementsReviewed),
   });
@@ -268,7 +369,18 @@ export default function DescobrirNegocioApp() {
         efeitosWhatIf={efeitosWhatIf}
         onAplicarWhatIf={aplicarWhatIf}
         diferenca={diferenca}
-        onDeclararMeios={declararMeios}
+        onReverMeios={reverMeios}
+        onFeedback={darFeedback}
+        onPedirOutras={pedirOutras}
+        onReporAprendizagem={reporAprendizagem}
+        onDesfazerUltimaEscolha={desfazerUltimaEscolha}
+        aExplorarMudancas={aExplorarMudancas}
+        onAlternarExploracaoDeMudancas={alternarExploracaoDeMudancas}
+        fontes={{
+          evidencia: aConsultarEvidencia ? "a-consultar" : erroEvidencia ? "indisponivel" : "ligada",
+          oferta: aConsultarOferta ? "a-consultar" : erroOferta ? "indisponivel" : "ligada",
+        }}
+        onRepetirFontes={repetirFontes}
       />
     );
   }
@@ -291,10 +403,13 @@ export default function DescobrirNegocioApp() {
         onDescobrir={() => analisar(contexto)}
         onRepor={() => {
           setContexto(CONTEXTO_INICIAL);
+          setSessao(SESSAO_INICIAL);
+          setAExplorarMudancas(false);
           setPerfilGuardado(false);
           setResultado(null);
         }}
         jaAnalisou={resultado !== null}
+        focarMeios={focarMeios}
       />
     </div>
   );

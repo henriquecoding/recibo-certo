@@ -29,13 +29,7 @@ import type { MarketRegion } from "@/lib/negocio/market/geografia";
 export type TipoTerritorio = "urbano" | "suburbano" | "rural";
 
 /** Até onde o negócio pode chegar. É o eixo que separa local de nacional. */
-export type AlcanceOperacional =
-  | "bairro"
-  | "concelho"
-  | "regiao"
-  | "nacional"
-  | "internacional"
-  | "online";
+export type AlcanceOperacional = "bairro" | "concelho" | "regiao" | "nacional" | "internacional" | "online";
 
 export interface ContextoLocalizacao {
   /** NUTS II — a lista fechada que a evidência sabe servir. */
@@ -100,6 +94,48 @@ export type AtivoId =
   | "carta-conducao"
   | "carteira-clientes";
 
+/**
+ * Declarar que um meio existe não prova que serve para o trabalho.
+ *
+ * Estes campos são deliberadamente estruturados: o motor consegue usar
+ * «funciona, mas com limitações»; não consegue tomar uma decisão segura a
+ * partir de uma caixa de texto. `undefined` continua a significar «ainda
+ * não perguntámos» — nunca «está tudo bem».
+ */
+export type EstadoAtivo = "adequado" | "funcional-com-limitacoes" | "precisa-reparacao" | "por-confirmar";
+
+export type DisponibilidadeAtivo = "sempre" | "parcial" | "ocasional";
+export type AcessoAtivo = "proprio" | "partilhado" | "alugado" | "por-reservar";
+export type UsoProfissionalAtivo = "confirmado" | "por-confirmar" | "nao";
+
+export type ConfiguracaoVeiculo = "passageiros" | "misto" | "mercadorias" | "por-confirmar";
+export type CapacidadeCargaVeiculo = "muito-reduzida" | "reduzida" | "media" | "elevada";
+export type EstadoInspecaoVeiculo = "valida" | "por-confirmar" | "nao-valida";
+export type AdaptacaoVeiculo =
+  "separacao-carga" | "prateleiras" | "refrigeracao" | "rampa" | "interior-lavavel" | "transporte-animais";
+
+export interface DetalheVeiculo {
+  /** Homologação/configuração — não a aparência da viatura. */
+  configuracao?: ConfiguracaoVeiculo;
+  lugares?: number;
+  /** Faixa operacional, sem inventar quilogramas que não conhecemos. */
+  capacidadeCarga?: CapacidadeCargaVeiculo;
+  inspecao?: EstadoInspecaoVeiculo;
+  adaptacoes?: readonly AdaptacaoVeiculo[];
+}
+
+export interface DetalheAtivo {
+  estado: EstadoAtivo;
+  disponibilidade?: DisponibilidadeAtivo;
+  acesso?: AcessoAtivo;
+  usoProfissional?: UsoProfissionalAtivo;
+  veiculo?: DetalheVeiculo;
+  /** Limitações escolhidas numa lista; nunca inferidas pelo motor. */
+  limitacoes?: readonly string[];
+}
+
+export type DetalhesAtivos = Partial<Record<AtivoId, DetalheAtivo>>;
+
 // ── TEMPO ────────────────────────────────────────────────────────────
 
 export type Dedicacao = "integral" | "part-time" | "fins-de-semana" | "poucas-horas";
@@ -137,13 +173,7 @@ export type NivelCompetencia = "basico" | "intermedio" | "avancado";
  * a mais valiosa das seis para vender o primeiro serviço. Fundi-las num
  * booleano era deitar fora a informação que mais separa candidatos.
  */
-export type TipoExperiencia =
-  | "interesse"
-  | "sei-fazer"
-  | "trabalhei"
-  | "geri"
-  | "conheco-setor"
-  | "tenho-contactos";
+export type TipoExperiencia = "interesse" | "sei-fazer" | "trabalhei" | "geri" | "conheco-setor" | "tenho-contactos";
 
 export interface CompetenciaDeclarada {
   id: string;
@@ -184,14 +214,7 @@ export interface ContextoPreferencias {
 }
 
 export type PublicoAlvo =
-  | "criancas"
-  | "idosos"
-  | "animais"
-  | "empresas"
-  | "turistas"
-  | "familias"
-  | "setor-publico"
-  | "profissionais";
+  "criancas" | "idosos" | "animais" | "empresas" | "turistas" | "familias" | "setor-publico" | "profissionais";
 
 // ── RESTRIÇÕES ───────────────────────────────────────────────────────
 
@@ -221,12 +244,7 @@ export type RestricaoId =
 
 // ── RISCO ────────────────────────────────────────────────────────────
 
-export type PerfilRisco =
-  | "muito-conservador"
-  | "conservador"
-  | "moderado"
-  | "arrojado"
-  | "muito-arrojado";
+export type PerfilRisco = "muito-conservador" | "conservador" | "moderado" | "arrojado" | "muito-arrojado";
 
 /**
  * As sete dimensões de risco, avaliadas em separado.
@@ -265,6 +283,11 @@ export interface OpportunityContext {
   localizacao: ContextoLocalizacao;
   capital: ContextoCapital;
   ativos: readonly AtivoId[];
+  /**
+   * Adequação dos meios declarados. Opcional para ler perfis antigos: a
+   * ausência fica «por confirmar» e vale menos do que adequação confirmada.
+   */
+  detalhesAtivos?: DetalhesAtivos;
   tempo: ContextoTempo;
   rendimento: ContextoRendimento;
   competencias: readonly CompetenciaDeclarada[];
@@ -288,6 +311,7 @@ export const CONTEXTO_INICIAL: OpportunityContext = Object.freeze({
   localizacao: { regiao: "portugal", alcance: "regiao" },
   capital: {},
   ativos: [],
+  detalhesAtivos: {},
   tempo: { dedicacao: "part-time" },
   rendimento: { ambicao: "complemento" },
   competencias: [],
@@ -427,10 +451,7 @@ const PESO_EXPERIENCIA: Readonly<Record<TipoExperiencia, number>> = Object.freez
  * teto aos cinco — a diferença entre um e cinco anos é grande, a
  * diferença entre dez e vinte não é o que decide um negócio novo.
  */
-export function experienciaForca(
-  contexto: OpportunityContext,
-  competenciaId: string,
-): number | null {
+export function experienciaForca(contexto: OpportunityContext, competenciaId: string): number | null {
   const declarada = contexto.competencias.find((item) => item.id === competenciaId);
   if (!declarada) return null;
   const base = declarada.experiencia === undefined ? 0.35 : PESO_EXPERIENCIA[declarada.experiencia];
@@ -455,9 +476,6 @@ export const ESCALABILIDADE_PRETENDIDA: Readonly<Record<AmbicaoNegocio, number>>
 });
 
 /** A pessoa tem contactos ou experiência de gestão nesta competência? */
-export function experienciaDe(
-  contexto: OpportunityContext,
-  competenciaId: string,
-): TipoExperiencia | undefined {
+export function experienciaDe(contexto: OpportunityContext, competenciaId: string): TipoExperiencia | undefined {
   return contexto.competencias.find((item) => item.id === competenciaId)?.experiencia;
 }

@@ -31,6 +31,7 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/contrato-publico-check.yml"
       - "supabase/migrations/**"
       - "src/lib/contabilistas/diretorio.ts"
       - "scripts/check-contrato-publico.mjs"
@@ -60,8 +61,12 @@ jobs:
       - name: Verificar o contrato público contra produção
         id: check
         env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # A URL e a chave publishable são públicas por definição: são a
+          # configuração que o browser recebe. Secret/variable têm precedência
+          # para permitir rotação sem alterar o workflow; o fallback impede que
+          # a monitorização de produção fique muda por falta de configuração.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || vars.NEXT_PUBLIC_SUPABASE_URL || 'https://sxdditwefdzuqeephqiy.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || vars.SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_SbQLhzMKWuXVvwvMUXsfCw_1AOT-yqu' }}
         run: |
           set +e
           node scripts/check-contrato-publico.mjs --exigir-ambiente
