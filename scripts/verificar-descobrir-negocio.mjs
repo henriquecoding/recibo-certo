@@ -386,6 +386,14 @@ try {
       if ((await cartao.getByRole("button", { expanded: true }).count()) === 0) {
         await cartao.locator("button").first().click();
       }
+      // Os packs de mercado chegam de forma independente e podem reordenar
+      // a lista enquanto este dossier está aberto. `.first()` passava então
+      // a apontar para outro cartão a meio de um clique. A partir daqui a
+      // âncora é o dossier realmente aberto, não a posição transitória.
+      cartao = pagina
+        .locator("#ferramenta article:has(> button[aria-expanded='true'])")
+        .first();
+      await cartao.waitFor({ state: "visible" });
       await pagina.waitForTimeout(500);
       let texto = await cartao.innerText();
       verificar("explica porque apareceu para esta pessoa", /Porque apareceu para ti/.test(texto));
@@ -453,7 +461,13 @@ try {
       );
 
       // «Como chegámos a esta conclusão?»
-      await cartao.getByRole("button", { name: /Como chegámos a esta conclusão/ }).click();
+      // `evaluate(click)` é deliberado: a geometria/tamanho dos controlos já
+      // foi verificada acima; aqui testamos a transição de estado. Um clique
+      // Playwright normal espera estabilidade visual e pode perder 30 s se
+      // uma fonte ao vivo reordenar o cartão durante o scroll automático.
+      await cartao
+        .getByRole("button", { name: /Como chegámos a esta conclusão/ })
+        .evaluate((botao) => botao.click());
       await pagina.waitForTimeout(400);
       texto = await cartao.innerText();
       verificar(
