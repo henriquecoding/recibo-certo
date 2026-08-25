@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.118.0",
+    version: "2.120.0",
     data: "2026-08-25",
     titulo: "O modo claro passa a ter chão",
     itens: [
@@ -30,6 +30,43 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "No telemóvel, o separador aceso da barra de baixo — a única indicação de onde estás — não se distinguia dos apagados. Passa a ter contorno próprio.",
       "O cartão do parceiro na página inicial não tinha contorno visível, que é justamente o que o devia marcar como território de outra marca.",
       "O modo escuro fica como estava: verificado elemento a elemento, com os estilos calculados de dezoito páginas comparados antes e depois. Os títulos do tema escuro deixam de depender de um valor afinado para o tema claro — era a porta por onde uma afinação do claro lhes mexia sem ninguém dar por isso.",
+    ],
+  },
+  {
+    version: "2.119.0",
+    data: "2026-08-25",
+    titulo: "O simulador de salário no telemóvel: as explicações deixam de sair do ecrã e abrem ao primeiro toque",
+    itens: [
+      "Os botões de ajuda espalhados por todo o site abriam um painel de largura fixa sempre centrado no próprio botão. Num telemóvel de 360px, um botão encostado à direita punha o painel a acabar 54px fora do ecrã — e o texto ficava cortado a meio da frase. No simulador de salário, cinco dos sete painéis da página saíam do ecrã: dois pela direita, um pela esquerda e dois por baixo. O painel passa a ser colocado onde há espaço, sempre dentro do ecrã, com um bico a apontar ao botão de onde veio.",
+      "E abriam ao SEGUNDO toque. Num ecrã tátil, tocar num botão despacha primeiro o equivalente a passar o rato por cima: o painel abria com esse e fechava logo a seguir com o toque. Media-se em todos os painéis da aplicação. Agora um toque abre, outro fecha.",
+      "O texto desses painéis vinha em MAIÚSCULAS com as letras afastadas sempre que a ajuda estava ao lado de um rótulo — que é a maioria dos casos. Herdava o estilo do rótulo. Um parágrafo inteiro de lei em maiúsculas é quase ilegível; passa a ler-se como texto normal.",
+      "Um painel de ajuda aberto perto do fundo do ecrã ficava por baixo da barra de pesquisa e da navegação do telemóvel. Deixou de ficar. Se o painel for maior do que o espaço disponível, ganha rolamento próprio em vez de ser cortado.",
+      "No «Passo 01» do simulador de salário, os controlos de «Situação familiar» e «Entidade empregadora» colapsavam no telemóvel: as opções ficavam empilhadas, centradas e sem contorno nenhum dentro do mesmo retângulo cinzento, sem se perceber qual estava escolhida. Passam a ser opções com identidade própria — rótulo à esquerda, marca de selecionado à direita — e voltam a ser um controlo horizontal em ecrãs largos.",
+      "O mesmo passo era uma lista corrida de nove perguntas ao mesmo nível. Ganha títulos: o recibo, quem recebe, quem paga e onde, e o que foi declarado à entidade empregadora. A última distinção é a que mais erros causava: o IRS Jovem, a taxa de retenção superior e os duodécimos não se aplicam por serem verdadeiros — aplicam-se por terem sido comunicados à empresa.",
+      "O número de dependentes e o número de dependentes com incapacidade eram dois cartões seguidos com contorno próprio; passam a ser o mesmo cartão, porque são a mesma pergunta em dois graus de detalhe.",
+      "Carregar em «Adicionar rubrica» no telemóvel abria a lista abaixo da dobra, tapada pela barra de navegação: do lado de quem usava, não acontecia nada. A lista passa a ser trazida ao ecrã.",
+      "Os separadores «Mês · Ano · Empresa · Cálculo» do resultado diziam-se separadores sem cumprir o que isso promete: não estavam ligados ao painel que abrem e não respondiam às setas do teclado. Passam a responder às setas, ao Início e ao Fim, e a anunciar corretamente o painel a que pertencem.",
+      "Os botões «Guardar», «Folha de cálculo», «PDF», «CSV» e «Desbloquear com o Plus» tinham menos de 36px de altura — abaixo do alvo de toque confortável que o resto da aplicação cumpre. Corrigido.",
+      "A explicação da opção por taxa de retenção superior colava duas citações da lei uma à outra, sem pontuação e ambas começadas em minúscula: lia-se como uma frase sem princípio nem fim. Passam a estar marcadas como citações, cada uma com a sua base legal à frente.",
+    ],
+  },
+  {
+    version: "2.118.0",
+    data: "2026-08-25",
+    titulo: "Auditoria ao simulador de recibos verdes: a região passa a contar, e aparece a conta que ninguém te avisava",
+    itens: [
+      "O simulador tinha um seletor de região desde sempre — e não o usava para o IRS. Quem reside na Madeira ou nos Açores tem os escalões do Art. 68.º reduzidos em 30%, e o simulador apurava-lhe o imposto pelas taxas do continente nos dois modos: no guiado a região nunca chegava ao motor, no completo o resultado anual ficava congelado quando se trocava de região. Para 30 000 € de faturação eram 1 183,79 € de imposto a mais por ano — anunciados por um ecrã que promete o líquido real.",
+      "Quem vende bens via dois números diferentes de Segurança Social no mesmo ecrã: o cabeçalho dizia 64,20 €/mês e o fluxo de caixa do mesmo recibo mandava reservar 224,70 €. O fluxo estava a usar a base de 70% dos serviços em vez dos 20% do Art. 162.º do Código Contributivo. Passa a ser um só número.",
+      "Atividades agrícolas, silvícolas, pecuárias, aquícolas e apícolas contribuem sobre 20% do rendimento, mas o motor anual só sabia olhar para a categoria fiscal — e a categoria delas diz 70%. Resultado: três vezes e meia a Segurança Social devida, nos dois modos. O motor passa a aceitar a base real da atividade.",
+      "Escolher no simulador completo uma atividade com regras próprias — alojamento local, TVDE, subsídios, transparência fiscal — mudava o coeficiente e deixava para trás a retenção, a regra dos 15% e a base de Segurança Social. Quem não tem retenção nenhuma via na mesma a promessa de um reembolso de retenções que nunca foram feitas.",
+      "Advogados e solicitadores na CPAS: o modo guiado mostrava «Segurança Social: —» e depois calculava o IRS como se as contribuições do Regime Geral tivessem sido pagas. Aos 60 000 €/ano eram 1 939,50 € de diferença entre o guiado e o completo, para o mesmo caso, no mesmo site.",
+      "Quem factura muito em poucos meses do ano tinha a Segurança Social anual mal contada no modo guiado: 15 000 €/mês durante 6 meses davam 8 276 € quando a conta real são 13 482 €.",
+      "As despesas que abatem ao IRS estavam com os limites errados. O campo das rendas parava nos 3 347 €, que corresponde ao teto antigo de 502 € — o de 2026 é 900 €, e quem paga 500 € de renda por mês não conseguia sequer escrever o que paga. No modo guiado, o resumo somava as deduções sem teto nenhum: 5 000 € de despesas gerais anunciavam 1 750 € de poupança quando a lei dá 250 €. Taxas e limites passam a vir todos da fonte fiscal.",
+      "O calendário dizia «Sem acerto — a retenção cobre o IRS» a quem tinha 2 237 € de reembolso à espera. O reembolso passa a aparecer, com o mês em que chega.",
+      "«Isento de IVA (abaixo de 15 000 €/ano)» aparecia ao lado do painel que dizia «faturaste 18 000 € — vais perder a isenção em janeiro». Entre os 15 000 € e os 18 750 € continuas isento, mas não é por estares abaixo do limiar; a frase passa a dizer a razão certa.",
+      "NOVO — Pagamentos por conta de IRS (Art. 102.º CIRS). A retenção sai do recibo e vê-se; estes não saem de lado nenhum. São três prestações até 20 de julho, setembro e dezembro, e apanham de surpresa exatamente quem não tem retenção durante o ano: vendas, alojamento local, TVDE, plataformas e clientes estrangeiros. Os dois modos passam a estimá-las e a dizer quando chegam.",
+      "No simulador de empresa em modo completo, a caixa «Aplicar IFICI» não mexia nos números: alimentava um rótulo e uma nota de âmbito, enquanto o motor lia outra caixa — a do painel de recibos verdes, que está escondida nesse modo. Ligar o regime não mudava um cêntimo do IRS do gerente, e o que o mudava era uma caixa que não se via. O guiado de empresa já fazia certo; agora fazem os dois. Voltar ao perfil «residente» também repõe o regime a desligado, em vez de o deixar ligado fora do ecrã.",
+      "NOVO — Ajustar a base da Segurança Social (Art. 163.º do Código Contributivo). Na declaração trimestral podes fixar um rendimento relevante até 25% acima ou abaixo do apurado, em intervalos de 5%. É a única alavanca que tens sobre a tua contribuição, e o simulador mostra os dois lados: quanto poupas agora e quanto sobe o IRS, porque as contribuições pagas abatem pela regra dos 15%.",
     ],
   },
   {

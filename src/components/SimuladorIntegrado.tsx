@@ -182,6 +182,7 @@ import {
   retencaoNaFonte,
   contribuicoesSSAnuais,
   calcularAbatimentoMinimoExistencia,
+  pagamentosPorContaIRS,
   type RegimeIVA,
   type SimulacaoIRS,
 } from "@/lib/fiscal";
@@ -200,6 +201,8 @@ import OnboardingGate from "@/components/simulador/OnboardingGate";
 import EuroBreakdown from "@/components/simulador/EuroBreakdown";
 import DecisionCard from "@/components/simulador/DecisionCard";
 import TimelineFiscal from "@/components/simulador/TimelineFiscal";
+import PagamentosContaCard from "@/components/simulador/PagamentosConta";
+import AjusteBaseSS from "@/components/simulador/AjusteBaseSS";
 import ComparacaoNarrativa from "@/components/simulador/ComparacaoNarrativa";
 import type {
   EstadoGuiadoSaida,
@@ -221,6 +224,7 @@ import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA as calcularSituacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import type { CategoriaSimuladorRV } from "@/lib/fiscal-data";
+import type { ZonaIVA } from "@/lib/fiscal-iva";
 import { FISCAL_YEAR } from "@/lib/fiscal-data";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
@@ -267,6 +271,25 @@ const IRS_JOVEM_LIMITE_2026 = IRS_JOVEM.tetoIAS.value * IAS_2026;
 const IRS_JOVEM_ISENCAO: Record<number, number> = IRS_JOVEM.isencaoPorAno.value;
 
 const IRS_JOVEM_IDADE_MAX = IRS_JOVEM.idadeMax.value;
+
+/**
+ * Porque é que este recibo não leva IVA — a razão REAL, vinda do motor.
+ *
+ * A frase era sempre a mesma: «Isento de IVA (abaixo de 15 000 €/ano)». Na
+ * zona de transição isso é falso e contradizia o painel imediatamente abaixo,
+ * que dizia «Faturaste 18 000 € — vais perder a isenção em janeiro». Duas
+ * frases opostas no mesmo ecrã sobre o mesmo número.
+ */
+function motivoIsencaoIVA(zona: ZonaIVA, limiar: number): string {
+  switch (zona) {
+    case "transicao":
+      return `Ainda isento este ano, apesar de já teres passado os ${fmt(limiar)} — a isenção do Art. 53.º só cai a 1 de janeiro. Este valor é a tua faturação, sem IVA a separar.`;
+    case "isento_natureza":
+      return "Isento pela natureza da atividade (Art. 9.º CIVA), sem limite de faturação — este valor é a tua faturação, sem IVA a separar.";
+    default:
+      return `Isento de IVA (abaixo de ${fmt(limiar)}/ano) — este valor é a tua faturação, sem IVA a separar.`;
+  }
+}
 
 const TIPO_ATIVIDADE_PARAMS = {
   art151: {
@@ -482,6 +505,25 @@ const DEDUCAO_GERAIS_MAX = DEDUCAO_DESP_GERAIS.value.limite;
 const DEDUCAO_RENDAS_PCT = DEDUCAO_RENDAS.value.taxa;
 const DEDUCAO_RENDAS_MAX = DEDUCAO_RENDAS.value.limite;
 
+/**
+ * Despesa a partir da qual a dedução já bate no limite legal — o topo útil de
+ * cada controlo.
+ *
+ * Existe porque os máximos estavam escritos à mão e envelheceram: o das rendas
+ * ficou em 3 347 €, que é o teto de despesa do limite ANTIGO de 502 €. O limite
+ * de 2026 é 900 € (Lei 36/2024), o que dá 6 000 € de renda — e quem paga 500 €
+ * por mês não conseguia sequer escrever o que paga, perdendo até 398 € de
+ * dedução por um número que ninguém voltou a rever. Derivado da fonte de
+ * verdade, deixa de poder desalinhar.
+ */
+const despesaMaxParaLimite = (taxa: number, limite: number) =>
+  taxa > 0 ? Math.ceil(limite / taxa) : limite;
+
+const DESPESA_MAX_SAUDE = despesaMaxParaLimite(DEDUCAO_SAUDE_PCT, DEDUCAO_SAUDE_MAX);
+const DESPESA_MAX_EDUCACAO = despesaMaxParaLimite(DEDUCAO_EDUCACAO_PCT, DEDUCAO_EDUCACAO_MAX);
+const DESPESA_MAX_GERAIS = despesaMaxParaLimite(DEDUCAO_GERAIS_PCT, DEDUCAO_GERAIS_MAX);
+const DESPESA_MAX_RENDAS = despesaMaxParaLimite(DEDUCAO_RENDAS_PCT, DEDUCAO_RENDAS_MAX);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // IMPOSTOS MUNICIPAIS (empresa com imóvel próprio)
 // IMI: Art. 112.º CIMI — taxa urban mínima 0,3%, máxima 0,45%
@@ -664,6 +706,19 @@ interface InputsParticularidades {
   // Art. 68.º. É uma particularidade DA PESSOA, e por isso vive aqui e não
   // ao lado do IVA — que segue a operação, não quem a faz.
   residenciaFiscal?: Regiao;
+  /**
+   * Pacote de regras da ATIVIDADE escolhida (`efeitoFiscal`), quando difere
+   * dos valores por omissão do tipo. Sem isto, escolher "Subsídio à
+   * exploração" ou "Atividades agrícolas" no combobox mudava o coeficiente mas
+   * deixava a retenção, a regra dos 15% e a base de Segurança Social nos
+   * valores do tipo — e o simulador anunciava um reembolso de retenções que
+   * nunca foram feitas e uma SS três vezes e meia acima da devida.
+   */
+  retencaoAtividade?: number;
+  aplicaRegra15Atividade?: boolean;
+  baseSSAtividade?: BaseSS;
+  /** Ajuste do rendimento relevante da SS (Art. 163.º CRC): −0,25 a +0,25. */
+  ajusteBaseSS?: number;
   numDep3plus: number; // dependentes > 3 anos
   numDep3minus: number; // dependentes ≤ 3 anos
   numDep2_6: number; // 2.º+ dependentes ≤ 6 anos
@@ -792,7 +847,9 @@ function simularAnualRV(
   },
   coefOverride?: number,
 ): ResultadoAnualRV {
-  const { ret } = TIPO_ATIVIDADE_PARAMS[tipo];
+  // A retenção sai do pacote de regras da atividade quando ela o traz; só na
+  // ausência dele é que cai no valor por omissão do tipo.
+  const ret = partic.retencaoAtividade ?? TIPO_ATIVIDADE_PARAMS[tipo].ret;
 
   const salarioBruto = Math.max(0, partic.outrosRendimentos ?? 0);
   const decl = simularDeclaracaoIRS({
@@ -801,6 +858,9 @@ function simularAnualRV(
       brutoAnual: faturacao,
       tipo: TIPO_LOCAL_PARA_CANONICO[tipo],
       coefOverride,
+      aplicaRegra15Override: partic.aplicaRegra15Atividade,
+      baseSSOverride: partic.baseSSAtividade,
+      ajusteBaseSS: partic.ajusteBaseSS,
       anoAtividade: partic.anoAtividade ?? 3,
       irsJovemAno: irsJovemAno > 0 ? irsJovemAno : undefined,
     },
@@ -3022,6 +3082,9 @@ export default function SimuladorIntegrado({
   // CPAS/CGA — advogados, solicitadores e funcionários públicos pré-2006
   // descontam para outra caixa; a SS do Regime Geral não se aplica.
   const [isencaoCpas, setIsencaoCpas] = useState(false);
+  // Ajuste voluntário do rendimento relevante da SS (Art. 163.º CRC):
+  // −0,25 a +0,25 em passos de 0,05. 0 = o apuramento normal.
+  const [ajusteBaseSS, setAjusteBaseSS] = useState(0);
 
   const [irsJovemAno, setIrsJovemAno] = useState(0);
   const [tipoAtiv, setTipoAtiv] = useState<TipoAtividade>("art151");
@@ -3407,6 +3470,13 @@ export default function SimuladorIntegrado({
   // ── Resultado por recibo ─────────────────────────────────────────────────
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
 
+  /**
+   * Pacote de regras EFETIVO da atividade — coeficiente, retenção, base de SS
+   * e regra dos 15% — resolvido uma vez e usado em todo o lado. É o mesmo
+   * `efeitoFiscal` que o Modo Guiado usa: uma só resolução, dois modos.
+   */
+  const efeitoAtividade = useMemo(() => efeitoFiscal(atividade), [atividade]);
+
   const resultRecibo = useMemo(
     () =>
       calcular({
@@ -3414,25 +3484,30 @@ export default function SimuladorIntegrado({
         tipo: atividade.tipo,
         regiao,
         regimeIVA: regimeEfetivo,
-        baseSS: "servicos",
+        // Estava fixo em "servicos". Quem vendia bens via o cabeçalho dizer
+        // 64,20 €/mês de Segurança Social e, três blocos abaixo, o fluxo de
+        // caixa do MESMO recibo mandar reservar 224,70 € — a base de 70% em
+        // vez dos 20% do Art. 162.º do Código Contributivo.
+        baseSS: efeitoAtividade.baseSS,
         dispensaRetencao,
         isencaoSSPrimeiroAno: isencaoSS,
         acumulaEmprego,
         irsJovemAno,
-        retencaoOverride:
-          atividade.retencao ?? TIPO_ATIVIDADE_PARAMS[tipoAtiv]?.ret,
+        ajusteBaseSS,
+        retencaoOverride: efeitoAtividade.retencao,
       }),
     [
       base,
       atividade.tipo,
-      atividade.retencao,
+      efeitoAtividade.retencao,
+      efeitoAtividade.baseSS,
       regiao,
       regimeEfetivo,
       dispensaRetencao,
       isencaoSS,
       acumulaEmprego,
       irsJovemAno,
-      tipoAtiv,
+      ajusteBaseSS,
     ],
   );
 
@@ -3459,6 +3534,14 @@ export default function SimuladorIntegrado({
     outrosRendimentos,
     anoAtividade,
     dispensaRetencao,
+    // O pacote de regras da atividade, resolvido numa só chamada — o mesmo
+    // `efeitoFiscal` que o Modo Guiado usa. Não é opcional para o resultado:
+    // decide a retenção anual (logo o acerto), a regra dos 15% e a base da
+    // Segurança Social.
+    retencaoAtividade: efeitoAtividade.retencao,
+    aplicaRegra15Atividade: efeitoAtividade.regra15,
+    baseSSAtividade: efeitoAtividade.baseSS,
+    ajusteBaseSS,
     // A mesma região que o utilizador escolheu para o IVA. Para quase toda a
     // gente é a residência; quando não for, o campo do perfil de preço é que
     // permite dizê-lo — aqui há uma pergunta só, e é esta.
@@ -3526,6 +3609,14 @@ export default function SimuladorIntegrado({
       acumulaEmprego,
       isencaoCpas,
       dispensaRetencao,
+      // `particularidades.residenciaFiscal` é a `regiao`. Sem ela aqui, mudar
+      // de Continente para a Madeira não recalculava nada: o painel anual
+      // ficava preso às taxas do continente enquanto o seletor dizia Madeira.
+      regiao,
+      efeitoAtividade.retencao,
+      efeitoAtividade.regra15,
+      efeitoAtividade.baseSS,
+      ajusteBaseSS,
       deficiencia,
       ifici,
       rnhAntigo,
@@ -3544,6 +3635,57 @@ export default function SimuladorIntegrado({
     ],
   );
 
+  /**
+   * Pagamentos por conta de IRS (Art. 102.º CIRS).
+   *
+   * A retenção na fonte sai do recibo e vê-se. Isto não sai de lado nenhum:
+   * são três notas de cobrança em julho, setembro e dezembro que apanham de
+   * surpresa exatamente quem não tem retenção — vendas, alojamento local,
+   * TVDE, clientes estrangeiros. Um simulador que promete «quando pagar» e
+   * omite a segunda maior saída do ano não está a cumprir a promessa.
+   *
+   * A lei calcula sobre o PENÚLTIMO ano; uma simulação prospetiva não o tem,
+   * e usa este cenário como proxy — a UI di-lo, em vez de fingir precisão.
+   */
+  const pagamentosConta = useMemo(
+    () =>
+      pagamentosPorContaIRS({
+        coleta: resultAnualRV.irs,
+        retencoesCatB: resultAnualRV.retencaoAnual,
+        rendimentoLiquidoCatB: resultAnualRV.rendimentoColetavel,
+        rendimentoLiquidoTotal:
+          resultAnualRV.rendimentoColetavel + Math.max(0, resultAnualRV.outrosRendimentos),
+      }),
+    [
+      resultAnualRV.irs,
+      resultAnualRV.retencaoAnual,
+      resultAnualRV.rendimentoColetavel,
+      resultAnualRV.outrosRendimentos,
+    ],
+  );
+
+  /**
+   * O MESMO cenário sem o ajuste do Art. 163.º — o contrafactual que dá sentido
+   * ao controlo. Sem ele o deslizador mostrava uma percentagem e escondia o
+   * que ela custa: a contribuição sobe/desce, e o IRS anda ao contrário pela
+   * regra dos 15%.
+   */
+  const resultAnualSemAjuste = useMemo(
+    () =>
+      ajusteBaseSS === 0
+        ? resultAnualRV
+        : simularAnualRV(
+            brutoAnual,
+            tipoAtiv,
+            irsJovemAno,
+            { primeiroAno: isencaoSSPrimeiroAno, acumulaEmprego, cpas: isencaoCpas },
+            { ...particularidades, ajusteBaseSS: 0 },
+            atividade.coef,
+          ),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ajusteBaseSS, resultAnualRV],
+  );
+
   // ── Resultado empresa ─────────────────────────────────────────────────────
   const custoConstituicaoAnual = incluirConstituicao
     ? Math.round(custoConstituicao / Math.max(1, anosAmortizacao))
@@ -3557,6 +3699,29 @@ export default function SimuladorIntegrado({
   const faturacaoBaseEmpresa = faturacaoComIvaEmpresa
     ? Math.round(brutoAnual / (1 + taxaIvaEmpresaEfetiva))
     : brutoAnual;
+
+  /**
+   * O IFICI do gerente — e QUAL dos dois estados o decide.
+   *
+   * Havia duas caixas para o mesmo facto. A do painel de empresa
+   * (`aplicarIFICICompleto`) é a única visível neste modo, e alimentava
+   * apenas texto: um badge «IFICI ativo» e uma nota de âmbito. O motor lia
+   * `ifici`, que é a caixa do painel de recibos verdes — escondida em empresa
+   * completo. Resultado: ligar o IFICI não mexia um cêntimo no IRS do gerente,
+   * e o que o mexia era uma caixa que a pessoa não via.
+   *
+   * É o mesmo defeito que o guiado de empresa já tinha corrigido (ver a nota
+   * em `coletaIRSGerente`, `fiscal-empresa.ts`); faltava a paridade aqui.
+   *
+   * O `perfilFundadorCompleto !== "residente"` não é um extra: a caixa só
+   * aparece a fundadores não residentes, e sem esta guarda um valor `true`
+   * deixado para trás continuava a aplicar a taxa de 20% depois de a pessoa
+   * voltar a «residente» — com a caixa outra vez fora do ecrã.
+   */
+  const ificiDoGerente =
+    cenario === "empresa"
+      ? aplicarIFICICompleto && perfilFundadorCompleto !== "residente"
+      : ifici;
 
   // Objeto de opções em vez de 20 argumentos posicionais.
   //
@@ -3592,7 +3757,7 @@ export default function SimuladorIntegrado({
         dependentes: numDep3plus + numDep3minus + numDep2_6 + numDepDefic,
         conjunta,
         regiao,
-        ifici,
+        ifici: ificiDoGerente,
       },
     }),
     [
@@ -3602,7 +3767,8 @@ export default function SimuladorIntegrado({
       naoDocumentadas, emPrejuizo, excecaoPrejuizo, rfaiInvest, regiaoRFAI,
       sifideDespesas, tipoSifide, primeirosAnos, custoConstituicaoAnual,
       rfaiContratualValor,
-      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao, ifici,
+      numDep3plus, numDep3minus, numDep2_6, numDepDefic, conjunta, regiao,
+      ificiDoGerente,
     ],
   );
 
@@ -4204,8 +4370,7 @@ export default function SimuladorIntegrado({
       )}
       {!temIva && valorRef > 0 && (
         <p className="rounded-xl bg-brand-light/60 px-4 py-2.5 text-[11px] leading-relaxed text-brand-dark dark:bg-brand/10">
-          Isento de IVA (abaixo de {fmt(IVA_ISENCAO_LIMITE)}/ano) — este valor é a
-          tua faturação, sem IVA a separar.
+          {motivoIsencaoIVA(situacaoIva.zona, situacaoIva.limiar)}
         </p>
       )}
     </div>
@@ -4469,6 +4634,7 @@ export default function SimuladorIntegrado({
               setOutrosRendimentos(estado.outrosRendimentos);
               setIsencaoSSPrimeiroAno(estado.isencaoSSPrimeiroAno);
               setIsencaoCpas(estado.isencaoCpas);
+              setAjusteBaseSS(estado.ajusteBaseSS);
               setAnoAtividade(estado.anoAtividade);
               setIrsJovemAno(estado.irsJovemAno);
               setDespSaude(estado.despSaude);
@@ -5263,6 +5429,24 @@ export default function SimuladorIntegrado({
                           </button>
                         );
                       })}
+
+                      {/* ── Ajuste do rendimento relevante (Art. 163.º CRC) ── */}
+                      <div className="border-t border-stone-100 pt-3 dark:border-stone-800">
+                        <AjusteBaseSS
+                          valor={ajusteBaseSS}
+                          onChange={setAjusteBaseSS}
+                          ssAnual={resultAnualRV.ssAnual}
+                          ssAnualSemAjuste={resultAnualSemAjuste.ssAnual}
+                          irsAnual={resultAnualRV.irs}
+                          irsAnualSemAjuste={resultAnualSemAjuste.irs}
+                          desativado={isencaoSS}
+                          motivoDesativado={
+                            isencaoCpas
+                              ? "Estás na CPAS/CGA — não descontas para o Regime Geral, logo não há base a ajustar."
+                              : "Não há contribuições a ajustar enquanto a isenção estiver ativa."
+                          }
+                        />
+                      </div>
                     </div>
                   </CollapsibleSection>
                 </div>
@@ -5690,31 +5874,31 @@ export default function SimuladorIntegrado({
                                   </div>
                                   {[
                                     {
-                                      label: `Despesas saúde (ded. 15%, máx €${DEDUCAO_SAUDE_MAX})`,
+                                      label: `Despesas saúde (ded. ${pct(DEDUCAO_SAUDE_PCT)}, máx ${fmt(DEDUCAO_SAUDE_MAX)})`,
                                       val: despSaude,
                                       set: setDespSaude,
-                                      max: 6_670,
+                                      max: DESPESA_MAX_SAUDE,
                                       note: "Consultas, medicamentos, seguros saúde",
                                     },
                                     {
-                                      label: `Despesas educação (ded. 30%, máx €${DEDUCAO_EDUCACAO_MAX})`,
+                                      label: `Despesas educação (ded. ${pct(DEDUCAO_EDUCACAO_PCT)}, máx ${fmt(DEDUCAO_EDUCACAO_MAX)})`,
                                       val: despEducacao,
                                       set: setDespEducacao,
-                                      max: 2_667,
+                                      max: DESPESA_MAX_EDUCACAO,
                                       note: "Propinas, material escolar, rendas de estudante",
                                     },
                                     {
-                                      label: `Rendas habitação (ded. 15%, máx €${DEDUCAO_RENDAS_MAX})`,
+                                      label: `Rendas habitação (ded. ${pct(DEDUCAO_RENDAS_PCT)}, máx ${fmt(DEDUCAO_RENDAS_MAX)})`,
                                       val: despRendas,
                                       set: setDespRendas,
-                                      max: 3_347,
+                                      max: DESPESA_MAX_RENDAS,
                                       note: "Arrendamento habitação permanente",
                                     },
                                     {
-                                      label: `Despesas gerais (ded. 35%, máx €${DEDUCAO_GERAIS_MAX}/pessoa)`,
+                                      label: `Despesas gerais (ded. ${pct(DEDUCAO_GERAIS_PCT)}, máx ${fmt(DEDUCAO_GERAIS_MAX)}/pessoa)`,
                                       val: despGerais,
                                       set: setDespGerais,
-                                      max: 714,
+                                      max: DESPESA_MAX_GERAIS,
                                       note: "Luz, água, telecomunicações, supermercado",
                                     },
                                   ].map(({ label, val, set, max, note }) => (
@@ -6063,7 +6247,15 @@ export default function SimuladorIntegrado({
                     localizacao={null}
                     localNome=""
                     onTipoSedeChange={setTipoSedeCompleto}
-                    onPerfilFundadorChange={setPerfilFundadorCompleto}
+                    onPerfilFundadorChange={(v) => {
+                      setPerfilFundadorCompleto(v);
+                      // A caixa do IFICI só existe para não residentes. Sem
+                      // este reposicionamento, voltar a «residente» escondia-a
+                      // ligada — e o motor continuava a aplicar a taxa de 20%
+                      // a alguém que já não a pode pedir. É o mesmo cuidado
+                      // que o guiado de empresa já tinha.
+                      if (v === "residente") setAplicarIFICICompleto(false);
+                    }}
                     onAplicarIFICIChange={setAplicarIFICICompleto}
                     onCustoSedeVirtualChange={setCustoSedeVirtualCompleto}
                     despesasOper={despesasOper}
@@ -6784,6 +6976,13 @@ export default function SimuladorIntegrado({
                         temIva={temIva}
                         ivaTotal={temIva ? resultReciboFinal.iva * 12 : 0}
                         faturacaoAnual={brutoAnual}
+                        pagamentosConta={pagamentosConta}
+                        className="mb-5"
+                      />
+
+                      <PagamentosContaCard
+                        resultado={pagamentosConta}
+                        faturacaoAnual={brutoAnual}
                         className="mb-5"
                       />
 
@@ -7196,7 +7395,7 @@ export default function SimuladorIntegrado({
                                   : "Art. 71.º CIRS — taxa liberatória final"
                               }
                             />
-                            {aplicarIFICICompleto && (
+                            {ificiDoGerente && (
                               <p className="px-4 py-1.5 text-[11px] leading-relaxed text-stone-400">
                                 Nota IFICI (Art. 58.º-A EBF): a taxa de {pct(IFICI_TAXA_FLAT)} abrange apenas
                                 rendimentos das categorias A e B elegíveis — não os dividendos.

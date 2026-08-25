@@ -44,6 +44,11 @@ import {
   SS_TAXA,
   SS_COEFICIENTE,
   SS_ACUMULACAO_LIMITE_MENSAL,
+  SS_AJUSTE_BASE,
+  DEDUCAO_SAUDE,
+  DEDUCAO_EDUCACAO,
+  DEDUCAO_RENDAS,
+  DEDUCAO_DESP_GERAIS,
   IAS,
   MINIMO_EXISTENCIA,
   type Atividade,
@@ -53,9 +58,11 @@ import {
   calcular,
   simularDeclaracaoIRS,
   contribuicoesSSAnuais,
+  pagamentosPorContaIRS,
   type RegimeIVA,
   type DeclaracaoResult,
   type SimulacaoIRS,
+  type PagamentosConta,
 } from "@/lib/fiscal";
 import { gerarPrazos, diasAte } from "@/lib/prazos";
 import { useScrollTopOnStep } from "@/lib/scroll";
@@ -69,14 +76,40 @@ import {
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
-import { situacaoIVA, type SituacaoIVA as SituacaoIVAResultado } from "@/lib/fiscal-iva";
+import { situacaoIVA, type SituacaoIVA as SituacaoIVAResultado, type ZonaIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
+import PagamentosContaCard from "@/components/simulador/PagamentosConta";
+import AjusteBaseSS from "@/components/simulador/AjusteBaseSS";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const IVA_LIMITE = IVA_ISENCAO_LIMITE.value;
 const IVA_LIMITE_IMEDIATO = IVA_ISENCAO_EXCESSO.value;
 const IRS_JOVEM_ISENCAO = IRS_JOVEM.isencaoPorAno.value;
+
+/**
+ * As quatro deduções à coleta por despesa, derivadas da fonte de verdade.
+ *
+ * O guiado tinha as taxas escritas à mão (0,15 · 0,3 · 0,15 · 0,35) e — pior —
+ * somava-as SEM OS LIMITES LEGAIS. Quem escrevesse 5 000 € de despesas gerais
+ * via a promessa de 1 750 € de dedução quando a lei dá 250 €: sete vezes mais.
+ * Agora as taxas, os limites e o topo de cada campo saem todos de
+ * `fiscal-data.ts`, e o total passa pelo mesmo `Math.min` do modo completo.
+ */
+const DEDUCOES_DESPESA = [
+  { chave: "saude", label: "Saúde", fonte: DEDUCAO_SAUDE },
+  { chave: "educacao", label: "Educação", fonte: DEDUCAO_EDUCACAO },
+  { chave: "rendas", label: "Rendas", fonte: DEDUCAO_RENDAS },
+  { chave: "gerais", label: "Gerais", fonte: DEDUCAO_DESP_GERAIS },
+] as const;
+
+/** Despesa a partir da qual a dedução já bate no limite legal. */
+const despesaMaxParaLimite = (taxa: number, limite: number) =>
+  taxa > 0 ? Math.ceil(limite / taxa) : limite;
+
+/** Dedução à coleta de uma despesa, já com o teto do respetivo artigo. */
+const deducaoComLimite = (despesa: number, taxa: number, limite: number) =>
+  Math.min(Math.max(0, despesa) * taxa, limite);
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -108,6 +141,8 @@ export interface EstadoGuiadoSaida {
   outrosRendimentos: number;
   isencaoSSPrimeiroAno: boolean;
   isencaoCpas: boolean;
+  /** Ajuste do rendimento relevante da SS (Art. 163.º CRC). */
+  ajusteBaseSS: number;
   anoAtividade: number;
   irsJovemAno: number;
   despSaude: number;
@@ -139,6 +174,25 @@ export interface ReciboGuiadoSaida {
     iva: number;
     liquido: number;
   };
+}
+
+/**
+ * Porque é que este recibo não leva IVA — a razão REAL, vinda do motor.
+ *
+ * A frase era sempre a mesma: «Isento de IVA (abaixo de 15 000 €/ano)». Na
+ * zona de transição isso é falso e contradizia o painel imediatamente abaixo,
+ * que dizia «Faturaste 18 000 € — vais perder a isenção em janeiro». Duas
+ * frases opostas no mesmo ecrã sobre o mesmo número.
+ */
+function motivoIsencaoIVA(zona: ZonaIVA, limiar: number): string {
+  switch (zona) {
+    case "transicao":
+      return `Ainda isento este ano, apesar de já teres passado os ${fmt(limiar)} — a isenção do Art. 53.º só cai a 1 de janeiro. Este valor é a tua faturação, sem IVA a separar.`;
+    case "isento_natureza":
+      return "Isento pela natureza da atividade (Art. 9.º CIVA), sem limite de faturação — este valor é a tua faturação, sem IVA a separar.";
+    default:
+      return `Isento de IVA (abaixo de ${fmt(limiar)}/ano) — este valor é a tua faturação, sem IVA a separar.`;
+  }
 }
 
 const CARDS_ATIV: CardAtiv[] = [
@@ -529,13 +583,18 @@ export default function ModoGuiado({
       mensalIva: cobraIva ? comIva - semIva : 0,
       isentoEfetivo: !cobraIva,
       taxaIvaEfetiva: cobraIva ? (algumIva ? taxaPotencial : sit.taxaEfetiva) : 0,
+      // A ZONA é a razão da isenção, e é o motor que a sabe. Sem ela a UI
+      // dizia sempre «abaixo de 15 000 €» — mesmo a quem já passou o limiar e
+      // só está isento até janeiro.
+      zonaIVA: sit.zona,
+      limiarIVA: sit.limiar,
     };
   }, [modoFat, totalInput, valorComIva, recibosItems, taxaPotencial, mesesFat, regiao, regimeIVA, tipoAtiv]);
 
   // Para direitos de autor, o IVA é a mistura obra própria (isento) + royalties
   // (taxa normal); a taxa efetiva é o IVA total ÷ faturação. Para tudo o resto,
   // usa-se a derivação normal acima.
-  const { mensalSemIva, mensalComIva, mensalIva, isentoEfetivo, taxaIvaEfetiva } =
+  const { mensalSemIva, mensalComIva, mensalIva, isentoEfetivo, taxaIvaEfetiva, zonaIVA, limiarIVA } =
     desdobramentoAutor
       ? {
           mensalSemIva: desdobramentoAutor.total,
@@ -546,6 +605,8 @@ export default function ModoGuiado({
             desdobramentoAutor.total > 0
               ? desdobramentoAutor.ivaRoyalties / desdobramentoAutor.total
               : 0,
+          zonaIVA: (situacaoIvaAutor?.zona ?? "isento_natureza") as ZonaIVA,
+          limiarIVA: situacaoIvaAutor?.limiar ?? IVA_LIMITE,
         }
       : derivadoBase;
 
@@ -584,6 +645,8 @@ export default function ModoGuiado({
   const [acumulaEmprego, setAcumulaEmprego] = useState(false);
   const [isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno] = useState(false);
   const [isencaoCpas, setIsencaoCpas] = useState(false); // CPAS/CGA — paga outro regime
+  // Ajuste voluntário do rendimento relevante da SS (Art. 163.º CRC).
+  const [ajusteBaseSS, setAjusteBaseSS] = useState(0);
   const [irsJovemOn, setIrsJovemOn] = useState(false);
   const [irsJovemAno, setIrsJovemAno] = useState(1);
   const [ifici, setIfici] = useState(false);
@@ -612,15 +675,18 @@ export default function ModoGuiado({
   // anunciar como poupança aquilo que a pessoa desembolsa.
   const ssAnualPoupanca = useMemo(() => {
     if (!isencaoSS) return 0;
-    const semIsencao = contribuicoesSSAnuais(brutoAnual, card.baseSS);
+    const base = efAtiv?.baseSS ?? card.baseSS;
+    const semIsencao = contribuicoesSSAnuais(brutoAnual, base, {}, { ajusteBase: ajusteBaseSS });
     const comIsencao = isencaoCpas
       ? 0 // CPAS/CGA: sai do Regime Geral por inteiro; a caixa própria tem taxas suas.
-      : contribuicoesSSAnuais(brutoAnual, card.baseSS, {
-          primeiroAno: isencaoSSPrimeiroAno,
-          acumulaEmprego,
-        });
+      : contribuicoesSSAnuais(
+          brutoAnual,
+          base,
+          { primeiroAno: isencaoSSPrimeiroAno, acumulaEmprego },
+          { ajusteBase: ajusteBaseSS },
+        );
     return Math.max(0, semIsencao - comIsencao);
-  }, [isencaoSS, isencaoCpas, isencaoSSPrimeiroAno, acumulaEmprego, brutoAnual, card.baseSS]);
+  }, [isencaoSS, isencaoCpas, isencaoSSPrimeiroAno, acumulaEmprego, brutoAnual, card.baseSS, efAtiv?.baseSS, ajusteBaseSS]);
 
   const resultRecibo = useMemo(
     () =>
@@ -629,11 +695,12 @@ export default function ModoGuiado({
         tipo: card.tipoFiscal,
         regiao,
         regimeIVA: regimeEfetivo,
-        baseSS: card.baseSS,
+        baseSS: efAtiv?.baseSS ?? card.baseSS,
         dispensaRetencao: brutoAnual < DISPENSA_RETENCAO_LIMITE.value,
         isencaoSSPrimeiroAno,
         acumulaEmprego,
         irsJovemAno: jovemAno,
+        ajusteBaseSS,
         retencaoOverride: efAtiv?.retencao,
       }),
     [
@@ -646,6 +713,7 @@ export default function ModoGuiado({
       isencaoSSPrimeiroAno,
       acumulaEmprego,
       jovemAno,
+      ajusteBaseSS,
       efAtiv?.retencao,
     ],
   );
@@ -660,6 +728,12 @@ export default function ModoGuiado({
   const declPreview = useMemo(
     () =>
       simularDeclaracaoIRS({
+        // A residência decide as TAXAS do Art. 68.º — a Madeira e os Açores
+        // aplicam menos 30% em todos os escalões. O guiado tinha o seletor de
+        // região desde sempre, mas nunca o passava ao motor: quem residia no
+        // Funchal via o IRS do continente. Para 30 000 €/ano são 1 183,79 €
+        // de imposto a mais, num ecrã que promete o líquido real.
+        residenciaFiscal: regiao,
         independente: {
           brutoAnual,
           tipo: card.tipoFiscal,
@@ -667,6 +741,8 @@ export default function ModoGuiado({
           irsJovemAno: jovemAno > 0 ? jovemAno : undefined,
           coefOverride: efAtiv?.coef,
           aplicaRegra15Override: efAtiv?.regra15,
+          baseSSOverride: efAtiv?.baseSS ?? card.baseSS,
+          ajusteBaseSS,
         },
         // Englobamento (Art. 22.º CIRS): o IRS é único e incide sobre a soma.
         salarios: acumulaEmprego && outrosRendimentos > 0 ? { bruto: outrosRendimentos } : undefined,
@@ -679,7 +755,13 @@ export default function ModoGuiado({
         // (Art. 31.º n.º 13): sem elas, o motor credita contribuições que a
         // pessoa não paga.
         acumulaEmprego,
-        isencaoSSPrimeiroAno,
+        // A CPAS/CGA não é uma isenção do Art. 157.º — é sair do Regime Geral.
+        // Para o motor o efeito é o mesmo (nada a descontar), e é isso que a
+        // regra dos 15% precisa de saber. Sem isto, o guiado creditava a um
+        // advogado contribuições que ele não faz e mostrava-lhe menos IRS do
+        // que o modo completo mostrava para o mesmo caso — até 1 939,50 € de
+        // diferença aos 60 000 €/ano, no mesmo site.
+        isencaoSSPrimeiroAno: isencaoSSPrimeiroAno || isencaoCpas,
         deducoes: {
           saude: despSaude,
           educacao: despEducacao,
@@ -690,6 +772,8 @@ export default function ModoGuiado({
     [
       brutoAnual,
       card.tipoFiscal,
+      card.baseSS,
+      regiao,
       anoAtividade,
       jovemAno,
       ifici,
@@ -698,8 +782,11 @@ export default function ModoGuiado({
       deficiencia,
       efAtiv?.coef,
       efAtiv?.regra15,
+      efAtiv?.baseSS,
+      ajusteBaseSS,
       acumulaEmprego,
       isencaoSSPrimeiroAno,
+      isencaoCpas,
       outrosRendimentos,
       despSaude,
       despEducacao,
@@ -715,9 +802,51 @@ export default function ModoGuiado({
   const irsAnual = simPreview.irsImputavelCatB;
   // Usa segSocial do calcular() que já aplica o coeficiente correto (bens=0,2 / serviços=0,7).
   // CPAS/CGA: quando isencaoCpas=true não há desconto para o Regime Geral → 0 para o simulador.
-  const ssAnual = isencaoCpas ? 0 : resultRecibo.segSocial * recibosAno;
+  // Vinha da contribuição MENSAL do recibo multiplicada pelos meses faturados.
+  // Como `calcular` anualiza o recibo a 12 meses, quem factura muito em poucos
+  // meses batia no teto de 12 × IAS numa base que não é a sua: 15 000 €/mês em
+  // 6 meses dava 8 276 € de Segurança Social quando a devida são 13 482 €. O
+  // ano é apurado sobre o ano — é o mesmo número que o motor anual usa.
+  const ssAnual = isencaoCpas
+    ? 0
+    : contribuicoesSSAnuais(
+        brutoAnual,
+        efAtiv?.baseSS ?? card.baseSS,
+        { primeiroAno: isencaoSSPrimeiroAno, acumulaEmprego },
+        { ajusteBase: ajusteBaseSS },
+      );
   const ivaAnual = mensalIva * mesesFat;
   const liquidoAnual = brutoAnual - irsAnual - ssAnual;
+
+  /**
+   * Pagamentos por conta de IRS (Art. 102.º CIRS) — a saída que não sai de
+   * nenhum recibo. O modo completo mostra-a no calendário; sem isto o guiado
+   * mandava a mesma pessoa embora sem saber que ela existe.
+   */
+  const retencaoAnualGuiado = resultRecibo.retencaoIRS * recibosAno;
+  /** O mesmo cenário sem o ajuste do Art. 163.º, para o controlo mostrar o custo. */
+  const ssAnualSemAjuste = useMemo(
+    () =>
+      isencaoCpas
+        ? 0
+        : contribuicoesSSAnuais(brutoAnual, efAtiv?.baseSS ?? card.baseSS, {
+            primeiroAno: isencaoSSPrimeiroAno,
+            acumulaEmprego,
+          }),
+    [isencaoCpas, brutoAnual, efAtiv?.baseSS, card.baseSS, isencaoSSPrimeiroAno, acumulaEmprego],
+  );
+
+  const pagamentosConta: PagamentosConta = useMemo(
+    () =>
+      pagamentosPorContaIRS({
+        coleta: irsAnual,
+        retencoesCatB: retencaoAnualGuiado,
+        rendimentoLiquidoCatB: simPreview.rendimentoColetavel,
+        rendimentoLiquidoTotal:
+          simPreview.rendimentoColetavel + Math.max(0, simPreview.outrosRendimentos),
+      }),
+    [irsAnual, retencaoAnualGuiado, simPreview.rendimentoColetavel, simPreview.outrosRendimentos],
+  );
 
   // Instantâneo para o Simulador de IRS poder importar esta simulação.
   useEffect(() => {
@@ -752,6 +881,7 @@ export default function ModoGuiado({
     outrosRendimentos: acumulaEmprego ? outrosRendimentos : 0,
     isencaoSSPrimeiroAno,
     isencaoCpas,
+    ajusteBaseSS,
     anoAtividade,
     irsJovemAno: jovemAno,
     despSaude,
@@ -769,7 +899,7 @@ export default function ModoGuiado({
     anoAtividade, jaTemAtividade, tipoAtiv, atividadeEspecifica, tipoSelecionado,
     modoFat, totalInput, valorComIva, recibosItems, mesesFat, regiao, regimeIVA,
     autorObraInput, autorRoyaltiesInput,
-    acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, isencaoCpas, irsJovemOn, irsJovemAno,
+    acumulaEmprego, outrosRendimentos, isencaoSSPrimeiroAno, isencaoCpas, ajusteBaseSS, irsJovemOn, irsJovemAno,
     ifici, rnhAntigo, exResidente, deficiencia, mostrarDeducoes,
     despSaude, despEducacao, despRendas, despGerais,
   });
@@ -815,7 +945,7 @@ export default function ModoGuiado({
     if (d.autorObraInput !== undefined) setAutorObraInput(sanitizeNumericDraft(d.autorObraInput));
     if (d.autorRoyaltiesInput !== undefined) setAutorRoyaltiesInput(sanitizeNumericDraft(d.autorRoyaltiesInput));
     set(d.mesesFat, setMesesFat); set(d.regiao, setRegiao); set(d.regimeIVA, setRegimeIVA);
-    set(d.acumulaEmprego, setAcumulaEmprego); set(d.outrosRendimentos, setOutrosRendimentos); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas);
+    set(d.acumulaEmprego, setAcumulaEmprego); set(d.outrosRendimentos, setOutrosRendimentos); set(d.isencaoSSPrimeiroAno, setIsencaoSSPrimeiroAno); set(d.isencaoCpas, setIsencaoCpas); set(d.ajusteBaseSS, setAjusteBaseSS);
     set(d.irsJovemOn, setIrsJovemOn); set(d.irsJovemAno, setIrsJovemAno); set(d.ifici, setIfici);
     set(d.rnhAntigo, setRnhAntigo); set(d.exResidente, setExResidente); set(d.deficiencia, setDeficiencia);
     set(d.mostrarDeducoes, setMostrarDeducoes); set(d.despSaude, setDespSaude); set(d.despEducacao, setDespEducacao);
@@ -1039,6 +1169,8 @@ export default function ModoGuiado({
                     autorRoyaltiesInput={autorRoyaltiesInput}
                     desdobramentoAutor={desdobramentoAutor}
                     situacaoIvaAutor={situacaoIvaAutor}
+                    zonaIVA={zonaIVA ?? "isento_limiar"}
+                    limiarIVA={limiarIVA ?? IVA_LIMITE}
                     onModoFat={setModoFat}
                     onTotalInput={(value) => setTotalInput(sanitizeNumericDraft(value))}
                     onValorComIva={setValorComIva}
@@ -1067,6 +1199,10 @@ export default function ModoGuiado({
                     setIsencaoSSPrimeiroAno={setIsencaoSSPrimeiroAno}
                     isencaoCpas={isencaoCpas}
                     setIsencaoCpas={setIsencaoCpas}
+                    ajusteBaseSS={ajusteBaseSS}
+                    setAjusteBaseSS={setAjusteBaseSS}
+                    ssAnual={ssAnual}
+                    ssAnualSemAjuste={ssAnualSemAjuste}
                     irsJovemOn={irsJovemOn}
                     setIrsJovemOn={setIrsJovemOn}
                     irsJovemAno={irsJovemAno}
@@ -1112,6 +1248,7 @@ export default function ModoGuiado({
                     liquidoAnual={liquidoAnual}
                     irsAnual={irsAnual}
                     ssAnual={ssAnual}
+                    pagamentosConta={pagamentosConta}
                     ivaAnual={ivaAnual}
                     taxaIVA={mensalSemIva > 0 ? mensalIva / mensalSemIva : 0}
                     regimeIVA={regimeEfetivo}
@@ -1579,6 +1716,8 @@ function PassoFaturacao({
   autorRoyaltiesInput,
   desdobramentoAutor,
   situacaoIvaAutor,
+  zonaIVA,
+  limiarIVA,
   onModoFat,
   onTotalInput,
   onValorComIva,
@@ -1608,6 +1747,9 @@ function PassoFaturacao({
   desdobramentoAutor: DesdobramentoAutor | null;
   /** Situação já resolvida pelo motor para o ramo dos direitos de autor. */
   situacaoIvaAutor: SituacaoIVAResultado | null;
+  /** Zona do Art. 53.º apurada pelo motor — decide a copy da isenção. */
+  zonaIVA: ZonaIVA;
+  limiarIVA: number;
   onModoFat: (m: "total" | "individual") => void;
   onTotalInput: (v: string) => void;
   onValorComIva: (v: boolean) => void;
@@ -1859,7 +2001,7 @@ function PassoFaturacao({
           {/* Isento — não há IVA a separar; o valor introduzido é a faturação. */}
           {montanteTotal > 0 && isentoEfetivo && (
             <p className="rounded-xl bg-brand-light/60 px-4 py-2.5 text-[11px] leading-relaxed text-brand-dark dark:bg-brand/10">
-              Isento de IVA (abaixo de {fmt(IVA_LIMITE)}/ano) — este valor é a tua faturação, sem IVA a separar.
+              {motivoIsencaoIVA(zonaIVA ?? "isento_limiar", limiarIVA ?? IVA_LIMITE)}
             </p>
           )}
         </div>
@@ -2186,6 +2328,10 @@ function PassoSituacao({
   setIsencaoSSPrimeiroAno,
   isencaoCpas,
   setIsencaoCpas,
+  ajusteBaseSS,
+  setAjusteBaseSS,
+  ssAnual,
+  ssAnualSemAjuste,
   irsJovemOn,
   setIrsJovemOn,
   irsJovemAno,
@@ -2218,6 +2364,11 @@ function PassoSituacao({
   setIsencaoSSPrimeiroAno: (v: boolean) => void;
   isencaoCpas: boolean;
   setIsencaoCpas: (v: boolean) => void;
+  /** Ajuste do rendimento relevante da SS (Art. 163.º CRC). */
+  ajusteBaseSS: number;
+  setAjusteBaseSS: (v: number) => void;
+  ssAnual: number;
+  ssAnualSemAjuste: number;
   irsJovemOn: boolean;
   setIrsJovemOn: (v: boolean) => void;
   irsJovemAno: number;
@@ -2246,11 +2397,12 @@ function PassoSituacao({
   setOutrosRendimentos: (v: number) => void;
 }) {
   const isencaoSS = isencaoSSPrimeiroAno || acumulaEmprego || isencaoCpas;
+  // Com os tetos legais de cada artigo — o mesmo `Math.min` que o motor aplica.
   const deducoesTotal =
-    despSaude * 0.15 +
-    despEducacao * 0.3 +
-    despRendas * 0.15 +
-    despGerais * 0.35;
+    deducaoComLimite(despSaude, DEDUCAO_SAUDE.value.taxa, DEDUCAO_SAUDE.value.limite) +
+    deducaoComLimite(despEducacao, DEDUCAO_EDUCACAO.value.taxa, DEDUCAO_EDUCACAO.value.limite) +
+    deducaoComLimite(despRendas, DEDUCAO_RENDAS.value.taxa, DEDUCAO_RENDAS.value.limite) +
+    deducaoComLimite(despGerais, DEDUCAO_DESP_GERAIS.value.taxa, DEDUCAO_DESP_GERAIS.value.limite);
 
   return (
     <div>
@@ -2362,6 +2514,22 @@ function PassoSituacao({
                 </div>
               )}
             </ToggleCard>
+
+            {/* ── Ajuste do rendimento relevante (Art. 163.º CRC) ────────── */}
+            <div className="rounded-3xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900">
+              <AjusteBaseSS
+                valor={ajusteBaseSS}
+                onChange={setAjusteBaseSS}
+                ssAnual={ssAnual}
+                ssAnualSemAjuste={ssAnualSemAjuste}
+                desativado={isencaoSS}
+                motivoDesativado={
+                  isencaoCpas
+                    ? "Estás na CPAS/CGA — não descontas para o Regime Geral, logo não há base a ajustar."
+                    : "Não há contribuições a ajustar enquanto a isenção estiver ativa."
+                }
+              />
+            </div>
           </div>
         </div>
 
@@ -2532,33 +2700,32 @@ function PassoSituacao({
                   {[
                     {
                       label: "Saúde",
-                      sublabel: "ded. 15%",
+                      fonte: DEDUCAO_SAUDE,
                       val: despSaude,
                       set: setDespSaude,
-                      max: 6_670,
                     },
                     {
                       label: "Educação",
-                      sublabel: "ded. 30%",
+                      fonte: DEDUCAO_EDUCACAO,
                       val: despEducacao,
                       set: setDespEducacao,
-                      max: 2_667,
                     },
                     {
                       label: "Rendas",
-                      sublabel: "ded. 15%",
+                      fonte: DEDUCAO_RENDAS,
                       val: despRendas,
                       set: setDespRendas,
-                      max: 3_347,
                     },
                     {
                       label: "Gerais",
-                      sublabel: "ded. 35%",
+                      fonte: DEDUCAO_DESP_GERAIS,
                       val: despGerais,
                       set: setDespGerais,
-                      max: 714,
                     },
-                  ].map(({ label, sublabel, val, set, max }) => (
+                  ].map(({ label, fonte, val, set }) => {
+                    const sublabel = `ded. ${pct(fonte.value.taxa)}`;
+                    const max = despesaMaxParaLimite(fonte.value.taxa, fonte.value.limite);
+                    return (
                     <div key={label}>
                       <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                         {label}{" "}
@@ -2578,7 +2745,8 @@ function PassoSituacao({
                         />
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </m.div>
             )}
@@ -2911,6 +3079,7 @@ function ResultadoFinal({
   liquidoAnual,
   irsAnual,
   ssAnual,
+  pagamentosConta,
   ivaAnual,
   taxaIVA,
   regimeIVA,
@@ -2952,6 +3121,8 @@ function ResultadoFinal({
   liquidoAnual: number;
   irsAnual: number;
   ssAnual: number;
+  /** Pagamentos por conta de IRS estimados (Art. 102.º CIRS). */
+  pagamentosConta: PagamentosConta;
   ivaAnual: number;
   taxaIVA: number;
   regimeIVA: RegimeIVA;
@@ -3693,6 +3864,9 @@ function ResultadoFinal({
               Recomeçar do início
             </button>
           </div>
+
+          {/* ── Pagamentos por conta de IRS (Art. 102.º) ─────────────────── */}
+          <PagamentosContaCard resultado={pagamentosConta} faturacaoAnual={brutoAnual} />
 
           {/* ── Calendário fiscal ───────────────────────────────────────── */}
           <div className="rounded-3xl border border-stone-100 bg-white shadow-card dark:border-stone-800 dark:bg-stone-900">

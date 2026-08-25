@@ -81,7 +81,7 @@ export default function ProGate({
         <p className="max-w-xs text-xs leading-relaxed text-stone-500 dark:text-stone-400">{description}</p>
         <Link
           href={href}
-          className="btn-shine mt-1 inline-flex items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
+          className="btn-shine mt-1 inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-brand px-4 py-2 text-xs font-semibold text-white shadow-glow transition-all hover:shadow-float"
         >
           <Sparkle size={13} />
           {cta}

@@ -58,6 +58,8 @@ import {
   DEDUCAO_RENDAS,
   DEDUCAO_DEPENDENTE_BEBE,
   SS_MIN_MENSAL,
+  SS_AJUSTE_BASE,
+  PAGAMENTOS_CONTA_IRS,
   // Benefícios fiscais IRC
   RFAI_TAXA_INTERIOR,
   RFAI_TAXA_INTERIOR_EXCEDENTE,
@@ -113,6 +115,11 @@ export interface CalcInput {
   irsJovemAno?: number;
   /** Taxa de retenção da atividade (regime especial), se diferente do `tipo`. */
   retencaoOverride?: number;
+  /**
+   * Ajuste voluntário do rendimento relevante da Segurança Social
+   * (Art. 163.º CRC), como fração de −0,25 a +0,25 em passos de 0,05.
+   */
+  ajusteBaseSS?: number;
 }
 
 export interface CalcResult {
@@ -190,19 +197,48 @@ export interface ContribuicoesSS {
   dispensaAcumulacao: "total" | "parcial" | "nenhuma";
 }
 
+export interface OpcoesContribuicoesSS {
+  /**
+   * Ajuste voluntário do rendimento relevante (Art. 163.º do Código dos
+   * Regimes Contributivos), como fração: −0,25 a +0,25 em passos de 0,05.
+   * Valores fora do intervalo são aparados; valores fora do passo são
+   * arredondados ao passo mais próximo — a Segurança Social não aceita
+   * percentagens intermédias, e devolver uma contribuição que o portal nunca
+   * cobraria seria pior do que arredondar.
+   */
+  ajusteBase?: number;
+}
+
+/**
+ * Normaliza o ajuste do Art. 163.º: apara ao limite legal e alinha ao passo.
+ * Devolve 0 para ausente/inválido — o comportamento de quem não escolheu.
+ */
+export function ajusteBaseValido(ajuste?: number): number {
+  if (ajuste === undefined || !Number.isFinite(ajuste)) return 0;
+  const { limite, passo } = SS_AJUSTE_BASE.value;
+  const aparado = Math.max(-limite, Math.min(limite, ajuste));
+  return Math.round(aparado / passo) * passo;
+}
+
 /**
  * Contribuições anuais de um trabalhador independente, com teto (12 × IAS),
- * contribuição mínima (20 €/mês), coeficiente por natureza da atividade e as
- * isenções do Art. 157.º.
+ * contribuição mínima (20 €/mês), coeficiente por natureza da atividade, o
+ * ajuste voluntário do Art. 163.º e as isenções do Art. 157.º.
  */
 export function contribuicoesSS(
   brutoAnual: number,
   baseSS: BaseSS,
   isencoes: IsencoesSS = {},
+  opcoes: OpcoesContribuicoesSS = {},
 ): ContribuicoesSS {
   const bruto = sanitize(brutoAnual);
   const coeficiente = SS_COEFICIENTE[baseSS].value;
-  const baseMensalSemTeto = (bruto * coeficiente) / 12;
+  // Art. 163.º do Código Contributivo: na declaração trimestral a pessoa pode
+  // fixar um rendimento relevante até 25% acima ou abaixo do apurado. O ajuste
+  // incide sobre o rendimento relevante — ANTES do teto de 12 × IAS e do mínimo
+  // de 20 €/mês, que continuam a valer sobre o valor já ajustado.
+  const ajuste = ajusteBaseValido(opcoes.ajusteBase);
+  const baseMensalSemTeto = (bruto * coeficiente * (1 + ajuste)) / 12;
   const baseMensal = Math.min(baseMensalSemTeto, SS_BASE_MAX_MENSAL.value);
   const limitadoPeloTeto = baseMensalSemTeto > SS_BASE_MAX_MENSAL.value;
 
@@ -257,7 +293,8 @@ export const contribuicoesSSAnuais = (
   brutoAnual: number,
   baseSS: BaseSS,
   isencoes: IsencoesSS = {},
-): number => contribuicoesSS(brutoAnual, baseSS, isencoes).contribuicaoAnual;
+  opcoes: OpcoesContribuicoesSS = {},
+): number => contribuicoesSS(brutoAnual, baseSS, isencoes, opcoes).contribuicaoAnual;
 
 /**
  * Retenção na fonte sobre um valor faturado.
@@ -275,6 +312,99 @@ export function retencaoNaFonte(
 ): number {
   if (opcoes.dispensa) return 0;
   return sanitize(base) * (1 - isencaoIRSJovem(opcoes.irsJovemAno)) * taxa;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+//  PAGAMENTOS POR CONTA DE IRS (Art. 102.º CIRS) — categoria B
+// ─────────────────────────────────────────────────────────────────────
+
+export interface PagamentosContaInput {
+  /**
+   * `C` — coleta do penúltimo ano, líquida das deduções à coleta (com exceção
+   * da al. i) do Art. 78.º). Numa simulação prospetiva usa-se a coleta
+   * estimada do ano corrente como aproximação: é o melhor número disponível
+   * e o único que o simulador conhece.
+   */
+  coleta: number;
+  /** `R` — retenções na fonte sobre rendimentos da categoria B nesse ano. */
+  retencoesCatB: number;
+  /** `RLB` — rendimento líquido positivo da categoria B nesse ano. */
+  rendimentoLiquidoCatB: number;
+  /** `RLT` — rendimento líquido total nesse ano (todas as categorias). */
+  rendimentoLiquidoTotal: number;
+}
+
+export interface PagamentosConta {
+  /** Total anual dos três pagamentos (0 quando não são exigíveis). */
+  total: number;
+  /** Valor de cada uma das três prestações. */
+  prestacao: number;
+  /** Número de prestações exigíveis (0 ou 3). */
+  numero: number;
+  /** Meses de vencimento (1 = janeiro). Vazio quando não há pagamentos. */
+  meses: number[];
+  /** Dia limite dentro de cada mês. */
+  dia: number;
+  /** true quando a prestação ficou abaixo do mínimo legal e caiu por isso. */
+  abaixoDoMinimo: boolean;
+  /** Valor bruto da fórmula antes do corte do mínimo (para explicar). */
+  totalAntesDoMinimo: number;
+}
+
+/**
+ * Pagamentos por conta de IRS da categoria B (Art. 102.º CIRS).
+ *
+ * `total = 65% × (C − R) × RLB / RLT`, entregue em três prestações iguais até
+ * ao dia 20 de julho, setembro e dezembro. Cada prestação não é exigível se
+ * for inferior a 50 €.
+ *
+ * Porque é que isto tem de existir num simulador de recibos verdes: a retenção
+ * na fonte é visível — sai do recibo. Isto não sai de lado nenhum. Quem factura
+ * sem retenção (vendas, alojamento local, TVDE, clientes estrangeiros) não vê
+ * um cêntimo de IRS sair durante o ano e depois recebe três notas de cobrança
+ * a partir de julho. É a saída de tesouraria que mais apanha gente de surpresa,
+ * e é exatamente o que este produto existe para evitar.
+ *
+ * A fórmula legal olha para o PENÚLTIMO ano. Uma simulação prospetiva não o
+ * tem — usa o ano simulado como proxy e diz que o faz. Não inventa: para quem
+ * mantém o nível de faturação, é a estimativa certa; para quem o muda, o
+ * Art. 102.º n.º 3 permite reduzir ou cessar, e a UI di-lo.
+ */
+export function pagamentosPorContaIRS(input: PagamentosContaInput): PagamentosConta {
+  const meses = [...PAGAMENTOS_CONTA_IRS.meses.value];
+  const numero = PAGAMENTOS_CONTA_IRS.numero.value;
+  const dia = PAGAMENTOS_CONTA_IRS.dia.value;
+  const minimo = PAGAMENTOS_CONTA_IRS.minimoPorPrestacao.value;
+
+  const rlt = sanitize(input.rendimentoLiquidoTotal);
+  const rlb = sanitize(input.rendimentoLiquidoCatB);
+  const vazio: PagamentosConta = {
+    total: 0, prestacao: 0, numero: 0, meses: [], dia,
+    abaixoDoMinimo: false, totalAntesDoMinimo: 0,
+  };
+  // Sem categoria B não há pagamentos por conta, e sem rendimento total a
+  // fração RLB/RLT não está definida.
+  if (rlb <= 0 || rlt <= 0) return vazio;
+
+  const base = sanitize(input.coleta) - sanitize(input.retencoesCatB);
+  if (base <= 0) return vazio;
+
+  const fracaoCatB = Math.min(1, rlb / rlt);
+  const total = PAGAMENTOS_CONTA_IRS.taxa.value * base * fracaoCatB;
+  const prestacao = total / numero;
+
+  if (prestacao < minimo) {
+    return { ...vazio, abaixoDoMinimo: total > 0, totalAntesDoMinimo: total };
+  }
+  return {
+    total: prestacao * numero,
+    prestacao,
+    numero,
+    meses,
+    dia,
+    abaixoDoMinimo: false,
+    totalAntesDoMinimo: total,
+  };
 }
 
 export function calcular(input: CalcInput): CalcResult {
@@ -301,10 +431,15 @@ export function calcular(input: CalcInput): CalcResult {
   // tesouraria por recibo e o acerto do ano não podem divergir. Traz para aqui
   // o mínimo mensal de 20 € (que faltava) e a dispensa por acumulação passa a
   // ser condicionada aos 4 × IAS em vez de zerar tudo.
-  const segSocial = contribuicoesSS(bruto * 12, input.baseSS, {
-    primeiroAno: input.isencaoSSPrimeiroAno,
-    acumulaEmprego: input.acumulaEmprego,
-  }).contribuicaoMensal;
+  const segSocial = contribuicoesSS(
+    bruto * 12,
+    input.baseSS,
+    {
+      primeiroAno: input.isencaoSSPrimeiroAno,
+      acumulaEmprego: input.acumulaEmprego,
+    },
+    { ajusteBase: input.ajusteBaseSS },
+  ).contribuicaoMensal;
 
   const entradaConta = bruto + iva - retencaoIRS;
   const liquido = bruto - retencaoIRS - segSocial;
@@ -1044,6 +1179,23 @@ export interface SimulacaoInput {
   /** Sujeita à regra dos 15% (override do que deriva do `tipo`). */
   aplicaRegra15Override?: boolean;
   /**
+   * Base da Segurança Social da atividade, quando difere do `tipo`.
+   *
+   * Existe porque há atividades cujo pacote de regras contradiz a categoria
+   * fiscal: as agrícolas, aquícolas e avícolas são `outros` para o IRS (que
+   * por omissão desconta sobre 70%) mas contribuem sobre 20% do rendimento
+   * (Art. 162.º do Código Contributivo). Sem esta porta, o motor cobrava-lhes
+   * três vezes e meia a Segurança Social devida — e a regra dos 15% do
+   * Art. 31.º n.º 13 creditava-lhes contribuições que ninguém paga.
+   */
+  baseSSOverride?: BaseSS;
+  /**
+   * Ajuste voluntário do rendimento relevante da Segurança Social
+   * (Art. 163.º CRC), como fração de −0,25 a +0,25 em passos de 0,05.
+   * Afeta a contribuição E, através do Art. 31.º n.º 13 al. a), o IRS.
+   */
+  ajusteBaseSS?: number;
+  /**
    * IFICI (ex-NHR 2.0): aplica taxa flat de 20% ao rendimento coletável em vez
    * dos escalões progressivos (Art. 58.º-A EBF). Incompatível com IRS Jovem.
    * Exige estatuto aprovado pela AT e não ter sido residente nos últimos 5 anos.
@@ -1318,10 +1470,15 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
     // 16 552 € reais (≈ 6 400 € de IRS a menos), a quem vende bens creditava
     // 7 490 € em vez de 4 587 €, e a quem estava isento no 1.º ano creditava
     // contribuições que nunca pagou.
-    const ssContribuicoes = contribuicoesSSAnuais(brutoAnual, BASE_SS_POR_TIPO[tipo], {
-      primeiroAno: input.isencaoSSPrimeiroAno,
-      acumulaEmprego: input.acumulaEmprego,
-    });
+    const ssContribuicoes = contribuicoesSSAnuais(
+      brutoAnual,
+      input.baseSSOverride ?? BASE_SS_POR_TIPO[tipo],
+      {
+        primeiroAno: input.isencaoSSPrimeiroAno,
+        acumulaEmprego: input.acumulaEmprego,
+      },
+      { ajusteBase: input.ajusteBaseSS },
+    );
     despesasAutomaticas = Math.max(DEDUCAO_ESPECIFICA_CATB.value, ssContribuicoes);
     acrescimo15 = aplicaRegra15
       ? Math.max(0, REGIME_15PCT.value * brutoConsiderado - (despesasAutomaticas + despesasJustificadas))
@@ -1552,10 +1709,15 @@ export function simularIRSAnual(input: SimulacaoInput): SimulacaoIRS {
   // sobre o excedente acima disso. Zerar incondicionalmente escondia perto de
   // 9 000 €/ano a quem faturasse acima de ~36 800 €.
   const acumulaEmprego = !!input.acumulaEmprego;
-  const ss = contribuicoesSS(brutoAnual, BASE_SS_POR_TIPO[tipo], {
-    primeiroAno: input.isencaoSSPrimeiroAno,
-    acumulaEmprego,
-  });
+  const ss = contribuicoesSS(
+    brutoAnual,
+    input.baseSSOverride ?? BASE_SS_POR_TIPO[tipo],
+    {
+      primeiroAno: input.isencaoSSPrimeiroAno,
+      acumulaEmprego,
+    },
+    { ajusteBase: input.ajusteBaseSS },
+  );
   const ssAnual = ss.contribuicaoAnual;
 
   // ── Quanto deste IRS é dos recibos verdes? ──────────────────────────────
@@ -2095,6 +2257,10 @@ export interface DeclaracaoInput {
     tipo: TipoAtividade;
     coefOverride?: number;
     aplicaRegra15Override?: boolean;
+    /** Base de SS da atividade, quando difere do `tipo` (agrícolas, TVDE…). */
+    baseSSOverride?: BaseSS;
+    /** Ajuste do rendimento relevante da SS (Art. 163.º CRC): −0,25 a +0,25. */
+    ajusteBaseSS?: number;
     anoAtividade?: number;
     regimeContabilidade?: "simplificado" | "organizada";
     despesasJustificadas?: number;
@@ -2193,6 +2359,10 @@ export interface DeclaracaoInput {
       tipo: TipoAtividade;
       coefOverride?: number;
       aplicaRegra15Override?: boolean;
+      /** Base de SS da atividade, quando difere do `tipo`. */
+      baseSSOverride?: BaseSS;
+      /** Ajuste do rendimento relevante da SS (Art. 163.º CRC). */
+      ajusteBaseSS?: number;
       anoAtividade?: number;
       regimeContabilidade?: "simplificado" | "organizada";
       despesasJustificadas?: number;
@@ -2788,6 +2958,8 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
       tipo: indepB?.tipo ?? "art151",
       coefOverride: indepB?.coefOverride,
       aplicaRegra15Override: indepB?.aplicaRegra15Override,
+      baseSSOverride: indepB?.baseSSOverride,
+      ajusteBaseSS: indepB?.ajusteBaseSS,
       anoAtividade: indepB?.anoAtividade,
       regimeContabilidade: indepB?.regimeContabilidade,
       despesasJustificadas: indepB?.despesasJustificadas,
@@ -2838,6 +3010,8 @@ export function simularDeclaracaoIRS(input: DeclaracaoInput): DeclaracaoResult {
     tipo: indep?.tipo ?? "art151",
     coefOverride: indep?.coefOverride,
     aplicaRegra15Override: indep?.aplicaRegra15Override,
+    baseSSOverride: indep?.baseSSOverride,
+    ajusteBaseSS: indep?.ajusteBaseSS,
     anoAtividade: indep?.anoAtividade,
     regimeContabilidade: indep?.regimeContabilidade,
     despesasJustificadas: indep?.despesasJustificadas,
