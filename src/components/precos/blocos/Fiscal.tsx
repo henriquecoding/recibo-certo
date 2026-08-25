@@ -36,9 +36,9 @@ export default function Fiscal({ contexto, atualizar }: PropsBloco) {
       />
       <Seletor
         id="regiao"
-        rotulo="Onde resides e tens atividade"
-        ajuda="O IVA segue a OPERAÇÃO e o IRS segue a PESSOA. Se resides num sítio e tens atividade noutro, é a tua residência que manda no IRS."
-        descricao="IVA de 23% no Continente, 22% na Madeira e 16% nos Açores. E quem reside nas regiões autónomas paga menos 30% de IRS em todos os escalões."
+        rotulo="Onde tens atividade"
+        ajuda="O IVA segue a OPERAÇÃO: é aqui que se decide a taxa que acrescentas ao preço."
+        descricao="IVA de 23% no Continente, 22% na Madeira e 16% nos Açores."
         opcoes={[
           { valor: "continente", rotulo: "Continente" },
           { valor: "madeira", rotulo: "Madeira" },
@@ -47,6 +47,34 @@ export default function Fiscal({ contexto, atualizar }: PropsBloco) {
         valor={contexto.vendedor.regiao}
         aoMudar={(v) => atualizar("regiao", (c) => void (c.vendedor.regiao = v))}
       />
+
+      {/* ── Residência fiscal ────────────────────────────────────────
+          O IVA segue a operação; o IRS segue a PESSOA. Coincidem para
+          quase toda a gente, e é por isso que o valor por omissão é «a
+          mesma» — mas o aviso `irs-regiao-autonoma` convidava a pessoa a
+          dizer-nos quando não coincidem, e não havia onde o dizer. Um
+          aviso que pede uma resposta que a interface não aceita é pior do
+          que não perguntar nada. */}
+      {contexto.vendedor.tipo === "ti" ? (
+        <Seletor
+          id="residencia-fiscal"
+          rotulo="Onde resides fiscalmente"
+          ajuda="Quem decide o teu IRS é onde RESIDES, não onde está o cliente nem onde exerces. Quem reside nas regiões autónomas paga menos 30% em todos os escalões (Lei Orgânica 2/2013)."
+          descricao="Na dúvida, deixa em «a mesma» — é o caso de quase toda a gente."
+          opcoes={[
+            { valor: "mesma", rotulo: "A mesma da atividade" },
+            { valor: "continente", rotulo: "Continente" },
+            { valor: "madeira", rotulo: "Madeira" },
+            { valor: "acores", rotulo: "Açores" },
+          ]}
+          valor={contexto.vendedor.residenciaFiscal ?? "mesma"}
+          aoMudar={(v) =>
+            atualizar("residencia-fiscal", (c) => {
+              c.vendedor.residenciaFiscal = v === "mesma" ? undefined : v;
+            })
+          }
+        />
+      ) : null}
 
       {contexto.vendedor.tipo === "ti" ? (
         <>
@@ -193,6 +221,37 @@ export default function Fiscal({ contexto, atualizar }: PropsBloco) {
         valor={contexto.canal.cliente}
         aoMudar={(v) => atualizar("cliente", (c) => void (c.canal.cliente = v))}
       />
+
+      {/* ── Inversão do sujeito passivo (Art. 2.º, n.º 1, al. j) CIVA) ──
+          Pergunta-se em vez de se adivinhar: as duas condições do
+          Ofício-Circulado 30 101 são cumulativas e a segunda depende do
+          enquadramento do CLIENTE, que não se infere de uma atividade
+          escolhida num combobox. Só aparece a quem vende a uma empresa
+          portuguesa, que é a única situação em que pode aplicar-se. */}
+      {contexto.canal.cliente === "empresa_pt" ? (
+        <label className="flex items-start gap-2.5 text-sm text-stone-600 dark:text-stone-400 sm:col-span-2">
+          <input
+            type="checkbox"
+            checked={!!contexto.canal.autoliquidacaoConstrucao}
+            onChange={(e) =>
+              atualizar(
+                "autoliquidacao-construcao",
+                (c) => void (c.canal.autoliquidacaoConstrucao = e.target.checked),
+              )
+            }
+            className="mt-0.5 h-4 w-4 flex-shrink-0 accent-brand"
+          />
+          <span>
+            São serviços de construção civil (empreitada ou subempreitada)
+            <span className="mt-0.5 block text-xs text-stone-600 dark:text-stone-400">
+              Obra, remodelação, reparação, manutenção, conservação ou demolição de imóveis. Nesse caso inverte-se o
+              sujeito passivo: emites a fatura SEM IVA com a menção «IVA — autoliquidação» e é o teu cliente que o
+              entrega. Não é isenção — continuas a deduzir o IVA das tuas compras. Só se aplica se ele for sujeito
+              passivo em Portugal com direito à dedução.
+            </span>
+          </span>
+        </label>
+      ) : null}
       <Seletor
         id="escalao-iva"
         rotulo="Taxa de IVA da venda"

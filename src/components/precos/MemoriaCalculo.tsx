@@ -70,10 +70,30 @@ export function MemoriaCalculo({ linhas }: { linhas: LinhaExplicacao[] }) {
             <div className="border-t border-stone-100 px-5 py-4 dark:border-stone-800">
               <ul className="space-y-3">
                 {linhas.map((linha, i) => (
-                  <li key={`${linha.rotulo}-${i}`} className="text-sm">
+                  // As linhas informativas DECOMPÕEM uma parcela que já está
+                  // na coluna — não são parcelas novas. Entram recuadas, com
+                  // uma barra à esquerda e o valor entre parênteses em vez do
+                  // sinal de menos, para que a coluna que se soma com os
+                  // olhos seja exatamente a que fecha. Ver `LinhaExplicacao`.
+                  <li
+                    key={`${linha.rotulo}-${i}`}
+                    className={
+                      linha.informativa
+                        ? "border-l-2 border-stone-200 pl-3 text-sm dark:border-stone-700"
+                        : "text-sm"
+                    }
+                  >
                     <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                       <span className="flex min-w-0 items-center gap-2">
-                        <span className="text-stone-700 dark:text-stone-200">{linha.rotulo}</span>
+                        <span
+                          className={
+                            linha.informativa
+                              ? "text-stone-500 dark:text-stone-400"
+                              : "text-stone-700 dark:text-stone-200"
+                          }
+                        >
+                          {linha.rotulo}
+                        </span>
                         <span
                           className={`flex-shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${CLASSE_CONFIANCA[linha.confianca]}`}
                         >
@@ -84,14 +104,22 @@ export function MemoriaCalculo({ linhas }: { linhas: LinhaExplicacao[] }) {
                         {linha.percentagem !== undefined && linha.percentagem > 0 ? (
                           <span className="text-xs text-stone-500 dark:text-stone-400">{pct(linha.percentagem)}</span>
                         ) : null}
-                        <span
-                          className={`font-semibold ${
-                            linha.valor < 0 ? "text-stone-500 dark:text-stone-400" : "text-stone-800 dark:text-stone-100"
-                          }`}
-                        >
-                          {linha.valor < 0 ? "−" : ""}
-                          {fmt(Math.abs(linha.valor))}
-                        </span>
+                        {linha.informativa ? (
+                          <span className="text-stone-500 dark:text-stone-400">
+                            <span className="sr-only">Já incluído acima: </span>({fmt(Math.abs(linha.valor))})
+                          </span>
+                        ) : (
+                          <span
+                            className={`font-semibold ${
+                              linha.valor < 0
+                                ? "text-stone-500 dark:text-stone-400"
+                                : "text-stone-800 dark:text-stone-100"
+                            }`}
+                          >
+                            {linha.valor < 0 ? "−" : ""}
+                            {fmt(Math.abs(linha.valor))}
+                          </span>
+                        )}
                       </span>
                     </div>
                     {linha.nota ? (

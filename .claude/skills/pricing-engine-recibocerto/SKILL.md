@@ -150,13 +150,14 @@ preço estar resolvido, e tentar metê-las lá dentro repete o erro do τ:
   por venda quantificada.
 - **Nunca inventar preço de mercado.** Sem fonte fiável, o módulo diz «não temos
   dados suficientes». Um vazio honesto vale mais do que um número plausível.
-- **Uma inexatidão conhecida declara-se.** O motor de IRS é nacional e as
-  regiões autónomas têm taxas 30% mais baixas (Art. 68.º via Lei Orgânica
-  2/2013), o que torna o preço proposto **conservador** para quem lá reside.
-  Enquanto for assim, o aviso `irs-regiao-autonoma` di-lo. A mesma inexatidão
-  em silêncio não seria honesta. Ver `PRICING-ENGINE-HANDOFF.md` §R9 antes de
-  mexer: falta uma decisão de produto, porque `vendedor.regiao` significa hoje
-  *região para efeitos de IVA* e não *residência fiscal*.
+- **O IVA segue a OPERAÇÃO; o IRS segue a PESSOA.** São duas perguntas, e há
+  dois campos: `vendedor.regiao` decide a taxa de IVA, `vendedor.residenciaFiscal`
+  decide os escalões do Art. 68.º. As taxas regionais (−30% na Madeira e nos
+  Açores, Lei Orgânica 2/2013) **são aplicadas** — o aviso `irs-regiao-autonoma`
+  existe para o dizer, não para se desculpar de as ignorar. `residenciaFiscal`
+  cai em `regiao` quando não é declarada, que é o caso de quase toda a gente,
+  e a interface pergunta-a a quem é a exceção. Isto resolveu o §R9 do
+  `PRICING-ENGINE-HANDOFF.md`.
 - **Nunca chamar IA a uma sequência de contas.** «O preço subiu porque
   acrescentaste 15% de comissão» é melhor do que «a IA recomenda 27,90 €».
 - **O cálculo é grátis, sem conta e sem email.** `access.core: "free"`,
@@ -178,5 +179,17 @@ npm audit --audit-level=high && npm run fiscal:check && npm run busca:check
 ```
 
 Mais, porque isto é interface: axe em desktop claro, mobile 360 px e desktop
-escuro (**zero violações WCAG 2.1 AA** — é o estado atual, mantém-se), sem
-overflow horizontal a 360 px, e o resultado antes dos campos em mobile.
+escuro (**zero violações WCAG 2.1 AA** — é o estado atual, mantém-se) e sem
+overflow horizontal a 360 px.
+
+**A ordem em mobile é campos → resultado, de propósito.** Esta linha já disse o
+contrário («o resultado antes dos campos») e contradizia o código, que argumenta
+a decisão em comentário: pôr uma recomendação por cima de campos que ninguém
+preencheu é anunciar um número que a pessoa nunca introduziu. Quem quiser
+mudá-la muda-a com o utilizador, não por causa desta frase.
+
+Cuidado ao medir alvos de toque: `getBoundingClientRect()` **não vê
+pseudo-elementos**. O `InfoTip` mede 16×16 px de caixa e 36×36 de alvo, porque a
+área vem de um `::before` com `-inset-2.5` — uma auditoria mediu a caixa e
+reportou uma violação que não existe. Medir com `elementFromPoint()`, e com o
+elemento dentro do viewport.

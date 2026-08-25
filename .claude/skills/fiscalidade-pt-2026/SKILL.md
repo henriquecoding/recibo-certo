@@ -79,7 +79,7 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 > `npm run skills:sync`. Não editar à mão — alterar os dados na fonte de verdade.
 
 <!-- AUTO-GERADO:valores-fiscais — não editar à mão. Atualizado por `npm run skills:sync`. -->
-<!-- Ano fiscal 2026 · última revisão 2026-08-24 · gerado de src/lib/fiscal-data.ts -->
+<!-- Ano fiscal 2026 · última revisão 2026-08-25 · gerado de src/lib/fiscal-data.ts -->
 
 - **IAS** 537,13 €.
 - **Retenção na fonte** (cat. B): Art. 151.º 23% · outros serviços 11,5% · direitos de autor 16,5% · vendas sem retenção. Dispensa abaixo de 15 000 €/ano.

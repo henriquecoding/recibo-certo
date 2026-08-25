@@ -17,7 +17,7 @@
 //  coimas.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { IVA_ISENCAO_LIMITE } from "../../fiscal-data";
+import { AUTOLIQUIDACAO_CONSTRUCAO, ISENCAO_IVA_REGIME, IVA_ISENCAO_LIMITE } from "../../fiscal-data";
 import type {
   Aviso,
   ContextoPreco,
@@ -381,6 +381,55 @@ export function reunirAvisos(e: EntradaAvisos): Aviso[] {
       fonte: "Art. 6.º n.º 6 CIVA",
       fonteUrl:
         "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva6.aspx",
+    });
+  }
+
+  // ── Inversão do sujeito passivo (construção civil) ─────────────────
+  //  A ferramenta mostrava a um subempreiteiro um PVP com 23% de IVA por
+  //  cima — um preço que ele não pode faturar. Agora que a conta está
+  //  certa, o aviso diz-lhe o que tem de escrever na fatura e sublinha a
+  //  parte que se confunde com a isenção: aqui continua a deduzir.
+  if (e.situacaoIVA.autoliquidacao) {
+    avisos.push({
+      id: "autoliquidacao-construcao",
+      severidade: "atencao",
+      titulo: "Esta fatura vai sem IVA — quem o liquida é o teu cliente",
+      texto: `Em serviços de construção civil a outro sujeito passivo português inverte-se o sujeito passivo: emites a fatura sem imposto, com a menção «${
+        AUTOLIQUIDACAO_CONSTRUCAO.mencaoNaFatura.value
+      }», e é o adquirente que liquida e entrega o IVA. Por isso o preço aqui em cima já não leva IVA por cima. Duas coisas a reter: isto NÃO é uma isenção — continuas a deduzir o IVA das tuas compras, e é por isso que o teu custo entra sem IVA —, e a regra só vale se o teu cliente for sujeito passivo em Portugal com direito à dedução. Se ele for particular, ou não tiver esse direito, liquidas IVA normalmente.`,
+      fonte: AUTOLIQUIDACAO_CONSTRUCAO.inverteSujeitoPassivo.legalBasis,
+      fonteUrl:
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva2.aspx",
+    });
+  }
+
+  // ── Regime de isenção transfronteiriço (o número «EX») ─────────────
+  //  O DL 35/2025 transpôs a Diretiva (UE) 2020/285 e, desde 1 de julho de
+  //  2025, quem está isento pelo Art. 53.º pode vender NOUTROS
+  //  Estados-Membros sem lá liquidar IVA — se o volume de negócios em toda
+  //  a União não passar dos 100 000 € e se tiver pedido o número com
+  //  sufixo «EX». Os dados já estavam em `fiscal-data.ts` há meses e
+  //  nenhum caminho da engine de preço lhes tocava: quem vendia para fora
+  //  recebia o aviso da autoliquidação e do OSS e não recebia este, que é
+  //  o que lhe poupa dinheiro e trabalho.
+  if (
+    !e.situacaoIVA.liquida &&
+    e.situacaoIVA.regime === "isento_art53" &&
+    (e.contexto.canal.cliente === "empresa_ue" ||
+      (e.contexto.canal.cliente === "consumidor" && e.contexto.canal.canal === "loja_online"))
+  ) {
+    avisos.push({
+      id: "isencao-transfronteirica-ex",
+      severidade: "info",
+      titulo: "Estando isento, podes vender na UE sem lá cobrar IVA",
+      texto: `Desde julho de 2025 a isenção do Art. 53.º pode acompanhar-te aos outros Estados-Membros: vendes sem liquidar IVA local, desde que o teu volume de negócios em TODA a União não passe de ${eur(
+        ISENCAO_IVA_REGIME.limiarUniao.value,
+      )} por ano. Não é automático — pede à AT o número de identificação com o sufixo «${
+        ISENCAO_IVA_REGIME.sufixoIdentificacao.value
+      }» antes de faturar. Sem ele, aplicam-se as regras normais do país de destino. Atenção a uma coisa que não muda: continuas sem deduzir o IVA das tuas compras.`,
+      fonte: ISENCAO_IVA_REGIME.limiarUniao.legalBasis,
+      fonteUrl:
+        "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/artigo-53-o-do-civa.aspx",
     });
   }
 
