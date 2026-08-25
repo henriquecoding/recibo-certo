@@ -22,6 +22,9 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
     itens: [
       "Carregar em «Preço» no percurso principal abre agora uma homepage própria, com URL partilhável, em vez de te levar direto para a calculadora completa. A ferramenta continua na sua página e abre quando quiseres calcular com os teus números.",
       "O primeiro ecrã mostra o preço a ser construído em quatro passos: reunir os custos, apurar a base, aplicar markup e IVA, e fixar o preço. Podes pausar, repetir ou saltar para qualquer passo.",
+      "A soma passa a ver-se a acontecer. Cada custo sai da sua linha como uma peça com o valor escrito, viaja até à base e, no instante em que aterra, a base conta: 14,80 €, depois 24,40 €, depois 28,90 €. Nenhum número muda sozinho — muda porque alguma coisa lhe chegou.",
+      "O markup, a Segurança Social e o IVA saem debaixo da base como três peças diferentes, com um silêncio entre elas, porque são três tipos de dinheiro diferentes: o que fica, o que sai da fatura e o que só passa por ti a caminho do Estado.",
+      "O marcador da régua cai primeiro no preço mínimo e só depois viaja até ao recomendado — são dois factos, e uma só trajetória contava-os como um. A composição enche-se da esquerda com o lucro em último, porque é a conclusão.",
       "Materiais, trabalho, custos fixos e markup são valores que podes arrastar com o rato ou o dedo — ou alterar com as setas do teclado. Toda a conta responde: a base, o IVA, o lucro, a margem, a régua e a barra da composição.",
       "Deixámos de chamar «margem» ao markup. São coisas diferentes e a diferença é grande: 40,4% de markup sobre os custos são 28,8% de margem sobre o preço líquido. A página mostra os dois números, cada um com o seu nome.",
       "A mesma peça, operada de outra forma, precisa de outro preço. Podes trocar entre sociedade e recibos verdes e ver porquê: a Segurança Social e o IRS do simplificado saem de cada fatura, por isso o mesmo lucro por unidade exige cobrar mais.",
