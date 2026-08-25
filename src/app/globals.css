@@ -1413,6 +1413,62 @@ html.dark .dark\:placeholder-stone-50::placeholder {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   CALENDÁRIO FISCAL — colunas pela largura do CONTENTOR, não do ecrã
+   ---------------------------------------------------------------------
+   O calendário do simulador vive numa coluna que ENCOLHE quando o ecrã
+   cresce: 278 px no telemóvel, 654 px no tablet e 391 px no desktop, onde
+   o layout passa a duas colunas. Com `sm:`/`lg:` do Tailwind — que medem o
+   ecrã e não a coluna — a grelha ia a seis colunas de 59 px justamente no
+   ecrã maior, e era isso que cortava o emblema «Agora» e os valores dentro
+   dos mosaicos. Nenhuma afinação de `text-[]` resolve: o problema é a
+   pergunta que os `breakpoints` fazem.
+
+   `@container` pergunta a coisa certa. Os limiares estão escolhidos para
+   que o mosaico mais estreito nunca desça abaixo de ~85 px, que é o que um
+   valor como «11 500 €» precisa a 11 px com `tabular-nums`.
+
+   Fora de `@layer`: são regras de componente com uma só classe, e dentro
+   de `utilities` o Tailwind purgava-as por não haver classe correspondente
+   no scan.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.cal-fiscal {
+  container-type: inline-size;
+  container-name: calfiscal;
+}
+
+/* Base (e travão para quem não tiver `@container`): nunca parte nada. */
+.cal-grelha {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cal-resumo {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@container calfiscal (min-width: 340px) {
+  .cal-grelha {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@container calfiscal (min-width: 360px) {
+  .cal-resumo {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container calfiscal (min-width: 620px) {
+  .cal-grelha {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .cal-resumo {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    IMPRESSÃO — a saída em papel e em PDF
    ---------------------------------------------------------------------
    A calculadora de preço ganhou «imprimir ou guardar em PDF», que é a

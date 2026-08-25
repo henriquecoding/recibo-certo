@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.122.4",
+    data: "2026-08-25",
+    titulo: "O calendário fiscal passa a dizer as datas certas — e o acerto de IRS não é em junho",
+    itens: [
+      "O calendário do simulador marcava o acerto de IRS em junho. Junho é o fim do prazo para ENTREGAR a declaração; o dinheiro só se move até 31 de agosto (Art. 97.º do CIRS). A quem tem imposto a pagar, isso pedia a reserva com dois meses de antecedência a mais; a quem tem reembolso, prometia-o para um mês em que ele não chega. O acerto passa a estar em agosto, dos dois lados — o reembolso é restituído no mesmo prazo, por remissão do Art. 96.º.",
+      "O IVA do 2.º trimestre estava marcado em agosto. Entrega-se em setembro: o Art. 41.º, n.º 10 do CIVA prolonga esse prazo, e só esse. Quem reservasse para agosto ficava com o mês errado assinalado no único sítio onde vai confirmar.",
+      "Todos os prazos diziam «até dia 20», fosse qual fosse a obrigação. Agora cada uma mostra a sua data real: o IVA paga-se ao dia 25 (declarar e pagar são dois prazos diferentes), a declaração trimestral à Segurança Social vai ao último dia do mês, e qualquer data que calhe a um fim de semana ou feriado salta para o dia útil seguinte. Em 2026 isso muda três marcos: os pagamentos por conta são a 21 de setembro e a 21 de dezembro, e a declaração do 4.º trimestre à Segurança Social é a 2 de fevereiro.",
+      "Havia meses marcados como «Sem obrigações» que tinham obrigações. A declaração trimestral à Segurança Social entrega-se mesmo durante a isenção do primeiro ano de atividade — declaras, não pagas — e julho tem duas coisas a fazer. Quem estava isento via um ano inteiro em branco.",
+      "Cada mês passa a abrir. Toca num mês e vês, uma a uma, as obrigações desse mês: a data exata, o que é, quanto sai ou entra, a base legal e a ligação para a página oficial onde confirmar. Nos mosaicos, o círculo cheio marca dinheiro a mexer e o contorno marca só declaração — um ponto vermelho em junho é a entrega da Modelo 3, não imposto a sair.",
+      "O texto deixou de sair fora dos cartões. No telemóvel, os valores dos meses eram cortados até desaparecerem e o emblema «Agora» saía pela borda; no computador era pior, porque a coluna onde o calendário vive é mais estreita no ecrã grande do que no tablet — e o calendário continuava a abrir mais colunas à medida que o ecrã crescia. As colunas passam a medir o espaço que têm de facto.",
+      "O total do ano passa a mostrar também o custo líquido: o que sai, menos o reembolso que entra.",
+      "A barra do ano contava meses inteiros e dizia «67% do ano» logo a 1 de agosto. Passa a contar dias.",
+      "O calendário navega-se pelo teclado — setas entre meses, Início e Fim para janeiro e dezembro — e anuncia a cada mês o que lá está, para quem usa leitor de ecrã.",
+    ],
+  },
+  {
     version: "2.122.3",
     data: "2026-08-25",
     titulo: "Um resultado aberto deixa de desaparecer quando chegam os dados de mercado",

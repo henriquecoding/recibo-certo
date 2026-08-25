@@ -71,6 +71,14 @@ export const FONTES_PRAZOS = {
     label: "AT — Artigo 60.º do CIRS",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs60.aspx",
   },
+  cirs97: {
+    label: "AT — Artigo 97.º do CIRS (pagamento do imposto)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs97.aspx",
+  },
+  cirs96: {
+    label: "AT — Artigo 96.º do CIRS (restituição oficiosa)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs96.aspx",
+  },
   segSocialTI: {
     label: "Segurança Social — Trabalhadores Independentes",
     url: "https://www.seg-social.pt/ptss/pssd/menu/trabalho/remuneracoes-contribuicoes/trabalhadores-independentes",
@@ -320,6 +328,23 @@ export function gerarPrazos(ano: number): Prazo[] {
     fonte: "cirs60",
   }, ano, 6, 30));
 
+  // ── IRS — acerto da nota de liquidação ──────────────────────────────
+  // A maior saída do ano para quem factura sem retenção, e a que faltava
+  // aqui: entregar a declaração em junho não é pagar. Quem entrega dentro do
+  // prazo é notificado da liquidação até 31 de julho (Art. 77.º) e paga até
+  // 31 de agosto (Art. 97.º, n.º 1, al. a)). O reembolso corre no mesmo
+  // prazo, por remissão do Art. 96.º — é por isso um só marco no calendário,
+  // com dois sentidos possíveis.
+  prazos.push(prazo({
+    id: `irs-pag-${ano}`,
+    titulo: "Acerto de IRS da nota de liquidação",
+    descricao: "Data-limite do acerto do ano anterior: paga-se aqui o imposto que a liquidação apurar — e é também até aqui que é restituído o reembolso, quando o apuramento é a favor (Art. 96.º).",
+    categoria: "irs",
+    natureza: "pagamento",
+    base: "Art. 97.º, n.º 1, al. a) do CIRS",
+    fonte: "cirs97",
+  }, ano, 8, 31));
+
   return prazos.sort((a, b) => a.data.localeCompare(b.data) || a.id.localeCompare(b.id));
 }
 
@@ -387,6 +412,16 @@ function avaliar(p: Prazo, perfil: PerfilPrazos): { aplicabilidade: Aplicabilida
     return perfil.pagamentosPorConta
       ? { aplicabilidade: "aplicavel", motivo: "Tens pagamentos por conta liquidados pela AT." }
       : { aplicabilidade: "nao-aplicavel", motivo: "A AT não te liquidou pagamentos por conta." };
+  }
+
+  // O acerto aplica-se a toda a gente: quem tem imposto a pagar tem aqui a
+  // data-limite, e quem tem reembolso tem aqui a data até à qual o recebe.
+  // Dizer "não se aplica" a quem vai receber seria esconder-lhe o prazo.
+  if (p.id.startsWith("irs-pag-")) {
+    return {
+      aplicabilidade: "aplicavel",
+      motivo: "Data-limite do acerto do ano anterior — a pagar se a liquidação apurar imposto, a receber se apurar reembolso.",
+    };
   }
 
   // A declaração anual de IRS aplica-se a toda a gente com rendimentos.
