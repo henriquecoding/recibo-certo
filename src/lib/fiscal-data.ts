@@ -221,6 +221,15 @@ export const SOURCES = {
     label: "Art. 101.º-B CIRS — Dispensa de retenção na fonte · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs101b.aspx",
   },
+  art102cirs: {
+    label: "Art. 102.º CIRS — Pagamentos por conta · Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs102.aspx",
+  },
+  art163CodigoContributivo: {
+    label:
+      "Art. 163.º do Código dos Regimes Contributivos — Base de incidência contributiva dos trabalhadores independentes · O Informador Fiscal (articulado) e OCC",
+    url: "https://informador.pt/legislacao/lexit/codigos/direito-fiscal/codigo-dos-regimes-contributivos-do-sistema-previdencial-de-seguranca-social/parte-ii-regimes-contributivos-do-sistema-previdencial/titulo-ii-regime-dos-trabalhadores-independentes/capitulo-iii-relacao-juridica-contributiva/seccao-ii-bases-de-incidencia-contributiva/artigo-163-o-base-de-incidencia-contributiva-dos-trabalhadores-independentes/",
+  },
   art12bCirs: {
     label: "Art. 12.º-B CIRS — IRS Jovem · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/cirs_rep/Pages/irs12b.aspx",
@@ -890,6 +899,59 @@ export const DISPENSA_RETENCAO_LIMITE = sv(
 );
 
 // ═══════════════════════════════════════════════════════════════════════
+//  PAGAMENTOS POR CONTA DE IRS (Art. 102.º CIRS) — categoria B
+//
+//  A retenção na fonte não é a única entrega antecipada de IRS. Quem tem
+//  rendimentos da categoria B faz ainda TRÊS pagamentos por conta, em julho,
+//  setembro e dezembro, calculados a partir da coleta do PENÚLTIMO ano. Para
+//  quem factura sem retenção (vendas, alojamento local, TVDE, plataformas
+//  estrangeiras) é a maior saída de tesouraria do ano — e a que apanha mais
+//  gente de surpresa, porque não sai de nenhum recibo.
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * Percentagem aplicada à fórmula do Art. 102.º, n.º 1.
+ *
+ * Desceu de 76,5% para 65% pela Lei n.º 45-A/2024 — usar o valor antigo
+ * sobrestima cada prestação em cerca de 18%.
+ */
+export const PAGAMENTOS_CONTA_IRS = {
+  taxa: sv(
+    0.65,
+    "Art. 102.º, n.º 1 CIRS — a totalidade dos pagamentos por conta é igual a 65% do montante da fórmula (C − R) × RLB / RLT",
+    "art102cirs",
+    DATA_LAST_REVIEW,
+    "Percentagem reduzida de 76,5% para 65% pela Lei n.º 45-A/2024."
+  ),
+  numero: sv(3, "Art. 102.º, n.º 1 CIRS — três prestações iguais", "art102cirs", DATA_LAST_REVIEW),
+  /** Meses de vencimento (1 = janeiro). */
+  meses: sv(
+    [7, 9, 12],
+    "Art. 102.º, n.º 1 CIRS — até ao dia 20 de julho, setembro e dezembro",
+    "art102cirs",
+    DATA_LAST_REVIEW
+  ),
+  dia: sv(20, "Art. 102.º, n.º 1 CIRS — até ao dia 20", "art102cirs", DATA_LAST_REVIEW),
+  /** Abaixo deste valor a prestação não é exigível. */
+  minimoPorPrestacao: sv(
+    50,
+    "Art. 102.º, n.º 1 CIRS — não sendo exigível se for inferior a 50 €",
+    "art102cirs",
+    DATA_LAST_REVIEW
+  ),
+  /**
+   * Margem de erro tolerada na redução/cessação voluntária (n.º 4): acima
+   * dela há juros compensatórios.
+   */
+  margemErro: sv(
+    0.2,
+    "Art. 102.º, n.º 4 CIRS — juros compensatórios se a falta exceder 20% do valor que normalmente seria entregue",
+    "art102cirs",
+    DATA_LAST_REVIEW
+  ),
+} as const;
+
+// ═══════════════════════════════════════════════════════════════════════
 //  IVA — isenção (Art. 53.º) e taxas por região
 // ═══════════════════════════════════════════════════════════════════════
 export const IVA_ISENCAO_LIMITE = sv(
@@ -1039,6 +1101,27 @@ export const SS_BASE_MAX_MENSAL = sv(
   "Limite de 12 × IAS ao rendimento relevante mensal médio",
   "segSocialGov",
   TODAY
+);
+
+/**
+ * Ajuste voluntário do rendimento relevante na declaração trimestral.
+ *
+ * Art. 163.º do Código dos Regimes Contributivos: ao entregar a declaração
+ * trimestral, o trabalhador independente pode fixar um rendimento relevante
+ * **superior ou inferior** ao apurado, até ao limite de **25%**, em intervalos
+ * de **5%**. É a única alavanca que a pessoa tem sobre a própria contribuição —
+ * paga menos agora e desconta menos para a reforma, ou o contrário.
+ *
+ * Não é neutro no IRS: as contribuições efetivamente pagas entram na regra dos
+ * 15% do Art. 31.º n.º 13 al. a) do CIRS, e por isso descer a base sobe (um
+ * pouco) o rendimento tributável.
+ */
+export const SS_AJUSTE_BASE = sv(
+  { limite: 0.25, passo: 0.05 },
+  "Art. 163.º do Código dos Regimes Contributivos — opção por rendimento relevante superior ou inferior ao apurado, até 25%, em intervalos de 5%",
+  "art163CodigoContributivo",
+  DATA_LAST_REVIEW,
+  "A opção é feita no ato da declaração trimestral e vigora no trimestre seguinte. O teto de 12 × IAS e o mínimo de 20 €/mês continuam a aplicar-se depois do ajuste."
 );
 
 export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
@@ -7739,6 +7822,39 @@ export function assertFiscalDataIntegrity(): void {
     || Math.abs(SS_MOE.entidade.value - SS_DEPENDENTE.entidade.value) > EPS) {
     erros.push("SS de membros de órgãos estatutários: as taxas divergiram das do regime geral sem justificação registada.");
   }
+  // ── Pagamentos por conta de IRS (Art. 102.º) ──
+  if (!isRate(PAGAMENTOS_CONTA_IRS.taxa.value)) {
+    erros.push("Pagamentos por conta de IRS: taxa fora do intervalo [0,1].");
+  }
+  if (PAGAMENTOS_CONTA_IRS.meses.value.length !== PAGAMENTOS_CONTA_IRS.numero.value) {
+    erros.push("Pagamentos por conta de IRS: o número de meses não coincide com o número de prestações.");
+  }
+  if (PAGAMENTOS_CONTA_IRS.meses.value.some((m) => m < 1 || m > 12)) {
+    erros.push("Pagamentos por conta de IRS: mês de vencimento fora de 1–12.");
+  }
+  if (PAGAMENTOS_CONTA_IRS.dia.value < 1 || PAGAMENTOS_CONTA_IRS.dia.value > 31) {
+    erros.push("Pagamentos por conta de IRS: dia de vencimento fora de 1–31.");
+  }
+  if (!(PAGAMENTOS_CONTA_IRS.minimoPorPrestacao.value > 0)) {
+    erros.push("Pagamentos por conta de IRS: o mínimo por prestação tem de ser positivo.");
+  }
+  if (!isRate(PAGAMENTOS_CONTA_IRS.margemErro.value)) {
+    erros.push("Pagamentos por conta de IRS: margem de erro fora do intervalo [0,1].");
+  }
+
+  // ── Ajuste voluntário da base de incidência da SS (Art. 163.º CRC) ──
+  {
+    const a = SS_AJUSTE_BASE.value;
+    if (!isRate(a.limite) || !isRate(a.passo)) {
+      erros.push("Ajuste da base de SS: limite ou passo fora do intervalo [0,1].");
+    }
+    if (!(a.passo > 0) || !(a.limite > 0)) {
+      erros.push("Ajuste da base de SS: limite e passo têm de ser positivos.");
+    } else if (Math.abs((a.limite / a.passo) - Math.round(a.limite / a.passo)) > EPS) {
+      erros.push("Ajuste da base de SS: o limite tem de ser um múltiplo inteiro do passo.");
+    }
+  }
+
   if (!(PAGAMENTOS_CONTA_IRC.taxaAte500k.value < PAGAMENTOS_CONTA_IRC.taxaAcima500k.value)) {
     erros.push("Pagamentos por conta de IRC: a taxa até 500 000 € tem de ser inferior à taxa acima.");
   }

@@ -107,6 +107,68 @@ const inputClass = "w-full rounded-xl border border-stone-200 bg-white px-3.5 py
 // controlos segmentados chegam a ter 3–5 colunas dentro da mesma linha.
 const segmentClass = (active: boolean) => `flex min-h-[36px] items-center justify-center rounded-xl px-2 py-2 text-center text-xs font-semibold leading-tight transition focus:outline-none focus:ring-2 focus:ring-brand/20 sm:px-3 ${active ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light" : "text-stone-500 hover:text-stone-700 dark:text-stone-400 dark:hover:text-stone-200"}`;
 
+/**
+ * Controlo segmentado com opções longas.
+ *
+ * ┌────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE ISTO NÃO É SÓ UM `grid` COM `sm:grid-cols-N`                 │
+ * │                                                                    │
+ * │ Era o que estava: `grid gap-1 … sm:grid-cols-3`. A partir de `sm`   │
+ * │ ficava um segmentado; ABAIXO de `sm` — ou seja, no telemóvel, que   │
+ * │ é a base — colapsava numa única coluna e as três opções ficavam     │
+ * │ empilhadas, centradas, sem contorno nenhum, dentro do mesmo         │
+ * │ retângulo cinzento. Medido a 360px: `grid-template-columns: 270px`  │
+ * │ e 124px de altura. Deixava de se ler como um controlo e passava a   │
+ * │ parecer texto solto num bloco cinzento — foi um dos sítios em que   │
+ * │ o simulador «parecia partido» no telemóvel.                         │
+ * │                                                                    │
+ * │ Empilhado, cada opção passa a ser uma LINHA com identidade: rótulo  │
+ * │ à esquerda, marca de selecionado à direita, superfície própria      │
+ * │ quando está ativa. A partir de `sm` volta ao segmentado horizontal. │
+ * └────────────────────────────────────────────────────────────────────┘
+ *
+ * Mantém `<button aria-pressed>` — e portanto o nome acessível de cada opção,
+ * de que o `vencimento:e2e` depende para carregar em cada uma pelo nome.
+ */
+function Segmentado<T extends string>({ opcoes, valor, onChange, colunas = 2, rotuladoPor }: {
+  opcoes: readonly (readonly [T, string])[];
+  valor: T;
+  onChange: (valor: T) => void;
+  /** Colunas a partir de `sm`. Abaixo disso empilha sempre. */
+  colunas?: 2 | 3;
+  rotuladoPor?: string;
+}) {
+  return (
+    <div
+      role="group"
+      aria-labelledby={rotuladoPor}
+      className={`grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 ${colunas === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+    >
+      {opcoes.map(([value, label]) => {
+        const ativo = valor === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            aria-pressed={ativo}
+            onClick={() => onChange(value)}
+            className={`flex min-h-[40px] items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-semibold leading-tight transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40 sm:justify-center sm:px-3 sm:text-center ${
+              ativo
+                ? "bg-white text-brand shadow-sm dark:bg-stone-700 dark:text-brand-light"
+                : "text-stone-500 hover:bg-white/60 hover:text-stone-700 dark:text-stone-400 dark:hover:bg-stone-700/40 dark:hover:text-stone-200"
+            }`}
+          >
+            <span className="min-w-0">{label}</span>
+            {/* Só no empilhado: em coluna, a superfície branca já diz qual é a
+                escolhida; numa linha larga, não diz. */}
+            <Check size={13} className={`flex-none sm:hidden ${ativo ? "opacity-100" : "opacity-0"}`} aria-hidden />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function parseNumber(value: string): number {
   return Math.max(0, parseNumericDraft(value) ?? 0);
 }
@@ -194,6 +256,68 @@ function Stepper({ id, value, min, max, onChange, decreaseLabel, increaseLabel }
         className="h-9 w-12 rounded-lg border border-stone-200 bg-white text-center text-sm font-bold tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/15 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
       />
       <button type="button" aria-label={increaseLabel} onClick={() => onChange(clamp(value + 1))} disabled={value >= max} className={button}>+</button>
+    </div>
+  );
+}
+
+/**
+ * Um subgrupo dentro de um passo.
+ *
+ * O «Passo 01» era uma lista corrida de nove controlos sem hierarquia
+ * nenhuma: mês, horas, situação familiar, dependentes, região, entidade,
+ * incapacidade, duodécimos, IRS Jovem e taxa opcional, todos ao mesmo nível.
+ * Num ecrã largo lê-se; num telemóvel, onde tudo empilha, são nove blocos
+ * iguais em fila e a pessoa perde-se a meio. Estes títulos dizem o que a
+ * secção seguinte pergunta — e, sobretudo, separam o que a pessoa É do que
+ * a pessoa DECLAROU à entidade empregadora, que é a distinção que mais erros
+ * causa neste formulário.
+ */
+function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400">{titulo}</p>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * Uma opção «sim/não» com rótulo, explicação e ajuda — a forma que os cartões
+ * de caixa de verificação deste passo já tinham, agora numa só peça para que
+ * não voltem a divergir (dois deles tinham a descrição a `text-[10px]` e os
+ * outros a `[11px]`, e só dois é que tinham ícone).
+ *
+ * O `InfoTip` fica FORA do `<label>` de propósito: um botão dentro de um
+ * rótulo é interativo dentro de interativo — carregar na ajuda alternava a
+ * caixa de verificação.
+ */
+function Opcao({ checked, onChange, titulo, descricao, icone, tip, disabled = false, ativa, children }: {
+  checked: boolean;
+  onChange: (valor: boolean) => void;
+  titulo: string;
+  descricao?: React.ReactNode;
+  icone?: React.ReactNode;
+  tip?: React.ReactNode;
+  disabled?: boolean;
+  /** Por omissão, «ativa» é estar marcada. A taxa opcional distingue as duas. */
+  ativa?: boolean;
+  children?: React.ReactNode;
+}) {
+  const destacada = ativa ?? checked;
+  return (
+    <div className={`rounded-2xl border p-3.5 transition ${destacada ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
+      <div className="flex items-start gap-2.5">
+        <label className={`flex min-w-0 flex-1 items-start gap-2.5 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+          <input type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand disabled:opacity-40" />
+          {icone}
+          <span className="min-w-0">
+            <span className="block text-xs font-semibold leading-snug text-stone-700 dark:text-stone-200">{titulo}</span>
+            {descricao && <span className="mt-1 block text-[11px] leading-relaxed text-stone-400">{descricao}</span>}
+          </span>
+        </label>
+        {tip && <span className="mt-0.5 flex-none">{tip}</span>}
+      </div>
+      {children}
     </div>
   );
 }
@@ -832,112 +956,158 @@ export function MotorReciboVencimento() {
           <section className="rounded-3xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6">
             <SectionHeader step="Passo 01" icon={<LayoutGrid size={17} />} title="Contexto do recibo" hint="Só pedimos dados que mudam a retenção ou o cálculo das rubricas." />
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Mês <InfoTip label="Para que serve o mês">Identifica o período do recibo, do cenário guardado e das exportações. As tabelas de retenção de 2026 são iguais em todos os meses do ano, por isso mudar o mês não altera o IRS nem a Segurança Social.</InfoTip></span><span className="relative block"><Calendar size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><select value={month} onChange={(event) => setMonth(Number(event.target.value))} className={`${inputClass} pl-9`}>{MONTHS.map((label, index) => <option key={label} value={index}>{label} 2026</option>)}</select></span></label>
-              <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input id="weekly-hours" type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} aria-invalid={weeklyHoursInvalid} aria-describedby={weeklyHoursInvalid ? "weekly-hours-error" : undefined} className={`${inputClass} pr-12 ${weeklyHoursInvalid ? "border-alert-border focus:border-alert-border focus:ring-alert-border/20" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span>{weeklyHoursInvalid && <span id="weekly-hours-error" className="mt-1.5 block text-[11px] leading-relaxed text-alert-text">Indica entre {WEEKLY_HOURS_RANGE.min} e {WEEKLY_HOURS_RANGE.max} horas — é a base do valor da hora extra e do desconto por falta.</span>}</label>
-            </div>
-
-            <div className="mt-4">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Situação familiar <InfoTip label="Despacho 233-A/2026, n.ºs 8 e 9">As tabelas de «casado» aplicam-se também à união de facto enquadrável no Art. 14.º do CIRS. A tabela de «único titular» só é aplicável se o outro cônjuge ou unido de facto não auferir rendimentos englobáveis ou se um dos dois tiver pelo menos {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento englobado do agregado.</InfoTip></span>
-              <div className="grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 sm:grid-cols-3">{FAMILY_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={maritalStatus === value} onClick={() => setMaritalStatus(value)} className={segmentClass(maritalStatus === value)}>{label}</button>)}</div>
-              {maritalStatus === "casadoUnico" && (
-                <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-400"><Warning size={12} className="mt-0.5 flex-none" /> Confirma a condição do n.º 9: só é «único titular» se o outro titular não tiver rendimentos englobáveis, ou se um dos dois concentrar {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento do agregado. Caso contrário, a tabela correta é a de dois titulares.</p>
-              )}
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="dependants-count" className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Dependentes <InfoTip label="Art. 13.º CIRS">Contam os filhos, adotados e enteados menores; os maiores até aos 25 anos que não aufiram anualmente mais do que a retribuição mínima mensal garantida; e os inaptos para o trabalho e para angariar meios de subsistência. Em guarda partilhada, cada dependente conta para o agregado conforme a residência acordada e comunicada à AT.</InfoTip></label>
-                <Stepper id="dependants-count" value={dependants} min={0} max={20} decreaseLabel="Menos dependentes" increaseLabel="Mais dependentes" onChange={(value) => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} />
-              </div>
-              <div><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Região fiscal</span><div className="grid grid-cols-3 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{REGION_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={region === value} onClick={() => setRegion(value)} className={segmentClass(region === value)}>{label}</button>)}</div></div>
-            </div>
-
-            <div className="mt-4">
-              <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Entidade empregadora <InfoTip label="Taxa contributiva da entidade">As instituições particulares de solidariedade social e demais entidades sem fins lucrativos contribuem à taxa de {pctExato(SS_DEPENDENTE.ipss.value)}, e não aos {pctExato(SS_DEPENDENTE.entidade.value)} do regime geral. Só muda o custo da EMPRESA — o teu desconto de {pctExato(SS_DEPENDENTE.trabalhador.value)} e o IRS são os mesmos.</InfoTip></span>
-              <div className="grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 sm:grid-cols-2">{EMPLOYER_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={employerRegime === value} onClick={() => setEmployerRegime(value)} className={segmentClass(employerRegime === value)}>{label}</button>)}</div>
-            </div>
-
-            {dependants > 0 && (
-              <div className="mt-3 rounded-2xl border border-stone-200 bg-white px-4 py-3 dark:border-stone-700 dark:bg-stone-900">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-2">
-                    <Heart size={15} className="flex-none text-brand" />
-                    <label htmlFor="dependants-disability" className="text-xs font-medium text-stone-600 dark:text-stone-300">Com incapacidade ≥ 60%</label>
-                    <InfoTip label="Despacho 233-A/2026, n.º 5 al. a)">
-                      Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) acresce {fmt(maritalStatus === "casadoDois" ? RETENCAO_DEP_DEFICIENTE.value.casadoDois : RETENCAO_DEP_DEFICIENTE.value.naoCasadoOuUnico)} à parcela a abater da retenção — ou seja, reduz o IRS retido TODOS OS MESES. No acerto anual acresce ainda {fmt(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} de dedução à coleta por dependente (2,5 × IAS, Art. 87.º CIRS).
-                    </InfoTip>
-                  </div>
-                  <Stepper id="dependants-disability" value={dependantsWithDisability} min={0} max={dependants} decreaseLabel="Menos dependentes com incapacidade" increaseLabel="Mais dependentes com incapacidade" onChange={setDependantsWithDisability} />
+            <div className="space-y-5">
+              {/* ── O que este recibo é ─────────────────────────────── */}
+              <Grupo titulo="O recibo">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block"><span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Mês <InfoTip label="Para que serve o mês">Identifica o período do recibo, do cenário guardado e das exportações. As tabelas de retenção de 2026 são iguais em todos os meses do ano, por isso mudar o mês não altera o IRS nem a Segurança Social.</InfoTip></span><span className="relative block"><Calendar size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" /><select value={month} onChange={(event) => setMonth(Number(event.target.value))} className={`${inputClass} pl-9`}>{MONTHS.map((label, index) => <option key={label} value={index}>{label} 2026</option>)}</select></span></label>
+                  <label className="block"><span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Horas por semana</span><span className="relative block"><input id="weekly-hours" type="text" inputMode="decimal" value={weeklyHours} onChange={(event) => setWeeklyHours(sanitizeNumericDraft(event.target.value))} aria-invalid={weeklyHoursInvalid} aria-describedby={weeklyHoursInvalid ? "weekly-hours-error" : undefined} className={`${inputClass} pr-12 ${weeklyHoursInvalid ? "border-alert-border focus:border-alert-border focus:ring-alert-border/20" : ""}`} /><span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">horas</span></span>{weeklyHoursInvalid && <span id="weekly-hours-error" className="mt-1.5 block text-[11px] leading-relaxed text-alert-text">Indica entre {WEEKLY_HOURS_RANGE.min} e {WEEKLY_HOURS_RANGE.max} horas — é a base do valor da hora extra e do desconto por falta.</span>}</label>
                 </div>
-                {dependantsWithDisability > 0 && (
-                  <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
-                    <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Fator comunicado à empresa <InfoTip label="Despacho 233-A/2026, n.ºs 6 e 7">A parcela por dependente com incapacidade pode ser multiplicada até {maxDisabilityFactor}× nesta situação familiar. O fator não é automático: tem de ser comunicado à entidade que paga o rendimento antes do pagamento. Deixa em 1× se não o comunicaste.</InfoTip></span>
-                    <div className={`grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 ${maxDisabilityFactor > 3 ? "grid-cols-6" : "grid-cols-3"}`}>
-                      {Array.from({ length: maxDisabilityFactor }, (_, index) => index + 1).map((value) => (
-                        <button key={value} type="button" aria-pressed={effectiveFactor === value} onClick={() => setDisabilityFactor(value)} className={segmentClass(effectiveFactor === value)}>{value}×</button>
-                      ))}
-                    </div>
+              </Grupo>
+
+              {/* ── Quem recebe ─────────────────────────────────────── */}
+              <Grupo titulo="Quem recebe">
+                <div>
+                  <span id="rot-situacao-familiar" className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Situação familiar <InfoTip label="Despacho 233-A/2026, n.ºs 8 e 9">As tabelas de «casado» aplicam-se também à união de facto enquadrável no Art. 14.º do CIRS. A tabela de «único titular» só é aplicável se o outro cônjuge ou unido de facto não auferir rendimentos englobáveis ou se um dos dois tiver pelo menos {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento englobado do agregado.</InfoTip></span>
+                  <Segmentado rotuladoPor="rot-situacao-familiar" opcoes={FAMILY_OPTIONS} valor={maritalStatus} onChange={setMaritalStatus} colunas={3} />
+                  {maritalStatus === "casadoUnico" && (
+                    <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-stone-400"><Warning size={12} className="mt-0.5 flex-none" /> Confirma a condição do n.º 9: só é «único titular» se o outro titular não tiver rendimentos englobáveis, ou se um dos dois concentrar {pct(RETENCAO_UNICO_TITULAR_FRACAO.value)} do rendimento do agregado. Caso contrário, a tabela correta é a de dois titulares.</p>
+                  )}
+                </div>
+
+                {/* Os dependentes e a incapacidade deles são a mesma pergunta em
+                    dois graus de detalhe — passam a viver no mesmo cartão, em
+                    vez de dois blocos com contorno próprio um a seguir ao outro. */}
+                <div className="rounded-2xl border border-stone-200 dark:border-stone-700">
+                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 px-3.5 py-3 sm:px-4">
+                    <label htmlFor="dependants-count" className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-stone-600 dark:text-stone-300">Dependentes <InfoTip label="Art. 13.º CIRS">Contam os filhos, adotados e enteados menores; os maiores até aos 25 anos que não aufiram anualmente mais do que a retribuição mínima mensal garantida; e os inaptos para o trabalho e para angariar meios de subsistência. Em guarda partilhada, cada dependente conta para o agregado conforme a residência acordada e comunicada à AT.</InfoTip></label>
+                    <Stepper id="dependants-count" value={dependants} min={0} max={20} decreaseLabel="Menos dependentes" increaseLabel="Mais dependentes" onChange={(value) => { setDependants(value); if (value < dependantsWithDisability) setDependantsWithDisability(value); }} />
                   </div>
+                  {dependants > 0 && (
+                    <div className="border-t border-stone-100 px-3.5 py-3 dark:border-stone-800 sm:px-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Heart size={15} className="flex-none text-brand" />
+                          <label htmlFor="dependants-disability" className="text-xs font-medium text-stone-600 dark:text-stone-300">Com incapacidade ≥ 60%</label>
+                          <InfoTip label="Despacho 233-A/2026, n.º 5 al. a)">
+                            Cada dependente com grau de incapacidade permanente ≥ 60% (atestado multiúso) acresce {fmt(maritalStatus === "casadoDois" ? RETENCAO_DEP_DEFICIENTE.value.casadoDois : RETENCAO_DEP_DEFICIENTE.value.naoCasadoOuUnico)} à parcela a abater da retenção — ou seja, reduz o IRS retido TODOS OS MESES. No acerto anual acresce ainda {fmt(DEDUCAO_DEPENDENTE_DEFICIENCIA.value)} de dedução à coleta por dependente (2,5 × IAS, Art. 87.º CIRS).
+                          </InfoTip>
+                        </div>
+                        <Stepper id="dependants-disability" value={dependantsWithDisability} min={0} max={dependants} decreaseLabel="Menos dependentes com incapacidade" increaseLabel="Mais dependentes com incapacidade" onChange={setDependantsWithDisability} />
+                      </div>
+                      {dependantsWithDisability > 0 && (
+                        <div className="mt-3 border-t border-stone-100 pt-3 dark:border-stone-800">
+                          <span className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Fator comunicado à empresa <InfoTip label="Despacho 233-A/2026, n.ºs 6 e 7">A parcela por dependente com incapacidade pode ser multiplicada até {maxDisabilityFactor}× nesta situação familiar. O fator não é automático: tem de ser comunicado à entidade que paga o rendimento antes do pagamento. Deixa em 1× se não o comunicaste.</InfoTip></span>
+                          {/* Seis colunas de «N×» cabem a 360px porque o rótulo tem
+                              dois caracteres; é o único segmentado desta secção que
+                              não precisa de empilhar. */}
+                          <div className={`grid gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800 ${maxDisabilityFactor > 3 ? "grid-cols-6" : "grid-cols-3"}`}>
+                            {Array.from({ length: maxDisabilityFactor }, (_, index) => index + 1).map((value) => (
+                              <button key={value} type="button" aria-pressed={effectiveFactor === value} onClick={() => setDisabilityFactor(value)} className={segmentClass(effectiveFactor === value)}>{value}×</button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {maritalStatus === "casadoUnico" && (
+                  <Opcao
+                    checked={spouseDisability}
+                    onChange={setSpouseDisability}
+                    titulo="Cônjuge com incapacidade ≥ 60% e sem rendimentos"
+                    descricao={<>Acresce {fmt(RETENCAO_CONJUGE_DEFICIENTE.value)} à parcela a abater todos os meses (Despacho 233-A/2026, n.º 5 al. b). Só se aplica se o cônjuge ou unido de facto não auferir rendimentos das categorias A ou H.</>}
+                  />
                 )}
-              </div>
-            )}
 
-            {maritalStatus === "casadoUnico" && (
-              <label className={`mt-3 flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition ${spouseDisability ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
-                <input type="checkbox" checked={spouseDisability} onChange={(event) => setSpouseDisability(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand" />
-                <span>
-                  <span className="block text-xs font-semibold text-stone-700 dark:text-stone-200">Cônjuge com incapacidade ≥ 60% e sem rendimentos</span>
-                  <span className="mt-0.5 block text-[10px] leading-relaxed text-stone-400">Acresce {fmt(RETENCAO_CONJUGE_DEFICIENTE.value)} à parcela a abater todos os meses (Despacho 233-A/2026, n.º 5 al. b). Só se aplica se o cônjuge ou unido de facto não auferir rendimentos das categorias A ou H.</span>
-                </span>
-              </label>
-            )}
+                <Opcao
+                  checked={disability}
+                  onChange={setDisability}
+                  titulo="Incapacidade ≥ 60%"
+                  descricao="Seleciona as tabelas próprias do titular."
+                />
+              </Grupo>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition ${disability ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}><input type="checkbox" checked={disability} onChange={(event) => setDisability(event.target.checked)} className="mt-0.5 h-4 w-4 accent-brand" /><span><span className="block text-xs font-semibold text-stone-700 dark:text-stone-200">Incapacidade ≥ 60%</span><span className="mt-0.5 block text-[10px] leading-relaxed text-stone-400">Seleciona as tabelas próprias do titular.</span></span></label>
-              <label className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-3.5 transition ${duodecimos ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}><input type="checkbox" checked={duodecimos} onChange={(event) => setDuodecimos(event.target.checked)} className="mt-0.5 h-4 w-4 accent-brand" /><span><span className="block text-xs font-semibold text-stone-700 dark:text-stone-200">Recebo em duodécimos</span><span className="mt-0.5 block text-[10px] leading-relaxed text-stone-400">Acrescenta 1/12 de férias e Natal; a retenção de cada parcela é proporcional ao imposto do subsídio completo.</span></span></label>
-            </div>
-
-            <div className={`mt-4 rounded-2xl border p-4 ${youthIrs ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
-              <div className="flex items-start gap-2.5">
-                <label className="flex min-w-0 shrink cursor-pointer items-start gap-2.5"><input type="checkbox" checked={youthIrs} onChange={(event) => setYouthIrs(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand" /><Sparkle size={14} className="mt-0.5 flex-none text-brand" /><span className="min-w-0 text-xs font-semibold leading-snug text-stone-700 dark:text-stone-200">Pedi à entidade empregadora para aplicar IRS Jovem</span></label>
-                <span className="mt-0.5 flex-none"><InfoTip label="Confirmação necessária">O regime não é ativado apenas pela idade. Esta opção confirma que o benefício foi invocado perante a entidade empregadora.</InfoTip></span>
-              </div>
-              {youthIrs && <div className="mt-3"><span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400">Ano do benefício</span><div className="grid grid-cols-5 gap-1 rounded-xl bg-white/70 p-1 dark:bg-stone-800">{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" onClick={() => setYouthYear(value)} className={segmentClass(youthYear === value)}>{value}.º</button>)}</div></div>}
-            </div>
-
-            {/* Opção do titular por taxa de retenção superior — Art. 98.º, n.º 6
-                CIRS. É um direito que se exerce por declaração à entidade
-                pagadora e que quase nenhum simulador oferece, apesar de ser a
-                única forma de evitar a surpresa de ter imposto a pagar em maio. */}
-            <div className={`mt-4 rounded-2xl border p-4 ${optionalRate && optionalAvailable ? "border-brand/30 bg-brand-light/40 dark:bg-brand/10" : "border-stone-200 dark:border-stone-700"}`}>
-              <div className="flex items-start gap-2.5">
-                <label className="flex min-w-0 shrink cursor-pointer items-start gap-2.5">
-                  <input type="checkbox" checked={optionalRate} disabled={!optionalAvailable} onChange={(event) => setOptionalRate(event.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-brand disabled:opacity-40" />
-                  <ShieldCheck size={14} className="mt-0.5 flex-none text-brand" />
-                  <span className="min-w-0 text-xs font-semibold leading-snug text-stone-700 dark:text-stone-200">Pedi retenção a uma taxa superior à das tabelas</span>
-                </label>
-                <span className="mt-0.5 flex-none"><InfoTip label="Art. 98.º, n.º 6 CIRS">{RETENCAO_TAXA_OPCIONAL.direito.value} A opção não muda o imposto que vais dever no fim: adianta-o. {RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo.value} (Despacho 233-A/2026, n.º 5, al. e).</InfoTip></span>
-              </div>
-              {!optionalAvailable ? (
-                <p className="mt-2 text-[10px] leading-relaxed text-stone-400">Esta remuneração já está no escalão de topo da tabela ({pct(marginal.taxaMaximaTabela)}): não há taxa inteira superior por que optar.</p>
-              ) : !optionalRate ? (
-                <p className="mt-2 text-[10px] leading-relaxed text-stone-400">A tabela aplica {pct(marginal.taxa)} a esta remuneração. Podes comunicar à entidade pagadora uma taxa inteira superior — mais desconto por mês, menos imposto a pagar no acerto.</p>
-              ) : (
-                <div className="mt-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <label htmlFor="optional-rate" className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">Taxa comunicada</label>
-                    <div className="flex items-center gap-2">
-                      <Stepper id="optional-rate" value={optionalValue} min={optionalMin} max={optionalMax} decreaseLabel="Menos um ponto percentual" increaseLabel="Mais um ponto percentual" onChange={setOptionalRatePct} />
-                      <span className="text-sm font-semibold text-stone-500 dark:text-stone-400">%</span>
-                    </div>
-                  </div>
-                  <p className="mt-2 text-[10px] leading-relaxed text-stone-400">
-                    Entre {optionalMin}% e {optionalMax}% — tem de ser inteira e superior aos {pct(marginal.taxa)} da tabela (Art. 98.º, n.º 6 CIRS).
-                    {optionalExtra > 0 && <> Com {optionalValue}%, retém-se mais <strong className="text-brand-dark dark:text-brand-light">{fmt(optionalExtra)}</strong> este mês.</>}
-                  </p>
+              {/* ── Quem paga e onde ────────────────────────────────── */}
+              <Grupo titulo="Quem paga e onde">
+                <div>
+                  <span id="rot-entidade" className="mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-stone-400">Entidade empregadora <InfoTip label="Taxa contributiva da entidade">As instituições particulares de solidariedade social e demais entidades sem fins lucrativos contribuem à taxa de {pctExato(SS_DEPENDENTE.ipss.value)}, e não aos {pctExato(SS_DEPENDENTE.entidade.value)} do regime geral. Só muda o custo da EMPRESA — o teu desconto de {pctExato(SS_DEPENDENTE.trabalhador.value)} e o IRS são os mesmos.</InfoTip></span>
+                  <Segmentado rotuladoPor="rot-entidade" opcoes={EMPLOYER_OPTIONS} valor={employerRegime} onChange={setEmployerRegime} colunas={2} />
                 </div>
-              )}
+                <div>
+                  {/* «Continente / Madeira / Açores» tem três rótulos curtos: fica
+                      em três colunas mesmo a 360px, sem empilhar. */}
+                  <span id="rot-regiao" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-stone-400">Região fiscal</span>
+                  <div role="group" aria-labelledby="rot-regiao" className="grid grid-cols-3 gap-1 rounded-2xl bg-stone-100 p-1 dark:bg-stone-800">{REGION_OPTIONS.map(([value, label]) => <button key={value} type="button" aria-pressed={region === value} onClick={() => setRegion(value)} className={segmentClass(region === value)}>{label}</button>)}</div>
+                </div>
+              </Grupo>
+
+              {/* ── O que foi declarado à entidade ──────────────────────
+                  Estas três não descrevem quem a pessoa é: descrevem o que ela
+                  COMUNICOU à entidade empregadora. Nenhuma se aplica só por ser
+                  verdadeira — daí estarem juntas e com este título. */}
+              <Grupo titulo="Declarado à entidade empregadora">
+                <Opcao
+                  checked={duodecimos}
+                  onChange={setDuodecimos}
+                  titulo="Recebo em duodécimos"
+                  descricao="Acrescenta 1/12 de férias e Natal; a retenção de cada parcela é proporcional ao imposto do subsídio completo."
+                />
+
+                <Opcao
+                  checked={youthIrs}
+                  onChange={setYouthIrs}
+                  icone={<Sparkle size={14} className="mt-0.5 flex-none text-brand" />}
+                  titulo="Pedi à entidade empregadora para aplicar IRS Jovem"
+                  tip={<InfoTip label="Confirmação necessária">O regime não é ativado apenas pela idade. Esta opção confirma que o benefício foi invocado perante a entidade empregadora.</InfoTip>}
+                >
+                  {youthIrs && <div className="mt-3"><span id="rot-ano-jovem" className="mb-1.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400">Ano do benefício</span><div role="group" aria-labelledby="rot-ano-jovem" className="grid grid-cols-5 gap-1 rounded-xl bg-white/70 p-1 dark:bg-stone-800">{Array.from({ length: 10 }, (_, index) => index + 1).map((value) => <button key={value} type="button" aria-pressed={youthYear === value} onClick={() => setYouthYear(value)} className={segmentClass(youthYear === value)}>{value}.º</button>)}</div></div>}
+                </Opcao>
+
+                {/* Opção do titular por taxa de retenção superior — Art. 98.º, n.º 6
+                    CIRS. É um direito que se exerce por declaração à entidade
+                    pagadora e que quase nenhum simulador oferece, apesar de ser a
+                    única forma de evitar a surpresa de ter imposto a pagar em maio. */}
+                <Opcao
+                  checked={optionalRate}
+                  disabled={!optionalAvailable}
+                  ativa={optionalRate && optionalAvailable}
+                  onChange={setOptionalRate}
+                  icone={<ShieldCheck size={14} className="mt-0.5 flex-none text-brand" />}
+                  titulo="Pedi retenção a uma taxa superior à das tabelas"
+                  tip={
+                    /* As duas citações vinham coladas uma à outra sem pontuação e
+                       começadas em minúscula — são excertos legais, e lidas em
+                       sequência davam uma frase sem princípio nem fim. Ficam
+                       marcadas como citações, com a base legal à frente. */
+                    <InfoTip label="Art. 98.º, n.º 6 CIRS">
+                      A lei diz que «{RETENCAO_TAXA_OPCIONAL.direito.value}» — {RETENCAO_TAXA_OPCIONAL.direito.legalBasis}.
+                      {" "}A opção não muda o imposto que vais dever no fim: adianta-o. No cálculo da retenção, «{RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo.value}» — {RETENCAO_TAXA_OPCIONAL.efeitoNoCalculo.legalBasis}.
+                    </InfoTip>
+                  }
+                >
+                  {!optionalAvailable ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-stone-400">Esta remuneração já está no escalão de topo da tabela ({pct(marginal.taxaMaximaTabela)}): não há taxa inteira superior por que optar.</p>
+                  ) : !optionalRate ? (
+                    <p className="mt-2 text-[11px] leading-relaxed text-stone-400">A tabela aplica {pct(marginal.taxa)} a esta remuneração. Podes comunicar à entidade pagadora uma taxa inteira superior — mais desconto por mês, menos imposto a pagar no acerto.</p>
+                  ) : (
+                    <div className="mt-3 rounded-xl bg-white/70 p-3 dark:bg-stone-900/40">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <label htmlFor="optional-rate" className="text-[11px] font-semibold uppercase tracking-wide text-stone-400">Taxa comunicada</label>
+                        <div className="flex items-center gap-2">
+                          <Stepper id="optional-rate" value={optionalValue} min={optionalMin} max={optionalMax} decreaseLabel="Menos um ponto percentual" increaseLabel="Mais um ponto percentual" onChange={setOptionalRatePct} />
+                          <span className="text-sm font-semibold text-stone-500 dark:text-stone-400">%</span>
+                        </div>
+                      </div>
+                      <p className="mt-2 text-[11px] leading-relaxed text-stone-400">
+                        Entre {optionalMin}% e {optionalMax}% — tem de ser inteira e superior aos {pct(marginal.taxa)} da tabela (Art. 98.º, n.º 6 CIRS).
+                        {optionalExtra > 0 && <> Com {optionalValue}%, retém-se mais <strong className="text-brand-dark dark:text-brand-light">{fmt(optionalExtra)}</strong> este mês.</>}
+                      </p>
+                    </div>
+                  )}
+                </Opcao>
+              </Grupo>
             </div>
 
             {abaixoDoMinimo && (
@@ -1018,7 +1188,7 @@ export function MotorReciboVencimento() {
         />
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800"><div className="flex items-center gap-2"><History size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Guardar cenário</p></div><p className="mt-1 text-[10px] leading-relaxed text-stone-400">Preserva contexto, rubricas e modo de cálculo para comparar mais tarde.</p><button type="button" disabled={limiteAtingido} onClick={() => setSaveDialog(true)} className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition hover:shadow-float disabled:cursor-not-allowed disabled:opacity-50"><Plus size={13} /> Guardar</button><p className="mt-2 text-[9px] text-stone-400">{naNuvem ? "Sincronização na nuvem ativa" : `Plano grátis: ${limite} cenário`}</p></div>
+          <div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800"><div className="flex items-center gap-2"><History size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Guardar cenário</p></div><p className="mt-1 text-[10px] leading-relaxed text-stone-400">Preserva contexto, rubricas e modo de cálculo para comparar mais tarde.</p><button type="button" disabled={limiteAtingido} onClick={() => setSaveDialog(true)} className="mt-3 inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-brand px-3.5 py-2 text-xs font-semibold text-white shadow-glow transition hover:shadow-float disabled:cursor-not-allowed disabled:opacity-50"><Plus size={13} /> Guardar</button><p className="mt-2 text-[9px] text-stone-400">{naNuvem ? "Sincronização na nuvem ativa" : `Plano grátis: ${limite} cenário`}</p></div>
           <ProGate title="Exportar recibo detalhado" description="Leva a decomposição por rubrica para a folha de cálculo, para PDF ou para dados.">
             <div className="rounded-2xl border border-stone-100 p-4 dark:border-stone-800">
               <div className="flex items-center gap-2"><Export size={15} className="text-brand" /><p className="text-xs font-semibold text-stone-700 dark:text-stone-200">Relatório e dados</p></div>
@@ -1026,9 +1196,9 @@ export function MotorReciboVencimento() {
               {/* A folha de cálculo é o formato humano: um recibo tem várias
                   tabelas e um CSV só sabe ter uma. Daí ser o botão em destaque. */}
               <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={() => void exportXlsx().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-[11px] font-semibold text-white shadow-glow transition hover:shadow-float"><LayoutGrid size={13} /> Folha de cálculo</button>
-                <button type="button" onClick={() => void exportPdf().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-3 py-2 text-[11px] font-semibold text-brand-dark"><FileSign size={13} /> PDF</button>
-                <button type="button" onClick={() => void exportCsv().catch(() => {})} className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-[11px] font-semibold text-stone-600 transition hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"><Export size={13} /> CSV</button>
+                <button type="button" onClick={() => void exportXlsx().catch(() => {})} className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl bg-brand px-3 py-2 text-[11px] font-semibold text-white shadow-glow transition hover:shadow-float"><LayoutGrid size={13} /> Folha de cálculo</button>
+                <button type="button" onClick={() => void exportPdf().catch(() => {})} className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-brand/25 bg-brand-light px-3 py-2 text-[11px] font-semibold text-brand-dark"><FileSign size={13} /> PDF</button>
+                <button type="button" onClick={() => void exportCsv().catch(() => {})} className="inline-flex min-h-[36px] items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-[11px] font-semibold text-stone-600 transition hover:border-brand hover:text-brand dark:border-stone-700 dark:text-stone-300"><Export size={13} /> CSV</button>
               </div>
               <p className="mt-2 text-[9px] leading-relaxed text-stone-400">O CSV sai em dois dialetos: um para o Excel em português, outro em RFC 4180 para importar noutro programa.</p>
               {exportState.estado !== "inativo" && (

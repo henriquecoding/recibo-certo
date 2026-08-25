@@ -20,8 +20,41 @@ Marca (verde humano, não néon):
 - `brand-light` `#E1F5EE` · `brand-mint` `#9FE1CB`
 
 Superfícies / neutros (quentes):
-- `cream` `#F5F4F0` (fundo app) · `sand` `#EDEAE2` · `ink` `#1A1A17`
-- escala `stone` (Tailwind) para texto e bordas
+- `cream` `#EDEAE0` (papel da página) · `sand` `#E6E2D5` · `ink` `#1A1A17`
+- escala `stone` para texto, preenchimentos e bordas — com o degrau baixo
+  redefinido em `tailwind.config.ts` (ver a seguir)
+
+**O papel é o degrau que carrega o modo claro.** Era `#F5F4F0` e punha o cartão
+branco a 1,101:1 do fundo — no limiar do percetível. A `#EDEAE0` são 1,204:1, e
+é isso que faz um cartão parecer pousado em vez de recortado. Provado por
+eliminação: bordas mais escuras sozinhas não mudam a leitura, e sombras mais
+fortes também não (uma sombra precisa de chão onde cair).
+
+**Três tokens separados para a mesma família**, porque têm réguas diferentes:
+
+| | preenchimento (`colors`) | borda (`borderColor`) | texto (`textColor`) |
+| --- | --- | --- | --- |
+| leva texto por cima? | sim → tecto AA | não | é texto → AA |
+| `brand` | `#177E5E` | `#177E5E` | **`#147455`** |
+| `stone-50` | `#F8F6F1` | `#E7E2D6` | — |
+| `stone-100` | `#F7F5EE` | `#E4DFD1` | — |
+| `stone-200` | `#E7E5DE` | `#DED8C6` | — |
+| `stone-300` | (Tailwind) | `#D0C7AC` | — |
+
+`bg-stone-100` está a 4,60:1 do verde — escurecê-lo falharia AA em 185 sítios.
+`bg-brand` é a marca a ser vista (régua: o branco por cima, 5,02:1);
+`text-brand` é a marca a ser lida (régua: 4,5:1 sobre o papel). Separá-los é o
+que permitiu escurecer o papel sem mexer na cor dos botões e do logótipo.
+
+**Uma borda tem dois lados.** As bordas contrastam contra o branco do cartão
+(1,33 / 1,42 / 1,69) **e** contra o papel (1,11 / 1,18 / 1,40). Afinar só contra
+o branco parte tudo o que vive directamente no papel — listas, faixas, o rodapé
+móvel. Referência: no escuro, cartão↔borda é 1,18 / 1,25 / 1,51.
+
+**Calibrar contra o pior COMPOSTO, não contra o token.** O texto que falhou AA
+depois de o papel descer não estava sobre o papel: estava sobre os halos verdes
+decorativos (`bg-brand/[0.03…0.05]`) compostos com ele, que dão `#E3E6DB`. É esse
+o fundo a usar na conta. Medido por `npm run hierarquia:e2e` + axe.
 
 Semânticas:
 - Aviso (amarelo pastel): `alert-bg` `#FEFBD0` · `alert` `#FFF8A0` · `alert-border` `#E8D97A` · `alert-text` `#7A5C00`
@@ -46,6 +79,9 @@ fica intacto. Preferência persistida + respeita o sistema (script anti-flash em
 - Espaçamento: escala Tailwind (4px base); secções `py-24`, cartões `p-6`.
 - Raio: `rounded-xl` (controlos), `rounded-2xl/3xl`, `rounded-4xl` `2rem` (cartões premium).
 - Sombras quentes (não cinzentas frias): `shadow-card`, `shadow-lift`, `shadow-float`, `shadow-glow`.
+  A aresta é da BORDA; a sombra é só altura. O anel de 1 px que `shadow-card`
+  ainda tem (0,04) é a pista de reserva das superfícies elevadas sem borda —
+  não a aresta principal, senão os cartões ficam com 2 px de contorno.
 - Textura: `.grain` (ruído subtil) para fundos planos.
 
 ## Motion (Linear/Stripe-grade)
@@ -80,3 +116,15 @@ CTA; skeletons em `animate-pulse`; alertas em amarelo pastel; inputs com
 Semântica HTML, `aria-*` (pressed/checked/expanded), foco visível, contraste
 adequado em ambos os temas, alvos de toque ≥ 36px, navegação por teclado
 (combobox, tooltips, toggles).
+
+## Verificar a hierarquia (`npm run hierarquia:e2e`)
+
+Mede, superfície a superfície, a MELHOR das três pistas que a podem delimitar —
+degrau de fundo, aresta de borda, anel de sombra — em catorze páginas × duas
+larguras × dois temas. Abaixo de 1,05:1 a superfície existe no DOM e não existe
+no ecrã.
+
+O critério de aprovação não é um número inventado: é o modo escuro. Uma página
+no claro não pode ter mais de 8% de superfícies invisíveis, nem ficar mais de 3
+pontos atrás da mesma página no escuro. Correr sempre que se mexer num token de
+cor, borda ou sombra — foi assim que se apanhou a borda que nunca se via.

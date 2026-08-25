@@ -160,7 +160,14 @@ export default function ChromeMobile() {
              */
             const classe = `focus-marca flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 no-underline transition-colors ${
               on
-                ? "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand"
+                ? // O anel não é decoração: `bg-brand-light` sobre o `cream`
+                  // desta barra dá 1,032:1 — no claro, o separador aceso não
+                  // se distinguia dos apagados, e este é o «estou aqui» do
+                  // telemóvel, a única pista de posição num ecrã sem migalhas.
+                  // (No escuro a pastilha já se lê — `brand/15` sobre
+                  // `stone-950` dá 1,25:1 — por isso `dark:ring-0` deixa o
+                  // tema escuro exactamente como estava.)
+                  "bg-brand-light text-brand-dark ring-1 ring-brand/25 dark:bg-brand/15 dark:text-brand dark:ring-0"
                 : // `stone-600` e não `stone-500`: medido sobre o fundo desta
                   // barra (`cream`), o 500 dá 4,42:1 e o rótulo tem 10 px —
                   // texto pequeno, portanto a régua da WCAG AA é 4,5:1 e

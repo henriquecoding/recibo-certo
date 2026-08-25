@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Receipt, Trash, Warning } from "@/components/ui/Icons";
 import {
   PAYROLL_RUBRIC_CATALOGUE,
@@ -214,8 +214,22 @@ export function ConstrutorRecibo({ rubrics, onChange, onPendingBenefit }: {
 }) {
   const [adding, setAdding] = useState(false);
   const [filter, setFilter] = useState<PayrollRubricMetaCategory | "all">("all");
+  const listaRubricas = useRef<HTMLDivElement>(null);
   const categories = useMemo(() => Array.from(new Set(PAYROLL_RUBRIC_CATALOGUE.map((item) => item.category))), []);
   const visible = filter === "all" ? PAYROLL_RUBRIC_CATALOGUE : PAYROLL_RUBRIC_CATALOGUE.filter((item) => item.category === filter);
+
+  // O seletor abre onde o botão estava — no fim de um formulário longo. Num
+  // telemóvel isso punha a lista de rubricas abaixo da dobra, tapada pela
+  // barra de navegação: carregava-se em «Adicionar rubrica» e, do lado de
+  // quem usa, não acontecia nada visível.
+  //
+  // O que se traz ao ecrã é A LISTA, não o topo do seletor: o cabeçalho e os
+  // filtros ocupam três linhas a 360px, e alinhar pelo topo deixava a lista
+  // toda outra vez abaixo da dobra. (O `scroll-behavior` do site, que já
+  // respeita `prefers-reduced-motion`, decide se anima.)
+  useEffect(() => {
+    if (adding) listaRubricas.current?.scrollIntoView({ block: "center" });
+  }, [adding]);
 
   function add(type: PayrollRubricType) {
     if (SINGLETON_TYPES.has(type) && rubrics.some((rubric) => rubric.type === type)) return;
@@ -266,7 +280,7 @@ export function ConstrutorRecibo({ rubrics, onChange, onPendingBenefit }: {
               ))}
             </div>
           </div>
-          <div className="grid max-h-[min(26rem,60dvh)] gap-2 overflow-y-auto overscroll-contain p-3 sm:grid-cols-2">
+          <div ref={listaRubricas} className="grid max-h-[min(26rem,60dvh)] gap-2 overflow-y-auto overscroll-contain p-3 sm:grid-cols-2">
             {visible.map((item) => {
               const alreadyAdded = SINGLETON_TYPES.has(item.type) && rubrics.some((rubric) => rubric.type === item.type);
               return (

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { fmt } from "@/lib/format";
+import type { PagamentosConta } from "@/lib/fiscal";
 import { Calendar, Warning } from "@/components/ui/Icons";
 
 const fmtCompacto = (n: number): string => {
@@ -19,6 +20,12 @@ interface TimelineFiscalProps {
   temIva: boolean;
   ivaTotal: number;
   faturacaoAnual: number;
+  /**
+   * Pagamentos por conta de IRS estimados (Art. 102.º CIRS). São a saída de
+   * tesouraria que ninguém vê chegar: não saem de nenhum recibo, e para quem
+   * factura sem retenção são a maior do ano.
+   */
+  pagamentosConta?: PagamentosConta;
   className?: string;
 }
 
@@ -27,15 +34,22 @@ const MESES_IVA = new Set([1, 4, 7, 10]);
 const MES_IRS = 5;
 
 interface Evento {
-  tipo: "ss" | "irs" | "iva";
+  tipo: "ss" | "irs" | "iva" | "ppc";
   label: string;
   valor: number;
+  /** Entradas (reembolso) em vez de saídas — mudam o sinal e a cor. */
+  entrada?: boolean;
 }
 
 const EVENTO_META: Record<Evento["tipo"], { cor: string; corDot: string; corBadge: string; corBadgeDark: string }> = {
   ss:  { cor: "amber", corDot: "bg-amber-400", corBadge: "bg-amber-50 text-amber-700 ring-amber-200/60", corBadgeDark: "dark:bg-amber-950/30 dark:text-amber-300 dark:ring-amber-800/40" },
   irs: { cor: "red",   corDot: "bg-red-400",   corBadge: "bg-red-50 text-red-700 ring-red-200/60",     corBadgeDark: "dark:bg-red-950/30 dark:text-red-300 dark:ring-red-800/40" },
   iva: { cor: "blue",  corDot: "bg-blue-400",   corBadge: "bg-blue-50 text-blue-700 ring-blue-200/60",   corBadgeDark: "dark:bg-blue-950/30 dark:text-blue-300 dark:ring-blue-800/40" },
+  ppc: { cor: "violet", corDot: "bg-violet-400", corBadge: "bg-violet-50 text-violet-700 ring-violet-200/60", corBadgeDark: "dark:bg-violet-950/30 dark:text-violet-300 dark:ring-violet-800/40" },
+};
+
+const EVENTO_LEGENDA: Record<Evento["tipo"], string> = {
+  ss: "SS", irs: "IRS", iva: "IVA", ppc: "Pag. conta",
 };
 
 export default function TimelineFiscal({
@@ -45,17 +59,28 @@ export default function TimelineFiscal({
   temIva,
   ivaTotal,
   faturacaoAnual,
+  pagamentosConta,
   className = "",
 }: TimelineFiscalProps) {
   const ivaTrim = temIva ? ivaTotal / 4 : 0;
   const irsAPagar = acertoIRS < 0 ? Math.abs(acertoIRS) : 0;
+  // O reembolso é o outro lado do mesmo acerto — e é o lado comum a quem tem
+  // retenção de 23%. Mostrar «Sem acerto · retenção cobre o IRS» a quem tem
+  // 2 237 € para receber é esconder o melhor número do ano.
+  const irsAReceber = acertoIRS > 0 ? acertoIRS : 0;
+  const ppcPrestacao = pagamentosConta?.prestacao ?? 0;
+  const ppcMeses = useMemo(
+    () => new Set((pagamentosConta?.meses ?? []).map((m) => m - 1)),
+    [pagamentosConta],
+  );
   const mesAtual = new Date().getMonth();
 
-  const { meses, totalSaidas, totalSS, totalIRS, totalIVA } = useMemo(() => {
+  const { meses, totalSaidas, totalSS, totalIRS, totalIVA, totalPPC } = useMemo(() => {
     let total = 0;
     let somaSS = 0;
     let somaIRS = 0;
     let somaIVA = 0;
+    let somaPPC = 0;
     const arr = MESES.map((nome, idx) => {
       const eventos: Evento[] = [];
 
@@ -74,11 +99,19 @@ export default function TimelineFiscal({
         total += irsAPagar;
         somaIRS += irsAPagar;
       }
+      if (idx === MES_IRS && irsAReceber > 0) {
+        eventos.push({ tipo: "irs", label: "Reembolso", valor: irsAReceber, entrada: true });
+      }
+      if (ppcMeses.has(idx) && ppcPrestacao > 0) {
+        eventos.push({ tipo: "ppc", label: "Pag. conta", valor: ppcPrestacao });
+        total += ppcPrestacao;
+        somaPPC += ppcPrestacao;
+      }
 
       return { nome, eventos, idx };
     });
-    return { meses: arr, totalSaidas: total, totalSS: somaSS, totalIRS: somaIRS, totalIVA: somaIVA };
-  }, [isencaoSS, ssAnualMensal, temIva, ivaTrim, irsAPagar]);
+    return { meses: arr, totalSaidas: total, totalSS: somaSS, totalIRS: somaIRS, totalIVA: somaIVA, totalPPC: somaPPC };
+  }, [isencaoSS, ssAnualMensal, temIva, ivaTrim, irsAPagar, irsAReceber, ppcMeses, ppcPrestacao]);
 
   const ssAlto = !isencaoSS && ssAnualMensal > 300;
   const progressoAno = ((mesAtual + 1) / 12) * 100;
@@ -105,10 +138,11 @@ export default function TimelineFiscal({
         <div className="flex items-center gap-3 text-[11px] text-stone-400 dark:text-stone-500">
           {Object.entries(EVENTO_META).map(([tipo, meta]) => {
             if (tipo === "iva" && !temIva) return null;
+            if (tipo === "ppc" && totalPPC <= 0) return null;
             return (
               <span key={tipo} className="flex items-center gap-1.5">
                 <span className={`h-2 w-2 rounded-full ${meta.corDot}`} />
-                {tipo.toUpperCase()}
+                {EVENTO_LEGENDA[tipo as Evento["tipo"]]}
               </span>
             );
           })}
@@ -185,14 +219,23 @@ export default function TimelineFiscal({
                 )}
                 {m.eventos.map((ev, i) => {
                   const meta = EVENTO_META[ev.tipo];
+                  const cls = ev.entrada
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-200/60 dark:bg-emerald-950/30 dark:text-emerald-300 dark:ring-emerald-800/40"
+                    : `${meta.corBadge} ${meta.corBadgeDark}`;
                   return (
                     <div
                       key={i}
-                      className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-inset ${meta.corBadge} ${meta.corBadgeDark} ${isPassado ? "opacity-50" : ""}`}
+                      className={`flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums ring-1 ring-inset ${cls} ${isPassado ? "opacity-50" : ""}`}
                     >
-                      <span className={`h-1.5 w-1.5 rounded-full ${meta.corDot} flex-shrink-0`} aria-hidden />
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${ev.entrada ? "bg-emerald-400" : meta.corDot}`}
+                        aria-hidden
+                      />
                       <span className="flex-shrink-0">{ev.label}</span>
-                      <span className="truncate opacity-70">−{fmtCompacto(ev.valor)}</span>
+                      <span className="truncate opacity-70">
+                        {ev.entrada ? "+" : "−"}
+                        {fmtCompacto(ev.valor)}
+                      </span>
                     </div>
                   );
                 })}
@@ -245,12 +288,18 @@ export default function TimelineFiscal({
           <div className="text-base font-bold tabular-nums text-stone-800 dark:text-stone-100">
             {totalIRS > 0 ? (
               <span className="text-red-600 dark:text-red-400">{fmt(totalIRS)}</span>
+            ) : irsAReceber > 0 ? (
+              <span className="text-emerald-600 dark:text-emerald-400">+{fmt(irsAReceber)}</span>
             ) : (
               <span className="text-brand font-semibold text-sm">Sem acerto</span>
             )}
           </div>
           <div className="text-[10px] text-stone-400 dark:text-stone-500">
-            {totalIRS > 0 ? "a pagar em junho" : "retenção cobre o IRS"}
+            {totalIRS > 0
+              ? "a pagar em junho"
+              : irsAReceber > 0
+                ? "reembolso previsto em junho"
+                : "retenção cobre o IRS"}
           </div>
         </div>
         <div className="group rounded-2xl border border-stone-200/70 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900/60">
@@ -273,6 +322,28 @@ export default function TimelineFiscal({
             </div>
           )}
         </div>
+        {pagamentosConta && (pagamentosConta.total > 0 || pagamentosConta.abaixoDoMinimo) && (
+          <div className="group rounded-2xl border border-stone-200/70 bg-white px-4 py-3 dark:border-stone-800 dark:bg-stone-900/60">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-violet-400" />
+              <span className="text-[11px] font-semibold text-stone-400 dark:text-stone-500 uppercase tracking-wider">
+                Pagamentos por conta
+              </span>
+            </div>
+            <div className="text-base font-bold tabular-nums text-stone-800 dark:text-stone-100">
+              {pagamentosConta.total > 0 ? (
+                fmt(pagamentosConta.total)
+              ) : (
+                <span className="text-brand font-semibold text-sm">Não exigível</span>
+              )}
+            </div>
+            <div className="text-[10px] text-stone-400 dark:text-stone-500 tabular-nums">
+              {pagamentosConta.total > 0
+                ? `${fmt(pagamentosConta.prestacao)} × ${pagamentosConta.numero} · jul · set · dez`
+                : "cada prestação fica abaixo do mínimo legal"}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Total anual ── */}
