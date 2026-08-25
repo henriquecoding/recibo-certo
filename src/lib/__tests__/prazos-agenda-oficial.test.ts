@@ -59,6 +59,16 @@ describe("prazos: agenda oficial de 2026", () => {
   it("declaração anual de IRS termina a 30 de junho", () => {
     expect(data(2026, "irs-decl-2026")).toBe("2026-06-30");
   });
+
+  it("o acerto da nota de liquidação paga-se a 31 de agosto, não em junho", () => {
+    // Junho fecha a ENTREGA da declaração (Art. 60.º); a liquidação é
+    // notificada até 31 de julho (Art. 77.º) e o imposto paga-se até 31 de
+    // agosto (Art. 97.º n.º 1 al. a)). O reembolso corre no mesmo prazo, por
+    // remissão do Art. 96.º. O calendário do simulador punha isto em junho.
+    expect(data(2026, "irs-pag-2026")).toBe("2026-08-31");
+    // 31 de agosto de 2025 foi domingo: transita para 1 de setembro.
+    expect(data(2025, "irs-pag-2025")).toBe("2025-09-01");
+  });
 });
 
 describe("prazos: dias úteis e feriados", () => {
