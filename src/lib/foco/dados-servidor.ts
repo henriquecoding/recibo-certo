@@ -113,9 +113,19 @@ export function dadosSalario(): DadosSalario {
 
 // ── Empresa ───────────────────────────────────────────────────────────
 
+/**
+ * O eixo vai até 190k, e não até 150k, por uma razão que só se vê a olho.
+ *
+ * Com o teto em 150k o cruzamento caía aos 93% da largura — encostado à
+ * direita, sem nada depois dele. Um ponto de viragem que acontece na
+ * moldura não se lê como viragem: lê-se como as duas linhas a acabarem
+ * juntas. Com o teto em 190k o cruzamento fica a ~71% e sobram dois
+ * pontos para as linhas se separarem depois de se cruzarem — que é a
+ * única coisa que este gráfico tem para mostrar.
+ */
 const ESCADA = [
-  15_000, 20_000, 25_000, 30_000, 40_000, 50_000,
-  65_000, 80_000, 100_000, 125_000, 150_000,
+  15_000, 25_000, 40_000, 55_000, 70_000, 90_000,
+  110_000, 130_000, 150_000, 170_000, 190_000,
 ] as const;
 
 /**

@@ -337,7 +337,23 @@ O ato 3 recebe o silêncio mais longo do site — `PASSO.outro` (380 ms) — ent
 | 3 · **Custar** | ~2 400 | A linha da empresa arranca **abaixo**: contabilista, IRC, dividendos. Uma ficha de custo fixo desce e afunda-a. É o preço de entrada, e vê-se |
 | 4 · **Virar** | ~3 200 | As linhas **cruzam-se**. O cruzamento acende e ganha um valor: «a partir de ~X €/ano». O marcador do ato 1 fica onde está, para a pessoa ver de que lado está |
 
-**As duas linhas a crescerem em simultâneo são deliberadas** e são a exceção
+**Uma correção apanhada a olho, depois de implementado.** A primeira versão
+traçava os dois líquidos absolutos sobre o mesmo eixo. Era honesta e era
+ilegível: com o zero em baixo e 130 mil euros em cima, uma diferença de três
+mil euros são dois pixéis — as duas linhas corriam coladas e o «cruzamento»
+não se via cruzar. Cortar o eixo em baixo resolveria, e é a mentira clássica de
+um gráfico.
+
+A resposta certa era outra: **a pergunta deste palco não é «quanto rende cada
+um», é «qual deles rende mais, e a partir de quando»** — e essa tem uma
+resposta de uma dimensão só. O que se desenha passou a ser a DIFERENÇA
+(`empresa − recibos verdes`): começa abaixo do zero, mergulha com o custo da
+contabilidade, sobe, e cruza o zero no ponto de viragem. O zero é o eixo
+verdadeiro, nada é truncado, e o cruzamento passou a ser impossível de não ver
+porque é o instante em que a linha muda de lado. É o princípio da congruência
+outra vez: a forma do gráfico passou a ser a forma da pergunta.
+
+**As duas linhas a crescerem em simultâneo eram deliberadas** e eram a exceção
 que confirma a regra do §1.3 do roteiro do preço: movem-se juntas porque são a
 mesma pergunta, e é o **cruzamento** — não a chegada — que é o acontecimento.
 
