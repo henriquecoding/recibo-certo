@@ -149,9 +149,13 @@ export default function ChromeMobile() {
           className="flex items-stretch justify-between gap-0.5 px-1 pt-1.5 md:gap-1 md:px-2"
         >
           {SLOTS.map((slot) => {
+            const naSuperficieCanonica = ativo(slot.hrefCanonico);
             const on =
               (pathname === "/" && foco === slot.id && Boolean(slot.homepageHref)) ||
-              ativo(slot.hrefCanonico);
+              naSuperficieCanonica;
+            // Um lugar activo tem de apontar para a superfície que declara
+            // como actual. Fora dela continua a abrir a porta editorial.
+            const destino = naSuperficieCanonica ? slot.hrefCanonico : slot.href;
             const Icon = iconeDe(slot.icone);
             /**
              * `min-w-0` e não um mínimo em `rem` — e é o que impede o
@@ -198,14 +202,14 @@ export default function ChromeMobile() {
              * │ levar à página do pilar, que é outra página.                │
              * └───────────────────────────────────────────────────────────┘
              */
-            const naRotaExacta = slot.homepageHref
-              ? pathname === "/" && foco === slot.id
-              : pathname === slot.href;
+            const naRotaExacta =
+              (Boolean(slot.homepageHref) && pathname === "/" && foco === slot.id) ||
+              pathname === slot.hrefCanonico;
 
             return (
               <Link
                 key={slot.id}
-                href={slot.href}
+                href={destino}
                 // O nome acessível é sempre o COMPLETO, mesmo quando o que
                 // se vê é o curto — o que um leitor de ecrã anuncia não
                 // pode depender da largura do ecrã.

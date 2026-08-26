@@ -60,7 +60,14 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
     >
       {PILARES.map((pilar, i) => {
         const Icon = iconeDe(pilar.icone);
-        const ativo = foco === pilar.id || aceso === pilar.href;
+        const naSuperficieCanonica = aceso === pilar.href;
+        // Se a pessoa já está na ferramenta canónica, o destino desenhado
+        // também é essa ferramenta. Assim `aria-current="page"` nunca fica
+        // num link que, ao ser activado, abre a homepage editorial.
+        const destino = naSuperficieCanonica
+          ? pilar.href
+          : hrefDaSuperficiePilar(pilar);
+        const ativo = foco === pilar.id || naSuperficieCanonica;
         const anterior = i > 0 ? PILARES[i - 1] : null;
         const anteriorAceso = Boolean(
           anterior && (foco === anterior.id || aceso === anterior.href),
@@ -71,7 +78,7 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
               <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
             )}
             <Link
-              href={hrefDaSuperficiePilar(pilar)}
+              href={destino}
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
               onClick={() => medirNavegacao(pilar.id, "secretaria")}

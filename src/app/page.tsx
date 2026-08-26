@@ -71,11 +71,31 @@ export async function generateMetadata({ searchParams }: HomeProps): Promise<Met
   const foco = normalizarFocoHomepage((await searchParams).foco);
   if (foco !== "descobrir") return {};
 
+  const title = "Descobrir que negócio testar em Portugal";
+  const socialTitle = `${title} | ReciboCerto`;
+  const description =
+    "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.";
+
   return {
-    title: "Descobrir que negócio testar em Portugal",
-    description:
-      "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.",
+    // A homepage e o layout raiz pertencem ao mesmo segmento; o template do
+    // layout só se aplica a segmentos filhos. `absolute` conserva a marca no
+    // separador sem a duplicar noutras rotas.
+    title: { absolute: socialTitle },
+    description,
     alternates: { canonical: "/" },
+    openGraph: {
+      title: socialTitle,
+      description,
+      url: "/?foco=descobrir",
+      siteName: "ReciboCerto",
+      locale: "pt_PT",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: socialTitle,
+      description,
+    },
   };
 }
 
