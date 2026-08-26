@@ -87,20 +87,6 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
     <>
       <HeroFoco
         foco={foco}
-        titulo={
-          <>
-            Recebeste {eur(dados.bruto)}.
-            <br />
-            Teus são {eur(dados.liquido)}.
-          </>
-        }
-        subtitulo={
-          <>
-            De cada recibo verde sai retenção de IRS e sai Segurança Social — e uma delas só sai
-            meses depois, quando o dinheiro já parece teu. Este é o cálculo que diz quanto guardar
-            e até quando.
-          </>
-        }
         ancora="#metodo-recibos"
         rotuloAncora="Ver o que sai e quando"
         selos={[

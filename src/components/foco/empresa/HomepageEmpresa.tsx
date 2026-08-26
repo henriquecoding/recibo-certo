@@ -84,27 +84,6 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
     <>
       <HeroFoco
         foco={foco}
-        titulo={
-          dados.cruzamento ? (
-            <>
-              Compensa a partir
-              <br />
-              de {eur0(dados.cruzamento)} por ano.
-            </>
-          ) : (
-            <>
-              Compensa abrir empresa?
-              <br />
-              Há um número que responde.
-            </>
-          )
-        }
-        subtitulo={
-          <>
-            Os dois caminhos traçados sobre o mesmo eixo, com o custo de ter empresa contado antes
-            de qualquer imposto. Onde as linhas se cruzam é onde a pergunta muda de resposta.
-          </>
-        }
         ancora="#metodo-empresa"
         rotuloAncora="Ver o que entra na conta"
         selos={[

@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.131.0",
+    data: "2026-08-26",
+    titulo: "Os cinco títulos deixaram de ser cinco textos e passaram a ser o mesmo instrumento",
+    itens: [
+      "Cada uma das cinco leituras abria com um título escrito no dia em que aquele ecrã nasceu. Lidos um a um passavam; lidos seguidos eram cinco coisas diferentes — um número («Compensa a partir de 140 000 € por ano»), uma pergunta com a resposta adiada («Há uma forma de saber»), um exemplo apresentado como se fosse teu («Recebeste 2000,00 €. Teus são 1240,40 €»), um slogan («O preço não nasce de um palpite») e um aforismo («Uma ideia só interessa depois de resistir à realidade»).",
+      "Nenhum deles continha a pergunta que tinhas escrito para lá chegar. Agora contêm: «Quanto fica de cada recibo verde — e o que tens de guardar», «Confere o recibo de vencimento, linha a linha», «Recibos verdes ou empresa — a partir de quanto compensa», «Quanto tens de cobrar para não trabalhares a perder», «Que negócio testar primeiro — e como saber se falha».",
+      "E deixaram de descrever a máquina. «Os dois caminhos traçados sobre o mesmo eixo» e «as linhas que batem acendem» é o que a demonstração faz — e ela está logo por baixo a fazê-lo. Um título serve para dizer porque é que vale a pena continuar a ler.",
+      "Um deles dizia uma coisa que não era verdade. «Compensa a partir de 140 000 € por ano» dava como lei o cruzamento de um conjunto de pressupostos. O número continua na demonstração, com os pressupostos ao lado; o título deixou de o afirmar como se valesse para toda a gente.",
+      "Os textos passaram a viver todos no mesmo sítio, com a forma escrita ao lado e verificada: comprimento, uma oração só, a palavra da procura lá dentro, sem falar na primeira pessoa do plural, e sem montantes. Um título fora da forma deixa de passar nas verificações.",
+      "Os títulos também deixaram de se partir em escada. A escala vinha de frases de trinta caracteres; com frases de cinquenta, cada linha levava vinte caracteres e o título caía em quatro linhas. Agora são sempre duas — e no telemóvel é o próprio texto a decidir onde parte.",
+    ],
+  },
+  {
     version: "2.130.0",
     data: "2026-08-26",
     titulo: "As cinco perguntas passaram a responder a quem as aponta — com o dedo, com o teclado ou com o rato",

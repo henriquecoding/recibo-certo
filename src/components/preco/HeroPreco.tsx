@@ -38,6 +38,7 @@ import {
   type EntradasDemoPreco,
   type ParametrosDemoPreco,
 } from "@/lib/pricing/demo-homepage";
+import { SubtituloHero, TituloHero } from "@/components/foco/TextosHero";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O PALCO DO PREÇO
@@ -494,14 +495,13 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
             <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
             Portugal
           </div>
-          {/* A escala pára nos 4,4rem, e não nos 5,4rem do hero de Descobrir.
-              Ali o título É o primeiro ecrã; aqui o primeiro ecrã é o palco. */}
-          <h1 className="text-balance font-display text-[clamp(2.2rem,5.4vw,4.4rem)] font-semibold leading-[.98] tracking-[-.035em] text-ink">
-            O preço não nasce de um palpite.
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-stone-600 sm:text-base">
-            Custos, trabalho, impostos e margem formam um valor que sustenta o negócio.
-          </p>
+          {/* Sem escala própria. Tinha uma — «ali o título É o primeiro
+              ecrã, aqui o primeiro ecrã é o palco» — e era verdade
+              enquanto a escala comum eram 5,65 rem. Agora que são 3,75,
+              um segundo degrau seria uma diferença que ninguém consegue
+              apontar mas que se nota ao passar de uma leitura à outra. */}
+          <TituloHero foco="preco" />
+          <SubtituloHero foco="preco" />
         </div>
 
         {/* ── O palco ───────────────────────────────────────────────── */}

@@ -7,7 +7,9 @@
 //  para o terceiro nascer diferente e ninguém saber apontar porquê.
 //
 //  O que fica aqui é a FORMA: sobrancelha → título → subtítulo → palco →
-//  dois CTA → linha de confiança. O que cada foco entrega é conteúdo.
+//  dois CTA → linha de confiança. O que cada foco entrega é o palco — o
+//  título e o subtítulo vêm de `copy-heros.ts`, onde os cinco se leem
+//  seguidos e onde a forma das frases está escrita e testada.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { ReactNode } from "react";
@@ -15,6 +17,7 @@ import Link from "next/link";
 import { ArrowRight, Sparkle } from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import type { DefinicaoFoco } from "./focos";
+import { SubtituloHero, TituloHero } from "./TextosHero";
 
 export interface SeloConfianca {
   Icon: (props: { size?: number; className?: string }) => ReactNode;
@@ -23,16 +26,12 @@ export interface SeloConfianca {
 
 export default function HeroFoco({
   foco,
-  titulo,
-  subtitulo,
   ancora,
   rotuloAncora = "Ver como funciona",
   selos,
   children,
 }: {
   foco: DefinicaoFoco;
-  titulo: ReactNode;
-  subtitulo: ReactNode;
   /** A âncora do CTA secundário — sempre DENTRO da página. */
   ancora: string;
   rotuloAncora?: string;
@@ -60,12 +59,12 @@ export default function HeroFoco({
             <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
             Portugal
           </div>
-          <h1 className="text-balance font-display text-[clamp(2.45rem,6.7vw,5.65rem)] font-semibold leading-[.98] tracking-[-.035em] text-ink">
-            {titulo}
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-stone-600 sm:text-lg">
-            {subtitulo}
-          </p>
+          {/* O texto vem de `copy-heros.ts`, onde os cinco se leem
+              seguidos. Antes vinha por props, e cada palco escrevia o seu
+              no dia em que nasceu — cinco formas diferentes para a mesma
+              posição na página. */}
+          <TituloHero foco={foco.id} />
+          <SubtituloHero foco={foco.id} />
         </div>
 
         <div className="mt-10 sm:mt-12">{children}</div>

@@ -26,10 +26,21 @@
 //  PLAYWRIGHT_CHROMIUM  caminho para um Chromium já instalado (opcional)
 // ═══════════════════════════════════════════════════════════════════════
 
+import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 
+// A versão vem do `package.json` e não escrita à mão: o popup de
+// Novidades aparece sempre que a guardada difere da atual, e um número
+// fixo aqui fazia esta verificação partir a cada subida de versão — com
+// um erro («o rato não chega à linha») que não tem nada que ver com o
+// que ela mede.
+const VERSAO = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+
 const EXEC = process.env.PLAYWRIGHT_CHROMIUM;
-const URL = process.env.BASE_URL ?? "http://localhost:3000/";
+// `ENDERECO` e não `URL`: uma constante com esse nome sombreia o
+// construtor global e põe-no na zona morta temporal — `new URL(...)`
+// mais acima rebentava com «Cannot access 'URL' before initialization».
+const ENDERECO = process.env.BASE_URL ?? "http://localhost:3000/";
 
 function ok(cond, msg, extra = "") {
   console.log(`${cond ? "  OK  " : "  FALHA"} ${msg}${extra ? " · " + extra : ""}`);
@@ -45,19 +56,19 @@ async function abrir(opcoes = {}) {
     isMobile: opcoes.touch ?? false,
     ...(opcoes.touch ? { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)" } : {}),
   });
-  await ctx.addInitScript(() => {
+  await ctx.addInitScript((versao) => {
     try {
-      localStorage.setItem("recibocerto:changelog_visto", "2.129.0");
+      localStorage.setItem("recibocerto:changelog_visto", versao);
       localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
         necessarios: true, estatistica: false, marketing: false, versao: 1,
         data: new Date().toISOString(),
       }));
       localStorage.removeItem("recibocerto:perfil:v1");
     } catch {}
-  });
+  }, VERSAO);
   const p = await ctx.newPage();
   p.on("pageerror", (e) => console.log("  ERRO DE PÁGINA", String(e).slice(0, 200)));
-  await p.goto(URL, { waitUntil: "networkidle" });
+  await p.goto(ENDERECO, { waitUntil: "networkidle" });
   await p.mouse.move(2, 2);
   return { b, p };
 }

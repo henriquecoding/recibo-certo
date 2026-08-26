@@ -118,7 +118,11 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
     icone: "Coin",
     ferramenta: "/ferramentas/calcular-preco",
     ctaPrimario: "Calcular o meu preço",
-    titulo: "Formar um preço que sustenta o negócio",
+    // Era «Formar um preço que sustenta o negócio» — uma frase sobre o
+    // que a ferramenta faz, sem uma única palavra do que alguém escreve
+    // para a encontrar. Os quatro outros focos já tinham a procura no
+    // título; este era o que estava de fora.
+    titulo: "Quanto cobrar — calcular o preço de um serviço ou produto",
     descricao:
       "Custos, tempo, comissões, IVA e margem numa só composição — e o que muda no preço consoante vendas direto, num marketplace, isento ou a recibos verdes.",
   },

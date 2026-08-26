@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/Icons";
 import PalcoDescobrir from "./PalcoDescobrir";
 import type { ExemploDescoberta } from "./tipos";
+import { SubtituloHero, TituloHero } from "@/components/foco/TextosHero";
 
 export type { ExemploDescoberta } from "./tipos";
 
@@ -30,13 +31,11 @@ export default function HeroDescobrir({ exemplo }: { exemplo: ExemploDescoberta 
             <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
             Portugal
           </div>
-          <h1 className="text-balance font-display text-[clamp(2.45rem,6.7vw,5.65rem)] font-semibold leading-[.98] tracking-[-.035em] text-ink">
-            Uma ideia só interessa depois de resistir à realidade.
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-stone-600 sm:text-lg">
-            Cruzamos o que sabes fazer com as tuas restrições e sinais oficiais de Portugal.
-            O resultado não é uma lista inspiradora: é uma hipótese que sabes como tentar destruir.
-          </p>
+          {/* O texto vem de `copy-heros.ts`, como o dos outros quatro.
+              Estava escrito aqui, e era um aforismo sem uma única palavra
+              do que alguém procura — ver o cabeçalho dessa tabela. */}
+          <TituloHero foco="descobrir" />
+          <SubtituloHero foco="descobrir" />
         </div>
 
         <div className="mt-10 sm:mt-12">

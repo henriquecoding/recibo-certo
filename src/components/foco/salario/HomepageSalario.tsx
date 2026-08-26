@@ -87,20 +87,6 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
     <>
       <HeroFoco
         foco={foco}
-        titulo={
-          <>
-            O teu recibo está certo?
-            <br />
-            Há uma forma de saber.
-          </>
-        }
-        subtitulo={
-          <>
-            Refazemos a conta a partir do bruto — Segurança Social, retenção de IRS e subsídios —
-            e pomo-la ao lado do recibo que recebeste. As linhas que batem acendem. A que não bate
-            fica sozinha.
-          </>
-        }
         ancora="#metodo-salario"
         rotuloAncora="Ver como se confere"
         selos={[
