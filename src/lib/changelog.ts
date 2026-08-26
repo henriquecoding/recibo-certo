@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.127.0",
+    data: "2026-08-26",
+    titulo: "A homepage passou a ter cinco entradas a sério — e três delas deixaram de ser a mesma página com outros números",
+    itens: [
+      "A homepage perguntava-te quem eras — «Sou trabalhador: Independente ou Por conta de outrem» — para decidir o que te mostrar. Metade das pessoas que usam isto tem salário E recibos verdes, e não cabe em nenhuma das duas. Essa pergunta desapareceu: agora escolhes o que queres SABER, e os cinco caminhos do topo levam todos ao mesmo tipo de sítio.",
+      "Antes, dois desses cinco trocavam o conteúdo da página e os outros três atiravam-te para fora dela. Pareciam iguais e faziam coisas diferentes. Agora «Recibos verdes», «Salário» e «Empresa» abrem uma leitura própria, como «Descobrir» e «Preço» já abriam, e cada uma tem um endereço que podes partilhar.",
+      "«Recibos verdes» ganhou uma demonstração nova, e é a única do site que constrói e depois TIRA: escreve-se o valor do recibo, ele parte-se em três — o que é teu, a retenção de IRS e a Segurança Social —, a parte da Segurança Social ganha uma data com os dias a contar, e no fim o «disponível para gastar» desce à tua frente. Porque a frase que este produto existe para desfazer é «recebi 2 000 €».",
+      "«Salário» deixou de ser a mesma cascata de deduções com outro número e passou a ser o que a ferramenta tem de único: uma conferência. O teu recibo fica ao lado da conta refeita a partir do bruto, linha a linha. As que batem acendem todas ao mesmo tempo — e a que não bate vê-se precisamente por ter ficado de fora. Depois explica-se porquê e quanto é ao fim do ano.",
+      "«Empresa» passou a responder «a partir de quando compensa» com um gráfico em vez de uma regra de bolso. Os dois caminhos crescem lado a lado sobre o mesmo eixo de faturação, o custo de ter contabilidade afunda a linha da empresa antes de ela subir, e o cruzamento das duas é o número que interessa. Sem esse custo, a empresa pareceria sempre melhor — e não é.",
+      "«Comparar cenários» deixou de ser um botão no topo e passou a fechar a leitura de «Descobrir». Comparar regimes antes de saber o que vais fazer é comparar impostos sobre um rendimento que ainda não existe — e é o erro caro do princípio, o que leva pessoas a abrir empresa para uma ideia que nunca teve um cliente.",
+      "As cinco leituras passaram a partilhar a mesma estrutura por construção, e não por coincidência: a mesma geometria de topo, a mesma moldura da demonstração, a mesma ordem de secções. Quem aprendeu onde estão as fontes numa, encontra-as nas outras sem procurar.",
+      "Todas as demonstrações novas param quando carregas em «Pausar» — incluindo as peças em voo e os números a contar —, funcionam sem JavaScript e entregam o resultado completo a quem prefere movimento reduzido.",
+    ],
+  },
+  {
     version: "2.126.0",
     data: "2026-08-26",
     titulo: "As duas demonstrações passaram a ter uma gramática de movimento só — e o tempo entre as coisas passou a querer dizer alguma coisa",

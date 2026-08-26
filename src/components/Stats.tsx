@@ -82,7 +82,7 @@ export default function Stats() {
       <div className="mx-auto mt-4 max-w-5xl text-center">
         <Link
           href="/#fontes"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
+          className="focus-marca inline-flex min-h-[24px] items-center gap-1.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
         >
           <Bank size={12} className="text-brand" />
           Tudo verificado em {N_FONTES} fontes oficiais — AT, Segurança Social e Diário da República

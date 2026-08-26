@@ -25,14 +25,18 @@ import { prefetchSimulador } from "@/lib/prefetch-simuladores";
 
 type Opcao = { chave: Perfil; label: string; icon: ReactNode };
 
+// Os rótulos passaram de identidades («Independente», «Por conta de
+// outrem») para o CÁLCULO que cada botão abre. É a mesma troca que a régua
+// de focos fez à escala da página: pergunta-se o que queres saber, não o
+// que és.
 const TRABALHADOR: Opcao[] = [
-  { chave: "independente", label: "Independente", icon: <Receipt size={15} /> },
-  { chave: "dependente", label: "Por conta de outrem", icon: <Briefcase size={15} /> },
+  { chave: "independente", label: "Um recibo verde", icon: <Receipt size={15} /> },
+  { chave: "dependente", label: "O meu salário", icon: <Briefcase size={15} /> },
 ];
 
 const GOSTARIA: Opcao[] = [
-  { chave: "empresa", label: "Abrir Empresa", icon: <Building size={15} /> },
-  { chave: "comparar", label: "Comparar Cenários", icon: <Scale size={15} /> },
+  { chave: "empresa", label: "Uma empresa", icon: <Building size={15} /> },
+  { chave: "comparar", label: "Os três lado a lado", icon: <Scale size={15} /> },
 ];
 
 function Grupo({
@@ -98,9 +102,26 @@ export default function SeletorModo({ center = false }: { center?: boolean }) {
         center ? "mx-auto max-w-md" : ""
       }`}
     >
+      {/* ┌───────────────────────────────────────────────────────────┐
+          │ DEIXOU DE PERGUNTAR QUEM ÉS                               │
+          │                                                           │
+          │ Isto dizia «SOU TRABALHADOR: Independente / Por conta de  │
+          │ outrem» e «GOSTARIA DE: Abrir empresa / Comparar          │
+          │ cenários», e vivia no hero da homepage a ramificar a      │
+          │ página inteira. A NN/g documenta cinco razões contra      │
+          │ navegação por audiência; três batem em cheio neste        │
+          │ produto, e a primeira é decisiva: metade do público tem   │
+          │ salário E recibos verdes, e não cabe numa categoria.      │
+          │                                                           │
+          │ A navegação passou para a régua de focos, que pergunta o  │
+          │ que queres SABER. O que sobra aqui é o que a NN/g         │
+          │ recomenda para uma categoria de audiência: navegação      │
+          │ secundária de uma ferramenta — «qual destes cálculos» —   │
+          │ e não a porta de entrada do site.                         │
+          └───────────────────────────────────────────────────────────┘ */}
       <Grupo
-        titulo="Sou trabalhador"
-        ariaLabel="O teu perfil de trabalhador"
+        titulo="Quero calcular"
+        ariaLabel="Que cálculo queres fazer"
         opcoes={TRABALHADOR}
         perfil={perfil}
         definir={definir}
@@ -113,8 +134,8 @@ export default function SeletorModo({ center = false }: { center?: boolean }) {
         className="-mx-2 my-2.5 h-px bg-stone-200/70 dark:bg-stone-700/60 sm:-mx-2.5"
       />
       <Grupo
-        titulo="Gostaria de"
-        ariaLabel="O que queres fazer"
+        titulo="Ou então"
+        ariaLabel="Outros cálculos"
         opcoes={GOSTARIA}
         perfil={perfil}
         definir={definir}

@@ -17,6 +17,12 @@ import Footer from "@/components/Footer";
 import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 import HomepageDescobrir from "@/components/descobrir/HomepageDescobrir";
 import HomepagePreco from "@/components/preco/HomepagePreco";
+import HomepageRecibos from "@/components/foco/recibos/HomepageRecibos";
+import HomepageSalario from "@/components/foco/salario/HomepageSalario";
+import HomepageEmpresa from "@/components/foco/empresa/HomepageEmpresa";
+import { FOCOS } from "@/components/foco/focos";
+import { dadosRecibo, dadosSalario, dadosEmpresa } from "@/lib/foco/dados-servidor";
+import type { FocoHomepage } from "@/lib/foco-homepage";
 import { faqs } from "@/lib/faq";
 import { normalizarFocoHomepage } from "@/lib/foco-homepage";
 import { cenariosDemoPreco, parametrosDemoPreco } from "@/lib/pricing/demo-homepage.servidor";
@@ -96,27 +102,16 @@ type HomeProps = {
 };
 
 /**
- * Cada foco traz o seu título e a sua descrição; a FORMA dos metadados é
- * comum aos dois.
+ * Os metadados de cada foco saem da MESMA tabela que define os focos
+ * (`components/foco/focos.ts`), com os metadados sociais completos
+ * (`openGraph`, `twitter`, título absoluto) por cima.
  *
- * A resolução deste conflito juntou os dois lados em vez de escolher um: a
- * tabela por foco (que deixa acrescentar um modo sem mexer na função) e os
- * metadados sociais completos (`openGraph`, `twitter`, título absoluto), que
- * a versão por foco não tinha e que decidem como a página aparece quando
- * alguém a partilha.
+ * Estavam escritos aqui à mão para dois focos; ao quinto isso seriam cinco
+ * sítios para um título divergir do outro sem ninguém dar por isso.
  */
-const METADADOS_POR_FOCO = {
-  descobrir: {
-    title: "Descobrir que negócio testar em Portugal",
-    description:
-      "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.",
-  },
-  preco: {
-    title: "Formar um preço que sustenta o negócio",
-    description:
-      "Custos, tempo, comissões, IVA e margem numa só composição — e o que muda no preço consoante vendas direto, num marketplace, isento ou a recibos verdes.",
-  },
-} as const;
+const METADADOS_POR_FOCO = Object.fromEntries(
+  FOCOS.map((f) => [f.id, { title: f.titulo, description: f.descricao }]),
+) as Record<FocoHomepage, { title: string; description: string }>;
 
 export async function generateMetadata({ searchParams }: HomeProps): Promise<Metadata> {
   const foco = normalizarFocoHomepage((await searchParams).foco);
@@ -201,10 +196,31 @@ export default async function Home({ searchParams }: HomeProps) {
       <div id="top">
         <Nav foco={foco} />
         <main>
+          {/* ── A RÉGUA DOS CINCO FOCOS NÃO VIVE AQUI ───────────────
+              Cheguei a montar uma, e era um sexto sítio onde escolher:
+              a cápsula do cabeçalho, a barra do telemóvel e o
+              `FilaPilares` já mostram os mesmos cinco pilares, todos
+              a ler `hrefDaSuperficiePilar`.
+
+              O que estava partido não era a falta de um controlo — era
+              o controlo existente a MISTURAR dois tipos de separador:
+              «Descobrir» e «Preço» trocavam o conteúdo na mesma página
+              e os outros três saíam dela para `/ferramentas/<slug>`.
+              A NN/g é explícita sobre isso desorientar.
+
+              Dar `homepageHref` aos cinco pilares corrigiu a cápsula
+              que já existia. Acrescentar outra régua por baixo dela
+              seria resolver o problema criando-o outra vez. */}
           {foco === "descobrir" ? (
             <HomepageDescobrir exemplo={exemploDescoberta} />
           ) : foco === "preco" ? (
             <HomepagePreco parametros={parametrosPreco} cenarios={cenariosPreco} />
+          ) : foco === "recibos" ? (
+            <HomepageRecibos dados={dadosRecibo()} />
+          ) : foco === "salario" ? (
+            <HomepageSalario dados={dadosSalario()} />
+          ) : foco === "empresa" ? (
+            <HomepageEmpresa dados={dadosEmpresa()} />
           ) : (
             <>
           <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />

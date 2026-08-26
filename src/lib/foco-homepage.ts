@@ -5,7 +5,13 @@
  * pessoa quer fazer agora; «independente», «dependente» e «empresa» descrevem
  * contextos profissionais que podem coexistir.
  */
-export const FOCOS_HOMEPAGE = ["descobrir", "preco"] as const;
+export const FOCOS_HOMEPAGE = [
+  "descobrir",
+  "preco",
+  "recibos",
+  "salario",
+  "empresa",
+] as const;
 
 export type FocoHomepage = (typeof FOCOS_HOMEPAGE)[number];
 

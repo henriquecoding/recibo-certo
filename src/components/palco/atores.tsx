@@ -123,6 +123,52 @@ export function Contador({
   return <>{formato(mostrado)}</>;
 }
 
+/**
+ * Uma progressão de 0 a 1 que a pausa pára — para o que não é um número
+ * nem uma ficha, mas continua a ser conteúdo em movimento.
+ *
+ * Existe pela mesma razão que o `Contador` tem relógio próprio: uma linha
+ * que leva 1,6 s a crescer é conteúdo animado, e o WCAG 2.2.2 não faz
+ * exceções para SVG. Deixá-la ao `motion` devolveria o defeito que já foi
+ * apanhado uma vez — a demonstração «em pausa» com coisas a mexer.
+ *
+ * Devolve 1 imediatamente quando `estatico`, para o HTML servido nascer
+ * com o desenho completo.
+ */
+export function useProgresso(activo: boolean, duracao: number, estatico = false) {
+  const { parado } = useContext(PalcoContexto);
+  const [valor, setValor] = useState(estatico ? 1 : 0);
+  const paradoRef = useRef(parado);
+  paradoRef.current = parado;
+
+  useEffect(() => {
+    if (estatico) {
+      setValor(1);
+      return;
+    }
+    if (!activo) {
+      setValor(0);
+      return;
+    }
+    let raf = 0;
+    let decorrido = 0;
+    let ultimo = performance.now();
+    const curva = bezier(ENTRADA);
+
+    const passo = (agora: number) => {
+      if (!paradoRef.current) decorrido += agora - ultimo;
+      ultimo = agora;
+      const t = Math.min(1, decorrido / duracao);
+      setValor(curva(t));
+      if (t < 1) raf = requestAnimationFrame(passo);
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [activo, duracao, estatico]);
+
+  return valor;
+}
+
 export interface FichaEmCena {
   id: string;
   origem: Ponto;

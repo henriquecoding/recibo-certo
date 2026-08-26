@@ -5,7 +5,19 @@
 > movimento dentro dela. Se o código e este roteiro discordarem, um dos dois
 > está errado — decide-se qual, não se «harmoniza».
 >
-> Estado: **plano**. Nada aqui está implementado.
+> Estado: **implementado** nas fases 1 a 6 (v2.127.0). O que ficou por
+> fazer está marcado na §8.
+>
+> **Uma correção ao plano, apanhada na execução.** A §3.1 previa um
+> compartimento 0 — uma «régua de focos» nova, por cima do hero. Cheguei a
+> montá-la, e o teste de navegação apanhou-a: dois destinos acesos para a
+> mesma página. A cápsula do cabeçalho, a barra do telemóvel e o
+> `FilaPilares` já mostram os mesmos cinco pilares e já leem
+> `hrefDaSuperficiePilar`. O que estava partido nunca foi a falta de um
+> controlo: era o controlo existente a misturar dois tipos de separador.
+> Dar `homepageHref` aos cinco corrigiu-o onde ele já estava. **A régua
+> nova foi apagada** — acrescentá-la seria resolver o problema criando-o
+> outra vez.
 
 ---
 
@@ -106,9 +118,12 @@ Os cinco pilares já são tarefas. O seletor da homepage ficou para trás.
 
 ### 1.1 O que morre
 
-- **`SeletorModo`** — o cartão «Sou trabalhador / Gostaria de». Substituído
-  pela régua de cinco focos, que é a mesma navegação que já existe na cápsula,
-  na barra do telemóvel e no `FilaPilares`.
+- **O cartão «Sou trabalhador / Gostaria de»** sai do hero. A navegação
+  passa a ser a cápsula do cabeçalho, que já mostrava os mesmos cinco pilares.
+  O `SeletorModo` sobrevive apenas dentro da `CalculadoraSecao`, com os
+  rótulos trocados de identidades («Independente») para cálculos («Um recibo
+  verde») — navegação secundária de uma ferramenta, que é exatamente onde a
+  NN/g diz que uma categoria de audiência pode viver.
 - **`Perfil` como ramificador da homepage.** `CalculadoraSecao`,
   `ExplorarSecao`, `FAQ` e `Hero` deixam de ler `usePerfil()`.
 - **O perfil `comparar`** enquanto modo da homepage. Absorvido — ver §5.
@@ -166,11 +181,14 @@ Os cinco focos são **a mesma página com outro conteúdo**, e isso tem de ser
 verdade por construção — não por eu ter escrito duas vezes o mesmo JSX, que é
 o que hoje acontece entre `HomepageDescobrir` e `HomepagePreco`.
 
-### 3.1 Os oito compartimentos, sempre por esta ordem
+### 3.1 Os sete compartimentos, sempre por esta ordem
+
+> A numeração começa em 1: o compartimento 0 («régua de focos») foi
+> retirado na execução — ver a nota no topo. A navegação dos cinco vive na
+> cápsula do cabeçalho, que já existia.
 
 | # | Compartimento | Fundo | O que é | Varia? |
 |---|---|---|---|---|
-| 0 | **Régua de focos** | — | Os cinco, server-rendered, o ativo marcado | Nunca |
 | 1 | **Hero** | `grain` + halos | Sobrancelha · h1 · sub · **palco** · 2 CTA · confiança | Conteúdo e palco |
 | 2 | **Método** | `grain bg-sand` | Como decide / o que faz, em 3 passos | Conteúdo |
 | 3 | **Percurso** | branco | Onde isto leva — incluindo **o foco seguinte** | Conteúdo |
@@ -225,6 +243,14 @@ depende, e já divergiu.
 Cada palco usa a mesma maquinaria (`components/palco/`: curvas, `PASSO`,
 relógio de atos, fichas, contadores, medição no DOM) e a mesma gramática
 (`roteiro-animacao-preco.md` §1). O que muda é **o argumento**.
+
+> **Onde vivem os roteiros dos três palcos novos.** Descobrir e Preço têm
+> ficheiro próprio em `docs/design/` porque nasceram antes da gramática
+> partilhada e precisaram de a justificar. Os três novos não repetem esse
+> trabalho: a linha temporal e a razão de cada beat vivem no cabeçalho do
+> respetivo `coreografia.ts`, ao lado dos números que descrevem. Um roteiro
+> separado para uma linha temporal de quatro atos seria um segundo sítio para
+> os mesmos milissegundos divergirem.
 
 ### 4.0 A regra do tom
 
@@ -375,10 +401,10 @@ Um teste deve garantir que o bloco de Descobrir não renderiza controlos.
   primário de cada hero. **A régua leva à leitura; o hero leva à ferramenta.**
 - `METADADOS_POR_FOCO` ganha três entradas. A forma já generaliza.
 
-### 6.2 A régua de focos
+### 6.2 A cápsula dos cinco (a régua que já existia)
 
-Server component, cinco `<a href>` reais, uma linha só. Exigências da NN/g que
-se cumprem à letra:
+`CapsulaNav` já era isto e já cumpria as exigências da NN/g — só lhe
+faltava o quinto destino ser do mesmo tipo dos outros quatro:
 
 - **Uma linha, nunca duas.** Cinco é o teto da recomendação («mais do que três
   a cinco pode ser demasiado»); no telemóvel a régua **desliza na horizontal**,
@@ -452,19 +478,22 @@ Não é um compartimento no fim: é condição de aceitação de cada um.
 Cada fase deixa a aplicação inteira e verificável. Nenhuma exige a seguinte
 para fazer sentido.
 
-| Fase | O que | Porque é esta a ordem |
-|---|---|---|
-| **1** | Extrair `LayoutFoco`, `HeroFoco`, `SeccaoFoco`, `ReguaDeFocos`, `focos.ts`. Migrar Descobrir e Preço para o esqueleto **sem alterar o que se vê** | O esqueleto tem de existir antes do terceiro foco, ou o terceiro nasce a divergir como os dois primeiros divergiram |
-| **2** | `foco` de 2 → 5. Régua homogénea, `homepageHref` nos cinco, metadados. Os três novos focos servem, para já, o conteúdo que hoje têm | Resolve o §0.2 — o defeito mais grave — sem esperar pelos palcos |
-| **3** | Palco de **Recibos verdes**: herdar a encenação do `HeroCard`, escrever `roteiro-animacao-recibos.md`, implementar, verificar | É o foco com mais tráfego e o que mais aproveita o que já existe |
-| **4** | Palco de **Salário** (a conferência) + `roteiro-animacao-salario.md` | É o que mais muda de proposta: passa de cópia a auditoria |
-| **5** | Palco de **Empresa** (o ponto de viragem) + `roteiro-animacao-empresa.md` | Depende de nada; fica por último por ser o de menor tráfego |
-| **6** | Comparar cenários dentro de Descobrir (§5). Retirar `SeletorModo` e o perfil `comparar` da homepage. Migração do `Perfil` (§6.3) | Só depois de os cinco existirem é que se pode desligar o eixo antigo |
-| **7** | Método/Percurso/Laboratório/Fontes/FAQ próprios dos três focos novos | O trabalho editorial de fundo, depois de a estrutura estar de pé |
+| Fase | Estado | O que | Porque é esta a ordem |
+|---|---|---|---|
+| **1** | ✅ | Extrair `HeroFoco`, `SeccaoFoco`, `focos.ts` (o `LayoutFoco` dissolveu-se nos dois: com sete compartimentos e uma ordem fixa, os *slots* eram cerimónia por cima de `SeccaoFoco`). Migrar Descobrir e Preço para o esqueleto **sem alterar o que se vê** | O esqueleto tem de existir antes do terceiro foco, ou o terceiro nasce a divergir como os dois primeiros divergiram |
+| **2** | ✅ | `foco` de 2 → 5. Régua homogénea, `homepageHref` nos cinco, metadados. Os três novos focos servem, para já, o conteúdo que hoje têm | Resolve o §0.2 — o defeito mais grave — sem esperar pelos palcos |
+| **3** | ✅ | Palco de **Recibos verdes**: herdar a encenação do `HeroCard`, implementar, verificar | É o foco com mais tráfego e o que mais aproveita o que já existe |
+| **4** | ✅ | Palco de **Salário** — a conferência | É o que mais muda de proposta: passa de cópia a auditoria |
+| **5** | ✅ | Palco de **Empresa** — o ponto de viragem | Depende de nada; fica por último por ser o de menor tráfego |
+| **6** | ✅ | Comparar cenários dentro de Descobrir (§5). Retirar `SeletorModo` e o perfil `comparar` da homepage. Migração do `Perfil` (§6.3) | Só depois de os cinco existirem é que se pode desligar o eixo antigo |
+| **7** | ◑ | Método, Percurso, Fontes e FAQ próprios: **feitos**. Falta o **Laboratório** dos três focos novos — a peça mexível, que Descobrir e Preço já têm | O trabalho editorial de fundo, depois de a estrutura estar de pé |
 
-**Fases 1 e 2 valem por si.** Se o trabalho parar aí, a homepage já deixou de
-misturar dois tipos de separador e já tem um eixo só — que é o defeito
-estrutural.
+**O que falta, e é a única coisa que falta:** o compartimento 4
+(**Laboratório**) dos três focos novos. Descobrir e Preço têm-no — a peça que
+se mexe e responde. Recibos verdes, Salário e Empresa têm o palco, que corre
+sozinho, mas ainda não têm onde a pessoa pôr os SEUS números sem sair da
+leitura. Os CTA levam à ferramenta, que faz isso; o compartimento é o passo
+intermédio que falta.
 
 ---
 
@@ -478,7 +507,7 @@ estrutural.
 - **Dois palcos com o mesmo verbo.** Um palco que seja uma cascata de deduções
   com outros números é o §0.3 a voltar.
 - **O mesmo bloco em dois focos.** Profundidades diferentes ou um sítio só.
-- **Um foco a inventar estrutura.** Os oito compartimentos, por ordem. Quem
+- **Um foco a inventar estrutura.** Os sete compartimentos, por ordem. Quem
   precisa de outra estrutura precisa de outra página.
 - **Um palco a animar pelo `motion`.** A pausa tem de parar tudo.
 - **Navegar alguém a partir de estado invisível.**

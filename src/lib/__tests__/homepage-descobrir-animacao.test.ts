@@ -8,6 +8,7 @@ import {
   arco,
   bezier,
 } from "@/components/descobrir/coreografia";
+import { FOCOS } from "@/components/foco/focos";
 
 const SRC = join(__dirname, "..", "..");
 const RAIZ = join(SRC, "..");
@@ -113,11 +114,19 @@ describe("homepage Descobrir: coreografia", () => {
     expect(PAGINA).toContain("url: `/?foco=${foco}`");
     expect(PAGINA).toContain("const tituloSocial = `${title} | ReciboCerto`");
     expect(PAGINA).toContain("title: { absolute: tituloSocial }");
-    // E a tabela por foco tem de cobrir os dois — senão a generalização é só
+    // E a tabela por foco tem de cobrir TODOS — senão a generalização é só
     // aparente e um dos modos fica sem metadados.
-    expect(PAGINA).toContain("const METADADOS_POR_FOCO = {");
-    for (const foco of ["descobrir", "preco"]) {
-      expect(PAGINA.slice(PAGINA.indexOf("METADADOS_POR_FOCO"))).toContain(`${foco}: {`);
+    //
+    // ⚠️ Este teste procurava um objeto literal escrito à mão com uma
+    // chave por foco. Ao quinto foco isso passaria a ser cinco sítios para
+    // um título divergir do outro, e a tabela passou a derivar de `FOCOS`
+    // — a mesma que desenha a régua. Um teste que exige a duplicação de
+    // volta não está a proteger nada.
+    expect(PAGINA).toContain("const METADADOS_POR_FOCO = Object.fromEntries(");
+    expect(PAGINA).toContain("FOCOS.map((f) => [f.id, { title: f.titulo, description: f.descricao }])");
+    for (const foco of FOCOS) {
+      expect(foco.titulo.length, `${foco.id} sem título`).toBeGreaterThan(10);
+      expect(foco.descricao.length, `${foco.id} sem descrição`).toBeGreaterThan(40);
     }
   });
 

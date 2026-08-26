@@ -104,7 +104,16 @@ function CartaoCompacto({
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand">
+            {/* `truncate` cortava «Calculadora de Segurança Social …» a
+                320 px, e o nome de uma ferramenta com reticências deixa de
+                ser um nome — a auditoria conta texto cortado como texto
+                que não cabe, e tem razão.
+
+                Também não é `line-clamp-2`: o `display:-webkit-box` que ele
+                usa continua a declarar a largura do texto por quebrar, e a
+                auditoria continuava a apanhá-lo. Aqui o nome quebra e
+                pronto — o cartão tem `h-full` e aguenta duas linhas. */}
+            <span className="min-w-0 text-balance text-sm font-semibold leading-snug text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand">
               {titulo}
             </span>
             {badge && (
@@ -344,7 +353,10 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
           <div className="mt-6">
             <Link
               href="/guias"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
+              // `min-h-[24px]` e `py-1`: a caixa media 121×16 e o alvo
+              // ficava abaixo do mínimo de 24 px do WCAG 2.5.8. O texto
+              // não muda de tamanho — muda a área tocável à volta dele.
+              className="focus-marca inline-flex min-h-[24px] items-center gap-1.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
             >
               Ver os guias todos <ArrowRight size={11} />
             </Link>

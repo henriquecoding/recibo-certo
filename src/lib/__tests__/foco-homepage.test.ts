@@ -1,18 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { FOCOS_HOMEPAGE, normalizarFocoHomepage } from "@/lib/foco-homepage";
 import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
+import { FOCOS, FOCO_POR_ID, FOCO_DO_PERFIL_ANTIGO } from "@/components/foco/focos";
 
 describe("homepage adaptativa", () => {
-  it("reconhece apenas experiências que existem de ponta a ponta", () => {
-    // A lista cresce quando uma experiência fica pronta, e não antes. Um foco
-    // aceite sem homepage por trás devolvia a homepage normal com um separador
-    // aceso a apontar para lado nenhum.
-    expect(FOCOS_HOMEPAGE).toEqual(["descobrir", "preco"]);
-    expect(normalizarFocoHomepage("descobrir")).toBe("descobrir");
-    expect(normalizarFocoHomepage("preco")).toBe("preco");
+  it("reconhece os cinco focos, e cada um existe de ponta a ponta", () => {
+    // ⚠️ Este teste fixava a lista literal `["descobrir", "preco"]`.
+    //
+    // Quando a homepage passou de dois focos para cinco, partiu — não por
+    // ter apanhado um defeito, mas por estar a medir o número de focos em
+    // vez do CONTRATO. O contrato é: nenhum foco é aceite sem que exista
+    // uma página por trás dele, e a lista dos aceites é exatamente a dos
+    // declarados.
+    expect([...FOCOS_HOMEPAGE].sort()).toEqual(FOCOS.map((f) => f.id).sort());
+
+    for (const foco of FOCOS) {
+      expect(normalizarFocoHomepage(foco.id)).toBe(foco.id);
+    }
+    // O primeiro valor ganha quando o parâmetro vem repetido.
     expect(normalizarFocoHomepage(["preco", "descobrir"])).toBe("preco");
-    expect(normalizarFocoHomepage("recibos")).toBeNull();
-    expect(normalizarFocoHomepage("salario")).toBeNull();
+    expect(normalizarFocoHomepage("qualquer-coisa")).toBeNull();
     expect(normalizarFocoHomepage(undefined)).toBeNull();
   });
 
@@ -25,33 +32,96 @@ describe("homepage adaptativa", () => {
     expect([...FOCOS_HOMEPAGE].sort()).toEqual([...declarados].sort());
 
     for (const pilar of PILARES) {
-      if (!pilar.homepageHref) continue;
-      expect(pilar.homepageHref).toBe(`/?foco=${pilar.id}`);
+      expect(pilar.homepageHref, `${pilar.id} sem porta editorial`).toBe(`/?foco=${pilar.id}`);
       expect(normalizarFocoHomepage(pilar.id)).toBe(pilar.id);
     }
   });
 
-  it("mantém o canónico da ferramenta separado da porta editorial", () => {
-    const descobrir = PILARES.find((pilar) => pilar.id === "descobrir");
-    const preco = PILARES.find((pilar) => pilar.id === "preco");
-    const recibos = PILARES.find((pilar) => pilar.id === "recibos");
-
-    expect(descobrir?.href).toBe("/ferramentas/descobrir-negocio");
-    expect(descobrir && hrefDaSuperficiePilar(descobrir)).toBe("/?foco=descobrir");
-
-    expect(preco?.href).toBe("/ferramentas/calcular-preco");
-    expect(preco && hrefDaSuperficiePilar(preco)).toBe("/?foco=preco");
-
-    // Um pilar sem experiência editorial continua a abrir a ferramenta.
-    expect(recibos?.homepageHref).toBeUndefined();
-    expect(recibos && hrefDaSuperficiePilar(recibos)).toBe(recibos?.href);
+  it("os cinco pilares têm porta editorial — a régua é homogénea", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ É ISTO QUE O DEFEITO MAIS GRAVE ERA                            │
+    // │                                                               │
+    // │ Dois pilares levavam a `/?foco=…` e trocavam o conteúdo na    │
+    // │ mesma página; três levavam a `/ferramentas/<slug>` e saíam    │
+    // │ dela. A NN/g é explícita: misturar separadores de página com  │
+    // │ separadores de navegação no mesmo controlo desorienta.        │
+    // │                                                               │
+    // │ Se algum dia um pilar voltar a ficar sem `homepageHref`, a    │
+    // │ régua volta a mentir — e este teste é o que impede isso de    │
+    // │ acontecer em silêncio.                                        │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(PILARES.every((pilar) => Boolean(pilar.homepageHref))).toBe(true);
+    expect(PILARES).toHaveLength(FOCOS.length);
   });
 
-  it("não confunde foco editorial com o parâmetro de perfil", () => {
-    expect(normalizarFocoHomepage("independente")).toBeNull();
-    expect(normalizarFocoHomepage("empresa")).toBeNull();
+  it("mantém o canónico da ferramenta separado da porta editorial", () => {
+    // A régua leva à LEITURA; o CTA do hero leva à FERRAMENTA. As duas
+    // tabelas têm de concordar sobre qual é qual.
+    for (const pilar of PILARES) {
+      const foco = FOCO_POR_ID.get(pilar.id as never);
+      expect(foco, `o pilar ${pilar.id} não tem foco`).toBeDefined();
+      expect(hrefDaSuperficiePilar(pilar)).toBe(`/?foco=${pilar.id}`);
+      expect(pilar.href).toBe(foco!.ferramenta);
+      expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
+    }
+  });
+
+  it("o perfil antigo aponta para um foco que existe", () => {
+    // A migração de quem tem `perfil` guardado de visitas anteriores. Só
+    // serve para MARCAR a régua — nunca para navegar. Redirecionar alguém
+    // a partir de estado invisível é o defeito que esta reestruturação
+    // existe para corrigir, com outra roupa.
+    for (const [perfil, foco] of Object.entries(FOCO_DO_PERFIL_ANTIGO)) {
+      expect(normalizarFocoHomepage(foco), `${perfil} → ${foco}`).toBe(foco);
+    }
+    // Os quatro perfis antigos, todos cobertos.
+    expect(Object.keys(FOCO_DO_PERFIL_ANTIGO).sort()).toEqual([
+      "comparar",
+      "dependente",
+      "empresa",
+      "independente",
+    ]);
+    // «Comparar» deixou de ser um modo e passou a viver dentro de
+    // Descobrir: quem o tinha guardado abre a mesa de decisão.
+    expect(FOCO_DO_PERFIL_ANTIGO.comparar).toBe("descobrir");
+  });
+
+  it("cada foco tem uma pergunta e um verbo que mais nenhum tem", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ A REGRA QUE IMPEDE A RECAÍDA                                  │
+    // │                                                               │
+    // │ Havia UM `HeroCard` com uma coreografia só, e três dos quatro │
+    // │ cartões declaravam `modoLinhas: "deducoes"` — Recibos verdes, │
+    // │ Salário e Empresa mostravam a mesma cascata de deduções com   │
+    // │ números diferentes. Uma máquina com três fatos, não três      │
+    // │ palcos.                                                       │
+    // │                                                               │
+    // │ Com cinco verbos distintos, nenhum palco pode voltar a ser a  │
+    // │ cascata do vizinho: só um dos cinco tem «repartir».           │
+    // └───────────────────────────────────────────────────────────────┘
+    const verbos = FOCOS.map((f) => f.verbo);
+    expect(new Set(verbos).size).toBe(FOCOS.length);
+    expect([...verbos].sort()).toEqual([
+      "compor",
+      "conferir",
+      "eliminar",
+      "repartir",
+      "virar",
+    ]);
+
+    const perguntas = FOCOS.map((f) => f.pergunta);
+    expect(new Set(perguntas).size).toBe(FOCOS.length);
+    for (const pergunta of perguntas) expect(pergunta.endsWith("?")).toBe(true);
+
+    // E cinco palcos com nomes distintos: dois focos com o mesmo palco
+    // seriam dois focos a mais.
+    expect(new Set(FOCOS.map((f) => f.palco)).size).toBe(FOCOS.length);
+  });
+
+  it("a porta editorial nunca carrega o parâmetro de perfil antigo", () => {
     for (const pilar of PILARES) {
       expect(pilar.homepageHref ?? "").not.toContain("modo=");
+      expect(pilar.homepageHref ?? "").not.toContain("perfil=");
     }
   });
 });

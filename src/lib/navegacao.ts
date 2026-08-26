@@ -142,6 +142,7 @@ export const PILARES: Pilar[] = [
   {
     id: "recibos",
     href: "/ferramentas/recibos-verdes",
+    homepageHref: "/?foco=recibos",
     label: "Recibos verdes",
     curto: "Recibos",
     resultado: "Quanto de cada recibo fica mesmo para ti, depois de tudo.",
@@ -152,6 +153,7 @@ export const PILARES: Pilar[] = [
   {
     id: "salario",
     href: "/ferramentas/recibo-vencimento",
+    homepageHref: "/?foco=salario",
     label: "Salário",
     curto: "Salário",
     resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",
@@ -162,6 +164,7 @@ export const PILARES: Pilar[] = [
   {
     id: "empresa",
     href: "/ferramentas/simulador-empresa",
+    homepageHref: "/?foco=empresa",
     label: "Empresa",
     curto: "Empresa",
     resultado: "IRC, salário de gerência e dividendos — o que sobra ao fim do ano.",

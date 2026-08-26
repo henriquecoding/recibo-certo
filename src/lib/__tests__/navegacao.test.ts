@@ -217,8 +217,12 @@ describe("navegacao:contrato-dos-destinos", () => {
   });
 
   it("uma experiência editorial nunca substitui o canónico da ferramenta", () => {
+    // ⚠️ Media a LISTA («descobrir», «preco») e por isso partiu quando os
+    // cinco pilares passaram a ter porta editorial — que é precisamente a
+    // correção que a régua precisava. O que interessa proteger é a
+    // separação entre a porta e o canónico, e essa vale para todos.
     const adaptativos = PILARES.filter((pilar) => pilar.homepageHref);
-    expect(adaptativos.map((pilar) => pilar.id)).toEqual(["descobrir", "preco"]);
+    expect(adaptativos).toHaveLength(PILARES.length);
 
     for (const pilar of adaptativos) {
       // A porta editorial é uma query da homepage; o canónico é a rota da

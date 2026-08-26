@@ -387,7 +387,11 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               <h2 id="palco-descobrir-titulo" className="truncate text-[11px] font-bold uppercase tracking-[.16em] text-white">
                 Mesa de decisão
               </h2>
-              <p className="mt-0.5 truncate text-[10px] text-white/45">
+              {/* Sem `truncate` — a legenda do ato quebra em vez de ser
+                  cortada. A 320 px «Eliminar padrões incompatíveis a…»
+                  transbordava 50 px, e uma legenda com reticências não
+                  diz o que o ato faz. */}
+              <p className="mt-0.5 text-[10px] leading-snug text-white/45">
                 {finalizado || estatico
                   ? "Demonstração concluída"
                   : parado

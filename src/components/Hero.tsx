@@ -10,7 +10,6 @@ import { usePerfil, type Perfil } from "@/lib/perfil";
 import { ferramentasPorPerfil } from "@/lib/ferramentas";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { guiasPorPerfil } from "@/lib/guias-config";
-import SeletorModo from "@/components/SeletorModo";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
 import type { ComparacaoCategoriasResult, VencimentoResult } from "@/lib/fiscal-dependente";
 import type { CalcResult } from "@/lib/fiscal";
@@ -1204,11 +1203,25 @@ export default function Hero({
           variants={staggerContainer}
           className="max-w-xl lg:max-w-none"
         >
-          <m.div variants={staggerItem}>
-            <SeletorModo />
-          </m.div>
-
-          <m.h1 variants={staggerItem} className="mt-7 font-display display-hero text-balance font-semibold text-ink">
+          {/* ┌───────────────────────────────────────────────────────┐
+              │ O «SOU TRABALHADOR» SAIU DAQUI                        │
+              │                                                       │
+              │ Perguntava QUEM ÉS para decidir o que mostrar, e a    │
+              │ NN/g tem cinco razões documentadas contra navegação   │
+              │ por audiência. Três batem em cheio neste produto:     │
+              │ metade do público tem salário E recibos verdes e não  │
+              │ cabe numa categoria; auto-identificar-se «cria um     │
+              │ passo adicional e tira as pessoas do modo-tarefa»; e  │
+              │ quem escolhe um lado fica sem saber o que havia do    │
+              │ outro.                                                │
+              │                                                       │
+              │ Foi substituído pela régua de focos, acima desta      │
+              │ secção, que pergunta O QUE QUERES SABER — e que é a   │
+              │ mesma navegação da cápsula, da barra do telemóvel e   │
+              │ do `FilaPilares`, em vez de um sexto sítio onde       │
+              │ escolher.                                             │
+              └───────────────────────────────────────────────────────┘ */}
+          <m.h1 variants={staggerItem} className="font-display display-hero text-balance font-semibold text-ink">
             {dados.h1}
           </m.h1>
 

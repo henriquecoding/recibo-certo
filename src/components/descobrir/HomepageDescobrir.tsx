@@ -20,6 +20,7 @@ import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
 import HeroDescobrir, { type ExemploDescoberta } from "./HeroDescobrir";
 import LaboratorioDescobrir from "./LaboratorioDescobrir";
+import BifurcacaoDescobrir from "./BifurcacaoDescobrir";
 
 const PRINCIPIOS = [
   {
@@ -352,6 +353,10 @@ export default function HomepageDescobrir({ exemplo }: { exemplo: ExemploDescobe
       </section>
       <Precos />
       <FAQDescobrir />
+      {/* O «Comparar cenários» que era um botão do cartão de audiência.
+          Fica entre o FAQ e as Fontes porque é o último ato da LEITURA —
+          a pergunta que só existe depois de haver uma hipótese. */}
+      <BifurcacaoDescobrir />
       <FontesDescobrir />
     </>
   );

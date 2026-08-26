@@ -1,0 +1,179 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  OS CINCO FOCOS DA HOMEPAGE
+//  ---------------------------------------------------------------------
+//  Antes desta tabela havia DOIS eixos a ramificar a mesma página:
+//  `Perfil` (localStorage, quatro valores, ramificava o Hero e a
+//  calculadora) e `foco` (URL, dois valores, ramificava a página inteira).
+//  Critérios diferentes, nenhum a saber do outro, e um deles invisível no
+//  URL. Ter dois modelos mentais para o mesmo gesto era o defeito de que
+//  todos os outros descendiam.
+//
+//  Fica um eixo: `foco`. E fica com a pergunta certa.
+//
+//  ── Porque a coluna do meio é uma PERGUNTA e não uma identidade ───────
+//
+//  O seletor antigo perguntava «sou trabalhador independente ou por conta
+//  de outrem?». A NN/g tem cinco razões documentadas contra navegação por
+//  audiência, e três batem em cheio aqui: metade do público tem salário E
+//  recibos verdes e não cabe numa categoria; auto-identificar-se «cria um
+//  passo adicional e tira as pessoas do modo-tarefa»; e quem escolhe um
+//  lado fica sem saber o que havia do outro.
+//
+//  O `lib/navegacao.ts` já tinha escrito isto em comentário há muito:
+//  a pergunta deixou de ser «quem és?» e passou a ser «em que ponto
+//  estás?». Os pilares já eram tarefas; o seletor é que ficou para trás.
+//
+//  ── Porque cada foco tem um VERBO ─────────────────────────────────────
+//
+//  É a regra que impede a recaída. Havia UM `HeroCard` com uma coreografia
+//  só, e três dos quatro cartões declaravam `modoLinhas: "deducoes"` —
+//  Recibos verdes, Salário e Empresa mostravam a mesma cascata de deduções
+//  com números diferentes. Uma máquina com três fatos, não três palcos.
+//
+//  Com cinco verbos distintos — eliminar, compor, repartir, conferir,
+//  virar — nenhum palco pode voltar a ser uma cascata de deduções com
+//  outros números, porque só um dos cinco tem como verbo «repartir».
+// ═══════════════════════════════════════════════════════════════════════
+
+import type { FocoHomepage } from "@/lib/foco-homepage";
+
+/**
+ * O tom do palco.
+ *
+ * Regra: **escuro** quando o assunto é um processo que não se vê, **claro**
+ * quando é um documento que se seguraria na mão. Não é decoração — é uma
+ * regra que se aplica sozinha a qualquer palco futuro.
+ */
+export type TomPalco = "claro" | "escuro";
+
+export interface DefinicaoFoco {
+  id: FocoHomepage;
+  /** O nome na régua. Uma palavra sempre que possível. */
+  label: string;
+  /** A pergunta que este foco responde e nenhum outro responde. */
+  pergunta: string;
+  /** O verbo do palco. Cinco focos, cinco verbos, sem exceção. */
+  verbo: "eliminar" | "compor" | "repartir" | "conferir" | "virar";
+  /** O nome do palco, para a régua de atos e para os roteiros. */
+  palco: string;
+  tom: TomPalco;
+  /** O ícone, resolvido por `iconeDe` em `ferramentas/icon-map`. */
+  icone: string;
+  /** A ferramenta: o destino do CTA primário do hero. */
+  ferramenta: string;
+  /** O rótulo do CTA primário. */
+  ctaPrimario: string;
+  /** Título e descrição sociais. */
+  titulo: string;
+  descricao: string;
+}
+
+/**
+ * A ordem é o ciclo de vida, e é contrato: quem aprendeu onde está
+ * «Recibos» acerta-lhe sem olhar, e trocar posições desfaz isso sem aviso.
+ *
+ *   que negócio abrir → quanto cobrar → quanto fica de cada recibo →
+ *   quanto fica do salário → e se fosse uma empresa
+ */
+export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
+  {
+    id: "descobrir",
+    label: "Descobrir",
+    pergunta: "Que negócio faz sentido eu testar?",
+    verbo: "eliminar",
+    palco: "Mesa de decisão",
+    tom: "escuro",
+    icone: "Lightbulb",
+    ferramenta: "/ferramentas/descobrir-negocio",
+    ctaPrimario: "Descobrir o que posso testar",
+    titulo: "Descobrir que negócio testar em Portugal",
+    descricao:
+      "Cruza competências, restrições e sinais oficiais para construir uma hipótese de negócio testável — com lacunas, riscos e próximo passo visíveis.",
+  },
+  {
+    id: "preco",
+    label: "Preço",
+    pergunta: "Quanto tenho de cobrar?",
+    verbo: "compor",
+    palco: "Formação do preço",
+    tom: "claro",
+    icone: "Coin",
+    ferramenta: "/ferramentas/calcular-preco",
+    ctaPrimario: "Calcular o meu preço",
+    titulo: "Formar um preço que sustenta o negócio",
+    descricao:
+      "Custos, tempo, comissões, IVA e margem numa só composição — e o que muda no preço consoante vendas direto, num marketplace, isento ou a recibos verdes.",
+  },
+  {
+    id: "recibos",
+    label: "Recibos verdes",
+    pergunta: "Deste recibo, quanto é meu e quanto tenho de guardar?",
+    verbo: "repartir",
+    palco: "A repartição",
+    tom: "claro",
+    icone: "Receipt",
+    ferramenta: "/ferramentas/recibos-verdes",
+    ctaPrimario: "Calcular o meu recibo",
+    titulo: "Quanto fica de cada recibo verde",
+    descricao:
+      "De cada recibo, o que é teu, o que é retenção de IRS e o que tens de reservar para a Segurança Social — com a data em que sai da conta.",
+  },
+  {
+    id: "salario",
+    label: "Salário",
+    pergunta: "O meu recibo de vencimento está certo?",
+    verbo: "conferir",
+    palco: "A conferência",
+    tom: "claro",
+    icone: "Briefcase",
+    ferramenta: "/ferramentas/recibo-vencimento",
+    ctaPrimario: "Conferir o meu recibo",
+    titulo: "Conferir o recibo de vencimento, linha a linha",
+    descricao:
+      "Recalcula o teu líquido a partir do bruto — Segurança Social, retenção de IRS e subsídios — e põe-no ao lado do recibo que recebeste.",
+  },
+  {
+    id: "empresa",
+    label: "Empresa",
+    pergunta: "A partir de quando compensa ter empresa?",
+    verbo: "virar",
+    palco: "O ponto de viragem",
+    tom: "escuro",
+    icone: "Building",
+    ferramenta: "/ferramentas/simulador-empresa",
+    ctaPrimario: "Simular a minha empresa",
+    titulo: "A partir de quando compensa abrir empresa",
+    descricao:
+      "Recibos verdes e sociedade lado a lado, com o custo fixo de ter empresa contado e o ponto de faturação em que as duas se cruzam.",
+  },
+]);
+
+export const FOCO_POR_ID = new Map(FOCOS.map((foco) => [foco.id, foco]));
+
+/** O href da leitura editorial de um foco. */
+export const hrefDoFoco = (id: FocoHomepage) => `/?foco=${id}`;
+
+/**
+ * A ferramenta de cada foco, indexada pelo id.
+ *
+ * Existe porque `PILARES` e esta tabela têm de concordar, e um teste
+ * compara-as: **a régua leva à leitura; o hero leva à ferramenta.**
+ */
+export const FERRAMENTA_DO_FOCO: Record<FocoHomepage, string> = Object.freeze(
+  Object.fromEntries(FOCOS.map((foco) => [foco.id, foco.ferramenta])),
+) as Record<FocoHomepage, string>;
+
+/**
+ * O perfil antigo → o foco que lhe corresponde.
+ *
+ * Só para a migração de quem tem `perfil` guardado de visitas anteriores.
+ * NUNCA para navegar automaticamente: redirecionar alguém a partir de
+ * estado invisível é o defeito que esta tabela existe para corrigir, com
+ * outra roupa. Serve para MARCAR a régua, e mais nada.
+ */
+export const FOCO_DO_PERFIL_ANTIGO: Record<string, FocoHomepage> = Object.freeze({
+  independente: "recibos",
+  dependente: "salario",
+  empresa: "empresa",
+  comparar: "descobrir",
+});
