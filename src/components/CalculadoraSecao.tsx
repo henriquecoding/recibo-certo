@@ -21,6 +21,24 @@ import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
 import SeletorModo from "@/components/SeletorModo";
 
+/**
+ * Quanto antes do ecrã se começa a descarregar o simulador.
+ *
+ * Lido uma vez, no cliente. `connection` não existe em todos os
+ * browsers — sem ela, assume-se ligação normal, que é o caso da maioria.
+ */
+function margemDeAntecipacao(): string {
+  if (typeof navigator === "undefined") return "320px 0px";
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } })
+    .connection;
+  if (!c) return "320px 0px";
+  if (c.saveData) return "0px";
+  if (c.effectiveType === "slow-2g" || c.effectiveType === "2g" || c.effectiveType === "3g") {
+    return "0px";
+  }
+  return "320px 0px";
+}
+
 function SimuladorSkeleton() {
   return (
     <div
@@ -107,10 +125,25 @@ export default function CalculadoraSecao() {
   const { perfil } = usePerfil();
   const copy = COPY[perfil] ?? COPY.independente;
 
-  // Carrega o simulador só quando a secção se aproxima do ecrã. A margem
-  // generosa garante que já está pronto quando o utilizador chega (incl. ao
-  // clicar no CTA "Calcular" do hero, que rola até aqui).
-  const { ref, perto } = usePerto<HTMLDivElement>("800px 0px");
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ 800 px DE MARGEM ERA TODA A GENTE                                 │
+  // │                                                                   │
+  // │ A margem existia para o simulador estar pronto quando alguém      │
+  // │ clicasse no CTA do hero. O efeito medido é outro: numa janela de  │
+  // │ 900 px de altura, 800 px de margem significa que a secção «está a │
+  // │ aproximar-se» no instante em que a página abre. Resultado — 547 KB│
+  // │ de simulador, mais os seus 200 KB de dados fiscais, descarregados │
+  // │ por TODA a gente que abre `/`, incluindo quem nunca desce.        │
+  // │                                                                   │
+  // │ 320 px é aproximar-se a sério: dá cerca de meio segundo de aviso  │
+  // │ a quem rola a um ritmo normal, e o esqueleto cobre o resto.       │
+  // └───────────────────────────────────────────────────────────────────┘
+  //
+  //  E com `Save-Data` ou ligação lenta declarada, não se antecipa nada:
+  //  quem pediu para poupar dados não quer um megabyte especulativo, e
+  //  numa ligação fraca antecipar rouba largura de banda ao que está a
+  //  ser lido agora.
+  const { ref, perto } = usePerto<HTMLDivElement>(margemDeAntecipacao());
 
   // Os OUTROS modos são pré-carregados por intenção (hover/foco/toque no seletor,
   // ver SeletorModo) em vez de todos no arranque — assim modos pesados (ex.: por
@@ -142,6 +175,7 @@ export default function CalculadoraSecao() {
           <p className="mb-3 text-sm text-stone-500 dark:text-stone-400">
             A responder a{" "}
             <Link
+              prefetch={false}
               href={hrefDoFoco(definicao.id)}
               className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
             >
@@ -178,6 +212,7 @@ export default function CalculadoraSecao() {
         <p className="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
           Já sabes quanto vais faturar?{" "}
           <Link
+            prefetch={false}
             href="/ferramentas/simulador-empresa"
             className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
           >

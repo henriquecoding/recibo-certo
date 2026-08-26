@@ -79,6 +79,19 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
             )}
             <Link
               href={destino}
+              // ── PRÉ-CARREGAR AO SOBREVOAR, E NÃO À ENTRADA ────────────
+              //  `/` é uma rota DINÂMICA (lê `?foco=`), e o Next não
+              //  pré-carrega o conteúdo dessas por omissão — cada clique
+              //  numa aba ficava à espera de um render do servidor. Numa
+              //  ligação com latência a sério isso são centenas de
+              //  milissegundos de nada a acontecer.
+              //
+              //  `prefetch={false}` desliga o pré-carregamento por
+              //  VISIBILIDADE (as cinco estão sempre no ecrã; buscá-las
+              //  todas à entrada seria trocar uma espera por cinco
+              //  pedidos que ninguém pediu) e mantém o de SOBREVOO —
+              //  que é quando a intenção já existe.
+              prefetch={false}
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
               onClick={() => medirNavegacao(pilar.id, "secretaria")}

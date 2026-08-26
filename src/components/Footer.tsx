@@ -170,6 +170,7 @@ export default function Footer() {
               </p>
             </div>
             <Link
+              prefetch={false}
               href="/dashboard"
               className="group inline-flex items-center gap-2 self-start rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float sm:self-auto"
             >
@@ -196,6 +197,7 @@ export default function Footer() {
                 {NAV_FERRAMENTAS.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="group flex items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
                     >
@@ -216,6 +218,7 @@ export default function Footer() {
                 {NAV_APRENDER.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
                     >
@@ -235,6 +238,7 @@ export default function Footer() {
                 {NAV_EMPRESA.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
                     >
@@ -264,6 +268,7 @@ export default function Footer() {
                   Tabelas AT, taxas SS e limites do Orçamento de Estado — monitorizados automaticamente e revistos por humanos.
                 </p>
                 <Link
+                  prefetch={false}
                   href="/#fontes"
                   className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand transition-colors hover:text-brand-dark"
                 >
@@ -309,6 +314,7 @@ export default function Footer() {
                   { label: "Fontes", href: "/#fontes" },
                 ].map((l) => (
                   <Link
+                    prefetch={false}
                     key={l.label}
                     href={l.href}
                     className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"

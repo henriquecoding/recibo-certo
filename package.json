@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.131.0",
+  "version": "2.132.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -20,6 +20,7 @@
     "contrato:check:producao": "node scripts/check-contrato-publico.mjs --exigir-ambiente",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
     "descobrir:e2e": "node scripts/verificar-descobrir-negocio.mjs",
+    "desempenho": "node scripts/medir-desempenho.mjs",
     "dev": "next dev",
     "docs": "npm run docs:fontes:check && npm run docs:build && npm run docs:verify",
     "docs:build": "python3 scripts/compor-documento.py",
@@ -29,6 +30,7 @@
     "docs:verify": "python3 scripts/verificar-documentos.py out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf && node scripts/verificar-texto-pdf.mjs out/relatorio-vencimento.pdf out/mapa-recibos.pdf out/declaracao-irs.pdf",
     "fiscal:check": "node scripts/check-fiscal-data.mjs",
     "fiscal:check:sources": "node scripts/check-fiscal-data.mjs --check-sources",
+    "fronteira": "node scripts/analisar-fronteira.mjs",
     "guias:check": "vitest run src/lib/__tests__/guias.test.ts src/lib/__tests__/fiz.test.ts && node scripts/check-guias.mjs",
     "guias:claims": "vitest run src/lib/__tests__/guias.test.ts -t \"guias:claims\"",
     "guias:expansao": "vitest run src/lib/__tests__/guias-expansao.test.ts",

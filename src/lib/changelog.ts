@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.132.0",
+    data: "2026-08-26",
+    titulo: "O site deixou de descarregar um megabyte e meio que ninguém tinha pedido",
+    itens: [
+      "Cada página descarregava, depois de já estar pronta, cerca de 1,6 MB de outras páginas — só porque as ligações delas estavam visíveis no ecrã. Uma página de termos e condições fazia dezassete pedidos que ninguém pediu, a competir por rede e por processador com aquilo que estavas mesmo a ler. As listas de ligações passaram a antecipar só quando passas o rato por cima, que é quando já há intenção.",
+      "As cinco leituras — Descobrir, Preço, Recibos verdes, Salário, Empresa — vinham todas em cada visita, embora só uma seja mostrada de cada vez. Cada uma passou a ser carregada quando é mesmo aberta. As abas ficaram 60% mais leves: de 2 610 KB para 1 040 KB, e de 43 ficheiros para 21.",
+      "O simulador da homepage começava a descarregar no instante em que a página abria, por causa de uma margem de antecipação larga demais — 750 KB para quem nunca chegou a descer até lá. Agora só antecipa quando estás mesmo a aproximar-te, e não antecipa nada se tiveres o modo de poupança de dados ligado ou uma ligação lenta.",
+      "Para mostrar três guias na secção «Explorar», a página carregava o catálogo inteiro de guias — meio megabyte de texto e tabelas. Os três passaram a ser escolhidos no servidor e chegam já resolvidos.",
+      "Trocar de aba deixou de parecer que nada acontece: há uma barra de progresso no topo enquanto a leitura seguinte chega, e as abas são antecipadas ao sobrevoo. Medido com 150 ms de latência simulada, a troca demora entre 25 e 62 ms.",
+      "Nada disto tirou funcionalidade nem conteúdo: as mesmas contas, os mesmos textos, os mesmos números e as mesmas demonstrações.",
+    ],
+  },
+  {
     version: "2.131.0",
     data: "2026-08-26",
     titulo: "Os cinco títulos deixaram de ser cinco textos e passaram a ser o mesmo instrumento",

@@ -20,7 +20,7 @@ import { usePerfil, type Perfil } from "@/lib/perfil";
 import { usePerto } from "@/lib/use-perto";
 import { ferramentasPorPerfil, TOTAL_FERRAMENTAS, ROTULO_KIND, type ToolDefinition } from "@/lib/ferramentas";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { guiasPorPerfil } from "@/lib/guias-config";
+import type { AtalhoGuia } from "@/lib/guias/atalhos.servidor";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import Reveal from "@/components/ui/Reveal";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -96,6 +96,7 @@ function CartaoCompacto({
   return (
     <m.div variants={entrada} className="h-full">
       <Link
+        prefetch={false}
         href={href}
         className="group flex h-full items-start gap-3 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-800 dark:bg-stone-900"
       >
@@ -152,6 +153,7 @@ function DestaqueCartao({ f, chip }: { f: ToolDefinition; chip: string }) {
   const Icon = iconeDe(f.icon);
   return (
     <Link
+      prefetch={false}
       href={f.canonicalHref}
       className="group relative grid gap-5 rounded-4xl border border-brand/25 bg-white p-6 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-float focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:bg-stone-900 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center"
     >
@@ -200,6 +202,7 @@ function DestaqueDemo({ perfil, perto }: { perfil: Perfil; perto: boolean }) {
           ))}
         </ul>
         <Link
+          prefetch={false}
           href="/ferramentas/simulador-irs"
           className="btn-shine mt-6 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:bg-brand-dark"
         >
@@ -223,7 +226,13 @@ function MiniRotulo({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) {
+export default function ExplorarSecao({
+  nAtividades,
+  atalhosGuias,
+}: {
+  nAtividades: number;
+  atalhosGuias: Record<Perfil, AtalhoGuia[]>;
+}) {
   const { perfil } = usePerfil();
   const copy = COPY[perfil] ?? COPY.independente;
   const { destaque, restantes } = ferramentasPorPerfil(perfil);
@@ -246,7 +255,12 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
     .filter((f) => !comDemo || f.id !== "simulador-irs")
     .slice(0, 6);
 
-  const guias = guiasPorPerfil(perfil).slice(0, 3);
+  // ── Os guias VÊM de fora ────────────────────────────────────────
+  //  Chamava-se aqui `guiasPorPerfil(perfil)`, e essa chamada trazia o
+  //  catálogo da expansão inteiro para o primeiro ecrã da homepage —
+  //  550 KB para desenhar três ligações. Ver o cabeçalho de
+  //  `lib/guias/atalhos.servidor.ts`.
+  const guias = atalhosGuias[perfil] ?? [];
 
   const chipDestaque =
     destaque.slug === "recibo-vencimento"
@@ -277,6 +291,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             </AnimatePresence>
           </div>
           <Link
+            prefetch={false}
             href="/ferramentas"
             className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
           >
@@ -328,7 +343,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
               <CartaoCompacto
                 key={g.href}
                 href={g.href}
-                Icon={g.icon}
+                Icon={iconeDe(g.icone)}
                 titulo={g.titulo}
                 meta={`${g.tempo} min de leitura`}
               />
@@ -336,6 +351,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             {/* Quiz — cartão-linha de marca */}
             <m.div variants={entrada} className="h-full">
               <Link
+                prefetch={false}
                 href="/quiz-fiscal"
                 className="group flex h-full items-center gap-3 rounded-2xl bg-brand p-4 text-white shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:shadow-float focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
@@ -357,6 +373,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
 
           <div className="mt-6">
             <Link
+              prefetch={false}
               href="/guias"
               // `min-h-[24px]` e `py-1`: a caixa media 121×16 e o alvo
               // ficava abaixo do mínimo de 24 px do WCAG 2.5.8. O texto

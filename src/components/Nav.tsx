@@ -302,7 +302,7 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
           {/* ── Linha 1 — marca · secções | conta · começar · menu ─────── */}
           <div className="flex h-[var(--rc-header-linha)] min-w-0 items-center justify-between gap-4 px-2">
             <div className="flex min-w-0 items-center gap-4">
-              <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
+              <Link prefetch={false} href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
                 <Logo />
               </Link>
               <BarraSecoes />
@@ -317,14 +317,14 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
 
               <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
                 {user ? (
-                  <Link href="/dashboard" className={ACAO}>
+                  <Link prefetch={false} href="/dashboard" className={ACAO}>
                     Painel
                     <ArrowRight size={14} aria-hidden />
                   </Link>
                 ) : disponivel ? (
                   <CTAComecar />
                 ) : (
-                  <Link href="/dashboard" className={ACAO}>
+                  <Link prefetch={false} href="/dashboard" className={ACAO}>
                     Começar Grátis
                     <ArrowRight size={14} aria-hidden />
                   </Link>

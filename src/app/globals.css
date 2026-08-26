@@ -1603,3 +1603,15 @@ html.dark .dark\:placeholder-stone-50::placeholder {
     animation: none;
   }
 }
+
+/* A barra de `app/loading.tsx`: atravessa e volta enquanto a leitura
+   seguinte não chega. Com movimento reduzido não anda — fica uma barra
+   inteira a meio tom, que diz o mesmo sem se mexer. */
+@keyframes carregar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}

@@ -208,6 +208,7 @@ export default function ChromeMobile() {
 
             return (
               <Link
+                prefetch={false}
                 key={slot.id}
                 href={destino}
                 // O nome acessível é sempre o COMPLETO, mesmo quando o que

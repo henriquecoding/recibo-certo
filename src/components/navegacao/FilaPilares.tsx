@@ -42,6 +42,7 @@ export default function FilaPilares() {
           </h2>
         </div>
         <Link
+          prefetch={false}
           href="/ferramentas"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand no-underline transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
         >
@@ -58,6 +59,7 @@ export default function FilaPilares() {
           return (
             <li key={pilar.id}>
               <Link
+                prefetch={false}
                 href={hrefDaSuperficiePilar(pilar)}
                 className="focus-marca group flex h-full items-start gap-3 rounded-4xl border border-stone-100 bg-white p-4 no-underline shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 lg:flex-col lg:gap-2.5"
               >

@@ -133,6 +133,8 @@ export default function Precos() {
               </ul>
 
               <Link
+
+                prefetch={false}
                 href="/dashboard"
                 className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-600"
               >
@@ -172,6 +174,8 @@ export default function Precos() {
               </ul>
 
               <Link
+
+                prefetch={false}
                 href="/dashboard/upgrade"
                 className="btn-shine mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
               >

@@ -14,15 +14,28 @@ import { ATIVIDADES } from "@/lib/fiscal-data";
 import Precos from "@/components/Precos";
 import Footer from "@/components/Footer";
 import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
-import HomepageDescobrir from "@/components/descobrir/HomepageDescobrir";
-import HomepagePreco from "@/components/preco/HomepagePreco";
-import HomepageRecibos from "@/components/foco/recibos/HomepageRecibos";
-import HomepageSalario from "@/components/foco/salario/HomepageSalario";
-import HomepageEmpresa from "@/components/foco/empresa/HomepageEmpresa";
+// ── AS CINCO LEITURAS CARREGAM UMA DE CADA VEZ ────────────────────────
+//  Estavam importadas estaticamente. Só UMA é renderizada em cada
+//  pedido — mas um import estático não sabe disso, e as cinco iam para o
+//  mesmo pacote: quem abria `/` descarregava os cinco palcos, as cinco
+//  coreografias e os cinco motores de desenho para ver zero deles.
+//
+//  `next/dynamic` sem `ssr: false` mantém tudo: o HTML continua a ser
+//  renderizado no servidor (o palco resolvido, as ligações reais, o
+//  conteúdo para quem não tem JavaScript) e só o CÓDIGO passa a ser um
+//  pedaço próprio, pedido quando aquela leitura é mesmo aberta.
+import dynamic from "next/dynamic";
+
+const HomepageDescobrir = dynamic(() => import("@/components/descobrir/HomepageDescobrir"));
+const HomepagePreco = dynamic(() => import("@/components/preco/HomepagePreco"));
+const HomepageRecibos = dynamic(() => import("@/components/foco/recibos/HomepageRecibos"));
+const HomepageSalario = dynamic(() => import("@/components/foco/salario/HomepageSalario"));
+const HomepageEmpresa = dynamic(() => import("@/components/foco/empresa/HomepageEmpresa"));
 import { FOCOS } from "@/components/foco/focos";
 import HeroBussola from "@/components/foco/HeroBussola";
 import { dadosRecibo, dadosSalario, dadosEmpresa } from "@/lib/foco/dados-servidor";
 import { respostasDosFocos } from "@/lib/foco/respostas-servidor";
+import { atalhosDeGuias } from "@/lib/guias/atalhos.servidor";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { faqs } from "@/lib/faq";
 import { normalizarFocoHomepage } from "@/lib/foco-homepage";
@@ -290,7 +303,7 @@ export default async function Home({ searchParams }: HomeProps) {
            * `nAtividades` é calculado no servidor para o chip nunca inventar.
            */}
           <section id="explorar" className="px-6 py-14 scroll-mt-20 sm:py-20">
-            <ExplorarSecao nAtividades={ATIVIDADES.length} />
+            <ExplorarSecao nAtividades={ATIVIDADES.length} atalhosGuias={atalhosDeGuias()} />
           </section>
 
           <Stats />
