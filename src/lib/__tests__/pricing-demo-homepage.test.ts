@@ -13,7 +13,7 @@ import {
   parametrosDemoPreco,
   precoDaEngine,
 } from "@/lib/pricing/demo-homepage.servidor";
-import { IVA_TAXAS } from "@/lib/fiscal-data";
+import { IVA_TAXAS, SS_COEFICIENTE, SS_TAXA } from "@/lib/fiscal-data";
 
 const PARAMETROS = parametrosDemoPreco();
 const EMPRESA = PARAMETROS.regimes[0];
@@ -173,9 +173,19 @@ describe("demo de preço da homepage: os parâmetros vêm da lei, não do fichei
     expect(fracaoFaturacaoDe(VENDEDOR_EMPRESA)).toBe(0);
     expect(EMPRESA.fracaoFaturacao).toBe(0);
     expect(RECIBOS.fracaoFaturacao).toBeGreaterThan(0);
-    // A Segurança Social do TI já são 21,4% × 20% da faturação de bens; com
-    // o IRS do simplificado por cima, nunca pode ficar abaixo disso.
-    expect(RECIBOS.fracaoFaturacao).toBeGreaterThan(0.0428);
+
+    // O piso não é um número escrito à mão: é a lei, lida de
+    // `fiscal-data.ts`. A contribuição do TI incide sobre o rendimento
+    // relevante (Art. 162.º do Código Contributivo) — 20% no caso da venda
+    // de bens — à taxa do Art. 168.º. Com o IRS do simplificado por cima, a
+    // fração retida de cada fatura nunca pode ficar abaixo disso.
+    //
+    // Escrever `0.0428` aqui parecia inofensivo e era o defeito que
+    // `fiscal-iva.ts` existe para não repetir: no ano em que a taxa ou a
+    // base mudarem, o teste continuava verde a defender o valor errado.
+    const ssSobreVendaDeBens = SS_TAXA.value * SS_COEFICIENTE.bens.value;
+    expect(ssSobreVendaDeBens).toBeCloseTo(0.0428, 6);
+    expect(RECIBOS.fracaoFaturacao).toBeGreaterThan(ssSobreVendaDeBens);
     expect(RECIBOS.fracaoFaturacao).toBeLessThan(0.5);
   });
 

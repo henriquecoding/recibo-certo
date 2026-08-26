@@ -8,6 +8,7 @@ import {
   SAIDA,
   VIAGEM,
   arco,
+  bezier,
   medir,
 } from "@/components/preco/coreografia";
 
@@ -190,6 +191,45 @@ describe("coreografia do preço: a cena servida está resolvida", () => {
   });
 });
 
+describe("coreografia do preço: os três defeitos apanhados em runtime", () => {
+  const HERO = readFileSync(join(process.cwd(), "src/components/preco/HeroPreco.tsx"), "utf8");
+  const ATORES = readFileSync(join(process.cwd(), "src/components/preco/atores.tsx"), "utf8");
+
+  it("a pausa pára as fichas e os contadores, não só o relógio dos atos", () => {
+    // Defeito: com a demonstração «em pausa», as fichas continuavam a voar e
+    // a aterrar. A pausa parava o relógio dos beats e mais nada. É o WCAG
+    // 2.2.2 a não ser cumprido.
+    //
+    // A correção estrutural: os atores deixaram de ser animados pelo
+    // `motion` e passaram a ter relógio próprio, que só acumula tempo
+    // enquanto não está parado. Se alguém devolver a ficha ao `m.span` com
+    // `animate`, o defeito volta — e volta em silêncio.
+    expect(ATORES).toContain("if (!paradoRef.current) decorrido += agora - ultimo;");
+    expect(ATORES).toContain("const { parado } = useContext(PalcoPreco);");
+    expect(ATORES).toContain("const { parado, imediato } = useContext(PalcoPreco);");
+    // A ficha é um `span` pintado à mão, não um `m.span` animado.
+    expect(ATORES).not.toMatch(/<m\.span[\s\S]{0,400}onAnimationComplete/);
+  });
+
+  it("entrar num ato repõe o estado que esse ato constrói", () => {
+    // Defeito: `if (ato < 1) setBaseAcumulada(0)` deixava a soma do ato
+    // anterior de pé. Saltar para o ato da base entrava nele a mostrar
+    // 28,90 € onde devia estar `—`: o ato que existe para MOSTRAR a soma
+    // mostrava-a já resolvida.
+    expect(HERO).not.toContain("if (ato < 1) setBaseAcumulada(0)");
+    const limpeza = HERO.slice(HERO.indexOf("setFichas([]);"));
+    expect(limpeza.slice(0, 700)).toContain("setBaseAcumulada(0);");
+  });
+
+  it("ir para um ato põe-no a correr", () => {
+    // Defeito: `onIr` pausava. Saltar para «Fixar o preço» deixava o preço
+    // preso em 35,55 € para sempre, porque nenhum beat chegava a disparar.
+    const onIr = HERO.slice(HERO.indexOf("onIr={(i) =>"));
+    expect(onIr.slice(0, 120)).toContain("setParado(false)");
+    expect(onIr.slice(0, 120)).not.toContain("setParado(true)");
+  });
+});
+
 describe("coreografia do preço: as curvas", () => {
   it("são tuplas de Bézier válidas", () => {
     for (const [nome, curva] of Object.entries({ ENTRADA, SAIDA, VIAGEM, ASSENTA })) {
@@ -211,6 +251,43 @@ describe("coreografia do preço: as curvas", () => {
     for (const [nome, curva] of Object.entries({ ENTRADA, SAIDA, VIAGEM })) {
       expect(Math.max(curva[1], curva[3]), `${nome} não pode ter overshoot`).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("o avaliador de Bézier concorda com o que o CSS faria", () => {
+    // As fichas deixaram de ser animadas pelo `motion` e passaram a avaliar
+    // a curva à mão. Se esta avaliação estiver errada, o movimento fica
+    // errado de uma maneira que ninguém consegue apontar a olho.
+    const linear = bezier([0, 0, 1, 1]);
+    for (const x of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
+      expect(linear(x)).toBeCloseTo(x, 5);
+    }
+
+    const e = bezier(ENTRADA);
+    expect(e(0)).toBe(0);
+    expect(e(1)).toBe(1);
+    // Uma curva de saída está SEMPRE acima da diagonal: chega depressa e
+    // assenta devagar. Se descer abaixo, alguém trocou os pontos de controlo.
+    for (const x of [0.1, 0.3, 0.5, 0.7, 0.9]) expect(e(x)).toBeGreaterThan(x);
+    // E é monótona: nunca anda para trás no meio do percurso.
+    let ultimo = -1;
+    for (let x = 0; x <= 1; x += 0.02) {
+      const y = e(x);
+      expect(y).toBeGreaterThanOrEqual(ultimo - 1e-9);
+      ultimo = y;
+    }
+
+    // `ASSENTA` passa do alvo — é o que lhe dá massa — e volta a 1.
+    const a = bezier(ASSENTA);
+    expect(a(1)).toBe(1);
+    let maximo = 0;
+    for (let x = 0; x <= 1; x += 0.01) maximo = Math.max(maximo, a(x));
+    expect(maximo).toBeGreaterThan(1);
+  });
+
+  it("fora do intervalo, a curva não inventa valores", () => {
+    const e = bezier(ENTRADA);
+    expect(e(-1)).toBe(0);
+    expect(e(2)).toBe(1);
   });
 
   it("ENTRADA é a curva da marca, e não uma variação dela", () => {

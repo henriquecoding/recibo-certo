@@ -48,6 +48,46 @@ export const VIAGEM: Curva = [0.65, 0, 0.35, 1];
 /** Passa do alvo e volta. Só para coisas que POUSAM. */
 export const ASSENTA: Curva = [0.34, 1.56, 0.64, 1];
 
+/**
+ * Avalia uma curva de Bézier — `y` em função de `x`, como o CSS faz.
+ *
+ * Existe porque as fichas deixaram de ser animadas pelo `motion`: passaram a
+ * ter relógio próprio, para a pausa as parar mesmo (ver `useRelogioDeFicha`).
+ * Um relógio próprio precisa de saber avaliar a curva, e é isto.
+ *
+ * Newton-Raphson sobre o eixo x, oito iterações. É o método que os browsers
+ * usam e converge muito antes disso para as curvas que aqui vivem.
+ */
+export function bezier([x1, y1, x2, y2]: Curva): (x: number) => number {
+  const cx = 3 * x1;
+  const bx = 3 * (x2 - x1) - cx;
+  const ax = 1 - cx - bx;
+  const cy = 3 * y1;
+  const by = 3 * (y2 - y1) - cy;
+  const ay = 1 - cy - by;
+
+  const emX = (t: number) => ((ax * t + bx) * t + cx) * t;
+  const emY = (t: number) => ((ay * t + by) * t + cy) * t;
+  const derivadaX = (t: number) => (3 * ax * t + 2 * bx) * t + cx;
+
+  return (x: number) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let t = x;
+    for (let i = 0; i < 8; i += 1) {
+      const erro = emX(t) - x;
+      if (Math.abs(erro) < 1e-6) break;
+      const d = derivadaX(t);
+      if (Math.abs(d) < 1e-6) break;
+      t -= erro / d;
+    }
+    return emY(t);
+  };
+}
+
+/** Interpolação linear, para poupar a escrita nos atores. */
+export const entre = (de: number, para: number, t: number) => de + (para - de) * t;
+
 // ── Durações (ms) ──────────────────────────────────────────────────────
 export const DUR = {
   micro: 160,
@@ -83,14 +123,19 @@ export const ATOS: Ato[] = [
   {
     id: "custos",
     rotulo: "Custos",
-    legenda: "Reunir o que a unidade custa",
-    duracao: 2200,
+    legenda: "Separar o que é custo do que não é",
+    duracao: 1800,
     beats: [
       { id: "regua", em: 0 },
-      { id: "materiais", em: 120 },
-      { id: "trabalho", em: 300 },
-      { id: "fixos", em: 480 },
-      { id: "pegas", em: 900 },
+      { id: "materiais", em: 140 },
+      { id: "trabalho", em: 320 },
+      { id: "fixos", em: 500 },
+      // O beat que faltava a este ato. Antes o markup NASCIA apagado, o que
+      // é uma afirmação: a pessoa via um controlo esbatido e não sabia
+      // porquê. Agora as quatro linhas começam iguais e o markup ESCURECE —
+      // uma triagem visível, que é o que o ato tem para dizer.
+      { id: "apagaMarkup", em: 820 },
+      { id: "pegas", em: 1180 },
     ],
   },
   {

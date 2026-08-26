@@ -72,6 +72,22 @@ seguinte **aterrar** em vez de se somar ao ruído. Há exatamente três:
    tempo de o valor «assentar» antes de ser lido.
 3. **Indefinido** depois do último beat — a cena **acaba**. Não reinicia.
 
+### 1.4 A pausa pára tudo o que se move
+
+Não é uma preferência: é o WCAG 2.2.2. E foi um defeito real — a primeira
+versão parava o relógio dos beats e mais nada, portanto as fichas continuavam a
+voar e a aterrar com a demonstração «em pausa».
+
+Por isso **nenhum ator do palco é animado pelo `motion`**: a ficha e o contador
+têm relógio próprio, com o mesmo desenho do relógio dos atos — um
+`requestAnimationFrame` que só acumula tempo enquanto não está parado. Pausar é
+deixar de acumular.
+
+O que continua no `motion` são transições de estado curtas (≤ 520 ms) que não
+são conteúdo em movimento: uma linha a acender, um cartão a assentar. Uma
+transição dessas a completar-se depois da pausa não é conteúdo animado — é o
+fim de um gesto que já tinha começado.
+
 ---
 
 ## 2. Os atores
@@ -89,14 +105,25 @@ seguinte **aterrar** em vez de se somar ao ruído. Há exatamente três:
 ### 2.1 A ficha, em detalhe
 
 ```
-nascer     origem medida com getBoundingClientRect, relativa ao palco
-           opacity 0 → 1, scale .8 → 1        180 ms   ENTRADA
-partir     x,y da origem → x,y do destino     640 ms   VIAGEM
-           (arco: o ponto de controlo desvia-se 18% da perpendicular)
-aterrar    scale 1 → .6, opacity 1 → 0        200 ms   SAIDA
-           ⤷ dispara o contador do destino no MESMO frame
-impacto    anel: scale .4 → 1.6, opacity .5 → 0   280 ms   ENTRADA
+            0%          12%                        88%        100%
+            ├── nascer ──┤────────── partir ─────────┤─ aterrar ─┤
+
+nascer    opacity 0→1, scale .8→1, parada na origem          ENTRADA
+partir    Bézier QUADRÁTICA origem → controlo → destino      VIAGEM
+          (controlo: 18% da perpendicular ao segmento)
+aterrar   opacity 1→0, scale 1→.6, já no destino             SAIDA
+impacto   anel: scale .4→1.6, opacity .5→0 · 280 ms          ENTRADA
 ```
+
+**O contador do destino dispara aos 88% — quando a ficha ENCOSTA — e não aos
+100%.** Com o disparo no fim, a causa via-se a desaparecer antes de o efeito
+acontecer, e a ligação entre as duas coisas perdia-se exatamente no instante em
+que tinha de se ver.
+
+A curva do percurso é uma **Bézier quadrática**, não três segmentos retos com
+um vértice. Uma reta entre dois pontos lê-se como teletransporte; um vértice
+lê-se como um ricochete. O desvio é pequeno (18%) — mais do que isso vira
+maneirismo.
 
 O arco importa. Uma linha reta entre dois pontos lê-se como teletransporte; um
 arco lê-se como trajetória. O desvio é pequeno (18%) — mais do que isso vira
@@ -115,21 +142,31 @@ atos), e entrar num ato a meio começa-o do princípio.
 > arrancar — e não tem instante próprio: acontece quando a causa acontece.
 > `coreografia.test.ts` compara os cues desta tabela com os do código, um a um.
 
-### ATO 1 — REUNIR OS CUSTOS · 2 200 ms
+### ATO 1 — SEPARAR O QUE É CUSTO · 1 800 ms
 
-> Intenção: dizer «começa aqui, e são estas três coisas».
+> Intenção: fazer uma **triagem visível**. Não «apresentar quatro campos» —
+> mostrar que três destes são custos e o quarto não é.
 
 | ms | Cue | Movimento |
 |---|---|---|
 | 0 | `regua` | A régua do cabeçalho da lista desenha-se da esquerda (`scaleX 0→1`, 320 ms, ENTRADA) |
-| 120 | `materiais` | Linha 1 sobe 3 px, o anel do ícone acende, o valor recebe um varrimento de luz (420 ms) |
-| 300 | `trabalho` | Linha 2 sobe 2 px (420 ms) |
-| 480 | `fixos` | Linha 3 sobe 2 px (420 ms) |
-| — | `markup` | **Fica apagado** (`opacity .55`). Não é um custo, e isso diz-se com encenação, não com texto |
-| 900 | `pegas` | As pegas das três linhas acesas pulsam uma vez (`opacity .3→.7→.3`, 700 ms) |
+| 140 | `materiais` | Linha 1 sobe 3 px, o anel do ícone acende (420 ms) |
+| 320 | `trabalho` | Linha 2 sobe 2 px (420 ms) |
+| 500 | `fixos` | Linha 3 sobe 2 px (420 ms) |
+| 820 | `apagaMarkup` | A linha do Markup **escurece** para `opacity .55` (420 ms) — não é um custo |
+| 1180 | `pegas` | As pegas das três linhas acesas respiram uma vez (`opacity .3→.7→.3`) |
+
+**As quatro linhas começam iguais.** Isto é a correção de um defeito: antes o
+Markup **nascia** apagado, o que é uma afirmação — a pessoa via um controlo
+esbatido e não tinha como saber porquê. Vê-lo escurecer é um argumento.
+
+**Os custos ficam acesos depois deste ato.** Voltavam a esbater-se durante a
+soma, o que lia como um piscar sem causa.
 
 **A variação é intencional:** 3 px, 2 px, 2 px e atrasos de 180/180 ms com
-durações iguais. Escadas perfeitamente regulares leem-se como máquina.
+durações iguais. Escadas perfeitamente regulares leem-se como máquina. O ato
+encolheu de 2 200 para 1 800 ms porque o anterior tinha 1,3 s sem nada a
+acontecer no fim.
 
 ### ATO 2 — APURAR A BASE · 2 400 ms
 
@@ -214,10 +251,34 @@ factos diferentes — «o mínimo é aqui» e «o preço fica ali» — e uma tr
 | durante | **Sem interpolação.** Os números seguem o dedo em 1:1 (`IMEDIATO`). O marcador segue com mola curta |
 | `pointerup` | A linha assenta (240 ms). As irmãs voltam. O preço faz uma contagem curta de recuperação (420 ms). A composição refaz-se (320 ms) |
 
+**A nota da linha cede o lugar ao delta.** Enquanto se arrasta, a segunda linha
+do controlo («por unidade», «tempo aplicado») passa a mostrar quanto o valor já
+mudou desde que o dedo pousou — `+ 2,40 €`, `− 1,20 €`. É informação que só
+existe durante o gesto, e ocupa um lugar que estava inerte: nada de novo
+aparece por cima do dedo.
+
+O sinal tem cor mas não tem juízo: areia a subir, verde a descer, porque é a
+direção que se está a comunicar e não se sabe qual delas é boa para quem
+arrasta.
+
 **Nunca** reinicia a sequência. Mexer é uma resposta, não um recomeço — quem
 arrasta já viu a explicação, ou decidiu não a ver.
 
-### 4.2 Troca de regime
+### 4.2 Ir para um ato é pô-lo a correr
+
+Clicar num passo da régua de atos **começa esse ato do princípio e reproduz-no**.
+Não pára nele.
+
+Foi um defeito real: com a navegação a pausar, saltar para «Fixar o preço»
+deixava o preço preso em 35,55 € para sempre, porque o relógio ficava suspenso
+e nenhum beat disparava. A régua de atos era uma navegação que não navegava.
+
+E entrar num ato **repõe o estado que esse ato constrói** — entrar no ato da
+base tem de mostrar `—` e somar outra vez. Com a reposição condicional que lá
+esteve, entrava-se no ato com a soma já feita: o ato que existe para MOSTRAR a
+soma mostrava-a resolvida.
+
+### 4.3 Troca de regime
 
 A ficha de SS e IRS **entra** (nasce do cartão da base, como as outras) ou
 **sai** (encolhe na direção do cartão). O segmento correspondente da barra
@@ -256,6 +317,23 @@ O que muda de propósito:
 
 ---
 
+## 6.1 Nada aparece antes de existir
+
+Duas regras que nasceram de ver a cena a meio, e não de a pensar em abstrato:
+
+**Uma peça não se mostra meio carregada.** O eixo da régua e os rótulos de 20 a
+70 € entram COM a régua. Com a régua encolhida a `scaleX(.04)` e o eixo já
+desenhado, ficava uma escala pendurada sem nada a que pertencer. A própria
+régua ganha opacidade ao desenrolar-se: encolhida e opaca, era um traço de dois
+pixéis parado no canto — lia como detrito.
+
+**Uma métrica não se mostra antes de existir na narrativa.** O preço mínimo sai
+dos custos e vale desde o primeiro ato. O lucro e a margem só existem depois de
+haver markup, e até lá aparecem como `—`. Mostrá-los esbatidos enquanto a cena
+os está a construir era contar o fim ao mesmo tempo que se contava o princípio.
+
+---
+
 ## 7. O que este roteiro proíbe
 
 - **Reiniciar em ciclo.** Uma cena que recomeça ensina o olho que nada ali
@@ -267,3 +345,5 @@ O que muda de propósito:
   que desaparece sem JavaScript. Anima-se a **ênfase**, nunca a presença.
 - **Elástico em fades.** `ASSENTA` é para coisas que pousam.
 - **Interpolar durante o arrasto.** O dedo manda.
+- **Mostrar uma peça a meio de carregar.** Ou está, ou não está.
+- **Adiantar um número que a cena ainda não construiu.**

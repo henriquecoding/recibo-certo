@@ -29,7 +29,7 @@ import {
   type Curva,
   type Ponto,
 } from "./coreografia";
-import { Anel, Contador, Ficha, type FichaEmCena } from "./atores";
+import { Anel, Contador, Ficha, PalcoPreco, type FichaEmCena } from "./atores";
 import {
   ENTRADAS_DEMO_PADRAO,
   LIMITES_DEMO_PRECO,
@@ -100,7 +100,7 @@ const CONTROLOS = [
   { chave: "materiais", rotulo: "Materiais", nota: "por unidade", Icon: ShoppingBag, beat: "materiais", subida: 3 },
   { chave: "trabalho", rotulo: "Trabalho", nota: "tempo aplicado", Icon: Clock, beat: "trabalho", subida: 2 },
   { chave: "estrutura", rotulo: "Custos fixos", nota: "quota imputada", Icon: LayoutGrid, beat: "fixos", subida: 2 },
-  { chave: "markup", rotulo: "Markup", nota: "acréscimo ao custo", Icon: CheckTrend, beat: "acordaMarkup", subida: 2 },
+  { chave: "markup", rotulo: "Markup", nota: "acréscimo ao custo", Icon: CheckTrend, beat: "apagaMarkup", subida: 2 },
 ] as const satisfies readonly {
   chave: ChaveEntrada;
   rotulo: string;
@@ -149,6 +149,8 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
   const [entradas, setEntradas] = useState<EntradasDemoPreco>(ENTRADAS_DEMO_PADRAO);
   const [regimeIdx, setRegimeIdx] = useState(0);
   const [aArrastar, setAArrastar] = useState<ChaveEntrada | null>(null);
+  /** O valor de onde o arrasto partiu, para se poder mostrar o quanto mudou. */
+  const [arrastoDe, setArrastoDe] = useState<number | null>(null);
 
   const [fichas, setFichas] = useState<FichaEmCena[]>([]);
   const [aneis, setAneis] = useState<{ id: string; em: Ponto }[]>([]);
@@ -241,7 +243,13 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     aoAterrarRef.current = {};
     setFichas([]);
     setAneis([]);
-    if (ato < 1) setBaseAcumulada(0);
+    // Sempre, e não `if (ato < 1)`.
+    //
+    // Com a reposição condicional, saltar para o ato da base pela régua de
+    // atos entrava nele com a soma do ato anterior já feita: a pessoa via
+    // 28,90 € onde devia ver `—`, e o ato que existe para MOSTRAR a soma
+    // mostrava-a resolvida. Apanhado em runtime.
+    setBaseAcumulada(0);
   }, [ciclo, ato]);
 
   const lancar = useCallback(
@@ -275,20 +283,31 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     [],
   );
 
-  const aterrar = useCallback((id: string) => {
+  /**
+   * A ficha ENCOSTA. É aqui que o contador do destino anda e nasce o anel.
+   *
+   * Separado de `sair` de propósito: o número tem de mudar no instante em
+   * que a coisa lá chega (88% do percurso), não quando ela acaba de se
+   * dissolver. Com um único evento no fim, a causa via-se a desaparecer
+   * antes de o efeito acontecer.
+   */
+  const chegar = useCallback((id: string) => {
     setFichas((atuais) => {
       const ficha = atuais.find((f) => f.id === id);
-      if (ficha) {
-        setAneis((anteriores) => [...anteriores, { id, em: ficha.destino }]);
-        window.setTimeout(
-          () => setAneis((anteriores) => anteriores.filter((a) => a.id !== id)),
-          DUR.impacto + 60,
-        );
-      }
-      return atuais.filter((f) => f.id !== id);
+      if (ficha) setAneis((anteriores) => [...anteriores, { id, em: ficha.destino }]);
+      return atuais;
     });
     aoAterrarRef.current[id]?.();
     aoAterrarRef.current[id] = undefined;
+    window.setTimeout(
+      () => setAneis((anteriores) => anteriores.filter((a) => a.id !== id)),
+      DUR.impacto + 60,
+    );
+  }, []);
+
+  /** A ficha acabou de se dissolver: sai de cena. */
+  const sair = useCallback((id: string) => {
+    setFichas((atuais) => atuais.filter((f) => f.id !== id));
   }, []);
 
   // ── ATO 2 · as três fichas de custo ──────────────────────────────────
@@ -387,6 +406,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     evento.currentTarget.setPointerCapture(evento.pointerId);
     arrasto.current = { chave, ponteiro: evento.pointerId, x: evento.clientX, valor: entradas[chave] };
     setAArrastar(chave);
+    setArrastoDe(entradas[chave]);
     fixarNoResultado();
   };
 
@@ -400,6 +420,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     if (arrasto.current?.ponteiro !== evento.pointerId) return;
     arrasto.current = null;
     setAArrastar(null);
+    setArrastoDe(null);
   };
 
   const aoTeclado = (evento: React.KeyboardEvent<HTMLDivElement>, chave: ChaveEntrada) => {
@@ -423,6 +444,14 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
   };
 
   /** Uma transição do roteiro, já silenciada quando o movimento é reduzido. */
+  const estadoDoPalco = useMemo(
+    // `parado` não inclui `estatico`: com movimento reduzido não há nada em
+    // curso para parar, e marcar tudo como parado só suspenderia contadores
+    // que já saltam direto para o valor final.
+    () => ({ parado: parado && !estatico, imediato: arrastando }),
+    [parado, estatico, arrastando],
+  );
+
   const t = (ms: number, curva: Curva = ENTRADA): Transition =>
     estatico ? { duration: 0 } : { duration: ms / 1000, ease: curva };
 
@@ -436,6 +465,11 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
   ].filter((p) => p.valor > 0);
 
   return (
+    // O estado do palco chega aos contadores e às fichas por contexto: são
+    // condições do PALCO, não de cada número. Passá-las à mão a catorze
+    // contadores era catorze sítios para um deles ficar para trás — e foi
+    // assim que a pausa deixou de parar as fichas.
+    <PalcoPreco.Provider value={estadoDoPalco}>
     <section
       data-hero
       className="grain relative overflow-hidden px-4 pb-14 pt-5 sm:px-6 sm:pb-20 sm:pt-8"
@@ -474,11 +508,9 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
               as coordenadas são medidas no DOM em tempo de execução, e é por
               isso que no telemóvel — com as colunas empilhadas — viajam na
               vertical sem uma linha de código a saber que há um telemóvel. */}
-          <AnimatePresence>
-            {fichas.map((ficha) => (
-              <Ficha key={ficha.id} ficha={ficha} aoAterrar={aterrar} />
-            ))}
-          </AnimatePresence>
+          {fichas.map((ficha) => (
+            <Ficha key={ficha.id} ficha={ficha} aoChegar={chegar} aoSair={sair} />
+          ))}
           {aneis.map((anel) => (
             <Anel key={anel.id} em={anel.em} />
           ))}
@@ -543,9 +575,22 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   const valor = entradas[chave];
                   const [min, max] = LIMITES_DEMO_PRECO[chave];
                   const activo = aArrastar === chave;
-                  // O markup fica apagado durante o ato dos custos: não é um
-                  // custo, e isso diz-se com encenação, não com uma etiqueta.
-                  const aceso = emCena(beat) || ato > (chave === "markup" ? 2 : 1);
+                  // ┌─────────────────────────────────────────────────────┐
+                  // │ A TRIAGEM É O QUE O PRIMEIRO ATO TEM PARA DIZER     │
+                  // │                                                     │
+                  // │ As quatro linhas começam iguais. No ato dos custos, │
+                  // │ três acendem e o markup ESCURECE — vê-se a separar. │
+                  // │ Antes o markup nascia apagado, o que é uma          │
+                  // │ afirmação: a pessoa via um controlo esbatido e não  │
+                  // │ sabia porquê. No ato dos impostos ele volta a       │
+                  // │ acender, porque muda de papel.                      │
+                  // │                                                     │
+                  // │ E os custos ficam acesos DEPOIS do seu ato: com     │
+                  // │ `ato > 1` os três esbatiam-se outra vez durante a   │
+                  // │ soma, o que lia como um piscar sem causa.           │
+                  // └─────────────────────────────────────────────────────┘
+                  const aceso =
+                    chave === "markup" ? ato >= 2 || !emCena(beat) : ato > 0 || emCena(beat);
                   const outroArrastado = arrastando && !activo;
                   return (
                     <m.div
@@ -593,7 +638,24 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                         <span className="block truncate text-[13px] font-semibold text-stone-800 dark:text-stone-100">
                           {rotulo}
                         </span>
-                        <span className="block truncate text-[10px] text-stone-400">{nota}</span>
+                        {/* A nota é informação de repouso. Durante o arrasto
+                            o que interessa é QUANTO mudou — e a linha já tem
+                            o lugar para o dizer, sem nada de novo a aparecer
+                            por cima do dedo. */}
+                        {activo && arrastoDe !== null && Math.abs(valor - arrastoDe) > 1e-9 ? (
+                          <span
+                            className={`block truncate text-[10px] font-semibold tabular-nums ${
+                              valor > arrastoDe
+                                ? "text-categoria-areia-text"
+                                : "text-brand dark:text-brand-mint"
+                            }`}
+                          >
+                            {valor > arrastoDe ? "+" : "−"}{" "}
+                            {formatarEntrada(chave, Math.abs(valor - arrastoDe))}
+                          </span>
+                        ) : (
+                          <span className="block truncate text-[10px] text-stone-400">{nota}</span>
+                        )}
                       </span>
                       <span className="flex items-center gap-2">
                         <span
@@ -672,7 +734,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                     {ato === 1 && baseValor === 0 ? (
                       <span className="text-stone-300 dark:text-stone-600">—</span>
                     ) : (
-                      <Contador valor={baseValor} formato={eur} imediato={arrastando} />
+                      <Contador valor={baseValor} formato={eur} />
                     )}
                   </div>
                   <m.div
@@ -694,7 +756,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       rotulo="Markup"
                       tom="margem"
                       valor={composicao.lucro}
-                      imediato={arrastando}
+                     
                       estatico={estatico}
                     />
                   )}
@@ -704,7 +766,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       rotulo="SS e IRS"
                       tom="retencao"
                       valor={composicao.retencaoPessoal}
-                      imediato={arrastando}
+                     
                       estatico={estatico}
                     />
                   )}
@@ -714,7 +776,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       rotulo={`IVA · ${pctLimpa(parametros.taxaIVA)}`}
                       tom="iva"
                       valor={composicao.iva}
-                      imediato={arrastando}
+                     
                       estatico={estatico}
                       anotacao={emCena("estado") || ato >= 3 ? "→ Estado" : undefined}
                     />
@@ -754,7 +816,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       valor={precoVisivel}
                       formato={eur}
                       duracao={DUR.contaPreco}
-                      imediato={arrastando}
+                     
                     />
                   </div>
                   <div className="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
@@ -762,19 +824,32 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   </div>
                 </div>
 
+                {/* Uma métrica só aparece depois de existir na narrativa.
+                    O preço mínimo sai dos custos e vale desde o primeiro ato.
+                    O lucro e a margem só existem depois de haver markup — e
+                    mostrá-los a 0,55 de opacidade enquanto a cena ainda os
+                    está a construir era contar o fim ao mesmo tempo que se
+                    contava o princípio. */}
                 <dl className="grid grid-cols-3 divide-x divide-stone-200 dark:divide-stone-700">
                   {[
-                    { rotulo: "Preço mínimo", valor: composicao.minimoPVP, formato: eur },
-                    { rotulo: "Lucro por venda", valor: composicao.lucro, formato: eur },
-                    { rotulo: "Margem", valor: composicao.margem, formato: pct1 },
-                  ].map((metrica, i) => (
-                    <div key={metrica.rotulo} className={`min-w-0 px-2 ${i === 0 ? "pl-0" : ""}`}>
-                      <dt className="text-[9px] leading-tight text-stone-400">{metrica.rotulo}</dt>
-                      <dd className="mt-1 font-display text-[15px] font-semibold tabular-nums text-ink">
-                        <Contador valor={metrica.valor} formato={metrica.formato} imediato={arrastando} />
-                      </dd>
-                    </div>
-                  ))}
+                    { rotulo: "Preço mínimo", valor: composicao.minimoPVP, formato: eur, desde: 0 },
+                    { rotulo: "Lucro por venda", valor: composicao.lucro, formato: eur, desde: 2 },
+                    { rotulo: "Margem", valor: composicao.margem, formato: pct1, desde: 2 },
+                  ].map((metrica, i) => {
+                    const existe = ato >= metrica.desde || estatico || !montado;
+                    return (
+                      <div key={metrica.rotulo} className={`min-w-0 px-2 ${i === 0 ? "pl-0" : ""}`}>
+                        <dt className="text-[9px] leading-tight text-stone-400">{metrica.rotulo}</dt>
+                        <dd className="mt-1 font-display text-[15px] font-semibold tabular-nums text-ink">
+                          {existe ? (
+                            <Contador valor={metrica.valor} formato={metrica.formato} />
+                          ) : (
+                            <span className="text-stone-300 dark:text-stone-600">—</span>
+                          )}
+                        </dd>
+                      </div>
+                    );
+                  })}
                 </dl>
               </div>
 
@@ -784,8 +859,22 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   aria-hidden
                   className="flex h-4 origin-left overflow-hidden rounded-full border border-categoria-areia-border dark:border-stone-700"
                   initial={false}
-                  animate={{ scaleX: reguaAberta || estatico || ato > 3 ? 1 : 0.04 }}
-                  transition={t(DUR.desenrolar)}
+                  // A opacidade acompanha o desenrolar. Encolhida a 4% e
+                  // opaca, a régua ficava um traço de dois pixéis parado no
+                  // canto — lia como detrito, não como uma peça prestes a
+                  // abrir. Aparece ao abrir-se.
+                  animate={{
+                    scaleX: reguaAberta || estatico || ato > 3 ? 1 : 0.04,
+                    opacity: reguaAberta || estatico || ato > 3 ? 1 : 0,
+                  }}
+                  transition={
+                    estatico
+                      ? { duration: 0 }
+                      : {
+                          scaleX: { duration: DUR.desenrolar / 1000, ease: ENTRADA },
+                          opacity: { duration: 0.22, ease: ENTRADA },
+                        }
+                  }
                 >
                   {[
                     { classe: "bg-clay-bg text-clay-text", texto: "não cobre", largura: `${Math.max(18, regua.minimo)}%` },
@@ -808,7 +897,17 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   ))}
                 </m.div>
 
-                <div className="relative mt-1 h-8">
+                {/* O eixo e os rótulos entram COM a régua.
+                    Com a régua encolhida a `scaleX(.04)` mas o eixo já
+                    desenhado, ficava uma escala de 20 a 70 € pendurada sem
+                    nada a que pertencer — um elemento órfão, que lê como
+                    peça meio carregada. */}
+                <m.div
+                  className="relative mt-1 h-8"
+                  initial={false}
+                  animate={{ opacity: reguaAberta || estatico || ato > 3 ? 1 : 0 }}
+                  transition={estatico ? { duration: 0 } : { duration: 0.42, delay: reguaAberta ? 0.12 : 0, ease: ENTRADA }}
+                >
                   <div
                     aria-hidden
                     className="absolute inset-x-0 top-0 h-2.5 border-b border-stone-300 bg-[repeating-linear-gradient(90deg,currentColor_0_1px,transparent_1px_9px)] text-stone-300 dark:border-stone-700 dark:text-stone-700"
@@ -852,13 +951,19 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       <i className="block h-1.5 w-1.5 rounded-full bg-brand" />
                     </m.span>
                   </m.div>
-                </div>
+                </m.div>
 
-                <div className="flex justify-between text-[9px] tabular-nums text-stone-400" aria-hidden>
+                <m.div
+                  className="flex justify-between text-[9px] tabular-nums text-stone-400"
+                  aria-hidden
+                  initial={false}
+                  animate={{ opacity: reguaAberta || estatico || ato > 3 ? 1 : 0 }}
+                  transition={estatico ? { duration: 0 } : { duration: 0.42, delay: reguaAberta ? 0.18 : 0, ease: ENTRADA }}
+                >
                   {regua.marcas.map((marca) => (
                     <span key={marca}>{marca} €</span>
                   ))}
-                </div>
+                </m.div>
               </div>
 
               {/* A composição — o LUCRO é o último a crescer. É a conclusão,
@@ -872,7 +977,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 <div className="flex items-baseline justify-between gap-2 text-[10px] text-stone-400">
                   <span>A composição do preço</span>
                   <span className="font-semibold tabular-nums text-stone-600 dark:text-stone-300">
-                    total · <Contador valor={composicao.pvp} formato={eur} imediato={arrastando} />
+                    total · <Contador valor={composicao.pvp} formato={eur} />
                   </span>
                 </div>
                 <div className="mt-1.5 flex h-3 gap-[3px]" aria-hidden>
@@ -909,7 +1014,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       }
                     >
                       <span className="block text-[11px] font-semibold tabular-nums text-stone-700 dark:text-stone-200">
-                        <Contador valor={p.valor} formato={eur} imediato={arrastando} />
+                        <Contador valor={p.valor} formato={eur} />
                       </span>
                       <span className="mt-0.5 block text-[9px] leading-tight text-stone-400">
                         {p.rotulo}
@@ -929,7 +1034,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
                   A mesma peça, operada de outra forma, custa{" "}
                   <strong className="font-semibold tabular-nums text-ink">
-                    <Contador valor={alternativa.pvp} formato={eur} imediato={arrastando} />
+                    <Contador valor={alternativa.pvp} formato={eur} />
                   </strong>{" "}
                   para deixar o mesmo lucro.{" "}
                   <span className="text-stone-500 dark:text-stone-400">{regime.nota}</span>
@@ -971,8 +1076,16 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
               indiceAtivo={ato}
               barraRef={barraRef}
               estatico={estatico}
+              // Ir para um ato é PÔ-LO A CORRER, não parar nele.
+              //
+              // Com `setParado(true)` — o que estava aqui — clicar num passo
+              // levava a pessoa para um ato que nunca acontecia: o relógio
+              // ficava suspenso, nenhum beat disparava, e saltar para «Fixar o
+              // preço» deixava o preço preso em 35,55 € para sempre. A régua
+              // de atos era uma navegação que não navegava. Apanhado em
+              // runtime; coberto por `coreografia-preco.test.ts`.
               onIr={(i) => {
-                setParado(true);
+                setParado(false);
                 setAto(i);
               }}
             />
@@ -1004,6 +1117,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
         </div>
       </div>
     </section>
+    </PalcoPreco.Provider>
   );
 }
 
@@ -1017,14 +1131,12 @@ function ChipFormula({
   rotulo,
   tom,
   valor,
-  imediato,
   estatico,
   anotacao,
 }: {
   rotulo: string;
   tom: "margem" | "retencao" | "iva";
   valor: number;
-  imediato: boolean;
   estatico: boolean;
   anotacao?: string;
 }) {
@@ -1049,7 +1161,6 @@ function ChipFormula({
           valor={valor}
           formato={(n) => `${n.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}
           duracao={520}
-          imediato={imediato}
           inicial={estatico ? undefined : 0}
         />
       </span>
