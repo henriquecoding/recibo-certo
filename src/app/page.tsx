@@ -79,6 +79,16 @@ type HomeProps = {
   searchParams: Promise<{ foco?: string | string[] }>;
 };
 
+/**
+ * Cada foco traz o seu título e a sua descrição; a FORMA dos metadados é
+ * comum aos dois.
+ *
+ * A resolução deste conflito juntou os dois lados em vez de escolher um: a
+ * tabela por foco (que deixa acrescentar um modo sem mexer na função) e os
+ * metadados sociais completos (`openGraph`, `twitter`, título absoluto), que
+ * a versão por foco não tinha e que decidem como a página aparece quando
+ * alguém a partilha.
+ */
 const METADADOS_POR_FOCO = {
   descobrir: {
     title: "Descobrir que negócio testar em Portugal",
@@ -96,10 +106,29 @@ export async function generateMetadata({ searchParams }: HomeProps): Promise<Met
   const foco = normalizarFocoHomepage((await searchParams).foco);
   if (!foco) return {};
 
-  // A canonical continua a ser `/`: a experiência editorial é uma leitura da
-  // homepage, não uma página nova. A rota indexável de cada ferramenta é a
-  // que vive em `/ferramentas/<slug>` e não passa por aqui.
-  return { ...METADADOS_POR_FOCO[foco], alternates: { canonical: "/" } };
+  const { title, description } = METADADOS_POR_FOCO[foco];
+  const tituloSocial = `${title} | ReciboCerto`;
+
+  return {
+    // A homepage e o layout raiz pertencem ao mesmo segmento; o template do
+    // layout só se aplica a segmentos filhos. `absolute` conserva a marca no
+    // separador sem a duplicar noutras rotas.
+    title: { absolute: tituloSocial },
+    description,
+    // A canonical continua a ser `/`: a experiência editorial é uma leitura
+    // da homepage, não uma página nova. A rota indexável de cada ferramenta
+    // é a que vive em `/ferramentas/<slug>` e não passa por aqui.
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: tituloSocial,
+      description,
+      url: `/?foco=${foco}`,
+      siteName: "ReciboCerto",
+      locale: "pt_PT",
+      type: "website",
+    },
+    twitter: { card: "summary_large_image", title: tituloSocial, description },
+  };
 }
 
 // ── Números do Hero — todos calculados no servidor (build) ────────────────

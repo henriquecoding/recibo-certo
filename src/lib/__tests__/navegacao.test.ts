@@ -297,6 +297,18 @@ describe("navegacao:acessibilidade", () => {
     }
   });
 
+  it("um pilar activo aponta para a mesma superfície que declara como actual", () => {
+    // «Descobrir» tem uma porta editorial e uma ferramenta canónica. Quando
+    // a ferramenta está activa, anunciar a porta editorial como `page`
+    // transformaria uma ligação para outra página na página actual.
+    expect(CAPSULA).toContain("const destino = naSuperficieCanonica");
+    expect(CAPSULA).toContain("? pilar.href");
+    expect(CAPSULA).toContain("href={destino}");
+    expect(CHROME).toContain("const destino = naSuperficieCanonica");
+    expect(CHROME).toContain("? slot.hrefCanonico : slot.href");
+    expect(CHROME).toContain("href={destino}");
+  });
+
   it("o gatilho do menu declara que abre um diálogo, nas duas superfícies", () => {
     for (const [nome, fonte] of [["cabeçalho", NAV], ["linha da marca do telemóvel", MARCA]] as const) {
       expect(fonte, `${nome}: gatilho sem aria-haspopup`).toContain('aria-haspopup="dialog"');
