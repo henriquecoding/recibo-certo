@@ -170,6 +170,50 @@ export const DUR = {
 //  Daí três degraus com nome, e não uma escada de números:
 // ═══════════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════════
+//  O ORÇAMENTO DA MÃO — o que um apontamento demora
+//  ---------------------------------------------------------------------
+//  Estava por escrever, e o resultado via-se: o ponteiro chegava ao campo
+//  e carregava 160 ms depois. Nenhuma pessoa faz isso. Lia-se como um
+//  script a executar passos, que é exatamente o que era.
+//
+//  ── `assenta` ────────────────────────────────────────────────────────
+//
+//  Quanto a mola do `palco/ponteiro.tsx` demora do arranque ao repouso,
+//  na escala de distância destes palcos (a largura de uma coluna). Não é
+//  um número escolhido: é o tempo medido com a rigidez e o amortecimento
+//  de lá.
+//
+//  A lei de Fitts diz que o tempo de um apontamento cresce com o
+//  logaritmo da distância sobre a largura do alvo — MT = a + b·log₂(A/W+1).
+//  A mola dá essa dependência de graça na aceleração, que é proporcional
+//  ao que falta; o que ela não dá é a variação no assentamento, que é
+//  constante. Para as distâncias que estes palcos têm, a diferença não é
+//  visível — daí um orçamento único e não uma função.
+//
+//  ── `espera` ─────────────────────────────────────────────────────────
+//
+//  A NN/g mediu em 0,3–0,5 s a paragem do cursor a partir da qual a
+//  intenção se lê («Timing Guidelines for Exposing Hidden Content»: «o
+//  melhor indício da intenção é o rato PARAR sobre um elemento»). 420 ms
+//  fica no meio do intervalo.
+//
+//  Chegar e carregar são dois acontecimentos, e o silêncio entre eles é
+//  o que os torna uma decisão em vez de uma sequência.
+// ═══════════════════════════════════════════════════════════════════════
+
+export const MAO = {
+  /** Da partida ao repouso da mola, na escala de uma coluna. */
+  assenta: 620,
+  /** A paragem sobre o alvo antes de a intenção se ler. */
+  espera: 420,
+  /** Carregar e largar. */
+  premir: 170,
+} as const;
+
+/** Partir daqui, chegar, parar — e só então o clique. */
+export const aoChegar = (partida: number) => partida + MAO.assenta + MAO.espera;
+
 export const PASSO = {
   /**
    * 90 ms — abaixo do limiar em que se julga a ordem de dois acontecimentos.

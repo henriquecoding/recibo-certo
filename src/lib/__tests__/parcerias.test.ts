@@ -155,10 +155,7 @@ describe("parcerias:copy — nada promete o que não acontece", () => {
     // As duas frases que descreviam o handoff — e que em modo LIGACAO eram
     // falsas. A do DemoIRS era a pior: interpolava o IRS estimado numa
     // promessa de que esse valor ia seguir.
-    for (const rel of [
-      join("components", "Hero.tsx"),
-      join("components", "simulador", "DemoIRS.tsx"),
-    ]) {
+    for (const rel of DEMOS_COM_ATO_FIZ) {
       const fonte = readFileSync(join(RAIZ, rel), "utf8");
       // Procura-se em JSX renderizado, não em comentários — daí exigir que
       // não apareça fora de uma linha começada por `//`.
@@ -360,13 +357,24 @@ describe("parcerias:modo-ligacao — minimização de dados", () => {
   });
 });
 
+/**
+ * As demonstrações que têm um ATO de parceiro dentro do palco.
+ *
+ * Eram duas. `components/Hero.tsx` — o cartão dos quatro perfis — foi
+ * substituído pelo hero da bússola, que não tem ato de parceiro nenhum: as
+ * cinco respostas levam às ferramentas do produto, e a única presença da FIZ
+ * na homepage é a `FizFaixaDemo`, que é servidor, estática e já tem teste
+ * próprio («a faixa estática é um componente de servidor, fora do palco»).
+ *
+ * A lista encolheu porque uma superfície desapareceu — não porque a regra
+ * afrouxou. Quem voltar a pôr um ato de parceiro num palco acrescenta-o aqui.
+ */
+const DEMOS_COM_ATO_FIZ = [join("components", "simulador", "DemoIRS.tsx")];
+
 // ─────────────────────────────────────────────────────────────────────────
 describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece", () => {
-  it("os atos das duas demos têm um botão real", () => {
-    for (const rel of [
-      join("components", "Hero.tsx"),
-      join("components", "simulador", "DemoIRS.tsx"),
-    ]) {
+  it("os atos de parceiro têm um botão real", () => {
+    for (const rel of DEMOS_COM_ATO_FIZ) {
       const fonte = readFileSync(join(RAIZ, rel), "utf8");
       expect(fonte, rel).toMatch(/FizActionButton/);
       expect(fonte, rel).toMatch(/\/ir\/fiz\?s=demo\./);
@@ -374,10 +382,7 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
   });
 
   it("o foco, o ponteiro e o toque travam o relógio", () => {
-    for (const rel of [
-      join("components", "Hero.tsx"),
-      join("components", "simulador", "DemoIRS.tsx"),
-    ]) {
+    for (const rel of DEMOS_COM_ATO_FIZ) {
       const fonte = readFileSync(join(RAIZ, rel), "utf8");
       expect(fonte, `${rel} · ponteiro`).toMatch(/onPointerEnter=/);
       expect(fonte, `${rel} · foco`).toMatch(/onFocus=/);
@@ -398,18 +403,25 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
     expect(irs).toMatch(/demo\.irs\.faixa/);
   });
 
-  it("o cursor encenado desmonta com o rato real", () => {
-    // Dois cursores no mesmo cartão fazem a pessoa clicar no falso.
-    const hero = readFileSync(join(RAIZ, "components", "Hero.tsx"), "utf8");
-    expect(hero).toMatch(/\{ponteiro && !reduzNoDesenho && !sobrevoo &&/);
-    expect(hero).toMatch(/\{ripple && !reduzNoDesenho && !sobrevoo &&/);
+  it("o cursor encenado sai da frente do rato real", () => {
+    // Dois cursores no mesmo sítio fazem a pessoa clicar no falso.
+    //
+    // O hero da homepage deixou de ser `Hero.tsx` e passou a ser a bússola,
+    // com o ponteiro partilhado de `palco/ponteiro.tsx`. A invariante é a
+    // mesma e o mecanismo é outro: o ponteiro lê a posição a cada fotograma
+    // e devolve `null` enquanto houver uma linha sobrevoada — some, e o
+    // relógio suspende-se por cima disso.
+    const hero = readFileSync(join(RAIZ, "components", "foco", "HeroBussola.tsx"), "utf8");
+    expect(hero, "a mão encenada tem de sair com uma mão a sério em cena").toMatch(
+      /if \(sobrevoadoRef\.current\) return \{ ponto: null/,
+    );
+    expect(hero, "sobrevoar tem de suspender o relógio").toMatch(
+      /suspenso: sobrevoado !== null/,
+    );
   });
 
   it("a régua anuncia o destino antes de lá chegar", () => {
-    for (const rel of [
-      join("components", "Hero.tsx"),
-      join("components", "simulador", "DemoIRS.tsx"),
-    ]) {
+    for (const rel of DEMOS_COM_ATO_FIZ) {
       const fonte = readFileSync(join(RAIZ, rel), "utf8");
       expect(fonte, rel).toMatch(/rotulo: "Parceiro"/);
       expect(fonte, rel).toMatch(/liga[çc][ãa]o para a FIZ/i);

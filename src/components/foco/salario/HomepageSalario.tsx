@@ -339,8 +339,8 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
           <Bussola
             excepto="salario"
             compacta
-            titulo="E as outras perguntas?"
-            nota="Cada uma abre uma leitura própria."
+            titulo="E as outras quatro?"
+            nota="Cada uma responde ao que este ecrã não responde."
           />
         </div>
       </section>

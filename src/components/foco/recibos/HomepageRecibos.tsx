@@ -361,8 +361,8 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
           <Bussola
             excepto="recibos"
             compacta
-            titulo="E as outras perguntas?"
-            nota="Cada uma abre uma leitura própria."
+            titulo="E as outras quatro?"
+            nota="Cada uma responde ao que este ecrã não responde."
           />
         </div>
       </section>

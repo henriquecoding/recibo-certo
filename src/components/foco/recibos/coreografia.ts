@@ -35,11 +35,14 @@ export {
   bezier,
   dwell,
   entre,
+  MAO,
+  aoChegar,
   type Curva,
 } from "@/components/palco/curvas";
 export { medir, arco, type Ponto } from "@/components/palco/medida";
 export { useRelogioDeAtos, type Ato, type Beat } from "@/components/palco/relogio";
 
+import { MAO, aoChegar } from "@/components/palco/curvas";
 import type { Ato } from "@/components/palco/relogio";
 
 /**
@@ -77,31 +80,38 @@ export const ATOS_RECIBOS: Ato[] = [
     //  Os tempos são os do `HeroCard` original (`COMPASSO`), agora como
     //  beats de um relógio que a pausa pára — lá eram quinze
     //  `setTimeout` que continuavam a andar com a demonstração em pausa.
-    duracao: 5200,
+    //  ── O que mudou quando a espera passou a ter nome ──────────────
+    //   Este ato tinha 5 200 ms e o cursor chegava ao campo e carregava
+    //   160 ms depois; ao botão, 140 ms depois. Abaixo do limiar em que
+    //   a NN/g mede a intenção (0,3–0,5 s), e por isso a mão não parecia
+    //   estar a decidir nada — parecia estar a executar. Com `MAO.espera`
+    //   os dois cliques ganham 420 ms de paragem e o ato 600 ms.
+    duracao: 5800,
     beats: [
       { id: "campo", em: 0 },
       // 1 · o cursor entra em cena, parado, e só depois desliza
       { id: "ponteiroEntra", em: 300 },
       { id: "vaiAoCampo", em: 460 },
-      // 2 · clica: o anel de toque, o cursor a afundar, o campo a focar
-      { id: "clicaCampo", em: 1240 },
-      { id: "soltaCampo", em: 1410 },
+      // 2 · chega, PARA, e só então clica: o anel de toque, o cursor a
+      //     afundar, o campo a focar
+      { id: "clicaCampo", em: aoChegar(460) },
+      { id: "soltaCampo", em: aoChegar(460) + MAO.premir },
       // 3 · o rato estaciona e a escrita começa — com a gralha do
       //     original: 2 → 20 → 200 → 2003 → 200 → 2000
-      { id: "d1", em: 1720 },
-      { id: "d2", em: 1940 },
-      { id: "d3", em: 2140 },
+      { id: "d1", em: 1980 },
+      { id: "d2", em: 2200 },
+      { id: "d3", em: 2400 },
       // O engano, e 440 ms parado a seguir: é o tempo de alguém ver que
       // escreveu um dígito a mais.
-      { id: "d4", em: 2340 },
-      { id: "d5", em: 2780 },
-      { id: "d6", em: 2980 },
-      { id: "formata", em: 3300 },
-      // 4 · o cursor regressa e desliza até «Calcular»
-      { id: "vaiAoBotao", em: 3560 },
-      { id: "clicaBotao", em: 4320 },
-      { id: "soltaBotao", em: 4490 },
-      { id: "calcula", em: 4720 },
+      { id: "d4", em: 2600 },
+      { id: "d5", em: 3040 },
+      { id: "d6", em: 3240 },
+      { id: "formata", em: 3560 },
+      // 4 · o cursor regressa, desliza até «Calcular», e espera outra vez
+      { id: "vaiAoBotao", em: 3820 },
+      { id: "clicaBotao", em: aoChegar(3820) },
+      { id: "soltaBotao", em: aoChegar(3820) + MAO.premir },
+      { id: "calcula", em: aoChegar(3820) + MAO.premir + 230 },
     ],
   },
   {

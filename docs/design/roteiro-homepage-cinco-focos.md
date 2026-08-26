@@ -203,6 +203,64 @@ quatro e quais são.
 > do `h1`, como o cartão ficava: o cartão podia, porque RAMIFICAVA aquele hero;
 > a bússola navega, e navegação por cima da promessa enterra a promessa.
 
+#### 3.0.1 Terceira correção: em `/`, a bússola **é** o hero
+
+O parágrafo acima resolveu metade e criou a outra metade. Pôr a bússola a seguir
+ao hero deixava em `/` duas coisas que não se falavam:
+
+- um **hero** que prometia «sabe quanto é teu, quanto reservar e quando pagar» —
+  a promessa de **um** dos cinco focos — por cima de uma página que responde a
+  cinco perguntas diferentes;
+- uma **bússola** que era uma lista de cinco perguntas **sem resposta nenhuma**:
+  cinco cliques às cegas.
+
+Passam a ser uma só coisa. O hero de `/` é a bússola, com a metade que lhe
+faltava: **cada pergunta tem a resposta ao lado, com o número verdadeiro, antes
+de qualquer clique.**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  Sabe o número certo — e porque é que é esse.                 │
+│  Cinco perguntas de quem trabalha em Portugal. Escolhe a tua  │
+│  — a resposta traz os valores de 2026, o artigo que a manda   │
+│  e o dia em que o dinheiro sai da conta.                      │
+│                                                              │
+│  AS CINCO PERGUNTAS          ┌────────────────────────────┐  │
+│  01 Que negócio posso testar?│  A RESPOSTA · RECIBOS      │  │
+│  02 Quanto tenho de cobrar?  │                            │  │
+│  03 Deste recibo, quanto  ▸  │  1 240,40 €                │  │
+│     é mesmo meu?             │  é o que fica de um recibo │  │
+│  04 O meu recibo de          │  de 2 000 € (Art. 151.º)   │  │
+│     vencimento está certo?   │  ─ IRS (23 %)   − 460,00 € │  │
+│  05 Compensa-me abrir        │  ─ Seg. Social  − 299,60 € │  │
+│     empresa?                 │  ─ Sai a        20 de set. │  │
+│  [▮▮▯] Perguntar Comparar    │  [ Calcular o meu recibo ] │  │
+│        Abrir      ⏸ ↺        └────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Porque é que a resposta tem de estar lá.** Jakob Nielsen mede em ~10 s o tempo
+que uma página tem para comunicar a sua proposta de valor. Cinco perguntas
+sozinhas gastavam esses 10 s **a prometer que existe uma resposta**.
+
+**E é uma demonstração, não uma decoração.** O ponteiro percorre três das cinco
+perguntas e o painel responde a cada uma — ver `roteiro-animacao-ponteiro.md`. Os
+três atos visitam **Descobrir**, **Empresa** e **Recibos verdes**, e não são três
+escolhidos por variedade: são as três **formas** de resposta que o produto tem —
+uma hipótese sem número nenhum, um limiar, e uma repartição com data. Três
+montantes em euros provariam o contrário do que a demonstração quer provar.
+
+**O que continua a funcionar sem nada disto.** Cinco `<a href>` reais no HTML
+servido, com o painel de «Recibos verdes» já resolvido e a resposta de cada foco
+em texto para o leitor de ecrã. Passar o rato ou o foco do teclado por cima de
+uma linha faz exatamente o que o roteiro faz — e **suspende-o**: a demonstração e
+a interação a sério são o mesmo mecanismo, não dois que se imitam.
+
+**O que morreu com isto.** `components/Hero.tsx` — 1 371 linhas, o `HeroCard` com
+os quatro perfis, e o eixo `Perfil` em `localStorage` que ramificava aquele hero.
+O «Como funciona» que só ele abria mudou-se para o hero novo: tirar a promessa
+antiga era o objetivo; tirar a explicação por arrasto não era.
+
 ### 3.1 Os sete compartimentos, sempre por esta ordem
 
 > A numeração começa em 1: o compartimento 0 («régua de focos») foi

@@ -50,7 +50,25 @@ export interface DefinicaoFoco {
   id: FocoHomepage;
   /** O nome na régua. Uma palavra sempre que possível. */
   label: string;
-  /** A pergunta que este foco responde e nenhum outro responde. */
+  /**
+   * A pergunta que este foco responde e nenhum outro responde.
+   *
+   * ── As regras que estas cinco frases cumprem ────────────────────────
+   *
+   * As primeiras eram cinco frases escritas em cinco momentos: uma tinha
+   * dez palavras e duas orações («Deste recibo, quanto é meu e quanto
+   * tenho de guardar?»), outra tinha três. Lidas em coluna, como a
+   * bússola as mostra, não pareciam cinco entradas do mesmo instrumento
+   * — pareciam cinco textos.
+   *
+   *  1. **Na primeira pessoa, e como alguém as diria em voz alta.** Não
+   *     «Formação de preço»; «Quanto tenho de cobrar?».
+   *  2. **Uma oração só, entre três e sete palavras.** Uma pergunta que
+   *     precisa de vírgula já é duas perguntas.
+   *  3. **A pergunta, e não a resposta.** O que o foco RESPONDE — o
+   *     valor, a data, o limiar — vive no painel, e é lá que a
+   *     especificidade tem de estar.
+   */
   pergunta: string;
   /** O verbo do palco. Cinco focos, cinco verbos, sem exceção. */
   verbo: "eliminar" | "compor" | "repartir" | "conferir" | "virar";
@@ -79,7 +97,7 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
   {
     id: "descobrir",
     label: "Descobrir",
-    pergunta: "Que negócio faz sentido eu testar?",
+    pergunta: "Que negócio posso testar?",
     verbo: "eliminar",
     palco: "Mesa de decisão",
     tom: "escuro",
@@ -107,7 +125,7 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
   {
     id: "recibos",
     label: "Recibos verdes",
-    pergunta: "Deste recibo, quanto é meu e quanto tenho de guardar?",
+    pergunta: "Deste recibo, quanto é mesmo meu?",
     verbo: "repartir",
     palco: "A repartição",
     tom: "claro",
@@ -135,7 +153,7 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
   {
     id: "empresa",
     label: "Empresa",
-    pergunta: "A partir de quando compensa ter empresa?",
+    pergunta: "Compensa-me abrir empresa?",
     verbo: "virar",
     palco: "O ponto de viragem",
     tom: "escuro",

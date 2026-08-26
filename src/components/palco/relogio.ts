@@ -66,6 +66,27 @@ export function useRelogioDeAtos({
   const [feitos, setFeitos] = useState<ReadonlySet<string>>(new Set());
   const [cumprido, setCumprido] = useState(false);
   const barraRef = useRef<HTMLSpanElement>(null);
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ O ESPELHO SÍNCRONO DE `feitos`, E PORQUE É QUE ELE TEM DE EXISTIR │
+  // │                                                                   │
+  // │ O relógio filtrava os beats por disparar contra o ESTADO          │
+  // │ `feitos`, e o estado é assíncrono. Reiniciar um ato a meio        │
+  // │ (carregar em «Recomeçar», ou saltar para um passo na régua)       │
+  // │ mudava a chave: o efeito de reposição pedia `setFeitos(new Set())`│
+  // │ e o efeito do relógio, no MESMO commit, ainda lia o conjunto      │
+  // │ antigo. Os beats que já tinham disparado ficavam de fora de       │
+  // │ `porDisparar` — e como o estado a seguir era limpo, nunca mais    │
+  // │ disparavam. Ficavam mortos até ao fim do ato.                     │
+  // │                                                                   │
+  // │ Foi assim que o ponteiro do palco dos recibos nunca entrou em     │
+  // │ cena: `d1` disparava e `ponteiroEntra`, 1 420 ms ANTES, não.      │
+  // │ Media-se a olho como «cheio de bugs» e era um só, aqui.           │
+  // │                                                                   │
+  // │ O espelho é escrito no mesmo instante em que o beat dispara, e o  │
+  // │ efeito de reposição limpa-o antes de o relógio arrancar — porque  │
+  // │ os efeitos correm pela ordem em que são declarados.               │
+  // └───────────────────────────────────────────────────────────────────┘
+  const feitosRef = useRef<Set<string>>(new Set());
 
   // O callback vive num ref para que uma identidade nova não reinicie o
   // relógio a meio do ato.
@@ -75,6 +96,7 @@ export function useRelogioDeAtos({
   const chave = `${ciclo}-${ato}`;
 
   useEffect(() => {
+    feitosRef.current = new Set();
     setFeitos(new Set());
     setCumprido(false);
     if (barraRef.current) barraRef.current.style.transform = "scaleX(0)";
@@ -88,7 +110,7 @@ export function useRelogioDeAtos({
     let raf = 0;
     let decorrido = 0;
     let ultimo = performance.now();
-    const porDisparar = definicao.beats.filter((b) => !feitos.has(b.id));
+    const porDisparar = definicao.beats.filter((b) => !feitosRef.current.has(b.id));
 
     const passo = (agora: number) => {
       decorrido += agora - ultimo;
@@ -100,6 +122,7 @@ export function useRelogioDeAtos({
 
       const chegados = porDisparar.filter((b) => b.em <= decorrido).map((b) => b.id);
       if (chegados.length > 0) {
+        for (const id of chegados) feitosRef.current.add(id);
         setFeitos((atuais) => new Set([...atuais, ...chegados]));
         for (const id of chegados) {
           const i = porDisparar.findIndex((b) => b.id === id);
@@ -116,11 +139,10 @@ export function useRelogioDeAtos({
 
     raf = requestAnimationFrame(passo);
     return () => cancelAnimationFrame(raf);
-    // `feitos` de propósito fora das dependências: entra na leitura inicial
-    // para o retomar não repetir beats, mas incluí-lo reiniciaria o relógio
-    // a cada beat disparado — que é precisamente o defeito que este desenho
-    // existe para não ter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // O espelho (`feitosRef`) é lido em vez do estado, de propósito: o
+    // estado não está disponível no mesmo commit em que a chave muda, e o
+    // relógio precisa de saber o que já disparou NESTE ato — nem antes,
+    // nem no ato anterior.
   }, [chave, parado, estatico, ato, atos]);
 
   const feito = useCallback(

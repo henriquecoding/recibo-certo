@@ -367,8 +367,8 @@ export default function HomepageDescobrir({ exemplo }: { exemplo: ExemploDescobe
           <Bussola
             excepto="descobrir"
             compacta
-            titulo="E as outras perguntas?"
-            nota="Cada uma abre uma leitura própria."
+            titulo="E as outras quatro?"
+            nota="Cada uma responde ao que este ecrã não responde."
           />
         </div>
       </section>

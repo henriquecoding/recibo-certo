@@ -26,11 +26,11 @@
 //      FORMA de dizer o que o texto já diz.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useReducedMotion } from "motion/react";
+import { useRef, type ReactNode } from "react";
 import { Pause, Play, RotateCcw } from "@/components/ui/Icons";
 import { PalcoContexto } from "./atores";
-import { useRelogioDeAtos, type Ato } from "./relogio";
+import type { Ato } from "./relogio";
+import { usePalco } from "./usePalco";
 import type { TomPalco } from "@/components/foco/focos";
 
 export interface CenaDoPalco {
@@ -109,89 +109,27 @@ export default function MolduraPalco({
   atos: readonly Ato[];
   children: (cena: CenaDoPalco) => ReactNode;
 }) {
-  const reduz = useReducedMotion();
-  const [montado, setMontado] = useState(false);
-  const ultimoAto = atos.length - 1;
-
-  // O HTML servido contém o resultado completo. Só depois da montagem a
-  // cena rebobina — sem JavaScript e com movimento reduzido não se perde
-  // conteúdo nenhum.
-  const [ato, setAto] = useState(ultimoAto);
-  const [parado, setParado] = useState(true);
-  const [finalizado, setFinalizado] = useState(true);
-  const [ciclo, setCiclo] = useState(0);
-  const [anuncioManual, setAnuncioManual] = useState("");
+  // Todo o estado — o ato inicial ser o último, a pausa parar mesmo, ir
+  // para um ato pô-lo a correr — vive em `usePalco`, partilhado com o hero
+  // da bússola. Ver o cabeçalho desse ficheiro.
+  const {
+    ato,
+    feito,
+    emCena,
+    estatico,
+    parado,
+    finalizado,
+    ciclo,
+    barraRef,
+    anuncio: anuncioManual,
+    alternarPausa,
+    irPara,
+    rever,
+    estadoPalco,
+  } = usePalco(atos);
   const palcoRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const reduzAgora = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setMontado(true);
-    if (reduzAgora) return;
-    setAto(0);
-    setParado(false);
-    setFinalizado(false);
-    setCiclo((atual) => atual + 1);
-  }, []);
-
-  useEffect(() => {
-    if (!reduz) return;
-    setAto(ultimoAto);
-    setParado(true);
-    setFinalizado(true);
-  }, [reduz, ultimoAto]);
-
-  const estatico = !montado || Boolean(reduz);
-
-  const terminarAto = useCallback(() => {
-    if (ato < ultimoAto) {
-      setAto(ato + 1);
-      return;
-    }
-    // A cena ACABA. Uma cena que recomeça em ciclo ensina o olho que nada
-    // ali depende de si.
-    setFinalizado(true);
-    setParado(true);
-  }, [ato, ultimoAto]);
-
-  const { feito, barraRef } = useRelogioDeAtos({
-    atos,
-    ato,
-    ciclo,
-    parado,
-    estatico,
-    aoTerminarAto: terminarAto,
-  });
-
-  const emCena = useCallback(
-    (beat: string) => !montado || feito(beat),
-    [montado, feito],
-  );
-
-  const irPara = (indice: number) => {
-    setAnuncioManual(`Passo ${indice + 1} de ${atos.length}: ${atos[indice]?.legenda}.`);
-    setAto(indice);
-    // Ir para um ato é PÔ-LO A CORRER. Com a navegação a pausar, saltar
-    // para o último ato deixava-o preso no primeiro frame para sempre,
-    // porque nenhum beat chegava a disparar.
-    setParado(false);
-    setFinalizado(false);
-    setCiclo((atual) => atual + 1);
-  };
-
-  const rever = () => {
-    setAnuncioManual(`Demonstração reiniciada no primeiro passo: ${atos[0]?.legenda}.`);
-    setAto(0);
-    setParado(false);
-    setFinalizado(false);
-    setCiclo((atual) => atual + 1);
-  };
-
   const pele = PELE[tom];
-  const estadoPalco = useMemo(
-    () => ({ parado: parado || estatico, imediato: false }),
-    [estatico, parado],
-  );
-
   const cena: CenaDoPalco = { ato, feito, emCena, estatico, ciclo, palcoRef };
 
   return (
@@ -242,7 +180,7 @@ export default function MolduraPalco({
               {!finalizado && (
                 <button
                   type="button"
-                  onClick={() => setParado((valor) => !valor)}
+                  onClick={alternarPausa}
                   aria-pressed={parado}
                   className={`focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold transition-colors ${pele.botao}`}
                 >

@@ -16,11 +16,27 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.129.0",
+    data: "2026-08-26",
+    titulo: "As cinco perguntas passaram a ser a primeira coisa da homepage — e cada uma traz a resposta ao lado",
+    itens: [
+      "A homepage abria com uma promessa que só servia um dos cinco caminhos — «sabe quanto é teu, quanto reservar e quando pagar» — e só por baixo dela é que apareciam as cinco perguntas. Agora as perguntas SÃO a abertura, e o título promete o que a página inteira faz: saber o número certo, e porque é que é esse.",
+      "E as perguntas deixaram de pedir um clique às cegas. Aponta uma e a resposta aparece ao lado, com o número a sério: de um recibo de 2 000 €, o que fica, o que é retenção e o dia em que a Segurança Social sai da conta; a faturação a partir da qual uma sociedade passa os recibos verdes; o preço que uma peça tem de ter. Tudo saído dos mesmos motores que as ferramentas usam.",
+      "A demonstração percorre três das cinco e mostra três tipos de resposta diferentes de propósito — uma hipótese de negócio sem número nenhum, um limiar, e uma repartição com data. Se as três fossem valores em euros, provava o contrário do que quer provar.",
+      "Passar o rato ou o teclado por cima de uma pergunta faz exatamente o que a demonstração faz, e pára-a enquanto lá estiveres. Deixou de haver uma animação a mudar o painel por baixo da tua mão.",
+      "As perguntas foram reescritas para caberem todas na mesma voz: «deste recibo, quanto é mesmo meu?» em vez de uma frase com dez palavras e duas orações, «compensa-me abrir empresa?» em vez de «a partir de quando compensa ter empresa?». Lidas em coluna, agora parecem cinco entradas do mesmo instrumento.",
+      "O cursor encenado das demonstrações passou a ter peso: persegue o alvo com uma mola em vez de saltar de ponto em ponto, remede o destino a cada fotograma — antes ia para onde a peça já não estava — e, ao chegar, PÁRA antes de clicar. Uma mão que chega e carrega no mesmo instante não parece alguém a decidir; parece um guião a executar passos.",
+      "Corrigido um defeito que afetava as cinco demonstrações e não só o cursor: saltar para um passo a meio matava, até ao fim desse passo, tudo o que já tinha acontecido nele. Era por isso que o rato às vezes simplesmente não entrava em cena.",
+      "Corrigido também um caso em que a demonstração ficava congelada com os botões de pausa à vista, à espera de nada, em navegadores que não declaram preferência de movimento.",
+      "No telemóvel, a resposta passou a vir logo a seguir à pergunta, e não depois dos controlos da demonstração.",
+    ],
+  },
+  {
     version: "2.128.0",
     data: "2026-08-26",
     titulo: "A homepage voltou a ter quem te guie — e o rato voltou à demonstração",
     itens: [
-      "A porta de entrada tinha ficado sem nada a orientar: havia cinco leituras novas e nenhuma forma de saber que existiam sem ir ao menu. Agora, logo a seguir ao primeiro ecrã, estão as cinco perguntas — «que negócio faz sentido eu testar?», «quanto tenho de cobrar?», «deste recibo, quanto é meu?», «o meu recibo de vencimento está certo?», «a partir de quando compensa ter empresa?» — e cada uma abre a sua leitura.",
+      "A porta de entrada tinha ficado sem nada a orientar: havia cinco leituras novas e nenhuma forma de saber que existiam sem ir ao menu. Passaram a estar na página, como cinco perguntas, cada uma a abrir a sua leitura.",
       "As mesmas cinco perguntas fecham cada leitura, sem a que estás a ver. Chegas ao fim de uma e sabes que há outras quatro, e qual é a pergunta de cada uma, sem ter de voltar ao topo.",
       "A demonstração dos recibos verdes recuperou o cursor que a homepage antiga tinha e que eu tinha deixado para trás: entra em cena, desliza até ao campo, clica, espera enquanto o valor é escrito com uma gralha pelo meio — 2, 20, 200, 2003, corrige para 200, 2000 — afasta-se para não tapar o que estás a ler, volta e carrega em «Calcular».",
       "E ao contrário do original, esta mão pára quando carregas em «Pausar». A versão antiga era uma cadeia de temporizadores que continuava a andar e a clicar com a demonstração em pausa.",

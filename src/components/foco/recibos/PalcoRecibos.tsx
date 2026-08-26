@@ -5,7 +5,7 @@ import { m } from "motion/react";
 import { Calendar, Check, Lock, Receipt, ShieldCheck, Warning } from "@/components/ui/Icons";
 import MolduraPalco, { type CenaDoPalco } from "@/components/palco/MolduraPalco";
 import { Contador, Ficha, Anel, type FichaEmCena } from "@/components/palco/atores";
-import { Ponteiro, Toque, type EstadoPonteiro } from "@/components/palco/ponteiro";
+import { Ponteiro, Toque, type LeituraPonteiro } from "@/components/palco/ponteiro";
 import type { Ponto } from "@/components/palco/medida";
 import {
   ATOS_RECIBOS,
@@ -173,24 +173,30 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
   const calculou = estatico || ato > 0 || emCena("calcula");
 
   // ── A MÃO ──────────────────────────────────────────────────────────
-  //  O ponteiro é derivado dos beats, e não de uma cadeia de
-  //  temporizadores paralela: há UM relógio, e ele manda em tudo o que
-  //  se move. Cada alvo é medido no DOM na altura em que o beat dispara,
-  //  para o cursor ir ao sítio onde a peça está de facto — e não a um
-  //  ponto pré-calculado que uma quebra de linha desalinhou.
-  const [ponteiro, setPonteiro] = useState<EstadoPonteiro>({ em: null, premido: false });
+  //  O ponteiro não recebe um destino por beat: recebe uma FUNÇÃO que
+  //  lhe diz, a cada frame, onde é que ele quer estar. Ver o cabeçalho
+  //  de `palco/ponteiro.tsx` — a versão anterior era um tween que
+  //  reiniciava a cada beat e media o alvo uma vez só, com o palco ainda
+  //  a encher-se. O cursor nascia fora do palco e arrastava-se.
+  //
+  //  Aqui o alvo é remedido a cada frame. Se uma peça se mexer a meio do
+  //  percurso — e mexe-se, porque as colunas ainda estão a preencher-se
+  //  — o cursor acompanha-a em vez de ir para onde ela já não está.
   const [toques, setToques] = useState<{ id: string; em: Ponto }[]>([]);
+  const feitoRef = useRef(feito);
+  feitoRef.current = feito;
+  const atoRef = useRef(ato);
+  atoRef.current = ato;
+  const estaticoRef = useRef(estatico);
+  estaticoRef.current = estatico;
 
-  useEffect(() => {
-    if (estatico || ato !== 0) {
-      setPonteiro({ em: null, premido: false });
-      setToques([]);
-      return;
-    }
+  const lerPonteiro = useCallback((): LeituraPonteiro => {
     const palco = palcoRef.current;
-    if (!palco) return;
-
-    const centro = (alvo: Element | null, fx = 0.34, fy = 0.68) => {
+    if (estaticoRef.current || atoRef.current !== 0 || !palco) {
+      return { ponto: null, premido: false };
+    }
+    const f = feitoRef.current;
+    const centro = (alvo: Element | null, fx = 0.34, fy = 0.62) => {
       if (!alvo) return null;
       const a = alvo.getBoundingClientRect();
       const b = palco.getBoundingClientRect();
@@ -198,51 +204,55 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
       return { x: a.left - b.left + a.width * fx, y: a.top - b.top + a.height * fy };
     };
 
-    // O cursor entra em cena PARADO, à direita e a meia altura — como no
-    // original. Aparecer já em movimento lê-se como um salto.
-    if (feito("ponteiroEntra") && !feito("vaiAoCampo")) {
+    if (!f("ponteiroEntra")) return { ponto: null, premido: false };
+
+    // 4 · o botão
+    if (f("vaiAoBotao")) {
+      return {
+        ponto: f("calcula") ? null : centro(botaoRef.current, 0.5, 0.5),
+        premido: f("clicaBotao") && !f("soltaBotao"),
+      };
+    }
+    // 3 · estaciona enquanto se escreve — afasta-se para não tapar
+    if (f("d1")) {
+      const c = centro(campoRef.current);
+      return { ponto: c ? { x: c.x + 104, y: c.y + 58 } : null, premido: false };
+    }
+    // 2 · o campo
+    if (f("vaiAoCampo")) {
+      return {
+        ponto: centro(campoRef.current),
+        premido: f("clicaCampo") && !f("soltaCampo"),
+      };
+    }
+    // 1 · entra em cena PARADO, à direita e a meia altura. `imediato`
+    //     porque uma entrada não é um percurso: aparecer já a viajar do
+    //     canto lê-se como um erro a acontecer devagar.
+    const b = palco.getBoundingClientRect();
+    return { ponto: { x: b.width * 0.66, y: b.height * 0.34 }, premido: false, imediato: true };
+  }, [palcoRef]);
+
+  // Os anéis de toque: um por clique, uma vez cada.
+  useEffect(() => {
+    if (estatico || ato !== 0) {
+      setToques([]);
+      return;
+    }
+    const palco = palcoRef.current;
+    if (!palco) return;
+    const centro = (alvo: Element | null, fx: number, fy: number) => {
+      if (!alvo) return null;
+      const a = alvo.getBoundingClientRect();
       const b = palco.getBoundingClientRect();
-      setPonteiro({ em: { x: b.width * 0.62, y: b.height * 0.52 }, premido: false });
-      return;
-    }
-    if (feito("clicaBotao")) {
-      const alvo = centro(botaoRef.current, 0.5, 0.55);
-      setPonteiro({
-        em: feito("calcula") ? null : alvo,
-        premido: feito("clicaBotao") && !feito("soltaBotao"),
-        duracao: DUR.entrada,
-      });
-      if (alvo) {
-        setToques((t) => (t.some((x) => x.id === "botao") ? t : [...t, { id: "botao", em: alvo }]));
-      }
-      return;
-    }
-    if (feito("vaiAoBotao")) {
-      setPonteiro({ em: centro(botaoRef.current, 0.5, 0.55), premido: false, duracao: 660 });
-      return;
-    }
-    // Enquanto se escreve, o rato ESTACIONA: afasta-se e esbate-se, para
-    // não ficar em cima do que a pessoa está a ler.
-    if (feito("d1")) {
-      const alvo = centro(campoRef.current);
-      setPonteiro({
-        em: alvo ? { x: alvo.x + 92, y: alvo.y + 54 } : null,
-        premido: false,
-        duracao: 500,
-      });
-      return;
-    }
-    if (feito("clicaCampo")) {
-      const alvo = centro(campoRef.current);
-      setPonteiro({ em: alvo, premido: !feito("soltaCampo"), duracao: DUR.micro });
-      if (alvo) {
-        setToques((t) => (t.some((x) => x.id === "campo") ? t : [...t, { id: "campo", em: alvo }]));
-      }
-      return;
-    }
-    if (feito("vaiAoCampo")) {
-      setPonteiro({ em: centro(campoRef.current), premido: false, duracao: 800 });
-    }
+      if (a.width === 0) return null;
+      return { x: a.left - b.left + a.width * fx, y: a.top - b.top + a.height * fy };
+    };
+    const marcar = (id: string, ponto: Ponto | null) => {
+      if (!ponto) return;
+      setToques((t) => (t.some((x) => x.id === id) ? t : [...t, { id, em: ponto }]));
+    };
+    if (feito("clicaCampo")) marcar("campo", centro(campoRef.current, 0.34, 0.62));
+    if (feito("clicaBotao")) marcar("botao", centro(botaoRef.current, 0.5, 0.5));
   }, [ato, ciclo, estatico, feito, palcoRef]);
 
   const focado = !estatico && ato === 0 && emCena("clicaCampo");
@@ -575,7 +585,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
       {toques.map((toque) => (
         <Toque key={`${ciclo}-${toque.id}`} em={toque.em} />
       ))}
-      <Ponteiro estado={ponteiro} />
+      <Ponteiro ler={lerPonteiro} />
 
       {fichas.map((ficha) => (
         <Ficha key={ficha.id} ficha={ficha} aoChegar={aoChegar} aoSair={aoSair} />

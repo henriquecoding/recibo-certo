@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Nav from "@/components/Nav";
 
-import Hero from "@/components/Hero";
 import Stats from "@/components/Stats";
 import CalculadoraSecao from "@/components/CalculadoraSecao";
 import ExplorarSecao from "@/components/ExplorarSecao";
@@ -21,8 +20,9 @@ import HomepageRecibos from "@/components/foco/recibos/HomepageRecibos";
 import HomepageSalario from "@/components/foco/salario/HomepageSalario";
 import HomepageEmpresa from "@/components/foco/empresa/HomepageEmpresa";
 import { FOCOS } from "@/components/foco/focos";
-import Bussola from "@/components/foco/Bussola";
+import HeroBussola from "@/components/foco/HeroBussola";
 import { dadosRecibo, dadosSalario, dadosEmpresa } from "@/lib/foco/dados-servidor";
+import { respostasDosFocos } from "@/lib/foco/respostas-servidor";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { faqs } from "@/lib/faq";
 import { normalizarFocoHomepage } from "@/lib/foco-homepage";
@@ -224,24 +224,17 @@ export default async function Home({ searchParams }: HomeProps) {
             <HomepageEmpresa dados={dadosEmpresa()} />
           ) : (
             <>
-          <Hero cmp={landingCmp} recibo={landingRecibo} vencimento={landingVencimento} />
+          {/* ── O HERO É A BÚSSOLA ──────────────────────────────────
+              Eram duas coisas: um hero que prometia uma coisa só («quanto
+              é teu, quanto reservar, quando pagar» — o foco dos recibos
+              verdes) e, por baixo, uma lista de cinco perguntas sem
+              resposta nenhuma. A promessa não cobria a página e a lista
+              pedia cinco cliques às cegas.
 
-          {/* ── A BÚSSOLA ───────────────────────────────────────────
-              O sistema que guia quem chega a `/` até ao foco certo.
-              Substitui o cartão «Sou trabalhador / Gostaria de», que
-              perguntava quem és; esta pergunta o que queres saber, e
-              cada entrada é uma ligação real para a leitura desse
-              foco. Vive imediatamente a seguir ao hero porque é a
-              primeira decisão que a página pede. */}
-          <section className="px-6 pt-10 sm:pt-14">
-            <div className="mx-auto max-w-5xl">
-              <Bussola
-                compacta
-                titulo="Cinco perguntas. Começa pela tua."
-                nota="Cada uma abre uma leitura própria, com a sua demonstração."
-              />
-            </div>
-          </section>
+              Passa a ser uma: as cinco perguntas SÃO o hero, cada uma com
+              a sua resposta ao lado e com o número verdadeiro. Ver o
+              cabeçalho de `components/foco/HeroBussola.tsx`. */}
+          <HeroBussola respostas={respostasDosFocos()} />
           {/* Ver a nota em `FizFaixaDemo`: o ato da demo é o extra, isto é o
               piso — renderizado no servidor, imóvel, e o único caminho para
               quem tem movimento reduzido, JavaScript desligado ou um ecrã
