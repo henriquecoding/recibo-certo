@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.128.0",
+    data: "2026-08-26",
+    titulo: "A homepage voltou a ter quem te guie — e o rato voltou à demonstração",
+    itens: [
+      "A porta de entrada tinha ficado sem nada a orientar: havia cinco leituras novas e nenhuma forma de saber que existiam sem ir ao menu. Agora, logo a seguir ao primeiro ecrã, estão as cinco perguntas — «que negócio faz sentido eu testar?», «quanto tenho de cobrar?», «deste recibo, quanto é meu?», «o meu recibo de vencimento está certo?», «a partir de quando compensa ter empresa?» — e cada uma abre a sua leitura.",
+      "As mesmas cinco perguntas fecham cada leitura, sem a que estás a ver. Chegas ao fim de uma e sabes que há outras quatro, e qual é a pergunta de cada uma, sem ter de voltar ao topo.",
+      "A demonstração dos recibos verdes recuperou o cursor que a homepage antiga tinha e que eu tinha deixado para trás: entra em cena, desliza até ao campo, clica, espera enquanto o valor é escrito com uma gralha pelo meio — 2, 20, 200, 2003, corrige para 200, 2000 — afasta-se para não tapar o que estás a ler, volta e carrega em «Calcular».",
+      "E ao contrário do original, esta mão pára quando carregas em «Pausar». A versão antiga era uma cadeia de temporizadores que continuava a andar e a clicar com a demonstração em pausa.",
+      "O gráfico da empresa passou a mostrar a diferença entre os dois caminhos em vez dos dois valores. Com os dois traçados no mesmo eixo, três mil euros de diferença eram dois pixéis e as linhas corriam coladas — não se via cruzar nada. Agora a linha começa abaixo do zero, afunda com o custo da contabilidade, sobe, e cruza o zero exatamente no ponto de viragem.",
+      "Nomes de ferramentas deixaram de ser cortados a meio no telemóvel, e as ligações pequenas passaram a ter área tocável suficiente.",
+    ],
+  },
+  {
     version: "2.127.0",
     data: "2026-08-26",
     titulo: "A homepage passou a ter cinco entradas a sério — e três delas deixaram de ser a mesma página com outros números",

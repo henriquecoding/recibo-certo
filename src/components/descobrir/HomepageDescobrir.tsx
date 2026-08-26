@@ -18,6 +18,7 @@ import {
 import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
+import Bussola from "@/components/foco/Bussola";
 import HeroDescobrir, { type ExemploDescoberta } from "./HeroDescobrir";
 import LaboratorioDescobrir from "./LaboratorioDescobrir";
 import BifurcacaoDescobrir from "./BifurcacaoDescobrir";
@@ -358,6 +359,19 @@ export default function HomepageDescobrir({ exemplo }: { exemplo: ExemploDescobe
           a pergunta que só existe depois de haver uma hipótese. */}
       <BifurcacaoDescobrir />
       <FontesDescobrir />
+      {/* A bússola fecha a leitura. Quem chegou aqui já sabe uma coisa;
+          isto diz-lhe que há outras quatro e qual é a pergunta de cada
+          uma — sem o obrigar a subir ao cabeçalho para descobrir. */}
+      <section className="px-4 pb-16 sm:px-6 sm:pb-24">
+        <div className="mx-auto max-w-6xl">
+          <Bussola
+            excepto="descobrir"
+            compacta
+            titulo="E as outras perguntas?"
+            nota="Cada uma abre uma leitura própria."
+          />
+        </div>
+      </section>
     </>
   );
 }

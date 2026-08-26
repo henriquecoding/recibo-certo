@@ -103,7 +103,12 @@ function CartaoCompacto({
           <Icon size={17} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="flex items-center gap-2">
+          {/* `flex-wrap` e o título SEM `min-w-0`: com `min-w-0` o nome
+              encolhia abaixo da sua palavra mais larga («Simulador»
+              pede 68 px e recebia 49), e uma palavra não parte. Agora o
+              distintivo passa para a linha de baixo quando não cabe, que
+              é o que tem de ceder — o nome da ferramenta não. */}
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
             {/* `truncate` cortava «Calculadora de Segurança Social …» a
                 320 px, e o nome de uma ferramenta com reticências deixa de
                 ser um nome — a auditoria conta texto cortado como texto
@@ -113,7 +118,7 @@ function CartaoCompacto({
                 usa continua a declarar a largura do texto por quebrar, e a
                 auditoria continuava a apanhá-lo. Aqui o nome quebra e
                 pronto — o cartão tem `h-full` e aguenta duas linhas. */}
-            <span className="min-w-0 text-balance text-sm font-semibold leading-snug text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand">
+            <span className="text-balance text-sm font-semibold leading-snug text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand">
               {titulo}
             </span>
             {badge && (

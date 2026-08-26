@@ -5,6 +5,7 @@ import { m } from "motion/react";
 import { Calendar, Check, Lock, Receipt, ShieldCheck, Warning } from "@/components/ui/Icons";
 import MolduraPalco, { type CenaDoPalco } from "@/components/palco/MolduraPalco";
 import { Contador, Ficha, Anel, type FichaEmCena } from "@/components/palco/atores";
+import { Ponteiro, Toque, type EstadoPonteiro } from "@/components/palco/ponteiro";
 import type { Ponto } from "@/components/palco/medida";
 import {
   ATOS_RECIBOS,
@@ -90,6 +91,8 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
   const lancadasRef = useRef(new Set<string>());
   const tomDaFichaRef = useRef(new Map<string, TomRecibo>());
 
+  const campoRef = useRef<HTMLDivElement>(null);
+  const botaoRef = useRef<HTMLDivElement>(null);
   const notaRef = useRef<HTMLDivElement>(null);
   const alvoTeuRef = useRef<HTMLDivElement>(null);
   const alvoIRSRef = useRef<HTMLDivElement>(null);
@@ -169,6 +172,82 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
   const campoAceso = emCena("campo");
   const calculou = estatico || ato > 0 || emCena("calcula");
 
+  // ── A MÃO ──────────────────────────────────────────────────────────
+  //  O ponteiro é derivado dos beats, e não de uma cadeia de
+  //  temporizadores paralela: há UM relógio, e ele manda em tudo o que
+  //  se move. Cada alvo é medido no DOM na altura em que o beat dispara,
+  //  para o cursor ir ao sítio onde a peça está de facto — e não a um
+  //  ponto pré-calculado que uma quebra de linha desalinhou.
+  const [ponteiro, setPonteiro] = useState<EstadoPonteiro>({ em: null, premido: false });
+  const [toques, setToques] = useState<{ id: string; em: Ponto }[]>([]);
+
+  useEffect(() => {
+    if (estatico || ato !== 0) {
+      setPonteiro({ em: null, premido: false });
+      setToques([]);
+      return;
+    }
+    const palco = palcoRef.current;
+    if (!palco) return;
+
+    const centro = (alvo: Element | null, fx = 0.34, fy = 0.68) => {
+      if (!alvo) return null;
+      const a = alvo.getBoundingClientRect();
+      const b = palco.getBoundingClientRect();
+      if (a.width === 0) return null;
+      return { x: a.left - b.left + a.width * fx, y: a.top - b.top + a.height * fy };
+    };
+
+    // O cursor entra em cena PARADO, à direita e a meia altura — como no
+    // original. Aparecer já em movimento lê-se como um salto.
+    if (feito("ponteiroEntra") && !feito("vaiAoCampo")) {
+      const b = palco.getBoundingClientRect();
+      setPonteiro({ em: { x: b.width * 0.62, y: b.height * 0.52 }, premido: false });
+      return;
+    }
+    if (feito("clicaBotao")) {
+      const alvo = centro(botaoRef.current, 0.5, 0.55);
+      setPonteiro({
+        em: feito("calcula") ? null : alvo,
+        premido: feito("clicaBotao") && !feito("soltaBotao"),
+        duracao: DUR.entrada,
+      });
+      if (alvo) {
+        setToques((t) => (t.some((x) => x.id === "botao") ? t : [...t, { id: "botao", em: alvo }]));
+      }
+      return;
+    }
+    if (feito("vaiAoBotao")) {
+      setPonteiro({ em: centro(botaoRef.current, 0.5, 0.55), premido: false, duracao: 660 });
+      return;
+    }
+    // Enquanto se escreve, o rato ESTACIONA: afasta-se e esbate-se, para
+    // não ficar em cima do que a pessoa está a ler.
+    if (feito("d1")) {
+      const alvo = centro(campoRef.current);
+      setPonteiro({
+        em: alvo ? { x: alvo.x + 92, y: alvo.y + 54 } : null,
+        premido: false,
+        duracao: 500,
+      });
+      return;
+    }
+    if (feito("clicaCampo")) {
+      const alvo = centro(campoRef.current);
+      setPonteiro({ em: alvo, premido: !feito("soltaCampo"), duracao: DUR.micro });
+      if (alvo) {
+        setToques((t) => (t.some((x) => x.id === "campo") ? t : [...t, { id: "campo", em: alvo }]));
+      }
+      return;
+    }
+    if (feito("vaiAoCampo")) {
+      setPonteiro({ em: centro(campoRef.current), premido: false, duracao: 800 });
+    }
+  }, [ato, ciclo, estatico, feito, palcoRef]);
+
+  const focado = !estatico && ato === 0 && emCena("clicaCampo");
+  const botaoPremido = !estatico && ato === 0 && emCena("clicaBotao") && !emCena("soltaBotao");
+
   const teuChegou = chegou("rep-teu", 1);
   const irsChegou = chegou("rep-irs", 1);
   const ssChegou = chegou("rep-ss", 1);
@@ -213,10 +292,17 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
               Valor do serviço
             </span>
             <m.div
+              ref={campoRef}
               initial={false}
               animate={{
-                borderColor: campoAceso ? "rgba(23,126,94,.5)" : "rgba(214,206,191,1)",
-                scale: calculou && ato === 0 ? 1.015 : 1,
+                borderColor: focado
+                  ? "rgba(23,126,94,.9)"
+                  : campoAceso
+                    ? "rgba(23,126,94,.5)"
+                    : "rgba(214,206,191,1)",
+                boxShadow: focado
+                  ? "0 0 0 3px rgba(23,126,94,.16)"
+                  : "0 0 0 0px rgba(23,126,94,0)",
               }}
               transition={t}
               className="mt-1.5 flex min-h-[52px] items-center rounded-2xl border-2 bg-white px-3 dark:bg-stone-900"
@@ -224,7 +310,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
               <span className="font-display text-2xl font-semibold tabular-nums text-ink">
                 {escrito || <span className="text-stone-300">0</span>}
               </span>
-              {!estatico && ato === 0 && !emCena("formata") && (
+              {!estatico && ato === 0 && focado && !emCena("formata") && (
                 <span
                   className="ml-0.5 inline-block h-6 w-px animate-pulse bg-brand"
                   style={{ animationDuration: "1s" }}
@@ -239,6 +325,31 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
                 Continente
               </span>
             </div>
+
+            {/* ── O BOTÃO QUE O CURSOR CLICA ─────────────────────────
+                Sem ele o ponteiro não tinha onde aterrar e o resultado
+                aparecia sozinho. Um cálculo que acontece sem ninguém o
+                mandar fazer não é uma demonstração do produto: é uma
+                animação por cima dele.
+
+                É um `div` e não um `button`: a cena inteira é
+                `aria-hidden` e quem usa teclado ou leitor de ecrã tem o
+                CTA a sério por baixo do palco. Um botão de verdade aqui
+                seria uma paragem de tabulação que não faz nada. */}
+            <m.div
+              ref={botaoRef}
+              initial={false}
+              animate={{
+                opacity: emCena("formata") || calculou ? 1 : 0.45,
+                scale: botaoPremido ? 0.97 : 1,
+                backgroundColor: calculou ? "rgb(23,126,94)" : "rgb(23,126,94)",
+              }}
+              transition={estatico ? { duration: 0 } : { duration: DUR.micro / 1000, ease: ENTRADA }}
+              className="mt-3 flex min-h-[40px] items-center justify-center gap-1.5 rounded-2xl px-4 text-xs font-semibold text-white shadow-glow"
+            >
+              {calculou ? <Check size={13} /> : null}
+              {calculou ? "Calculado" : "Calcular"}
+            </m.div>
           </div>
 
           {/* A nota: a origem de onde as três fichas se partem. */}
@@ -460,6 +571,11 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
           </m.div>
         </div>
       </div>
+
+      {toques.map((toque) => (
+        <Toque key={`${ciclo}-${toque.id}`} em={toque.em} />
+      ))}
+      <Ponteiro estado={ponteiro} />
 
       {fichas.map((ficha) => (
         <Ficha key={ficha.id} ficha={ficha} aoChegar={aoChegar} aoSair={aoSair} />

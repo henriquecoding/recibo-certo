@@ -217,8 +217,12 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
               stroke="rgba(255,255,255,.4)"
               strokeWidth="1.5"
             />
-            <text x={M.esq + 2} y={yZero - 5} fill="rgba(255,255,255,.45)" fontSize="8" fontWeight="700">
-              valem o mesmo
+            {/* «0» e não «valem o mesmo»: o texto transbordava 28 px da
+                sua caixa SVG, e o que ele dizia já está dito no rótulo
+                por baixo do gráfico e na legenda das duas zonas. Uma
+                etiqueta que sai do desenho não é legenda. */}
+            <text x={M.esq + 2} y={yZero - 5} fill="rgba(255,255,255,.5)" fontSize="9" fontWeight="700">
+              0
             </text>
             {/* Duas referências de escala. Sem elas a linha diz «sobe» e
                 não diz «quanto» — e «quanto» é a única coisa que
@@ -335,7 +339,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
           transition={t}
           className="mt-1 text-center text-[9px] text-white/35"
         >
-          Faturação anual · a tracejado, o exemplo de {eur0(dados.exemplo)} · acima da linha, a sociedade ganha
+          Faturação anual · no zero as duas valem o mesmo · a tracejado, o exemplo de {eur0(dados.exemplo)}
         </m.div>
       </div>
 

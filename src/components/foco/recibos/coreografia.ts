@@ -68,19 +68,40 @@ export const ATOS_RECIBOS: Ato[] = [
     id: "escrever",
     rotulo: "Valor",
     legenda: "Escrever o valor do recibo e calcular",
-    duracao: 2900,
+    // ── O ATO DA MÃO ─────────────────────────────────────────────────
+    //  Este ato tinha 2 900 ms e escrevia sozinho. Faltava-lhe o que
+    //  fazia a homepage antiga funcionar: o CURSOR. Um campo que se
+    //  preenche sem nada lhe ter tocado é um vídeo de um formulário; é a
+    //  mão que transforma isso em alguém a usar o produto.
+    //
+    //  Os tempos são os do `HeroCard` original (`COMPASSO`), agora como
+    //  beats de um relógio que a pausa pára — lá eram quinze
+    //  `setTimeout` que continuavam a andar com a demonstração em pausa.
+    duracao: 5200,
     beats: [
       { id: "campo", em: 0 },
-      { id: "d1", em: 420 },
-      { id: "d2", em: 620 },
-      { id: "d3", em: 800 },
-      // O engano. 180 ms depois do anterior e depois 420 ms parado: é o
-      // tempo de alguém ver que escreveu um dígito a mais.
-      { id: "d4", em: 980 },
-      { id: "d5", em: 1400 },
-      { id: "d6", em: 1580 },
-      { id: "formata", em: 1900 },
-      { id: "calcula", em: 2300 },
+      // 1 · o cursor entra em cena, parado, e só depois desliza
+      { id: "ponteiroEntra", em: 300 },
+      { id: "vaiAoCampo", em: 460 },
+      // 2 · clica: o anel de toque, o cursor a afundar, o campo a focar
+      { id: "clicaCampo", em: 1240 },
+      { id: "soltaCampo", em: 1410 },
+      // 3 · o rato estaciona e a escrita começa — com a gralha do
+      //     original: 2 → 20 → 200 → 2003 → 200 → 2000
+      { id: "d1", em: 1720 },
+      { id: "d2", em: 1940 },
+      { id: "d3", em: 2140 },
+      // O engano, e 440 ms parado a seguir: é o tempo de alguém ver que
+      // escreveu um dígito a mais.
+      { id: "d4", em: 2340 },
+      { id: "d5", em: 2780 },
+      { id: "d6", em: 2980 },
+      { id: "formata", em: 3300 },
+      // 4 · o cursor regressa e desliza até «Calcular»
+      { id: "vaiAoBotao", em: 3560 },
+      { id: "clicaBotao", em: 4320 },
+      { id: "soltaBotao", em: 4490 },
+      { id: "calcula", em: 4720 },
     ],
   },
   {

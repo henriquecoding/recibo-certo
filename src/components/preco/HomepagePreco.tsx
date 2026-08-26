@@ -17,6 +17,7 @@ import {
 import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
+import Bussola from "@/components/foco/Bussola";
 import HeroPreco from "./HeroPreco";
 import LaboratorioPreco from "./LaboratorioPreco";
 import type { ParametrosDemoPreco } from "@/lib/pricing/demo-homepage";
@@ -446,6 +447,19 @@ export default function HomepagePreco({
       <Precos />
       <FAQPreco />
       <FontesPreco />
+      {/* A bússola fecha a leitura. Quem chegou aqui já sabe uma coisa;
+          isto diz-lhe que há outras quatro e qual é a pergunta de cada
+          uma — sem o obrigar a subir ao cabeçalho para descobrir. */}
+      <section className="px-4 pb-16 sm:px-6 sm:pb-24">
+        <div className="mx-auto max-w-6xl">
+          <Bussola
+            excepto="preco"
+            compacta
+            titulo="E as outras perguntas?"
+            nota="Cada uma abre uma leitura própria."
+          />
+        </div>
+      </section>
     </>
   );
 }

@@ -1204,7 +1204,7 @@ export default function Hero({
           className="max-w-xl lg:max-w-none"
         >
           {/* ┌───────────────────────────────────────────────────────┐
-              │ O «SOU TRABALHADOR» SAIU DAQUI                        │
+              │ A BÚSSOLA OCUPA O LUGAR DO «SOU TRABALHADOR»          │
               │                                                       │
               │ Perguntava QUEM ÉS para decidir o que mostrar, e a    │
               │ NN/g tem cinco razões documentadas contra navegação   │
@@ -1215,11 +1215,21 @@ export default function Hero({
               │ quem escolhe um lado fica sem saber o que havia do    │
               │ outro.                                                │
               │                                                       │
-              │ Foi substituído pela régua de focos, acima desta      │
-              │ secção, que pergunta O QUE QUERES SABER — e que é a   │
-              │ mesma navegação da cápsula, da barra do telemóvel e   │
-              │ do `FilaPilares`, em vez de um sexto sítio onde       │
-              │ escolher.                                             │
+              │ Mas tirá-lo e não pôr nada no lugar foi outro erro:   │
+              │ o cartão estava NA PÁGINA, no ponto de decisão, e     │
+              │ ramificava ali. Uma barra de navegação no cabeçalho   │
+              │ serve quem já sabe para onde vai; quem chega a `/`    │
+              │ não sabe.                                             │
+              │                                                       │
+              │ A bússola faz o mesmo trabalho com a pergunta certa,  │
+              │ e vive LOGO A SEGUIR a este hero, à largura toda.     │
+              │                                                       │
+              │ Não aqui por cima do título: o cartão antigo podia    │
+              │ estar acima do `h1` porque RAMIFICAVA a página — a    │
+              │ escolha mudava este hero. A bússola navega para outra │
+              │ página, e navegação por cima da promessa enterra a    │
+              │ promessa. Experimentei, e o título ficava fora do     │
+              │ primeiro ecrã.                                        │
               └───────────────────────────────────────────────────────┘ */}
           <m.h1 variants={staggerItem} className="font-display display-hero text-balance font-semibold text-ink">
             {dados.h1}
@@ -1315,10 +1325,14 @@ export default function Hero({
                   <Link
                     key={a.href}
                     href={a.href}
-                    className="group inline-flex min-h-[36px] items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand-dark hover:shadow-card dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300 dark:hover:text-brand"
+                    // `max-w-full` e o título num `span` que pode encolher:
+                    // a 360 px «Simulador de recibos verdes» transbordava
+                    // 19 px da pastilha, e o nome de uma ferramenta cortado
+                    // deixa de ser um nome. Agora quebra dentro da pastilha.
+                    className="group inline-flex min-h-[36px] max-w-full items-center gap-1.5 rounded-full border border-stone-200/80 bg-white/70 px-3 py-1.5 text-xs font-semibold text-stone-600 transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:text-brand-dark hover:shadow-card dark:border-stone-700 dark:bg-stone-800/70 dark:text-stone-300 dark:hover:text-brand"
                   >
                     <a.Icon size={13} className="flex-shrink-0 text-brand" />
-                    {a.titulo}
+                    <span className="min-w-0 text-left leading-snug">{a.titulo}</span>
                     <ArrowRight size={10} className="flex-shrink-0 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" />
                   </Link>
                 ))}

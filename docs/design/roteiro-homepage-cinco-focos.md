@@ -5,7 +5,7 @@
 > movimento dentro dela. Se o código e este roteiro discordarem, um dos dois
 > está errado — decide-se qual, não se «harmoniza».
 >
-> Estado: **implementado** nas fases 1 a 6 (v2.127.0). O que ficou por
+> Estado: **implementado** nas fases 1 a 6 (v2.128.0). O que ficou por
 > fazer está marcado na §8.
 >
 > **Uma correção ao plano, apanhada na execução.** A §3.1 previa um
@@ -181,6 +181,28 @@ Os cinco focos são **a mesma página com outro conteúdo**, e isso tem de ser
 verdade por construção — não por eu ter escrito duas vezes o mesmo JSX, que é
 o que hoje acontece entre `HomepageDescobrir` e `HomepagePreco`.
 
+### 3.0 A bússola
+
+Antes dos compartimentos, e em todas as páginas: **a bússola**. Cinco ligações
+reais, cada uma com a PERGUNTA que aquele foco responde.
+
+Na porta genérica (`/`) vive logo a seguir ao hero — é a primeira decisão que a
+página pede. Em cada foco vive no fim, sem o foco atual, a dizer que há outras
+quatro e quais são.
+
+> **Tirar o cartão «Sou trabalhador» e não pôr nada no lugar foi um erro, e
+> demorou uma iteração a ver.** O cartão perguntava quem és, e isso estava mal.
+> Mas fazia uma coisa que a barra de navegação não faz: estava NA PÁGINA, no
+> ponto onde a pessoa decide. Argumentei que a cápsula do cabeçalho já mostrava
+> os cinco pilares — é verdade e é insuficiente. Uma barra de navegação serve
+> quem já sabe para onde vai; quem chega a `/` não sabe, e ficou sem nada a
+> guiá-lo, com cinco páginas novas atrás de um clique que ninguém lhe disse
+> para dar.
+>
+> A bússola faz o trabalho do cartão com a pergunta certa. E não fica por cima
+> do `h1`, como o cartão ficava: o cartão podia, porque RAMIFICAVA aquele hero;
+> a bússola navega, e navegação por cima da promessa enterra a promessa.
+
 ### 3.1 Os sete compartimentos, sempre por esta ordem
 
 > A numeração começa em 1: o compartimento 0 («régua de focos») foi
@@ -244,13 +266,13 @@ Cada palco usa a mesma maquinaria (`components/palco/`: curvas, `PASSO`,
 relógio de atos, fichas, contadores, medição no DOM) e a mesma gramática
 (`roteiro-animacao-preco.md` §1). O que muda é **o argumento**.
 
-> **Onde vivem os roteiros dos três palcos novos.** Descobrir e Preço têm
-> ficheiro próprio em `docs/design/` porque nasceram antes da gramática
-> partilhada e precisaram de a justificar. Os três novos não repetem esse
-> trabalho: a linha temporal e a razão de cada beat vivem no cabeçalho do
-> respetivo `coreografia.ts`, ao lado dos números que descrevem. Um roteiro
-> separado para uma linha temporal de quatro atos seria um segundo sítio para
-> os mesmos milissegundos divergirem.
+> **Os cinco palcos têm roteiro próprio em `docs/design/`:**
+> `roteiro-animacao-descobrir.md`, `-preco.md`, `-recibos.md`, `-salario.md` e
+> `-empresa.md`. Cheguei a argumentar que os três novos dispensavam ficheiro
+> porque a razão de cada beat vivia no cabeçalho do `coreografia.ts` — e era
+> uma economia falsa: um roteiro não é a lista dos milissegundos, é o
+> argumento que os justifica, e esse não cabe num comentário ao lado do
+> número.
 
 ### 4.0 A regra do tom
 
