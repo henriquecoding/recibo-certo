@@ -4,13 +4,22 @@ import { describe, expect, it } from "vitest";
 import {
   ATOS,
   ASSENTA,
+  DUR,
   ENTRADA,
+  PASSO,
   SAIDA,
   VIAGEM,
   arco,
   bezier,
+  dwell,
   medir,
 } from "@/components/preco/coreografia";
+
+const emDe = (ato: string, beat: string) => {
+  const encontrado = ATOS.find((a) => a.id === ato)?.beats.find((b) => b.id === beat);
+  if (!encontrado) throw new Error(`o beat ${ato}/${beat} deixou de existir`);
+  return encontrado.em;
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O ROTEIRO E O CÓDIGO NÃO PODEM DIVERGIR
@@ -125,6 +134,93 @@ describe("coreografia do preço: o roteiro é a fonte de verdade", () => {
     expect(conta!.em - chega!.em).toBe(260);
   });
 
+  it("o intervalo entre duas partidas diz a que grupo elas pertencem", () => {
+    // ⚠️ Esta é a regra da §1.3, e é a que se estraga primeiro: são números
+    // pequenos, ninguém os vê a olho, e cada um parece inofensivo sozinho.
+    //
+    // Mas o intervalo é informação. Três degraus, três significados:
+    //   uno   (90)  · não são dois acontecimentos, é um com espessura
+    //   irmao (160) · partes de uma mesma soma
+    //   outro (380) · uma fronteira — o que vem a seguir é outra ideia
+
+    // As três fichas de custo são irmãs: partes de uma soma.
+    const a = emDe("base", "fichaA");
+    const b = emDe("base", "fichaB");
+    const c = emDe("base", "fichaC");
+    expect(b - a).toBe(PASSO.irmao);
+    expect(c - b).toBe(PASSO.irmao);
+
+    // E o desfasamento tem de as deixar SOBREPOSTAS no ar, senão perde-se a
+    // pista de destino comum e leem-se como três eventos sem relação. Com
+    // uma viagem de `DUR.viagem`, a última parte em `c - a` e a primeira
+    // chega em `DUR.viagem`: o que sobra é a janela em que estão as três.
+    const sobreposicao = DUR.viagem - (c - a);
+    expect(sobreposicao / DUR.viagem).toBeGreaterThanOrEqual(0.45);
+
+    // A mesma coisa dita pela métrica de Chevalier et al. (2014). A 220 ms
+    // — o valor anterior — isto dava 0,61.
+    expect(dwell(PASSO.irmao, 3, c - a + DUR.viagem)).toBeCloseTo(0.5, 2);
+
+    // A retenção e o IVA são a MESMA ideia vista duas vezes: `uno`.
+    expect(emDe("impostos", "chipIVA") - emDe("impostos", "chipRetencao")).toBe(PASSO.uno);
+
+    // E entre a margem e as retenções há uma fronteira, não um desfasamento.
+    // (A margem conta 640 ms depois de sair; o silêncio começa aí.)
+    expect(emDe("impostos", "chipRetencao") - (emDe("impostos", "chipMargem") + 640)).toBe(
+      PASSO.outro,
+    );
+
+    // Nenhum destes três degraus pode colapsar noutro: uma escala com dois
+    // valores indistinguíveis não é uma escala, é ruído com dois nomes.
+    expect(PASSO.uno).toBeLessThan(PASSO.irmao);
+    expect(PASSO.irmao).toBeLessThan(PASSO.outro);
+  });
+
+  it("nada aterra sobre uma peça que ainda se está a desenhar", () => {
+    // O defeito que a §1.3 e o ato 4 corrigem: o marcador caía aos 1 700,
+    // sobre uma régua que só fechava aos 2 000 e enquanto o preço grande
+    // ainda estava a contar (até 2 120). Três afirmações ao mesmo tempo.
+    const regua = emDe("preco", "regua");
+    const conta = emDe("preco", "contaPreco");
+    const zonas = emDe("preco", "zonas");
+    const cai = emDe("preco", "marcadorCai");
+
+    const reguaFecha = regua + DUR.desenrolar;
+    const contaAcaba = conta + DUR.contaResultado;
+
+    // As zonas são ALCANÇADAS pela régua: começam depois de ela arrancar e
+    // a última acende quando ela fecha.
+    expect(zonas).toBeGreaterThan(regua);
+    expect(zonas + (2 * DUR.desenrolar) / 3).toBeLessThanOrEqual(reguaFecha);
+
+    // E o marcador espera pelas duas.
+    expect(cai).toBeGreaterThanOrEqual(reguaFecha);
+    expect(cai).toBeGreaterThanOrEqual(contaAcaba);
+  });
+
+  it("há exatamente um momento simultâneo, e é o grupo a responder", () => {
+    // `confirmaOrigens` é a única coisa da cena que se move sem
+    // desfasamento nenhum, e é de propósito: luminância dinâmica
+    // sincronizada é a pista de destino comum mais forte que há. Se algum
+    // dia isto ganhar um `delay: i * …`, deixa de dizer o que existe para
+    // dizer — que as três, JUNTAS, são esta base.
+    const HERO = readFileSync(
+      join(process.cwd(), "src/components/preco/HeroPreco.tsx"),
+      "utf8",
+    );
+    expect(emDe("base", "confirmaOrigens")).toBeGreaterThan(emDe("base", "assenta"));
+    expect(emDe("base", "confirmaOrigens")).toBeLessThan(emDe("base", "parcelas"));
+    expect(HERO).toContain('const origensConfirmadas = ato === 1 && emCena("confirmaOrigens")');
+    expect(HERO).toContain("const confirmado = origensConfirmadas");
+    expect(HERO).toContain("scale: confirmado ? 1.08 : 1,");
+  });
+
+  it("uma peça sai mais depressa do que entra", () => {
+    // O emparelhamento entrada/saída do Material 3. O que chega tem de ser
+    // lido; o que parte já foi.
+    expect(DUR.saida).toBeLessThan(DUR.entrada);
+  });
+
   it("a cena acaba: o último ato não devolve ao primeiro", () => {
     // A regra do §7. Se algum dia aparecer aqui um beat de reinício, é
     // porque alguém transformou a demonstração num GIF.
@@ -193,7 +289,10 @@ describe("coreografia do preço: a cena servida está resolvida", () => {
 
 describe("coreografia do preço: os três defeitos apanhados em runtime", () => {
   const HERO = readFileSync(join(process.cwd(), "src/components/preco/HeroPreco.tsx"), "utf8");
-  const ATORES = readFileSync(join(process.cwd(), "src/components/preco/atores.tsx"), "utf8");
+  // A mecânica mudou de casa: vive em `components/palco/`, partilhada com o
+  // palco de «Descobrir». O invariante é o mesmo — o que se verifica é o
+  // ficheiro onde ele agora existe.
+  const ATORES = readFileSync(join(process.cwd(), "src/components/palco/atores.tsx"), "utf8");
 
   it("a pausa pára as fichas e os contadores, não só o relógio dos atos", () => {
     // Defeito: com a demonstração «em pausa», as fichas continuavam a voar e
@@ -205,8 +304,8 @@ describe("coreografia do preço: os três defeitos apanhados em runtime", () => 
     // enquanto não está parado. Se alguém devolver a ficha ao `m.span` com
     // `animate`, o defeito volta — e volta em silêncio.
     expect(ATORES).toContain("if (!paradoRef.current) decorrido += agora - ultimo;");
-    expect(ATORES).toContain("const { parado } = useContext(PalcoPreco);");
-    expect(ATORES).toContain("const { parado, imediato } = useContext(PalcoPreco);");
+    expect(ATORES).toContain("const { parado } = useContext(PalcoContexto);");
+    expect(ATORES).toContain("const { parado, imediato } = useContext(PalcoContexto);");
     // A ficha é um `span` pintado à mão, não um `m.span` animado.
     expect(ATORES).not.toMatch(/<m\.span[\s\S]{0,400}onAnimationComplete/);
   });
@@ -305,9 +404,9 @@ describe("coreografia do preço: a trajetória", () => {
 
     // A meio da distância no eixo do movimento…
     expect(meio.x).toBeCloseTo(150, 6);
-    // …e desviado 18% na perpendicular. Uma reta lê-se como teletransporte;
+    // …e desviado 16% na perpendicular. Uma reta lê-se como teletransporte;
     // mais do que isto lê-se como maneirismo.
-    expect(Math.abs(meio.y)).toBeCloseTo(300 * 0.18, 6);
+    expect(Math.abs(meio.y)).toBeCloseTo(300 * 0.16, 6);
   });
 
   it("o desvio acompanha a direção — no telemóvel a viagem é vertical", () => {
@@ -315,7 +414,7 @@ describe("coreografia do preço: a trajetória", () => {
     // segundo roteiro para isso: a trajetória segue a medição.
     const meio = arco({ x: 0, y: 0 }, { x: 0, y: 240 });
     expect(meio.y).toBeCloseTo(120, 6);
-    expect(Math.abs(meio.x)).toBeCloseTo(240 * 0.18, 6);
+    expect(Math.abs(meio.x)).toBeCloseTo(240 * 0.16, 6);
   });
 
   it("uma distância nula não produz NaN", () => {

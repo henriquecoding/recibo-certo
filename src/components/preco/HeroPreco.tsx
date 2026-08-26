@@ -25,11 +25,11 @@ import {
   ATOS,
   ULTIMO_ATO,
   medir,
-  useCoreografia,
+  useRelogioDeAtos,
   type Curva,
   type Ponto,
 } from "./coreografia";
-import { Anel, Contador, Ficha, PalcoPreco, type FichaEmCena } from "./atores";
+import { Anel, Contador, Ficha, PalcoContexto, TOM_FICHA, type FichaEmCena } from "./atores";
 import {
   ENTRADAS_DEMO_PADRAO,
   LIMITES_DEMO_PRECO,
@@ -209,7 +209,8 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     });
   }, []);
 
-  const coreografia = useCoreografia({
+  const coreografia = useRelogioDeAtos({
+    atos: ATOS,
     ato,
     ciclo,
     parado,
@@ -258,7 +259,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
       origem: Element | null;
       destino: Element | null;
       rotulo: string;
-      tom: FichaEmCena["tom"];
+      tom: string;
       duracao?: number;
       aoAterrar?: () => void;
     }) => {
@@ -324,7 +325,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
         origem: valorRefs.current[chave] ?? null,
         destino: cartaoRef.current,
         rotulo: eur(valor),
-        tom: "custo",
+        tom: TOM_FICHA.custo,
         aoAterrar: () => setBaseAcumulada((b) => Math.round((b + valor) * 100) / 100),
       });
     }
@@ -343,7 +344,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
       origem: pilhaRef.current,
       destino: resultadoRef.current,
       rotulo: eur(composicao.pvp),
-      tom: "total",
+      tom: TOM_FICHA.total,
       duracao: DUR.viagemLonga,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -358,6 +359,11 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     retencao: temRetencao && (emCena("chipRetencao") || ato >= 3),
     iva: emCena("chipIVA") || ato >= 3,
   };
+  // Só existe DENTRO do ato da base: é a resposta do grupo ao cartão que
+  // acabou de fechar a soma, e não um estado que se guarda. Prender ao ato
+  // evita também o pisca da hidratação — no HTML servido `ato` é o último,
+  // portanto isto nasce falso e não tem de se apagar.
+  const origensConfirmadas = ato === 1 && emCena("confirmaOrigens");
   const resultadoAceso = emCena("chega");
   const precoFinal = emCena("contaPreco");
   const reguaAberta = emCena("regua") && ato === 3;
@@ -469,7 +475,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     // condições do PALCO, não de cada número. Passá-las à mão a catorze
     // contadores era catorze sítios para um deles ficar para trás — e foi
     // assim que a pausa deixou de parar as fichas.
-    <PalcoPreco.Provider value={estadoDoPalco}>
+    <PalcoContexto.Provider value={estadoDoPalco}>
     <section
       data-hero
       className="grain relative overflow-hidden px-4 pb-14 pt-5 sm:px-6 sm:pb-20 sm:pt-8"
@@ -591,6 +597,15 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   // └─────────────────────────────────────────────────────┘
                   const aceso =
                     chave === "markup" ? ato >= 2 || !emCena(beat) : ato > 0 || emCena(beat);
+                  // O grupo a responder. As três origens acendem AO MESMO
+                  // TEMPO — sem desfasamento nenhum — quando o cartão fecha a
+                  // soma. É a única coisa nesta cena que se move em
+                  // simultâneo, e é de propósito: luminância dinâmica
+                  // sincronizada é uma pista de destino comum tão forte como
+                  // a posição (Chalbi et al., IEEE VIS 2019), e é a forma de
+                  // dizer «as três, juntas, são esta base» — que nenhuma
+                  // ficha podia dizer sozinha, porque cada uma chegou só.
+                  const confirmado = origensConfirmadas && chave !== "markup";
                   const outroArrastado = arrastando && !activo;
                   return (
                     <m.div
@@ -626,8 +641,13 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       <m.span
                         initial={false}
                         animate={{
-                          borderColor: aceso ? "rgba(23,126,94,.4)" : "rgba(214,206,191,1)",
+                          borderColor: confirmado
+                            ? "rgba(23,126,94,.85)"
+                            : aceso
+                              ? "rgba(23,126,94,.4)"
+                              : "rgba(214,206,191,1)",
                           color: aceso ? "rgb(20,116,85)" : "rgb(120,113,108)",
+                          scale: confirmado ? 1.08 : 1,
                         }}
                         transition={t(DUR.entrada)}
                         className="flex h-8 w-8 items-center justify-center rounded-full border bg-white dark:bg-stone-900"
@@ -815,7 +835,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                     <Contador
                       valor={precoVisivel}
                       formato={eur}
-                      duracao={DUR.contaPreco}
+                      duracao={DUR.contaResultado}
                      
                     />
                   </div>
@@ -890,7 +910,22 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       // os rótulos ficam comprimidos num borrão de dois pixéis.
                       // Uma coisa que ainda não se pode ler não deve ver-se.
                       animate={{ opacity: emCena("zonas") || estatico ? 1 : 0 }}
-                      transition={estatico ? { duration: 0 } : { duration: 0.36, delay: i * 0.09, ease: ENTRADA }}
+                      // ── O desfasamento é o DESENROLAR, não um número ────
+                      //  Estava em 90 ms: as três zonas acendiam em 180 ms
+                      //  sobre uma régua que ia em 20% do seu percurso, e
+                      //  isso não é a régua a pintar-se — é três rótulos a
+                      //  aparecerem por cima dela.
+                      //
+                      //  Agora o passo é `DUR.desenrolar / 3`: a primeira
+                      //  zona acende quando a borda a alcança e a última
+                      //  fecha com a régua. A forma do movimento passa a
+                      //  corresponder à forma da ideia, que é o princípio da
+                      //  congruência de Tversky, Morrison & Bétrancourt.
+                      transition={
+                        estatico
+                          ? { duration: 0 }
+                          : { duration: 0.36, delay: (i * DUR.desenrolar) / 3000, ease: ENTRADA }
+                      }
                     >
                       {zona.texto}
                     </m.span>
@@ -937,7 +972,13 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       estatico
                         ? { duration: 0 }
                         : marcadorNoLugar
-                          ? { left: { duration: 0.72, ease: ASSENTA }, opacity: { duration: 0.2 }, y: { duration: 0.2 } }
+                          ? // 0,66 s e não 0,72: a viagem acabava no
+                            // instante EXATO em que a barra da composição
+                            // começava a crescer, e dois acontecimentos
+                            // colados são um a tapar o outro. Assim o
+                            // marcador assenta 60 ms antes — `PASSO.uno`,
+                            // que se lê como entrega e não como colisão.
+                            { left: { duration: 0.66, ease: ASSENTA }, opacity: { duration: 0.2 }, y: { duration: 0.2 } }
                           : { duration: 0.32, ease: ENTRADA }
                     }
                   >
@@ -1117,7 +1158,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
         </div>
       </div>
     </section>
-    </PalcoPreco.Provider>
+    </PalcoContexto.Provider>
   );
 }
 

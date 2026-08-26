@@ -1,7 +1,3 @@
-"use client";
-
-import { useCallback, useEffect, useRef, useState } from "react";
-
 // ═══════════════════════════════════════════════════════════════════════
 //  A MAQUINARIA DA COREOGRAFIA DO PALCO DO PREÇO
 //  ---------------------------------------------------------------------
@@ -26,98 +22,31 @@ import { useCallback, useEffect, useRef, useState } from "react";
 //  relógios.
 // ═══════════════════════════════════════════════════════════════════════
 
-// ── Curvas ─────────────────────────────────────────────────────────────
-//  Cada uma existe para um tipo de acontecimento, e trocá-las estraga o
-//  significado: `ASSENTA` passa do alvo e volta, o que num fade produz o
-//  efeito elástico barato que o roteiro proíbe.
+// A mecânica — curvas, avaliador de Bézier, escalas de duração, relógio e
+// medição — vive agora em `components/palco/`, partilhada com o palco de
+// «Descobrir». Estava duplicada byte a byte nos dois sítios, e já tinha
+// começado a divergir: `ASSENTA` tinha 1,56 aqui e 1,42 lá.
+//
+// O que fica NESTE ficheiro é o que é específico desta cena: a sua linha
+// temporal.
+export {
+  ENTRADA,
+  SAIDA,
+  VIAGEM,
+  ASSENTA,
+  DUR,
+  PASSO,
+  bezier,
+  dwell,
+  entre,
+  type Curva,
+} from "@/components/palco/curvas";
+export { medir, arco, type Ponto } from "@/components/palco/medida";
+export { useRelogioDeAtos, type Ato, type Beat, type Relogio } from "@/components/palco/relogio";
 
-/**
- * Uma curva de Bézier como o `motion` a quer: uma tupla de quatro, e não
- * `number[]`. A diferença é o que impede um `as unknown as` em cada
- * `transition` — e um `as unknown as` num tipo de animação é exatamente
- * onde uma curva errada passaria despercebida.
- */
-export type Curva = [number, number, number, number];
+import type { Ato } from "@/components/palco/relogio";
 
-/** Chegadas, aparições, assentamentos. É o `EASE` da marca. */
-export const ENTRADA: Curva = [0.16, 1, 0.3, 1];
-/** Partidas. Acelera: uma coisa que parte tem de parecer puxada. */
-export const SAIDA: Curva = [0.7, 0, 0.84, 0];
-/** O trajeto de uma ficha. Simétrica — acelera a sair, trava a chegar. */
-export const VIAGEM: Curva = [0.65, 0, 0.35, 1];
-/** Passa do alvo e volta. Só para coisas que POUSAM. */
-export const ASSENTA: Curva = [0.34, 1.56, 0.64, 1];
-
-/**
- * Avalia uma curva de Bézier — `y` em função de `x`, como o CSS faz.
- *
- * Existe porque as fichas deixaram de ser animadas pelo `motion`: passaram a
- * ter relógio próprio, para a pausa as parar mesmo (ver `useRelogioDeFicha`).
- * Um relógio próprio precisa de saber avaliar a curva, e é isto.
- *
- * Newton-Raphson sobre o eixo x, oito iterações. É o método que os browsers
- * usam e converge muito antes disso para as curvas que aqui vivem.
- */
-export function bezier([x1, y1, x2, y2]: Curva): (x: number) => number {
-  const cx = 3 * x1;
-  const bx = 3 * (x2 - x1) - cx;
-  const ax = 1 - cx - bx;
-  const cy = 3 * y1;
-  const by = 3 * (y2 - y1) - cy;
-  const ay = 1 - cy - by;
-
-  const emX = (t: number) => ((ax * t + bx) * t + cx) * t;
-  const emY = (t: number) => ((ay * t + by) * t + cy) * t;
-  const derivadaX = (t: number) => (3 * ax * t + 2 * bx) * t + cx;
-
-  return (x: number) => {
-    if (x <= 0) return 0;
-    if (x >= 1) return 1;
-    let t = x;
-    for (let i = 0; i < 8; i += 1) {
-      const erro = emX(t) - x;
-      if (Math.abs(erro) < 1e-6) break;
-      const d = derivadaX(t);
-      if (Math.abs(d) < 1e-6) break;
-      t -= erro / d;
-    }
-    return emY(t);
-  };
-}
-
-/** Interpolação linear, para poupar a escrita nos atores. */
-export const entre = (de: number, para: number, t: number) => de + (para - de) * t;
-
-// ── Durações (ms) ──────────────────────────────────────────────────────
-export const DUR = {
-  micro: 160,
-  entrada: 420,
-  viagem: 640,
-  viagemLonga: 760,
-  contaParcela: 380,
-  contaPreco: 980,
-  desenrolar: 700,
-  assenta: 340,
-  impacto: 280,
-} as const;
-
-// ── A linha temporal ───────────────────────────────────────────────────
-
-export interface Beat {
-  id: string;
-  /** ms desde o início do ato. */
-  em: number;
-}
-
-export interface Ato {
-  id: string;
-  /** Curto — cabe por baixo da barra da régua de atos. */
-  rotulo: string;
-  /** Frase inteira, para o leitor de ecrã. */
-  legenda: string;
-  duracao: number;
-  beats: Beat[];
-}
+// ── A linha temporal desta cena ────────────────────────────────────────
 
 export const ATOS: Ato[] = [
   {
@@ -142,189 +71,94 @@ export const ATOS: Ato[] = [
     id: "base",
     rotulo: "Base",
     legenda: "Somar a base de custos",
-    duracao: 2400,
+    duracao: 2100,
     beats: [
       { id: "cartao", em: 0 },
+      // ── As três fichas partem a `PASSO.irmao` (160 ms) ─────────────────
+      //  Estavam a 220 ms. Com uma viagem de 640 ms isso deixava-as no ar
+      //  em conjunto apenas 200 ms — 31% do percurso — e três fichas que
+      //  mal se cruzam não têm destino comum: leem-se como três
+      //  acontecimentos separados, que é o contrário do que este ato diz.
+      //
+      //  A 160 ms a sobreposição sobe para 320 ms (50% do percurso) e o
+      //  dwell de Chevalier et al. desce de 0,61 para 0,50. As aterragens
+      //  continuam a 160 ms umas das outras — bem acima do limiar em que
+      //  dois acontecimentos se fundem —, portanto a base continua a contar
+      //  em três degraus visíveis. O desfasamento comprou o que tinha de
+      //  comprar e não mais do que isso.
       { id: "fichaA", em: 180 },
-      { id: "fichaB", em: 400 },
-      { id: "fichaC", em: 620 },
+      { id: "fichaB", em: 340 },
+      { id: "fichaC", em: 500 },
       // As aterragens não são beats: acontecem quando a ficha chega, e é a
       // chegada que faz o contador andar. Um beat de aterragem seria um
       // segundo relógio a dizer o que o primeiro já sabe — e a primeira
       // oportunidade para os dois discordarem.
-      { id: "assenta", em: 1560 },
-      { id: "parcelas", em: 1700 },
+      { id: "assenta", em: 1300 },
+      // As três linhas de origem acendem AO MESMO TEMPO — luminância
+      // dinâmica simultânea, que Chalbi et al. mostram ser uma pista de
+      // destino comum tão forte como a posição. É o grupo a responder: «as
+      // três, juntas, são esta base.» Nenhuma ficha o podia dizer sozinha.
+      { id: "confirmaOrigens", em: 1400 },
+      { id: "parcelas", em: 1560 },
     ],
   },
   {
     id: "impostos",
     rotulo: "Markup e IVA",
     legenda: "Aplicar markup e IVA",
-    duracao: 2600,
+    duracao: 2500,
     beats: [
       { id: "acordaMarkup", em: 0 },
       { id: "chipMargem", em: 260 },
-      // ── silêncio de 380 ms ──
+      // ── silêncio de 380 ms · `PASSO.outro` ──
+      //  Uma fronteira, não um desfasamento: o que vem a seguir é outra
+      //  ideia. A margem é tua; o que se segue não é.
       { id: "chipRetencao", em: 1280 },
-      { id: "chipIVA", em: 1500 },
-      { id: "estado", em: 2120 },
+      // …e as duas retenções partem a `PASSO.uno` (90 ms), não a 220.
+      //  Abaixo do limiar de ordem: não são dois acontecimentos, é um só —
+      //  «isto sai» — visto duas vezes. O intervalo passa a codificar a
+      //  pertença ao grupo, que é trabalho que nenhum rótulo faz sozinho.
+      { id: "chipIVA", em: 1370 },
+      { id: "estado", em: 1980 },
     ],
   },
   {
     id: "preco",
     rotulo: "Preço",
     legenda: "Fixar o preço recomendado",
-    duracao: 3400,
+    // ── Este ato cresceu de propósito: 3 400 → 4 500 ms ─────────────────
+    //  Tinha nove beats em 3,4 s, com três a dispararem em 300 ms: o preço
+    //  a contar (980 ms), a régua a desenrolar-se (700 ms) e as zonas a
+    //  ganharem cor — as zonas a colorir uma régua que ia em 20% do seu
+    //  desenrolar. É o princípio da apreensão de Tversky, Morrison &
+    //  Bétrancourt (2002) a ser violado à letra: a animação é depressa e
+    //  complexa demais para ser percebida com exatidão.
+    //
+    //  Encurtar não era opção — o que lá está é preciso todo. Espalhar é.
+    duracao: 4500,
     beats: [
       { id: "handoff", em: 0 },
       { id: "chega", em: 880 },
       // ── silêncio de 260 ms ──
       { id: "contaPreco", em: 1140 },
       { id: "regua", em: 1300 },
-      { id: "zonas", em: 1440 },
-      { id: "marcadorCai", em: 1700 },
-      { id: "marcadorViaja", em: 1980 },
-      { id: "barra", em: 2700 },
-      { id: "resolve", em: 3300 },
+      // As zonas deixaram de aparecer em bloco e passaram a ser ALCANÇADAS
+      // pelo desenrolar da régua: a primeira quando a borda a passa, a
+      // última quando a régua fecha (1300 + 700 = 2000). O princípio da
+      // congruência diz que a forma do gráfico tem de corresponder à forma
+      // da ideia — e a ideia aqui é que a régua se está a pintar a si
+      // própria, não que três rótulos apareceram por cima dela.
+      { id: "zonas", em: 1530 },
+      // E o marcador só cai depois de a régua estar fechada (2000) e de o
+      // preço ter parado de contar (2120). Um marcador a aterrar sobre uma
+      // escala a meio-desenhar, enquanto o número ainda muda, são três
+      // afirmações ao mesmo tempo — e o §7 proíbe duas.
+      { id: "marcadorCai", em: 2200 },
+      { id: "marcadorViaja", em: 2520 },
+      { id: "barra", em: 3240 },
+      { id: "resolve", em: 4000 },
     ],
   },
 ];
 
 export const ULTIMO_ATO = ATOS.length - 1;
-
-// ── O relógio dos beats ────────────────────────────────────────────────
-
-export interface Coreografia {
-  /** Já aconteceu, neste ato? */
-  feito: (id: string) => boolean;
-  /** Marca o ato inteiro como cumprido — para saltar direto ao resultado. */
-  cumprirAto: () => void;
-  /** Progresso 0–1 do ato, escrito no DOM por `ref` (não em estado). */
-  barraRef: React.RefObject<HTMLSpanElement | null>;
-}
-
-export function useCoreografia({
-  ato,
-  ciclo,
-  parado,
-  estatico,
-  aoTerminarAto,
-}: {
-  ato: number;
-  /** Muda → o ato recomeça do princípio. */
-  ciclo: number;
-  parado: boolean;
-  /** Movimento reduzido: tudo já aconteceu, nada corre. */
-  estatico: boolean;
-  aoTerminarAto: () => void;
-}): Coreografia {
-  const [feitos, setFeitos] = useState<ReadonlySet<string>>(new Set());
-  const [cumprido, setCumprido] = useState(false);
-  const barraRef = useRef<HTMLSpanElement>(null);
-
-  // O callback vive num ref para que uma identidade nova não reinicie o
-  // relógio a meio do ato.
-  const terminarRef = useRef(aoTerminarAto);
-  terminarRef.current = aoTerminarAto;
-
-  const chave = `${ciclo}-${ato}`;
-
-  useEffect(() => {
-    setFeitos(new Set());
-    setCumprido(false);
-    if (barraRef.current) barraRef.current.style.transform = "scaleX(0)";
-  }, [chave]);
-
-  useEffect(() => {
-    if (estatico || parado) return;
-    const definicao = ATOS[ato];
-    if (!definicao) return;
-
-    let raf = 0;
-    let decorrido = 0;
-    let ultimo = performance.now();
-    const porDisparar = definicao.beats.filter((b) => !feitos.has(b.id));
-
-    const passo = (agora: number) => {
-      decorrido += agora - ultimo;
-      ultimo = agora;
-
-      if (barraRef.current) {
-        barraRef.current.style.transform = `scaleX(${Math.min(1, decorrido / definicao.duracao)})`;
-      }
-
-      const chegados = porDisparar.filter((b) => b.em <= decorrido).map((b) => b.id);
-      if (chegados.length > 0) {
-        setFeitos((atuais) => new Set([...atuais, ...chegados]));
-        // Já estão em estado; não voltam a disparar neste ciclo de rAF.
-        for (const id of chegados) {
-          const i = porDisparar.findIndex((b) => b.id === id);
-          if (i >= 0) porDisparar.splice(i, 1);
-        }
-      }
-
-      if (decorrido >= definicao.duracao) {
-        terminarRef.current();
-        return;
-      }
-      raf = requestAnimationFrame(passo);
-    };
-
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
-    // `feitos` de propósito fora das dependências: entra na leitura inicial
-    // para o retomar não repetir beats, mas incluí-lo reiniciaria o relógio
-    // a cada beat disparado — que é precisamente o defeito que este desenho
-    // existe para não ter.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chave, parado, estatico, ato]);
-
-  const feito = useCallback(
-    (id: string) => estatico || cumprido || feitos.has(id),
-    [estatico, cumprido, feitos],
-  );
-
-  const cumprirAto = useCallback(() => setCumprido(true), []);
-
-  return { feito, cumprirAto, barraRef };
-}
-
-// ── Medição ────────────────────────────────────────────────────────────
-
-export interface Ponto {
-  x: number;
-  y: number;
-}
-
-/**
- * O centro de `alvo`, em coordenadas do `palco`.
- *
- * É medido em tempo de execução, e não pré-calculado, porque é isto que faz
- * o roteiro funcionar em qualquer disposição: no telemóvel as colunas
- * empilham e as fichas passam a viajar na vertical sem uma linha de código
- * a saber que existe um telemóvel.
- */
-export function medir(alvo: Element | null, palco: Element | null): Ponto | null {
-  if (!alvo || !palco) return null;
-  const a = alvo.getBoundingClientRect();
-  const p = palco.getBoundingClientRect();
-  if (a.width === 0 && a.height === 0) return null;
-  return { x: a.left - p.left + a.width / 2, y: a.top - p.top + a.height / 2 };
-}
-
-/**
- * O ponto de controlo do arco, a 18% da perpendicular.
- *
- * Uma linha reta entre dois pontos lê-se como teletransporte; um arco lê-se
- * como trajetória. Mais do que 18% e passa a maneirismo.
- */
-export function arco(origem: Ponto, destino: Ponto): Ponto {
-  const dx = destino.x - origem.x;
-  const dy = destino.y - origem.y;
-  const dist = Math.hypot(dx, dy) || 1;
-  const desvio = dist * 0.18;
-  return {
-    x: dx / 2 + (-dy / dist) * desvio,
-    y: dy / 2 + (dx / dist) * desvio,
-  };
-}

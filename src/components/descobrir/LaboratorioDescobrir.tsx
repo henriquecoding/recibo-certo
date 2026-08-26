@@ -127,7 +127,7 @@ export default function LaboratorioDescobrir({ exemplo }: { exemplo: ExemploDesc
                 <div>
                   <div className="text-[10px] font-bold uppercase tracking-[.14em] text-stone-500">Hipótese compatível</div>
                   <h4 className="mt-1 font-display text-xl font-semibold leading-tight text-ink">
-                    Organização operacional para microempresas
+                    {exemplo.titulo}
                   </h4>
                 </div>
               </div>

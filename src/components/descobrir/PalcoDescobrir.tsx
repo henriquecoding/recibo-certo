@@ -9,6 +9,7 @@ import {
 } from "react";
 import { AnimatePresence, m, useReducedMotion } from "motion/react";
 import {
+  ArrowRight,
   Check,
   Close,
   Filter,
@@ -148,6 +149,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
   }, [ato]);
 
   const { feito, barraRef } = useCoreografiaDescobrir({
+    atos: ATOS_DESCOBRIR,
     ato,
     ciclo,
     parado,
@@ -201,7 +203,18 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
       lancadasRef.current.add(id);
       setFichas((atuais) => [
         ...atuais,
-        { id, origem: pontoOrigem, destino: pontoDestino, rotulo, tom, duracao },
+        {
+          id,
+          origem: pontoOrigem,
+          destino: pontoDestino,
+          rotulo,
+          tom,
+          // A mesa é larga e as fichas atravessam zonas inteiras: a
+          // distância pede o degrau AMPLO da escala, não o curto. A mesma
+          // duração numa distância maior lê-se como mais depressa, e é a
+          // velocidade que o olho compara — não o número de milissegundos.
+          duracao: duracao ?? DUR.viagemAmpla,
+        },
       ]);
     };
 
@@ -305,6 +318,11 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
   const provaChegou = chegou("evidencia-prova", 2);
   const evidenciaPronta = fonteChegou && provaChegou;
   const hipoteseChegou = estatico || chegadas.has("hipotese-final");
+  // `preparaHipotese` era um beat morto: disparava aos 0 ms do quarto acto e
+  // nada no ecrã reagia. Passa a ser o que o nome já dizia — a antecipação.
+  // O cartão levanta-se 360 ms antes de a ficha partir, e é por isso que a
+  // partida se lê como consequência e não como aparição.
+  const preparaEntrega = !estatico && ato === 3 && feito("preparaHipotese");
   const mostraModelo = estatico || (ato === 3 && feito("mostraModelo"));
   const mostraTeste = estatico || (ato === 3 && feito("mostraTeste"));
   const mostraCriterio = estatico || (ato === 3 && feito("mostraCriterio"));
@@ -333,7 +351,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
     : { duration: DUR.entrada / 1000, ease: ENTRADA };
 
   const estadoPalco = useMemo(
-    () => ({ parado: parado || estatico }),
+    // `imediato` é do contexto partilhado e serve os contadores durante um
+    // arrasto. Esta cena não tem nada arrastável, por isso é sempre falso —
+    // mas o contexto é um só, e o campo existe.
+    () => ({ parado: parado || estatico, imediato: false }),
     [estatico, parado],
   );
 
@@ -341,7 +362,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
     "O que trazes",
     "O que não pode acontecer",
     "O que se sabe",
-    "O que segue para teste",
+    // O último ato deixou de resumir e passou a acumular: a coluna guarda
+    // tudo o que entrou, e o título tem de dizer isso. «O que segue para
+    // teste» descrevia o cartão-resumo que aqui estava.
+    "Tudo o que entrou",
   ][ato];
 
   return (
@@ -406,7 +430,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
           <li>Fronteiras: operações com stock, presença contínua ou equipa obrigatória são retiradas quando não cabem.</li>
           <li>Evidência: INE e Eurostat descrevem contexto; oferta local e vontade de pagar continuam por confirmar através de prova local.</li>
           <li>
-            Hipótese: organização operacional para microempresas. Modelo: {exemplo.modelo}.
+            Hipótese: {exemplo.titulo}. Modelo: {exemplo.modelo}.
             Primeiro teste: {exemplo.primeiroTeste} Critério de rejeição: {exemplo.testeDeFalsificacao}
           </li>
         </ol>
@@ -421,7 +445,12 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
 
           <div aria-hidden className="relative grid gap-3 md:grid-cols-[.82fr_1.18fr] lg:grid-cols-[.82fr_1.3fr_.95fr]">
             {/* Entrada: o conteúdo muda, mas a bandeja e a sua posição ficam. */}
-            <div className="relative min-h-[178px] overflow-hidden rounded-3xl border border-white/10 bg-white/[.045] p-4 backdrop-blur-sm md:min-h-[360px] lg:min-h-[410px]">
+            {/* `flex flex-col` para o último acto ter onde se distribuir: a
+                grelha estica esta coluna à altura da mais alta, e o conteúdo
+                acabava 75 px acima do fundo — medido, não estimado. Isso não
+                se resolve com enchimento, resolve-se deixando o que já lá
+                está ocupar o espaço que a grelha lhe deu. */}
+            <div className="relative flex min-h-[178px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[.045] p-4 backdrop-blur-sm md:min-h-[360px] lg:min-h-[410px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">Entrada · 01</div>
@@ -474,17 +503,68 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   </m.div>
                 )}
 
+                {/* ┌───────────────────────────────────────────────────┐
+                     │ NO ÚLTIMO ATO A ENTRADA ACUMULA, NÃO RESUME        │
+                     │                                                   │
+                     │ Aqui estava um cartão de três linhas — «contexto  │
+                     │ compatível / fronteiras respeitadas / lacunas     │
+                     │ convertidas» — e tinha dois defeitos ao mesmo     │
+                     │ tempo. Repetia, palavra por palavra, os três      │
+                     │ selos que a coluna da SAÍDA já mostra: a mesma    │
+                     │ informação duas vezes, a 40 cm de distância. E    │
+                     │ deixava a coluna a 44% de densidade, com 269 px   │
+                     │ de vazio — medido, não estimado.                  │
+                     │                                                   │
+                     │ Pior do que o vazio: ao fim da demonstração já    │
+                     │ não se via NADA do que tinha entrado. A hipótese  │
+                     │ ficava sem proveniência visível.                  │
+                     │                                                   │
+                     │ Agora a coluna guarda o que passou por ela, com  │
+                     │ a cor de cada natureza. A coluna enche-se porque │
+                     │ a demonstração a encheu — não porque se lá pôs   │
+                     │ enchimento.                                       │
+                     └───────────────────────────────────────────────────┘ */}
                 {ato === 3 && (
-                  <m.div key="compor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-5">
-                    <div className="rounded-3xl border border-brand-mint/25 bg-brand/10 p-4">
-                      <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-brand-mint"><Check size={12} /> Três condições cumpridas</div>
-                      <ul className="mt-3 space-y-2 text-[11px] text-white/65">
-                        <li>Contexto compatível</li>
-                        <li>Fronteiras respeitadas</li>
-                        <li>Lacunas convertidas em teste</li>
-                      </ul>
-                    </div>
-                    <p className="mt-3 text-[10px] leading-relaxed text-white/40">A saída recebe uma hipótese — nunca uma promessa.</p>
+                  <m.div key="compor" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-4 flex flex-1 flex-col gap-3">
+                    {[
+                      {
+                        rotulo: "Contexto",
+                        cor: "border-brand-mint/25 bg-brand/10",
+                        ponto: "bg-brand-mint",
+                        itens: [exemplo.competencia, "Trabalhar com dados", "Part-time"],
+                      },
+                      {
+                        rotulo: "Fronteiras",
+                        cor: "border-[#e7c98e]/25 bg-[#e7c98e]/10",
+                        ponto: "bg-[#e7c98e]",
+                        itens: ["Sem stock nem espaço", "Só algumas horas", "Operação a solo"],
+                      },
+                      {
+                        rotulo: "Evidência",
+                        cor: "border-[#9fc8e7]/25 bg-[#9fc8e7]/10",
+                        ponto: "bg-[#9fc8e7]",
+                        itens: ["INE · Eurostat", "Piloto local por fazer"],
+                      },
+                    ].map((grupo, indice) => (
+                      <m.div
+                        key={grupo.rotulo}
+                        initial={estatico ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={estatico ? { duration: 0 } : { ...transicao, delay: 0.06 + indice * 0.08 }}
+                        className={`flex flex-1 flex-col justify-center rounded-2xl border px-3 py-2.5 ${grupo.cor}`}
+                      >
+                        <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/45">{grupo.rotulo}</div>
+                        <ul className="mt-1.5 space-y-1">
+                          {grupo.itens.map((item) => (
+                            <li key={item} className="flex items-center gap-2 text-[11px] leading-snug text-white/75">
+                              <span className={`h-1 w-1 flex-shrink-0 rounded-full ${grupo.ponto}`} />
+                              <span className="truncate">{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </m.div>
+                    ))}
+                    <p className="pt-0.5 text-[10px] leading-relaxed text-white/40">Tudo o que a hipótese teve de respeitar. A saída recebe uma hipótese — nunca uma promessa.</p>
                   </m.div>
                 )}
               </AnimatePresence>
@@ -535,13 +615,39 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   ))}
                 </div>
 
-                <m.div ref={sobreviventeRef} initial={false} animate={{ opacity: contextoPronto ? 1 : 0.24, y: fronteirasProntas && (feito("sobrevivente") || ato > 1 || estatico) ? -2 : 0, borderColor: fronteirasProntas ? "rgba(159,225,203,.52)" : "rgba(255,255,255,.1)" }} transition={transicao} className="mt-2 rounded-2xl border bg-brand/[.07] p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <span className="block text-[8px] font-bold uppercase tracking-wide text-brand-mint/75">Candidato que permanece</span>
-                      <span className="mt-1 block font-display text-sm font-semibold leading-tight text-white">Organização operacional para microempresas</span>
-                    </div>
-                    <Lightbulb size={14} className="mt-0.5 flex-shrink-0 text-brand-mint" />
+                {/*
+                  Este cartão dizia o título da hipótese — o MESMO título que a
+                  coluna da Saída diz, a 40 cm de distância. Duas colunas a
+                  afirmar a mesma frase não são ênfase: são uma a desperdiçar o
+                  seu turno. Cada coluna tem um trabalho, e o do Motor é dizer
+                  PORQUE sobreviveu, não O QUE é.
+
+                  Por isso o título vive aqui só enquanto a Saída está vazia.
+                  No instante em que a ficha lá chega, o Motor entrega-o e passa
+                  a mostrar a aritmética do que entrou — que é o número que mais
+                  nenhuma coluna tem.
+                */}
+                <m.div ref={sobreviventeRef} initial={false} animate={{ opacity: contextoPronto ? 1 : 0.24, y: hipoteseChegou ? 0 : preparaEntrega ? -6 : fronteirasProntas && (feito("sobrevivente") || ato > 1 || estatico) ? -2 : 0, borderColor: hipoteseChegou ? "rgba(255,255,255,.12)" : preparaEntrega || fronteirasProntas ? "rgba(159,225,203,.52)" : "rgba(255,255,255,.1)" }} transition={transicao} className={`mt-2 rounded-2xl border p-3 transition-colors ${hipoteseChegou ? "bg-white/[.03]" : "bg-brand/[.07]"}`}>
+                  <div className="flex min-h-[42px] items-start justify-between gap-2">
+                    {hipoteseChegou ? (
+                      <>
+                        <div className="min-w-0">
+                          <span className="block text-[8px] font-bold uppercase tracking-wide text-white/40">Entregue à saída</span>
+                          <span className="mt-1 block text-[10px] leading-relaxed text-white/60">
+                            Composta a partir de {CONTEXTO.length} capacidades, {FRONTEIRAS.length} eliminações e 1 fonte observada.
+                          </span>
+                        </div>
+                        <ArrowRight size={13} className="mt-0.5 flex-shrink-0 text-white/30" />
+                      </>
+                    ) : (
+                      <>
+                        <div className="min-w-0">
+                          <span className="block text-[8px] font-bold uppercase tracking-wide text-brand-mint/75">Candidato que permanece</span>
+                          <span className="mt-1 block font-display text-sm font-semibold leading-tight text-white">{exemplo.titulo}</span>
+                        </div>
+                        <Lightbulb size={14} className="mt-0.5 flex-shrink-0 text-brand-mint" />
+                      </>
+                    )}
                   </div>
                 </m.div>
               </div>
@@ -606,7 +712,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                       >
                         <Check size={12} />
                       </m.span>
-                      <h3 className="relative mt-1.5 font-display text-lg font-semibold leading-[1.08] text-ink">Organização operacional para microempresas</h3>
+                      <h3 className="relative mt-1.5 font-display text-lg font-semibold leading-[1.08] text-ink">{exemplo.titulo}</h3>
 
                       <m.div initial={false} animate={{ opacity: mostraModelo ? 1 : 0, y: mostraModelo ? 0 : 5 }} transition={transicao} className="relative mt-3 flex flex-wrap gap-1.5">
                         <span className="rounded-full bg-brand-light px-2.5 py-1 text-[8px] font-bold text-brand-dark">{exemplo.modelo}</span>

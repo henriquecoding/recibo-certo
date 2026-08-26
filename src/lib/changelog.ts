@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.126.0",
+    data: "2026-08-26",
+    titulo: "As duas demonstrações passaram a ter uma gramática de movimento só — e o tempo entre as coisas passou a querer dizer alguma coisa",
+    itens: [
+      "«Descobrir» e «Preço» animavam com dois motores escritos em separado, que já tinham começado a divergir sem ninguém dar por isso: o mesmo tipo de peça assentava com força diferente em cada página e a trajetória curvava-se de maneira diferente. Passaram a partilhar uma gramática só, e nas diferenças ficou o valor mais contido dos dois.",
+      "O intervalo entre duas coisas a mover-se deixou de ser escolhido a olho. Passa a haver três, e cada um quer dizer uma coisa: muito curto significa «isto é um só acontecimento», médio significa «estas peças são parcelas da mesma soma», e longo é uma fronteira — o que vem a seguir é outro assunto.",
+      "Na soma dos custos, as três peças passam a estar no ar em conjunto durante metade do percurso, em vez de quase se cruzarem. É o que faz três peças a voar lerem-se como uma soma a acontecer e não como três coisas sem relação — e a base continua a contar em três degraus bem separados.",
+      "No passo dos impostos, a Segurança Social e o IVA passam a sair quase em simultâneo, logo a seguir ao silêncio que os separa da margem. Antes saíam com o mesmo espaçamento das parcelas de custo, e o tempo dizia que eram parcelas irmãs da margem — exatamente a confusão que esse passo existe para desfazer.",
+      "Quando a base fecha a conta, as três linhas de custo acendem ao mesmo tempo. É o único momento simultâneo da demonstração inteira e diz o que nenhuma peça podia dizer sozinha, porque cada uma chegou só: as três, juntas, são esta base.",
+      "O passo final estava apertado — o preço a contar, a régua a abrir-se e as três zonas a ganharem cor quase ao mesmo tempo, com as zonas a acenderem sobre uma régua que ainda ia a meio. Passou a estar espalhado: as zonas acendem ao longo da abertura da régua, e o marcador só cai depois de a régua estar feita e de o preço ter parado de contar.",
+      "Na mesa de decisão de «Descobrir», o título da hipótese deixou de aparecer duas vezes. A coluna do motor mostra-o enquanto a saída está vazia e, no instante em que a peça lá chega, entrega-o e passa a mostrar de que é que a hipótese foi composta.",
+      "E esse título deixou de ser texto escrito à mão: vem do dossier curado do problema e do modelo de receita que a demonstração encena, como já vinham o primeiro teste e o critério para abandonar a hipótese.",
+    ],
+  },
+  {
     version: "2.125.0",
     data: "2026-08-25",
     titulo: "«Preço» passa a mostrar o preço a formar-se, parcela a parcela",

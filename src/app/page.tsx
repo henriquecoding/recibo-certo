@@ -23,6 +23,7 @@ import { cenariosDemoPreco, parametrosDemoPreco } from "@/lib/pricing/demo-homep
 import { COMPETENCIA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/competencias";
 import { MODELO_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/modelos";
 import { PROBLEMA_POR_ID } from "@/lib/negocio/descoberta/conhecimento/dados/problemas";
+import { referenciaCurada } from "@/lib/negocio/descoberta/conhecimento/seeds";
 import {
   generateWebSiteSchema,
   generateOrganizationSchema,
@@ -43,24 +44,39 @@ const jsonLdComFaq = {
   "@graph": [...jsonLdBase, generateFAQSchema(faqs)],
 };
 
-const problemaExemplo = PROBLEMA_POR_ID.get("processos-dispersos-micro");
-const modeloExemplo = MODELO_POR_ID.get("avenca");
+// O par que a demonstração encena. Deixou de ser duas escolhas
+// independentes: é UM dossier curado, e por isso `referenciaCurada` devolve
+// o título que a hipótese vai ter. Antes o par era (problema × avença), que
+// no catálogo é o dossier das ilhas — e o palco, não podendo usar esse
+// título, escrevia um à mão que não existia em lado nenhum.
+const PAR_EXEMPLO = { problema: "processos-dispersos-micro", modelo: "projeto" } as const;
+
+const problemaExemplo = PROBLEMA_POR_ID.get(PAR_EXEMPLO.problema);
+const modeloExemplo = MODELO_POR_ID.get(PAR_EXEMPLO.modelo);
 const competenciaExemplo = COMPETENCIA_POR_ID.get("organizacao");
+const dossierExemplo = referenciaCurada(PAR_EXEMPLO.problema, PAR_EXEMPLO.modelo);
 const primeiroTesteExemplo = problemaExemplo?.comoValidar[1] ?? problemaExemplo?.comoValidar[0];
 
-if (!problemaExemplo || !modeloExemplo || !competenciaExemplo || !primeiroTesteExemplo) {
+if (
+  !problemaExemplo ||
+  !modeloExemplo ||
+  !competenciaExemplo ||
+  !dossierExemplo ||
+  !primeiroTesteExemplo
+) {
   throw new Error("O exemplo editorial da homepage deixou de existir no grafo de descoberta.");
 }
 
 /**
- * O palco não inventa um negócio nem um teste: as quatro linhas vêm do
- * mesmo grafo que alimenta a ferramenta completa. Só atravessam a fronteira
- * servidor/cliente as strings que a demonstração desenha.
+ * O palco não inventa um negócio, um título nem um teste: as cinco linhas
+ * vêm do mesmo grafo que alimenta a ferramenta completa. Só atravessam a
+ * fronteira servidor/cliente as strings que a demonstração desenha.
  */
 const exemploDescoberta = Object.freeze({
   competencia: competenciaExemplo.rotulo,
   problema: problemaExemplo.enunciado,
   modelo: modeloExemplo.rotulo,
+  titulo: dossierExemplo.template.title,
   primeiroTeste: primeiroTesteExemplo,
   testeDeFalsificacao: problemaExemplo.testeDeFalsificacao,
 });
