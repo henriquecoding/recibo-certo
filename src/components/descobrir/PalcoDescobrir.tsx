@@ -407,7 +407,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
           <li>Evidência: INE e Eurostat descrevem contexto; oferta local e vontade de pagar continuam por confirmar através de prova local.</li>
           <li>
             Hipótese: organização operacional para microempresas. Modelo: {exemplo.modelo}.
-            Primeiro teste: {exemplo.primeiroTeste}. Critério de rejeição: {exemplo.testeDeFalsificacao}.
+            Primeiro teste: {exemplo.primeiroTeste} Critério de rejeição: {exemplo.testeDeFalsificacao}
           </li>
         </ol>
         <p className="sr-only" aria-live="polite">{anuncioManual}</p>
@@ -432,7 +432,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                 </span>
               </div>
 
-              <AnimatePresence mode="wait" initial={false}>
+              {/* A entrada nova monta logo no início do acto. Em `wait`, o
+                  cartão anterior demorava 420 ms a sair e a primeira ficha
+                  tentava medir uma origem que ainda não existia. */}
+              <AnimatePresence mode="popLayout" initial={false}>
                 {ato === 0 && (
                   <m.div key="contexto" initial={estatico ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-4 space-y-2">
                     <span ref={origemCompetenciaRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 text-[11px] text-white/80">

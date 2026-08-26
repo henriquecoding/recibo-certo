@@ -73,6 +73,7 @@ describe("homepage Descobrir: coreografia", () => {
     expect(PALCO).not.toMatch(/aria-live[^>]*>\{ATOS_DESCOBRIR/);
     expect(PALCO).toContain("min-h-[258px]");
     expect(PALCO).not.toContain("line-clamp-2 text-[8px]");
+    expect(PALCO).toContain('<AnimatePresence mode="popLayout" initial={false}>');
     expect(HERO).not.toContain("setInterval");
   });
 
