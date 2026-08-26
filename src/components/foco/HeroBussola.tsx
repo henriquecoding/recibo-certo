@@ -4,7 +4,7 @@
 //  O HERO DE `/` — a bússola, encenada
 //  ---------------------------------------------------------------------
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ TRÊS VERSÕES ATÉ AQUI, E O QUE CADA UMA ERROU                       │
+//  │ QUATRO VERSÕES ATÉ AQUI, E O QUE CADA UMA ERROU                     │
 //  │                                                                     │
 //  │ 1 · O cartão «Sou trabalhador independente / por conta de outrem»   │
 //  │     perguntava QUEM ÉS. A NN/g tem cinco razões documentadas        │
@@ -15,35 +15,43 @@
 //  │     havia do outro.                                                 │
 //  │                                                                     │
 //  │ 2 · Tirá-lo e não pôr nada no lugar foi pior. O cartão estava NA    │
-//  │     PÁGINA, no ponto de decisão, e ramificava ali. Uma cápsula de   │
-//  │     navegação no cabeçalho serve quem já sabe para onde vai; quem   │
-//  │     chega a `/` não sabe.                                           │
+//  │     PÁGINA, no ponto onde a pessoa decide, e ramificava ali. Uma    │
+//  │     cápsula de navegação no cabeçalho serve quem já sabe para onde  │
+//  │     vai; quem chega a `/` não sabe.                                 │
 //  │                                                                     │
 //  │ 3 · A bússola, posta por baixo de um hero que falava só de recibos  │
 //  │     verdes, era uma lista de cinco perguntas SEM RESPOSTA — cinco   │
 //  │     cliques às cegas debaixo de uma promessa que só servia um dos   │
 //  │     cinco caminhos.                                                 │
+//  │                                                                     │
+//  │ 4 · A bússola COMO hero resolveu a leitura e deixou a interação por │
+//  │     resolver: o roteiro roubava o painel de volta ao afastar o      │
+//  │     rato, o teclado gastava cinco paragens de tabulação sem setas,  │
+//  │     quem usa ecrã tátil não conseguia apontar de todo, e a resposta │
+//  │     trocava de um fotograma para o outro. É o que esta versão faz.  │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ── O que este hero é ────────────────────────────────────────────────
 //
-//  A bússola DEIXOU de estar debaixo do hero e passou a ser o hero. E
-//  ganhou a metade que lhe faltava: cada pergunta tem a resposta ao lado,
-//  com o número verdadeiro, antes de qualquer clique.
+//  Cinco perguntas, e a resposta de cada uma ao lado — com o número
+//  verdadeiro, antes de qualquer clique. Jakob Nielsen mede em ~10 s o
+//  tempo que uma página tem para comunicar a sua proposta de valor; cinco
+//  perguntas sozinhas gastavam-nos a prometer que existe uma resposta.
 //
-//  Jakob Nielsen mede em ~10 s o tempo que uma página tem para comunicar a
-//  sua proposta de valor. Cinco perguntas sozinhas gastavam esses 10 s a
-//  prometer que existe uma resposta. Aqui a resposta está lá.
+//  ── As quatro regras da interação ────────────────────────────────────
 //
-//  ── E é uma demonstração, não uma decoração ──────────────────────────
-//
-//  O ponteiro percorre três das cinco perguntas e o painel responde a
-//  cada uma. Não é enfeite: é a única coisa que esta página tem para
-//  ensinar — «aponta uma pergunta e vem um número» — ensinada fazendo-a.
-//
-//  Passar o rato ou o foco do teclado por cima de qualquer linha faz
-//  exatamente o mesmo e SUSPENDE o roteiro. A demonstração e a interação
-//  a sério são o mesmo mecanismo, e não dois que se imitam.
+//   1. **A primeira interação ENTREGA o palco.** Não suspende: entrega.
+//      Ver `usePalco.entregar` — uma demonstração que retoma o comando
+//      depois de alguém lhe tocar está a discutir com quem a usa.
+//   2. **A escolha fica.** Afastar o rato não desfaz nada. O painel só
+//      muda quando a pessoa aponta outra coisa.
+//   3. **Uma paragem de tabulação, e setas lá dentro.** É o que a APG do
+//      W3C manda para um widget composto — e a bússola é um: a seleção
+//      comanda um painel de detalhe.
+//   4. **No ecrã tátil, o primeiro toque abre e o segundo entra.** É o
+//      comportamento nativo do iOS para ligações que dependem de
+//      sobrevoo; aqui é explícito, porque o painel nunca está escondido e
+//      por isso o Safari não o faria sozinho.
 //
 //  ── O que continua a funcionar sem nada disto ────────────────────────
 //
@@ -53,22 +61,34 @@
 //  a cena acabar: a mesma página.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, FileSign, Pause, Play, RotateCcw, ShieldCheck } from "@/components/ui/Icons";
+import {
+  ArrowRight,
+  ChevronDown,
+  FileSign,
+  Pause,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+} from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import ComoFuncionaModal from "@/components/ComoFuncionaModal";
 import { PalcoContexto } from "@/components/palco/atores";
 import { Ponteiro, Toque, type LeituraPonteiro } from "@/components/palco/ponteiro";
 import { usePalco, type Palco } from "@/components/palco/usePalco";
 import type { Ponto } from "@/components/palco/medida";
+import { usePerfil, type Perfil } from "@/lib/perfil";
+import { scrollToId } from "@/lib/scroll";
 import type { RespostaDoFoco } from "@/lib/foco/respostas-servidor";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { ATOS_BUSSOLA, PERCURSO } from "./coreografia-bussola";
-import { FOCOS, FOCO_POR_ID, hrefDoFoco } from "./focos";
+import { FOCOS, FOCO_POR_ID, PERFIL_DO_FOCO, hrefDoFoco } from "./focos";
 
 /** `ENTRADA` de `palco/curvas.ts`, na forma que o CSS quer. */
 const EASE_ENTRADA = "cubic-bezier(.16,1,.3,1)";
+
+const ID_PAINEL = "bussola-resposta";
 
 /**
  * O tom de uma linha do painel É informação.
@@ -84,30 +104,49 @@ const TOM_LINHA = {
   neutro: "text-white/75",
 } as const;
 
+/** De onde veio a mudança — decide se o leitor de ecrã é avisado. */
+type Origem = "roteiro" | "pessoa";
+
 export default function HeroBussola({
   respostas,
 }: {
   respostas: Record<FocoHomepage, RespostaDoFoco>;
 }) {
-  // ── A suspensão, e porque não é a pausa ────────────────────────────
-  //  O rato em cima de uma linha, ou o foco do teclado dentro dela, pára
-  //  o roteiro enquanto lá estiver e devolve-o sozinho ao sair. Sem isto
-  //  a demonstração continuava a andar por baixo da mão de quem estava a
-  //  ler — e trocava o painel que a pessoa tinha acabado de abrir.
-  const [sobrevoado, setSobrevoado] = useState<FocoHomepage | null>(null);
+  const palco = usePalco(ATOS_BUSSOLA);
+  const { ato, feito, emCena, estatico, ciclo, entregar } = palco;
+  const { definir } = usePerfil();
+
+  // ── Quem manda no painel ───────────────────────────────────────────
+  //  Duas fontes, e a segunda vence assim que existir: o roteiro enquanto
+  //  ninguém mexeu, e a escolha da pessoa para sempre a partir daí.
+  const [escolhido, setEscolhido] = useState<FocoHomepage | null>(null);
+  const [anuncio, setAnuncio] = useState("");
   const [comoFunciona, setComoFunciona] = useState(false);
-  const palco = usePalco(ATOS_BUSSOLA, { suspenso: sobrevoado !== null });
-  const { ato, feito, emCena, estatico, ciclo } = palco;
 
   const palcoRef = useRef<HTMLDivElement>(null);
+  const painelRef = useRef<HTMLElement>(null);
   const linhasRef = useRef<Partial<Record<FocoHomepage, HTMLLIElement | null>>>({});
   const realceRef = useRef<HTMLSpanElement>(null);
+
+  // ── O apontador grosseiro ──────────────────────────────────────────
+  //  `(hover: hover) and (pointer: fine)` é a pergunta certa, e não «é um
+  //  telemóvel?»: um portátil com ecrã tátil tem os dois, um tablet com
+  //  rato passa a ter sobrevoo. A pergunta é sobre o APONTADOR, não sobre
+  //  a classe de aparelho.
+  const [grosseiro, setGrosseiro] = useState(false);
+  useEffect(() => {
+    const consulta = window.matchMedia("(hover: hover) and (pointer: fine)");
+    const aplicar = () => setGrosseiro(!consulta.matches);
+    aplicar();
+    consulta.addEventListener("change", aplicar);
+    return () => consulta.removeEventListener("change", aplicar);
+  }, []);
 
   // ── Qual pergunta está aberta ──────────────────────────────────────
   //  Derivado, e não em estado: um `useState` sincronizado por efeito
   //  divergiria do HTML servido no primeiro render, e é exatamente o
   //  tipo de divergência que rebenta a hidratação sem dizer porquê.
-  const indiceApontado = (() => {
+  const indiceDoRoteiro = (() => {
     if (estatico) return PERCURSO.length - 1;
     for (let i = ato; i >= 0; i -= 1) {
       // Os atos anteriores já abriram, por definição.
@@ -116,10 +155,33 @@ export default function HeroBussola({
     }
     return -1;
   })();
-  const focoDoRoteiro = indiceApontado >= 0 ? PERCURSO[indiceApontado] : null;
-  const aberto = sobrevoado ?? focoDoRoteiro;
+  const focoDoRoteiro = indiceDoRoteiro >= 0 ? PERCURSO[indiceDoRoteiro] : null;
+  const aberto = escolhido ?? focoDoRoteiro;
   const resposta = aberto ? respostas[aberto] : null;
   const focoAberto = aberto ? FOCO_POR_ID.get(aberto) : undefined;
+  const perfilDoAberto = aberto ? (PERFIL_DO_FOCO[aberto] as Perfil | undefined) : undefined;
+
+  /**
+   * Abrir uma pergunta.
+   *
+   * `entregar()` é a primeira coisa que acontece, e é o que separa esta
+   * versão da anterior: o roteiro para AQUI e não volta a mexer no painel.
+   */
+  const escolher = useCallback(
+    (id: FocoHomepage, origem: Origem) => {
+      setEscolhido(id);
+      entregar();
+      if (origem === "pessoa") {
+        const r = respostas[id];
+        const f = FOCO_POR_ID.get(id);
+        // Anunciado só quando foi a pessoa a mexer. Um `aria-live` que
+        // dispara com o roteiro fala por cima de tudo durante nove
+        // segundos a alguém que nem sequer chegou ao hero.
+        setAnuncio(`${f?.label}: ${r.destaque}. ${r.legenda}.`);
+      }
+    },
+    [entregar, respostas],
+  );
 
   // ── O realce que desliza ───────────────────────────────────────────
   //  Um só elemento a mudar de sítio, e não cinco a acender e a apagar.
@@ -161,16 +223,15 @@ export default function HeroBussola({
   atoRef.current = ato;
   const estaticoRef = useRef(estatico);
   estaticoRef.current = estatico;
-  const sobrevoadoRef = useRef(sobrevoado);
-  sobrevoadoRef.current = sobrevoado;
+  const escolhidoRef = useRef(escolhido);
+  escolhidoRef.current = escolhido;
 
   const lerPonteiro = useCallback((): LeituraPonteiro => {
     const raiz = palcoRef.current;
     if (estaticoRef.current || !raiz) return { ponto: null, premido: false };
-    // Enquanto alguém está a apontar a sério, a mão encenada sai da
-    // frente. Duas mãos ao mesmo tempo no mesmo sítio não é uma
-    // demonstração — é uma disputa.
-    if (sobrevoadoRef.current) return { ponto: null, premido: false };
+    // Entregue o palco, a mão encenada sai. Duas mãos ao mesmo tempo no
+    // mesmo sítio não é uma demonstração — é uma disputa.
+    if (escolhidoRef.current) return { ponto: null, premido: false };
 
     const f = feitoRef.current;
     const a = atoRef.current;
@@ -216,7 +277,7 @@ export default function HeroBussola({
   // O anel do clique, uma vez só, no ato que clica.
   const [toque, setToque] = useState<Ponto | null>(null);
   useEffect(() => {
-    if (estatico || ato !== 2 || !feito("preme")) {
+    if (estatico || escolhido || ato !== 2 || !feito("preme")) {
       setToque(null);
       return;
     }
@@ -225,12 +286,12 @@ export default function HeroBussola({
     if (!raiz || !linha) return;
     const r = linha.getBoundingClientRect();
     const b = raiz.getBoundingClientRect();
-    setToque((atual) =>
-      atual ?? { x: r.left - b.left + r.width * 0.88, y: r.top - b.top + r.height * 0.5 },
+    setToque(
+      (atual) => atual ?? { x: r.left - b.left + r.width * 0.88, y: r.top - b.top + r.height * 0.5 },
     );
-  }, [ato, ciclo, estatico, feito]);
+  }, [ato, ciclo, estatico, escolhido, feito]);
 
-  const acendeu = estatico || (ato === 2 && emCena("acende"));
+  const acendeu = estatico || Boolean(escolhido) || (ato === 2 && emCena("acende"));
 
   // ┌───────────────────────────────────────────────────────────────────┐
   // │ UM BEAT SÓ EXISTE DENTRO DO SEU ATO                               │
@@ -243,11 +304,126 @@ export default function HeroBussola({
   // │ 3 s, e o hero ficava uma moldura vazia com uma régua por baixo.   │
   // │ Só se via a olho, e só depois do primeiro ato — que é precisamente│
   // │ o momento em que já ninguém está a olhar para o código.           │
-  // │                                                                   │
-  // │ O que chegou fica: um ato posterior é prova de que o anterior     │
-  // │ correu até ao fim.                                                │
   // └───────────────────────────────────────────────────────────────────┘
-  const jaChegou = (beat: string) => estatico || ato > 0 || emCena(beat);
+  const jaChegou = useCallback(
+    (beat: string) => estatico || ato > 0 || emCena(beat),
+    [ato, emCena, estatico],
+  );
+
+  // ── Teclado: uma paragem de tabulação, setas lá dentro ─────────────
+  //  A APG do W3C é explícita — «Tab e Shift+Tab movem-se ENTRE widgets;
+  //  as setas tratam da navegação interna». A bússola é um widget: a
+  //  seleção comanda um painel de detalhe.
+  //
+  //  Antes eram cinco paragens sem setas: para passar do hero ao resto
+  //  da página gastavam-se cinco Tabs, e a resposta trocava em todas.
+  const idComTab = aberto ?? FOCOS[0].id;
+  const aoTeclar = useCallback(
+    (evento: React.KeyboardEvent, indice: number) => {
+      const passo =
+        evento.key === "ArrowDown" || evento.key === "ArrowRight"
+          ? 1
+          : evento.key === "ArrowUp" || evento.key === "ArrowLeft"
+            ? -1
+            : 0;
+      let destino = -1;
+      if (passo !== 0) destino = (indice + passo + FOCOS.length) % FOCOS.length;
+      else if (evento.key === "Home") destino = 0;
+      else if (evento.key === "End") destino = FOCOS.length - 1;
+      if (destino < 0) return;
+      evento.preventDefault();
+      const id = FOCOS[destino].id;
+      escolher(id, "pessoa");
+      linhasRef.current[id]?.querySelector("a")?.focus();
+    },
+    [escolher],
+  );
+
+  // ── Ecrã tátil: o primeiro toque abre, o segundo entra ─────────────
+  const aoClicar = useCallback(
+    (evento: React.MouseEvent, id: FocoHomepage) => {
+      if (!grosseiro || escolhido === id) return;
+      evento.preventDefault();
+      escolher(id, "pessoa");
+      // A resposta está por baixo da lista neste tamanho de ecrã. Abrir
+      // sem a mostrar é abrir para lado nenhum.
+      painelRef.current?.scrollIntoView({
+        behavior: estatico ? "auto" : "smooth",
+        block: "nearest",
+      });
+    },
+    [escolher, escolhido, estatico, grosseiro],
+  );
+
+  const aoApontar = useCallback(
+    (id: FocoHomepage) => {
+      // Num apontador grosseiro, `mouseenter`/`focus` disparam junto com o
+      // toque e roubariam o primeiro toque ao `aoClicar`.
+      if (grosseiro) return;
+      escolher(id, "pessoa");
+    },
+    [escolher, grosseiro],
+  );
+
+  const registar = useCallback(
+    (id: FocoHomepage) => (no: HTMLLIElement | null) => {
+      linhasRef.current[id] = no;
+    },
+    [],
+  );
+
+  // ── Devolver o palco ───────────────────────────────────────────────
+  //  «Rever» e os passos da régua têm de LARGAR a escolha, não só repor
+  //  o relógio. Sem isto o roteiro voltava a correr por baixo de um
+  //  painel que ficava preso na pergunta escolhida, e a mão encenada
+  //  nunca reaparecia — a demonstração andava e não se via.
+  const aoRever = useCallback(() => {
+    setEscolhido(null);
+    setAnuncio("");
+    palco.rever();
+  }, [palco]);
+
+  const aoIrPara = useCallback(
+    (indice: number) => {
+      setEscolhido(null);
+      setAnuncio("");
+      palco.irPara(indice);
+    },
+    [palco],
+  );
+
+  const linhas = useMemo(
+    () =>
+      FOCOS.map((foco, i) => (
+        <Linha
+          key={foco.id}
+          foco={foco}
+          indice={i}
+          resposta={respostas[foco.id]}
+          entrou={jaChegou(`p${i}`)}
+          ativo={aberto === foco.id}
+          comTab={idComTab === foco.id}
+          grosseiro={grosseiro}
+          estatico={estatico}
+          registar={registar}
+          aoApontar={aoApontar}
+          aoClicar={aoClicar}
+          aoTeclar={aoTeclar}
+        />
+      )),
+    [
+      aberto,
+      aoApontar,
+      aoClicar,
+      aoTeclar,
+      estatico,
+      grosseiro,
+      idComTab,
+      jaChegou,
+      registar,
+      respostas,
+    ],
+  );
 
   return (
     <PalcoContexto.Provider value={palco.estadoPalco}>
@@ -297,6 +473,7 @@ export default function HeroBussola({
 
               <ol
                 aria-labelledby="bussola-hero-titulo"
+                aria-controls={ID_PAINEL}
                 className="relative mt-2 overflow-hidden rounded-3xl border border-stone-200/80 bg-white/80 backdrop-blur-sm dark:border-stone-700/80 dark:bg-stone-900/70"
               >
                 {/* O realce que desliza entre linhas. `aria-hidden`: o
@@ -306,85 +483,8 @@ export default function HeroBussola({
                   aria-hidden
                   className="pointer-events-none absolute inset-x-0 top-0 z-0 border-l-[3px] border-brand bg-brand-light/70 opacity-0 transition-[transform,height,opacity] duration-[380ms] ease-out dark:bg-brand/15"
                 />
-
-                {FOCOS.map((foco, i) => {
-                  const Icon = iconeDe(foco.icone);
-                  const entrou = jaChegou(`p${i}`);
-                  const ativo = aberto === foco.id;
-                  return (
-                    <li
-                      key={foco.id}
-                      ref={(no) => {
-                        linhasRef.current[foco.id] = no;
-                      }}
-                      className="relative z-10 border-b border-stone-200/70 last:border-b-0 dark:border-stone-700/60"
-                      style={{
-                        opacity: entrou ? 1 : 0,
-                        transform: entrou ? "none" : "translateY(10px)",
-                        transition: estatico
-                          ? "none"
-                          : `opacity 420ms ${EASE_ENTRADA}, transform 420ms ${EASE_ENTRADA}`,
-                      }}
-                    >
-                      <Link
-                        href={hrefDoFoco(foco.id)}
-                        onMouseEnter={() => setSobrevoado(foco.id)}
-                        onMouseLeave={() => setSobrevoado(null)}
-                        onFocus={() => setSobrevoado(foco.id)}
-                        onBlur={() => setSobrevoado(null)}
-                        className="focus-marca group flex min-h-[60px] items-center gap-3 px-3 py-3 no-underline sm:px-4"
-                      >
-                        <span
-                          aria-hidden
-                          className={`w-6 flex-shrink-0 text-right font-display text-[11px] font-semibold tabular-nums transition-colors ${
-                            ativo ? "text-brand" : "text-stone-300 dark:text-stone-600"
-                          }`}
-                        >
-                          {String(i + 1).padStart(2, "0")}
-                        </span>
-                        <span
-                          aria-hidden
-                          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
-                            ativo
-                              ? "bg-brand text-white"
-                              : "bg-stone-100 text-stone-400 group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800 dark:text-stone-500"
-                          }`}
-                        >
-                          <Icon size={15} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span
-                            className={`block text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${
-                              ativo
-                                ? "text-brand-dark dark:text-brand-mint"
-                                : "text-stone-800 dark:text-stone-100"
-                            }`}
-                          >
-                            {foco.pergunta}
-                          </span>
-                          <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
-                            {foco.label}
-                          </span>
-                        </span>
-                        {/* A resposta em texto, para quem não vê o painel.
-                            A animação é a FORMA de dizer isto — nunca o
-                            único sítio onde está dito. */}
-                        <span className="sr-only">
-                          {respostas[foco.id].destaque} — {respostas[foco.id].legenda}.
-                        </span>
-                        <ArrowRight
-                          size={14}
-                          aria-hidden
-                          className={`flex-shrink-0 transition-all group-hover:translate-x-0.5 ${
-                            ativo ? "text-brand" : "text-stone-300 dark:text-stone-600"
-                          }`}
-                        />
-                      </Link>
-                    </li>
-                  );
-                })}
+                {linhas}
               </ol>
-
             </div>
 
             {/* ── O painel da resposta ──────────────────────────────
@@ -392,6 +492,8 @@ export default function HeroBussola({
                 da página que responde, e uma resposta que se parece com
                 a lista que a pediu não se lê como resposta. */}
             <aside
+              id={ID_PAINEL}
+              ref={painelRef}
               className="relative overflow-hidden rounded-3xl border border-brand-deep/25 bg-[#0c251e] text-white shadow-lift"
               style={{
                 opacity: jaChegou("painel") ? 1 : 0,
@@ -410,81 +512,22 @@ export default function HeroBussola({
                 </p>
 
                 {resposta && focoAberto ? (
-                  <>
-                    <p
-                      // Uma hipótese de negócio tem trinta caracteres de
-                      // título; um limiar em euros tem nove. O mesmo corpo
-                      // para os dois deixava um minúsculo e o outro a
-                      // partir-se em quatro linhas.
-                      className={`mt-2.5 text-balance font-display font-semibold leading-[1.1] tracking-tight ${
-                        resposta.destaque.length <= 16
-                          ? "text-[clamp(1.9rem,5vw,2.6rem)] tabular-nums"
-                          : "text-[clamp(1.25rem,3vw,1.6rem)]"
-                      }`}
-                    >
-                      {resposta.destaque}
-                    </p>
-                    <p className="mt-2 text-[12px] leading-relaxed text-white/55">
-                      {resposta.legenda}
-                    </p>
-
-                    <ul className="mt-4 space-y-1.5">
-                      {resposta.linhas.map((linha) => {
-                        // ── Uma linha com uma FRASE não é uma linha com um
-                        //    montante, e não pode ser desenhada como tal.
-                        //
-                        //  Rótulo à esquerda e valor à direita é o desenho
-                        //  certo para «Segurança Social · − 299,60 €». Com
-                        //  «Primeiro teste · Mapear o processo de cinco
-                        //  empresas sem propor software nenhum», o valor não
-                        //  encolhe (é `flex-shrink-0`, para os números nunca
-                        //  se partirem) e passava POR CIMA do rótulo.
-                        //
-                        //  Uma frase empilha-se; um montante alinha-se.
-                        const frase = linha.valor.length > 22;
-                        return (
-                          <li
-                            key={linha.rotulo}
-                            className={`rounded-xl bg-white/[0.045] px-3 py-2 ${
-                              frase ? "" : "flex items-baseline justify-between gap-3"
-                            }`}
-                          >
-                            <span className="min-w-0 text-[11px] leading-snug text-white/55">
-                              {linha.rotulo}
-                            </span>
-                            <span
-                              className={`text-[12px] font-semibold ${
-                                frase
-                                  ? "mt-1 block leading-snug"
-                                  : "flex-shrink-0 text-right tabular-nums"
-                              } ${TOM_LINHA[linha.tom ?? "neutro"]}`}
-                            >
-                              {linha.valor}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-
-                    <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-white/40">
-                      <FileSign size={11} className="mt-px flex-shrink-0" />
-                      <span className="min-w-0">{resposta.base}</span>
-                    </p>
-
-                    <Link
-                      href={focoAberto.ferramenta}
-                      className={`focus-marca mt-4 inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold no-underline transition-all sm:mt-auto ${
-                        acendeu
-                          ? "bg-brand text-white shadow-glow hover:-translate-y-0.5"
-                          : "bg-white/10 text-white/80 hover:bg-white/15"
-                      }`}
-                    >
-                      <span className="min-w-0 text-center leading-snug">
-                        {focoAberto.ctaPrimario}
-                      </span>
-                      <ArrowRight size={14} className="flex-shrink-0" />
-                    </Link>
-                  </>
+                  // `key`: remontar é o que faz a animação de chegada
+                  // voltar a correr. Sem ela, o conteúdo trocava de um
+                  // fotograma para o outro — e um número que substitui
+                  // outro sem chegar lê-se como uma falha de desenho.
+                  <Resposta
+                    key={focoAberto.id}
+                    resposta={resposta}
+                    ferramenta={focoAberto.ferramenta}
+                    ctaPrimario={focoAberto.ctaPrimario}
+                    acendeu={acendeu}
+                    perfil={perfilDoAberto}
+                    aoExperimentar={(p) => {
+                      definir(p);
+                      scrollToId("calculadora");
+                    }}
+                  />
                 ) : (
                   // O repouso do primeiro ato, antes de a mão apontar.
                   // Não é um estado vazio: é a instrução, e dura 2,4 s.
@@ -502,10 +545,15 @@ export default function HeroBussola({
           {/* Fora da grelha, e não dentro da coluna das perguntas: ali, no
               telemóvel, a régua da demonstração ficava ENTRE a pergunta e a
               resposta — a interromper a única ideia que este hero tem. */}
-          <Controlos palco={palco} />
+          <Controlos
+            palco={palco}
+            entregue={Boolean(escolhido)}
+            aoRever={aoRever}
+            aoIrPara={aoIrPara}
+          />
 
           <p className="sr-only" aria-live="polite">
-            {palco.anuncio}
+            {anuncio || palco.anuncio}
           </p>
 
           {/* Os selos, e o «Como funciona» que o hero antigo tinha.
@@ -544,7 +592,249 @@ export default function HeroBussola({
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-//  A RÉGUA E OS DOIS CONTROLOS
+//  UMA LINHA DA BÚSSOLA
+//  ---------------------------------------------------------------------
+//  `memo` não é otimização prematura: o relógio dos atos muda de estado a
+//  cada beat, e há dezenas por ato. Sem isto, as cinco linhas voltavam a
+//  desenhar-se dezenas de vezes por segundo durante os nove segundos do
+//  roteiro — para nada, porque só uma delas muda de estado de cada vez.
+// ═══════════════════════════════════════════════════════════════════════
+
+interface LinhaProps {
+  foco: (typeof FOCOS)[number];
+  indice: number;
+  resposta: RespostaDoFoco;
+  entrou: boolean;
+  ativo: boolean;
+  comTab: boolean;
+  grosseiro: boolean;
+  estatico: boolean;
+  registar: (id: FocoHomepage) => (no: HTMLLIElement | null) => void;
+  aoApontar: (id: FocoHomepage) => void;
+  aoClicar: (evento: React.MouseEvent, id: FocoHomepage) => void;
+  aoTeclar: (evento: React.KeyboardEvent, indice: number) => void;
+}
+
+const Linha = memo(function Linha({
+  foco,
+  indice,
+  resposta,
+  entrou,
+  ativo,
+  comTab,
+  grosseiro,
+  estatico,
+  registar,
+  aoApontar,
+  aoClicar,
+  aoTeclar,
+}: LinhaProps) {
+  const Icon = iconeDe(foco.icone);
+  return (
+    <li
+      ref={registar(foco.id)}
+      className="relative z-10 border-b border-stone-200/70 last:border-b-0 dark:border-stone-700/60"
+      style={{
+        opacity: entrou ? 1 : 0,
+        transform: entrou ? "none" : "translateY(10px)",
+        // ── Não se aponta para o que ainda está a chegar ──────────────
+        //  As cinco linhas entram deslocadas 10 px e sobem durante
+        //  420 ms. Enquanto sobem continuavam a receber o rato: apontar
+        //  para uma delas a meio da entrada punha o cursor sobre uma
+        //  linha e, 100 ms depois, sobre a de baixo — a resposta que
+        //  abria não era a da pergunta para onde a pessoa tinha
+        //  apontado. Apanhado por uma verificação automática, que é
+        //  precisamente onde este tipo de erro de 10 px se apanha.
+        pointerEvents: entrou ? undefined : "none",
+        transition: estatico
+          ? "none"
+          : `opacity 420ms ${EASE_ENTRADA}, transform 420ms ${EASE_ENTRADA}`,
+      }}
+    >
+      <Link
+        href={hrefDoFoco(foco.id)}
+        tabIndex={comTab ? 0 : -1}
+        aria-current={ativo ? "true" : undefined}
+        onMouseEnter={() => aoApontar(foco.id)}
+        onFocus={() => aoApontar(foco.id)}
+        onClick={(e) => aoClicar(e, foco.id)}
+        onKeyDown={(e) => aoTeclar(e, indice)}
+        className="focus-marca group flex min-h-[60px] items-center gap-3 px-3 py-3 no-underline sm:px-4"
+      >
+        <span
+          aria-hidden
+          className={`w-6 flex-shrink-0 text-right font-display text-[11px] font-semibold tabular-nums transition-colors ${
+            ativo ? "text-brand" : "text-stone-300 dark:text-stone-600"
+          }`}
+        >
+          {String(indice + 1).padStart(2, "0")}
+        </span>
+        <span
+          aria-hidden
+          className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl transition-colors ${
+            ativo
+              ? "bg-brand text-white"
+              : "bg-stone-100 text-stone-400 group-hover:bg-brand-light group-hover:text-brand dark:bg-stone-800 dark:text-stone-500"
+          }`}
+        >
+          <Icon size={15} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span
+            className={`block text-[13px] font-semibold leading-snug transition-colors sm:text-sm ${
+              ativo ? "text-brand-dark dark:text-brand-mint" : "text-stone-800 dark:text-stone-100"
+            }`}
+          >
+            {foco.pergunta}
+          </span>
+          <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
+            {/* No ecrã tátil, o que o PRÓXIMO toque faz — porque muda. Um
+                primeiro toque que não navega, sem nada a dizê-lo, lê-se
+                como uma ligação avariada. */}
+            {grosseiro && ativo ? "Toca outra vez para abrir" : foco.label}
+          </span>
+        </span>
+        {/* A resposta em texto, para quem não vê o painel. A animação é a
+            FORMA de dizer isto — nunca o único sítio onde está dito. */}
+        <span className="sr-only">
+          {resposta.destaque} — {resposta.legenda}.
+        </span>
+        {grosseiro && ativo ? (
+          <ChevronDown size={14} aria-hidden className="flex-shrink-0 text-brand" />
+        ) : (
+          <ArrowRight
+            size={14}
+            aria-hidden
+            className={`flex-shrink-0 transition-all group-hover:translate-x-0.5 ${
+              ativo ? "text-brand" : "text-stone-300 dark:text-stone-600"
+            }`}
+          />
+        )}
+      </Link>
+    </li>
+  );
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O CORPO DA RESPOSTA
+//  ---------------------------------------------------------------------
+//  Componente próprio para que a `key` do pai o remonte a cada troca — é
+//  isso que faz a animação de chegada correr outra vez (`.resposta-entra`
+//  em `globals.css`, com o desfasamento de `PASSO.uno`).
+// ═══════════════════════════════════════════════════════════════════════
+
+function Resposta({
+  resposta,
+  ferramenta,
+  ctaPrimario,
+  acendeu,
+  perfil,
+  aoExperimentar,
+}: {
+  resposta: RespostaDoFoco;
+  ferramenta: string;
+  ctaPrimario: string;
+  acendeu: boolean;
+  perfil?: Perfil;
+  aoExperimentar: (p: Perfil) => void;
+}) {
+  return (
+    <div className="resposta-entra flex min-h-0 flex-1 flex-col">
+      <p
+        // Uma hipótese de negócio tem trinta caracteres de título; um
+        // limiar em euros tem nove. O mesmo corpo para os dois deixava
+        // um minúsculo e o outro a partir-se em quatro linhas.
+        className={`mt-2.5 text-balance font-display font-semibold leading-[1.1] tracking-tight ${
+          resposta.destaque.length <= 16
+            ? "text-[clamp(1.9rem,5vw,2.6rem)] tabular-nums"
+            : "text-[clamp(1.25rem,3vw,1.6rem)]"
+        }`}
+      >
+        {resposta.destaque}
+      </p>
+      <p className="mt-2 text-[12px] leading-relaxed text-white/55">{resposta.legenda}</p>
+
+      <ul className="mt-4 space-y-1.5">
+        {resposta.linhas.map((linha) => {
+          // ── Uma linha com uma FRASE não é uma linha com um montante,
+          //    e não pode ser desenhada como tal.
+          //
+          //  Rótulo à esquerda e valor à direita é o desenho certo para
+          //  «Segurança Social · − 299,60 €». Com «Primeiro teste ·
+          //  Mapear o processo de cinco empresas sem propor software
+          //  nenhum», o valor não encolhe (é `flex-shrink-0`, para os
+          //  números nunca se partirem) e passava POR CIMA do rótulo.
+          //
+          //  Uma frase empilha-se; um montante alinha-se.
+          const frase = linha.valor.length > 22;
+          return (
+            <li
+              key={linha.rotulo}
+              className={`rounded-xl bg-white/[0.045] px-3 py-2 ${
+                frase ? "" : "flex items-baseline justify-between gap-3"
+              }`}
+            >
+              <span className="min-w-0 text-[11px] leading-snug text-white/55">{linha.rotulo}</span>
+              <span
+                className={`text-[12px] font-semibold ${
+                  frase ? "mt-1 block leading-snug" : "flex-shrink-0 text-right tabular-nums"
+                } ${TOM_LINHA[linha.tom ?? "neutro"]}`}
+              >
+                {linha.valor}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+
+      <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-white/40">
+        <FileSign size={11} className="mt-px flex-shrink-0" />
+        <span className="min-w-0">{resposta.base}</span>
+      </p>
+
+      {/* ── As duas saídas ────────────────────────────────────────────
+          A ferramenta completa, e — quando existe — a experiência já
+          aqui na página.
+
+          A segunda é o que voltou a ligar as duas metades de `/`. O hero
+          fala `foco` (no URL); a calculadora, o «Explorar» e o FAQ falam
+          `Perfil` (em `localStorage`). Enquanto o hero antigo existiu era
+          ele que escrevia o `Perfil` — ao substituí-lo, os dois eixos
+          deixaram de se falar, e escolher uma pergunta em cima não mexia
+          em nada por baixo.
+
+          Escreve-se no gesto DELIBERADO, e nunca no sobrevoo: passar o
+          rato por uma pergunta é ler, não é decidir, e não pode
+          reconfigurar uma página inteira duas dobras abaixo. */}
+      <div className="mt-4 flex flex-col gap-2 sm:mt-auto">
+        <Link
+          href={ferramenta}
+          className={`focus-marca inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl px-4 text-sm font-semibold no-underline transition-all ${
+            acendeu
+              ? "bg-brand text-white shadow-glow hover:-translate-y-0.5"
+              : "bg-white/10 text-white/80 hover:bg-white/15"
+          }`}
+        >
+          <span className="min-w-0 text-center leading-snug">{ctaPrimario}</span>
+          <ArrowRight size={14} className="flex-shrink-0" />
+        </Link>
+        {perfil ? (
+          <button
+            type="button"
+            onClick={() => aoExperimentar(perfil)}
+            className="focus-marca inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-2xl border border-white/15 px-4 text-[13px] font-semibold text-white/75 transition-colors hover:border-white/30 hover:text-white"
+          >
+            <span className="min-w-0 text-center leading-snug">Experimentar já, aqui</span>
+            <ChevronDown size={13} className="flex-shrink-0" />
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A RÉGUA E OS CONTROLOS
 //  ---------------------------------------------------------------------
 //  Ao nível do módulo, e não dentro de `HeroBussola`.
 //
@@ -555,7 +845,17 @@ export default function HeroBussola({
 //  teclado saltava do botão para o corpo da página a cada beat.
 // ═══════════════════════════════════════════════════════════════════════
 
-function Controlos({ palco: p }: { palco: Palco }) {
+const Controlos = memo(function Controlos({
+  palco: p,
+  entregue,
+  aoRever,
+  aoIrPara,
+}: {
+  palco: Palco;
+  entregue: boolean;
+  aoRever: () => void;
+  aoIrPara: (indice: number) => void;
+}) {
   if (p.estatico) return null;
   return (
     <div className="mt-2.5 flex items-center gap-3 px-1">
@@ -568,8 +868,8 @@ function Controlos({ palco: p }: { palco: Palco }) {
           <li key={item.id}>
             <button
               type="button"
-              onClick={() => p.irPara(i)}
-              aria-current={i === p.ato ? "step" : undefined}
+              onClick={() => aoIrPara(i)}
+              aria-current={i === p.ato && !entregue ? "step" : undefined}
               aria-label={`Passo ${i + 1} de ${ATOS_BUSSOLA.length}: ${item.legenda}`}
               className="focus-marca group block min-h-[36px] w-full py-1 text-left"
             >
@@ -584,7 +884,7 @@ function Controlos({ palco: p }: { palco: Palco }) {
               </span>
               <span
                 className={`mt-1 block truncate text-[9px] font-bold uppercase tracking-wide transition-colors ${
-                  i === p.ato
+                  i === p.ato && !entregue
                     ? "text-stone-700 dark:text-stone-200"
                     : i < p.ato
                       ? "text-brand"
@@ -598,7 +898,10 @@ function Controlos({ palco: p }: { palco: Palco }) {
         ))}
       </ol>
       <div className="flex flex-shrink-0 items-center gap-1.5">
-        {!p.finalizado && (
+        {/* Entregue o palco, não há nada para pausar — só para rever. Um
+            botão «Pausar» sobre uma cena que já não anda é um controlo
+            que mente. */}
+        {!p.finalizado && !entregue && (
           <button
             type="button"
             onClick={p.alternarPausa}
@@ -611,8 +914,8 @@ function Controlos({ palco: p }: { palco: Palco }) {
         )}
         <button
           type="button"
-          onClick={p.rever}
-          aria-label={p.finalizado ? "Rever a demonstração" : "Recomeçar a demonstração"}
+          onClick={aoRever}
+          aria-label={p.finalizado || entregue ? "Rever a demonstração" : "Recomeçar a demonstração"}
           className="focus-marca inline-flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/50 hover:text-brand-dark dark:border-stone-700 dark:text-stone-300"
         >
           <RotateCcw size={12} />
@@ -620,4 +923,4 @@ function Controlos({ palco: p }: { palco: Palco }) {
       </div>
     </div>
   );
-}
+});

@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { FOCOS_HOMEPAGE, normalizarFocoHomepage } from "@/lib/foco-homepage";
 import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
-import { FOCOS, FOCO_POR_ID, FOCO_DO_PERFIL_ANTIGO } from "@/components/foco/focos";
+import {
+  FOCOS,
+  FOCO_POR_ID,
+  FOCO_DO_PERFIL_ANTIGO,
+  PERFIL_DO_FOCO,
+} from "@/components/foco/focos";
 
 describe("homepage adaptativa", () => {
   it("reconhece os cinco focos, e cada um existe de ponta a ponta", () => {
@@ -116,6 +121,41 @@ describe("homepage adaptativa", () => {
     // E cinco palcos com nomes distintos: dois focos com o mesmo palco
     // seriam dois focos a mais.
     expect(new Set(FOCOS.map((f) => f.palco)).size).toBe(FOCOS.length);
+  });
+
+  it("as duas metades da homepage falam a mesma língua", () => {
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ O CONTRATO QUE VOLTOU A LIGAR `/`                               │
+    // │                                                                 │
+    // │ A homepage tem dois eixos: `foco` (a pergunta, no URL, manda no │
+    // │ hero) e `Perfil` (em `localStorage`, manda na calculadora, no   │
+    // │ «Explorar» e no FAQ). Enquanto o hero antigo existiu era ele    │
+    // │ que escrevia o `Perfil`; ao substituí-lo pela bússola, as duas  │
+    // │ metades deixaram de se falar — escolhias uma pergunta em cima e │
+    // │ a calculadora continuava no que estivesse guardado de uma       │
+    // │ visita anterior.                                                │
+    // │                                                                 │
+    // │ `PERFIL_DO_FOCO` é o caminho de volta, e tem de ser a INVERSA   │
+    // │ EXATA da migração. Duas tabelas escritas à mão é ter duas       │
+    // │ respostas para a mesma pergunta — que é o defeito de origem     │
+    // │ desta página, com outra roupa.                                  │
+    // └─────────────────────────────────────────────────────────────────┘
+    for (const [perfil, foco] of Object.entries(FOCO_DO_PERFIL_ANTIGO)) {
+      expect(PERFIL_DO_FOCO[foco], `${foco} tem de voltar a ${perfil}`).toBe(perfil);
+    }
+    for (const [foco, perfil] of Object.entries(PERFIL_DO_FOCO)) {
+      expect(FOCO_DO_PERFIL_ANTIGO[perfil as string]).toBe(foco);
+    }
+
+    // É parcial de propósito: «Preço» não tem simulador na homepage.
+    // Inventar-lhe um perfil levava a pergunta a um simulador que não a
+    // responde — e nenhum outro foco pode ficar de fora sem razão.
+    expect(PERFIL_DO_FOCO.preco).toBeUndefined();
+    expect(Object.keys(PERFIL_DO_FOCO).sort()).toEqual(
+      FOCOS.map((f) => f.id)
+        .filter((id) => id !== "preco")
+        .sort(),
+    );
   });
 
   it("a porta editorial nunca carrega o parâmetro de perfil antigo", () => {

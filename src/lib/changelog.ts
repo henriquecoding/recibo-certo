@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.130.0",
+    data: "2026-08-26",
+    titulo: "As cinco perguntas passaram a responder a quem as aponta — com o dedo, com o teclado ou com o rato",
+    itens: [
+      "O rato saltava ao clicar. A mão da demonstração encolhia ao carregar, mas o encolhimento estava a ser aplicado à POSIÇÃO em vez de ao desenho: a 178 pixéis de altura, cada clique atirava o cursor 43 pixéis para cima e 77 para a esquerda, num único fotograma. Não era uma animação mal calibrada — era um teletransporte. Agora o carregar é animado no mesmo relógio do percurso, desce depressa e levanta-se com mais calma, e a posição não se mexe um pixel.",
+      "A demonstração deixou de discutir contigo. Apontavas uma pergunta, afastavas o rato, e o roteiro trocava a resposta que tinhas acabado de abrir. Agora a primeira vez que apontas ENTREGA a demonstração: ela para onde está, a escolha fica, e o botão passa a ser «Rever» — um convite, não uma disputa.",
+      "No telemóvel já dá para apontar. Sem rato não havia forma nenhuma de ver a resposta de uma pergunta sem sair da página — tocar saltava logo para outro ecrã. Agora o primeiro toque abre a resposta e rola até ela, o segundo é que entra; e a linha aberta di-lo, com a seta a mudar de direção e um «toca outra vez para abrir».",
+      "Com teclado, a bússola custava cinco paragens de tabulação e a resposta mudava em todas. Passou a ser uma só: entras na pergunta aberta, andas com as setas (com volta ao fim), Home e End vão aos extremos, e Enter abre. É o que as normas de acessibilidade do W3C mandam para um conjunto de opções que comanda um painel.",
+      "A resposta deixou de trocar de um fotograma para o outro. As cinco partes entram desfasadas noventa milissegundos — o suficiente para se ler como uma coisa a chegar, e pouco para não parecerem cinco. Quem pede menos movimento recebe-a inteira, de uma vez.",
+      "Escolher uma pergunta em cima já muda a página em baixo. O hero e a calculadora falavam línguas diferentes e nada os ligava — descias e o simulador estava no que tivesse ficado de uma visita anterior. Agora há um «Experimentar já, aqui» que abre o simulador certo sem sair da página, e a secção da calculadora diz a que pergunta está a responder, com o caminho de volta.",
+      "Corrigido um erro de dez pixéis que ninguém veria: enquanto as cinco perguntas sobem para o lugar, apontar para uma delas abria a de baixo.",
+    ],
+  },
+  {
     version: "2.129.0",
     data: "2026-08-26",
     titulo: "As cinco perguntas passaram a ser a primeira coisa da homepage — e cada uma traz a resposta ao lado",

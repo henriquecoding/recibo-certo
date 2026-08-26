@@ -724,7 +724,9 @@ describe("handoff:integracao", () => {
     // string num ficheiro de UI — a UI passou a derivar dela.
     expect(FERRAMENTA_DO_FOCO.empresa).toBe("/ferramentas/simulador-empresa");
     // E a bússola tem mesmo de a usar como destino do painel da resposta.
-    expect(ler("src/components/foco/HeroBussola.tsx")).toContain("href={focoAberto.ferramenta}");
+    expect(ler("src/components/foco/HeroBussola.tsx")).toContain(
+      "ferramenta={focoAberto.ferramenta}",
+    );
   });
 });
 

@@ -53,6 +53,12 @@ export interface Palco {
   /** O que o leitor de ecrã ouve quando alguém navega à mão. */
   anuncio: string;
   alternarPausa: () => void;
+  /**
+   * A pessoa tomou conta: a cena acaba onde está e não volta a andar.
+   *
+   * Não é pausa — ver o bloco em `entregar`, mais abaixo.
+   */
+  entregar: () => void;
   /** Ir para um ato é PÔ-LO A CORRER, e repor o que ele constrói. */
   irPara: (indice: number) => void;
   rever: () => void;
@@ -60,24 +66,7 @@ export interface Palco {
   estadoPalco: { parado: boolean; imediato: boolean };
 }
 
-export function usePalco(
-  atos: readonly Ato[],
-  {
-    /**
-     * Uma suspensão TEMPORÁRIA, que não é a pausa.
-     *
-     * A distinção herda-se do hero antigo e é real: `parado` é uma tranca
-     * — alguém carregou em «Pausar» e a demonstração fica parada até
-     * alguém a retomar. `suspenso` é o rato em cima de uma peça, ou o
-     * foco do teclado dentro dela: o relógio pára enquanto durar e volta
-     * sozinho ao sair, sem mexer no estado do botão.
-     *
-     * Sem isto, a demonstração continuava a andar por baixo da mão de
-     * quem estava a ler — e a mudar o painel que a pessoa tinha aberto.
-     */
-    suspenso = false,
-  }: { suspenso?: boolean } = {},
-): Palco {
+export function usePalco(atos: readonly Ato[]): Palco {
   // ┌───────────────────────────────────────────────────────────────────┐
   // │ UMA FONTE SÓ PARA `prefers-reduced-motion`                        │
   // │                                                                   │
@@ -148,10 +137,7 @@ export function usePalco(
     atos,
     ato,
     ciclo,
-    // A suspensão entra AQUI e não em `parado`: o relógio pára das duas
-    // maneiras, mas o botão de pausa continua a dizer a verdade sobre a
-    // tranca — e não muda de rótulo cada vez que o rato passa por cima.
-    parado: parado || suspenso,
+    parado,
     estatico,
     aoTerminarAto: terminarAto,
   });
@@ -181,9 +167,31 @@ export function usePalco(
 
   const alternarPausa = useCallback(() => setParado((valor) => !valor), []);
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ ENTREGAR NÃO É PAUSAR                                             │
+  // │                                                                   │
+  // │ Pausar é uma tranca que alguém abre a seguir. Entregar é o fim:   │
+  // │ a pessoa tomou conta da cena e o roteiro não volta a tomá-la.     │
+  // │                                                                   │
+  // │ A primeira versão do hero da bússola resolvia isto com uma        │
+  // │ SUSPENSÃO — o relógio parava enquanto o rato estivesse em cima e  │
+  // │ voltava sozinho ao sair. Parecia delicado e era o contrário:      │
+  // │ bastava afastar o rato para o roteiro trocar o painel que a       │
+  // │ pessoa tinha acabado de abrir. Uma demonstração que retoma o      │
+  // │ comando depois de alguém lhe tocar está a discutir com quem a     │
+  // │ está a usar.                                                      │
+  // │                                                                   │
+  // │ A cena fica onde está e o controlo passa a ser «Rever» — que é    │
+  // │ um convite, não uma disputa.                                      │
+  // └───────────────────────────────────────────────────────────────────┘
+  const entregar = useCallback(() => {
+    setParado(true);
+    setFinalizado(true);
+  }, []);
+
   const estadoPalco = useMemo(
-    () => ({ parado: parado || suspenso || estatico, imediato: false }),
-    [estatico, parado, suspenso],
+    () => ({ parado: parado || estatico, imediato: false }),
+    [estatico, parado],
   );
 
   return {
@@ -198,6 +206,7 @@ export function usePalco(
     barraRef,
     anuncio,
     alternarPausa,
+    entregar,
     irPara,
     rever,
     estadoPalco,

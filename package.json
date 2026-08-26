@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.129.0",
+  "version": "2.130.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -9,6 +9,7 @@
     "busca:check": "vitest run src/lib/__tests__/busca-cabecalho.test.ts src/lib/__tests__/busca-fronteira.test.ts && node scripts/gen-busca-indice.mjs --check",
     "busca:indice": "node scripts/gen-busca-indice.mjs",
     "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
+    "bussola:e2e": "node scripts/verificar-bussola.mjs",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
     "cobertura:check": "vitest run src/lib/__tests__/negocio-descoberta-cobertura.test.ts --reporter=verbose",
     "concelhos:check": "node scripts/gen-concelhos.mjs --check",

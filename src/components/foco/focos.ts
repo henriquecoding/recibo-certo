@@ -182,6 +182,42 @@ export const FERRAMENTA_DO_FOCO: Record<FocoHomepage, string> = Object.freeze(
 ) as Record<FocoHomepage, string>;
 
 /**
+ * O foco → o simulador que a homepage abre em `#calculadora`.
+ *
+ * ── Porque é que isto tem de existir ─────────────────────────────────
+ *
+ * A homepage tem, hoje, DOIS eixos — e o cabeçalho deste ficheiro diz que
+ * isso era o defeito de que todos os outros descendiam. O eixo `foco` vive
+ * no URL e manda no hero; o eixo `Perfil` vive em `localStorage` e manda em
+ * tudo o que está por baixo (a calculadora, o «Explorar», o FAQ).
+ *
+ * Enquanto o hero antigo existiu, os dois encontravam-se num sítio: era ele
+ * que escrevia o `Perfil`. Ao substituí-lo pela bússola, esse encontro
+ * desapareceu e as duas metades da página deixaram de se falar — escolhias
+ * uma pergunta em cima e a calculadora continuava no que estivesse guardado
+ * de uma visita anterior.
+ *
+ * Isto volta a ligá-las, por DERIVAÇÃO e não à mão: é o inverso exato de
+ * `FOCO_DO_PERFIL_ANTIGO`, calculado, com um teste a exigir que continue a
+ * ser a inversa. Escrever as duas tabelas em separado era garantir que um
+ * dia discordavam.
+ *
+ * É parcial de propósito: «Preço» não tem simulador na homepage, e por isso
+ * não tem entrada. Inventar-lhe uma levaria a pergunta a um simulador que
+ * não a responde.
+ */
+export const PERFIL_DO_FOCO: Partial<Record<FocoHomepage, string>> = Object.freeze(
+  Object.fromEntries(
+    Object.entries({
+      independente: "recibos",
+      dependente: "salario",
+      empresa: "empresa",
+      comparar: "descobrir",
+    } satisfies Record<string, FocoHomepage>).map(([perfil, foco]) => [foco, perfil]),
+  ),
+);
+
+/**
  * O perfil antigo → o foco que lhe corresponde.
  *
  * Só para a migração de quem tem `perfil` guardado de visitas anteriores.

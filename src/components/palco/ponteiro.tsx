@@ -80,6 +80,22 @@ const AMORTECIMENTO = 19;
 /** Abaixo disto está parado; poupa frames sem que se note. */
 const REPOUSO = 0.05;
 
+// ── O carregar ─────────────────────────────────────────────────────────
+//  Quanto o cursor encolhe ao premir, e com que rapidez lá chega.
+//
+//  Não é uma transição de CSS: a `transform` é reescrita a cada fotograma
+//  pela mola, e uma transição sobre a mesma propriedade ficaria a
+//  perseguir a posição com atraso. A escala integra-se no MESMO relógio,
+//  por aproximação exponencial — `v += (alvo − v)·(1 − e^(−dt/τ))`, que é
+//  estável seja qual for o `dt`.
+//
+//  Descer é mais rápido do que subir. Um dedo carrega com decisão e
+//  levanta-se sem pressa; τ iguais nos dois sentidos leem-se como um
+//  interruptor, não como uma mão.
+const ESCALA_PREMIDO = 0.82;
+const TAU_PREME = 0.03;
+const TAU_SOLTA = 0.055;
+
 export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
   const { parado } = useContext(PalcoContexto);
   const ref = useRef<HTMLDivElement>(null);
@@ -95,8 +111,35 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
     let ultimo = performance.now();
     let pos: Ponto | null = null;
     let vel = { x: 0, y: 0 };
-    let premidoAnterior: boolean | null = null;
+    let escala = 1;
     let visivelAnterior: boolean | null = null;
+
+    const escrever = () => {
+      const no = ref.current;
+      if (!no || !pos) return;
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ A ESCALA TEM DE VIVER DENTRO DA `transform`                   │
+      // │                                                               │
+      // │ Estava na propriedade individual `scale`, e isso não é o mesmo │
+      // │ sítio. O CSS compõe as propriedades individuais e a            │
+      // │ `transform` por esta ordem — `translate`, `rotate`, `scale`,   │
+      // │ e só DEPOIS `transform` — o que na matriz final significa que  │
+      // │ a `transform` se aplica ao ponto PRIMEIRO e a `scale` escala   │
+      // │ o resultado à volta da origem do elemento.                    │
+      // │                                                               │
+      // │ Ou seja: o cursor estava em (x, y) por `transform`, e premir   │
+      // │ passava-o para (0,82·x · 0,82·y) — encolhia a POSIÇÃO, não o   │
+      // │ desenho. A 178 px de altura, o clique atirava-o 43 px para     │
+      // │ cima e 40 px para a esquerda, num fotograma. Não era uma       │
+      // │ animação mal calibrada: era um teletransporte.                │
+      // │                                                               │
+      // │ Dentro da `transform`, depois das duas translações, a escala   │
+      // │ compõe-se onde tem de se compor: à volta do sítio onde o       │
+      // │ cursor está.                                                  │
+      // └───────────────────────────────────────────────────────────────┘
+      no.style.transform =
+        `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${escala})`;
+    };
 
     const passo = (agora: number) => {
       raf = requestAnimationFrame(passo);
@@ -113,19 +156,22 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
         visivelAnterior = Boolean(ponto);
         no.style.opacity = ponto ? "1" : "0";
       }
-      if (premidoAnterior !== premido) {
-        premidoAnterior = premido;
-        no.style.scale = premido ? "0.76" : "1";
-      }
       if (!ponto) return;
 
       if (!pos || imediato) {
         pos = { ...ponto };
         vel = { x: 0, y: 0 };
-        no.style.transform = `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px)`;
+        escala = 1;
+        escrever();
         return;
       }
       if (paradoRef.current) return;
+
+      // O carregar, no mesmo relógio que o percurso. `1 − e^(−dt/τ)` em vez
+      // de um passo fixo: com o separador em segundo plano o `dt` cresce e
+      // um passo fixo saltava o alvo.
+      const alvoEscala = premido ? ESCALA_PREMIDO : 1;
+      escala += (alvoEscala - escala) * (1 - Math.exp(-dt / (premido ? TAU_PREME : TAU_SOLTA)));
 
       // Mola: a = k·(alvo − pos) − c·v
       const ax = RIGIDEZ * (ponto.x - pos.x) - AMORTECIMENTO * vel.x;
@@ -141,7 +187,7 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
         pos = { ...ponto };
         vel = { x: 0, y: 0 };
       }
-      no.style.transform = `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px)`;
+      escrever();
     };
 
     raf = requestAnimationFrame(passo);
@@ -161,7 +207,10 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
     <div
       ref={ref}
       aria-hidden
-      className="pointer-events-none absolute left-0 top-0 z-40 opacity-0 transition-[scale] duration-100 ease-out"
+      // Sem `transition-[scale]`: a escala é integrada no relógio, dentro
+      // da `transform`. Uma transição de CSS sobre a mesma propriedade que
+      // o relógio reescreve a cada fotograma ficava a perseguir a posição.
+      className="pointer-events-none absolute left-0 top-0 z-40 opacity-0"
     >
       <CursorArrow size={22} className="text-ink drop-shadow-[0_2px_8px_rgba(26,26,23,.45)]" />
     </div>

@@ -413,10 +413,17 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
     // relógio suspende-se por cima disso.
     const hero = readFileSync(join(RAIZ, "components", "foco", "HeroBussola.tsx"), "utf8");
     expect(hero, "a mão encenada tem de sair com uma mão a sério em cena").toMatch(
-      /if \(sobrevoadoRef\.current\) return \{ ponto: null/,
+      /if \(escolhidoRef\.current\) return \{ ponto: null/,
     );
-    expect(hero, "sobrevoar tem de suspender o relógio").toMatch(
-      /suspenso: sobrevoado !== null/,
+    // E a mão sai porque a pessoa TOMOU CONTA — não porque o relógio
+    // ficou suspenso à espera de a ver ir embora. A distinção está em
+    // `usePalco.entregar`, e é o que impede o roteiro de trocar o painel
+    // que alguém acabou de abrir.
+    expect(hero, "apontar tem de entregar o palco, não suspendê-lo").toMatch(
+      /entregar\(\)/,
+    );
+    expect(hero, "e nada pode voltar a suspender em vez de entregar").not.toMatch(
+      /suspenso:/,
     );
   });
 

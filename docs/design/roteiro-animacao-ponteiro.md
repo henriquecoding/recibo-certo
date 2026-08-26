@@ -200,6 +200,65 @@ de ser preciso.
 
 ---
 
+## 5b. O carregar — e a armadilha da ordem de composição
+
+O clique tem duas metades: o cursor encolhe (`MAO`/`ESCALA_PREMIDO`, 0,82) e o
+anel de toque nasce. A primeira metade esteve errada durante toda a primeira
+versão, e o sintoma era inconfundível: **ao clicar, o cursor saltava para cima e
+para a esquerda.**
+
+### Porquê
+
+A escala estava na propriedade individual `scale`, e a posição na `transform`.
+São sítios diferentes, e o CSS compõe-nos por uma ordem fixa:
+
+```
+matriz final = translate · rotate · scale · transform
+```
+
+A `transform` é a que se aplica ao ponto **primeiro**; a `scale` escala o
+**resultado**, à volta da origem do elemento. Ou seja: o cursor estava em
+`(x, y)` por `transform`, e premir passava-o para `(0,82·x , 0,82·y)`. Encolhia
+a **posição**, não o desenho.
+
+A 178 px de altura e 430 px da esquerda, isso é um salto de **43 px para cima e
+77 px para a esquerda, num fotograma**. Não era uma animação mal calibrada: era
+um teletransporte com o aspeto de uma.
+
+### A correção
+
+A escala entra **dentro** da `transform`, depois das duas translações:
+
+```js
+no.style.transform =
+  `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${escala})`;
+```
+
+E deixa de ser uma transição de CSS. A `transform` é reescrita a cada fotograma
+pela mola; uma `transition` sobre a mesma propriedade ficaria a perseguir a
+posição com atraso. A escala integra-se no **mesmo relógio**, por aproximação
+exponencial:
+
+```
+escala += (alvo − escala) · (1 − e^(−dt/τ))
+```
+
+`1 − e^(−dt/τ)` e não um passo fixo: com o separador em segundo plano o `dt`
+cresce, e um passo fixo ultrapassava o alvo.
+
+**Descer é mais rápido do que subir** — `τ` de 30 ms a premir e 55 ms a largar.
+Um dedo carrega com decisão e levanta-se sem pressa; dois `τ` iguais leem-se
+como um interruptor, não como uma mão.
+
+### Como se mede
+
+`npm run bussola:e2e`, teste 1. Amostra a matriz do cursor e exige que, **nos
+fotogramas em que a escala muda, a posição não mude** — o que separa um clique
+de um teletransporte. A medição atual dá `0,0 px` de deslocamento com 9 valores
+distintos de escala ao longo do carregar.
+
+---
+
 ## 6. Duas armadilhas que já custaram caro
 
 ### 6.1 O estilo em linha ganha sempre à classe
@@ -248,6 +307,10 @@ Não «ver se parece bem». Traçar:
 2. Amostrar `transform` e `opacity` do ponteiro a cada ~500 ms e confirmar a
    sequência: entra num ponto de repouso → viaja → **para** → prime → larga →
    estaciona → viaja → prime → sai.
+2b. Amostrar a **matriz completa** e verificar que a posição não muda nos
+   fotogramas em que a escala muda. É o que apanha a §5b, e é a única forma:
+   a olho, um salto de 43 px num fotograma lê-se como «a animação está
+   estranha», que não é um diagnóstico.
 3. Confirmar que `prefers-reduced-motion: reduce` não desenha ponteiro nenhum e
    serve a cena resolvida.
 4. Confirmar que «Pausar» pára o cursor no sítio onde estava.

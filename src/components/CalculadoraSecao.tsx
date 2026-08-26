@@ -16,6 +16,7 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePerfil } from "@/lib/perfil";
+import { FOCO_DO_PERFIL_ANTIGO, FOCO_POR_ID, hrefDoFoco } from "@/components/foco/focos";
 import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
 import SeletorModo from "@/components/SeletorModo";
@@ -116,14 +117,38 @@ export default function CalculadoraSecao() {
   // conta de outrem, ~1 MB) não gastam dados a quem nunca os usa, mantendo a
   // troca de modo praticamente instantânea para quem mostra intenção.
 
+  // ── A PERGUNTA QUE ESTA SECÇÃO RESPONDE ──────────────────────────
+  //  A homepage tem duas metades que falavam línguas diferentes: o hero
+  //  fala `foco` (a pergunta, no URL) e isto fala `Perfil` (em
+  //  `localStorage`). Vinham do mesmo gesto e nada o dizia — descias a
+  //  página e o simulador aparecia sem explicação de porquê aquele.
+  //
+  //  Esta linha é a metade que faltava do laço: a bússola escreve o
+  //  perfil quando alguém carrega em «Experimentar já, aqui», e daqui
+  //  vê-se de que pergunta é que este simulador é a resposta — com o
+  //  caminho de volta à leitura completa dela.
+  const foco = FOCO_DO_PERFIL_ANTIGO[perfil];
+  const definicao = foco ? FOCO_POR_ID.get(foco) : undefined;
+
   return (
     <div className="mx-auto max-w-5xl">
-      {/* Seletor de modo — espelha o do hero, para trocar aqui mesmo */}
+      {/* Seletor de modo — espelha o da bússola, para trocar aqui mesmo */}
       <div className="mb-8 flex justify-center">
         <SeletorModo center />
       </div>
 
       <Reveal className="mb-10 text-center">
+        {definicao ? (
+          <p className="mb-3 text-sm text-stone-500 dark:text-stone-400">
+            A responder a{" "}
+            <Link
+              href={hrefDoFoco(definicao.id)}
+              className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+            >
+              «{definicao.pergunta}»
+            </Link>
+          </p>
+        ) : null}
         <div className="eyebrow mb-3 text-brand">{copy.eyebrow}</div>
         <h2 className="font-display display-2 font-semibold text-ink">{copy.h2}</h2>
         <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">{copy.sub}</p>

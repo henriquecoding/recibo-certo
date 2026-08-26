@@ -267,7 +267,9 @@ describe("negocio:regressao", () => {
     // a fonte de verdade e alimenta o painel da resposta.
     const seccao = ler("src/components/CalculadoraSecao.tsx");
     expect(FERRAMENTA_DO_FOCO.empresa).toBe("/ferramentas/simulador-empresa");
-    expect(ler("src/components/foco/HeroBussola.tsx")).toContain("href={focoAberto.ferramenta}");
+    expect(ler("src/components/foco/HeroBussola.tsx")).toContain(
+      "ferramenta={focoAberto.ferramenta}",
+    );
     expect(seccao).toContain("/ferramentas/simulador-empresa");
   });
 
