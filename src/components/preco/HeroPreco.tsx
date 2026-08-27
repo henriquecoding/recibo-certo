@@ -497,7 +497,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
         <div
           ref={palcoRef}
           data-palco="preco"
-          className="relative mt-7 rounded-[2rem] border border-categoria-areia-border bg-stone-50 shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:mt-9 sm:rounded-[2.5rem]"
+          className="relative mt-1 rounded-[2rem] border border-categoria-areia-border bg-stone-50 shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:mt-2 sm:rounded-[2.5rem]"
         >
           {/* As fichas e os anéis vivem sobre o palco inteiro, em absoluto:
               as coordenadas são medidas no DOM em tempo de execução, e é por

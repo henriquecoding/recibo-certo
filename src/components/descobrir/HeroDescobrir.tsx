@@ -28,7 +28,7 @@ export default function HeroDescobrir({ exemplo }: { exemplo: ExemploDescoberta 
       <div className="mx-auto max-w-6xl">
         <CabecalhoHeroFoco foco={FOCO} />
 
-        <div className="mt-10 sm:mt-12">
+        <div className="mt-1 sm:mt-2">
           <PalcoDescobrir exemplo={exemplo} />
         </div>
 

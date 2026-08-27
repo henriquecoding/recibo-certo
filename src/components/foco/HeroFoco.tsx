@@ -51,7 +51,7 @@ export default function HeroFoco({
       <div className="mx-auto max-w-6xl">
         <CabecalhoHeroFoco foco={foco} />
 
-        <div className="mt-10 sm:mt-12">{children}</div>
+        <div className="mt-1 sm:mt-2">{children}</div>
 
         {/* Um primário sólido para a ferramenta e um secundário com
             contorno para uma âncora DENTRO da página. Nunca dois

@@ -14,6 +14,7 @@ import { iconeDe } from "@/components/ferramentas/icon-map";
 import type { DefinicaoFoco } from "./focos";
 import { FOCOS } from "./focos";
 import { SubtituloHero, TituloHero } from "./TextosHero";
+import ReguaPerguntasHero from "./ReguaPerguntasHero";
 
 export default function CabecalhoHeroFoco({ foco }: { foco: DefinicaoFoco }) {
   const Icon = iconeDe(foco.icone);
@@ -48,6 +49,8 @@ export default function CabecalhoHeroFoco({ foco }: { foco: DefinicaoFoco }) {
           <SubtituloHero foco={foco.id} alinhamento="inicio" />
         </div>
       </div>
+
+      <ReguaPerguntasHero focoAtivo={foco.id} />
     </header>
   );
 }

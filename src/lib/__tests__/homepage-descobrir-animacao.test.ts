@@ -111,7 +111,8 @@ describe("homepage Descobrir: coreografia", () => {
     // está a fixar a primeira implementação que passou.
     expect(PAGINA).toContain("openGraph: {");
     expect(PAGINA).toContain("twitter: {");
-    expect(PAGINA).toContain("url: `/?foco=${foco}`");
+    expect(PAGINA).toContain('url: focoPedido ? `/?foco=${foco}` : "/"');
+    expect(PAGINA).toContain('const foco = focoPedido ?? "descobrir"');
     expect(PAGINA).toContain("const tituloSocial = `${title} | ReciboCerto`");
     expect(PAGINA).toContain("title: { absolute: tituloSocial }");
     // E a tabela por foco tem de cobrir TODOS — senão a generalização é só

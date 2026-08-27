@@ -159,7 +159,6 @@ function Cena({
   // ── Ato 3 · o custo afunda a linha da empresa ──────────────────────
   const afunda = estatico || ato > 2 || (ato === 2 && emCena("afunda"));
   const mergulho = useProgresso(afunda, 900, estatico);
-  const detalhe = noAto(2, "detalhe");
   const fossoVisivel = noAto(2, "fosso");
   const fichaCusto = estatico || ato > 2 || (ato === 2 && emCena("fichaCusto"));
 
@@ -189,21 +188,23 @@ function Cena({
   const yCruz = dados.cruzamento ? yZero : null;
   const xAtivo = px(pontoAtivo.faturacao);
   const yAtivo = py(valorEm(pontoAtivo));
+  const empresaVence = pontoAtivo.empresa > pontoAtivo.freelancer;
+  const diferencaAtiva = Math.abs(pontoAtivo.empresa - pontoAtivo.freelancer);
 
   const MARCAS = [minX, minX + (maxX - minX) / 2, maxX];
 
   return (
     <div className="relative">
-      <SeletorCenario
-        dados={dados}
-        ponto={pontoAtivo}
-        indice={indice}
-        aoMudar={aoMudar}
-      />
-
-      <div aria-hidden className="mt-3 grid gap-3 lg:grid-cols-[1.6fr_.85fr]">
+      <div className="grid overflow-hidden rounded-[1.75rem] border border-white/10 shadow-[0_24px_65px_rgba(0,0,0,.22)] lg:grid-cols-[1.55fr_.72fr]">
         {/* ── O gráfico ─────────────────────────────────────────── */}
-        <div className="rounded-3xl border border-white/10 bg-black/15 p-3 sm:p-4">
+        <div className="min-w-0 bg-black/15 p-3 sm:p-4">
+        <SeletorCenario
+          dados={dados}
+          ponto={pontoAtivo}
+          indice={indice}
+          aoMudar={aoMudar}
+        />
+        <div aria-hidden className="mt-3 rounded-3xl border border-white/10 bg-black/15 p-3 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">
@@ -390,130 +391,114 @@ function Cena({
         >
           Faturação anual · no zero as duas valem o mesmo · a tracejado, o cenário escolhido
         </m.div>
+        </div>
       </div>
 
-      {/* ── A leitura ───────────────────────────────────────────── */}
-      <div className="flex flex-col gap-3">
-        {/* O custo fixo, que é o que impede a leitura fácil. */}
+        {/* ── A decisão ───────────────────────────────────────────── */}
         <m.div
+          aria-hidden
           initial={false}
-          animate={{
-            opacity: fichaCusto ? 1 : 0.2,
-            y: fichaCusto && afunda ? 0 : -4,
-            borderColor: afunda ? "rgba(231,201,142,.45)" : "rgba(255,255,255,.1)",
-          }}
+          animate={{ opacity: valorVisivel ? 1 : 0.35 }}
           transition={t}
-          className="rounded-3xl border bg-[#e7c98e]/[.07] p-3.5"
+          className="relative flex min-h-full flex-col bg-[linear-gradient(145deg,#fbf8f1_0%,#f0e9dc_100%)] p-5 text-stone-900 sm:p-6"
         >
-          <div className="flex items-center gap-2">
-            <Warning size={12} className="flex-shrink-0 text-[#e7c98e]" />
-            <span className="text-[9px] font-bold uppercase tracking-wide text-[#e7c98e]">
-              Antes de render, custa
-            </span>
+          <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-brand/15 bg-brand-light px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.14em] text-brand-dark">
+            <Check size={10} /> Exemplo calculado
           </div>
-          <div className="mt-1.5 font-display text-xl font-semibold tabular-nums text-white">
-            {estatico || !afunda ? (
-              eur0(dados.custoFixo)
-            ) : (
-              <Contador valor={dados.custoFixo} formato={eur0} inicial={0} duracao={DUR.contaResultado} />
-            )}
-            <span className="ml-1 text-[10px] font-normal text-white/45">/ ano</span>
-          </div>
-          <m.p
-            initial={false}
-            animate={{ opacity: detalhe ? 1 : 0 }}
-            transition={t}
-            className="mt-1.5 text-[10px] leading-relaxed text-white/55"
-          >
-            Contabilidade obrigatória, todos os meses, mesmo num mês sem faturar. É o fosso que a
-            sociedade tem de recuperar antes de compensar.
-          </m.p>
-        </m.div>
 
-        {/* O veredicto. */}
-        <m.div
-          initial={false}
-          animate={{
-            opacity: valorVisivel ? 1 : 0.15,
-            borderColor: acende ? "rgba(159,225,203,.5)" : "rgba(255,255,255,.1)",
-          }}
-          transition={t}
-          className="rounded-3xl border bg-brand/[.09] p-3.5"
-        >
-          <div className="flex items-center gap-2">
-            <Scale size={12} className="flex-shrink-0 text-brand-mint" />
-            <span className="text-[9px] font-bold uppercase tracking-wide text-brand-mint">
-              A viragem
-            </span>
+          <div className="mt-5 text-[10px] font-bold uppercase tracking-[.18em] text-brand-dark">
+            Ponto de viragem
           </div>
           {dados.cruzamento ? (
             <>
-              <div className="mt-1.5 font-display text-2xl font-semibold leading-none tabular-nums text-white">
-                {estatico || !valorVisivel ? (
-                  eur0(dados.cruzamento)
-                ) : (
-                  <Contador
-                    valor={dados.cruzamento}
-                    formato={eur0}
-                    inicial={0}
-                    duracao={DUR.contaResultado}
-                  />
-                )}
+              <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                <span className="font-display text-[clamp(2.35rem,4.2vw,4rem)] font-semibold leading-none tabular-nums text-stone-950">
+                  {estatico || !valorVisivel ? (
+                    eur0(dados.cruzamento)
+                  ) : (
+                    <Contador
+                      valor={dados.cruzamento}
+                      formato={eur0}
+                      inicial={0}
+                      duracao={DUR.contaResultado}
+                    />
+                  )}
+                </span>
+                <span className="text-sm font-semibold text-stone-500">/ ano</span>
               </div>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-white/60">
-                Abaixo disto compensam os recibos verdes. Acima, a sociedade começa a compensar —
-                se a faturação se mantiver.
+              <p className="mt-3 text-sm leading-relaxed text-stone-600">
+                É onde a empresa começa a superar os recibos verdes neste cenário, já com o custo
+                de a manter contado.
               </p>
             </>
           ) : (
-            <p className="mt-1.5 text-[11px] leading-relaxed text-white/70">
-              Neste intervalo de faturação, os dois caminhos não se cruzam: compensam sempre os
-              recibos verdes.
+            <p className="mt-2 text-sm leading-relaxed text-stone-600">
+              Neste intervalo, os caminhos não se cruzam: os recibos verdes deixam sempre mais
+              líquido.
             </p>
           )}
-        </m.div>
 
-        {/* Onde a pessoa está — a leitura que fecha a cena. */}
-        <m.div
-          initial={false}
-          animate={{ opacity: ondeEstas ? 1 : 0, y: ondeEstas ? 0 : 6 }}
-          transition={t}
-          className="rounded-3xl border border-white/10 bg-white/[.04] p-3.5"
-        >
-          <span className="block text-[9px] font-bold uppercase tracking-wide text-white/40">
-            Neste cenário · {eur0(pontoAtivo.faturacao)} por ano
-          </span>
-          <div className="mt-2 space-y-1.5">
-            <Barra
-              Icon={Receipt}
-              rotulo="Recibos verdes"
-              valor={pontoAtivo.freelancer}
-              maximo={Math.max(pontoAtivo.freelancer, pontoAtivo.empresa)}
-              cor="bg-brand-mint"
-              vence={pontoAtivo.freelancer >= pontoAtivo.empresa}
-              visivel={ondeEstas}
-            />
-            <Barra
-              Icon={Building}
-              rotulo="Empresa"
-              valor={pontoAtivo.empresa}
-              maximo={Math.max(pontoAtivo.freelancer, pontoAtivo.empresa)}
-              cor="bg-[#e7c98e]"
-              vence={pontoAtivo.empresa > pontoAtivo.freelancer}
-              visivel={ondeEstas}
-            />
+          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border border-stone-300/80 bg-white/55">
+            <div className="px-3 py-3">
+              <div className="text-[9px] font-bold uppercase tracking-wide text-clay">Até cruzar</div>
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-stone-700">
+                <Receipt size={12} className="text-brand" /> Recibos verdes
+              </div>
+            </div>
+            <div className="flex items-center border-x border-stone-300/80 px-2 text-stone-400">→</div>
+            <div className="px-3 py-3 text-right">
+              <div className="text-[9px] font-bold uppercase tracking-wide text-brand-dark">Depois</div>
+              <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px] font-semibold text-stone-700">
+                <Building size={12} className="text-brand" /> Empresa
+              </div>
+            </div>
           </div>
-          <m.p
+
+          <m.div
             initial={false}
-            animate={{ opacity: resolvido ? 1 : 0 }}
+            animate={{ opacity: fichaCusto && afunda ? 1 : 0.25, y: fichaCusto ? 0 : -4 }}
             transition={t}
-            className="mt-2.5 text-[10px] leading-relaxed text-white/50"
+            className="mt-5 space-y-2 border-y border-stone-300/70 py-4 text-[11px] text-stone-600"
           >
-            Um número não decide sozinho: a sociedade traz obrigações, contabilidade e
-            responsabilidade limitada. O ponto de viragem diz quando vale a pena discuti-la.
-          </m.p>
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2"><Scale size={13} className="text-brand" /> Continente · 2026</span>
+              <span className="font-semibold text-stone-800">Cenário fiscal</span>
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="inline-flex items-center gap-2"><Warning size={13} className="text-clay" /> Contabilidade incluída</span>
+              <span className="font-semibold tabular-nums text-stone-800">{eur0(dados.custoFixo)}/ano</span>
+            </div>
+          </m.div>
+
+          <m.div
+            initial={false}
+            animate={{ opacity: ondeEstas ? 1 : 0, y: ondeEstas ? 0 : 6 }}
+            transition={t}
+            className="mt-auto pt-5"
+          >
+            <div className="text-[9px] font-bold uppercase tracking-[.14em] text-stone-500">
+              No cenário escolhido · {eur0(pontoAtivo.faturacao)}
+            </div>
+            <div className="mt-2 rounded-2xl bg-brand px-4 py-3 text-white shadow-[0_12px_30px_rgba(15,107,82,.2)]">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold">
+                  {empresaVence ? "A empresa passa à frente" : "Os recibos verdes ainda vencem"}
+                </span>
+                <span className="font-display text-lg font-semibold tabular-nums">
+                  +{eur0(diferencaAtiva)}
+                </span>
+              </div>
+              <m.p
+                initial={false}
+                animate={{ opacity: resolvido ? 1 : 0 }}
+                transition={t}
+                className="mt-1 text-[10px] leading-relaxed text-white/70"
+              >
+                Diferença líquida anual com os mesmos pressupostos.
+              </m.p>
+            </div>
+          </m.div>
         </m.div>
-        </div>
       </div>
     </div>
   );
@@ -615,41 +600,6 @@ function SeletorCenario({
         ) : null}
         <span>{eur0(fim)}</span>
       </div>
-    </div>
-  );
-}
-
-function Barra({
-  Icon,
-  rotulo,
-  valor,
-  maximo,
-  cor,
-  vence,
-  visivel,
-}: {
-  Icon: (props: { size?: number; className?: string }) => React.ReactNode;
-  rotulo: string;
-  valor: number;
-  maximo: number;
-  cor: string;
-  vence: boolean;
-  visivel: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Icon size={12} className="flex-shrink-0 text-white/45" />
-      <span className="w-[5.5rem] flex-shrink-0 truncate text-[10px] text-white/65">{rotulo}</span>
-      <span className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-white/10">
-        <span
-          className={`block h-full rounded-full transition-[width] duration-700 ${cor}`}
-          style={{ width: visivel ? `${(valor / (maximo || 1)) * 100}%` : "0%" }}
-        />
-      </span>
-      <span className="flex-shrink-0 text-[10px] font-semibold tabular-nums text-white">
-        {eur0(valor)}
-      </span>
-      {vence ? <Check size={11} className="flex-shrink-0 text-brand-mint" /> : <span className="w-[11px]" />}
     </div>
   );
 }
