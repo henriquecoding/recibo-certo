@@ -80,6 +80,56 @@ function marcaDeEstado(pronto: boolean) {
     : "border-white/10 bg-white/[.035] text-white/35";
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O PAPEL — o cartão da hipótese, e porque nenhuma cor dele tem `dark:`
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ 1,09:1 — O TÍTULO ERA INVISÍVEL NO MODO ESCURO                      │
+//  │                                                                     │
+//  │ O cartão tinha `bg-[#f8fbf8]`: um LITERAL, que nenhuma camada de    │
+//  │ tema remapeia. Mas o texto lá dentro usava `text-ink` e             │
+//  │ `text-stone-600`, que o `.dark` de `globals.css` inverte para tons  │
+//  │ CLAROS — porque assume que uma superfície escura está por baixo.    │
+//  │                                                                     │
+//  │ As duas metades discordavam: fundo branco fixo, texto a ficar       │
+//  │ branco. Medido no browser, no escuro:                               │
+//  │                                                                     │
+//  │   título .................. 1,09:1   ← ilegível                     │
+//  │   «Mapear o processo…» .... 1,53:1                                  │
+//  │   «O que a faria falhar» .. 1,63:1                                  │
+//  │   «Hipótese composta» ..... 2,00:1                                  │
+//  │                                                                     │
+//  │ Os únicos elementos que sobreviviam eram os dois chips — porque     │
+//  │ têm fundo PRÓPRIO (`bg-brand-light`, `bg-stone-100`), que a mesma   │
+//  │ camada remapeia, e por isso fundo e texto viravam juntos.           │
+//  └─────────────────────────────────────────────────────────────────────┘
+//
+//  A regra que fica, e que vale para todo o palco: **este palco é escuro
+//  nos DOIS temas** (`bg-[#0c251e]`, ver a moldura). Uma superfície que
+//  não muda com o tema não pode levar cores que mudam. Ou tudo literal,
+//  ou tudo do tema — misturar é o defeito.
+//
+//  É a mesma disciplina do `TINTA` no palco da Empresa, pela mesma razão.
+//  No modo claro nada muda: os valores são exatamente os que o tema já
+//  resolvia (medido, 5,46:1 a 16,7:1, tudo acima de AA).
+const PAPEL = {
+  fundo: "bg-[#F8FBF8]",
+  halo: "bg-[#E1F5EE]",
+  /** `ink` — 16,7:1 sobre o papel. */
+  titulo: "text-[#1A1A17]",
+  /** `stone-600` — 7,3:1. */
+  corpo: "text-[#57534E]",
+  /** O verde da marca — 5,5:1. */
+  marca: "text-[#177E5E]",
+  risco: "border-[#E7E5DE]",
+  chipMarca: "bg-[#E1F5EE] text-[#0F6E56]",
+  chipNeutro: "bg-[#F1EFE7] text-[#57534E]",
+  aviso: "border-[#E6C5B7] bg-[#F6E7E0]",
+  avisoTitulo: "text-[#97553C]",
+  avisoCorpo: "text-[#5F5650]",
+} as const;
+
 export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta }) {
   const reduz = useReducedMotion();
   const [montado, setMontado] = useState(false);
@@ -704,9 +754,9 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                       <span className="mt-1 text-[9px] leading-relaxed text-white/30">Só aparece depois de sobreviver ao contexto, às fronteiras e às lacunas.</span>
                     </m.div>
                   ) : (
-                    <m.article key="hipotese" initial={estatico ? false : { opacity: 0, scale: 0.92, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={estatico ? { duration: 0 } : { duration: DUR.assenta / 1000, ease: ASSENTA }} className="relative min-h-[258px] overflow-hidden rounded-3xl border border-brand-mint/45 bg-[#f8fbf8] p-4 text-stone-800 shadow-[0_16px_46px_rgba(2,24,18,.28)] sm:min-h-[230px] lg:min-h-[278px]">
-                      <div aria-hidden className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-brand-light blur-2xl" />
-                      <div className="relative text-[8px] font-bold uppercase tracking-[.16em] text-brand">Hipótese composta</div>
+                    <m.article key="hipotese" initial={estatico ? false : { opacity: 0, scale: 0.92, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={estatico ? { duration: 0 } : { duration: DUR.assenta / 1000, ease: ASSENTA }} className={`relative min-h-[258px] overflow-hidden rounded-3xl border border-brand-mint/45 p-4 shadow-[0_16px_46px_rgba(2,24,18,.28)] sm:min-h-[230px] lg:min-h-[278px] ${PAPEL.fundo} ${PAPEL.corpo}`}>
+                      <div aria-hidden className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${PAPEL.halo}`} />
+                      <div className={`relative text-[8px] font-bold uppercase tracking-[.16em] ${PAPEL.marca}`}>Hipótese composta</div>
                       <m.span
                         aria-hidden
                         initial={false}
@@ -716,21 +766,21 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                       >
                         <Check size={12} />
                       </m.span>
-                      <h3 className="relative mt-1.5 font-display text-lg font-semibold leading-[1.08] text-ink">{exemplo.titulo}</h3>
+                      <h3 className={`relative mt-1.5 font-display text-lg font-semibold leading-[1.08] ${PAPEL.titulo}`}>{exemplo.titulo}</h3>
 
                       <m.div initial={false} animate={{ opacity: mostraModelo ? 1 : 0, y: mostraModelo ? 0 : 5 }} transition={transicao} className="relative mt-3 flex flex-wrap gap-1.5">
-                        <span className="rounded-full bg-brand-light px-2.5 py-1 text-[8px] font-bold text-brand-dark">{exemplo.modelo}</span>
-                        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-[8px] font-bold text-stone-600">B2B</span>
+                        <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${PAPEL.chipMarca}`}>{exemplo.modelo}</span>
+                        <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${PAPEL.chipNeutro}`}>B2B</span>
                       </m.div>
 
-                      <m.div initial={false} animate={{ opacity: mostraTeste ? 1 : 0, y: mostraTeste ? 0 : 6 }} transition={transicao} className="relative mt-3 border-t border-stone-200 pt-2.5">
-                        <div className="flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wide text-brand"><Target size={10} /> Primeiro teste</div>
-                        <p className="mt-1 text-[9px] leading-relaxed text-stone-600">{exemplo.primeiroTeste}</p>
+                      <m.div initial={false} animate={{ opacity: mostraTeste ? 1 : 0, y: mostraTeste ? 0 : 6 }} transition={transicao} className={`relative mt-3 border-t pt-2.5 ${PAPEL.risco}`}>
+                        <div className={`flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wide ${PAPEL.marca}`}><Target size={10} /> Primeiro teste</div>
+                        <p className={`mt-1 text-[9px] leading-relaxed ${PAPEL.corpo}`}>{exemplo.primeiroTeste}</p>
                       </m.div>
 
-                      <m.div initial={false} animate={{ opacity: mostraCriterio ? 1 : 0, y: mostraCriterio ? 0 : 6 }} transition={transicao} className="relative mt-2 rounded-2xl border border-clay-border bg-clay-bg/65 px-2.5 py-2">
-                        <div className="text-[8px] font-bold uppercase tracking-wide text-clay-text">O que a faria falhar</div>
-                        <p className="mt-1 text-[8px] leading-relaxed text-stone-600">{exemplo.testeDeFalsificacao}</p>
+                      <m.div initial={false} animate={{ opacity: mostraCriterio ? 1 : 0, y: mostraCriterio ? 0 : 6 }} transition={transicao} className={`relative mt-2 rounded-2xl border px-2.5 py-2 ${PAPEL.aviso}`}>
+                        <div className={`text-[8px] font-bold uppercase tracking-wide ${PAPEL.avisoTitulo}`}>O que a faria falhar</div>
+                        <p className={`mt-1 text-[8px] leading-relaxed ${PAPEL.avisoCorpo}`}>{exemplo.testeDeFalsificacao}</p>
                       </m.div>
                     </m.article>
                   )}

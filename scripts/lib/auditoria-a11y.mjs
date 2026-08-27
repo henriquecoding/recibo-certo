@@ -140,6 +140,19 @@ const extrasPara = (seletor) => `(() => {
   // era o teste a não conhecer o padrão.
   const transbordam = [...raiz.querySelectorAll("*")]
     .filter(visivel)
+    // ATENÇÃO — SVG FORA. Num elemento de texto de SVG, clientWidth e
+    // scrollWidth não querem dizer o que querem em HTML: o primeiro é a
+    // caixa arredondada e o segundo a largura real da tinta, e diferem
+    // por fração de pixel em QUALQUER texto. A regra dava "transborda
+    // +28px" em três rótulos do gráfico da Empresa que, medidos, ocupam
+    // 36..193 dentro de um SVG de 0..1076 — não transbordam coisa
+    // nenhuma. Texto de SVG também não quebra linha nem recorta: se não
+    // couber, o desenho é que está mal dimensionado, e isso aparece no
+    // scrollHorizontal da página.
+    //
+    // (Sem crases neste comentário de propósito: ele vive DENTRO de um
+    // template literal, e uma crase aqui fecha a sonda a meio.)
+    .filter((el) => !(el.ownerSVGElement || el.tagName.toLowerCase() === "svg"))
     .filter((el) => el.clientWidth > 4)
     .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()))
     .filter((el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== "auto")

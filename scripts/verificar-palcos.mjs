@@ -17,7 +17,9 @@
 //     das superfícies no escuro. Uma camada de realce que resolve para o
 //     pastel de modo claro é uma falha objetiva, e foi assim que se
 //     apanhou a armadilha do `dark:` a vencer o remapeamento de
-//     `globals.css`.
+//     `globals.css`. E, desde que o axe deu verde a um título com
+//     **1,09:1** no cartão do Descobrir, há aqui uma varredura de
+//     contraste própria — ver `verificarContraste`.
 //   · a régua tem de responder a arrasto, a toque e a teclado, e o ponto
 //     selecionado no gráfico tem de a acompanhar — senão é decoração.
 //
@@ -457,6 +459,87 @@ async function verificarArranquePorEtapas(navegador) {
   await ctx.close();
 }
 
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O CONTRASTE REAL DE CADA PALCO, NOS DOIS TEMAS
+//  ---------------------------------------------------------------------
+//  ┌───────────────────────────────────────────────────────────────────────┐
+//  │ O AXE PASSOU COM 1,09:1                                               │
+//  │                                                                       │
+//  │ O cartão da hipótese do Descobrir tinha `bg-[#f8fbf8]` — um LITERAL,  │
+//  │ que nenhuma camada de tema remapeia — e texto em `text-ink` e         │
+//  │ `text-stone-600`, que o `.dark` de `globals.css` inverte para tons    │
+//  │ claros. Fundo branco fixo, texto a ficar branco: o título ficava a    │
+//  │ **1,09:1** e era literalmente invisível.                              │
+//  │                                                                       │
+//  │ `auditar-a11y-focos.mjs` corre o axe na vista «desktop escuro» e      │
+//  │ deu VERDE. Uma regra de contraste que não apanha 1,09:1 não é a rede  │
+//  │ que se pensava ter — e é por isso que esta varredura existe ao lado.  │
+//  └───────────────────────────────────────────────────────────────────────┘
+//
+//  Mede a razão de contraste de TODO o texto de cada palco contra o fundo
+//  opaco mais próximo, nos dois temas. Ignora o que está a meio de uma
+//  transição de opacidade (< 0,9), porque aí a cor ainda não é a final.
+//
+//  4,5:1 é o limiar da WCAG AA para texto normal. Os palcos usam muito
+//  texto de 8–11 px, que é precisamente onde o limiar importa mais.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** A sonda corre DENTRO do browser. A luminância é a da WCAG, com gama. */
+const SONDA_CONTRASTE = `(() => {
+  const canal = (v) => { const s = v/255; return s <= 0.04045 ? s/12.92 : Math.pow((s+0.055)/1.055, 2.4); };
+  const luz = (c) => { const m = (c.match(/[\\d.]+/g) ?? []).map(Number); return 0.2126*canal(m[0]||0) + 0.7152*canal(m[1]||0) + 0.0722*canal(m[2]||0); };
+  const opaco = (c) => { const m = (c.match(/[\\d.]+/g) ?? []).map(Number); return m.length < 4 || m[3] >= 0.95; };
+  // O fundo EFETIVO: o primeiro antecessor com cor opaca. É o que o olho
+  // vê, e não o que o elemento declara — que é quase sempre transparente.
+  const fundoDe = (el) => { let n = el; while (n && n !== document.documentElement) { const b = getComputedStyle(n).backgroundColor; if (b && b !== "rgba(0, 0, 0, 0)" && opaco(b)) return b; n = n.parentElement; } return getComputedStyle(document.body).backgroundColor; };
+  const razao = (a, b) => { const L1 = Math.max(luz(a), luz(b)), L2 = Math.min(luz(a), luz(b)); return (L1 + 0.05) / (L2 + 0.05); };
+  const secao = document.querySelector("[id$='-titulo']")?.closest("section");
+  if (!secao) return null;
+  const maus = [];
+  for (const el of secao.querySelectorAll("*")) {
+    const txt = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent.trim()).join("");
+    if (!txt) continue;
+    const cs = getComputedStyle(el);
+    if (cs.visibility === "hidden" || cs.display === "none") continue;
+    let op = 1, n = el; while (n && n !== document.body) { op *= Number(getComputedStyle(n).opacity); n = n.parentElement; }
+    if (op < 0.9) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) continue;
+    const k = razao(cs.color, fundoDe(el));
+    if (k < 4.5) maus.push({ txt: txt.slice(0, 30), k: Number(k.toFixed(2)), cor: cs.color, fundo: fundoDe(el) });
+  }
+  return maus;
+})()`;
+
+async function verificarContraste(navegador) {
+  for (const foco of ["descobrir", "preco", "recibos", "empresa", "salario"]) {
+    for (const tema of ["light", "dark"]) {
+      const ctx = await contexto(navegador, tema);
+      const p = await ctx.newPage();
+      await p.goto(`${ENDERECO}/?foco=${foco}`, { waitUntil: "load" });
+      await p.locator("section").first().scrollIntoViewIfNeeded().catch(() => {});
+      await p.waitForTimeout(CENA_EMPRESA + 3000);
+      const maus = await p.evaluate(SONDA_CONTRASTE);
+      if (maus === null) {
+        verificar(false, `[contraste/${foco}/${tema}] palco não encontrado`);
+      } else {
+        verificar(
+          maus.length === 0,
+          `[contraste/${foco}/${tema}] todo o texto acima de 4,5:1`,
+          maus.length
+            ? maus
+                .slice(0, 3)
+                .map((m) => `${m.k}:1 «${m.txt}» (${m.cor} sobre ${m.fundo})`)
+                .join(" · ")
+            : "",
+        );
+      }
+      await ctx.close();
+    }
+  }
+}
+
 // ── Correr ─────────────────────────────────────────────────────────────
 const navegador = await chromium.launch(EXEC ? { executablePath: EXEC } : {});
 try {
@@ -465,6 +548,7 @@ try {
   await verificarRegua(navegador);
   await verificarTemaEscuro(navegador);
   await verificarArranquePorEtapas(navegador);
+  await verificarContraste(navegador);
 } finally {
   await navegador.close();
 }

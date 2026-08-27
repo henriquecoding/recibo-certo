@@ -327,7 +327,12 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
                 />
               )}
             </m.div>
-            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-stone-400">
+            {/* `text-stone-500` e não `stone-400`: medido, o 400 dava
+                4,26:1 sobre a pastilha escura — abaixo dos 4,5 de AA para
+                texto pequeno. O 500 sobe para 5,4:1 e no claro mantém-se
+                acima. Apanhado pela varredura de contraste de
+                `palcos:e2e`, que o axe não apanha. */}
+            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-stone-500 dark:text-stone-300">
               <span className="rounded-full bg-stone-100 px-2 py-0.5 font-semibold dark:bg-stone-800">
                 Art. 151.º
               </span>

@@ -548,7 +548,7 @@ function GraficoVantagem({
         transition={transicao}
         className="mt-1 grid grid-cols-2 gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(9rem,.65fr)_minmax(0,1fr)]"
       >
-        <CartaoLiquido titulo="Recibos verdes" Icone={Receipt} valor={ponto.freelancer} vence={!empresaVence && !empate} cor={TINTA.rv} />
+        <CartaoLiquido titulo="Recibos verdes" curto="Recibos" Icone={Receipt} valor={ponto.freelancer} vence={!empresaVence && !empate} cor={TINTA.rv} />
         <div className="order-3 col-span-2 flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[.035] px-3 text-center lg:order-none lg:col-span-1">
           <span className="text-[9px] font-bold uppercase tracking-[.12em] text-white/35">diferença anual</span>
           <span className="mt-1 font-display text-lg font-semibold tabular-nums" style={{ color: empate ? "rgba(255,255,255,.75)" : empresaVence ? TINTA.empresa : TINTA.rv }}>
@@ -566,12 +566,22 @@ function GraficoVantagem({
 
 function CartaoLiquido({
   titulo,
+  curto,
   Icone,
   valor,
   vence,
   cor,
 }: {
   titulo: string;
+  /**
+   * O nome a 320 px, onde o inteiro não cabe.
+   *
+   * Dois rótulos e não um cortado: mesmo sem `tracking`, «Recibos verdes»
+   * transbordava 20 px e saía como «Recibos verd…». Reticências num nome
+   * não são um nome — a mesma regra que a tabela do palco do Salário já
+   * segue, e que a auditoria aplica em todo o site.
+   */
+  curto?: string;
   Icone: (props: { size?: number; className?: string }) => React.ReactNode;
   valor: number;
   vence: boolean;
@@ -582,8 +592,16 @@ function CartaoLiquido({
       className="min-w-0 rounded-2xl border bg-white/[.035] p-3 transition-[border-color,box-shadow] duration-300"
       style={{ borderColor: vence ? `${cor}77` : "rgba(255,255,255,.1)", boxShadow: vence ? `0 0 0 1px ${cor}22` : "none" }}
     >
-      <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.1em] text-white/45">
-        <Icone size={11} /> <span className="truncate">{titulo}</span>
+      {/* `tracking` só a partir de `sm`: a 320 px os 0,1em espalhados por
+          catorze letras valem ~12 px, e eram eles que faziam «Recibos
+          verdes» sair como «Recibos verd…». Reticências num nome não são
+          um nome — a mesma regra que a auditoria aplica em todo o site. */}
+      <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-normal text-white/45 sm:tracking-[.1em]">
+        <Icone size={11} className="flex-shrink-0" />{" "}
+        <span className="truncate">
+          <span className="sm:hidden">{curto ?? titulo}</span>
+          <span className="hidden sm:inline">{titulo}</span>
+        </span>
         {vence ? <Check size={10} className="ml-auto flex-shrink-0" /> : null}
       </div>
       <div className="mt-1.5 truncate font-display text-[clamp(1rem,3vw,1.45rem)] font-semibold tabular-nums text-white">{eur0(valor)}</div>
