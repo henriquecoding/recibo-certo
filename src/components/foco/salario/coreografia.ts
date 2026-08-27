@@ -83,9 +83,12 @@ export const ATOS_SALARIO: Ato[] = [
       { id: "bate1", em: 620 },
       { id: "bate2", em: 710 },
       { id: "bate3", em: 800 },
-      // ── SILÊNCIO · 380 ms (`PASSO.outro`) ──
-      //  O beat de que tudo depende. Sem ele a linha errada seria só mais
-      //  uma a acender; com ele, é a única que ficou de fora.
+      // ── SILÊNCIO · 800 ms ──
+      //  Mais do dobro de `PASSO.outro`, e é o silêncio mais longo do site.
+      //  É o beat de que tudo depende: sem ele a linha errada seria só mais
+      //  uma a acender; com ele, é a única que ficou de fora. O comentário
+      //  dizia 380 ms — o valor da constante, não o intervalo real entre
+      //  `bate3` e `falha`, que sempre foram estes 800.
       { id: "falha", em: 1600 },
       { id: "marcaFalha", em: 2100 },
     ],

@@ -110,7 +110,11 @@ async function medirRota(navegador, rota) {
     const n = performance.getEntriesByType("navigation")[0];
     const tarefas = performance.getEntriesByType("longtask") ?? [];
     return {
-      domContentLoaded: n ? n.domContentLoaded - n.startTime : 0,
+      // `domContentLoadedEventEnd`, e não `domContentLoaded`: o segundo
+      // não existe em `PerformanceNavigationTiming` (é do velho
+      // `performance.timing`), e a subtração dava `NaN` — uma coluna
+      // inteira do relatório a dizer «NaN ms» sem nada a falhar.
+      domContentLoaded: n ? n.domContentLoadedEventEnd - n.startTime : 0,
       load: n ? n.loadEventEnd - n.startTime : 0,
       bloqueio: tarefas.reduce((s, t) => s + Math.max(0, t.duration - 50), 0),
     };

@@ -23,6 +23,25 @@
 //  ⚠️ Servir uma BUILD. Um `next start` sobre uma build anterior serve o
 //  código antigo e faz parecer que a correção não funcionou.
 //
+//  ⚠️⚠️ A BÚSSOLA JÁ NÃO É O HERO DE `/`.
+//
+//  A reestruturação que trouxe `CabecalhoHeroFoco` e `ReguaPerguntasHero`
+//  tirou `HeroBussola` da página — `foco-heros.test.ts` até exige que
+//  `page.tsx` não o contenha —, e `HeroBussola.tsx` ficou sem nenhum
+//  consumidor de produção.
+//
+//  Este ficheiro mede cinco garantias de um componente que não está no
+//  ecrã. Deixá-lo a esbarrar num tempo-limite de 30 s com um rasto de
+//  pilha era pior do que inútil: parecia uma regressão do palco em que
+//  alguém estivesse a mexer. Agora deteta a ausência, diz-lhe o nome, e
+//  sai sem inventar um veredicto — nem verde, que seria mentira, nem
+//  vermelho, que apontaria para o sítio errado.
+//
+//  A decisão que falta é do dono do produto, e é uma de duas: a bússola
+//  volta a `/` e estas cinco garantias voltam a valer, ou `HeroBussola.tsx`
+//  e este ficheiro saem juntos. Enquanto nenhuma for tomada, isto fica
+//  aqui a dizer que está por decidir.
+//
 //  PLAYWRIGHT_CHROMIUM  caminho para um Chromium já instalado (opcional)
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -41,6 +60,16 @@ const EXEC = process.env.PLAYWRIGHT_CHROMIUM;
 // construtor global e põe-no na zona morta temporal — `new URL(...)`
 // mais acima rebentava com «Cannot access 'URL' before initialization».
 const ENDERECO = process.env.BASE_URL ?? "http://localhost:3000/";
+
+/**
+ * A bússola está no ecrã?
+ *
+ * Uma pergunta, feita uma vez, antes de qualquer medição — e não cinco
+ * tempos-limite de 30 s a dizerem a mesma coisa em cinco sítios.
+ */
+async function bussolaNaPagina(p) {
+  return (await p.locator('ol[aria-labelledby="bussola-hero-titulo"] a').count()) > 0;
+}
 
 function ok(cond, msg, extra = "") {
   console.log(`${cond ? "  OK  " : "  FALHA"} ${msg}${extra ? " · " + extra : ""}`);
@@ -97,6 +126,33 @@ const estado = (p) =>
       focado: document.activeElement?.textContent?.slice(0, 26).replace(/\s+/g, " "),
     };
   });
+
+// ═══ 0 · A BÚSSOLA AINDA ESTÁ EM `/`? ═════════════════════════════════
+{
+  const { b, p } = await abrir();
+  if (!(await bussolaNaPagina(p))) {
+    console.log(
+      [
+        "",
+        "  A bússola NÃO está no hero de `/`.",
+        "",
+        '  `ol[aria-labelledby="bussola-hero-titulo"]` não existe na página. A',
+        "  reestruturação para `CabecalhoHeroFoco` + `ReguaPerguntasHero` tirou",
+        "  `HeroBussola` de `page.tsx`, e `foco-heros.test.ts` exige que assim",
+        "  fique. As cinco garantias deste ficheiro são de um componente que",
+        "  não está no ecrã — não há nada para medir, e por isso não há",
+        "  veredicto.",
+        "",
+        "  A decidir: ou a bússola volta a `/`, ou `HeroBussola.tsx` e este",
+        "  ficheiro saem juntos.",
+        "",
+      ].join("\n"),
+    );
+    await b.close();
+    process.exit(0);
+  }
+  await b.close();
+}
 
 // ═══ 1 · O CLIQUE NÃO TELETRANSPORTA ═══════════════════════════════════
 {

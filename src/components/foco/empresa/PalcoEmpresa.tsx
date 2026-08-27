@@ -1,30 +1,105 @@
 "use client";
 
-import { useState } from "react";
-import { m } from "motion/react";
-import { Building, Check, Receipt, Scale, Warning } from "@/components/ui/Icons";
-import MolduraPalco, { type CenaDoPalco } from "@/components/palco/MolduraPalco";
-import { Contador, useProgresso } from "@/components/palco/atores";
-import { ATOS_EMPRESA, DUR, ENTRADA, ASSENTA, entre } from "./coreografia";
+// ═══════════════════════════════════════════════════════════════════════
+//  «O PONTO DE VIRAGEM» — o palco do foco da empresa
+//  ---------------------------------------------------------------------
+//  Três peças, e nenhuma delas é nova nesta casa:
+//
+//   1. A **régua de faturação** — o mesmo controlo do comparador de
+//      cenários: um `role="slider"` próprio com captura de ponteiro,
+//      atalhos de teclado, marcador de viragem e atalhos de valor. Era um
+//      `<input type="range">` com uma cadeia de pseudo-elementos por
+//      estilar; o nativo não sabe desenhar marcadores dentro da calha, e
+//      era por isso que a viragem vivia numa legenda por baixo em vez de
+//      estar onde acontece.
+//   2. As **duas colunas repartidas** — «para onde vai cada euro», o
+//      mesmo desenho que o comparador usa para os três regimes. Mesma
+//      altura porque partem da mesma faturação; o que se compara é o
+//      tamanho da fatia que fica.
+//   3. A **faixa do domínio** — a fronteira, desenhada como o que é: uma
+//      barra com dois lados e um corte. Substituiu uma `polyline` que
+//      tinha um defeito de FORMA, não de custo: a pergunta é um limiar
+//      («a partir de quanto?»), e um limiar tem duas zonas e uma
+//      fronteira. Uma curva a subir tem infinitos valores intermédios
+//      que ninguém precisa de ler, e precisa de espaço DEPOIS do
+//      cruzamento para se ler como cruzamento — o que obrigava a
+//      escolher o teto do eixo pela estética em vez de pelo domínio.
+//
+//  ── O que era «travado», medido em vez de suposto ────────────────────
+//
+//  A suspeita óbvia era o custo de render: o palco anterior crescia por
+//  `useProgresso`, que é `setState` a 60 Hz, e voltava a renderizar a cena
+//  inteira — quarenta pontos de `polyline`, o seletor e dois contadores —
+//  a cada frame. **Medido lado a lado, não era isso.** Com a cena a correr
+//  e com um arrasto lento de ponta a ponta, a 1×, 4× e 6× de estrangulamento
+//  de CPU, as duas versões perdem a mesma proporção de frames (0,3% a 12%,
+//  conforme o estrangulamento) — e a 6× o que se perde é da PÁGINA, não do
+//  palco.
+//
+//  O que estava mesmo avariado era a INTERAÇÃO, e vê-se num toque:
+//
+//   · **O `<input type="range">` não respondia a dedo nenhum.** Toque
+//     simples e arrasto de dedo sobre a calha, a 390 px: o valor ficava em
+//     25 e não se mexia. Num telemóvel, o único controlo do palco era
+//     inerte — que é exatamente a palavra «travada».
+//   · **`setPointerCapture` derrubava a árvore.** Ver o quadro em
+//     `aoDescer`, mais abaixo: uma exceção por tratar fazia o palco
+//     desaparecer do ecrã a meio de um gesto.
+//
+//  O crescimento passou na mesma para transições de CSS sobre `height`,
+//  `opacity` e `transform` — não porque a alternativa fosse lenta, mas
+//  porque uma pausa a meio deixa a transição onde está sem nada continuar
+//  a mexer, e porque durante um arrasto a transição se desliga por
+//  completo: o dedo é a autoridade.
+//
+//  **Não usa `bg-cmp-imposto` nem `dark:`.** O palco escuro é escuro nos
+//  DOIS temas (`#0c251e`, ver `MolduraPalco`), e as classes de tema
+//  trocariam de valor com a preferência do sistema para um fundo que não
+//  muda — que é meio caminho para o modo claro mostrar dois verdes quase
+//  pretos um ao lado do outro. A paleta está fixada em `TINTA`, escolhida
+//  contra `#0c251e` e não contra o papel da página.
+// ═══════════════════════════════════════════════════════════════════════
 
-const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
-const mil = (n: number) => `${Math.round(n / 1000)}k`;
+import { useCallback, useMemo, useRef, useState } from "react";
+import { m, type Transition } from "motion/react";
+import { Building, Check, GripHorizontal, Receipt, Scale, Warning } from "@/components/ui/Icons";
+import MolduraPalco, { type CenaDoPalco } from "@/components/palco/MolduraPalco";
+import { Contador } from "@/components/palco/atores";
+import { ATOS_EMPRESA, DUR, ENTRADA, ASSENTA } from "./coreografia";
+
+/**
+ * Euros sem cêntimos, com o separador de milhares SEMPRE.
+ *
+ * `toLocaleString("pt-PT")` sozinho usa `useGrouping: "auto"`, que suprime o
+ * separador em inteiros de quatro dígitos. O palco ficava a dizer
+ * «1920 €», «4678 €» e «180 500 €» na mesma vista — três números da mesma
+ * grandeza escritos de duas maneiras, e a lê-los depressa os de quatro
+ * dígitos parecem ter mais casas do que têm.
+ */
+const eur0 = (n: number) =>
+  `${new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 0, useGrouping: true }).format(
+    Math.round(n),
+  )} €`;
+const mil = (n: number) => `${Math.round(n / 1000)}k€`;
 
 export interface PontoComparacao {
   faturacao: number;
   freelancer: number;
   /** Líquido pela empresa, já com o custo de a ter. */
   empresa: number;
-  /** Líquido pela empresa se ela não custasse nada a manter. */
-  empresaSemCustos: number;
+  /** Para onde vai o resto em recibos verdes. Com `freelancer`, soma a faturação. */
+  rv: { irs: number; ss: number };
+  /** Para onde vai o resto pela sociedade. Com `empresa`, soma a faturação. */
+  soc: { irc: number; dividendos: number; contabilidade: number };
 }
 
 export interface DadosEmpresa {
-  pontos: readonly PontoComparacao[];
-  /** Cenários calculados no servidor que alimentam a régua interativa. */
+  /** Cenários calculados no servidor que alimentam a régua. */
   cenarios: readonly PontoComparacao[];
   /** A faturação em que a empresa passa à frente. `null` se nunca passa. */
   cruzamento: number | null;
+  /** O teto da escala: o limite do regime simplificado (Art. 28.º CIRS). */
+  limiteSimplificado: number;
   /** O custo anual de ter empresa (contabilidade). */
   custoFixo: number;
   /** A faturação do exemplo editorial usado nas secções abaixo do palco. */
@@ -33,39 +108,75 @@ export interface DadosEmpresa {
   exemploEmpresa: number;
 }
 
-// ── A caixa do desenho, em unidades do `viewBox` ───────────────────────
-const L = 420;
-const A = 210;
-const M = { esq: 8, dir: 12, topo: 16, base: 30 };
+// ── A paleta, contra `#0c251e` ────────────────────────────────────────
+//
+//  Quatro tintas e uma regra: o VERDE VIVO é sempre o que fica contigo,
+//  em qualquer coluna. Se a fatia verde de uma coluna for maior, é essa a
+//  que compensa — e isso tem de se poder ler sem legenda nenhuma.
+const TINTA = {
+  /** O que fica. */
+  fica: "#4FD1A3",
+  /** IRS, ou o imposto sobre os dividendos ao retirar o lucro. */
+  imposto: "#3E93AE",
+  /** Segurança Social, ou o IRC com a derrama. */
+  impostoFundo: "#1F5A6B",
+  /** O custo fixo de ter empresa. Areia — o tom que o palco já usa para «custo». */
+  custo: "#E7C98E",
+} as const;
+
+/** A curva de tudo o que cresce, escrita para CSS. */
+const CURVA_CSS = `cubic-bezier(${ENTRADA.join(",")})`;
+
+interface Fatia {
+  id: string;
+  rotulo: string;
+  valor: number;
+  cor: string;
+  /** Só a fatia que fica leva rótulo por dentro. */
+  destaque?: boolean;
+}
 
 export default function PalcoEmpresa({ dados }: { dados: DadosEmpresa }) {
-  const [indice, setIndice] = useState(() =>
-    Math.max(
-      0,
-      dados.cenarios.findIndex((ponto) =>
-        dados.cruzamento
-          ? ponto.faturacao === dados.cruzamento
-          : ponto.faturacao === dados.exemplo,
-      ),
-    ),
-  );
-  const pontoAtivo = dados.cenarios[indice] ?? dados.cenarios[0] ?? dados.pontos[0]!;
-  const melhorEscolhido =
-    pontoAtivo.empresa > pontoAtivo.freelancer ? "empresa" : "recibos verdes";
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ NÃO ABRE NO PONTO DE VIRAGEM, E ISSO É O CONTRÁRIO DO ÓBVIO       │
+  // │                                                                   │
+  // │ A primeira versão abria lá — «é a resposta que o palco tem para   │
+  // │ dar». Posto a correr, a cena inteira resolvia-se em «a empresa    │
+  // │ passa à frente, +2 €»: no cruzamento os dois caminhos valem, por  │
+  // │ definição, o MESMO. As duas colunas ficavam idênticas, a fatia    │
+  // │ da contabilidade valia 1% da faturação e não se via, e o          │
+  // │ veredicto anunciava uma vitória de dois euros.                     │
+  // │                                                                   │
+  // │ O cruzamento é o sítio onde a comparação é MENOS legível. Ele já  │
+  // │ está dito três vezes — no marcador da calha, no corte da faixa e  │
+  // │ no número grande da ficha da viragem. A régua abre no exemplo     │
+  // │ editorial, uma faturação onde a diferença se vê e onde o custo    │
+  // │ fixo ainda pesa o suficiente para ter uma fatia.                  │
+  // └───────────────────────────────────────────────────────────────────┘
+  const indiceInicial = useMemo(() => {
+    const encontrado = dados.cenarios.findIndex((ponto) => ponto.faturacao === dados.exemplo);
+    return encontrado >= 0 ? encontrado : 0;
+  }, [dados.cenarios, dados.exemplo]);
+
+  const [indice, setIndice] = useState(indiceInicial);
+  const [arrastando, setArrastando] = useState(false);
+  const ponto = dados.cenarios[indice] ?? dados.cenarios[0]!;
+  const diferenca = ponto.empresa - ponto.freelancer;
+  const vence = diferenca > 0 ? "a empresa" : "os recibos verdes";
 
   return (
     <MolduraPalco
       id="palco-empresa"
       tom="escuro"
       nome="O ponto de viragem"
-      resumo="A diferença entre o líquido de uma sociedade e o de recibos verdes, traçada ao longo da faturação anual, com o custo de ter empresa contado. Onde a linha cruza o zero é o ponto de viragem."
+      resumo={`A mesma faturação anual repartida pelos dois caminhos — recibos verdes e sociedade —, com o custo fixo de ter empresa contado, e a faturação a partir da qual a conta se inverte.`}
       narracao={[
-        `O eixo mostra faturação anual de ${mil(dados.pontos[0]?.faturacao ?? 0)} a ${mil(dados.pontos[dados.pontos.length - 1]?.faturacao ?? 0)} euros. O seletor abre em ${eur0(pontoAtivo.faturacao)} e pode ser ajustado por toque, arrasto ou teclado.`,
-        "A linha mostra quanto a sociedade deixa a mais ou a menos do que recibos verdes. Abaixo do zero, compensam os recibos verdes; acima, compensa a sociedade.",
-        `Ter empresa custa cerca de ${eur0(dados.custoFixo)} por ano em contabilidade, antes de qualquer imposto. É esse custo que afunda a linha e empurra o ponto de viragem para a direita.`,
+        `A régua vai de ${eur0(dados.cenarios[0]?.faturacao ?? 0)} a ${eur0(dados.limiteSimplificado)} de faturação anual — o limite do regime simplificado, Art. 28.º do CIRS. Abre em ${eur0(ponto.faturacao)} e pode ser ajustada por toque, arrasto ou teclado.`,
+        `Com ${eur0(ponto.faturacao)} de faturação: por recibos verdes ficam ${eur0(ponto.freelancer)}, sendo ${eur0(ponto.rv.irs)} de IRS e ${eur0(ponto.rv.ss)} de Segurança Social. Por uma sociedade ficam ${eur0(ponto.empresa)}, sendo ${eur0(ponto.soc.irc)} de IRC com derrama, ${eur0(ponto.soc.dividendos)} de imposto sobre os dividendos e ${eur0(ponto.soc.contabilidade)} de contabilidade.`,
+        `Ter empresa custa ${eur0(dados.custoFixo)} por ano em contabilidade certificada, antes de qualquer imposto e mesmo num mês sem faturar. É esse custo fixo que a faturação tem de recuperar antes de a sociedade compensar seja o que for.`,
         dados.cruzamento
-          ? `A linha cruza o zero por volta dos ${eur0(dados.cruzamento)} de faturação anual. Abaixo disso compensam os recibos verdes; acima, a sociedade. No cenário escolhido de ${eur0(pontoAtivo.faturacao)}, compensa ${melhorEscolhido}.`
-          : `Dentro deste intervalo de faturação a linha nunca chega ao zero: compensam sempre os recibos verdes.`,
+          ? `A conta inverte-se aos ${eur0(dados.cruzamento)} de faturação anual: abaixo disso compensam os recibos verdes, acima compensa a sociedade. No cenário escolhido de ${eur0(ponto.faturacao)}, compensam ${vence}, com uma diferença de ${eur0(Math.abs(diferenca))} por ano.`
+          : `Até ao limite do regime simplificado a conta nunca se inverte: com estes pressupostos, compensam sempre os recibos verdes.`,
       ]}
       atos={ATOS_EMPRESA}
     >
@@ -73,9 +184,11 @@ export default function PalcoEmpresa({ dados }: { dados: DadosEmpresa }) {
         <Cena
           cena={cena}
           dados={dados}
-          pontoAtivo={pontoAtivo}
+          ponto={ponto}
           indice={indice}
+          arrastando={arrastando}
           aoMudar={setIndice}
+          aoArrastar={setArrastando}
         />
       )}
     </MolduraPalco>
@@ -85,335 +198,181 @@ export default function PalcoEmpresa({ dados }: { dados: DadosEmpresa }) {
 function Cena({
   cena,
   dados,
-  pontoAtivo,
+  ponto,
   indice,
+  arrastando,
   aoMudar,
+  aoArrastar,
 }: {
   cena: CenaDoPalco;
   dados: DadosEmpresa;
-  pontoAtivo: PontoComparacao;
+  ponto: PontoComparacao;
   indice: number;
+  arrastando: boolean;
   aoMudar: (indice: number) => void;
+  aoArrastar: (arrastando: boolean) => void;
 }) {
   const { ato, emCena, estatico } = cena;
   const t = estatico ? { duration: 0 } : { duration: DUR.entrada / 1000, ease: ENTRADA };
-  const noAto = (indice: number, beat: string) =>
-    estatico || ato > indice || (ato === indice && emCena(beat));
+  const noAto = (indiceAto: number, beat: string) =>
+    estatico || ato > indiceAto || (ato === indiceAto && emCena(beat));
 
-  // ┌───────────────────────────────────────────────────────────────────┐
-  // │ O QUE SE DESENHA É A DIFERENÇA, E NÃO DOIS ABSOLUTOS              │
-  // │                                                                   │
-  // │ A primeira versão traçava os dois líquidos por cima do mesmo      │
-  // │ eixo. Era honesta e era ilegível: com o zero em baixo e 130 mil   │
-  // │ em cima, uma diferença de três mil euros são dois pixéis. As      │
-  // │ duas linhas corriam coladas e o «cruzamento» não se via cruzar.   │
-  // │                                                                   │
-  // │ Cortar o eixo em baixo resolveria — e é a mentira clássica de um  │
-  // │ gráfico. A resposta certa é outra: a pergunta deste palco não é   │
-  // │ «quanto rende cada um», é «qual deles rende MAIS, e a partir de   │
-  // │ quando». Essa pergunta tem uma resposta de uma dimensão só.       │
-  // │                                                                   │
-  // │ Aqui a linha é `empresa − recibos verdes`. Começa em baixo do     │
-  // │ zero, sobe, e CRUZA O ZERO no ponto de viragem. O zero é o eixo   │
-  // │ verdadeiro — nada é truncado —, e o cruzamento passa a ser        │
-  // │ impossível de não ver, porque é o momento em que a linha muda de  │
-  // │ lado. É o princípio da congruência: a forma do gráfico passou a   │
-  // │ ser a forma da pergunta.                                          │
-  // └───────────────────────────────────────────────────────────────────┘
-  const xs = dados.pontos.map((p) => p.faturacao);
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
+  // ── Ato 1 · o cenário ─────────────────────────────────────────────
+  const regua = noAto(0, "regua");
+  const valorAberto = noAto(0, "valor");
+  const escala = noAto(0, "escala");
+  const dominio = noAto(0, "dominio");
 
-  /** A vantagem da empresa, já com o custo de a ter. */
-  const dif = (p: PontoComparacao) => p.empresa - p.freelancer;
-  /** A mesma vantagem se a sociedade não custasse nada a manter. */
-  const difSemCustos = (p: PontoComparacao) => p.empresaSemCustos - p.freelancer;
-
-  const todosY = dados.pontos.flatMap((p) => [dif(p), difSemCustos(p), 0]);
-  const minY = Math.min(...todosY);
-  const maxY = Math.max(...todosY);
-  const folga = (maxY - minY) * 0.12 || 1;
-
-  const px = (f: number) => M.esq + ((f - minX) / (maxX - minX || 1)) * (L - M.esq - M.dir);
-  const py = (v: number) =>
-    A -
-    M.base -
-    ((v - (minY - folga)) / (maxY + folga - (minY - folga) || 1)) * (A - M.topo - M.base);
-  const yZero = py(0);
-
-  // ── Ato 1 · o eixo ─────────────────────────────────────────────────
-  const eixo = noAto(0, "eixo");
-  const marcas = noAto(0, "marcas");
-  const marcador = noAto(0, "marcador");
-  const legendaAberta = noAto(0, "legenda");
-
-  // ── Ato 2 · as duas linhas ─────────────────────────────────────────
-  // Crescem AO MESMO TEMPO, à mesma velocidade, na mesma direção. É a
-  // única sobreposição deliberada de toda a casa: são a mesma pergunta a
-  // receber duas respostas, e o acontecimento não é nenhuma delas chegar
-  // — é o cruzamento. Separá-las no tempo destruiria isso.
-  const traca = estatico || ato > 1 || (ato === 1 && emCena("linhaRV"));
-  const cresce = useProgresso(traca, 1600, estatico);
+  // ── Ato 2 · para onde vai cada euro ───────────────────────────────
+  const colunas = noAto(1, "colunas");
+  const sobe = noAto(1, "sobe");
   const rotulos = noAto(1, "rotulos");
+  const liquidos = noAto(1, "liquidos");
 
-  // ── Ato 3 · o custo afunda a linha da empresa ──────────────────────
-  const afunda = estatico || ato > 2 || (ato === 2 && emCena("afunda"));
-  const mergulho = useProgresso(afunda, 900, estatico);
-  const fossoVisivel = noAto(2, "fosso");
-  const fichaCusto = estatico || ato > 2 || (ato === 2 && emCena("fichaCusto"));
+  // ── Ato 3 · o custo ───────────────────────────────────────────────
+  // `isola` é o único beat do site que BAIXA coisas em vez de as trazer.
+  // Toda a coluna recua para 35% e só a contabilidade fica — o custo
+  // vê-se por ser a única coisa acesa, não por ter chegado agora.
+  const isola = ato === 2 && !estatico;
+  const acende = ato === 2 && emCena("acende");
+  const fichaCusto = noAto(2, "ficha");
+  const fosso = noAto(2, "fosso");
 
-  // ── Ato 4 · a viragem ──────────────────────────────────────────────
-  const cruzaVisivel = estatico || (ato === 3 && emCena("cruza"));
-  const acende = estatico || (ato === 3 && emCena("acendeCruz"));
-  const valorVisivel = estatico || (ato === 3 && emCena("valor"));
-  const ondeEstas = estatico || (ato === 3 && emCena("ondeEstas"));
-  const resolvido = estatico || (ato === 3 && emCena("resolve"));
+  // ── Ato 4 · a viragem ─────────────────────────────────────────────
+  const parte = noAto(3, "parte");
+  const marca = noAto(3, "marca");
+  const valorViragem = noAto(3, "valor");
+  const veredicto = noAto(3, "veredicto");
+  const resolve = estatico || (ato === 3 && emCena("resolve"));
 
-  // Quantos pontos da linha já foram traçados.
-  const ate = Math.max(1, Math.round(cresce * (dados.pontos.length - 1)));
-  const visiveis = dados.pontos.slice(0, ate + 1);
+  const diferenca = ponto.empresa - ponto.freelancer;
+  const empresaVence = diferenca > 0;
 
-  /** A linha da vantagem: sem custos no ato 2, com custos a partir do 3. */
-  const valorEm = (p: PontoComparacao) => entre(difSemCustos(p), dif(p), mergulho);
-  const linhaDif = visiveis.map((p) => `${px(p.faturacao)},${py(valorEm(p))}`).join(" ");
-  /** A área entre a linha e o zero — é ela que dá lado ao sinal. */
-  const areaDif =
-    visiveis.length > 1
-      ? `${px(visiveis[0].faturacao)},${yZero} ${linhaDif} ${px(visiveis[visiveis.length - 1].faturacao)},${yZero}`
-      : "";
-
-  const xCruz = dados.cruzamento ? px(dados.cruzamento) : null;
-  // O cruzamento acontece EM cima do zero, por construção: é a definição
-  // do ponto de viragem. Não há nada para interpolar.
-  const yCruz = dados.cruzamento ? yZero : null;
-  const xAtivo = px(pontoAtivo.faturacao);
-  const yAtivo = py(valorEm(pontoAtivo));
-  const empresaVence = pontoAtivo.empresa > pontoAtivo.freelancer;
-  const diferencaAtiva = Math.abs(pontoAtivo.empresa - pontoAtivo.freelancer);
-
-  const MARCAS = [minX, minX + (maxX - minX) / 2, maxX];
+  const fatiasRV: Fatia[] = [
+    { id: "fica", rotulo: "Fica contigo", valor: ponto.freelancer, cor: TINTA.fica, destaque: true },
+    { id: "irs", rotulo: "IRS", valor: ponto.rv.irs, cor: TINTA.imposto },
+    { id: "ss", rotulo: "Segurança Social", valor: ponto.rv.ss, cor: TINTA.impostoFundo },
+  ];
+  const fatiasSoc: Fatia[] = [
+    { id: "fica", rotulo: "Fica contigo", valor: ponto.empresa, cor: TINTA.fica, destaque: true },
+    { id: "div", rotulo: "Imposto sobre dividendos", valor: ponto.soc.dividendos, cor: TINTA.imposto },
+    { id: "irc", rotulo: "IRC e derrama", valor: ponto.soc.irc, cor: TINTA.impostoFundo },
+    { id: "cont", rotulo: "Contabilidade", valor: ponto.soc.contabilidade, cor: TINTA.custo },
+  ];
 
   return (
-    <div className="relative">
-      <div className="grid overflow-hidden rounded-[1.75rem] border border-white/10 shadow-[0_24px_65px_rgba(0,0,0,.22)] lg:grid-cols-[1.55fr_.72fr]">
-        {/* ── O gráfico ─────────────────────────────────────────── */}
-        <div className="min-w-0 bg-black/15 p-3 sm:p-4">
-        <SeletorCenario
+    <div className="relative grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(17rem,.62fr)] lg:items-start">
+      <div className="min-w-0 space-y-3">
+        <ReguaFaturacao
           dados={dados}
-          ponto={pontoAtivo}
+          ponto={ponto}
           indice={indice}
+          arrastando={arrastando}
           aoMudar={aoMudar}
+          aoArrastar={aoArrastar}
+          estatico={estatico}
+          visivel={regua}
+          valorAberto={valorAberto}
+          escalaAberta={escala}
+          dominioAberto={dominio}
+          partido={parte}
+          marcado={marca}
+          transicao={t}
         />
-        <div aria-hidden className="mt-3 rounded-3xl border border-white/10 bg-black/15 p-3 sm:p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">
-              A diferença · 01
-            </div>
-            <div className="mt-1 text-xs font-semibold text-white/80">
-              Quanto a empresa deixa a mais (ou a menos)
-            </div>
-          </div>
-          <m.div
-            initial={false}
-            animate={{ opacity: rotulos ? 1 : 0 }}
-            transition={t}
-            className="flex flex-wrap items-center gap-3 text-[9px] font-semibold"
-          >
-            <span className="inline-flex items-center gap-1.5 text-white/70">
-              <span className="h-2.5 w-4 rounded-sm bg-brand-mint/25" /> Compensam recibos verdes
-            </span>
-            <span className="inline-flex items-center gap-1.5 text-white/70">
-              <span className="h-2.5 w-4 rounded-sm bg-[#e7c98e]/35" /> Compensa a empresa
-            </span>
-          </m.div>
-        </div>
-
-        <svg
-          viewBox={`0 0 ${L} ${A}`}
-          className="mt-2 w-full"
-          style={{ aspectRatio: `${L} / ${A}` }}
-          role="presentation"
-        >
-          {/* A grelha entra COM o eixo — uma peça não se mostra meio
-              carregada, e uma grelha sem eixo é uma escala pendurada. */}
-          <m.g
-            initial={false}
-            animate={{ opacity: eixo ? 1 : 0 }}
-            transition={t}
-          >
-            {[0.25, 0.5, 0.75].map((f) => (
-              <line
-                key={f}
-                x1={M.esq}
-                x2={L - M.dir}
-                y1={M.topo + (A - M.base - M.topo) * f}
-                y2={M.topo + (A - M.base - M.topo) * f}
-                stroke="rgba(255,255,255,.05)"
-                strokeWidth="1"
-              />
-            ))}
-            {/* O ZERO é o eixo. É onde as duas opções valem o mesmo, e é
-                a única linha do desenho que precisa de peso. */}
-            <line
-              x1={M.esq}
-              x2={L - M.dir}
-              y1={yZero}
-              y2={yZero}
-              stroke="rgba(255,255,255,.4)"
-              strokeWidth="1.5"
-            />
-            {/* «0» e não «valem o mesmo»: o texto transbordava 28 px da
-                sua caixa SVG, e o que ele dizia já está dito no rótulo
-                por baixo do gráfico e na legenda das duas zonas. Uma
-                etiqueta que sai do desenho não é legenda. */}
-            <text x={M.esq + 2} y={yZero - 5} fill="rgba(255,255,255,.5)" fontSize="9" fontWeight="700">
-              0
-            </text>
-            {/* Duas referências de escala. Sem elas a linha diz «sobe» e
-                não diz «quanto» — e «quanto» é a única coisa que
-                distingue um argumento de uma seta para cima. */}
-            <text x={L - M.dir - 2} y={py(maxY) + 3} textAnchor="end" fill="rgba(231,201,142,.6)" fontSize="8" fontWeight="600">
-              + {eur0(maxY)}
-            </text>
-            <text x={L - M.dir - 2} y={py(minY) + 3} textAnchor="end" fill="rgba(159,225,203,.55)" fontSize="8" fontWeight="600">
-              − {eur0(Math.abs(minY))}
-            </text>
-          </m.g>
-
-          {MARCAS.map((f, i) => (
-            <m.text
-              key={f}
-              x={px(f)}
-              y={A - 8}
-              textAnchor={i === 0 ? "start" : i === MARCAS.length - 1 ? "end" : "middle"}
-              fill="rgba(255,255,255,.4)"
-              fontSize="9"
-              fontWeight="600"
-              initial={false}
-              animate={{ opacity: marcas ? 1 : 0 }}
-              transition={estatico ? { duration: 0 } : { ...t, delay: i * 0.08 }}
-            >
-              {mil(f)}
-            </m.text>
-          ))}
-
-          {/* O FOSSO — a área entre a vantagem sem custos e a real.
-              É o que ter empresa custa antes de render, e aqui vê-se
-              como uma faixa a separar duas alturas da mesma linha. */}
-          {fossoVisivel && visiveis.length > 1 ? (
-            <polygon
-              points={`${visiveis.map((p) => `${px(p.faturacao)},${py(difSemCustos(p))}`).join(" ")} ${[...visiveis].reverse().map((p) => `${px(p.faturacao)},${py(dif(p))}`).join(" ")}`}
-              fill="rgba(231,201,142,.14)"
-            />
-          ) : null}
-
-          {/* A área entre a linha e o zero: verde quando a empresa está a
-              perder (a vantagem é negativa) e areia quando está a ganhar.
-              O sinal deixa de ser uma coisa que se lê no eixo e passa a
-              ser o LADO em que a mancha está. */}
-          {areaDif ? (
-            <>
-              <defs>
-                <clipPath id="acimaDoZero">
-                  <rect x={0} y={M.topo - 4} width={L} height={Math.max(0, yZero - M.topo + 4)} />
-                </clipPath>
-                <clipPath id="abaixoDoZero">
-                  <rect x={0} y={yZero} width={L} height={Math.max(0, A - M.base - yZero + 4)} />
-                </clipPath>
-              </defs>
-              <polygon points={areaDif} fill="rgba(231,201,142,.2)" clipPath="url(#acimaDoZero)" />
-              <polygon points={areaDif} fill="rgba(159,225,203,.16)" clipPath="url(#abaixoDoZero)" />
-            </>
-          ) : null}
-
-          {visiveis.length > 1 ? (
-            <polyline
-              points={linhaDif}
-              fill="none"
-              stroke="#e7c98e"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : null}
-
-          {/* O marcador segue o cenário escolhido. É a causa visível das
-              duas barras e do veredicto que mudam ao mesmo gesto. */}
-          <m.g initial={false} animate={{ opacity: marcador ? 1 : 0 }} transition={t}>
-            <line
-              x1={xAtivo}
-              x2={xAtivo}
-              y1={M.topo}
-              y2={A - M.base}
-              stroke="rgba(255,255,255,.3)"
-              strokeWidth="1"
-              strokeDasharray="3 3"
-            />
-            <text
-              x={xAtivo}
-              y={M.topo - 5}
-              textAnchor={
-                pontoAtivo.faturacao === minX
-                  ? "start"
-                  : pontoAtivo.faturacao === maxX
-                    ? "end"
-                    : "middle"
-              }
-              fill="rgba(255,255,255,.55)"
-              fontSize="9"
-              fontWeight="700"
-            >
-              {mil(pontoAtivo.faturacao)}
-            </text>
-            <circle cx={xAtivo} cy={yAtivo} r="4" fill="#e7c98e" stroke="#0c251e" strokeWidth="2" />
-          </m.g>
-
-          {/* O cruzamento: o acontecimento deste palco. */}
-          {xCruz !== null && yCruz !== null ? (
-            <m.g
-              initial={false}
-              animate={{ opacity: cruzaVisivel ? 1 : 0, scale: acende ? 1 : 0.6 }}
-              style={{ transformOrigin: `${xCruz}px ${yCruz}px` }}
-              transition={estatico ? { duration: 0 } : { duration: DUR.assenta / 1000, ease: ASSENTA }}
-            >
-              <circle cx={xCruz} cy={yCruz} r="10" fill="rgba(159,225,203,.18)" />
-              <circle cx={xCruz} cy={yCruz} r="4.5" fill="#0c251e" stroke="#9FE1CB" strokeWidth="2.5" />
-            </m.g>
-          ) : null}
-        </svg>
 
         <m.div
           initial={false}
-          animate={{ opacity: legendaAberta ? 1 : 0 }}
+          animate={{ opacity: colunas ? 1 : 0, y: colunas ? 0 : 10 }}
           transition={t}
-          className="mt-1 text-center text-[9px] text-white/35"
+          className="rounded-3xl border border-white/10 bg-black/20 p-3 sm:p-4"
         >
-          Faturação anual · no zero as duas valem o mesmo · a tracejado, o cenário escolhido
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-[.16em] text-white/40">
+              Para onde vai cada euro
+            </h3>
+            <p className="text-[10px] text-white/40">
+              Mesma altura porque parte da mesma faturação
+            </p>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-4">
+            <ColunaRepartida
+              titulo="Recibos verdes"
+              Icone={Receipt}
+              fatias={fatiasRV}
+              total={ponto.faturacao}
+              liquido={ponto.freelancer}
+              cresceu={sobe}
+              mostraLiquido={liquidos}
+              mostraRotulo={rotulos}
+              vence={!empresaVence}
+              recuada={isola}
+              estatico={estatico}
+              arrastando={arrastando}
+            />
+            <ColunaRepartida
+              titulo="Empresa"
+              Icone={Building}
+              fatias={fatiasSoc}
+              total={ponto.faturacao}
+              liquido={ponto.empresa}
+              cresceu={sobe}
+              mostraLiquido={liquidos}
+              mostraRotulo={rotulos}
+              vence={empresaVence}
+              recuada={isola}
+              acesa={acende ? "cont" : undefined}
+              estatico={estatico}
+              arrastando={arrastando}
+            />
+          </div>
+
+          <Legenda visivel={rotulos} transicao={t} />
         </m.div>
-        </div>
       </div>
 
-        {/* ── A decisão ───────────────────────────────────────────── */}
+      {/* ── A leitura ────────────────────────────────────────────── */}
+      <div className="flex min-w-0 flex-col gap-3">
         <m.div
-          aria-hidden
           initial={false}
-          animate={{ opacity: valorVisivel ? 1 : 0.35 }}
+          animate={{ opacity: fichaCusto ? 1 : 0.25, y: fichaCusto ? 0 : -6 }}
           transition={t}
-          className="relative flex min-h-full flex-col bg-[linear-gradient(145deg,#fbf8f1_0%,#f0e9dc_100%)] p-5 text-stone-900 sm:p-6"
+          className="rounded-3xl border border-[#e7c98e]/25 bg-[#e7c98e]/[.07] p-4"
         >
-          <div className="inline-flex w-fit items-center gap-1.5 rounded-full border border-brand/15 bg-brand-light px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.14em] text-brand-dark">
-            <Check size={10} /> Exemplo calculado
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#e7c98e]">
+            <Warning size={12} /> O custo de ter
           </div>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="font-display text-2xl font-semibold tabular-nums text-white">
+              {eur0(dados.custoFixo)}
+            </span>
+            <span className="text-[11px] font-semibold text-white/45">por ano</span>
+          </div>
+          <m.p
+            initial={false}
+            animate={{ opacity: fosso ? 1 : 0 }}
+            transition={t}
+            className="mt-2 text-[11px] leading-relaxed text-white/55"
+          >
+            Contabilidade certificada, obrigatória e mensal — mesmo num mês sem faturar. Sai antes
+            de qualquer imposto, e é o fosso que a faturação tem de recuperar primeiro.
+          </m.p>
+        </m.div>
 
-          <div className="mt-5 text-[10px] font-bold uppercase tracking-[.18em] text-brand-dark">
-            Ponto de viragem
+        <m.div
+          initial={false}
+          animate={{ opacity: valorViragem ? 1 : 0.2, y: valorViragem ? 0 : 8 }}
+          transition={t}
+          className="rounded-3xl border border-brand-mint/25 bg-brand-mint/[.06] p-4"
+        >
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-brand-mint">
+            <Scale size={12} /> A viragem
           </div>
           {dados.cruzamento ? (
             <>
-              <div className="mt-1 flex flex-wrap items-baseline gap-1.5">
-                <span className="font-display text-[clamp(2.35rem,4.2vw,4rem)] font-semibold leading-none tabular-nums text-stone-950">
-                  {estatico || !valorVisivel ? (
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-display text-[clamp(1.9rem,4.4vw,2.9rem)] font-semibold leading-none tabular-nums text-white">
+                  {estatico || !valorViragem ? (
                     eur0(dados.cruzamento)
                   ) : (
                     <Contador
@@ -424,182 +383,584 @@ function Cena({
                     />
                   )}
                 </span>
-                <span className="text-sm font-semibold text-stone-500">/ ano</span>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-stone-600">
-                É onde a empresa começa a superar os recibos verdes neste cenário, já com o custo
-                de a manter contado.
-              </p>
-            </>
-          ) : (
-            <p className="mt-2 text-sm leading-relaxed text-stone-600">
-              Neste intervalo, os caminhos não se cruzam: os recibos verdes deixam sempre mais
-              líquido.
-            </p>
-          )}
-
-          <div className="mt-5 grid grid-cols-[1fr_auto_1fr] overflow-hidden rounded-2xl border border-stone-300/80 bg-white/55">
-            <div className="px-3 py-3">
-              <div className="text-[9px] font-bold uppercase tracking-wide text-clay">Até cruzar</div>
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-stone-700">
-                <Receipt size={12} className="text-brand" /> Recibos verdes
-              </div>
-            </div>
-            <div className="flex items-center border-x border-stone-300/80 px-2 text-stone-400">→</div>
-            <div className="px-3 py-3 text-right">
-              <div className="text-[9px] font-bold uppercase tracking-wide text-brand-dark">Depois</div>
-              <div className="mt-1 flex items-center justify-end gap-1.5 text-[11px] font-semibold text-stone-700">
-                <Building size={12} className="text-brand" /> Empresa
-              </div>
-            </div>
-          </div>
-
-          <m.div
-            initial={false}
-            animate={{ opacity: fichaCusto && afunda ? 1 : 0.25, y: fichaCusto ? 0 : -4 }}
-            transition={t}
-            className="mt-5 space-y-2 border-y border-stone-300/70 py-4 text-[11px] text-stone-600"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2"><Scale size={13} className="text-brand" /> Continente · 2026</span>
-              <span className="font-semibold text-stone-800">Cenário fiscal</span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="inline-flex items-center gap-2"><Warning size={13} className="text-clay" /> Contabilidade incluída</span>
-              <span className="font-semibold tabular-nums text-stone-800">{eur0(dados.custoFixo)}/ano</span>
-            </div>
-          </m.div>
-
-          <m.div
-            initial={false}
-            animate={{ opacity: ondeEstas ? 1 : 0, y: ondeEstas ? 0 : 6 }}
-            transition={t}
-            className="mt-auto pt-5"
-          >
-            <div className="text-[9px] font-bold uppercase tracking-[.14em] text-stone-500">
-              No cenário escolhido · {eur0(pontoAtivo.faturacao)}
-            </div>
-            <div className="mt-2 rounded-2xl bg-brand px-4 py-3 text-white shadow-[0_12px_30px_rgba(15,107,82,.2)]">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-semibold">
-                  {empresaVence ? "A empresa passa à frente" : "Os recibos verdes ainda vencem"}
-                </span>
-                <span className="font-display text-lg font-semibold tabular-nums">
-                  +{eur0(diferencaAtiva)}
-                </span>
+                <span className="text-xs font-semibold text-white/45">/ ano</span>
               </div>
               <m.p
                 initial={false}
-                animate={{ opacity: resolvido ? 1 : 0 }}
+                animate={{ opacity: resolve ? 1 : 0 }}
                 transition={t}
-                className="mt-1 text-[10px] leading-relaxed text-white/70"
+                className="mt-2 text-[11px] leading-relaxed text-white/55"
               >
-                Diferença líquida anual com os mesmos pressupostos.
+                Abaixo compensam os recibos verdes; acima, a sociedade. Com os lucros todos
+                retirados, a viragem só acontece perto do teto do regime simplificado — e acima
+                desse teto a pergunta deixa de ser esta.
               </m.p>
-            </div>
-          </m.div>
+            </>
+          ) : (
+            <p className="mt-2 text-[11px] leading-relaxed text-white/55">
+              Até ao limite do regime simplificado a conta nunca se inverte: com estes pressupostos,
+              compensam sempre os recibos verdes.
+            </p>
+          )}
+        </m.div>
+
+        <m.div
+          initial={false}
+          animate={{ opacity: veredicto ? 1 : 0, y: veredicto ? 0 : 8 }}
+          transition={t}
+          className="mt-auto rounded-3xl bg-brand p-4 text-white shadow-[0_14px_34px_rgba(10,74,57,.35)]"
+        >
+          <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/60">
+            No cenário escolhido · {eur0(ponto.faturacao)}
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <span className="text-xs font-semibold">
+              {/* Menos de um euro é um empate, e chamar-lhe vitória seria
+                  transformar ruído de arredondamento numa recomendação. */}
+              {Math.abs(diferenca) < 1
+                ? "Aqui as duas valem o mesmo"
+                : empresaVence
+                  ? "A empresa passa à frente"
+                  : "Compensam os recibos verdes"}
+            </span>
+            {Math.abs(diferenca) >= 1 ? (
+              <span className="font-display text-xl font-semibold tabular-nums">
+                +{eur0(Math.abs(diferenca))}
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-1 text-[10px] leading-relaxed text-white/65">
+            {Math.abs(diferenca) < 1
+              ? "É este o ponto de viragem: a faturação em que a conta se inverte."
+              : "Diferença de líquido anual, com os mesmos pressupostos nos dois lados."}
+          </p>
         </m.div>
       </div>
     </div>
   );
 }
 
-function SeletorCenario({
+// ═══════════════════════════════════════════════════════════════════════
+//  A COLUNA REPARTIDA
+//  ---------------------------------------------------------------------
+//  Uma coluna de altura fixa, `flex-col-reverse`, com as fatias em
+//  percentagem da faturação. Cresce porque as percentagens vão de 0 à sua
+//  quota e o CSS interpola — não há relógio, não há `setState`, e uma
+//  pausa a meio deixa a transição onde está sem nada continuar a mexer.
+//
+//  ⚠️ Durante um arrasto a transição é DESLIGADA. O dedo é a autoridade:
+//  interpolar 720 ms entre o que o dedo faz e o que a coluna mostra
+//  lê-se como atraso, não como suavidade — a mesma regra que o `Contador`
+//  já cumpre com `imediato`.
+// ═══════════════════════════════════════════════════════════════════════
+const ALTURA = 172;
+
+function ColunaRepartida({
+  titulo,
+  Icone,
+  fatias,
+  total,
+  liquido,
+  cresceu,
+  mostraLiquido,
+  mostraRotulo,
+  vence,
+  recuada,
+  acesa,
+  estatico,
+  arrastando,
+}: {
+  titulo: string;
+  Icone: (props: { size?: number; className?: string }) => React.ReactNode;
+  fatias: readonly Fatia[];
+  total: number;
+  liquido: number;
+  cresceu: boolean;
+  mostraLiquido: boolean;
+  mostraRotulo: boolean;
+  vence: boolean;
+  /** O ato do custo baixa tudo o que não é o custo. */
+  recuada: boolean;
+  /** A fatia que fica acesa enquanto o resto recua. */
+  acesa?: string;
+  estatico: boolean;
+  arrastando: boolean;
+}) {
+  const quota = (valor: number) => (total > 0 ? (Math.max(0, valor) / total) * 100 : 0);
+  const pctFica = quota(liquido);
+  const duracao = estatico || arrastando ? "0ms" : "720ms";
+
+  return (
+    <div className="flex min-w-0 flex-col">
+      {/* O visto encosta ao VALOR e não à margem da coluna: empurrado para
+          a direita por `justify-between`, ficava a meio caminho entre as
+          duas colunas e parecia pertencer à do lado. */}
+      <div
+        className="flex min-h-[1.15rem] items-center gap-1 transition-opacity duration-300"
+        style={{ opacity: mostraLiquido ? 1 : 0 }}
+      >
+        <span
+          className="truncate text-[11px] font-bold tabular-nums"
+          style={{ color: TINTA.fica }}
+        >
+          {eur0(liquido)}
+        </span>
+        {/* O ícone herda a cor: `Icons.tsx` não aceita `style`, e envolvê-lo
+            num `span` que a define é a forma que o resto da casa já usa. */}
+        {vence ? (
+          <span className="flex flex-shrink-0 items-center" style={{ color: TINTA.fica }}>
+            <Check size={10} />
+          </span>
+        ) : null}
+      </div>
+
+      <div
+        role="img"
+        aria-label={`${titulo}: de ${eur0(total)} ficam ${eur0(liquido)}, ${Math.round(pctFica)} por cento.`}
+        className={`mt-1 flex w-full flex-col-reverse overflow-hidden rounded-2xl transition-[box-shadow,opacity] duration-500 ${
+          vence ? "ring-2 ring-[#4FD1A3]/55" : "ring-1 ring-white/10"
+        }`}
+        style={{ height: ALTURA }}
+      >
+        {fatias.map((fatia) => {
+          const pct = cresceu ? quota(fatia.valor) : 0;
+          // Recuar é baixar a opacidade, nunca a altura: uma fatia que
+          // encolhe é uma fatia que vale menos, e neste ato nada mudou de
+          // valor. Ver o cabeçalho da coreografia.
+          const recuo = recuada && acesa !== undefined && fatia.id !== acesa ? 0.22 : 1;
+          return (
+            <div
+              key={fatia.id}
+              title={`${fatia.rotulo}: ${eur0(fatia.valor)}`}
+              className="relative w-full"
+              style={{
+                height: `${pct}%`,
+                backgroundColor: fatia.cor,
+                opacity: recuada && acesa === undefined ? 0.35 : recuo,
+                transitionProperty: "height, opacity",
+                transitionDuration: duracao === "0ms" ? "0ms, 0ms" : `${duracao}, 420ms`,
+                transitionTimingFunction: `${CURVA_CSS}, ${CURVA_CSS}`,
+              }}
+            >
+              {fatia.destaque && pct >= 20 ? (
+                <span
+                  className="absolute inset-x-0 bottom-1.5 text-center text-[10px] font-bold tabular-nums transition-opacity duration-300"
+                  style={{ color: "#08201A", opacity: mostraRotulo ? 1 : 0 }}
+                >
+                  {Math.round(pct)}%
+                </span>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+
+      <div
+        className="mt-1.5 flex items-center justify-center gap-1 text-[10px] font-semibold transition-opacity duration-300"
+        style={{ opacity: mostraRotulo ? 1 : 0.35, color: vence ? "#FFFFFF" : "rgba(255,255,255,.55)" }}
+      >
+        <Icone size={11} />
+        <span className="truncate">{titulo}</span>
+      </div>
+    </div>
+  );
+}
+
+function Legenda({
+  visivel,
+  transicao,
+}: {
+  visivel: boolean;
+  transicao: Transition;
+}) {
+  const ITENS = [
+    { cor: TINTA.fica, texto: "Fica contigo" },
+    { cor: TINTA.imposto, texto: "IRS / dividendos" },
+    { cor: TINTA.impostoFundo, texto: "Seg. Social / IRC" },
+    { cor: TINTA.custo, texto: "Contabilidade" },
+  ];
+  return (
+    <m.ul
+      initial={false}
+      animate={{ opacity: visivel ? 1 : 0 }}
+      transition={transicao}
+      className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5 border-t border-white/10 pt-2.5 text-[9px] font-medium text-white/50"
+    >
+      {ITENS.map((item) => (
+        <li key={item.texto} className="inline-flex items-center gap-1.5">
+          <span
+            className="h-2 w-2 flex-shrink-0 rounded-[3px]"
+            style={{ backgroundColor: item.cor }}
+          />
+          {item.texto}
+        </li>
+      ))}
+    </m.ul>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A RÉGUA DE FATURAÇÃO
+//  ---------------------------------------------------------------------
+//  O mesmo controlo do comparador de cenários, com a pele do palco
+//  escuro. Um `div` com `role="slider"` e não um `<input type="range">`,
+//  por três razões que só aparecem quando se tenta:
+//
+//   · O nativo não deixa desenhar NADA dentro da calha. O marcador da
+//     viragem — que é a resposta do palco — tinha de viver numa legenda
+//     por baixo, longe do sítio onde acontece.
+//   · Estilar o puxador exige uma cadeia de `::-webkit-slider-thumb`,
+//     `::-moz-range-thumb` e `::-moz-range-track` que diverge entre
+//     motores e não aceita animação de escala ao premir.
+//   · `setPointerCapture` dá arrasto que continua fora do elemento, que é
+//     o que um dedo faz.
+//
+//  O que o nativo dava de graça — teclado e semântica — está aqui
+//  explícito: `aria-valuemin/max/now/text`, setas com `Shift` para saltos
+//  largos, `Home`/`End`, e `touch-action: none` para o arrasto não virar
+//  scroll da página.
+// ═══════════════════════════════════════════════════════════════════════
+function ReguaFaturacao({
   dados,
   ponto,
   indice,
+  arrastando,
   aoMudar,
+  aoArrastar,
+  estatico,
+  visivel,
+  valorAberto,
+  escalaAberta,
+  dominioAberto,
+  partido,
+  marcado,
+  transicao,
 }: {
   dados: DadosEmpresa;
   ponto: PontoComparacao;
   indice: number;
+  arrastando: boolean;
   aoMudar: (indice: number) => void;
+  aoArrastar: (arrastando: boolean) => void;
+  estatico: boolean;
+  visivel: boolean;
+  valorAberto: boolean;
+  escalaAberta: boolean;
+  dominioAberto: boolean;
+  partido: boolean;
+  marcado: boolean;
+  transicao: Transition;
 }) {
-  const ultimo = Math.max(0, dados.cenarios.length - 1);
-  const progresso = ultimo === 0 ? 0 : (indice / ultimo) * 100;
-  const diferenca = ponto.empresa - ponto.freelancer;
-  const vencedor = diferenca > 0 ? "Empresa" : diferenca < 0 ? "Recibos verdes" : "As duas opções";
-  const frase =
-    diferenca === 0
-      ? "Neste cenário, as duas opções deixam o mesmo líquido."
-      : `${vencedor} deixa ${eur0(Math.abs(diferenca))} a mais por ano neste cenário.`;
+  const calhaRef = useRef<HTMLDivElement>(null);
+  const ultimo = dados.cenarios.length - 1;
   const primeiro = dados.cenarios[0]?.faturacao ?? 0;
   const fim = dados.cenarios[ultimo]?.faturacao ?? primeiro;
-  const posicaoViragem =
-    dados.cruzamento && fim > primeiro
-      ? ((dados.cruzamento - primeiro) / (fim - primeiro)) * 100
-      : null;
+
+  /** Onde, em percentagem da calha, cai uma faturação. */
+  const posicao = useCallback(
+    (faturacao: number) =>
+      fim > primeiro
+        ? Math.min(100, Math.max(0, ((faturacao - primeiro) / (fim - primeiro)) * 100))
+        : 0,
+    [primeiro, fim],
+  );
+
+  const pctAtual = posicao(ponto.faturacao);
+  const pctViragem = dados.cruzamento !== null ? posicao(dados.cruzamento) : null;
+
+  const fixar = useCallback(
+    (novo: number) => aoMudar(Math.max(0, Math.min(ultimo, novo))),
+    [aoMudar, ultimo],
+  );
+
+  /**
+   * O cenário mais próximo de um `clientX`.
+   *
+   * Procura pela FATURAÇÃO e não pelo índice: a grelha tem um degrau extra
+   * — o ponto exato da viragem —, e por isso os índices não estão
+   * igualmente espaçados. Escolher por índice fazia o puxador saltar por
+   * cima da própria resposta que o palco existe para mostrar.
+   */
+  const maisProximo = useCallback(
+    (clientX: number) => {
+      const el = calhaRef.current;
+      if (!el) return indice;
+      const { left, width } = el.getBoundingClientRect();
+      const fracao = Math.max(0, Math.min(1, (clientX - left) / Math.max(1, width)));
+      const alvo = primeiro + fracao * (fim - primeiro);
+      let melhor = 0;
+      let menorDistancia = Infinity;
+      for (let i = 0; i < dados.cenarios.length; i += 1) {
+        const distancia = Math.abs(dados.cenarios[i].faturacao - alvo);
+        if (distancia < menorDistancia) {
+          menorDistancia = distancia;
+          melhor = i;
+        }
+      }
+      return melhor;
+    },
+    [dados.cenarios, indice, primeiro, fim],
+  );
+
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ `setPointerCapture` ATIRA, E ATIRAR AQUI DESMONTA O PALCO         │
+  // │                                                                   │
+  // │ Lança `NotFoundError` quando o `pointerId` já não está ativo — um │
+  // │ toque que acabou entre o evento e o tratador, um ponteiro         │
+  // │ sintético, um gesto cancelado pelo sistema. E uma exceção por     │
+  // │ tratar dentro de um tratador de eventos do React derruba a árvore │
+  // │ inteira: o palco DESAPARECE do ecrã.                              │
+  // │                                                                   │
+  // │ Apanhado a medir, não a ler: um arrasto de dedo sintetizado por   │
+  // │ CDP fazia `document.querySelector('[role=slider]')` devolver      │
+  // │ `null` a seguir. E como a captura era a PRIMEIRA linha, um toque  │
+  // │ simples também não movia nada — a exceção acontecia antes de o    │
+  // │ valor ser atualizado.                                             │
+  // │                                                                   │
+  // │ Ordem certa: primeiro o que a pessoa pediu, depois o conforto de  │
+  // │ o arrasto continuar fora do elemento. A captura é uma comodidade; │
+  // │ o valor não é.                                                    │
+  // └───────────────────────────────────────────────────────────────────┘
+  const aoDescer = useCallback(
+    (evento: React.PointerEvent) => {
+      aoArrastar(true);
+      fixar(maisProximo(evento.clientX));
+      try {
+        evento.currentTarget.setPointerCapture(evento.pointerId);
+      } catch {
+        /* sem captura: o arrasto pára ao sair do elemento, e mais nada. */
+      }
+    },
+    [aoArrastar, fixar, maisProximo],
+  );
+
+  const aoMover = useCallback(
+    (evento: React.PointerEvent) => {
+      if (arrastando) fixar(maisProximo(evento.clientX));
+    },
+    [arrastando, fixar, maisProximo],
+  );
+
+  const aoSubir = useCallback(() => aoArrastar(false), [aoArrastar]);
+
+  const aoTeclar = useCallback(
+    (evento: React.KeyboardEvent) => {
+      // `Shift` salta cinco degraus — 25 000 € — para atravessar a escala
+      // sem trinta e nove toques na seta.
+      const passo = evento.shiftKey ? 5 : 1;
+      const teclas: Record<string, number | undefined> = {
+        ArrowRight: indice + passo,
+        ArrowUp: indice + passo,
+        ArrowLeft: indice - passo,
+        ArrowDown: indice - passo,
+        Home: 0,
+        End: ultimo,
+      };
+      const destino = teclas[evento.key];
+      if (destino === undefined) return;
+      evento.preventDefault();
+      fixar(destino);
+    },
+    [indice, ultimo, fixar],
+  );
+
+  // Concordância: «a empresa DEIXA», «os recibos verdes DEIXAM». O sujeito
+  // e o verbo viajam juntos para não voltar a haver um a mudar sem o outro.
+  const diferencaAqui = Math.abs(ponto.empresa - ponto.freelancer);
+  const frase =
+    diferencaAqui < 1
+      ? "Neste cenário, os dois caminhos deixam praticamente o mesmo líquido."
+      : `${
+          ponto.empresa > ponto.freelancer ? "A empresa deixa" : "Os recibos verdes deixam"
+        } ${eur0(diferencaAqui)} a mais por ano.`;
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/[.065] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] sm:px-5">
-      <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
-      <div className="relative grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,.7fr)] sm:items-end">
-        <div>
-          <label
-            htmlFor="empresa-faturacao"
+    <m.div
+      initial={false}
+      animate={{ opacity: visivel ? 1 : 0, y: visivel ? 0 : -8 }}
+      transition={transicao}
+      className="relative overflow-hidden rounded-3xl border border-white/12 bg-white/[.05] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,.07)] sm:px-5"
+    >
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-brand/25 blur-3xl"
+      />
+
+      <div className="relative flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+        <div className="min-w-0">
+          <span
+            id="empresa-regua-rotulo"
             className="block text-[10px] font-bold uppercase tracking-[.16em] text-brand-mint"
           >
             Faturação anual do cenário
-          </label>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <output className="font-display text-[clamp(2rem,5vw,3.2rem)] font-semibold leading-none tabular-nums text-white">
-              {eur0(ponto.faturacao)}
-            </output>
-            <span className="text-[10px] font-semibold text-white/45">arrasta ou usa as setas</span>
-          </div>
+          </span>
+          <m.output
+            initial={false}
+            animate={{ opacity: valorAberto ? 1 : 0 }}
+            transition={transicao}
+            className="mt-0.5 block font-display text-[clamp(1.9rem,5vw,3rem)] font-semibold leading-none tabular-nums text-white"
+          >
+            {eur0(ponto.faturacao)}
+          </m.output>
         </div>
-        <div className="rounded-2xl border border-white/10 bg-black/15 px-3.5 py-3">
-          <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/35">
-            Leitura imediata
-          </div>
-          <p aria-live="polite" className="mt-1 text-xs font-semibold leading-relaxed text-white/80">
-            {frase}
-          </p>
+        {/* ⚠️ SEM `aria-live`, e é deliberado.
+            `MolduraPalco` já garante «uma região viva por palco», e esta
+            era a segunda: a auditoria contava duas em `empresa` e mais
+            nenhum palco tinha isso. Pior do que a contagem é o efeito —
+            o `role="slider"` anuncia esta mesma frase em `aria-valuetext`
+            a cada mudança, portanto quem usa leitor de ecrã ouvia-a duas
+            vezes por cada passo da seta. O texto fica; o anúncio é do
+            controlo, que é quem sabe quando mudou. */}
+        <m.p
+          initial={false}
+          animate={{ opacity: valorAberto ? 1 : 0 }}
+          transition={transicao}
+          className="min-w-0 max-w-[15rem] text-[11px] font-semibold leading-relaxed text-white/70"
+        >
+          {frase}
+        </m.p>
+      </div>
+
+      {/* A calha: alvo de 40 px de altura, barra visual de 10 px. */}
+      <div
+        ref={calhaRef}
+        role="slider"
+        tabIndex={0}
+        aria-labelledby="empresa-regua-rotulo"
+        aria-valuemin={primeiro}
+        aria-valuemax={fim}
+        aria-valuenow={ponto.faturacao}
+        aria-valuetext={`${eur0(ponto.faturacao)} por ano. ${frase}`}
+        onPointerDown={aoDescer}
+        onPointerMove={aoMover}
+        onPointerUp={aoSubir}
+        onPointerCancel={aoSubir}
+        onKeyDown={aoTeclar}
+        style={{ touchAction: "none" }}
+        className={`focus-marca relative mt-4 h-10 select-none rounded-full ${
+          arrastando ? "cursor-grabbing" : "cursor-grab"
+        }`}
+      >
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 overflow-hidden rounded-full bg-white/12"
+        >
+          <span
+            className="block h-full rounded-full bg-gradient-to-r from-brand to-brand-mint"
+            style={{
+              width: `${pctAtual}%`,
+              transition: estatico || arrastando ? "none" : `width 240ms ${CURVA_CSS}`,
+            }}
+          />
+        </span>
+
+        {/* O marcador da viragem, DENTRO da calha. É a razão de este
+            controlo não poder ser um `<input type="range">`. */}
+        {pctViragem !== null ? (
+          <m.span
+            aria-hidden
+            initial={false}
+            animate={{ opacity: marcado ? 1 : 0, scaleY: marcado ? 1 : 0.3 }}
+            transition={estatico ? { duration: 0 } : { duration: DUR.assenta / 1000, ease: ASSENTA }}
+            className="pointer-events-none absolute top-1/2 z-10 h-6 w-[2px] -translate-y-1/2 rounded-full bg-brand-mint"
+            style={{ left: `${pctViragem}%` }}
+          />
+        ) : null}
+
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 z-20 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${pctAtual}%`,
+            transition: estatico || arrastando ? "none" : `left 240ms ${CURVA_CSS}`,
+          }}
+        >
+          {/* Envolvente posiciona, interior anima — separar as duas coisas
+              é o que impede a escala de premir arrastar a posição com ela. */}
+          <m.div
+            initial={false}
+            animate={{ scale: arrastando ? 1.16 : 1 }}
+            transition={{ duration: 0.1 }}
+          >
+            <span
+              className={`flex h-8 w-8 items-center justify-center rounded-full border-2 bg-[#0c251e] transition-shadow duration-100 ${
+                arrastando
+                  ? "border-brand-mint shadow-[0_0_0_5px_rgba(159,225,203,.22)]"
+                  : "border-brand-mint/80 shadow-[0_2px_12px_rgba(0,0,0,.45)]"
+              }`}
+            >
+              <GripHorizontal size={13} className="text-brand-mint" />
+            </span>
+          </m.div>
         </div>
       </div>
 
-      <div className="relative mt-4">
-        <span
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/15"
-        />
-        <span
-          aria-hidden
-          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-brand-mint"
-          style={{ width: `${progresso}%` }}
-        />
-        {posicaoViragem !== null ? (
-          <span
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 z-0 h-5 w-px -translate-y-1/2 bg-brand-mint/50"
-            style={{ left: `${posicaoViragem}%` }}
-          />
-        ) : null}
-        <input
-          id="empresa-faturacao"
-          type="range"
-          min={0}
-          max={ultimo}
-          step={1}
-          value={indice}
-          onChange={(evento) => aoMudar(Number(evento.currentTarget.value))}
-          aria-describedby="empresa-faturacao-ajuda"
-          aria-valuetext={`${eur0(ponto.faturacao)}. ${frase}`}
-          className="focus-marca relative z-10 h-10 w-full cursor-ew-resize appearance-none bg-transparent accent-brand-mint [&::-moz-range-progress]:bg-transparent [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-[#0c251e] [&::-moz-range-thumb]:bg-brand-mint [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[9px] [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-[#0c251e] [&::-webkit-slider-thumb]:bg-brand-mint [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_rgba(159,225,203,.55)]"
-        />
-      </div>
-      <div
-        id="empresa-faturacao-ajuda"
-        className="relative flex items-center justify-between gap-3 text-[9px] font-semibold text-white/40"
+      <m.div
+        initial={false}
+        animate={{ opacity: escalaAberta ? 1 : 0 }}
+        transition={transicao}
+        className="mt-0.5 flex items-center justify-between text-[9px] font-semibold tabular-nums text-white/35"
       >
-        <span>{eur0(primeiro)}</span>
-        {dados.cruzamento ? (
-          <span className="text-center text-brand-mint/70">
-            viragem calculada · {eur0(dados.cruzamento)}
-          </span>
-        ) : null}
-        <span>{eur0(fim)}</span>
-      </div>
-    </div>
+        <span>{mil(primeiro)}</span>
+        <span className="text-white/45">arrasta, toca ou usa as setas</span>
+        <span>{mil(fim)}</span>
+      </m.div>
+
+      {/* ── A FAIXA DO DOMÍNIO ───────────────────────────────────────
+          A pergunta é um LIMIAR, e um limiar tem duas zonas e um corte.
+          Entra neutra no ato 1 — ainda não há resposta — e PARTE-SE no
+          ato 4, que é o acontecimento que dá nome ao palco. Uma barra
+          com um corte diz «a partir daqui» de uma vez; uma curva a subir
+          obriga a procurar onde é que ela passa o zero. */}
+      <m.div
+        initial={false}
+        animate={{ opacity: dominioAberto ? 1 : 0 }}
+        transition={transicao}
+        className="mt-3"
+      >
+        <div className="relative h-2 overflow-hidden rounded-full bg-white/10">
+          <span
+            className="absolute inset-y-0 left-0 bg-brand/45"
+            style={{
+              width: `${partido && pctViragem !== null ? pctViragem : 100}%`,
+              transition: estatico ? "none" : `width 620ms ${CURVA_CSS}`,
+            }}
+          />
+          {pctViragem !== null ? (
+            <span
+              className="absolute inset-y-0 right-0 bg-[#e7c98e]/45"
+              style={{
+                width: `${partido ? 100 - pctViragem : 0}%`,
+                transition: estatico ? "none" : `width 620ms ${CURVA_CSS}`,
+              }}
+            />
+          ) : null}
+        </div>
+        <m.div
+          initial={false}
+          animate={{ opacity: partido ? 1 : 0 }}
+          transition={transicao}
+          className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[9px] font-semibold"
+        >
+          {pctViragem !== null && dados.cruzamento !== null ? (
+            <>
+              <span className="inline-flex items-center gap-1.5 text-white/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+                Recibos verdes até {eur0(dados.cruzamento)}
+              </span>
+              <span className="inline-flex items-center gap-1.5 text-white/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-[#e7c98e]" />
+                Empresa acima disso
+              </span>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-white/60">
+              <span className="h-1.5 w-1.5 rounded-full bg-brand" />
+              Recibos verdes em toda a escala testada
+            </span>
+          )}
+        </m.div>
+      </m.div>
+    </m.div>
   );
 }

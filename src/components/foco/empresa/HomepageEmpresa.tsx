@@ -56,9 +56,9 @@ const FAQS = [
       "Não. O ponto de viragem é o valor a partir do qual a sociedade passa a deixar mais líquido no teu bolso, com pressupostos declarados. Não conta a responsabilidade limitada, o custo de fechar a empresa mais tarde, nem o que uma estrutura formal muda na relação com clientes e bancos.",
   },
   {
-    pergunta: "Porque é que a linha da empresa começa tão abaixo?",
+    pergunta: "Porque é que a fatia que fica é menor do lado da empresa?",
     resposta:
-      "Porque a contabilidade é obrigatória e mensal. Antes do primeiro euro de imposto já há um custo fixo anual a pagar, e é esse fosso que a faturação tem de recuperar. Uma comparação que o ignore faz a empresa parecer melhor do que é em faturações baixas.",
+      "Porque a contabilidade é obrigatória e mensal. Antes do primeiro euro de imposto já há um custo fixo anual a pagar, e é esse fosso que a faturação tem de recuperar. Uma comparação que o ignore faz a empresa parecer melhor do que é — e era exatamente isso que acontecia enquanto este custo era narrado sem ser descontado.",
   },
   {
     pergunta: "E se eu não retirar os lucros?",
@@ -66,9 +66,9 @@ const FAQS = [
       "Aí a conta muda, e muda a favor da sociedade — mas deixa de ser comparável com o líquido de recibos verdes, que é dinheiro na tua conta. Manter lucros na empresa é uma decisão de investimento, não uma poupança fiscal automática.",
   },
   {
-    pergunta: "O regime simplificado tem um limite?",
+    pergunta: "Porque é que a régua acaba onde acaba?",
     resposta:
-      "Tem: acima do limite anual de rendimentos previsto no Art. 28.º do CIRS, passas obrigatoriamente a contabilidade organizada. A partir daí a pergunta deixa de ser «compensa?» e passa a ser «sob que forma».",
+      "Porque acaba no limite de rendimento anual do regime simplificado (Art. 28.º do CIRS). Acima dele passas obrigatoriamente a contabilidade organizada, e a comparação desta página — simplificado contra sociedade — deixa de ter as duas respostas que compara. A partir daí a pergunta já não é «compensa?», é «sob que forma».",
   },
   {
     pergunta: "Posso ter empresa e continuar a recibos verdes?",
@@ -176,7 +176,7 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
         id="percurso-empresa"
         fundo="branco"
         sobrancelha="Antes de decidir"
-        titulo="Um gráfico não abre uma empresa."
+        titulo="Uma régua não abre uma empresa."
         intro="O ponto de viragem diz quando a conversa vale a pena. A conversa em si tem partes que nenhum simulador substitui — e há duas coisas que convém ter feito antes."
       >
         <div className="grid gap-4 lg:grid-cols-3">
@@ -272,8 +272,8 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
       <FaqFoco
         id="faq-empresa"
         sobrancelha="Antes de abrir"
-        titulo="As perguntas que o gráfico não responde."
-        intro="Cinco coisas que mudam a decisão e que não cabem numa linha a cruzar outra."
+        titulo="As perguntas que uma régua não responde."
+        intro="Cinco coisas que mudam a decisão e que não cabem numa fronteira entre dois lados."
         perguntas={FAQS}
         cta={{ href: "/ferramentas/simulador-empresa", rotulo: "Simular a minha empresa" }}
       />
@@ -333,9 +333,11 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
                 Sem dependentes, lucros retirados
               </h3>
               <p className="mt-2 text-xs leading-relaxed text-stone-600">
-                O gráfico assume que os lucros da sociedade são retirados para o bolso e que não há
-                dependentes. Custo de contabilidade estimado em {eur0(dados.custoFixo)}/ano. Muda
-                qualquer um destes e o ponto de viragem muda com ele.
+                A cena assume que os lucros da sociedade são retirados para o bolso, que não há
+                dependentes nem despesas de atividade, e a derrama municipal no máximo legal —
+                o lado prudente num comparador. Contabilidade estimada em {eur0(dados.custoFixo)}
+                /ano, contada antes de qualquer imposto. Muda qualquer um destes e o ponto de
+                viragem muda com ele.
               </p>
             </div>
           </Reveal>

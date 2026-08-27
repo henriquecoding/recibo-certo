@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.133.0",
+    data: "2026-08-27",
+    titulo: "A conta de abrir empresa estava a esquecer-se do contabilista",
+    itens: [
+      "A demonstração de «Empresa» dizia — por escrito, e em voz alta para quem usa leitor de ecrã — que a contabilidade certificada custa cerca de 1 920 € por ano e que é esse custo que empurra o ponto de viragem. Mas a conta por trás nunca chegava a descontá-lo: o número publicado era o de uma sociedade que não paga contabilista. Com o custo contado, a viragem passa de cerca de 148 000 € para 180 500 € de faturação anual — e diz uma coisa que a versão anterior escondia: com os lucros todos retirados, a sociedade só passa à frente perto do teto do regime simplificado.",
+      "A régua da demonstração passou a acabar exatamente nesse teto — o limite de rendimento do regime simplificado (Art. 28.º do CIRS). Acima dele a contabilidade organizada deixa de ser opcional, e a comparação desta página deixa de ter as duas respostas que compara. É a única fronteira honesta que a escala pode ter.",
+      "O gráfico de linha da Empresa deu lugar a duas colunas lado a lado que mostram para onde vai cada euro em cada caminho — o mesmo desenho do comparador de cenários. As duas têm a mesma altura porque partem da mesma faturação: o que se compara é o tamanho da fatia que fica contigo. Com 30 000 € de faturação são 72% por recibos verdes contra 56% por sociedade.",
+      "O seletor da faturação não respondia a toque nenhum num telemóvel — nem a um toque, nem a um arrasto de dedo. Era o único controlo da demonstração, e num telemóvel estava simplesmente inerte. Foi substituído pelo mesmo controlo do comparador de cenários, que responde a arrasto, a toque e ao teclado, e que mostra o ponto de viragem marcado dentro da própria barra em vez de numa legenda por baixo.",
+      "Um gesto de dedo podia fazer a demonstração desaparecer do ecrã a meio do arrasto. Era uma falha do navegador a propagar-se sem ser apanhada. Corrigida aqui e também no comparador de cenários, onde estava o mesmo defeito à espera.",
+      "A demonstração de «Salário» estava ilegível no tema escuro: as linhas conferidas acendiam com dois tons de papel claro por cima de um cartão escuro, e o texto por baixo deles desaparecia. O realce passou a acompanhar o tema, e há agora uma verificação automática que mede a cor de cada superfície nos dois temas — a olho isto passa por «um realce um bocadinho claro».",
+      "E passou a parecer-se com o simulador de recibo de vencimento para onde manda: os dois líquidos em confronto — o do recibo e o que devia ser — subiram para o topo, em corpo grande e lado a lado, com a repartição do bruto ao lado. Estavam no rodapé de uma tabela, do mesmo tamanho das linhas.",
+      "Em ecrãs de 320 px, quatro rótulos da tabela de conferência transbordavam da sua coluna — «Subsídios» por 28 px. As colunas foram reequilibradas e voltam a caber.",
+    ],
+  },
+  {
     version: "2.132.0",
     data: "2026-08-26",
     titulo: "O site deixou de descarregar um megabyte e meio que ninguém tinha pedido",
