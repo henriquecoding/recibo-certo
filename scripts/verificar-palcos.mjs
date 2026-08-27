@@ -18,8 +18,8 @@
 //     pastel de modo claro é uma falha objetiva, e foi assim que se
 //     apanhou a armadilha do `dark:` a vencer o remapeamento de
 //     `globals.css`.
-//   · a régua tem de responder a arrasto, a toque e a teclado, e tem de
-//     mexer as duas colunas — senão é decoração.
+//   · a régua tem de responder a arrasto, a toque e a teclado, e o ponto
+//     selecionado no gráfico tem de a acompanhar — senão é decoração.
 //
 //  ENDERECO   por omissão, http://localhost:3000
 // ═══════════════════════════════════════════════════════════════════════
@@ -31,9 +31,9 @@ const ENDERECO = process.env.ENDERECO ?? process.env.BASE_URL ?? "http://localho
 const EXEC = process.env.PLAYWRIGHT_CHROMIUM;
 const VERSAO = JSON.parse(new TextDecoder().decode(readFileSync(new URL("../package.json", import.meta.url)))).version;
 
-/** A cena inteira: 2400 + 3000 + 2600 + 3200, com folga. */
+/** A cena inteira: 2300 + 3100 + 2800 + 3200, com folga. */
 const CENA_EMPRESA = 12_500;
-/** 2600 + 3000 + 3000 + 3000, com folga. */
+/** 2500 + 2800 + 2800 + 3300, com folga. */
 const CENA_SALARIO = 12_500;
 
 const falhas = [];
@@ -153,7 +153,7 @@ async function medirCena(navegador, foco, duracao) {
   await ctx.close();
 }
 
-/** A régua move as duas colunas — por arrasto, por toque e por teclado. */
+/** A régua move o ponto de leitura — por arrasto, por toque e por teclado. */
 async function verificarRegua(navegador) {
   const ctx = await contexto(navegador, "light");
   const p = await ctx.newPage();
@@ -166,19 +166,21 @@ async function verificarRegua(navegador) {
   const lerEstado = () =>
     p.evaluate(() => {
       const r = document.querySelector('[role="slider"][aria-labelledby="empresa-regua-rotulo"]');
-      const colunas = [...document.querySelectorAll('[role="img"][aria-label*="ficam"]')];
+      const ponto = document.querySelector('[data-empresa-ponto="atual"]');
+      const curva = document.querySelector('[data-empresa-curva="real"]');
       return {
         agora: Number(r.getAttribute("aria-valuenow")),
         texto: r.getAttribute("aria-valuetext"),
-        colunas: colunas.map((c) => c.getAttribute("aria-label")),
+        ponto: ponto ? `${ponto.getAttribute("cx")},${ponto.getAttribute("cy")}` : null,
+        curva: curva?.getAttribute("d") ?? null,
       };
     });
 
   const inicial = await lerEstado();
   verificar(
-    inicial.colunas.length === 2,
-    "[empresa] há duas colunas repartidas",
-    `encontradas ${inicial.colunas.length}`,
+    Boolean(inicial.curva && inicial.ponto),
+    "[empresa] a curva real e o ponto de leitura existem",
+    inicial.ponto ?? "ponto ausente",
   );
   verificar(
     Boolean(inicial.texto && /€/.test(inicial.texto)),
@@ -200,9 +202,9 @@ async function verificarRegua(navegador) {
     `${inicial.agora} → ${arrastado.agora}`,
   );
   verificar(
-    arrastado.colunas.join("|") !== inicial.colunas.join("|"),
-    "[empresa] as colunas seguem a régua",
-    arrastado.colunas[1] ?? "",
+    arrastado.ponto !== inicial.ponto,
+    "[empresa] o ponto do gráfico segue a régua",
+    `${inicial.ponto} → ${arrastado.ponto}`,
   );
 
   // ── Teclado: uma paragem de Tab, setas por dentro ───────────────────

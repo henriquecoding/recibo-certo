@@ -68,7 +68,7 @@ const FAQS = [
   {
     pergunta: "Porque é que a régua acaba onde acaba?",
     resposta:
-      "Porque acaba no limite de rendimento anual do regime simplificado (Art. 28.º do CIRS). Acima dele passas obrigatoriamente a contabilidade organizada, e a comparação desta página — simplificado contra sociedade — deixa de ter as duas respostas que compara. A partir daí a pergunta já não é «compensa?», é «sob que forma».",
+      "Os 200 000 € são a referência de acesso do Art. 28.º, n.º 2, do CIRS e uma fronteira clara para esta comparação. Ultrapassá-la não produz uma mudança automática ao primeiro euro: o n.º 6 prevê a cessação após dois períodos consecutivos acima do limite ou quando o excesso, num só período, ultrapassa 25%. A régua termina na referência; não tenta encenar todo esse histórico.",
   },
   {
     pergunta: "Posso ter empresa e continuar a recibos verdes?",
@@ -330,14 +330,14 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
                 <Warning size={12} /> Os pressupostos desta cena
               </div>
               <h3 className="mt-5 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                Sem dependentes, lucros retirados
+                Sem gerente remunerado, lucros retirados
               </h3>
               <p className="mt-2 text-xs leading-relaxed text-stone-600">
-                A cena assume que os lucros da sociedade são retirados para o bolso, que não há
-                dependentes nem despesas de atividade, e a derrama municipal no máximo legal —
-                o lado prudente num comparador. Contabilidade estimada em {eur0(dados.custoFixo)}
-                /ano, contada antes de qualquer imposto. Muda qualquer um destes e o ponto de
-                viragem muda com ele.
+                A cena assume que não há remuneração de gerência nem contribuições associadas, que
+                todos os lucros são retirados para o bolso, que não há dependentes nem despesas de
+                atividade, e a derrama municipal no máximo legal. Contabilidade estimada em{" "}
+                {eur0(dados.custoFixo)}/ano, contada antes do imposto. Muda qualquer um destes e o
+                ponto de viragem muda com ele.
               </p>
             </div>
           </Reveal>

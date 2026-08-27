@@ -105,8 +105,10 @@ export function dadosSalario(): DadosSalario {
     irsCerto: comDependente.irsRetido,
     liquidoRecibo: semDependente.liquido,
     liquidoCerto: comDependente.liquido,
-    // Catorze meses: doze de vencimento mais os dois subsídios.
-    diferencaAnual: diferencaMensal * 14,
+    // Projeção condicional: doze vencimentos e os dois subsídios, caso a
+    // mesma tabela errada seja repetida em cada um desses pagamentos.
+    pagamentosProjetados: 14,
+    diferenca14Pagamentos: diferencaMensal * 14,
     motivo:
       "A retenção foi calculada pela tabela de quem não tem dependentes. Com um dependente declarado, a tabela é outra e a retenção é mais baixa.",
   };
@@ -135,13 +137,14 @@ export function dadosSalario(): DadosSalario {
 // └───────────────────────────────────────────────────────────────────────┘
 
 /**
- * A escala vai de 15 000 € ao limite legal do regime simplificado.
+ * A escala vai de 15 000 € à referência de 200 000 € do regime
+ * simplificado.
  *
- * O teto não é uma escolha de enquadramento: acima de
- * `REGIME_SIMPLIFICADO.limite` (Art. 28.º do CIRS) a contabilidade
- * organizada deixa de ser opcional e a pergunta deste palco — «simplificado
- * ou sociedade?» — deixa de ter as duas respostas que compara. Parar
- * exatamente aí é a única fronteira honesta que a escala pode ter.
+ * O Art. 28.º, n.º 2, do CIRS usa este montante como condição de acesso.
+ * A cessação do regime, porém, obedece às regras próprias do n.º 6 — não
+ * acontece automaticamente ao primeiro euro acima. A página usa os
+ * 200 000 € como fronteira editorial comparável, sem a apresentar como uma
+ * mudança instantânea e universal de regime.
  */
 const ESCALA_MIN = 15_000;
 const ESCALA_MAX = REGIME_SIMPLIFICADO.limite.value;
@@ -154,20 +157,23 @@ const PRESSUPOSTOS = {
 } as const;
 
 /**
- * Um cenário, com a repartição de cada euro nos dois caminhos.
+ * Um cenário, com a diferença de líquido e a decomposição dos dois caminhos.
  *
- * As duas repartições somam, cada uma, a faturação — é isso que permite
- * desenhar duas colunas da MESMA altura e deixar a comparação a cargo do
- * tamanho da fatia que fica. Não é uma coincidência aritmética a explorar:
- * é a identidade do próprio motor (`bruto = líquido + o que sai`), e o
- * teste `foco-empresa-interacao` exige que continue a fechar.
+ * A curva usa os líquidos; as parcelas ficam no payload para explicar e
+ * testar a resposta. Cada lado continua a somar a faturação: é a identidade
+ * do motor (`bruto = líquido + o que sai`), não um detalhe do desenho.
  */
 const pontoEmpresa = (faturacao: number): PontoComparacao => {
   const c = compararCategorias({ brutoAnual: faturacao, ...PRESSUPOSTOS });
+  const semCusto = compararCategorias({ brutoAnual: faturacao, dependentes: 0 });
   return {
     faturacao,
     freelancer: Math.round(c.freelancer.liquido),
     empresa: Math.round(c.empresa.liquido),
+    // Contrafactual calculado de novo pelo motor — não se soma a avença ao
+    // líquido, porque a contabilidade é custo dedutível e também altera IRC,
+    // derrama e dividendos.
+    empresaSemCustos: Math.round(semCusto.empresa.liquido),
     rv: {
       irs: Math.round(c.freelancer.irs),
       ss: Math.round(c.freelancer.ss),

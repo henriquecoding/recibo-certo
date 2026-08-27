@@ -20,8 +20,10 @@ describe("palco Empresa: cenários interativos", () => {
 
     for (const ponto of dados.cenarios) {
       const calculado = compararCategorias({ brutoAnual: ponto.faturacao, ...PRESSUPOSTOS });
+      const semCusto = compararCategorias({ brutoAnual: ponto.faturacao, dependentes: 0 });
       expect(ponto.freelancer).toBe(Math.round(calculado.freelancer.liquido));
       expect(ponto.empresa).toBe(Math.round(calculado.empresa.liquido));
+      expect(ponto.empresaSemCustos).toBe(Math.round(semCusto.empresa.liquido));
     }
   });
 
@@ -45,16 +47,14 @@ describe("palco Empresa: cenários interativos", () => {
       expect(ponto.soc.contabilidade).toBe(Math.round(AVENCA_SOCIEDADE_ANUAL_MEDIA));
       // O líquido da sociedade é MENOR do que o da mesma sociedade sem
       // custo nenhum. É a asserção que o defeito não sobrevivia.
-      const semCusto = compararCategorias({ brutoAnual: ponto.faturacao, dependentes: 0 });
-      expect(ponto.empresa).toBeLessThan(Math.round(semCusto.empresa.liquido));
+      expect(ponto.empresa).toBeLessThan(ponto.empresaSemCustos);
     }
   });
 
   /**
-   * As duas colunas do palco têm a MESMA altura porque partem da mesma
-   * faturação, e o que se compara é o tamanho da fatia que fica. Isso só é
-   * honesto enquanto cada repartição fechar a conta — e é uma identidade do
-   * motor (`bruto = líquido + o que sai`), não uma coincidência a explorar.
+   * A curva compara líquidos, mas o payload conserva a decomposição que
+   * explica cada resposta. Esta identidade impede uma curva visualmente certa
+   * de esconder um cenário cuja conta deixou de fechar.
    */
   it("reparte cada euro sem sobrar nem faltar, nos dois caminhos", () => {
     for (const ponto of dadosEmpresa().cenarios) {
@@ -77,12 +77,11 @@ describe("palco Empresa: cenários interativos", () => {
   });
 
   /**
-   * A escala acaba no limite do regime simplificado, e não num número
-   * escolhido para o desenho ficar bonito. Acima do Art. 28.º do CIRS a
-   * contabilidade organizada deixa de ser opcional e a comparação desta
-   * página perde uma das duas respostas que compara.
+   * A escala acaba na referência de acesso do Art. 28.º, n.º 2, e não num
+   * número escolhido para o desenho ficar bonito. A interface deixa claro
+   * que a cessação obedece às regras históricas próprias do n.º 6.
    */
-  it("para exatamente no limite legal do regime simplificado", () => {
+  it("para exatamente na referência do regime simplificado", () => {
     const dados = dadosEmpresa();
     const faturacoes = dados.cenarios.map((ponto) => ponto.faturacao);
 

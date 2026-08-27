@@ -136,7 +136,7 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
               {
                 rotulo: "Por mês",
                 valor: eur(diferencaMensal),
-                texto: `${eur(dados.diferencaAnual)} ao fim de catorze meses. Não é dinheiro perdido — é dinheiro emprestado sem se saber.`,
+                texto: `Se o erro se repetir nos ${dados.pagamentosProjetados} pagamentos, a projeção é ${eur(dados.diferenca14Pagamentos)}. É uma hipótese explícita, não um total garantido.`,
                 cores: "bg-clay-bg text-clay-text",
               },
             ].map((coluna, indice) => (

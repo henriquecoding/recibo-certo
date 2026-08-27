@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.134.0",
+    data: "2026-08-27",
+    titulo: "A curva voltou, e o recibo passou a explicar o erro",
+    itens: [
+      "A demonstração de Empresa recuperou a curva de diferença que torna o ponto de viragem visível. A régua tátil e acessível mantém-se; o desenho da linha passou para uma animação nativa do SVG, sem voltar a renderizar o palco inteiro a cada fotograma.",
+      "A contabilidade aparece agora como a distância entre a conta real e um contrafactual calculado de novo pelo motor fiscal. Não se somam simplesmente 1 920 € ao líquido: o custo é dedutível e também muda o IRC, a derrama e os dividendos.",
+      "A demonstração de Salário deixou de ser uma tabela. Um vencimento base comum abre em dois recibos compactos, uma varredura confirma a Segurança Social e pára na única linha que diverge — a retenção de IRS.",
+      "Os valores mensais do exemplo estavam certos, mas o total anual mostrado numa captura antiga não: 34,29 € repetidos em catorze pagamentos são 480,06 €, não 146,87 €. A projeção passou a dizer a condição à vista e foi removida a afirmação falsa de que aqueles subsídios estavam incluídos por duodécimos.",
+      "Os pressupostos da Empresa ficaram mais rigorosos: o cenário declara que não inclui remuneração de gerência nem contribuições associadas. Os 200 000 € são apresentados como referência do Art. 28.º do CIRS; a página deixou de afirmar que ultrapassá-los muda o regime automaticamente ao primeiro euro.",
+    ],
+  },
+  {
     version: "2.133.0",
     data: "2026-08-27",
     titulo: "A conta de abrir empresa estava a esquecer-se do contabilista",

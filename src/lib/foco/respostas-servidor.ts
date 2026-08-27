@@ -147,12 +147,12 @@ function respostaSalario(): RespostaDoFoco {
     //  Mostrar o líquido certo respondia a outra pergunta. O que esta
     //  ferramenta faz é encontrar a diferença, e a diferença é que tem
     //  de estar em corpo grande.
-    destaque: eur(s.diferencaAnual),
-    legenda: `retidos a mais num ano, num vencimento de ${eur0(s.bruto)} com um dependente declarado`,
+    destaque: eur(s.diferenca14Pagamentos),
+    legenda: `de projeção se a mesma retenção errada se repetir em ${s.pagamentosProjetados} pagamentos, num vencimento de ${eur0(s.bruto)}`,
     linhas: [
       { rotulo: "O recibo pagou", valor: eur(s.liquidoRecibo), tom: "sai" },
       { rotulo: "Devia ter pago", valor: eur(s.liquidoCerto), tom: "fica" },
-      { rotulo: "Contas feitas sobre", valor: "14 meses", tom: "neutro" },
+      { rotulo: "Projeção sobre", valor: `${s.pagamentosProjetados} pagamentos`, tom: "neutro" },
     ],
     base: "Tabelas de retenção na fonte de 2026, Continente",
   };
