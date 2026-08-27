@@ -9,8 +9,8 @@ export const FOCOS_HOMEPAGE = [
   "descobrir",
   "preco",
   "recibos",
-  "salario",
   "empresa",
+  "salario",
 ] as const;
 
 export type FocoHomepage = (typeof FOCOS_HOMEPAGE)[number];

@@ -30,8 +30,8 @@
 //  Recibos verdes, Salário e Empresa mostravam a mesma cascata de deduções
 //  com números diferentes. Uma máquina com três fatos, não três palcos.
 //
-//  Com cinco verbos distintos — eliminar, compor, repartir, conferir,
-//  virar — nenhum palco pode voltar a ser uma cascata de deduções com
+//  Com cinco verbos distintos — eliminar, compor, repartir, virar,
+//  conferir — nenhum palco pode voltar a ser uma cascata de deduções com
 //  outros números, porque só um dos cinco tem como verbo «repartir».
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -91,7 +91,11 @@ export interface DefinicaoFoco {
  * «Recibos» acerta-lhe sem olhar, e trocar posições desfaz isso sem aviso.
  *
  *   que negócio abrir → quanto cobrar → quanto fica de cada recibo →
- *   quanto fica do salário → e se fosse uma empresa
+ *   e se fosse uma empresa → conferir um salário
+ *
+ * Os quatro primeiros formam o arco de quem testa e estrutura atividade.
+ * «Salário» é uma tarefa paralela — fica por último para não interromper
+ * a passagem natural de recibos verdes para a decisão de abrir empresa.
  */
 export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
   {
@@ -141,20 +145,6 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
       "De cada recibo, o que é teu, o que é retenção de IRS e o que tens de reservar para a Segurança Social — com a data em que sai da conta.",
   },
   {
-    id: "salario",
-    label: "Salário",
-    pergunta: "O meu recibo de vencimento está certo?",
-    verbo: "conferir",
-    palco: "A conferência",
-    tom: "claro",
-    icone: "Briefcase",
-    ferramenta: "/ferramentas/recibo-vencimento",
-    ctaPrimario: "Conferir o meu recibo",
-    titulo: "Conferir o recibo de vencimento, linha a linha",
-    descricao:
-      "Recalcula o teu líquido a partir do bruto — Segurança Social, retenção de IRS e subsídios — e põe-no ao lado do recibo que recebeste.",
-  },
-  {
     id: "empresa",
     label: "Empresa",
     pergunta: "Compensa-me abrir empresa?",
@@ -167,6 +157,20 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
     titulo: "A partir de quando compensa abrir empresa",
     descricao:
       "Recibos verdes e sociedade lado a lado, com o custo fixo de ter empresa contado e o ponto de faturação em que as duas se cruzam.",
+  },
+  {
+    id: "salario",
+    label: "Salário",
+    pergunta: "O meu recibo de vencimento está certo?",
+    verbo: "conferir",
+    palco: "A conferência",
+    tom: "claro",
+    icone: "Briefcase",
+    ferramenta: "/ferramentas/recibo-vencimento",
+    ctaPrimario: "Conferir o meu recibo",
+    titulo: "Conferir o recibo de vencimento, linha a linha",
+    descricao:
+      "Recalcula o teu líquido a partir do bruto — Segurança Social, retenção de IRS e subsídios — e põe-no ao lado do recibo que recebeste.",
   },
 ]);
 

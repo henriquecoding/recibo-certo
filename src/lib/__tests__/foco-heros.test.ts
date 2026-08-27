@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { COPY_HEROS, tituloEmDuasLinhas } from "@/components/foco/copy-heros";
 import { FOCOS } from "@/components/foco/focos";
@@ -33,7 +35,26 @@ const palavras = (t: string) => t.split(/\s+/).filter(Boolean).length;
  */
 const NOS = /\b\w+(?:amos|emos|imos)\b|\bnós\b|\bnoss[ao]s?\b/i;
 
+const SRC = join(process.cwd(), "src", "components");
+const ler = (...partes: string[]) => readFileSync(join(SRC, ...partes), "utf8");
+
 describe("os cinco títulos de hero são o mesmo instrumento", () => {
+  it("as cinco portas usam a mesma abertura dinâmica", () => {
+    const abertura = ler("foco", "CabecalhoHeroFoco.tsx");
+    const consumidores = [
+      ler("foco", "HeroFoco.tsx"),
+      ler("descobrir", "HeroDescobrir.tsx"),
+      ler("preco", "HeroPreco.tsx"),
+    ];
+
+    expect(abertura).toContain("<TituloHero foco={foco.id}");
+    expect(abertura).toContain("<SubtituloHero foco={foco.id}");
+    expect(abertura).toContain("{foco.palco}");
+    for (const consumidor of consumidores) {
+      expect(consumidor).toContain("<CabecalhoHeroFoco foco=");
+    }
+  });
+
   it("há um por foco, e nenhum a mais", () => {
     expect(Object.keys(COPY_HEROS).sort()).toEqual(FOCOS.map((f) => f.id).sort());
   });

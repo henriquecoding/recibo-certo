@@ -1,16 +1,18 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Lightbulb,
   Lock,
   ShieldCheck,
   Sparkle,
 } from "@/components/ui/Icons";
 import PalcoDescobrir from "./PalcoDescobrir";
 import type { ExemploDescoberta } from "./tipos";
-import { SubtituloHero, TituloHero } from "@/components/foco/TextosHero";
+import CabecalhoHeroFoco from "@/components/foco/CabecalhoHeroFoco";
+import { FOCO_POR_ID } from "@/components/foco/focos";
 
 export type { ExemploDescoberta } from "./tipos";
+
+const FOCO = FOCO_POR_ID.get("descobrir")!;
 
 export default function HeroDescobrir({ exemplo }: { exemplo: ExemploDescoberta }) {
   return (
@@ -24,19 +26,7 @@ export default function HeroDescobrir({ exemplo }: { exemplo: ExemploDescoberta 
       </div>
 
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-            <Lightbulb size={14} />
-            Descobrir um negócio
-            <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
-            Portugal
-          </div>
-          {/* O texto vem de `copy-heros.ts`, como o dos outros quatro.
-              Estava escrito aqui, e era um aforismo sem uma única palavra
-              do que alguém procura — ver o cabeçalho dessa tabela. */}
-          <TituloHero foco="descobrir" />
-          <SubtituloHero foco="descobrir" />
-        </div>
+        <CabecalhoHeroFoco foco={FOCO} />
 
         <div className="mt-10 sm:mt-12">
           <PalcoDescobrir exemplo={exemplo} />

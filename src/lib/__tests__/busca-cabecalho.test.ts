@@ -24,6 +24,21 @@ import { PRIORIDADE } from "@/components/overlays/CoordenadorOverlays";
 // ─────────────────────────────────────────────────────────────────────
 
 const DOCS = construirDocumentos();
+const NAV = readFileSync(join(process.cwd(), "src", "components", "Nav.tsx"), "utf8");
+
+describe("cabecalho: pesquisa em destaque", () => {
+  it("abre visível e ocupa uma linha inteira abaixo dos cinco focos", () => {
+    // A pesquisa é uma porta principal do produto. Este contrato impede
+    // que volte a ser comprimida num ícone ou escondida por omissão numa
+    // reformulação do hero.
+    expect(NAV).toContain("const [abertoManual, setAbertoManual] = useState(true)");
+    const capsula = NAV.indexOf("<CapsulaNav foco={foco} />");
+    const busca = NAV.indexOf('<LancadorBusca inputId="rc-header-busca" />');
+    expect(capsula).toBeGreaterThan(-1);
+    expect(busca).toBeGreaterThan(capsula);
+    expect(NAV.slice(busca - 100, busca)).toContain("w-full");
+  });
+});
 
 describe("busca:cobertura", () => {
   it("indexa TODOS os guias publicáveis da fonte canónica", () => {

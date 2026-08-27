@@ -129,6 +129,24 @@ const ESCADA = [
 ] as const;
 
 /**
+ * A grelha do controlo interativo. Tem mais resolução do que o desenho,
+ * mas continua a ser calculada no servidor pelo motor fiscal verdadeiro.
+ * O browser só escolhe entre respostas já verificadas — nunca reimplementa
+ * a conta a cada pixel nem recebe o motor fiscal inteiro no bundle.
+ */
+const CENARIOS = Array.from({ length: 36 }, (_, indice) => 15_000 + indice * 5_000);
+
+const pontoEmpresa = (faturacao: number): PontoComparacao => {
+  const c = compararCategorias({ brutoAnual: faturacao, dependentes: 0 });
+  return {
+    faturacao,
+    freelancer: Math.round(c.freelancer.liquido),
+    empresa: Math.round(c.empresa.liquido),
+    empresaSemCustos: Math.round(c.empresa.liquido + AVENCA_SOCIEDADE_ANUAL_MEDIA),
+  };
+};
+
+/**
  * Os dois caminhos traçados sobre o mesmo eixo, e o ponto onde se cruzam.
  *
  * `empresaSemCustos` é a mesma sociedade com a contabilidade devolvida ao
@@ -137,15 +155,7 @@ const ESCADA = [
  * um limiar e ninguém vê o que teve de ser recuperado primeiro.
  */
 export function dadosEmpresa(): DadosEmpresa {
-  const pontos: PontoComparacao[] = ESCADA.map((faturacao) => {
-    const c = compararCategorias({ brutoAnual: faturacao, dependentes: 0 });
-    return {
-      faturacao,
-      freelancer: Math.round(c.freelancer.liquido),
-      empresa: Math.round(c.empresa.liquido),
-      empresaSemCustos: Math.round(c.empresa.liquido + AVENCA_SOCIEDADE_ANUAL_MEDIA),
-    };
-  });
+  const pontos = ESCADA.map(pontoEmpresa);
 
   // O cruzamento por varredura fina, e não por interpolação entre os
   // pontos desenhados: o desenho tem onze pontos porque onze chegam para
@@ -160,9 +170,16 @@ export function dadosEmpresa(): DadosEmpresa {
   }
 
   const exemplo = compararCategorias({ brutoAnual: FATURACAO_EXEMPLO, dependentes: 0 });
+  // O ponto exato da viragem entra na régua mesmo quando não cai num dos
+  // degraus de 5 000 €. Assim é possível pousar precisamente na resposta
+  // que o palco destaca — sem interpolar nem arredondar no cliente.
+  const cenarios = [...new Set([...CENARIOS, ...(cruzamento ? [cruzamento] : [])])]
+    .sort((a, b) => a - b)
+    .map(pontoEmpresa);
 
   return {
     pontos,
+    cenarios,
     cruzamento,
     custoFixo: Math.round(AVENCA_SOCIEDADE_ANUAL_MEDIA),
     exemplo: FATURACAO_EXEMPLO,

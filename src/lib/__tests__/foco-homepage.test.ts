@@ -9,6 +9,14 @@ import {
 } from "@/components/foco/focos";
 
 describe("homepage adaptativa", () => {
+  it("mantém Empresa imediatamente antes de Salário em todas as fontes", () => {
+    const ordem = ["descobrir", "preco", "recibos", "empresa", "salario"];
+
+    expect([...FOCOS_HOMEPAGE]).toEqual(ordem);
+    expect(FOCOS.map((foco) => foco.id)).toEqual(ordem);
+    expect(PILARES.map((pilar) => pilar.id)).toEqual(ordem);
+  });
+
   it("reconhece os cinco focos, e cada um existe de ponta a ponta", () => {
     // ⚠️ Este teste fixava a lista literal `["descobrir", "preco"]`.
     //

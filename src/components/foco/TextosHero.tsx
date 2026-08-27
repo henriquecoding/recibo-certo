@@ -34,14 +34,25 @@ import { COPY_HEROS, tituloEmDuasLinhas } from "./copy-heros";
 //  uma quebra manual reparte cada metade por sua conta — o que dá
 //  sub-quebras que ninguém pediu. Em baixo não há quebra manual e é o
 //  `balance` que manda, porque só ele sabe a largura real.
-const CLASSES_H1 =
-  "text-balance sm:[text-wrap:pretty] font-display text-[clamp(2rem,4.6vw,3.75rem)] " +
-  "font-semibold leading-[1.06] tracking-[-.03em] text-ink";
+const ESCALA_H1 = {
+  normal: "text-[clamp(2rem,4.6vw,3.75rem)]",
+  editorial: "text-[clamp(2.25rem,5.1vw,4.25rem)]",
+} as const;
 
-export function TituloHero({ foco, className }: { foco: FocoHomepage; className?: string }) {
+export function TituloHero({
+  foco,
+  className,
+  escala = "normal",
+}: {
+  foco: FocoHomepage;
+  className?: string;
+  escala?: keyof typeof ESCALA_H1;
+}) {
   const [antes, depois] = tituloEmDuasLinhas(COPY_HEROS[foco]);
   return (
-    <h1 className={`${CLASSES_H1} ${className ?? ""}`}>
+    <h1
+      className={`text-balance font-display font-semibold leading-[1.04] tracking-[-.035em] text-ink sm:[text-wrap:pretty] ${ESCALA_H1[escala]} ${className ?? ""}`}
+    >
       {antes}
       {depois ? (
         <>
@@ -56,9 +67,24 @@ export function TituloHero({ foco, className }: { foco: FocoHomepage; className?
   );
 }
 
-export function SubtituloHero({ foco }: { foco: FocoHomepage }) {
+export function SubtituloHero({
+  foco,
+  alinhamento = "centro",
+  className,
+}: {
+  foco: FocoHomepage;
+  alinhamento?: "centro" | "inicio";
+  className?: string;
+}) {
+  const geometria =
+    alinhamento === "centro"
+      ? "mx-auto mt-6 max-w-2xl text-center"
+      : "mx-0 mt-3 max-w-none text-left";
+
   return (
-    <p className="mx-auto mt-6 max-w-2xl text-balance text-base leading-relaxed text-stone-600 sm:text-lg dark:text-stone-400">
+    <p
+      className={`${geometria} text-balance text-base leading-relaxed text-stone-600 sm:text-lg dark:text-stone-400 ${className ?? ""}`}
+    >
       {COPY_HEROS[foco].subtitulo}
     </p>
   );

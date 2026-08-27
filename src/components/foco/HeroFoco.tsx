@@ -15,9 +15,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Sparkle } from "@/components/ui/Icons";
-import { iconeDe } from "@/components/ferramentas/icon-map";
 import type { DefinicaoFoco } from "./focos";
-import { SubtituloHero, TituloHero } from "./TextosHero";
+import CabecalhoHeroFoco from "./CabecalhoHeroFoco";
 
 export interface SeloConfianca {
   Icon: (props: { size?: number; className?: string }) => ReactNode;
@@ -39,8 +38,6 @@ export default function HeroFoco({
   /** O palco. */
   children: ReactNode;
 }) {
-  const Icon = iconeDe(foco.icone);
-
   return (
     <section
       data-hero
@@ -52,20 +49,7 @@ export default function HeroFoco({
       </div>
 
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-            <Icon size={14} />
-            {foco.label}
-            <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
-            Portugal
-          </div>
-          {/* O texto vem de `copy-heros.ts`, onde os cinco se leem
-              seguidos. Antes vinha por props, e cada palco escrevia o seu
-              no dia em que nasceu — cinco formas diferentes para a mesma
-              posição na página. */}
-          <TituloHero foco={foco.id} />
-          <SubtituloHero foco={foco.id} />
-        </div>
+        <CabecalhoHeroFoco foco={foco} />
 
         <div className="mt-10 sm:mt-12">{children}</div>
 

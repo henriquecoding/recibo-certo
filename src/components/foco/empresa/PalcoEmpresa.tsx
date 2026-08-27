@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { m } from "motion/react";
 import { Building, Check, Receipt, Scale, Warning } from "@/components/ui/Icons";
 import MolduraPalco, { type CenaDoPalco } from "@/components/palco/MolduraPalco";
@@ -20,11 +21,13 @@ export interface PontoComparacao {
 
 export interface DadosEmpresa {
   pontos: readonly PontoComparacao[];
+  /** Cenários calculados no servidor que alimentam a régua interativa. */
+  cenarios: readonly PontoComparacao[];
   /** A faturação em que a empresa passa à frente. `null` se nunca passa. */
   cruzamento: number | null;
   /** O custo anual de ter empresa (contabilidade). */
   custoFixo: number;
-  /** A faturação do exemplo marcado no eixo. */
+  /** A faturação do exemplo editorial usado nas secções abaixo do palco. */
   exemplo: number;
   exemploFreelancer: number;
   exemploEmpresa: number;
@@ -36,7 +39,19 @@ const A = 210;
 const M = { esq: 8, dir: 12, topo: 16, base: 30 };
 
 export default function PalcoEmpresa({ dados }: { dados: DadosEmpresa }) {
-  const melhor = dados.exemploEmpresa > dados.exemploFreelancer ? "empresa" : "recibos verdes";
+  const [indice, setIndice] = useState(() =>
+    Math.max(
+      0,
+      dados.cenarios.findIndex((ponto) =>
+        dados.cruzamento
+          ? ponto.faturacao === dados.cruzamento
+          : ponto.faturacao === dados.exemplo,
+      ),
+    ),
+  );
+  const pontoAtivo = dados.cenarios[indice] ?? dados.cenarios[0] ?? dados.pontos[0]!;
+  const melhorEscolhido =
+    pontoAtivo.empresa > pontoAtivo.freelancer ? "empresa" : "recibos verdes";
 
   return (
     <MolduraPalco
@@ -45,21 +60,41 @@ export default function PalcoEmpresa({ dados }: { dados: DadosEmpresa }) {
       nome="O ponto de viragem"
       resumo="A diferença entre o líquido de uma sociedade e o de recibos verdes, traçada ao longo da faturação anual, com o custo de ter empresa contado. Onde a linha cruza o zero é o ponto de viragem."
       narracao={[
-        `O eixo mostra faturação anual de ${mil(dados.pontos[0]?.faturacao ?? 0)} a ${mil(dados.pontos[dados.pontos.length - 1]?.faturacao ?? 0)} euros. O exemplo está marcado em ${eur0(dados.exemplo)}.`,
+        `O eixo mostra faturação anual de ${mil(dados.pontos[0]?.faturacao ?? 0)} a ${mil(dados.pontos[dados.pontos.length - 1]?.faturacao ?? 0)} euros. O seletor abre em ${eur0(pontoAtivo.faturacao)} e pode ser ajustado por toque, arrasto ou teclado.`,
         "A linha mostra quanto a sociedade deixa a mais ou a menos do que recibos verdes. Abaixo do zero, compensam os recibos verdes; acima, compensa a sociedade.",
         `Ter empresa custa cerca de ${eur0(dados.custoFixo)} por ano em contabilidade, antes de qualquer imposto. É esse custo que afunda a linha e empurra o ponto de viragem para a direita.`,
         dados.cruzamento
-          ? `A linha cruza o zero por volta dos ${eur0(dados.cruzamento)} de faturação anual. Abaixo disso compensam os recibos verdes; acima, a sociedade. No exemplo de ${eur0(dados.exemplo)}, compensa ${melhor}.`
+          ? `A linha cruza o zero por volta dos ${eur0(dados.cruzamento)} de faturação anual. Abaixo disso compensam os recibos verdes; acima, a sociedade. No cenário escolhido de ${eur0(pontoAtivo.faturacao)}, compensa ${melhorEscolhido}.`
           : `Dentro deste intervalo de faturação a linha nunca chega ao zero: compensam sempre os recibos verdes.`,
       ]}
       atos={ATOS_EMPRESA}
     >
-      {(cena) => <Cena cena={cena} dados={dados} />}
+      {(cena) => (
+        <Cena
+          cena={cena}
+          dados={dados}
+          pontoAtivo={pontoAtivo}
+          indice={indice}
+          aoMudar={setIndice}
+        />
+      )}
     </MolduraPalco>
   );
 }
 
-function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
+function Cena({
+  cena,
+  dados,
+  pontoAtivo,
+  indice,
+  aoMudar,
+}: {
+  cena: CenaDoPalco;
+  dados: DadosEmpresa;
+  pontoAtivo: PontoComparacao;
+  indice: number;
+  aoMudar: (indice: number) => void;
+}) {
   const { ato, emCena, estatico } = cena;
   const t = estatico ? { duration: 0 } : { duration: DUR.entrada / 1000, ease: ENTRADA };
   const noAto = (indice: number, beat: string) =>
@@ -152,13 +187,23 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
   // O cruzamento acontece EM cima do zero, por construção: é a definição
   // do ponto de viragem. Não há nada para interpolar.
   const yCruz = dados.cruzamento ? yZero : null;
+  const xAtivo = px(pontoAtivo.faturacao);
+  const yAtivo = py(valorEm(pontoAtivo));
 
   const MARCAS = [minX, minX + (maxX - minX) / 2, maxX];
 
   return (
-    <div aria-hidden className="relative grid gap-3 lg:grid-cols-[1.6fr_.85fr]">
-      {/* ── O gráfico ───────────────────────────────────────────── */}
-      <div className="rounded-3xl border border-white/10 bg-black/15 p-3 sm:p-4">
+    <div className="relative">
+      <SeletorCenario
+        dados={dados}
+        ponto={pontoAtivo}
+        indice={indice}
+        aoMudar={aoMudar}
+      />
+
+      <div aria-hidden className="mt-3 grid gap-3 lg:grid-cols-[1.6fr_.85fr]">
+        {/* ── O gráfico ─────────────────────────────────────────── */}
+        <div className="rounded-3xl border border-white/10 bg-black/15 p-3 sm:p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">
@@ -292,31 +337,35 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
             />
           ) : null}
 
-          {/* O marcador do exemplo fica onde está, para se ver de que lado
-              a pessoa está quando o cruzamento aparecer. */}
+          {/* O marcador segue o cenário escolhido. É a causa visível das
+              duas barras e do veredicto que mudam ao mesmo gesto. */}
           <m.g initial={false} animate={{ opacity: marcador ? 1 : 0 }} transition={t}>
             <line
-              x1={px(dados.exemplo)}
-              x2={px(dados.exemplo)}
+              x1={xAtivo}
+              x2={xAtivo}
               y1={M.topo}
               y2={A - M.base}
               stroke="rgba(255,255,255,.3)"
               strokeWidth="1"
               strokeDasharray="3 3"
             />
-            {/* Só o valor. «30k · o exemplo» transbordava 25 px da caixa
-                do texto — o que a legenda diz, di-lo o rótulo por baixo do
-                gráfico, e uma etiqueta que sai do desenho não é legenda. */}
             <text
-              x={px(dados.exemplo)}
+              x={xAtivo}
               y={M.topo - 5}
-              textAnchor="middle"
+              textAnchor={
+                pontoAtivo.faturacao === minX
+                  ? "start"
+                  : pontoAtivo.faturacao === maxX
+                    ? "end"
+                    : "middle"
+              }
               fill="rgba(255,255,255,.55)"
               fontSize="9"
               fontWeight="700"
             >
-              {mil(dados.exemplo)}
+              {mil(pontoAtivo.faturacao)}
             </text>
+            <circle cx={xAtivo} cy={yAtivo} r="4" fill="#e7c98e" stroke="#0c251e" strokeWidth="2" />
           </m.g>
 
           {/* O cruzamento: o acontecimento deste palco. */}
@@ -339,7 +388,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
           transition={t}
           className="mt-1 text-center text-[9px] text-white/35"
         >
-          Faturação anual · no zero as duas valem o mesmo · a tracejado, o exemplo de {eur0(dados.exemplo)}
+          Faturação anual · no zero as duas valem o mesmo · a tracejado, o cenário escolhido
         </m.div>
       </div>
 
@@ -432,25 +481,25 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
           className="rounded-3xl border border-white/10 bg-white/[.04] p-3.5"
         >
           <span className="block text-[9px] font-bold uppercase tracking-wide text-white/40">
-            No exemplo · {eur0(dados.exemplo)} por ano
+            Neste cenário · {eur0(pontoAtivo.faturacao)} por ano
           </span>
           <div className="mt-2 space-y-1.5">
             <Barra
               Icon={Receipt}
               rotulo="Recibos verdes"
-              valor={dados.exemploFreelancer}
-              maximo={Math.max(dados.exemploFreelancer, dados.exemploEmpresa)}
+              valor={pontoAtivo.freelancer}
+              maximo={Math.max(pontoAtivo.freelancer, pontoAtivo.empresa)}
               cor="bg-brand-mint"
-              vence={dados.exemploFreelancer >= dados.exemploEmpresa}
+              vence={pontoAtivo.freelancer >= pontoAtivo.empresa}
               visivel={ondeEstas}
             />
             <Barra
               Icon={Building}
               rotulo="Empresa"
-              valor={dados.exemploEmpresa}
-              maximo={Math.max(dados.exemploFreelancer, dados.exemploEmpresa)}
+              valor={pontoAtivo.empresa}
+              maximo={Math.max(pontoAtivo.freelancer, pontoAtivo.empresa)}
               cor="bg-[#e7c98e]"
-              vence={dados.exemploEmpresa > dados.exemploFreelancer}
+              vence={pontoAtivo.empresa > pontoAtivo.freelancer}
               visivel={ondeEstas}
             />
           </div>
@@ -464,6 +513,107 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosEmpresa }) {
             responsabilidade limitada. O ponto de viragem diz quando vale a pena discuti-la.
           </m.p>
         </m.div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SeletorCenario({
+  dados,
+  ponto,
+  indice,
+  aoMudar,
+}: {
+  dados: DadosEmpresa;
+  ponto: PontoComparacao;
+  indice: number;
+  aoMudar: (indice: number) => void;
+}) {
+  const ultimo = Math.max(0, dados.cenarios.length - 1);
+  const progresso = ultimo === 0 ? 0 : (indice / ultimo) * 100;
+  const diferenca = ponto.empresa - ponto.freelancer;
+  const vencedor = diferenca > 0 ? "Empresa" : diferenca < 0 ? "Recibos verdes" : "As duas opções";
+  const frase =
+    diferenca === 0
+      ? "Neste cenário, as duas opções deixam o mesmo líquido."
+      : `${vencedor} deixa ${eur0(Math.abs(diferenca))} a mais por ano neste cenário.`;
+  const primeiro = dados.cenarios[0]?.faturacao ?? 0;
+  const fim = dados.cenarios[ultimo]?.faturacao ?? primeiro;
+  const posicaoViragem =
+    dados.cruzamento && fim > primeiro
+      ? ((dados.cruzamento - primeiro) / (fim - primeiro)) * 100
+      : null;
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-white/15 bg-white/[.065] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,.06)] sm:px-5">
+      <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-48 w-48 rounded-full bg-brand/20 blur-3xl" />
+      <div className="relative grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(13rem,.7fr)] sm:items-end">
+        <div>
+          <label
+            htmlFor="empresa-faturacao"
+            className="block text-[10px] font-bold uppercase tracking-[.16em] text-brand-mint"
+          >
+            Faturação anual do cenário
+          </label>
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <output className="font-display text-[clamp(2rem,5vw,3.2rem)] font-semibold leading-none tabular-nums text-white">
+              {eur0(ponto.faturacao)}
+            </output>
+            <span className="text-[10px] font-semibold text-white/45">arrasta ou usa as setas</span>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/15 px-3.5 py-3">
+          <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/35">
+            Leitura imediata
+          </div>
+          <p aria-live="polite" className="mt-1 text-xs font-semibold leading-relaxed text-white/80">
+            {frase}
+          </p>
+        </div>
+      </div>
+
+      <div className="relative mt-4">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-white/15"
+        />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute left-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-brand-mint"
+          style={{ width: `${progresso}%` }}
+        />
+        {posicaoViragem !== null ? (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 z-0 h-5 w-px -translate-y-1/2 bg-brand-mint/50"
+            style={{ left: `${posicaoViragem}%` }}
+          />
+        ) : null}
+        <input
+          id="empresa-faturacao"
+          type="range"
+          min={0}
+          max={ultimo}
+          step={1}
+          value={indice}
+          onChange={(evento) => aoMudar(Number(evento.currentTarget.value))}
+          aria-describedby="empresa-faturacao-ajuda"
+          aria-valuetext={`${eur0(ponto.faturacao)}. ${frase}`}
+          className="focus-marca relative z-10 h-10 w-full cursor-ew-resize appearance-none bg-transparent accent-brand-mint [&::-moz-range-progress]:bg-transparent [&::-moz-range-thumb]:h-6 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-4 [&::-moz-range-thumb]:border-[#0c251e] [&::-moz-range-thumb]:bg-brand-mint [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:h-1.5 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-[9px] [&::-webkit-slider-thumb]:h-6 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-4 [&::-webkit-slider-thumb]:border-[#0c251e] [&::-webkit-slider-thumb]:bg-brand-mint [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_rgba(159,225,203,.55)]"
+        />
+      </div>
+      <div
+        id="empresa-faturacao-ajuda"
+        className="relative flex items-center justify-between gap-3 text-[9px] font-semibold text-white/40"
+      >
+        <span>{eur0(primeiro)}</span>
+        {dados.cruzamento ? (
+          <span className="text-center text-brand-mint/70">
+            viragem calculada · {eur0(dados.cruzamento)}
+          </span>
+        ) : null}
+        <span>{eur0(fim)}</span>
       </div>
     </div>
   );

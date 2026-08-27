@@ -38,7 +38,8 @@ import {
   type EntradasDemoPreco,
   type ParametrosDemoPreco,
 } from "@/lib/pricing/demo-homepage";
-import { SubtituloHero, TituloHero } from "@/components/foco/TextosHero";
+import CabecalhoHeroFoco from "@/components/foco/CabecalhoHeroFoco";
+import { FOCO_POR_ID } from "@/components/foco/focos";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O PALCO DO PREÇO
@@ -78,6 +79,8 @@ const pct1 = (n: number) =>
 /** Uma taxa legal escreve-se como a lei a escreve: 23%, não 23,0%. */
 const pctLimpa = (n: number) =>
   `${(n * 100).toLocaleString("pt-PT", { maximumFractionDigits: 1 })}%`;
+
+const FOCO = FOCO_POR_ID.get("preco")!;
 
 type ChaveEntrada = keyof EntradasDemoPreco;
 
@@ -488,21 +491,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
       </div>
 
       <div className="mx-auto max-w-6xl">
-        <div className="mx-auto max-w-3xl text-center">
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-brand/25 bg-brand-light px-3.5 py-2 text-xs font-semibold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-            <Coin size={14} />
-            Formar um preço
-            <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
-            Portugal
-          </div>
-          {/* Sem escala própria. Tinha uma — «ali o título É o primeiro
-              ecrã, aqui o primeiro ecrã é o palco» — e era verdade
-              enquanto a escala comum eram 5,65 rem. Agora que são 3,75,
-              um segundo degrau seria uma diferença que ninguém consegue
-              apontar mas que se nota ao passar de uma leitura à outra. */}
-          <TituloHero foco="preco" />
-          <SubtituloHero foco="preco" />
-        </div>
+        <CabecalhoHeroFoco foco={FOCO} />
 
         {/* ── O palco ───────────────────────────────────────────────── */}
         <div

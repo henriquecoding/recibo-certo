@@ -3,7 +3,7 @@
  * AUDITORIA DE ACESSIBILIDADE DOS CINCO FOCOS DA HOMEPAGE.
  * ----------------------------------------------------------------------
  * A homepage passou a ter cinco leituras editoriais — `/`, e `?foco=` com
- * descobrir, preco, recibos, salario e empresa —, cada uma com um palco
+ * descobrir, preco, recibos, empresa e salario —, cada uma com um palco
  * que se move sozinho. Auditar só uma delas seria auditar um quinto do
  * que se serve.
  *
@@ -23,7 +23,7 @@
 
 import { auditar, BASE } from "./lib/auditoria-a11y.mjs";
 
-const FOCOS = ["descobrir", "preco", "recibos", "salario", "empresa"];
+const FOCOS = ["descobrir", "preco", "recibos", "empresa", "salario"];
 
 /** Espera que a sequência assente sozinha no último ato. */
 const assentar = async (p) => {

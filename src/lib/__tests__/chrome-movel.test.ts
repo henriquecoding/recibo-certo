@@ -77,7 +77,7 @@ describe("chrome-movel:barra", () => {
     // «Recibos» acerta-lhe sem olhar, e trocar as posições desfaz isso sem
     // aviso nenhum. Por isso o número vive na fonte e não aqui.
     expect(PILARES).toHaveLength(5);
-    expect(PILARES.map((p) => p.id)).toEqual(["descobrir", "preco", "recibos", "salario", "empresa"]);
+    expect(PILARES.map((p) => p.id)).toEqual(["descobrir", "preco", "recibos", "empresa", "salario"]);
   });
 
   it("«Pesquisar» não é um dos lugares — a pesquisa é o dock", () => {

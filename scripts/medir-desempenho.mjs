@@ -168,7 +168,7 @@ async function medirTransicoes(navegador, latencia) {
   });
 
   const passos = [];
-  for (const alvo of ["Preço", "Recibos verdes", "Salário", "Empresa", "Descobrir"]) {
+  for (const alvo of ["Preço", "Recibos verdes", "Empresa", "Salário", "Descobrir"]) {
     bytesPorTroca.length = 0;
     const ligacao = p.locator(`a[href*="foco="]:has-text("${alvo}")`).first();
     if (!(await ligacao.count())) continue;

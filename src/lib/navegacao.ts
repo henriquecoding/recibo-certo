@@ -103,13 +103,17 @@ export interface Pilar {
 }
 
 /**
- * OS CINCO PILARES, pela ordem do ciclo de vida e não por identidade.
+ * OS CINCO PILARES, pela ordem da decisão e não por identidade.
  *
  * A pergunta que a ordem responde deixou de ser «quem és?» (independente,
  * dependente, empresa) e passou a ser «em que ponto estás?»:
  *
  *     que negócio abrir → quanto cobrar → quanto fica de cada recibo →
- *     quanto fica do salário → e se fosse uma empresa
+ *     e se fosse uma empresa → conferir um salário
+ *
+ * Os quatro primeiros são um arco contínuo de atividade independente.
+ * «Salário» é uma tarefa paralela e fecha a fila sem separar «Recibos» de
+ * «Empresa», que são precisamente os dois lados da mesma decisão.
  *
  * Os dois primeiros lugares são exactamente os dois motores que antes só
  * existiam dentro de `/ferramentas`. A ordem é contrato: quem aprendeu
@@ -151,17 +155,6 @@ export const PILARES: Pilar[] = [
     toolId: "recibos-verdes",
   },
   {
-    id: "salario",
-    href: "/ferramentas/recibo-vencimento",
-    homepageHref: "/?foco=salario",
-    label: "Salário",
-    curto: "Salário",
-    resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",
-    icone: "Briefcase",
-    prefixos: ["/ferramentas/recibo-vencimento"],
-    toolId: "recibo-vencimento",
-  },
-  {
     id: "empresa",
     href: "/ferramentas/simulador-empresa",
     homepageHref: "/?foco=empresa",
@@ -171,6 +164,17 @@ export const PILARES: Pilar[] = [
     icone: "Building",
     prefixos: ["/ferramentas/simulador-empresa"],
     toolId: "simulador-empresa",
+  },
+  {
+    id: "salario",
+    href: "/ferramentas/recibo-vencimento",
+    homepageHref: "/?foco=salario",
+    label: "Salário",
+    curto: "Salário",
+    resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",
+    icone: "Briefcase",
+    prefixos: ["/ferramentas/recibo-vencimento"],
+    toolId: "recibo-vencimento",
   },
 ];
 

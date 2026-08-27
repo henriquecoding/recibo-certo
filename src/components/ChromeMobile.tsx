@@ -15,7 +15,7 @@
 //  │ OS CINCO LUGARES SÃO OS CINCO PILARES — E JÁ NÃO CINCO SECÇÕES       │
 //  │                                                                     │
 //  │      antes:  Início · Guias · Quiz · Contabilistas · Conta          │
-//  │      agora:  Descobrir · Preço · Recibos · Salário · Empresa        │
+//  │      agora:  Descobrir · Preço · Recibos · Empresa · Salário        │
 //  │                                                                     │
 //  │ A barra anterior tinha um problema que não dava erro nenhum: NÃO     │
 //  │ ERA A BARRA DE SECRETÁRIA. Lá dizia «Simular · Guias · Quiz ·       │
