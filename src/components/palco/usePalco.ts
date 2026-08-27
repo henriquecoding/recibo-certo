@@ -25,8 +25,9 @@
 //      sozinha ensina o olho que nada ali depende de si.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useRelogioDeAtos, type Ato } from "./relogio";
+import { useArranque } from "./arranque";
 
 export interface Palco {
   /** O índice do ato em curso. */
@@ -66,7 +67,23 @@ export interface Palco {
   estadoPalco: { parado: boolean; imediato: boolean };
 }
 
-export function usePalco(atos: readonly Ato[]): Palco {
+/**
+ * @param atos   a coreografia
+ * @param moldura o elemento do palco. Quando é dado, a cena só arranca
+ *                depois de ele estar no ecrã e de o browser ter tido um
+ *                momento livre — ver `arranque.ts`. Sem ele, arranca à
+ *                montagem, que é o comportamento antigo.
+ */
+/**
+ * Uma referência vazia e ESTÁVEL, para quando não há moldura.
+ *
+ * `useArranque` é um hook e não pode ser chamado condicionalmente. Passar
+ * `{ current: null }` criado inline daria uma referência nova a cada
+ * render, e o efeito voltava a correr sem parar.
+ */
+const semMoldura: RefObject<Element | null> = { current: null };
+
+export function usePalco(atos: readonly Ato[], moldura?: RefObject<Element | null>): Palco {
   // ┌───────────────────────────────────────────────────────────────────┐
   // │ UMA FONTE SÓ PARA `prefers-reduced-motion`                        │
   // │                                                                   │
@@ -106,6 +123,25 @@ export function usePalco(atos: readonly Ato[]): Palco {
     return () => consulta.removeEventListener("change", aplicar);
   }, []);
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A CENA PEDE LICENÇA ANTES DE ARRANCAR                             │
+  // │                                                                   │
+  // │ Antes rebobinava à montagem — ou seja, ao mesmo tempo que o React │
+  // │ hidrata a página e o browser avalia quase um megabyte de          │
+  // │ JavaScript. Os primeiros frames da cena caíam dentro da maior     │
+  // │ tarefa do arranque (~690 ms a 6× de estrangulamento), e o         │
+  // │ resultado era a cena a parecer que «carrega toda de uma vez».      │
+  // │                                                                   │
+  // │ Agora espera por duas licenças — estar no ecrã e o browser ter um │
+  // │ momento livre. Ver o cabeçalho de `arranque.ts`.                   │
+  // │                                                                   │
+  // │ Com movimento reduzido a espera é DESLIGADA (`ativo: false`): não │
+  // │ há cena para arrancar, e fazer o estado final esperar por uma     │
+  // │ licença que não vai servir para nada era só atraso.                │
+  // └───────────────────────────────────────────────────────────────────┘
+  const arrancou = useArranque(moldura ?? semMoldura, moldura != null && reduz === false);
+  const podeArrancar = moldura == null || reduz !== false || arrancou;
+
   useEffect(() => {
     if (reduz === null) return;
     if (reduz) {
@@ -114,12 +150,13 @@ export function usePalco(atos: readonly Ato[]): Palco {
       setFinalizado(true);
       return;
     }
+    if (!podeArrancar) return;
     // O HTML servido contém o resultado completo. Só aqui a cena rebobina.
     setAto(0);
     setParado(false);
     setFinalizado(false);
     setCiclo((atual) => atual + 1);
-  }, [reduz, ultimoAto]);
+  }, [reduz, ultimoAto, podeArrancar]);
 
   const montado = reduz !== null;
   const estatico = reduz !== false;

@@ -382,6 +382,81 @@ async function verificarTemaEscuro(navegador) {
   }
 }
 
+/**
+ * A cena espera pela sua vez.
+ *
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ O QUE ISTO GARANTE, E O QUE NÃO GARANTE                               │
+ * │                                                                       │
+ * │ Garante que um palco FORA DO ECRÃ não está a correr: não gasta CPU    │
+ * │ nem bateria a demonstrar para ninguém, e quando a pessoa chega lá a   │
+ * │ cena começa do princípio em vez de já ter acabado.                    │
+ * │                                                                       │
+ * │ NÃO garante que a página carregue mais depressa — medido em A/B       │
+ * │ intercalado, o bloqueio da thread é indistinguível com e sem esta     │
+ * │ espera. O peso do arranque não é a animação: uma página de texto      │
+ * │ sem palco nenhum já custa 60% do mesmo bloqueio. Ver o roteiro.       │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
+async function verificarArranquePorEtapas(navegador) {
+  // Uma janela baixa põe o palco abaixo da dobra sem ser preciso rolar.
+  const ctx = await navegador.newContext({
+    viewport: { width: 1280, height: 260 },
+    colorScheme: "light",
+  });
+  await ctx.addInitScript(
+    ([v]) => {
+      try {
+        localStorage.setItem("recibocerto:changelog_visto", v);
+        localStorage.setItem(
+          "recibocerto:cookie-consent",
+          JSON.stringify({
+            necessarios: true,
+            estatistica: false,
+            marketing: false,
+            versao: 1,
+            data: new Date().toISOString(),
+          }),
+        );
+      } catch {}
+    },
+    [VERSAO],
+  );
+  const p = await ctx.newPage();
+  await p.goto(`${ENDERECO}/?foco=empresa`, { waitUntil: "load" });
+  await p.waitForTimeout(4000);
+
+  /** A legenda do cabeçalho diz em que passo a cena vai. */
+  const legenda = () => p.locator("#palco-empresa-titulo + p").innerText();
+
+  const foraDoEcra = await legenda();
+  verificar(
+    /concluída/i.test(foraDoEcra),
+    "[arranque] fora do ecrã a cena não arranca — fica no estado servido",
+    `legenda: «${foraDoEcra}»`,
+  );
+
+  await p.locator("#palco-empresa-titulo").scrollIntoViewIfNeeded();
+  // Tempo para a licença (visível + browser livre) e para o 1.º ato.
+  await p.waitForTimeout(2500);
+  const noEcra = await legenda();
+  verificar(
+    !/concluída/i.test(noEcra),
+    "[arranque] ao entrar no ecrã a cena começa do princípio",
+    `legenda: «${noEcra}»`,
+  );
+
+  // E ACABA — a rede de segurança do `timeout` do `requestIdleCallback`.
+  await p.waitForTimeout(CENA_EMPRESA);
+  const fim = await legenda();
+  verificar(
+    /concluída/i.test(fim),
+    "[arranque] e chega ao fim depois de arrancar",
+    `legenda: «${fim}»`,
+  );
+  await ctx.close();
+}
+
 // ── Correr ─────────────────────────────────────────────────────────────
 const navegador = await chromium.launch(EXEC ? { executablePath: EXEC } : {});
 try {
@@ -389,6 +464,7 @@ try {
   await medirCena(navegador, "salario", CENA_SALARIO);
   await verificarRegua(navegador);
   await verificarTemaEscuro(navegador);
+  await verificarArranquePorEtapas(navegador);
 } finally {
   await navegador.close();
 }

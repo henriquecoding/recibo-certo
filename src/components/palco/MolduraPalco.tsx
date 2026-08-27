@@ -109,6 +109,12 @@ export default function MolduraPalco({
   atos: readonly Ato[];
   children: (cena: CenaDoPalco) => ReactNode;
 }) {
+  // A moldura é o que o `IntersectionObserver` do arranque vigia: a cena
+  // só rebobina depois de ela estar no ecrã e de o browser ter tido um
+  // momento livre. Declarada antes do hook porque é argumento dele.
+  const molduraRef = useRef<HTMLElement>(null);
+  const palcoRef = useRef<HTMLDivElement>(null);
+
   // Todo o estado — o ato inicial ser o último, a pausa parar mesmo, ir
   // para um ato pô-lo a correr — vive em `usePalco`, partilhado com o hero
   // da bússola. Ver o cabeçalho desse ficheiro.
@@ -126,8 +132,7 @@ export default function MolduraPalco({
     irPara,
     rever,
     estadoPalco,
-  } = usePalco(atos);
-  const palcoRef = useRef<HTMLDivElement>(null);
+  } = usePalco(atos, molduraRef);
 
   const pele = PELE[tom];
   const cena: CenaDoPalco = { ato, feito, emCena, estatico, ciclo, palcoRef };
@@ -135,6 +140,7 @@ export default function MolduraPalco({
   return (
     <PalcoContexto.Provider value={estadoPalco}>
       <section
+        ref={molduraRef}
         aria-labelledby={`${id}-titulo`}
         aria-describedby={`${id}-resumo`}
         className={`relative overflow-hidden rounded-[2rem] border sm:rounded-[2.5rem] ${pele.seccao}`}
