@@ -166,6 +166,9 @@ describe("homepage: compatibilidade e intenção", () => {
     expect(ligacao).toContain('iniciar(foco, "teclado")');
     expect(ligacao).toContain("router.push(ROTA_POR_FOCO[foco], { scroll: false })");
     expect(fonte).toContain("performance.now() - navegacaoAtual.inicio < 1_000");
+    expect(fonte).toContain("__rcNavegacaoPendente");
+    expect(fonte).toContain("lerNavegacaoPendente()");
+    expect(fonte).not.toContain("let navegacaoPendente");
 
     const regua = ler("components", "foco", "ReguaPerguntasHero.tsx");
     const bussola = ler("components", "foco", "HeroBussola.tsx");

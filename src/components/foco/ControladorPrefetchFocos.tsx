@@ -52,7 +52,16 @@ interface NavegacaoPendente {
   rscRegistado: boolean;
 }
 
-let navegacaoPendente: NavegacaoPendente | null = null;
+type JanelaNavegacao = Window & {
+  __rcNavegacaoPendente?: NavegacaoPendente | null;
+};
+
+const lerNavegacaoPendente = () =>
+  (window as JanelaNavegacao).__rcNavegacaoPendente ?? null;
+
+const guardarNavegacaoPendente = (navegacao: NavegacaoPendente | null) => {
+  (window as JanelaNavegacao).__rcNavegacaoPendente = navegacao;
+};
 
 const baldeInteracao = (ms: number) => {
   if (ms <= 50) return "0-50ms";
@@ -223,7 +232,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   const iniciar = useCallback<ContextoFocos["iniciar"]>(
     (destino, origem) => {
       if (!focoAtivo || destino === focoAtivo) return;
-      const navegacaoAtual = navegacaoPendente;
+      const navegacaoAtual = lerNavegacaoPendente();
       if (
         navegacaoAtual?.destino === destino &&
         performance.now() - navegacaoAtual.inicio < 1_000
@@ -233,7 +242,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
       const jaPreparado = preparados.has(destino);
       preparar(destino, "intencao");
       const inicio = performance.now();
-      navegacaoPendente = {
+      guardarNavegacaoPendente({
         origem,
         partida: focoAtivo,
         destino,
@@ -241,14 +250,14 @@ export default function ControladorPrefetchFocos({ children }: { children: React
         preparado: jaPreparado,
         ackRegistado: false,
         rscRegistado: false,
-      };
+      });
       setPendente(destino);
       setAnunciar(false);
       marcar("rc:foco:pointerdown", { foco: destino, origem });
       marcar("rc:foco:navigation-start", { foco: destino, origem, preparado: jaPreparado });
 
       requestAnimationFrame(() => {
-        const atual = navegacaoPendente;
+        const atual = lerNavegacaoPendente();
         if (!atual || atual.destino !== destino || atual.ackRegistado) return;
         atual.ackRegistado = true;
         const duracao = performance.now() - atual.inicio;
@@ -264,7 +273,9 @@ export default function ControladorPrefetchFocos({ children }: { children: React
 
       agendar(() => setAnunciar(true), 120);
       agendar(() => {
-        if (navegacaoPendente?.destino === destino) navegacaoPendente = null;
+        if (lerNavegacaoPendente()?.destino === destino) {
+          guardarNavegacaoPendente(null);
+        }
         setPendente((atual) => (atual === destino ? null : atual));
         setAnunciar(false);
       }, 10_000);
@@ -307,7 +318,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
           concluirRef.current(focoRecurso);
         }
 
-        const navegacao = navegacaoPendente;
+        const navegacao = lerNavegacaoPendente();
         if (
           navegacao &&
           !navegacao.rscRegistado &&
@@ -331,7 +342,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   // O novo conteúdo confirma a navegação depois de duas frames: a primeira
   // faz o commit; a segunda prova que houve uma oportunidade de pintura.
   useEffect(() => {
-    const atual = navegacaoPendente;
+    const atual = lerNavegacaoPendente();
     if (!focoAtivo || !atual || atual.destino !== focoAtivo) return;
     let frame2: number | null = null;
     const frame1 = requestAnimationFrame(() => {
@@ -345,7 +356,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
           prepared: atual.preparado,
           latency_bucket: baldeInteracao(duracao),
         });
-        navegacaoPendente = null;
+        guardarNavegacaoPendente(null);
         setPendente(null);
         setAnunciar(false);
       });

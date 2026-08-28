@@ -71,6 +71,8 @@ rc:foco:first-animation-frame
 O benchmark só interage depois de `controller-ready` e da `link-ready:<foco>` do
 destino. Isto distingue o HTML já pintado da ilha de navegação efetivamente
 hidratada, inclusive sob CPU reduzida e hidratação seletiva.
+O estado início→commit vive no `window` do documento, não num `let` de módulo,
+para continuar único mesmo se o App Router avaliar chunks de rota distintos.
 `prefetch-ready:<foco>` persiste enquanto a entrada estiver válida no Router
 Cache; assim, um prefetch idle anterior conta como preparação real e não é
 repetido só para produzir uma marca nova.
