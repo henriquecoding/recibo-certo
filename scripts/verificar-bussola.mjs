@@ -89,7 +89,7 @@ async function abrir(opcoes = {}) {
     try {
       localStorage.setItem("recibocerto:changelog_visto", versao);
       localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
-        necessarios: true, estatistica: false, marketing: false, versao: 1,
+        necessarios: true, estatistica: false, marketing: false, versao: 2,
         data: new Date().toISOString(),
       }));
       localStorage.removeItem("recibocerto:perfil:v1");

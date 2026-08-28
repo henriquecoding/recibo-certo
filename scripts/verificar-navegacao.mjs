@@ -80,7 +80,7 @@ for (const vp of VIEWPORTS) {
     try {
       localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
         necessarios: true, estatistica: false, marketing: false,
-        data: new Date().toISOString(), versao: 1,
+        data: new Date().toISOString(), versao: 2,
       }));
       localStorage.setItem("recibocerto:changelog_visto", versao);
     } catch { /* ignora */ }

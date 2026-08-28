@@ -66,7 +66,7 @@ const semear = () => {
     localStorage.setItem("recibocerto:onboarded", "1");
     localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
       necessarios: true, estatistica: false, marketing: false,
-      data: new Date().toISOString(), versao: 1,
+      data: new Date().toISOString(), versao: 2,
     }));
   } catch {
     /* modo privado: os overlays fecham-se por Escape */

@@ -35,7 +35,7 @@ export const SEMEAR = `
   localStorage.setItem("recibocerto:onboarded", "1");
   localStorage.setItem("recibocerto:changelog_visto", ${JSON.stringify(VERSAO)});
   localStorage.setItem("recibocerto:cookie-consent", ${JSON.stringify(
-    JSON.stringify({ necessarios: true, estatistica: false, marketing: false, versao: 1 }),
+    JSON.stringify({ necessarios: true, estatistica: false, marketing: false, versao: 2 }),
   )});
 `;
 

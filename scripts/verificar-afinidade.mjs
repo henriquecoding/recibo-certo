@@ -112,7 +112,7 @@ async function novaPagina({ largura = 1280, altura = 900 } = {}) {
     try {
       window.localStorage.setItem(
         "recibocerto:cookie-consent",
-        JSON.stringify({ versao: 1, estatistica: true, marketing: false, em: new Date().toISOString() }),
+        JSON.stringify({ versao: 2, estatistica: true, marketing: false, em: new Date().toISOString() }),
       );
       window.localStorage.setItem("recibocerto:changelog_visto", versao);
     } catch { /* modo privado: segue à mesma */ }

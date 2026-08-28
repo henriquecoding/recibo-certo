@@ -303,7 +303,7 @@ async function correr() {
                 estatistica: false,
                 marketing: false,
                 data: new Date().toISOString(),
-                versao: 1,
+                versao: 2,
               }),
             );
             localStorage.setItem("recibocerto:changelog_visto", versao);

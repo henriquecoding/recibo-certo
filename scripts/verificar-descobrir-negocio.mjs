@@ -61,7 +61,7 @@ const semear = () => {
         estatistica: false,
         marketing: false,
         data: new Date().toISOString(),
-        versao: 1,
+        versao: 2,
       }),
     );
   } catch {

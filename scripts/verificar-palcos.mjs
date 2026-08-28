@@ -68,7 +68,7 @@ async function contexto(navegador, tema, largura = 1280) {
             necessarios: true,
             estatistica: false,
             marketing: false,
-            versao: 1,
+            versao: 2,
             data: new Date().toISOString(),
           }),
         );
@@ -423,7 +423,7 @@ async function verificarArranquePorEtapas(navegador) {
             necessarios: true,
             estatistica: false,
             marketing: false,
-            versao: 1,
+            versao: 2,
             data: new Date().toISOString(),
           }),
         );

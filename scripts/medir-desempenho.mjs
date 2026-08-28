@@ -251,10 +251,13 @@ const erroDeSelector = (mensagem, pagina) =>
 async function exigirHomepage(pagina, foco) {
   const seletor = `main[data-homepage-foco="${foco}"]`;
   const principal = pagina.locator(seletor);
+  // O App Router atualiza o URL no `commit` antes de substituir a árvore
+  // visível. Esperar primeiro pelo destino evita transformar esse intervalo
+  // legítimo numa falsa ausência de selector nos três motores.
+  await principal.first().waitFor({ state: "visible", timeout: 10_000 });
   if ((await principal.count()) !== 1) {
     throw erroDeSelector(`Esperava exatamente ${seletor}`, pagina);
   }
-  await principal.waitFor({ state: "visible", timeout: 10_000 });
   const h1 = principal.locator("h1");
   if ((await h1.count()) < 1) throw erroDeSelector(`${seletor} ficou sem h1`, pagina);
   if ((await principal.innerText()).trim().length < 500) {

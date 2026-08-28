@@ -201,9 +201,17 @@ describe("homepage: animação, dados de campo e budgets", () => {
   it("protege a matriz real, a amostra e a dispersão no CI", () => {
     const benchmark = ler("..", "scripts", "medir-desempenho.mjs");
     const workflow = ler("..", ".github", "workflows", "testes-e-build.yml");
+    const esperaDestino = benchmark.indexOf(
+      'await principal.first().waitFor({ state: "visible"',
+    );
+    const exigeDestinoUnico = benchmark.indexOf(
+      "if ((await principal.count()) !== 1)",
+    );
     expect(benchmark).toContain("REPETICOES < 10");
     expect(benchmark).toContain("export const CONSENT_VERSION = (\\d+);");
     expect(benchmark).toContain("chromium, firefox, webkit");
+    expect(esperaDestino).toBeGreaterThan(-1);
+    expect(esperaDestino).toBeLessThan(exigeDestinoUnico);
     expect(benchmark).toContain("p50: arredondar(p50)");
     expect(benchmark).toContain("p75: arredondar(p75)");
     expect(benchmark).toContain("p95: arredondar(p95)");
@@ -212,5 +220,16 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(workflow).toContain("homepage-performance:");
     expect(workflow).toContain("RC_REPETICOES: 10");
     expect(workflow).toContain("npx playwright install --with-deps ${{ matrix.browser }}");
+  });
+
+  it("mantém os E2E no contrato de consentimento em vigor", () => {
+    for (const script of [
+      "verificar-descobrir-negocio.mjs",
+      "verificar-negocio-empresa.mjs",
+    ]) {
+      expect(ler("..", "scripts", script)).toContain(
+        `versao: ${CONSENT_VERSION}`,
+      );
+    }
   });
 });
