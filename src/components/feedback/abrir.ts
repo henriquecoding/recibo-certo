@@ -6,7 +6,12 @@ import type { TipoFeedback } from "@/lib/supabase/feedback";
 
 export const EVENTO_ABRIR_FEEDBACK = "recibocerto:feedback:abrir";
 
-export function abrirFeedback(detalhe?: { tipo?: TipoFeedback; area?: string }) {
+export interface DetalheFeedback {
+  tipo?: TipoFeedback;
+  area?: string;
+}
+
+export function abrirFeedback(detalhe?: DetalheFeedback) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(EVENTO_ABRIR_FEEDBACK, { detail: detalhe }));
 }

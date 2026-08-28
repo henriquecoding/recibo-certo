@@ -5,13 +5,12 @@ import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
 import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
-import DeferredOverlays from "@/components/ui/DeferredOverlays";
+import IntentOverlays from "@/components/ui/IntentOverlays";
 import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
 import { AvisosProvider } from "@/components/ui/Avisos";
 import { ConfirmacaoProvider } from "@/components/ui/Confirmar";
 import ChromeMobile from "@/components/ChromeMobile";
 import BotaoTopo from "@/components/ui/BotaoTopo";
-import FeedbackModal from "@/components/feedback/FeedbackModal";
 import Medicao from "@/components/Medicao";
 // Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
 // carregar o módulo e faz o build falhar se `APP_VERSION` e a entrada mais
@@ -193,9 +192,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         {/* Voltar ao topo — global em todo o site público;
                             esconde-se sozinho no /dashboard e no /admin. */}
                         <BotaoTopo />
-                        <FeedbackModal />
                         <Medicao />
-                        <DeferredOverlays />
+                        <IntentOverlays />
                       </ConfirmacaoProvider>
                     </AvisosProvider>
                   </CoordenadorOverlays>

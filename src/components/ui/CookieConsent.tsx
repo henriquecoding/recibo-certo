@@ -58,8 +58,12 @@ function Categoria({
   );
 }
 
-export default function CookieConsent() {
-  const [querAbrir, setAberto] = useState(false);
+export default function CookieConsent({
+  abrirInicialmente = false,
+}: {
+  abrirInicialmente?: boolean;
+}) {
+  const [querAbrir, setAberto] = useState(abrirInicialmente);
   const [jaDecidiu, setJaDecidiu] = useState(true);
 
   /**
@@ -82,6 +86,8 @@ export default function CookieConsent() {
     } else {
       setEstatistica(c.estatistica);
       setMarketing(c.marketing);
+      setJaDecidiu(true);
+      if (abrirInicialmente) setAberto(true);
     }
     const abrir = () => {
       const cur = lerConsentimento();
@@ -92,7 +98,7 @@ export default function CookieConsent() {
     };
     window.addEventListener(ABRIR_PREFERENCIAS_EVENT, abrir);
     return () => window.removeEventListener(ABRIR_PREFERENCIAS_EVENT, abrir);
-  }, []);
+  }, [abrirInicialmente]);
 
   useEffect(() => {
     if (!aberto) return;
