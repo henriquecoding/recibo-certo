@@ -7,7 +7,13 @@ import { useIntencaoFocos } from "./ControladorPrefetchFocos";
 
 type Props = Omit<
   ComponentProps<typeof Link>,
-  "href" | "prefetch" | "onPointerEnter" | "onPointerDown" | "onFocus" | "onClick"
+  | "href"
+  | "prefetch"
+  | "onPointerEnter"
+  | "onPointerDown"
+  | "onFocus"
+  | "onKeyDown"
+  | "onClick"
 > & {
   foco: FocoHomepage;
 };
@@ -39,6 +45,18 @@ export default function LinkFocoIntencao({ foco, className = "", ...props }: Pro
       scroll={false}
       onPointerEnter={() => preparar(foco)}
       onFocus={() => preparar(foco)}
+      onKeyDown={(evento) => {
+        if (
+          evento.key === "Enter" &&
+          !evento.repeat &&
+          !evento.metaKey &&
+          !evento.ctrlKey &&
+          !evento.shiftKey &&
+          !evento.altKey
+        ) {
+          iniciar(foco, "teclado");
+        }
+      }}
       onPointerDown={(evento) => {
         if (
           evento.button === 0 &&

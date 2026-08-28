@@ -223,6 +223,13 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   const iniciar = useCallback<ContextoFocos["iniciar"]>(
     (destino, origem) => {
       if (!focoAtivo || destino === focoAtivo) return;
+      const navegacaoAtual = navegacaoPendente;
+      if (
+        navegacaoAtual?.destino === destino &&
+        performance.now() - navegacaoAtual.inicio < 1_000
+      ) {
+        return;
+      }
       const jaPreparado = preparados.has(destino);
       preparar(destino, "intencao");
       const inicio = performance.now();

@@ -161,6 +161,9 @@ describe("homepage: compatibilidade e intenção", () => {
 
     const ligacao = ler("components", "foco", "LinkFocoIntencao.tsx");
     expect(ligacao).toContain("`rc:foco:link-ready:${foco}`");
+    expect(ligacao).toContain('evento.key === "Enter"');
+    expect(ligacao).toContain('iniciar(foco, "teclado")');
+    expect(fonte).toContain("performance.now() - navegacaoAtual.inicio < 1_000");
 
     const regua = ler("components", "foco", "ReguaPerguntasHero.tsx");
     const bussola = ler("components", "foco", "HeroBussola.tsx");

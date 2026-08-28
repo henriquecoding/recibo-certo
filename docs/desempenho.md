@@ -49,7 +49,8 @@ hover por si só. A preparação por intenção é implementada explicitamente p
 - zero especulação em `Save-Data`, `2g` e `slow-2g`;
 - ao esconder o documento, itens idle saem da fila;
 - o Router Cache conserva focos preparados/visitados;
-- o link reconhece a interação localmente e mantém a posição de scroll.
+- o link reconhece pointer e Enter explicitamente, deduplica keydown→click e
+  mantém a posição de scroll.
 
 As marcas disponíveis são:
 
