@@ -76,18 +76,18 @@ function selecionar(nome, todos) {
   return ids;
 }
 
-const browsersSelecionados = selecionar(
-  "RC_BROWSERS",
-  SMOKE ? ["chromium"] : Object.keys(TIPOS_BROWSER),
-);
-const cenariosSelecionados = selecionar(
-  "RC_CENARIOS",
-  SMOKE ? ["desktop-normal"] : Object.keys(CENARIOS),
-);
-const focosSelecionados = selecionar(
-  "RC_FOCOS",
-  SMOKE ? ["descobrir"] : Object.keys(ROTAS),
-);
+const todosBrowsers = Object.keys(TIPOS_BROWSER);
+const todosCenarios = Object.keys(CENARIOS);
+const todosFocos = Object.keys(ROTAS);
+const browsersSelecionados = process.env.RC_BROWSERS
+  ? selecionar("RC_BROWSERS", todosBrowsers)
+  : (SMOKE ? ["chromium"] : todosBrowsers);
+const cenariosSelecionados = process.env.RC_CENARIOS
+  ? selecionar("RC_CENARIOS", todosCenarios)
+  : (SMOKE ? ["desktop-normal"] : todosCenarios);
+const focosSelecionados = process.env.RC_FOCOS
+  ? selecionar("RC_FOCOS", todosFocos)
+  : (SMOKE ? ["descobrir"] : todosFocos);
 
 const versao = JSON.parse(
   readFileSync(new URL("../package.json", import.meta.url), "utf8"),
@@ -410,6 +410,68 @@ async function prepararFoco(pagina, link, foco, metodo) {
   );
 }
 
+async function capturarDiagnosticoCommit(pagina, foco, entrada, modo) {
+  return pagina.evaluate(
+    ({ focoAlvo, entradaAlvo, modoAlvo }) => {
+      const simplificarDetalhe = (detalhe) => {
+        if (!detalhe || typeof detalhe !== "object") return detalhe ?? null;
+        return Object.fromEntries(
+          Object.entries(detalhe).filter(([, valor]) =>
+            ["string", "number", "boolean"].includes(typeof valor),
+          ),
+        );
+      };
+
+      const marcas = performance
+        .getEntriesByType("mark")
+        .filter((entradaMarca) => entradaMarca.name.startsWith("rc:foco:"))
+        .map((entradaMarca) => ({
+          nome: entradaMarca.name,
+          inicio: Number(entradaMarca.startTime.toFixed(2)),
+          detalhe: simplificarDetalhe(entradaMarca.detail),
+        }));
+
+      const navegacoes = performance.getEntriesByType("navigation").map((entradaNavegacao) => ({
+        nome: entradaNavegacao.name,
+        tipo: entradaNavegacao.type,
+        inicio: Number(entradaNavegacao.startTime.toFixed(2)),
+        domInteractive: Number(entradaNavegacao.domInteractive.toFixed(2)),
+        loadEventEnd: Number(entradaNavegacao.loadEventEnd.toFixed(2)),
+      }));
+
+      const recursosRecentes = performance
+        .getEntriesByType("resource")
+        .filter((recurso) =>
+          recurso.initiatorType === "fetch" || recurso.name.includes("/inicio/"),
+        )
+        .slice(-12)
+        .map((recurso) => ({
+          nome: recurso.name,
+          tipo: recurso.initiatorType,
+          inicio: Number(recurso.startTime.toFixed(2)),
+          fim: Number(recurso.responseEnd.toFixed(2)),
+          transferencia: recurso.transferSize,
+        }));
+
+      return {
+        alvo: { foco: focoAlvo, entrada: entradaAlvo, modo: modoAlvo },
+        url: window.location.href,
+        pathname: window.location.pathname,
+        readyState: document.readyState,
+        visibilidade: document.visibilityState,
+        focoRenderizado:
+          document.querySelector("main[data-homepage-foco]")?.getAttribute("data-homepage-foco") ??
+          null,
+        navegacaoPendente: window.__rcNavegacaoPendente ?? null,
+        marcas,
+        navegacoes,
+        recursosRecentes,
+      };
+    },
+    { focoAlvo: foco, entradaAlvo: entrada, modoAlvo: modo },
+  );
+}
+
 async function interagir({
   pagina,
   contexto,
@@ -440,11 +502,37 @@ async function interagir({
   if (new URL(pagina.url()).pathname !== ROTAS[foco]) {
     throw erroDeSelector(`A homepage renderizou «${foco}» fora da rota esperada`, pagina);
   }
-  await pagina.waitForFunction(
-    () => performance.getEntriesByName("rc:foco:content-commit").length > 0,
-    undefined,
-    { timeout: 10_000 },
+  const diagnosticoAposRender = await capturarDiagnosticoCommit(
+    pagina,
+    foco,
+    entrada,
+    modo,
   );
+  try {
+    await pagina.waitForFunction(
+      () => performance.getEntriesByName("rc:foco:content-commit").length > 0,
+      undefined,
+      { timeout: 10_000 },
+    );
+  } catch (erro) {
+    const diagnosticoNoTimeout = await capturarDiagnosticoCommit(
+      pagina,
+      foco,
+      entrada,
+      modo,
+    ).catch((falhaDiagnostico) => ({
+      falha: falhaDiagnostico instanceof Error
+        ? falhaDiagnostico.message
+        : String(falhaDiagnostico),
+    }));
+    console.error(
+      `[homepage:diagnostico-content-commit] ${JSON.stringify({
+        aposRender: diagnosticoAposRender,
+        noTimeout: diagnosticoNoTimeout,
+      })}`,
+    );
+    throw erro;
+  }
   if (offline) await contexto.setOffline(false);
 
   const marcouFrame = await pagina.evaluate(
