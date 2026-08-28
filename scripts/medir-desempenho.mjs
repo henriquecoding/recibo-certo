@@ -278,6 +278,14 @@ async function exigirControlador(pagina) {
   );
 }
 
+async function exigirLigacaoPronta(pagina, foco) {
+  await pagina.waitForFunction(
+    (destino) => performance.getEntriesByName(`rc:foco:link-ready:${destino}`).length > 0,
+    foco,
+    { timeout: 15_000 },
+  );
+}
+
 async function medirCarga(navegador, browserNome, cenarioId, foco) {
   const cenario = CENARIOS[cenarioId];
   const { contexto, pagina, redeAplicada, cpuAplicada } = await prepararPagina(
@@ -387,7 +395,10 @@ async function prepararFoco(pagina, link, foco, metodo) {
       .getEntriesByName("rc:foco:prefetch-start")
       .some((e) => e.detail?.foco === destino),
     foco,
-    { timeout: 3_000 },
+    // A fila reserva a vaga atual por até 2,5 s. Se uma preparação idle já
+    // estiver em curso, a intenção explícita entra primeiro na fila seguinte;
+    // 6 s deixam margem ao motor sem transformar ausência de prefetch em dado.
+    { timeout: 6_000 },
   );
   await pagina
     .waitForFunction(
@@ -410,6 +421,7 @@ async function interagir({
   preparacao = "hover",
   offline = false,
 }) {
+  await exigirLigacaoPronta(pagina, foco);
   const link = await ligacaoVisivel(pagina, foco);
   await limparJanela(pagina);
   if (modo === "preparado") {

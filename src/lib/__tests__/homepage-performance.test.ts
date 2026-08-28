@@ -155,6 +155,9 @@ describe("homepage: compatibilidade e intenção", () => {
     expect(fonte).toContain('marcar("rc:foco:navigation-start"');
     expect(fonte).toContain('marcar("rc:foco:rsc-end"');
 
+    const ligacao = ler("components", "foco", "LinkFocoIntencao.tsx");
+    expect(ligacao).toContain("`rc:foco:link-ready:${foco}`");
+
     const regua = ler("components", "foco", "ReguaPerguntasHero.tsx");
     const bussola = ler("components", "foco", "HeroBussola.tsx");
     expect(regua).toContain("data-foco-destino={item.id}");
@@ -220,6 +223,8 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(benchmark).toContain("contexto.setOffline(true)");
     expect(benchmark).toContain('offline: repeticao === 0 && browserNome === "chromium"');
     expect(benchmark).not.toContain("pagina.waitForURL(destino");
+    expect(benchmark).toContain("getEntriesByName(`rc:foco:link-ready:${destino}`)");
+    expect(benchmark).toContain("{ timeout: 6_000 }");
     expect(workflow).toContain("homepage-performance:");
     expect(workflow).toContain("RC_REPETICOES: 10");
     expect(workflow).toContain("npx playwright install --with-deps ${{ matrix.browser }}");

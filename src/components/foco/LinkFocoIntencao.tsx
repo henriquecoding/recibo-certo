@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import type { ComponentProps } from "react";
+import { useEffect, type ComponentProps } from "react";
 import { ROTA_POR_FOCO, type FocoHomepage } from "@/lib/foco-homepage";
 import { useIntencaoFocos } from "./ControladorPrefetchFocos";
 
@@ -16,6 +16,20 @@ type Props = Omit<
 export default function LinkFocoIntencao({ foco, className = "", ...props }: Props) {
   const { pendente, preparar, iniciar } = useIntencaoFocos();
   const aAbrir = pendente === foco;
+
+  // O controlador pai pode hidratar antes destas ilhas durante a hidratação
+  // seletiva. Esta marca prova que o próprio link — e os seus handlers — já
+  // chegaram ao commit, evitando que medições confundam HTML visível com uma
+  // interação realmente pronta.
+  useEffect(() => {
+    const nome = `rc:foco:link-ready:${foco}`;
+    try {
+      performance.mark(nome, { detail: { foco } });
+    } catch {
+      performance.mark(nome);
+    }
+  }, [foco]);
+
   return (
     <Link
       {...props}
