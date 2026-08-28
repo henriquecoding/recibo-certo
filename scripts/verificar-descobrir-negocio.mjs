@@ -250,7 +250,9 @@ try {
       //  └────────────────────────────────────────────────────────────┘
       await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
       await fecharOverlays(pagina);
-      await pagina.locator("#contexto-descoberta").waitFor({ timeout: 20000 });
+      // Durante a reconciliação responsiva pode existir por instantes uma
+      // cópia oculta. O contrato de usabilidade é o configurador visível.
+      await pagina.locator("#contexto-descoberta:visible").waitFor({ timeout: 20000 });
 
       await semErroDeRuntime(pagina, "descoberta: fase A");
       await semOverflow(pagina, "descoberta: fase A");

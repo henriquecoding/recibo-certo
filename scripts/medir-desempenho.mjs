@@ -270,6 +270,14 @@ async function exigirHomepage(pagina, foco) {
   return (await h1.first().innerText()).trim();
 }
 
+async function exigirControlador(pagina) {
+  await pagina.waitForFunction(
+    () => performance.getEntriesByName("rc:foco:controller-ready").length > 0,
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
 async function medirCarga(navegador, browserNome, cenarioId, foco) {
   const cenario = CENARIOS[cenarioId];
   const { contexto, pagina, redeAplicada, cpuAplicada } = await prepararPagina(
@@ -410,13 +418,17 @@ async function interagir({
   }
   if (offline) await contexto.setOffline(true);
 
-  const destino = new URL(ROTAS[foco], BASE).href;
-  const navegacao = pagina.waitForURL(destino, { waitUntil: "commit", timeout: 10_000 });
-  if (entrada === "touch") await Promise.all([navegacao, link.tap()]);
-  else if (entrada === "teclado") await Promise.all([navegacao, link.press("Enter")]);
-  else await Promise.all([navegacao, link.click()]);
+  // Uma transição do App Router não é uma navegação de documento. Esperar
+  // `waitForURL` em paralelo produzia falsos timeouts diferentes em cada
+  // motor; o contrato real é o destino renderizado, seguido do URL coerente.
+  if (entrada === "touch") await link.tap();
+  else if (entrada === "teclado") await link.press("Enter");
+  else await link.click();
 
   await exigirHomepage(pagina, foco);
+  if (new URL(pagina.url()).pathname !== ROTAS[foco]) {
+    throw erroDeSelector(`A homepage renderizou «${foco}» fora da rota esperada`, pagina);
+  }
   await pagina.waitForFunction(
     () => performance.getEntriesByName("rc:foco:content-commit").length > 0,
     undefined,
@@ -509,7 +521,7 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
   try {
     await pagina.goto(`${BASE}/`, { waitUntil: "load", timeout: 45_000 });
     await exigirHomepage(pagina, "descobrir");
-    await pagina.waitForTimeout(180);
+    await exigirControlador(pagina);
     const entradaFria = cenario.touch ? "touch" : "pointer";
     const fria = await interagir({
       pagina, contexto, foco: "empresa", entrada: entradaFria,
@@ -534,7 +546,10 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
         ...await interagir({
           pagina, contexto, foco: "preco", entrada: "touch",
           modo: "preparado", motion: cenario.motion, preparacao: "idle",
-          offline: repeticao === 0,
+          // A prova offline é feita uma vez no Chromium, que expõe o modo
+          // offline real do CDP. Firefox/WebKit continuam a validar a mesma
+          // transição preparada, sem confundir caches do harness com o app.
+          offline: repeticao === 0 && browserNome === "chromium",
         }),
       });
     } else {
@@ -545,7 +560,7 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
         ...await interagir({
           pagina, contexto, foco: "recibos", entrada: "pointer",
           modo: "preparado", motion: cenario.motion, preparacao: "hover",
-          offline: repeticao === 0,
+          offline: repeticao === 0 && browserNome === "chromium",
         }),
       });
       await pagina.goBack({ waitUntil: "commit", timeout: 10_000 });

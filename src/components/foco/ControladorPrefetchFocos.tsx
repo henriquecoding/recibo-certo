@@ -134,6 +134,14 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   const prepararRef = useRef<ContextoFocos["preparar"]>(() => {});
   const concluirRef = useRef<(foco: FocoHomepage) => void>(() => {});
 
+  // Contrato de hidratação observável. O benchmark não pode assumir que o
+  // evento `load` significa que os handlers do App Router já estão ligados,
+  // sobretudo com CPU/rede reduzidas. A marca também torna esse intervalo
+  // auditável sem criar estado, listeners ou trabalho por frame.
+  useEffect(() => {
+    if (focoAtivo) marcar("rc:foco:controller-ready", { foco: focoAtivo });
+  }, [focoAtivo]);
+
   const agendar = useCallback((fn: () => void, ms: number) => {
     const id = setTimeout(() => {
       temporizadores.current.delete(id);

@@ -140,8 +140,10 @@ Variáveis úteis: `RC_BROWSERS`, `RC_CENARIOS`, `RC_FOCOS`, `RC_REPETICOES`,
 Chromium recebe Fast/Slow 4G e CPU 6×/4× pelo CDP. Firefox e WebKit recebem a
 mesma latência e o relatório identifica, sem fingir, que throughput e CPU não
 foram emulados. WebKit mobile, Chromium e Firefox são jobs bloqueantes na CI.
-O primeiro ensaio de cada cenário desliga a rede depois do prefetch; se a rota
-preparada não estiver no Router Cache, o teste falha.
+O primeiro ensaio de cada cenário no Chromium desliga a rede pelo CDP depois do
+prefetch; se a rota preparada não estiver no Router Cache, o teste falha.
+Firefox e WebKit validam a mesma troca preparada online, sem atribuir ao
+produto diferenças do cache offline do próprio harness.
 
 O antigo `desempenho.json` foi removido: misturava recursos pós-load, tinha
 `domContentLoaded: null`, bloqueio zero e URLs dinâmicos antigos. Resultados

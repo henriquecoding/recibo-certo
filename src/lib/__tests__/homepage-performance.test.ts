@@ -147,6 +147,7 @@ describe("homepage: compatibilidade e intenção", () => {
     expect(fonte).toContain('effectiveType === "2g"');
     expect(fonte).toContain("saveData");
     expect(fonte).toContain('item.origem !== "idle"');
+    expect(fonte).toContain('marcar("rc:foco:controller-ready"');
     expect(fonte).toContain('marcar("rc:foco:pointerdown"');
     expect(fonte).toContain('marcar("rc:foco:ack-painted"');
     expect(fonte).toContain('marcar("rc:foco:content-commit"');
@@ -217,6 +218,8 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(benchmark).toContain("p95: arredondar(p95)");
     expect(benchmark).toContain("dispersao: arredondar(p95 - p50)");
     expect(benchmark).toContain("contexto.setOffline(true)");
+    expect(benchmark).toContain('offline: repeticao === 0 && browserNome === "chromium"');
+    expect(benchmark).not.toContain("pagina.waitForURL(destino");
     expect(workflow).toContain("homepage-performance:");
     expect(workflow).toContain("RC_REPETICOES: 10");
     expect(workflow).toContain("npx playwright install --with-deps ${{ matrix.browser }}");
