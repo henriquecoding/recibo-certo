@@ -158,6 +158,8 @@ describe("homepage: compatibilidade e intenção", () => {
     );
     expect(fonte).toContain('marcar("rc:foco:navigation-start"');
     expect(fonte).toContain('marcar("rc:foco:rsc-end"');
+    expect(fonte).toContain('document.addEventListener("keydown", aoTeclarFoco, true)');
+    expect(fonte).toContain('marcar("rc:foco:keyboard-ready"');
 
     const ligacao = ler("components", "foco", "LinkFocoIntencao.tsx");
     expect(ligacao).toContain("`rc:foco:link-ready:${foco}`");
@@ -236,6 +238,7 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(benchmark).toContain('offline: repeticao === 0 && browserNome === "chromium"');
     expect(benchmark).not.toContain("pagina.waitForURL(destino");
     expect(benchmark).toContain("getEntriesByName(`rc:foco:link-ready:${destino}`)");
+    expect(benchmark).toContain('getEntriesByName("rc:foco:keyboard-ready")');
     expect(benchmark).toContain("{ timeout: 6_000 }");
     expect(benchmark).toContain("`rc:foco:prefetch-ready:${foco}`");
     expect(benchmark).not.toContain("catch(() => pagina.waitForTimeout(2_500))");

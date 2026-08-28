@@ -283,6 +283,36 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     [agendar, focoAtivo, preparar],
   );
 
+  // O Firefox ativa ligações com Enter sem garantir um `click` sintético.
+  // A instrumentação não pode depender desse detalhe do motor: capturamos o
+  // keydown no documento para que qualquer uma das superfícies editoriais
+  // (`data-foco-destino`) registe o início antes da navegação nativa. Links
+  // que também têm handler próprio passam pela deduplicação de `iniciar`.
+  useEffect(() => {
+    const aoTeclarFoco = (evento: KeyboardEvent) => {
+      if (
+        evento.key !== "Enter" ||
+        evento.repeat ||
+        evento.isComposing ||
+        evento.metaKey ||
+        evento.ctrlKey ||
+        evento.shiftKey ||
+        evento.altKey
+      ) {
+        return;
+      }
+      if (!(evento.target instanceof Element)) return;
+      const ligacao = evento.target.closest<HTMLAnchorElement>("a[data-foco-destino]");
+      const foco = ligacao?.dataset.focoDestino as FocoHomepage | undefined;
+      if (!foco || !FOCOS_HOMEPAGE.includes(foco)) return;
+      iniciar(foco, "teclado");
+    };
+
+    document.addEventListener("keydown", aoTeclarFoco, true);
+    marcar("rc:foco:keyboard-ready", { foco: focoAtivo });
+    return () => document.removeEventListener("keydown", aoTeclarFoco, true);
+  }, [focoAtivo, iniciar]);
+
   // `router.prefetch` não expõe Promise. O Resource Timing dá-nos o fim
   // verdadeiro quando houve rede; cache hits ficam deliberadamente sem um
   // `prefetch-end` inventado. Ao terminar a resposta, a vaga da fila pode

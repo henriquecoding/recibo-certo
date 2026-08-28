@@ -49,13 +49,17 @@ hover por si só. A preparação por intenção é implementada explicitamente p
 - zero especulação em `Save-Data`, `2g` e `slow-2g`;
 - ao esconder o documento, itens idle saem da fila;
 - o Router Cache conserva focos preparados/visitados;
-- o link reconhece pointer e Enter explicitamente, deduplica keydown→click e
-  força Enter pelo App Router em todos os motores, mantendo a posição de scroll.
+- o controlador captura Enter antes da ativação nativa em todas as ligações
+  `data-foco-destino`; assim Firefox não depende de produzir um `click`
+  sintético, e links com handler próprio continuam deduplicados;
+- o link instrumental força Enter pelo App Router em todos os motores,
+  mantendo a posição de scroll.
 
 As marcas disponíveis são:
 
 ```text
 rc:foco:controller-ready
+rc:foco:keyboard-ready
 rc:foco:link-ready:<foco>
 rc:foco:pointerdown
 rc:foco:ack-painted
@@ -69,8 +73,9 @@ rc:foco:first-animation-frame
 ```
 
 O benchmark só interage depois de `controller-ready` e da `link-ready:<foco>` do
-destino. Isto distingue o HTML já pintado da ilha de navegação efetivamente
-hidratada, inclusive sob CPU reduzida e hidratação seletiva.
+destino; para Enter também exige `keyboard-ready`. Isto distingue o HTML já
+pintado da instrumentação efetivamente hidratada, inclusive sob CPU reduzida e
+hidratação seletiva.
 O estado início→commit vive no `window` do documento, não num `let` de módulo,
 para continuar único mesmo se o App Router avaliar chunks de rota distintos.
 `prefetch-ready:<foco>` persiste enquanto a entrada estiver válida no Router

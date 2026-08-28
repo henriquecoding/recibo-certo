@@ -286,6 +286,14 @@ async function exigirLigacaoPronta(pagina, foco) {
   );
 }
 
+async function exigirTecladoPronto(pagina) {
+  await pagina.waitForFunction(
+    () => performance.getEntriesByName("rc:foco:keyboard-ready").length > 0,
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
 async function medirCarga(navegador, browserNome, cenarioId, foco) {
   const cenario = CENARIOS[cenarioId];
   const { contexto, pagina, redeAplicada, cpuAplicada } = await prepararPagina(
@@ -483,6 +491,7 @@ async function interagir({
   offline = false,
 }) {
   await exigirLigacaoPronta(pagina, foco);
+  if (entrada === "teclado") await exigirTecladoPronto(pagina);
   const link = await ligacaoVisivel(pagina, foco);
   await limparJanela(pagina);
   if (modo === "preparado") {
