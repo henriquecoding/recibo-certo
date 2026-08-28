@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, type ComponentProps } from "react";
 import { ROTA_POR_FOCO, type FocoHomepage } from "@/lib/foco-homepage";
 import { useIntencaoFocos } from "./ControladorPrefetchFocos";
@@ -20,6 +21,7 @@ type Props = Omit<
 
 /** Link de servidor por fora, política única de intenção por dentro. */
 export default function LinkFocoIntencao({ foco, className = "", ...props }: Props) {
+  const router = useRouter();
   const { pendente, preparar, iniciar } = useIntencaoFocos();
   const aAbrir = pendente === foco;
 
@@ -54,7 +56,9 @@ export default function LinkFocoIntencao({ foco, className = "", ...props }: Pro
           !evento.shiftKey &&
           !evento.altKey
         ) {
+          evento.preventDefault();
           iniciar(foco, "teclado");
+          router.push(ROTA_POR_FOCO[foco], { scroll: false });
         }
       }}
       onPointerDown={(evento) => {

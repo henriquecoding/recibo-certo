@@ -50,7 +50,7 @@ hover por si só. A preparação por intenção é implementada explicitamente p
 - ao esconder o documento, itens idle saem da fila;
 - o Router Cache conserva focos preparados/visitados;
 - o link reconhece pointer e Enter explicitamente, deduplica keydown→click e
-  mantém a posição de scroll.
+  força Enter pelo App Router em todos os motores, mantendo a posição de scroll.
 
 As marcas disponíveis são:
 
