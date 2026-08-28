@@ -157,6 +157,9 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   }, []);
 
   const concluir = useCallback((foco: FocoHomepage) => {
+    if (!preparados.has(foco)) {
+      marcar(`rc:foco:prefetch-ready:${foco}`, { foco });
+    }
     preparados.add(foco);
     if (itemEmCurso.current?.foco !== foco) return;
     cancelarAgendado(itemEmCurso.current.reserva);
@@ -181,6 +184,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     const opcoes = {
       onInvalidate: () => {
         preparados.delete(item.foco);
+        performance.clearMarks(`rc:foco:prefetch-ready:${item.foco}`);
         if ((intencaoAte.get(item.foco) ?? 0) > Date.now()) {
           prepararRef.current(item.foco, "intencao");
         }

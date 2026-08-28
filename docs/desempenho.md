@@ -60,6 +60,7 @@ rc:foco:pointerdown
 rc:foco:ack-painted
 rc:foco:prefetch-start
 rc:foco:prefetch-end
+rc:foco:prefetch-ready:<foco>
 rc:foco:navigation-start
 rc:foco:rsc-end
 rc:foco:content-commit
@@ -69,6 +70,9 @@ rc:foco:first-animation-frame
 O benchmark só interage depois de `controller-ready` e da `link-ready:<foco>` do
 destino. Isto distingue o HTML já pintado da ilha de navegação efetivamente
 hidratada, inclusive sob CPU reduzida e hidratação seletiva.
+`prefetch-ready:<foco>` persiste enquanto a entrada estiver válida no Router
+Cache; assim, um prefetch idle anterior conta como preparação real e não é
+repetido só para produzir uma marca nova.
 
 Os eventos analíticos `focus_switch_ack` e `focus_switch_ready` levam apenas
 foco, tipo de entrada, preparação e balde de latência; continuam subordinados

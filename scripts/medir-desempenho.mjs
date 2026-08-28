@@ -391,24 +391,23 @@ async function prepararFoco(pagina, link, foco, metodo) {
   // `idle` não sintetiza hover num ecrã tátil: espera o único adjacente que
   // a política real prepara depois de a página assentar.
   await pagina.waitForFunction(
-    (destino) => performance
-      .getEntriesByName("rc:foco:prefetch-start")
-      .some((e) => e.detail?.foco === destino),
-    foco,
+    ({ destino, pronta }) => (
+      performance.getEntriesByName(pronta).length > 0 || performance
+        .getEntriesByName("rc:foco:prefetch-start")
+        .some((e) => e.detail?.foco === destino)
+    ),
+    { destino: foco, pronta: `rc:foco:prefetch-ready:${foco}` },
     // A fila reserva a vaga atual por até 2,5 s. Se uma preparação idle já
     // estiver em curso, a intenção explícita entra primeiro na fila seguinte;
-    // 6 s deixam margem ao motor sem transformar ausência de prefetch em dado.
+    // uma marca ready anterior também é uma preparação válida, não um motivo
+    // para pedir os mesmos bytes outra vez.
     { timeout: 6_000 },
   );
-  await pagina
-    .waitForFunction(
-      (destino) => performance
-        .getEntriesByName("rc:foco:prefetch-end")
-        .some((e) => e.detail?.foco === destino),
-      foco,
-      { timeout: 2_500 },
-    )
-    .catch(() => pagina.waitForTimeout(2_500));
+  await pagina.waitForFunction(
+    (nome) => performance.getEntriesByName(nome).length > 0,
+    `rc:foco:prefetch-ready:${foco}`,
+    { timeout: 6_000 },
+  );
 }
 
 async function interagir({

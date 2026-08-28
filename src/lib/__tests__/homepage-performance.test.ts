@@ -152,6 +152,10 @@ describe("homepage: compatibilidade e intenção", () => {
     expect(fonte).toContain('marcar("rc:foco:ack-painted"');
     expect(fonte).toContain('marcar("rc:foco:content-commit"');
     expect(fonte).toContain('marcar("rc:foco:prefetch-end"');
+    expect(fonte).toContain("`rc:foco:prefetch-ready:${foco}`");
+    expect(fonte).toContain(
+      'performance.clearMarks(`rc:foco:prefetch-ready:${item.foco}`)',
+    );
     expect(fonte).toContain('marcar("rc:foco:navigation-start"');
     expect(fonte).toContain('marcar("rc:foco:rsc-end"');
 
@@ -225,6 +229,8 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(benchmark).not.toContain("pagina.waitForURL(destino");
     expect(benchmark).toContain("getEntriesByName(`rc:foco:link-ready:${destino}`)");
     expect(benchmark).toContain("{ timeout: 6_000 }");
+    expect(benchmark).toContain("`rc:foco:prefetch-ready:${foco}`");
+    expect(benchmark).not.toContain("catch(() => pagina.waitForTimeout(2_500))");
     expect(workflow).toContain("homepage-performance:");
     expect(workflow).toContain("RC_REPETICOES: 10");
     expect(workflow).toContain("npx playwright install --with-deps ${{ matrix.browser }}");
