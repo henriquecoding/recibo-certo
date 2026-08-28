@@ -19,6 +19,7 @@ import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import { FOCO_POR_ID } from "@/components/foco/focos";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 import PalcoSalario, { type DadosSalario } from "./PalcoSalario";
 
 const eur = (n: number) =>
@@ -190,8 +191,8 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
             </Link>
           </div>
 
-          <Link
-            href="/?foco=recibos"
+          <LinkFocoIntencao
+            foco="recibos"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
@@ -210,10 +211,10 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Abrir <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
-          <Link
-            href="/?foco=empresa"
+          <LinkFocoIntencao
+            foco="empresa"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
@@ -232,7 +233,7 @@ export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Ver os caminhos <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
         </div>
       </SeccaoFoco>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RelogioDeCena } from "./frame";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  O RELÓGIO DOS ATOS — um só, para todos os palcos
@@ -12,12 +13,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 //  tempo restante de cada um é possível, e é exatamente o tipo de código
 //  que fica dessincronizado ao segundo bug.
 //
-//  Em vez disso há UM relógio por ato: um `requestAnimationFrame` acumula
-//  tempo decorrido enquanto não está parado, e dispara os beats cujo
+//  Em vez disso há UM relógio por cena: este consumidor acumula o `delta`
+//  partilhado enquanto não está parado, e dispara os beats cujo
 //  instante já passou. Pausar é deixar de acumular. Não há nada para
 //  ressincronizar porque nunca houve dois relógios.
 //
-//  A mesma decisão vale para as fichas (`atores.tsx`), e é o que torna a
+//  O mesmo relógio serve as fichas (`atores.tsx`), e é o que torna a
 //  pausa REAL em vez de decorativa — WCAG 2.2.2.
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -50,17 +51,18 @@ export function useRelogioDeAtos({
   atos,
   ato,
   ciclo,
-  parado,
   estatico,
+  relogioDeCena,
   aoTerminarAto,
 }: {
   atos: readonly Ato[];
   ato: number;
   /** Muda → o ato recomeça do princípio. */
   ciclo: number;
-  parado: boolean;
   /** Movimento reduzido: tudo já aconteceu, nada corre. */
   estatico: boolean;
+  /** A única fonte de frames da cena, partilhada com todos os atores. */
+  relogioDeCena: RelogioDeCena;
   aoTerminarAto: () => void;
 }): Relogio {
   const [feitos, setFeitos] = useState<ReadonlySet<string>>(new Set());
@@ -103,18 +105,15 @@ export function useRelogioDeAtos({
   }, [chave]);
 
   useEffect(() => {
-    if (estatico || parado) return;
+    if (estatico) return;
     const definicao = atos[ato];
     if (!definicao) return;
 
-    let raf = 0;
     let decorrido = 0;
-    let ultimo = performance.now();
     const porDisparar = definicao.beats.filter((b) => !feitosRef.current.has(b.id));
 
-    const passo = (agora: number) => {
-      decorrido += agora - ultimo;
-      ultimo = agora;
+    return relogioDeCena.inscrever(({ delta }) => {
+      decorrido += delta;
 
       if (barraRef.current) {
         barraRef.current.style.transform = `scaleX(${Math.min(1, decorrido / definicao.duracao)})`;
@@ -132,18 +131,15 @@ export function useRelogioDeAtos({
 
       if (decorrido >= definicao.duracao) {
         terminarRef.current();
-        return;
+        return false;
       }
-      raf = requestAnimationFrame(passo);
-    };
-
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
+      return true;
+    });
     // O espelho (`feitosRef`) é lido em vez do estado, de propósito: o
     // estado não está disponível no mesmo commit em que a chave muda, e o
     // relógio precisa de saber o que já disparou NESTE ato — nem antes,
     // nem no ato anterior.
-  }, [chave, parado, estatico, ato, atos]);
+  }, [chave, estatico, ato, atos, relogioDeCena]);
 
   const feito = useCallback(
     (id: string) => estatico || cumprido || feitos.has(id),

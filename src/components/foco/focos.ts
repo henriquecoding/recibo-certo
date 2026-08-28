@@ -35,7 +35,7 @@
 //  outros números, porque só um dos cinco tem como verbo «repartir».
 // ═══════════════════════════════════════════════════════════════════════
 
-import type { FocoHomepage } from "@/lib/foco-homepage";
+import { ROTA_POR_FOCO, type FocoHomepage } from "@/lib/foco-homepage";
 
 /**
  * O tom do palco.
@@ -177,7 +177,7 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
 export const FOCO_POR_ID = new Map(FOCOS.map((foco) => [foco.id, foco]));
 
 /** O href da leitura editorial de um foco. */
-export const hrefDoFoco = (id: FocoHomepage) => `/?foco=${id}`;
+export const hrefDoFoco = (id: FocoHomepage) => ROTA_POR_FOCO[id];
 
 /**
  * A ferramenta de cada foco, indexada pelo id.

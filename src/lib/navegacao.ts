@@ -34,7 +34,7 @@
 //  │ Cada pilar continua a ter uma rota canónica da ferramenta, indexável │
 //  │ e alcançável sem JavaScript. Quando a homepage já sabe contar essa   │
 //  │ etapa por inteiro, as superfícies de descoberta podem abrir também   │
-//  │ uma experiência editorial em `/?foco=…`; o CTA dessa experiência é   │
+//  │ uma experiência editorial numa rota `/inicio/…`; o CTA dessa leitura │
 //  │ que entra no motor completo. O rodapé, o menu e a pesquisa continuam │
 //  │ a apontar para o canónico. Duas portas explícitas, nunca um URL que   │
 //  │ muda de significado por baixo da pessoa.                             │
@@ -72,18 +72,19 @@
 //     pela mesma razão que o catálogo das ferramentas o faz.
 //   · `href` é sempre o destino CANÓNICO da ferramenta. `homepageHref` é
 //     opcional e só existe quando a homepage já implementa esse modo de
-//     ponta a ponta. Nunca se confunde com `?modo=…`, que escolhe perfil.
+//     ponta a ponta. Nunca se confunde com queries que escolhem estado.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { TOTAL_FERRAMENTAS } from "@/lib/ferramentas";
+import { ROTA_POR_FOCO, type FocoHomepage, type RotaFocoHomepage } from "@/lib/foco-homepage";
 
 /** Um destino da navegação principal. */
 export interface Pilar {
-  id: string;
+  id: FocoHomepage;
   /** Rota canónica. É sempre a da ferramenta, nunca uma query da homepage. */
   href: string;
   /** Experiência editorial da homepage, quando já está implementada. */
-  homepageHref?: `/?foco=${string}`;
+  homepageHref?: RotaFocoHomepage;
   /** O nome completo. É SEMPRE o nome acessível, em qualquer largura. */
   label: string;
   /**
@@ -124,7 +125,7 @@ export const PILARES: Pilar[] = [
   {
     id: "descobrir",
     href: "/ferramentas/descobrir-negocio",
-    homepageHref: "/?foco=descobrir",
+    homepageHref: ROTA_POR_FOCO.descobrir,
     label: "Descobrir",
     curto: "Descobrir",
     resultado: "Que negócio testar, a partir do que sabes fazer e de sinais oficiais.",
@@ -135,7 +136,7 @@ export const PILARES: Pilar[] = [
   {
     id: "preco",
     href: "/ferramentas/calcular-preco",
-    homepageHref: "/?foco=preco",
+    homepageHref: ROTA_POR_FOCO.preco,
     label: "Preço",
     curto: "Preço",
     resultado: "Quanto cobrar para cobrir custos, comissões e impostos.",
@@ -146,7 +147,7 @@ export const PILARES: Pilar[] = [
   {
     id: "recibos",
     href: "/ferramentas/recibos-verdes",
-    homepageHref: "/?foco=recibos",
+    homepageHref: ROTA_POR_FOCO.recibos,
     label: "Recibos verdes",
     curto: "Recibos",
     resultado: "Quanto de cada recibo fica mesmo para ti, depois de tudo.",
@@ -157,7 +158,7 @@ export const PILARES: Pilar[] = [
   {
     id: "empresa",
     href: "/ferramentas/simulador-empresa",
-    homepageHref: "/?foco=empresa",
+    homepageHref: ROTA_POR_FOCO.empresa,
     label: "Empresa",
     curto: "Empresa",
     resultado: "IRC, salário de gerência e dividendos — o que sobra ao fim do ano.",
@@ -168,7 +169,7 @@ export const PILARES: Pilar[] = [
   {
     id: "salario",
     href: "/ferramentas/recibo-vencimento",
-    homepageHref: "/?foco=salario",
+    homepageHref: ROTA_POR_FOCO.salario,
     label: "Salário",
     curto: "Salário",
     resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",

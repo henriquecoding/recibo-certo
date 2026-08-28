@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { m } from "motion/react";
 import { PILARES } from "@/lib/navegacao";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { fadeUp, staggerContainer, staggerItem, inViewOnce } from "@/lib/motion";
 import {
   Logo, ShieldCheck, Lock, Clock, CheckTrend, ArrowRight,
   Calendar, Calculator, Scale, Mail,
@@ -82,19 +80,12 @@ export default function Footer() {
           style={{ background: "linear-gradient(90deg, transparent, rgba(29,158,117,0.5) 30%, rgba(159,225,203,0.6) 50%, rgba(29,158,117,0.5) 70%, transparent)" }}
         />
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <m.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="grid grid-cols-2 sm:grid-cols-4"
-          >
+          <div className="rc-view-reveal grid grid-cols-2 sm:grid-cols-4">
             {TRUST.map((p) => {
               const Icon = p.icon;
               return (
-                <m.div
+                <div
                   key={p.label}
-                  variants={staggerItem}
                   className="flex items-center gap-2.5 px-3 py-4 sm:px-4 sm:py-5"
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 ring-1 ring-brand/20">
@@ -121,10 +112,10 @@ export default function Footer() {
                         └────────────────────────────────────────────────┘ */}
                     <p className="truncate text-[10px] font-medium leading-tight text-white/70">{p.sub}</p>
                   </div>
-                </m.div>
+                </div>
               );
             })}
-          </m.div>
+          </div>
         </div>
       </div>
 
@@ -155,13 +146,7 @@ export default function Footer() {
               ser pública e a comunicação estar revista. */}
 
           {/* ── Topo: logo + CTA ── */}
-          <m.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
-          >
+          <div className="rc-view-reveal mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="mb-3"><Logo /></div>
               <p className="max-w-md text-[13px] leading-relaxed text-stone-500 dark:text-stone-400">
@@ -178,18 +163,12 @@ export default function Footer() {
               Abrir o dashboard
               <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </Link>
-          </m.div>
+          </div>
 
           {/* ── Grelha de navegação ── */}
-          <m.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4"
-          >
+          <div className="rc-view-reveal grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4">
             {/* Ferramentas — com ícones */}
-            <m.div variants={staggerItem} className="col-span-2 sm:col-span-1">
+            <div className="col-span-2 sm:col-span-1">
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Ferramentas
               </h3>
@@ -207,10 +186,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Aprender */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Aprender
               </h3>
@@ -227,10 +206,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Empresa */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 ReciboCerto
               </h3>
@@ -247,10 +226,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Contacto + newsletter */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Contacto
               </h3>
@@ -275,24 +254,18 @@ export default function Footer() {
                   Ver fontes <ArrowRight size={10} />
                 </Link>
               </div>
-            </m.div>
-          </m.div>
+            </div>
+          </div>
 
           {/* ── Aviso legal ── */}
-          <m.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40"
-          >
+          <div className="rc-view-reveal mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40">
             <Warning size={12} className="mt-0.5 shrink-0 text-alert-text dark:text-yellow-500" />
             <p className="text-[11px] leading-relaxed text-alert-text/90 dark:text-stone-400">
               <strong className="font-semibold">Não vinculativo.</strong>{" "}
               Calculadora informativa baseada nas taxas fiscais de {FISCAL_YEAR}. Não substitui
               aconselhamento de um contabilista certificado. Confirma sempre com a AT.
             </p>
-          </m.div>
+          </div>
 
           {/* ── Barra inferior ── */}
           <div className="mt-8 border-t border-stone-200/50 dark:border-stone-800 pb-8 pt-6">

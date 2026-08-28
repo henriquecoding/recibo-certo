@@ -1,8 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { m } from "motion/react";
+import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { DUR, ENTRADA, SAIDA, VIAGEM, bezier, entre } from "./curvas";
+import { RELOGIO_DE_CENA_NULO, type RelogioDeCena } from "./frame";
 import { arco, type Ponto } from "./medida";
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -24,8 +24,9 @@ import { arco, type Ponto } from "./medida";
 //  do ato da base, as fichas continuavam a voar e a aterrar. Além de ser um
 //  defeito de qualidade, é o WCAG 2.2.2 a não ser cumprido.
 //
-//  A ficha tem relógio próprio, com o mesmo desenho do relógio dos atos: um
-//  `requestAnimationFrame` que só acumula tempo enquanto não está parado.
+//  Ficha, contador, ponteiro e beats subscrevem o MESMO relógio da cena.
+//  Assim a pausa é uma decisão única e não há ciclos concorrentes a disputar
+//  cada frame. As interpolações escrevem no DOM; React recebe apenas beats.
 //
 //  ── O que NÃO vive aqui ──────────────────────────────────────────────
 //
@@ -42,9 +43,18 @@ import { arco, type Ponto } from "./medida";
  * do PALCO, não de cada número: passá-los à mão a catorze contadores era
  * catorze sítios para um deles ficar para trás.
  */
-export const PalcoContexto = createContext<{ parado: boolean; imediato: boolean }>({
+export interface EstadoDoPalco {
+  parado: boolean;
+  imediato: boolean;
+  estatico: boolean;
+  relogioDeCena: RelogioDeCena;
+}
+
+export const PalcoContexto = createContext<EstadoDoPalco>({
   parado: false,
   imediato: false,
+  estatico: true,
+  relogioDeCena: RELOGIO_DE_CENA_NULO,
 });
 
 /**
@@ -70,103 +80,37 @@ export function Contador({
    */
   inicial?: number;
 }) {
-  const { parado, imediato } = useContext(PalcoContexto);
-  const [mostrado, setMostrado] = useState(inicial ?? valor);
-  const anterior = useRef(inicial ?? valor);
-  const paradoRef = useRef(parado);
-  paradoRef.current = parado;
+  const { imediato, estatico, relogioDeCena } = useContext(PalcoContexto);
+  const noRef = useRef<HTMLSpanElement>(null);
   /** O último valor DESENHADO. É daqui que a contagem seguinte parte. */
-  const mostradoRef = useRef(mostrado);
-  mostradoRef.current = mostrado;
+  const mostradoRef = useRef(inicial ?? valor);
+  const formatoRef = useRef(formato);
+  formatoRef.current = formato;
+
+  const escrever = useCallback((seguinte: number) => {
+    mostradoRef.current = seguinte;
+    if (noRef.current) noRef.current.textContent = formatoRef.current(seguinte);
+  }, []);
 
   useEffect(() => {
-    const reduzido =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-    const de = anterior.current;
-    if (imediato || reduzido || de === valor || duracao <= 0) {
-      anterior.current = valor;
-      setMostrado(valor);
+    const de = mostradoRef.current;
+    if (imediato || estatico || de === valor || duracao <= 0) {
+      escrever(valor);
       return;
     }
 
-    let raf = 0;
     let decorrido = 0;
-    let ultimo = performance.now();
     const curva = bezier(ENTRADA);
 
-    const passo = (agora: number) => {
-      if (!paradoRef.current) decorrido += agora - ultimo;
-      ultimo = agora;
+    return relogioDeCena.inscrever(({ delta }) => {
+      decorrido += delta;
       const t = Math.min(1, decorrido / duracao);
-      setMostrado(entre(de, valor, curva(t)));
-      if (t < 1) raf = requestAnimationFrame(passo);
-      else anterior.current = valor;
-    };
-    raf = requestAnimationFrame(passo);
+      escrever(entre(de, valor, curva(t)));
+      return t < 1;
+    });
+  }, [valor, duracao, escrever, estatico, imediato, relogioDeCena]);
 
-    return () => {
-      cancelAnimationFrame(raf);
-      // ⚠️ NÃO se escreve `anterior.current = valor` aqui.
-      //
-      // A limpeza corre quando o valor muda a meio de uma contagem — o que
-      // acontece a cada pixel de um arrasto. Marcar o alvo como «já lá
-      // chegámos» fazia a contagem seguinte partir de um número que não
-      // estava no ecrã, e o resultado era um salto visível. O ponto de
-      // partida certo é o último valor DESENHADO.
-      anterior.current = mostradoRef.current;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [valor, duracao, imediato]);
-
-  return <>{formato(mostrado)}</>;
-}
-
-/**
- * Uma progressão de 0 a 1 que a pausa pára — para o que não é um número
- * nem uma ficha, mas continua a ser conteúdo em movimento.
- *
- * Existe pela mesma razão que o `Contador` tem relógio próprio: uma linha
- * que leva 1,6 s a crescer é conteúdo animado, e o WCAG 2.2.2 não faz
- * exceções para SVG. Deixá-la ao `motion` devolveria o defeito que já foi
- * apanhado uma vez — a demonstração «em pausa» com coisas a mexer.
- *
- * Devolve 1 imediatamente quando `estatico`, para o HTML servido nascer
- * com o desenho completo.
- */
-export function useProgresso(activo: boolean, duracao: number, estatico = false) {
-  const { parado } = useContext(PalcoContexto);
-  const [valor, setValor] = useState(estatico ? 1 : 0);
-  const paradoRef = useRef(parado);
-  paradoRef.current = parado;
-
-  useEffect(() => {
-    if (estatico) {
-      setValor(1);
-      return;
-    }
-    if (!activo) {
-      setValor(0);
-      return;
-    }
-    let raf = 0;
-    let decorrido = 0;
-    let ultimo = performance.now();
-    const curva = bezier(ENTRADA);
-
-    const passo = (agora: number) => {
-      if (!paradoRef.current) decorrido += agora - ultimo;
-      ultimo = agora;
-      const t = Math.min(1, decorrido / duracao);
-      setValor(curva(t));
-      if (t < 1) raf = requestAnimationFrame(passo);
-    };
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
-  }, [activo, duracao, estatico]);
-
-  return valor;
+  return <span ref={noRef}>{formato(mostradoRef.current)}</span>;
 }
 
 export interface FichaEmCena {
@@ -202,10 +146,8 @@ export function Ficha({
   aoChegar: (id: string) => void;
   aoSair: (id: string) => void;
 }) {
-  const { parado } = useContext(PalcoContexto);
+  const { relogioDeCena } = useContext(PalcoContexto);
   const ref = useRef<HTMLSpanElement>(null);
-  const paradoRef = useRef(parado);
-  paradoRef.current = parado;
   const aoChegarRef = useRef(aoChegar);
   aoChegarRef.current = aoChegar;
   const aoSairRef = useRef(aoSair);
@@ -220,9 +162,7 @@ export function Ficha({
     const cViagem = bezier(VIAGEM);
     const cSair = bezier(SAIDA);
 
-    let raf = 0;
     let decorrido = 0;
-    let ultimo = performance.now();
     let chegou = false;
 
     const pintar = (t: number) => {
@@ -260,9 +200,8 @@ export function Ficha({
 
     pintar(0);
 
-    const passo = (agora: number) => {
-      if (!paradoRef.current) decorrido += agora - ultimo;
-      ultimo = agora;
+    return relogioDeCena.inscrever(({ delta }) => {
+      decorrido += delta;
       const t = Math.min(1, decorrido / duracao);
       pintar(t);
 
@@ -272,17 +211,15 @@ export function Ficha({
       }
       if (t >= 1) {
         aoSairRef.current(ficha.id);
-        return;
+        return false;
       }
-      raf = requestAnimationFrame(passo);
-    };
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
+      return true;
+    });
     // A ficha é imutável depois de nascer: o valor com que partiu é o valor
     // que entrega. Relançá-la a meio do voo com outro seria mudar a pergunta
     // depois de dada a resposta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ficha.id]);
+  }, [ficha.id, relogioDeCena]);
 
   return (
     <span
@@ -301,14 +238,17 @@ export function Ficha({
 
 /** O anel de impacto que fica onde uma ficha chegou. */
 export function Anel({ em, cor = "border-brand" }: { em: Ponto; cor?: string }) {
+  const { parado } = useContext(PalcoContexto);
   return (
-    <m.span
+    <span
       aria-hidden
-      className={`pointer-events-none absolute z-20 h-6 w-6 rounded-full border-2 ${cor}`}
-      style={{ left: em.x, top: em.y, translateX: "-50%", translateY: "-50%" }}
-      initial={{ opacity: 0.5, scale: 0.4 }}
-      animate={{ opacity: 0, scale: 1.6 }}
-      transition={{ duration: DUR.impacto / 1000, ease: ENTRADA }}
+      className={`rc-anel-palco pointer-events-none absolute z-20 h-6 w-6 rounded-full border-2 ${cor}`}
+      style={{
+        left: em.x,
+        top: em.y,
+        animationDuration: `${DUR.impacto}ms`,
+        animationPlayState: parado ? "paused" : "running",
+      }}
     />
   );
 }

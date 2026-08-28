@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { MENU_GRUPOS, PILARES, SECOES, SECOES_TOPO, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
 import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
+import { ROTA_POR_FOCO } from "@/lib/foco-homepage";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  A SINCRONIA DAS SUPERFÍCIES DE NAVEGAÇÃO
@@ -225,11 +226,12 @@ describe("navegacao:contrato-dos-destinos", () => {
     expect(adaptativos).toHaveLength(PILARES.length);
 
     for (const pilar of adaptativos) {
-      // A porta editorial é uma query da homepage; o canónico é a rota da
+      // A porta editorial é uma rota estática; o canónico é a rota da
       // ferramenta. Se um dia o `homepageHref` passasse a apontar para
       // `/ferramentas/…`, o menu, o rodapé e a pesquisa deixavam de ter um
       // destino distinto — e a homepage adaptada deixava de ser alcançável.
-      expect(pilar.homepageHref).toBe(`/?foco=${pilar.id}`);
+      expect(pilar.homepageHref).toBe(ROTA_POR_FOCO[pilar.id]);
+      expect(pilar.homepageHref).not.toContain("?");
       expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
       expect(pilar.href).not.toContain("?");
     }

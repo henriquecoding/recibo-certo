@@ -2,8 +2,8 @@
 /**
  * AUDITORIA DE ACESSIBILIDADE DOS CINCO FOCOS DA HOMEPAGE.
  * ----------------------------------------------------------------------
- * A homepage passou a ter cinco leituras editoriais — `/`, e `?foco=` com
- * descobrir, preco, recibos, empresa e salario —, cada uma com um palco
+ * A homepage tem cinco leituras editoriais em rotas estáticas — `/` e
+ * `/inicio/{preco,recibos,empresa,salario}` —, cada uma com um palco
  * que se move sozinho. Auditar só uma delas seria auditar um quinto do
  * que se serve.
  *
@@ -23,7 +23,13 @@
 
 import { auditar, BASE } from "./lib/auditoria-a11y.mjs";
 
-const FOCOS = ["descobrir", "preco", "recibos", "empresa", "salario"];
+const ROTAS = {
+  descobrir: "/",
+  preco: "/inicio/preco",
+  recibos: "/inicio/recibos",
+  empresa: "/inicio/empresa",
+  salario: "/inicio/salario",
+};
 
 /** Espera que a sequência assente sozinha no último ato. */
 const assentar = async (p) => {
@@ -40,17 +46,17 @@ const ESTADOS = [
       await p.waitForTimeout(2200);
     },
   },
-  ...FOCOS.flatMap((foco) => [
+  ...Object.entries(ROTAS).flatMap(([foco, url]) => [
     {
       nome: `${foco} · a meio da sequência`,
-      url: `/?foco=${foco}`,
+      url,
       preparar: async (p) => {
         await p.waitForTimeout(2200);
       },
     },
     {
       nome: `${foco} · assente`,
-      url: `/?foco=${foco}`,
+      url,
       preparar: assentar,
     },
   ]),
@@ -58,7 +64,7 @@ const ESTADOS = [
     // A pausa do palco. É o controlo que o WCAG 2.2.2 exige, e o que
     // mais depressa se parte quando um palco novo é acrescentado.
     nome: "palco em pausa",
-    url: "/?foco=salario",
+    url: ROTAS.salario,
     preparar: async (p) => {
       await p.waitForTimeout(2200);
       const pausa = p.getByRole("button", { name: /Pausar/ }).first();

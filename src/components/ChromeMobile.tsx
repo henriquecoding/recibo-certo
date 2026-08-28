@@ -53,15 +53,16 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useReducedMotion } from "motion/react";
+import { usePathname } from "next/navigation";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { DockMovel } from "@/components/busca/DockMovel";
 import ChromeMobileMarca from "@/components/ChromeMobileMarca";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
-import { normalizarFocoHomepage } from "@/lib/foco-homepage";
+import { focoDaRotaHomepage } from "@/lib/foco-homepage";
+import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
+import { usePrefereMovimentoReduzido } from "@/hooks/usePrefereMovimentoReduzido";
 
 /**
  * Os cinco lugares. A ordem vem da fonte e é fixa; o significado nunca
@@ -89,9 +90,9 @@ const SLOTS = PILARES.map((p) => ({
 
 export default function ChromeMobile() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const foco = normalizarFocoHomepage(searchParams.get("foco"));
-  const reduzMovimento = useReducedMotion();
+  const foco = focoDaRotaHomepage(pathname);
+  const reduzMovimento = usePrefereMovimentoReduzido();
+  const { pendente, preparar, iniciar } = useIntencaoFocos();
 
   // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
   // lê exactamente a mesma coisa. Ver `hooks/useQuizAJogar.ts`.
@@ -151,8 +152,9 @@ export default function ChromeMobile() {
           {SLOTS.map((slot) => {
             const naSuperficieCanonica = ativo(slot.hrefCanonico);
             const on =
-              (pathname === "/" && foco === slot.id && Boolean(slot.homepageHref)) ||
+              foco === slot.id ||
               naSuperficieCanonica;
+            const destacado = pendente ? pendente === slot.id : on;
             // Um lugar activo tem de apontar para a superfície que declara
             // como actual. Fora dela continua a abrir a porta editorial.
             const destino = naSuperficieCanonica ? slot.hrefCanonico : slot.href;
@@ -170,7 +172,7 @@ export default function ChromeMobile() {
              * rótulo com reticências — nunca uma página a rolar para o lado.
              */
             const classe = `focus-marca flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 no-underline transition-colors ${
-              on
+              destacado
                 ? // O anel não é decoração: `bg-brand-light` sobre o `cream`
                   // desta barra dá 1,032:1 — no claro, o separador aceso não
                   // se distinguia dos apagados, e este é o «estou aqui» do
@@ -203,12 +205,13 @@ export default function ChromeMobile() {
              * └───────────────────────────────────────────────────────────┘
              */
             const naRotaExacta =
-              (Boolean(slot.homepageHref) && pathname === "/" && foco === slot.id) ||
+              pathname === slot.homepageHref ||
               pathname === slot.hrefCanonico;
 
             return (
               <Link
                 prefetch={false}
+                scroll={false}
                 key={slot.id}
                 href={destino}
                 // O nome acessível é sempre o COMPLETO, mesmo quando o que
@@ -216,7 +219,22 @@ export default function ChromeMobile() {
                 // pode depender da largura do ecrã.
                 aria-label={slot.nomeCompleto}
                 aria-current={on ? "page" : undefined}
+                aria-busy={pendente === slot.id || undefined}
+                onPointerEnter={() => preparar(slot.id)}
+                onFocus={() => preparar(slot.id)}
+                onPointerDown={(evento) => {
+                  if (
+                    evento.button === 0 &&
+                    !evento.metaKey &&
+                    !evento.ctrlKey &&
+                    !evento.shiftKey &&
+                    !evento.altKey
+                  ) {
+                    iniciar(slot.id, "pointer");
+                  }
+                }}
                 onClick={(e) => {
+                  if (e.detail === 0) iniciar(slot.id, "teclado");
                   medirNavegacao(slot.id, window.innerWidth >= 768 ? "tablet" : "movel");
                   if (!naRotaExacta) return;
                   // `⌘/Ctrl/Shift + clique` continuam a pertencer ao browser.

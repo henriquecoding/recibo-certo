@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { FOCOS_HOMEPAGE, normalizarFocoHomepage } from "@/lib/foco-homepage";
+import {
+  FOCOS_HOMEPAGE,
+  ROTA_POR_FOCO,
+  focoDaRotaHomepage,
+  normalizarFocoHomepage,
+} from "@/lib/foco-homepage";
 import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import {
   FOCOS,
@@ -45,8 +50,11 @@ describe("homepage adaptativa", () => {
     expect([...FOCOS_HOMEPAGE].sort()).toEqual([...declarados].sort());
 
     for (const pilar of PILARES) {
-      expect(pilar.homepageHref, `${pilar.id} sem porta editorial`).toBe(`/?foco=${pilar.id}`);
+      expect(pilar.homepageHref, `${pilar.id} sem porta editorial`).toBe(
+        ROTA_POR_FOCO[pilar.id],
+      );
       expect(normalizarFocoHomepage(pilar.id)).toBe(pilar.id);
+      expect(focoDaRotaHomepage(pilar.homepageHref!)).toBe(pilar.id);
     }
   });
 
@@ -73,7 +81,7 @@ describe("homepage adaptativa", () => {
     for (const pilar of PILARES) {
       const foco = FOCO_POR_ID.get(pilar.id as never);
       expect(foco, `o pilar ${pilar.id} não tem foco`).toBeDefined();
-      expect(hrefDaSuperficiePilar(pilar)).toBe(`/?foco=${pilar.id}`);
+      expect(hrefDaSuperficiePilar(pilar)).toBe(ROTA_POR_FOCO[pilar.id]);
       expect(pilar.href).toBe(foco!.ferramenta);
       expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
     }

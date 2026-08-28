@@ -79,8 +79,8 @@ const LIMIAR_FRACO = 1.09;
    hierarquia aparece primeiro numa destas formas. */
 const PAGINAS = [
   { nome: "landing", url: "/" },
-  { nome: "landing-descobrir", url: "/?foco=descobrir" },
-  { nome: "landing-preco", url: "/?foco=preco" },
+  { nome: "landing-preco", url: "/inicio/preco" },
+  { nome: "landing-recibos", url: "/inicio/recibos" },
   { nome: "precos", url: "/precos" },
   { nome: "guias", url: "/guias" },
   { nome: "ferramentas", url: "/ferramentas" },

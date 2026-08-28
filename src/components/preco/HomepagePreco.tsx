@@ -22,6 +22,7 @@ import HeroPreco from "./HeroPreco";
 import LaboratorioPreco from "./LaboratorioPreco";
 import type { ParametrosDemoPreco } from "@/lib/pricing/demo-homepage";
 import type { CenarioDemoPreco } from "@/lib/pricing/demo-homepage.servidor";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 
 const PRINCIPIOS = [
   {
@@ -187,8 +188,8 @@ function PercursoPreco() {
         </Reveal>
 
         <div className="mt-9 grid gap-4 lg:grid-cols-[1fr_1fr_1.25fr]">
-          <Link
-            href="/?foco=descobrir"
+          <LinkFocoIntencao
+            foco="descobrir"
             className="focus-marca group relative rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <div className="flex items-center justify-between">
@@ -205,7 +206,7 @@ function PercursoPreco() {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Voltar atrás <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
           <div className="relative rounded-4xl border border-brand bg-brand-light p-5 shadow-card dark:bg-brand/15 sm:p-6">
             <div className="flex items-center justify-between">

@@ -16,6 +16,7 @@ import {
   medir,
   type Curva,
 } from "./coreografia";
+import { usePrazoSSAtual, type PrazoSSResolvido } from "./PrazoSSAtual";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  A PALETA DESTA CENA
@@ -38,6 +39,8 @@ const ANEL = {
   ss: "border-categoria-areia-border",
 } as const;
 
+const SEM_PRAZOS: readonly string[] = [];
+
 type TomRecibo = keyof typeof TOM;
 
 const eur = (n: number) =>
@@ -55,14 +58,34 @@ export interface DadosRecibo {
   diasParaPrazo: number;
 }
 
+/** Versão estável do payload: a data corrente é escolhida no dispositivo. */
+export interface DadosReciboSnapshot {
+  bruto: number;
+  liquido: number;
+  retencaoIRS: number;
+  segSocial: number;
+  taxaRetencao: number;
+  prazosSS: readonly string[];
+}
+
+export type DadosReciboHomepage = DadosRecibo | DadosReciboSnapshot;
+
 interface Impacto {
   id: string;
   em: Ponto;
   tom: TomRecibo;
 }
 
-export default function PalcoRecibos({ dados }: { dados: DadosRecibo }) {
+export default function PalcoRecibos({ dados }: { dados: DadosReciboHomepage }) {
   const reservado = dados.retencaoIRS + dados.segSocial;
+  const prazoDoSnapshot = usePrazoSSAtual(
+    "prazosSS" in dados ? dados.prazosSS : SEM_PRAZOS,
+  );
+  const prazo =
+    "prazoSS" in dados
+      ? { iso: "", rotulo: dados.prazoSS, dias: dados.diasParaPrazo }
+      : prazoDoSnapshot;
+  const rotuloPrazo = prazo?.rotulo ?? "ao próximo dia 20";
 
   return (
     <MolduraPalco
@@ -73,17 +96,25 @@ export default function PalcoRecibos({ dados }: { dados: DadosRecibo }) {
       narracao={[
         `Valor: o recibo é de ${eur(dados.bruto)}, ao abrigo do Art. 151.º.`,
         `Repartir: ${eur(dados.liquido)} ficam contigo, ${eur(dados.retencaoIRS)} são retenção de IRS a ${Math.round(dados.taxaRetencao * 100)}% e ${eur(dados.segSocial)} são a contribuição para a Segurança Social.`,
-        `Datar: a contribuição para a Segurança Social é paga até ${dados.prazoSS}. A retenção já foi entregue pelo cliente.`,
+        `Datar: a contribuição para a Segurança Social é paga até ${rotuloPrazo}. A retenção já foi entregue pelo cliente.`,
         `Reservar: ${eur(reservado)} não são para gastar. O que sobra mesmo para gastar são ${eur(dados.liquido)}.`,
       ]}
       atos={ATOS_RECIBOS}
     >
-      {(cena) => <Cena cena={cena} dados={dados} />}
+      {(cena) => <Cena cena={cena} dados={dados} prazo={prazo} />}
     </MolduraPalco>
   );
 }
 
-function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
+function Cena({
+  cena,
+  dados,
+  prazo,
+}: {
+  cena: CenaDoPalco;
+  dados: DadosReciboHomepage;
+  prazo: PrazoSSResolvido | null;
+}) {
   const { ato, feito, emCena, estatico, ciclo, palcoRef } = cena;
   const [fichas, setFichas] = useState<FichaEmCena[]>([]);
   const [chegadas, setChegadas] = useState<ReadonlySet<string>>(new Set());
@@ -437,7 +468,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
               rotulo="Segurança Social"
               valor={dados.segSocial}
               nota="Pagas tu, no trimestre seguinte"
-              data={datado ? dados.prazoSS : undefined}
+              data={datado ? (prazo?.rotulo ?? "próximo dia 20") : undefined}
               destaque={datado}
               t={t}
             />
@@ -465,15 +496,15 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
             <span className="text-[10px] font-semibold text-categoria-areia-text dark:text-[#e7c98e]">
               Faltam{" "}
               <span className="tabular-nums">
-                {contaDias && !estatico ? (
+                {prazo && contaDias && !estatico ? (
                   <Contador
-                    valor={dados.diasParaPrazo}
+                    valor={prazo.dias}
                     formato={(n) => String(Math.round(n))}
                     inicial={0}
                     duracao={DUR.contaResultado}
                   />
                 ) : (
-                  dados.diasParaPrazo
+                  (prazo?.dias ?? "—")
                 )}
               </span>{" "}
               dias
@@ -568,7 +599,7 @@ function Cena({ cena, dados }: { cena: CenaDoPalco; dados: DadosRecibo }) {
               )}
             </div>
             <p className="mt-1 text-[9px] leading-relaxed text-stone-500">
-              Retenção já entregue + Segurança Social por pagar até {dados.prazoSS}.
+              Retenção já entregue + Segurança Social por pagar até {prazo?.rotulo ?? "ao próximo dia 20"}.
             </p>
           </m.div>
 

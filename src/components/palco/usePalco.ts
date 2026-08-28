@@ -28,6 +28,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { useRelogioDeAtos, type Ato } from "./relogio";
 import { useArranque } from "./arranque";
+import { useRelogioDeCena } from "./frame";
+import type { EstadoDoPalco } from "./atores";
 
 export interface Palco {
   /** O índice do ato em curso. */
@@ -64,7 +66,7 @@ export interface Palco {
   irPara: (indice: number) => void;
   rever: () => void;
   /** Para o `PalcoContexto.Provider`. */
-  estadoPalco: { parado: boolean; imediato: boolean };
+  estadoPalco: EstadoDoPalco;
 }
 
 /**
@@ -160,6 +162,7 @@ export function usePalco(atos: readonly Ato[], moldura?: RefObject<Element | nul
 
   const montado = reduz !== null;
   const estatico = reduz !== false;
+  const relogioDeCena = useRelogioDeCena({ parado, estatico, alvo: moldura });
 
   const terminarAto = useCallback(() => {
     if (ato < ultimoAto) {
@@ -174,8 +177,8 @@ export function usePalco(atos: readonly Ato[], moldura?: RefObject<Element | nul
     atos,
     ato,
     ciclo,
-    parado,
     estatico,
+    relogioDeCena,
     aoTerminarAto: terminarAto,
   });
 
@@ -227,8 +230,13 @@ export function usePalco(atos: readonly Ato[], moldura?: RefObject<Element | nul
   }, []);
 
   const estadoPalco = useMemo(
-    () => ({ parado: parado || estatico, imediato: false }),
-    [estatico, parado],
+    () => ({
+      parado: parado || estatico,
+      imediato: false,
+      estatico,
+      relogioDeCena,
+    }),
+    [estatico, parado, relogioDeCena],
   );
 
   return {

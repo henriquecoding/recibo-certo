@@ -267,7 +267,7 @@ const estado = (p) =>
 
   await linha.tap();
   await p.waitForTimeout(1200);
-  ok(p.url().includes("foco=empresa"), "o segundo toque navega", p.url().slice(-24));
+  ok(p.url().endsWith("/inicio/empresa"), "o segundo toque navega", p.url().slice(-32));
   await b.close();
 }
 

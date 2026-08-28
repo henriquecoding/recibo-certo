@@ -25,7 +25,6 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { AnimatePresence, m } from "motion/react";
 import { Check, Close, Info, Warning } from "@/components/ui/Icons";
 
 export type TomAviso = "sucesso" | "erro" | "info";
@@ -150,11 +149,9 @@ function Pilha({ avisos, onFechar }: { avisos: Aviso[]; onFechar: (id: string) =
       // um aviso que não existe.
       className="pointer-events-none fixed inset-x-0 bottom-0 z-[9600] flex flex-col items-center gap-2 px-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:items-end sm:px-5 sm:pb-5"
     >
-      <AnimatePresence initial={false}>
-        {avisos.map((aviso) => (
-          <Cartao key={aviso.id} aviso={aviso} onFechar={onFechar} />
-        ))}
-      </AnimatePresence>
+      {avisos.map((aviso) => (
+        <Cartao key={aviso.id} aviso={aviso} onFechar={onFechar} />
+      ))}
     </div>
   );
 }
@@ -172,12 +169,7 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
   }, [aviso.id, aviso.duracaoMs, pausado, onFechar]);
 
   return (
-    <m.div
-      layout
-      initial={{ opacity: 0, y: 14, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 8, scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+    <div
       // `alert` interrompe o leitor de ecrã; `status` espera pela pausa.
       // Um erro depois de uma ação destrutiva não pode esperar.
       role={aviso.tom === "erro" ? "alert" : "status"}
@@ -185,7 +177,7 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
       onMouseLeave={() => setPausado(false)}
       onFocus={() => setPausado(true)}
       onBlur={() => setPausado(false)}
-      className={`pointer-events-auto flex w-full max-w-[26rem] items-start gap-3 rounded-2xl border bg-white px-4 py-3 shadow-float ${borda}`}
+      className={`rc-aviso-entrada pointer-events-auto flex w-full max-w-[26rem] items-start gap-3 rounded-2xl border bg-white px-4 py-3 shadow-float ${borda}`}
     >
       <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${chip}`}>
         <Icon size={15} aria-hidden />
@@ -215,6 +207,6 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
       >
         <Close size={15} aria-hidden />
       </button>
-    </m.div>
+    </div>
   );
 }

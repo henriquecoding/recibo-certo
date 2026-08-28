@@ -14,12 +14,10 @@
 //  tempo restante de cada um é possível, e é exatamente o tipo de código
 //  que fica dessincronizado ao segundo bug.
 //
-//  Em vez disso há UM relógio por ato — o mesmo padrão que
-//  `simulador/palco.tsx` já usa para a barra de progresso: um
-//  `requestAnimationFrame` acumula tempo decorrido enquanto não está
-//  parado, e dispara os beats cujo instante já passou. Pausar é deixar de
-//  acumular. Não há nada para ressincronizar porque nunca houve dois
-//  relógios.
+//  Em vez disso há UM relógio por cena (`components/palco/frame.ts`):
+//  beats, fichas, contadores e ponteiro acumulam o mesmo `delta`. Pausar é
+//  suspender essa fonte. Não há nada para ressincronizar porque nunca houve
+//  dois relógios.
 // ═══════════════════════════════════════════════════════════════════════
 
 // A mecânica — curvas, avaliador de Bézier, escalas de duração, relógio e

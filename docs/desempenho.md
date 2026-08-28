@@ -1,173 +1,159 @@
-# Desempenho — o que se mede, e o que já se corrigiu
+# Desempenho da homepage
 
-> Dois motores mantêm isto honesto:
->
-> - `npm run desempenho` — o que cada rota custa no browser, com uma base de
->   comparação em `desempenho.json`. `--guardar` fixa uma nova base.
-> - `npm run fronteira` — que módulos pesados ficam alcançáveis a partir de um
->   componente `"use client"`, **e por que caminho**.
->
-> Ambos exigem uma **build** servida (`npm run build && npx next start`). Um
-> `next start` sobre uma build anterior mede o código antigo.
+Documento corrente da implementação de agosto de 2026. Números históricos dos
+palcos estão separados em [`desempenho-palcos.md`](./desempenho-palcos.md); não
+devem ser usados como baseline da arquitetura atual.
 
----
+## Contrato atual
 
-## 0. A regra
+As cinco leituras são entradas estáticas concretas:
 
-**Um componente de cliente recebe DADOS. Não importa CATÁLOGOS.**
+| foco | rota |
+|---|---|
+| Descobrir | `/` |
+| Preço | `/inicio/preco` |
+| Recibos verdes | `/inicio/recibos` |
+| Empresa | `/inicio/empresa` |
+| Salário | `/inicio/salario` |
 
-O empacotador não avisa. Um componente `"use client"` que importa uma *função*
-de um módulo de dados leva o módulo inteiro — e depois o que esse importa, e
-assim por diante. Ninguém escreve isto de propósito; é o que acontece quando
-uma fronteira não é verificada.
+Cada entrada importa apenas a sua `Homepage*`. Os exemplos fiscais são
+snapshots versionados em `src/generated/homepage/`, ligados à versão da
+aplicação, ao ano fiscal e ao SHA-256 do motor que os gerou. O build falha se
+ficarem desatualizados.
 
----
+`/?foco=...` é apenas compatibilidade: o proxy responde 307 para a rota
+concreta, preservando parâmetros como UTM e removendo `foco`. O canonical
+continua a ser `/`; Open Graph e Twitter usam a rota concreta da leitura.
 
-## 1. Porque é que os chunks não servem para diagnosticar
+## Caminho crítico
 
-O Turbopack junta módulos sem relação no mesmo ficheiro. Um chunk de 547 KB
-com fontes legais, dados fiscais, guias e concelhos lá dentro **não diz quem os
-pediu** — e as três primeiras horas desta investigação foram gastas a tentar
-lê-lo.
+- O root layout não monta `MotionProvider` global. Motion fica nos subtrees
+  animados.
+- Auth público consulta primeiro apenas a existência de sessão persistida. O
+  SDK Supabase entra por `import()` quando existe sessão, callback OAuth, rota
+  privada ou ação explícita de conta.
+- Stripe/reconciliação/entitlements entram apenas depois de existir utilizador.
+- Busca, Auth, Novidades e Feedback têm loaders independentes por intenção.
+- `/termos` é o controlo negativo do piso: o manifesto inicial não pode conter
+  Motion nem `@supabase/supabase-js`.
 
-`npm run fronteira` percorre o grafo de imports a partir de cada ficheiro
-`"use client"` e imprime o caminho mais curto até cada módulo pesado. É esse
-caminho que se corta.
+## Prefetch de focos
 
-Não segue `import()` dinâmico, de propósito: é precisamente a ferramenta que
-corta a fronteira, e segui-la apagaria a diferença entre um módulo carregado à
-entrada e outro carregado quando alguém abre um painel.
+`prefetch={false}` desliga o prefetch automático do `<Link>`; não conserva
+hover por si só. A preparação por intenção é implementada explicitamente por
+`ControladorPrefetchFocos`:
 
-`ENTRADAS=a,b npm run fronteira` limita a análise a um sub-conjunto — é assim
-que se separa o custo do **layout** (que todas as páginas pagam) do de uma
-página só.
+- `pointerenter`, foco de teclado e `pointerdown` promovem o destino;
+- fila deduplicada, concorrência 1;
+- no máximo um foco adjacente em idle e dois especulativos por sessão;
+- zero especulação em `Save-Data`, `2g` e `slow-2g`;
+- ao esconder o documento, itens idle saem da fila;
+- o Router Cache conserva focos preparados/visitados;
+- o link reconhece a interação localmente e mantém a posição de scroll.
 
----
+As marcas disponíveis são:
 
-## 2. O que se mediu, e o que se encontrou
-
-### 2.1 A medição tem de separar o caminho crítico do resto
-
-A primeira medição dizia 2 612 KB em todas as rotas — e estava a somar coisas
-que não são comparáveis. Separando pelo evento `load`:
-
-| | crítico | depois do `load` |
-| --- | --- | --- |
-| `/` | 988 KB | **1 624 KB** |
-| `/termos` (uma página de texto) | 777 KB | **1 622 KB** |
-
-Uma página de termos e condições descarregava 1,6 MB **depois** de estar
-pronta. Não era código dela: era **pré-carregamento especulativo** de todas as
-ligações visíveis.
-
-### 2.2 O `<Link>` pré-carrega por visibilidade
-
-No App Router, um `<Link>` visível pré-carrega a rota de destino. Numa barra de
-navegação com cinco pilares, num rodapé com seis secções e numa grelha com seis
-ferramentas, isso são dezassete pedidos que ninguém pediu — a competir por
-largura de banda e por CPU com o que a pessoa está mesmo a ler.
-
-**`prefetch={false}` desliga o pré-carregamento por VISIBILIDADE e mantém o de
-SOBREVOO** — que é quando a intenção já existe. Aplicado às superfícies de
-lista: barra de navegação, rodapé, «Explorar», resultados de pesquisa, planos,
-números.
-
-### 2.3 Meio megabyte de guias para desenhar três ligações
-
-```
-ExplorarSecao  →  guias-config  →  guias/manifests
-               →  guias/expansao/derivar
-               →  catalogo (142 KB) + conteudo (127 KB)
-                  + dados-motor (115 KB) + fontes (52 KB)
+```text
+rc:foco:pointerdown
+rc:foco:ack-painted
+rc:foco:prefetch-start
+rc:foco:prefetch-end
+rc:foco:navigation-start
+rc:foco:rsc-end
+rc:foco:content-commit
+rc:foco:first-animation-frame
 ```
 
-`ExplorarSecao` mostra **três** guias por perfil. Para os obter chamava
-`guiasPorPerfil()`, e a chamada trazia o catálogo inteiro.
+Os eventos analíticos `focus_switch_ack` e `focus_switch_ready` levam apenas
+foco, tipo de entrada, preparação e balde de latência; continuam subordinados
+ao consentimento e não incluem valores fiscais nem PII.
 
-Agora os atalhos são resolvidos no servidor (`lib/guias/atalhos.servidor.ts`) e
-atravessam a fronteira como doze objetos pequenos. O ícone vai como **chave** e
-não como componente — a mesma convenção que `icon-map.tsx` já documentava para
-as ferramentas, e pela mesma razão: uma chave não arrasta a árvore atrás de si.
+O componente oficial do Vercel Speed Insights também é um `lazy import` atrás
+do opt-in de estatística. Mede apenas estas cinco rotas, volta a confirmar o
+consentimento em `beforeSend` e remove query e hash antes do envio. A versão do
+consentimento foi incrementada para que uma escolha antiga não autorize o novo
+subprocessador retroativamente.
 
-### 2.4 As cinco leituras vinham todas, sempre
+## Medições diretas do build
 
-`page.tsx` importava as cinco `Homepage*` estaticamente. Só uma é renderizada
-em cada pedido — mas um import estático não sabe disso. Com `next/dynamic` (sem
-`ssr: false`, portanto sem perder o HTML servido) cada leitura passou a ser um
-pedaço próprio.
+Build local de produção de 28 de agosto de 2026, versão 2.134.0. São medições
+do manifesto/artefacto, não Core Web Vitals de campo:
 
-### 2.5 O simulador descarregava para toda a gente
+| rota | JS inicial cru | JS gzip | HTML cru | HTML gzip | RSC gzip |
+|---|---:|---:|---:|---:|---:|
+| `/` | 398,3 KB | 124,0 KB | 270,5 KB | 39,3 KB | 13,8 KB |
+| `/inicio/preco` | 403,9 KB | 127,2 KB | 254,5 KB | 37,2 KB | 12,6 KB |
+| `/inicio/recibos` | 389,7 KB | 122,6 KB | 232,5 KB | 34,8 KB | 12,7 KB |
+| `/inicio/empresa` | 391,4 KB | 123,2 KB | 251,9 KB | 39,5 KB | 14,1 KB |
+| `/inicio/salario` | 385,8 KB | 121,1 KB | 234,9 KB | 35,2 KB | 12,5 KB |
+| `/termos` | 325,2 KB | 102,3 KB | — | — | — |
 
-`CalculadoraSecao` carregava o simulador quando a secção «se aproximava», com
-**800 px** de margem. Numa janela de 900 px de altura, 800 px de margem
-significa *no instante em que a página abre*: 547 KB de simulador mais 200 KB
-de dados fiscais, para quem nunca desceu.
+Todas as cinco entradas saem `○ Static`; os manifests passam isolamento de
+cena. `/termos` passa o controlo sem Motion e sem SDK Supabase.
 
-Agora são 320 px — e **nada** com `Save-Data` ligado ou ligação lenta
-declarada. Quem pediu para poupar dados não quer um megabyte especulativo.
+O budget editorial de 200 KB de HTML **cru** permanece como aviso explícito:
+o HTML inclui conteúdo SSR/no-JS e os dados RSC embebidos pelo Next. Remover
+secções para fazer o número ficar verde violaria o contrato funcional. A
+transferência real fica entre 34,8 e 39,5 KB gzip, abaixo do gate de 45 KB. A
+exceção só pode desaparecer por redução de markup/serialização medida, nunca
+por esconder conteúdo do servidor.
 
-### 2.6 A rota é dinâmica, e não havia sinal de espera
+## Orçamentos bloqueantes
 
-`/` lê `?foco=` e por isso é dinâmica: trocar de aba pede um render ao
-servidor. Sem `app/loading.tsx` o App Router não tinha fronteira de espera para
-mostrar, e a página anterior ficava congelada até a nova chegar — uma interface
-que não responde ao toque lê-se como avariada, não como ocupada.
+O postbuild (`scripts/verificar-chunks-homepage.mjs`) falha acima de 5% de
+folga nos budgets de transferência:
 
----
+| métrica | limite |
+|---|---:|
+| JS inicial descodificado | 800 KB |
+| JS inicial gzip | 250 KB |
+| RSC adicional gzip | 40 KB |
+| HTML transferido gzip | 45 KB |
+| grafo cliente de outra cena | zero |
+| Motion/Supabase inicial em `/termos` | zero |
 
-## 3. O resultado
+O benchmark de browser aplica ainda os budgets de FCP/LCP/CLS, ack, ready,
+bytes por troca, long tasks, TBT e FPS definidos no relatório mestre.
 
-| rota | antes | depois | |
-| --- | --- | --- | --- |
-| `/?foco=…` (as cinco) | 2 610 KB | **1 040 KB** | −60 % |
-| `/` | 2 612 KB | **2 056 KB** | −21 % |
-| scripts por rota | 43 | **21** | −51 % |
-| `/termos`, depois do `load` | 1 622 KB | **52 KB** | −97 % |
+## Protocolo de browser
 
-Transição entre abas, com 150 ms de latência simulada: **25–62 ms**.
+`scripts/medir-desempenho.mjs` cria contexto frio por carga e contexto quente
+para visitado/preparado. Por omissão executa 10 repetições por grupo e guarda
+p50, p75, p95, mínimo, máximo e dispersão. Regista commit, build ID, versão do
+browser, CPU/rede efetivamente aplicadas e data.
 
-> A medição das transições **sobrevoa antes de clicar**, que é o que uma pessoa
-> faz e o que dispara o pré-carregamento. Medir sem isso mede um caso que quase
-> não existe. E mede-se **com latência**: no mesmo computador que serve, tudo
-> parece instantâneo e a diferença entre pré-carregar e não pré-carregar
-> desaparece.
+```bash
+# terminal 1
+npm run build
+npm start -- --hostname 127.0.0.1
 
----
+# terminal 2: matriz completa, três browsers
+npm run desempenho -- --guardar
 
-## 4. O que falta, com a prova
+# diagnóstico curto (não é baseline nem gate)
+npm run desempenho:smoke
+```
 
-`npm run fronteira` continua a apontar o que ainda atravessa. Por ordem de
-alcance:
+Variáveis úteis: `RC_BROWSERS`, `RC_CENARIOS`, `RC_FOCOS`, `RC_REPETICOES`,
+`RC_PERF_OUTPUT`, `BASE_URL` e `PLAYWRIGHT_CHROMIUM`.
 
-| módulo | tamanho | alcançável de |
-| --- | --- | --- |
-| `lib/fiscal-data.ts` | 371 KB | 91 componentes de cliente |
-| `lib/fiscal.ts` | 143 KB | 57 componentes de cliente |
-| `lib/negocio/market/bulk/dados/procura-nuts2.json` | 211 KB | 5 |
-| `lib/negocio/market/bulk/dados/oferta-concelhos.json` | 101 KB | 6 |
+Chromium recebe Fast/Slow 4G e CPU 6×/4× pelo CDP. Firefox e WebKit recebem a
+mesma latência e o relatório identifica, sem fingir, que throughput e CPU não
+foram emulados. WebKit mobile, Chromium e Firefox são jobs bloqueantes na CI.
+O primeiro ensaio de cada cenário desliga a rede depois do prefetch; se a rota
+preparada não estiver no Router Cache, o teste falha.
 
-O maior é `fiscal-data.ts`, e dentro dele os dois maiores blocos são
-`PARAMETROS_AUDITADOS` (54 KB — o registo da auditoria, que só três superfícies
-de servidor leem) e `SOURCES` (786 linhas de citações legais).
+O antigo `desempenho.json` foi removido: misturava recursos pós-load, tinha
+`domContentLoaded: null`, bloqueio zero e URLs dinâmicos antigos. Resultados
+novos vivem em `artifacts/desempenho-*.json` e são publicados pela CI durante
+30 dias.
 
-`PARAMETROS_AUDITADOS` sai com uma mudança mecânica, desde que
-`assertFiscalDataIntegrity()` continue a correr no build — é a **regra 1** do
-`CLAUDE.md` e não se toca nela sem substituir a âncora.
+## Dados de campo
 
-`SOURCES` é outra história: cada valor é embrulhado em `sv(valor, SOURCES.x)`,
-portanto a citação viaja com o número. Separá-los é uma decisão de desenho, não
-uma limpeza.
-
----
-
-## 5. Como não regredir
-
-1. **Antes de dar por concluída uma alteração que toca em componentes de
-   cliente:** `npm run fronteira`. Um módulo pesado novo na lista é uma
-   fronteira que se abriu.
-2. **Depois de uma alteração de peso:** `npm run desempenho` compara com
-   `desempenho.json` e mostra a diferença. Sem base de comparação, uma
-   otimização é uma opinião.
-3. **Um `<Link>` numa lista leva `prefetch={false}`.** A exceção é uma ligação
-   única e óbvia — um CTA principal —, onde o pré-carregamento à entrada compra
-   mesmo alguma coisa.
+Não se transformam números de laboratório em LCP/INP/CLS de produção. A
+instrumentação consentida já está no artefacto; depois da publicação e de haver
+amostra suficiente, a promoção deve consultar Speed Insights por dispositivo,
+rota/foco e Portugal, comparar Preview sem Toolbar com produção e rever janelas
+de 48 horas e 7 dias.
+Enquanto não houver amostra de campo suficiente, o estado correto é “sem dados”,
+nunca zero.

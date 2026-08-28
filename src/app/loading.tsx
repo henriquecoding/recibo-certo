@@ -1,9 +1,9 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  O QUE SE VÊ ENQUANTO UMA LEITURA CHEGA
 //  ---------------------------------------------------------------------
-//  `/` é uma rota dinâmica: trocar de aba pede um render ao servidor. Sem
-//  este ficheiro, o App Router não tem fronteira de espera para mostrar —
-//  a página anterior fica congelada até a nova chegar, e uma interface
+//  As cinco leituras são estáticas, mas um primeiro acesso ainda pode esperar
+//  pela rede. Sem este ficheiro, o App Router não tem fronteira de espera para
+//  mostrar — a página anterior fica imóvel até a nova chegar, e uma interface
 //  que não responde ao toque lê-se como avariada, não como ocupada.
 //
 //  Não é um esqueleto do conteúdo. Um esqueleto que adivinha a forma da

@@ -130,8 +130,8 @@ describe("chrome-movel:barra", () => {
     // carregava no separador aceso ficava no fim, sem sinal nenhum de que
     // tinha tocado.
     expect(CHROME).toContain("const naRotaExacta =");
-    expect(CHROME).toContain("Boolean(slot.homepageHref)");
-    expect(CHROME).toContain('pathname === "/" && foco === slot.id');
+    expect(CHROME).toContain("pathname === slot.homepageHref");
+    expect(CHROME).toContain("focoDaRotaHomepage(pathname)");
     expect(CHROME).toContain("pathname === slot.hrefCanonico");
     expect(CHROME).toContain("window.scrollTo({ top: 0");
     // A rota EXACTA, e não o prefixo que acende o separador.

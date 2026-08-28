@@ -16,7 +16,8 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePerfil } from "@/lib/perfil";
-import { FOCO_DO_PERFIL_ANTIGO, FOCO_POR_ID, hrefDoFoco } from "@/components/foco/focos";
+import { FOCO_DO_PERFIL_ANTIGO, FOCO_POR_ID } from "@/components/foco/focos";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
 import SeletorModo from "@/components/SeletorModo";
@@ -174,13 +175,12 @@ export default function CalculadoraSecao() {
         {definicao ? (
           <p className="mb-3 text-sm text-stone-500 dark:text-stone-400">
             A responder a{" "}
-            <Link
-              prefetch={false}
-              href={hrefDoFoco(definicao.id)}
+            <LinkFocoIntencao
+              foco={definicao.id}
               className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
             >
               «{definicao.pergunta}»
-            </Link>
+            </LinkFocoIntencao>
           </p>
         ) : null}
         <div className="eyebrow mb-3 text-brand">{copy.eyebrow}</div>

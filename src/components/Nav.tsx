@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { m } from "motion/react";
 import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
 import { useBuscaAberta } from "@/components/busca/motor";
@@ -315,7 +314,7 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
             <div className="flex flex-shrink-0 items-center gap-2">
               <MenuConta avatarUrl={avatarUrl} />
 
-              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+              <div className="transition-transform hover:-translate-y-px active:scale-[0.97]">
                 {user ? (
                   <Link prefetch={false} href="/dashboard" className={ACAO}>
                     Painel
@@ -329,7 +328,7 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
                     <ArrowRight size={14} aria-hidden />
                   </Link>
                 )}
-              </m.div>
+              </div>
 
               {/* «Menu» não é o sexto pilar: vive nesta linha, com a forma de
                   um controlo com contorno, e não dentro da bandeja. Esteve lá

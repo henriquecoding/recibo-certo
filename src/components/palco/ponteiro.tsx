@@ -97,18 +97,14 @@ const TAU_PREME = 0.03;
 const TAU_SOLTA = 0.055;
 
 export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
-  const { parado } = useContext(PalcoContexto);
+  const { relogioDeCena } = useContext(PalcoContexto);
   const ref = useRef<HTMLDivElement>(null);
-  const paradoRef = useRef(parado);
-  paradoRef.current = parado;
   // A função é relida a cada frame a partir de uma ref: assim o palco
   // pode passar uma closure nova a cada render sem reiniciar nada.
   const lerRef = useRef(ler);
   lerRef.current = ler;
 
   useEffect(() => {
-    let raf = 0;
-    let ultimo = performance.now();
     let pos: Ponto | null = null;
     let vel = { x: 0, y: 0 };
     let escala = 1;
@@ -141,14 +137,12 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
         `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${escala})`;
     };
 
-    const passo = (agora: number) => {
-      raf = requestAnimationFrame(passo);
-      // Passo fixo máximo: um separador em segundo plano acumula segundos
-      // de `dt` e faria a mola explodir ao voltar.
-      const dt = Math.min(0.032, (agora - ultimo) / 1000);
-      ultimo = agora;
+    return relogioDeCena.inscrever(({ delta }) => {
+      // Passo máximo defensivo: o relógio partilhado já devolve zero ao
+      // retomar, mas limitar o integrador também o protege de um frame lento.
+      const dt = Math.min(0.032, delta / 1000);
       const no = ref.current;
-      if (!no) return;
+      if (!no) return true;
 
       const { ponto, premido, imediato } = lerRef.current();
 
@@ -156,16 +150,15 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
         visivelAnterior = Boolean(ponto);
         no.style.opacity = ponto ? "1" : "0";
       }
-      if (!ponto) return;
+      if (!ponto) return true;
 
       if (!pos || imediato) {
         pos = { ...ponto };
         vel = { x: 0, y: 0 };
         escala = 1;
         escrever();
-        return;
+        return true;
       }
-      if (paradoRef.current) return;
 
       // O carregar, no mesmo relógio que o percurso. `1 − e^(−dt/τ)` em vez
       // de um passo fixo: com o separador em segundo plano o `dt` cresce e
@@ -188,11 +181,9 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
         vel = { x: 0, y: 0 };
       }
       escrever();
-    };
-
-    raf = requestAnimationFrame(passo);
-    return () => cancelAnimationFrame(raf);
-  }, []);
+      return true;
+    });
+  }, [relogioDeCena]);
 
   return (
     // ⚠️ SEM `style` no JSX, e a opacidade inicial numa CLASSE.
@@ -226,28 +217,16 @@ export function Ponteiro({ ler }: { ler: () => LeituraPonteiro }) {
  * toque, que usá-los indistintamente apagaria.
  */
 export function Toque({ em }: { em: Ponto }) {
-  const ref = useRef<HTMLSpanElement>(null);
-  useEffect(() => {
-    const no = ref.current;
-    if (!no) return;
-    // Dois frames: o primeiro fixa o estado inicial, o segundo dispara a
-    // transição. Com um só, o browser pode coalescer os dois e o anel
-    // aparece já no fim — que é o mesmo que não aparecer.
-    const a = requestAnimationFrame(() => {
-      const b = requestAnimationFrame(() => {
-        no.style.opacity = "0";
-        no.style.scale = "1.25";
-      });
-      return b;
-    });
-    return () => cancelAnimationFrame(a);
-  }, []);
+  const { parado } = useContext(PalcoContexto);
   return (
     <span
-      ref={ref}
       aria-hidden
-      className="pointer-events-none absolute z-30 h-11 w-11 rounded-full border-2 border-brand/70 transition-[opacity,scale] duration-500 ease-out"
-      style={{ left: em.x, top: em.y, translate: "-50% -50%", opacity: 0.9, scale: "0.2" }}
+      className="rc-toque-palco pointer-events-none absolute z-30 h-11 w-11 rounded-full border-2 border-brand/70"
+      style={{
+        left: em.x,
+        top: em.y,
+        animationPlayState: parado ? "paused" : "running",
+      }}
     />
   );
 }

@@ -23,7 +23,6 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { AnimatePresence, m } from "motion/react";
 import { useOverlay, useOverlayAtivo } from "@/components/overlays/CoordenadorOverlays";
 import { Warning } from "@/components/ui/Icons";
 
@@ -82,9 +81,7 @@ export function ConfirmacaoProvider({ children }: { children: ReactNode }) {
   return (
     <ContextoConfirmar.Provider value={confirmar}>
       {children}
-      <AnimatePresence>
-        {pedido && permitido && <Dialogo pedido={pedido} onResponder={responder} />}
-      </AnimatePresence>
+      {pedido && permitido && <Dialogo pedido={pedido} onResponder={responder} />}
     </ContextoConfirmar.Provider>
   );
 }
@@ -157,24 +154,16 @@ function Dialogo({
       aria-describedby={pedido.descricao ? "confirmar-descricao" : undefined}
       className="fixed inset-0 z-[9200]"
     >
-      <m.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.18 }}
+      <div
         onClick={() => onResponder(false)}
-        className="absolute inset-0 bg-ink/45 backdrop-blur-sm"
+        className="rc-overlay-entrada absolute inset-0 bg-ink/45 backdrop-blur-sm"
         aria-hidden
       />
 
       <div className="pointer-events-none absolute inset-0 flex items-end justify-center sm:items-center sm:p-4">
-        <m.div
+        <div
           ref={caixaRef}
-          initial={{ opacity: 0, y: 22, scale: 0.98 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 16, scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 420, damping: 36 }}
-          className="pointer-events-auto flex max-h-[90dvh] w-full max-w-md flex-col rounded-t-4xl border border-stone-200/80 bg-white shadow-float sm:rounded-4xl"
+          className="rc-dialogo-entrada pointer-events-auto flex max-h-[90dvh] w-full max-w-md flex-col rounded-t-4xl border border-stone-200/80 bg-white shadow-float sm:rounded-4xl"
         >
           {/* Puxador da folha inferior — só telemóvel. */}
           <div className="mx-auto mt-2.5 h-1 w-10 shrink-0 rounded-full bg-stone-200 sm:hidden" aria-hidden />
@@ -231,7 +220,7 @@ function Dialogo({
               {pedido.confirmar ?? "Continuar"}
             </button>
           </div>
-        </m.div>
+        </div>
       </div>
     </div>
   );

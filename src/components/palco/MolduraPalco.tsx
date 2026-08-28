@@ -141,6 +141,7 @@ export default function MolduraPalco({
     <PalcoContexto.Provider value={estadoPalco}>
       <section
         ref={molduraRef}
+        data-palco={id.replace(/^palco-/, "")}
         aria-labelledby={`${id}-titulo`}
         aria-describedby={`${id}-resumo`}
         className={`relative overflow-hidden rounded-[2rem] border sm:rounded-[2.5rem] ${pele.seccao}`}

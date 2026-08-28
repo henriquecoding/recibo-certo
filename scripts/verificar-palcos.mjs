@@ -37,6 +37,13 @@ const VERSAO = JSON.parse(new TextDecoder().decode(readFileSync(new URL("../pack
 const CENA_EMPRESA = 12_500;
 /** 2500 + 2800 + 2800 + 3300, com folga. */
 const CENA_SALARIO = 12_500;
+const ROTA_FOCO = {
+  descobrir: "/",
+  preco: "/inicio/preco",
+  recibos: "/inicio/recibos",
+  empresa: "/inicio/empresa",
+  salario: "/inicio/salario",
+};
 
 const falhas = [];
 const passos = [];
@@ -113,7 +120,7 @@ async function medirCena(navegador, foco, duracao) {
     };
     requestAnimationFrame(contar);
   });
-  await p.goto(`${ENDERECO}/?foco=${foco}`, { waitUntil: "load" });
+  await p.goto(`${ENDERECO}${ROTA_FOCO[foco]}`, { waitUntil: "load" });
   // Zerar depois da carga: o que se mede é a CENA, não o arranque da rota.
   await p.waitForTimeout(1200);
   await p.evaluate(() => {
@@ -159,7 +166,7 @@ async function medirCena(navegador, foco, duracao) {
 async function verificarRegua(navegador) {
   const ctx = await contexto(navegador, "light");
   const p = await ctx.newPage();
-  await p.goto(`${ENDERECO}/?foco=empresa`, { waitUntil: "load" });
+  await p.goto(`${ENDERECO}${ROTA_FOCO.empresa}`, { waitUntil: "load" });
   await p.waitForTimeout(CENA_EMPRESA);
 
   const regua = p.locator('[role="slider"][aria-labelledby="empresa-regua-rotulo"]');
@@ -252,7 +259,7 @@ async function verificarRegua(navegador) {
   await ctx.close();
   const ctxToque = await contexto(navegador, "light", 390);
   const pt = await ctxToque.newPage();
-  await pt.goto(`${ENDERECO}/?foco=empresa`, { waitUntil: "load" });
+  await pt.goto(`${ENDERECO}${ROTA_FOCO.empresa}`, { waitUntil: "load" });
   await pt.waitForTimeout(CENA_EMPRESA);
   const reguaToque = pt.locator('[role="slider"][aria-labelledby="empresa-regua-rotulo"]');
   const antesToque = Number(await reguaToque.getAttribute("aria-valuenow"));
@@ -337,7 +344,7 @@ async function verificarTemaEscuro(navegador) {
   for (const tema of ["light", "dark"]) {
     const ctx = await contexto(navegador, tema);
     const p = await ctx.newPage();
-    await p.goto(`${ENDERECO}/?foco=salario`, { waitUntil: "load" });
+    await p.goto(`${ENDERECO}${ROTA_FOCO.salario}`, { waitUntil: "load" });
     await p.waitForTimeout(CENA_SALARIO);
 
     const camadas = await p.evaluate(() => {
@@ -425,7 +432,7 @@ async function verificarArranquePorEtapas(navegador) {
     [VERSAO],
   );
   const p = await ctx.newPage();
-  await p.goto(`${ENDERECO}/?foco=empresa`, { waitUntil: "load" });
+  await p.goto(`${ENDERECO}${ROTA_FOCO.empresa}`, { waitUntil: "load" });
   await p.waitForTimeout(4000);
 
   /** A legenda do cabeçalho diz em que passo a cena vai. */
@@ -517,7 +524,7 @@ async function verificarContraste(navegador) {
     for (const tema of ["light", "dark"]) {
       const ctx = await contexto(navegador, tema);
       const p = await ctx.newPage();
-      await p.goto(`${ENDERECO}/?foco=${foco}`, { waitUntil: "load" });
+      await p.goto(`${ENDERECO}${ROTA_FOCO[foco]}`, { waitUntil: "load" });
       await p.locator("section").first().scrollIntoViewIfNeeded().catch(() => {});
       await p.waitForTimeout(CENA_EMPRESA + 3000);
       const maus = await p.evaluate(SONDA_CONTRASTE);

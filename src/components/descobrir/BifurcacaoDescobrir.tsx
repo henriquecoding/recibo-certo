@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Briefcase, Building, Receipt, Scale } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  «E SOB QUE FORMA TESTAS ISTO?» — o comparador, dentro de Descobrir
@@ -26,7 +27,7 @@ import Reveal from "@/components/ui/Reveal";
 //  duplicar conteúdo entre secções. Por isso a regra é dura:
 //
 //    AQUI  · raso   · «sob que forma testo isto?»  · SEM controlos
-//    /?foco=empresa · fundo · «a partir de quando compensa?» · com tudo
+//    /inicio/empresa · fundo · «a partir de quando compensa?» · com tudo
 //
 //  Nunca o mesmo bloco duas vezes: um é uma bifurcação qualitativa que
 //  fecha uma leitura, o outro é a leitura inteira. Os dois apontam para
@@ -45,7 +46,7 @@ const FORMAS = [
     resumo: "Abrir atividade nas Finanças e emitir. É o caminho mais curto entre a hipótese e o primeiro cliente pagante.",
     exige: "Abertura de atividade, uma declaração trimestral e reservar o que é do Estado.",
     quando: "Para testar. Enquanto não souberes se alguém paga, tudo o resto é estrutura a mais.",
-    href: "/?foco=recibos",
+    foco: "recibos",
     cta: "Ver o que fica de cada recibo",
     destaque: true,
   },
@@ -56,7 +57,7 @@ const FORMAS = [
     resumo: "Uma pessoa coletiva com contabilidade organizada, responsabilidade limitada e IRC sobre o lucro.",
     exige: "Contabilista certificado todos os meses — mesmo num mês sem faturar — e capital social.",
     quando: "Quando a faturação, o risco ou os clientes o justificarem. Há um ponto de viragem, e é um número.",
-    href: "/?foco=empresa",
+    foco: "empresa",
     cta: "Ver o ponto de viragem",
     destaque: false,
   },
@@ -67,7 +68,7 @@ const FORMAS = [
     resumo: "Testar a hipótese ao lado do emprego. Não é desistir: é financiar o teste com rendimento que já existe.",
     exige: "Verificar exclusividade no contrato e as regras de acumulação da Segurança Social.",
     quando: "Quase sempre, no início. É a forma que permite a hipótese falhar sem levar o resto atrás.",
-    href: "/?foco=salario",
+    foco: "salario",
     cta: "Conferir o meu recibo",
     destaque: false,
   },
@@ -98,7 +99,7 @@ export default function BifurcacaoDescobrir() {
         </Reveal>
 
         <div className="mt-9 grid gap-3 lg:grid-cols-3">
-          {FORMAS.map(({ id, Icon, titulo, resumo, exige, quando, href, cta, destaque }, i) => (
+          {FORMAS.map(({ id, Icon, titulo, resumo, exige, quando, foco, cta, destaque }, i) => (
             <Reveal key={id} delay={i * 0.05}>
               <div
                 className={`flex h-full flex-col rounded-4xl border p-5 shadow-card sm:p-6 ${
@@ -136,8 +137,8 @@ export default function BifurcacaoDescobrir() {
                   </div>
                 </dl>
 
-                <Link
-                  href={href}
+                <LinkFocoIntencao
+                  foco={foco}
                   className={`focus-marca mt-auto inline-flex min-h-[40px] items-center gap-1.5 pt-4 text-xs font-semibold no-underline ${
                     destaque
                       ? "text-brand-dark dark:text-brand-mint"
@@ -145,7 +146,7 @@ export default function BifurcacaoDescobrir() {
                   }`}
                 >
                   {cta} <ArrowRight size={13} />
-                </Link>
+                </LinkFocoIntencao>
               </div>
             </Reveal>
           ))}

@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { Playfair_Display, DM_Sans } from "next/font/google";
-import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { AuthProvider } from "@/lib/supabase/auth";
-import { PerfilProvider } from "@/lib/perfil";
 import { SubscricaoProvider } from "@/lib/stripe/subscription";
 import IntentOverlays from "@/components/ui/IntentOverlays";
 import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
@@ -12,6 +10,7 @@ import { ConfirmacaoProvider } from "@/components/ui/Confirmar";
 import ChromeMobile from "@/components/ChromeMobile";
 import BotaoTopo from "@/components/ui/BotaoTopo";
 import Medicao from "@/components/Medicao";
+import ControladorPrefetchFocos from "@/components/foco/ControladorPrefetchFocos";
 // Importado pelo efeito colateral: `assertChangelogIntegrity()` corre ao
 // carregar o módulo e faz o build falhar se `APP_VERSION` e a entrada mais
 // recente do CHANGELOG divergirem. Antes essa garantia vinha de graça, porque
@@ -156,8 +155,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <AuthProvider>
           <SubscricaoProvider>
             <Suspense>
-              <PerfilProvider>
-                <MotionProvider>
                   {/* O coordenador de overlays envolve tudo o que pode abrir
                       uma superfície por cima da página. A invariante que
                       entrega — nunca mais de um `aria-modal` activo — só se
@@ -171,24 +168,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         com os outros — ver `ui/Confirmar.tsx`. */}
                     <AvisosProvider>
                       <ConfirmacaoProvider>
-                        {children}
-                        {/* Todo o chrome do telemóvel vive aqui, no fim do
-                            corpo: a pesquisa, os cinco pilares e a marca são
-                            três linhas da MESMA superfície fixa em baixo. A
-                            linha da marca já foi uma barra em fluxo no topo —
-                            ver o quadro em `ChromeMobileMarca.tsx`. */}
-                        {/* `ChromeMobile` lê `foco` da query string para
-                            acender o modo adaptativo. Esse valor só existe no
-                            pedido; sem uma fronteira própria, `useSearchParams`
-                            fazia o Suspense exterior substituir também o
-                            conteúdo da página durante a pré-renderização. O
-                            resultado era grave: os dossiers de Descobrir
-                            desapareciam do HTML sem JavaScript. A fronteira
-                            local limita o adiamento ao chrome — o rodapé
-                            continua a garantir navegação sem JavaScript. */}
-                        <Suspense fallback={null}>
-                          <ChromeMobile />
-                        </Suspense>
+                        <ControladorPrefetchFocos>
+                          {children}
+                          {/* Todo o chrome do telemóvel vive aqui, no fim do
+                              corpo: a pesquisa, os cinco pilares e a marca são
+                              três linhas da MESMA superfície fixa em baixo. A
+                              linha da marca já foi uma barra em fluxo no topo —
+                              ver o quadro em `ChromeMobileMarca.tsx`. */}
+                          {/* O chrome deriva o foco da rota estática. A fronteira
+                              continua local porque `usePathname` pertence ao
+                              router cliente; o conteúdo editorial permanece no
+                              HTML servido sem JavaScript. */}
+                          <Suspense fallback={null}>
+                            <ChromeMobile />
+                          </Suspense>
+                        </ControladorPrefetchFocos>
                         {/* Voltar ao topo — global em todo o site público;
                             esconde-se sozinho no /dashboard e no /admin. */}
                         <BotaoTopo />
@@ -197,8 +191,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                       </ConfirmacaoProvider>
                     </AvisosProvider>
                   </CoordenadorOverlays>
-                </MotionProvider>
-              </PerfilProvider>
             </Suspense>
           </SubscricaoProvider>
         </AuthProvider>

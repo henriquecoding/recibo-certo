@@ -7,6 +7,8 @@ import Footer from "@/components/Footer";
 import AnuncioSlot from "@/components/parcerias/AnuncioSlot";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
+import { PerfilProvider } from "@/lib/perfil";
 
 export const metadata: Metadata = {
   title: "Planos e Preços — Calculadora Grátis ou Plus",
@@ -76,6 +78,7 @@ export default function PrecosPage() {
       <div id="top">
         <Nav />
         <main className="pt-8">
+          <PerfilProvider><MotionProvider>
           <Precos />
           {/* O slot público que faltava: a tabela `anuncios` tinha CRUD e
               pré-visualização no admin desde a migração 004 e NADA no site a
@@ -84,6 +87,7 @@ export default function PrecosPage() {
             <AnuncioSlot superficie="anuncio.landing_pricing" />
           </div>
           <FAQ />
+          </MotionProvider></PerfilProvider>
         </main>
         <Footer />
       </div>

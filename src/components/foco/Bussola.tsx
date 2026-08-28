@@ -28,11 +28,11 @@
 //  abríveis noutro separador.
 // ═══════════════════════════════════════════════════════════════════════
 
-import Link from "next/link";
 import { ArrowRight } from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import type { FocoHomepage } from "@/lib/foco-homepage";
-import { FOCOS, hrefDoFoco } from "./focos";
+import { FOCOS } from "./focos";
+import LinkFocoIntencao from "./LinkFocoIntencao";
 
 export default function Bussola({
   /** O foco onde a pessoa já está — esse não se sugere a si próprio. */
@@ -81,8 +81,8 @@ export default function Bussola({
           const Icon = iconeDe(foco.icone);
           return (
             <li key={foco.id}>
-              <Link
-                href={hrefDoFoco(foco.id)}
+              <LinkFocoIntencao
+                foco={foco.id}
                 className="focus-marca group flex h-full min-h-[52px] items-center gap-2.5 rounded-2xl border border-transparent bg-white px-3 py-2 text-left no-underline shadow-sm transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-card dark:bg-stone-800"
               >
                 <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white dark:bg-brand/15">
@@ -100,7 +100,7 @@ export default function Bussola({
                   size={13}
                   className="flex-shrink-0 text-stone-400 transition-all group-hover:translate-x-0.5 group-hover:text-brand"
                 />
-              </Link>
+              </LinkFocoIntencao>
             </li>
           );
         })}

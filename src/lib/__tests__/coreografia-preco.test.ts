@@ -293,19 +293,23 @@ describe("coreografia do preço: os três defeitos apanhados em runtime", () => 
   // palco de «Descobrir». O invariante é o mesmo — o que se verifica é o
   // ficheiro onde ele agora existe.
   const ATORES = readFileSync(join(process.cwd(), "src/components/palco/atores.tsx"), "utf8");
+  const FRAME = readFileSync(join(process.cwd(), "src/components/palco/frame.ts"), "utf8");
 
   it("a pausa pára as fichas e os contadores, não só o relógio dos atos", () => {
     // Defeito: com a demonstração «em pausa», as fichas continuavam a voar e
     // a aterrar. A pausa parava o relógio dos beats e mais nada. É o WCAG
     // 2.2.2 a não ser cumprido.
     //
-    // A correção estrutural: os atores deixaram de ser animados pelo
-    // `motion` e passaram a ter relógio próprio, que só acumula tempo
-    // enquanto não está parado. Se alguém devolver a ficha ao `m.span` com
-    // `animate`, o defeito volta — e volta em silêncio.
-    expect(ATORES).toContain("if (!paradoRef.current) decorrido += agora - ultimo;");
-    expect(ATORES).toContain("const { parado } = useContext(PalcoContexto);");
-    expect(ATORES).toContain("const { parado, imediato } = useContext(PalcoContexto);");
+    // A correção estrutural: beats e atores subscrevem um único relógio por
+    // cena. Pausar, esconder o separador ou sair do viewport suspende a fonte
+    // comum; nenhuma peça conserva um ciclo concorrente.
+    expect(FRAME.match(/requestAnimationFrame\(/g)).toHaveLength(1);
+    expect(FRAME).toContain("!paradoRef.current");
+    expect(FRAME).toContain("documentoVisivel.current");
+    expect(FRAME).toContain("emVista.current");
+    expect(ATORES).not.toMatch(/requestAnimationFrame\(/);
+    expect(ATORES).toContain("relogioDeCena.inscrever");
+    expect(ATORES).toContain("const { imediato, estatico, relogioDeCena }");
     // A ficha é um `span` pintado à mão, não um `m.span` animado.
     expect(ATORES).not.toMatch(/<m\.span[\s\S]{0,400}onAnimationComplete/);
   });

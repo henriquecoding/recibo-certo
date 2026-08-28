@@ -60,12 +60,14 @@ describe("os cinco títulos de hero são o mesmo instrumento", () => {
     const regua = ler("foco", "ReguaPerguntasHero.tsx");
     const abertura = ler("foco", "CabecalhoHeroFoco.tsx");
 
-    expect(pagina).toContain('normalizarFocoHomepage((await searchParams).foco) ?? "descobrir"');
+    expect(pagina).toContain('export const dynamic = "error"');
+    expect(pagina).toContain('<HomepageFocoShell foco="descobrir">');
+    expect(pagina).not.toContain("searchParams");
     expect(pagina).not.toContain("<HeroBussola");
     expect(abertura).toContain("<ReguaPerguntasHero focoAtivo={foco.id}");
     expect(regua).toContain("FOCOS.map");
     expect(regua).toContain('aria-current={ativo ? "step" : undefined}');
-    expect(regua).toContain('item.id === "descobrir" ? "/"');
+    expect(regua).toContain("hrefDoFoco(item.id)");
   });
 
   it("há um por foco, e nenhum a mais", () => {

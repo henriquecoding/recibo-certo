@@ -82,8 +82,10 @@ import { usePerfil, type Perfil } from "@/lib/perfil";
 import { scrollToId } from "@/lib/scroll";
 import type { RespostaDoFoco } from "@/lib/foco/respostas-servidor";
 import type { FocoHomepage } from "@/lib/foco-homepage";
+import { ROTA_POR_FOCO } from "@/lib/foco-homepage";
 import { ATOS_BUSSOLA, PERCURSO } from "./coreografia-bussola";
-import { FOCOS, FOCO_POR_ID, PERFIL_DO_FOCO, hrefDoFoco } from "./focos";
+import { FOCOS, FOCO_POR_ID, PERFIL_DO_FOCO } from "./focos";
+import { useIntencaoFocos } from "./ControladorPrefetchFocos";
 
 /** `ENTRADA` de `palco/curvas.ts`, na forma que o CSS quer. */
 const EASE_ENTRADA = "cubic-bezier(.16,1,.3,1)";
@@ -112,7 +114,8 @@ export default function HeroBussola({
 }: {
   respostas: Record<FocoHomepage, RespostaDoFoco>;
 }) {
-  const palco = usePalco(ATOS_BUSSOLA);
+  const palcoRef = useRef<HTMLDivElement>(null);
+  const palco = usePalco(ATOS_BUSSOLA, palcoRef);
   const { ato, feito, emCena, estatico, ciclo, entregar } = palco;
   const { definir } = usePerfil();
 
@@ -123,7 +126,6 @@ export default function HeroBussola({
   const [anuncio, setAnuncio] = useState("");
   const [comoFunciona, setComoFunciona] = useState(false);
 
-  const palcoRef = useRef<HTMLDivElement>(null);
   const painelRef = useRef<HTMLElement>(null);
   const linhasRef = useRef<Partial<Record<FocoHomepage, HTMLLIElement | null>>>({});
   const realceRef = useRef<HTMLSpanElement>(null);
@@ -461,6 +463,7 @@ export default function HeroBussola({
               empilham-se pela mesma ordem: pergunta, depois resposta. */}
           <div
             ref={palcoRef}
+            data-palco="bussola"
             className="relative mt-8 grid gap-4 sm:mt-10 lg:grid-cols-[1fr_1fr] lg:gap-5"
           >
             <div>
@@ -630,6 +633,7 @@ const Linha = memo(function Linha({
   aoTeclar,
 }: LinhaProps) {
   const Icon = iconeDe(foco.icone);
+  const { pendente, preparar, iniciar } = useIntencaoFocos();
   return (
     <li
       ref={registar(foco.id)}
@@ -652,12 +656,38 @@ const Linha = memo(function Linha({
       }}
     >
       <Link
-        href={hrefDoFoco(foco.id)}
+        href={ROTA_POR_FOCO[foco.id]}
+        data-foco-destino={foco.id}
+        prefetch={false}
+        scroll={false}
         tabIndex={comTab ? 0 : -1}
         aria-current={ativo ? "true" : undefined}
-        onMouseEnter={() => aoApontar(foco.id)}
-        onFocus={() => aoApontar(foco.id)}
-        onClick={(e) => aoClicar(e, foco.id)}
+        aria-busy={pendente === foco.id || undefined}
+        onMouseEnter={() => {
+          aoApontar(foco.id);
+          preparar(foco.id);
+        }}
+        onFocus={() => {
+          aoApontar(foco.id);
+          preparar(foco.id);
+        }}
+        onPointerDown={(evento) => {
+          preparar(foco.id);
+          if (
+            (!grosseiro || ativo) &&
+            evento.button === 0 &&
+            !evento.metaKey &&
+            !evento.ctrlKey &&
+            !evento.shiftKey &&
+            !evento.altKey
+          ) {
+            iniciar(foco.id, "pointer");
+          }
+        }}
+        onClick={(e) => {
+          aoClicar(e, foco.id);
+          if (!e.defaultPrevented && e.detail === 0) iniciar(foco.id, "teclado");
+        }}
         onKeyDown={(e) => aoTeclar(e, indice)}
         className="focus-marca group flex min-h-[60px] items-center gap-3 px-3 py-3 no-underline sm:px-4"
       >

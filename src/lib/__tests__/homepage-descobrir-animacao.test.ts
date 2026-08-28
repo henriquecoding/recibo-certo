@@ -9,6 +9,8 @@ import {
   bezier,
 } from "@/components/descobrir/coreografia";
 import { FOCOS } from "@/components/foco/focos";
+import { metadataDoFoco } from "@/lib/foco/metadata";
+import { ROTA_POR_FOCO } from "@/lib/foco-homepage";
 
 const SRC = join(__dirname, "..", "..");
 const RAIZ = join(SRC, "..");
@@ -20,6 +22,7 @@ const ATORES_DESTA_CENA = ler("components", "descobrir", "atores.tsx");
 // com o palco do preço. O que fica em `descobrir/atores.tsx` é a paleta
 // semântica desta cena — que é a única coisa que não é partilhável.
 const ATORES = ler("components", "palco", "atores.tsx");
+const RELOGIO_DE_CENA = ler("components", "palco", "frame.ts");
 const HERO = ler("components", "descobrir", "HeroDescobrir.tsx");
 const PAGINA = ler("app", "page.tsx");
 const ROTEIRO = readFileSync(
@@ -65,8 +68,11 @@ describe("homepage Descobrir: coreografia", () => {
     expect(DUR.viagemAmpla).toBeLessThanOrEqual(820);
     expect(DUR.viagemLonga).toBeLessThanOrEqual(820);
     expect(PALCO).toContain("duracao ?? DUR.viagemAmpla");
-    expect(ATORES).toContain("requestAnimationFrame");
-    expect(ATORES).toContain("paradoRef.current");
+    expect(RELOGIO_DE_CENA.match(/requestAnimationFrame\(/g)).toHaveLength(1);
+    expect(RELOGIO_DE_CENA).toContain('document.addEventListener("visibilitychange"');
+    expect(RELOGIO_DE_CENA).toContain("IntersectionObserver");
+    expect(ATORES).not.toMatch(/requestAnimationFrame\(/);
+    expect(ATORES).toContain("relogioDeCena.inscrever");
     expect(ATORES).toContain("no.style.transform");
     expect(ATORES).toContain("no.style.opacity");
     expect(ATORES).not.toContain("no.style.top");
@@ -99,35 +105,16 @@ describe("homepage Descobrir: coreografia", () => {
   });
 
   it("define metadata social própria para a porta editorial", () => {
-    // ⚠️ O que se mede é a FORMA, não a literal.
-    //
-    // Este teste fixava `url: "/?foco=descobrir"` escrito à mão. Quando a
-    // homepage passou a servir dois focos, a função generalizou-se e passou
-    // a derivar o URL do foco ativo — comportamento idêntico para Descobrir e
-    // correto também para Preço. O teste partiu à mesma, porque estava a
-    // medir a forma como o código estava escrito e não o que ele faz.
-    //
-    // Um teste que impede uma generalização correta não está a proteger nada:
-    // está a fixar a primeira implementação que passou.
-    expect(PAGINA).toContain("openGraph: {");
-    expect(PAGINA).toContain("twitter: {");
-    expect(PAGINA).toContain('url: focoPedido ? `/?foco=${foco}` : "/"');
-    expect(PAGINA).toContain('const foco = focoPedido ?? "descobrir"');
-    expect(PAGINA).toContain("const tituloSocial = `${title} | ReciboCerto`");
-    expect(PAGINA).toContain("title: { absolute: tituloSocial }");
-    // E a tabela por foco tem de cobrir TODOS — senão a generalização é só
-    // aparente e um dos modos fica sem metadados.
-    //
-    // ⚠️ Este teste procurava um objeto literal escrito à mão com uma
-    // chave por foco. Ao quinto foco isso passaria a ser cinco sítios para
-    // um título divergir do outro, e a tabela passou a derivar de `FOCOS`
-    // — a mesma que desenha a régua. Um teste que exige a duplicação de
-    // volta não está a proteger nada.
-    expect(PAGINA).toContain("const METADADOS_POR_FOCO = Object.fromEntries(");
-    expect(PAGINA).toContain("FOCOS.map((f) => [f.id, { title: f.titulo, description: f.descricao }])");
+    expect(PAGINA).toContain('export const metadata = metadataDoFoco("descobrir")');
+    expect(PAGINA).toContain('export const dynamic = "error"');
     for (const foco of FOCOS) {
       expect(foco.titulo.length, `${foco.id} sem título`).toBeGreaterThan(10);
       expect(foco.descricao.length, `${foco.id} sem descrição`).toBeGreaterThan(40);
+      expect(metadataDoFoco(foco.id)).toMatchObject({
+        alternates: { canonical: "/" },
+        openGraph: { url: ROTA_POR_FOCO[foco.id] },
+        twitter: { card: "summary_large_image" },
+      });
     }
   });
 

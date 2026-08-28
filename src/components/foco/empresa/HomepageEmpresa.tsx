@@ -18,6 +18,7 @@ import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import { FOCO_POR_ID } from "@/components/foco/focos";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 import PalcoEmpresa, { type DadosEmpresa } from "./PalcoEmpresa";
 
 const eur0 = (n: number) => `${Math.round(n).toLocaleString("pt-PT")} €`;
@@ -180,8 +181,8 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
         intro="O ponto de viragem diz quando a conversa vale a pena. A conversa em si tem partes que nenhum simulador substitui — e há duas coisas que convém ter feito antes."
       >
         <div className="grid gap-4 lg:grid-cols-3">
-          <Link
-            href="/?foco=preco"
+          <LinkFocoIntencao
+            foco="preco"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <div className="flex items-center justify-between">
@@ -204,10 +205,10 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Formar o preço <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
-          <Link
-            href="/?foco=recibos"
+          <LinkFocoIntencao
+            foco="recibos"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <div className="flex items-center justify-between">
@@ -230,7 +231,7 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Ver a repartição <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
           <div className="rounded-4xl border border-brand bg-brand-light p-5 shadow-card dark:bg-brand/15 sm:p-6">
             <div className="flex items-center justify-between">

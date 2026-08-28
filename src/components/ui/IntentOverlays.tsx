@@ -14,15 +14,58 @@ import {
 import { useAuth } from "@/lib/supabase/auth";
 import { APP_VERSION, VERSAO_STORAGE_KEY } from "@/lib/version";
 
-const AuthModal = dynamic(() => import("@/components/ui/AuthModal"), { ssr: false });
-const BuscaOverlay = dynamic(() => import("@/components/busca/BuscaGlobal"), { ssr: false });
-const CookieConsent = dynamic(() => import("@/components/ui/CookieConsent"), { ssr: false });
-const FeedbackModal = dynamic(() => import("@/components/feedback/FeedbackModal"), {
-  ssr: false,
-});
-const NovidadesModal = dynamic(() => import("@/components/ui/NovidadesModal"), {
-  ssr: false,
-});
+// Cada superfície traz o runtime de animação no MESMO gesto que a pede.
+// O root deixa de referenciar Motion e páginas de texto não pagam pelo
+// runtime apenas para manter cinco modais fechados.
+const AuthModal = dynamic(async () => {
+  const [{ default: Modal }, { default: MotionProvider }] = await Promise.all([
+    import("@/components/ui/AuthModal"),
+    import("@/components/ui/motion/MotionProvider"),
+  ]);
+  return function AuthModalComMovimento() {
+    return <MotionProvider><Modal /></MotionProvider>;
+  };
+}, { ssr: false });
+
+const BuscaOverlay = dynamic(async () => {
+  const [{ default: Overlay }, { default: MotionProvider }] = await Promise.all([
+    import("@/components/busca/BuscaGlobal"),
+    import("@/components/ui/motion/MotionProvider"),
+  ]);
+  return function BuscaComMovimento(props: { abrirInicialmente?: boolean }) {
+    return <MotionProvider><Overlay {...props} /></MotionProvider>;
+  };
+}, { ssr: false });
+
+const CookieConsent = dynamic(async () => {
+  const [{ default: Consentimento }, { default: MotionProvider }] = await Promise.all([
+    import("@/components/ui/CookieConsent"),
+    import("@/components/ui/motion/MotionProvider"),
+  ]);
+  return function CookiesComMovimento(props: { abrirInicialmente?: boolean }) {
+    return <MotionProvider><Consentimento {...props} /></MotionProvider>;
+  };
+}, { ssr: false });
+
+const FeedbackModal = dynamic(async () => {
+  const [{ default: Modal }, { default: MotionProvider }] = await Promise.all([
+    import("@/components/feedback/FeedbackModal"),
+    import("@/components/ui/motion/MotionProvider"),
+  ]);
+  return function FeedbackComMovimento(props: { pedidoInicial: DetalheFeedback }) {
+    return <MotionProvider><Modal {...props} /></MotionProvider>;
+  };
+}, { ssr: false });
+
+const NovidadesModal = dynamic(async () => {
+  const [{ default: Modal }, { default: MotionProvider }] = await Promise.all([
+    import("@/components/ui/NovidadesModal"),
+    import("@/components/ui/motion/MotionProvider"),
+  ]);
+  return function NovidadesComMovimento() {
+    return <MotionProvider><Modal /></MotionProvider>;
+  };
+}, { ssr: false });
 
 /** Auth só atravessa a fronteira dinâmica depois de a pessoa pedir conta. */
 function AuthIntentLoader() {

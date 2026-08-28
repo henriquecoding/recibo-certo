@@ -396,8 +396,9 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
     // JavaScript e para quem tem movimento reduzido e nunca vê o ato.
     expect(faixa).not.toMatch(/^"use client"/m);
     expect(faixa).toMatch(/FizDisclosure/);
-    // Montada nas duas páginas.
-    const landing = readFileSync(join(RAIZ, "app", "page.tsx"), "utf8");
+    // A landing monta-a na casca estática comum às cinco entradas; a página
+    // de IRS continua a montá-la diretamente.
+    const landing = readFileSync(join(RAIZ, "components", "foco", "HomepageFocoShell.tsx"), "utf8");
     const irs = readFileSync(join(RAIZ, "app", "ferramentas", "simulador-irs", "page.tsx"), "utf8");
     expect(landing).toMatch(/demo\.hero\.faixa/);
     expect(irs).toMatch(/demo\.irs\.faixa/);

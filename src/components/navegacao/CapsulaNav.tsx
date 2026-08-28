@@ -41,6 +41,7 @@ import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES, hrefAtivo, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import type { FocoHomepage } from "@/lib/foco-homepage";
+import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
 
 const ITEM =
   "focus-marca flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-3 text-sm transition-colors";
@@ -52,6 +53,7 @@ const ATIVO = "font-semibold bg-white text-brand-dark shadow-card dark:bg-stone-
 export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null }) {
   const pathname = usePathname();
   const aceso = hrefAtivo(pathname);
+  const { pendente, preparar, iniciar } = useIntencaoFocos();
 
   return (
     <nav
@@ -69,37 +71,53 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
           : hrefDaSuperficiePilar(pilar);
         const ativo = foco === pilar.id || naSuperficieCanonica;
         const anterior = i > 0 ? PILARES[i - 1] : null;
+        const destacado = pendente ? pendente === pilar.id : ativo;
         const anteriorAceso = Boolean(
-          anterior && (foco === anterior.id || aceso === anterior.href),
+          anterior &&
+            (pendente
+              ? pendente === anterior.id
+              : foco === anterior.id || aceso === anterior.href),
         );
         return (
           <Fragment key={pilar.id}>
-            {i > 0 && !ativo && !anteriorAceso && (
+            {i > 0 && !destacado && !anteriorAceso && (
               <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
             )}
             <Link
               href={destino}
-              // ── PRÉ-CARREGAR AO SOBREVOAR, E NÃO À ENTRADA ────────────
-              //  `/` é uma rota DINÂMICA (lê `?foco=`), e o Next não
-              //  pré-carrega o conteúdo dessas por omissão — cada clique
-              //  numa aba ficava à espera de um render do servidor. Numa
-              //  ligação com latência a sério isso são centenas de
-              //  milissegundos de nada a acontecer.
-              //
-              //  `prefetch={false}` desliga o pré-carregamento por
-              //  VISIBILIDADE (as cinco estão sempre no ecrã; buscá-las
-              //  todas à entrada seria trocar uma espera por cinco
-              //  pedidos que ninguém pediu) e mantém o de SOBREVOO —
-              //  que é quando a intenção já existe.
+              // ── PRÉ-CARREGAR POR INTENÇÃO, NUNCA AS CINCO À ENTRADA ───
+              //  `prefetch={false}` desliga TODA a política automática do
+              //  Link, incluindo hover. Por isso os três eventos abaixo
+              //  entregam o alvo ao controlador comum: pointerenter, foco e
+              //  pointerdown. Ele deduplica, respeita Save-Data/2g e mantém
+              //  uma única operação especulativa em curso.
               prefetch={false}
+              scroll={false}
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
-              onClick={() => medirNavegacao(pilar.id, "secretaria")}
-              className={`${ITEM} ${ativo ? ATIVO : INATIVO}`}
+              aria-busy={pendente === pilar.id || undefined}
+              onPointerEnter={() => preparar(pilar.id)}
+              onFocus={() => preparar(pilar.id)}
+              onPointerDown={(evento) => {
+                if (
+                  evento.button === 0 &&
+                  !evento.metaKey &&
+                  !evento.ctrlKey &&
+                  !evento.shiftKey &&
+                  !evento.altKey
+                ) {
+                  iniciar(pilar.id, "pointer");
+                }
+              }}
+              onClick={(evento) => {
+                if (evento.detail === 0) iniciar(pilar.id, "teclado");
+                medirNavegacao(pilar.id, "secretaria");
+              }}
+              className={`${ITEM} ${destacado ? ATIVO : INATIVO}`}
             >
               <Icon
                 size={17}
-                className={`flex-shrink-0 ${ativo ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
+                className={`flex-shrink-0 ${destacado ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
               />
               <span className="truncate">{pilar.label}</span>
             </Link>

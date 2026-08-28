@@ -18,7 +18,9 @@ import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import { FOCO_POR_ID } from "@/components/foco/focos";
-import PalcoRecibos, { type DadosRecibo } from "./PalcoRecibos";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
+import PalcoRecibos, { type DadosReciboHomepage } from "./PalcoRecibos";
+import { PrazoSSTexto } from "./PrazoSSAtual";
 
 const eur = (n: number) =>
   `${n.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -78,10 +80,12 @@ const FAQS = [
   },
 ] as const;
 
-export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
+export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage }) {
   const foco = FOCO_POR_ID.get("recibos")!;
   const reservado = dados.retencaoIRS + dados.segSocial;
   const pct = Math.round((dados.liquido / dados.bruto) * 100);
+  const prazos = "prazosSS" in dados ? dados.prazosSS : undefined;
+  const prazoEstatico = "prazoSS" in dados ? dados.prazoSS : undefined;
 
   return (
     <>
@@ -137,7 +141,17 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
               {
                 rotulo: "Segurança Social",
                 valor: dados.segSocial,
-                texto: `Fica na tua conta até ${dados.prazoSS}. É esta a parte que apanha as pessoas.`,
+                texto: (
+                  <>
+                    Fica na tua conta até{" "}
+                    <PrazoSSTexto
+                      prazos={prazos}
+                      valor={prazoEstatico}
+                      fallback="ao próximo dia 20"
+                    />
+                    . É esta a parte que apanha as pessoas.
+                  </>
+                ),
                 cores:
                   "bg-categoria-areia-bg text-categoria-areia-text dark:bg-stone-800 dark:text-[#e7c98e]",
               },
@@ -170,8 +184,8 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
         intro="Com a repartição à vista, a decisão deixa de ser «quanto recebi» e passa a ser «isto sustenta-se?». Duas perguntas se abrem, e não são a mesma."
       >
         <div className="grid gap-4 lg:grid-cols-3">
-          <Link
-            href="/?foco=preco"
+          <LinkFocoIntencao
+            foco="preco"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
@@ -188,10 +202,10 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Formar o preço <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
-          <Link
-            href="/?foco=empresa"
+          <LinkFocoIntencao
+            foco="empresa"
             className="focus-marca group rounded-4xl border border-stone-100 bg-white p-5 no-underline shadow-card transition-all hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-6"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
@@ -210,7 +224,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
               Ver o ponto de viragem <ArrowRight size={13} />
             </div>
-          </Link>
+          </LinkFocoIntencao>
 
           <div className="rounded-4xl border border-brand bg-brand-light p-5 shadow-card dark:bg-brand/15 sm:p-6">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white">
@@ -223,8 +237,13 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
               Reservar {eur(reservado)}
             </h3>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">
-              Separa hoje o que não é teu. A Segurança Social deste recibo sai a {dados.prazoSS}, e
-              esse dia chega na mesma se te esqueceres.
+              Separa hoje o que não é teu. A Segurança Social deste recibo sai até{" "}
+              <PrazoSSTexto
+                prazos={prazos}
+                valor={prazoEstatico}
+                fallback="no próximo dia 20"
+              />
+              , e esse dia chega na mesma se te esqueceres.
             </p>
             <Link
               href="/ferramentas/recibos-verdes"
@@ -249,12 +268,12 @@ export default function HomepageRecibos({ dados }: { dados: DadosRecibo }) {
               </p>
             </div>
           </div>
-          <Link
-            href="/?foco=descobrir"
+          <LinkFocoIntencao
+            foco="descobrir"
             className="focus-marca inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-xs font-semibold text-stone-700 no-underline hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200"
           >
             Descobrir o que testar <ArrowRight size={13} />
-          </Link>
+          </LinkFocoIntencao>
         </div>
       </SeccaoFoco>
 

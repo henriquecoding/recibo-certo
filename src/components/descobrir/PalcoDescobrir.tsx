@@ -40,6 +40,7 @@ import {
   type Ponto,
 } from "./coreografia";
 import type { ExemploDescoberta } from "./tipos";
+import { useRelogioDeCena } from "@/components/palco/frame";
 
 const CONTEXTO = [
   { id: "competencia", beat: "enviaCompetencia", curto: "Organizar e executar" },
@@ -188,6 +189,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
   }, [reduz]);
 
   const estatico = !montado || Boolean(reduz);
+  const relogioDeCena = useRelogioDeCena({ parado, estatico, alvo: palcoRef });
 
   const terminarAto = useCallback(() => {
     if (ato < ULTIMO_ATO_DESCOBRIR) {
@@ -202,8 +204,8 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
     atos: ATOS_DESCOBRIR,
     ato,
     ciclo,
-    parado,
     estatico,
+    relogioDeCena,
     aoTerminarAto: terminarAto,
   });
 
@@ -404,8 +406,13 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
     // `imediato` é do contexto partilhado e serve os contadores durante um
     // arrasto. Esta cena não tem nada arrastável, por isso é sempre falso —
     // mas o contexto é um só, e o campo existe.
-    () => ({ parado: parado || estatico, imediato: false }),
-    [estatico, parado],
+    () => ({
+      parado: parado || estatico,
+      imediato: false,
+      estatico,
+      relogioDeCena,
+    }),
+    [estatico, parado, relogioDeCena],
   );
 
   const tituloEntrada = [
@@ -421,6 +428,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
   return (
     <EstadoPalcoDescobrir.Provider value={estadoPalco}>
       <section
+        data-palco="descobrir"
         aria-labelledby="palco-descobrir-titulo"
         aria-describedby="palco-descobrir-resumo"
         className="relative overflow-hidden rounded-[2rem] border border-brand-deep/20 bg-[#0c251e] text-white shadow-lift sm:rounded-[2.5rem]"

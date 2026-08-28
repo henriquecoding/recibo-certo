@@ -30,6 +30,7 @@ import {
   type Ponto,
 } from "./coreografia";
 import { Anel, Contador, Ficha, PalcoContexto, TOM_FICHA, type FichaEmCena } from "./atores";
+import { useRelogioDeCena } from "@/components/palco/frame";
 import {
   ENTRADAS_DEMO_PADRAO,
   LIMITES_DEMO_PRECO,
@@ -182,6 +183,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
   }, []);
 
   const estatico = montado && Boolean(reduz);
+  const relogioDeCena = useRelogioDeCena({ parado, estatico, alvo: palcoRef });
   const regime = parametros.regimes[regimeIdx] ?? parametros.regimes[0];
 
   const composicao = useMemo(
@@ -217,8 +219,8 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     atos: ATOS,
     ato,
     ciclo,
-    parado,
     estatico,
+    relogioDeCena,
     aoTerminarAto: avancar,
   });
   const { feito, cumprirAto, barraRef } = coreografia;
@@ -458,8 +460,13 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
     // `parado` não inclui `estatico`: com movimento reduzido não há nada em
     // curso para parar, e marcar tudo como parado só suspenderia contadores
     // que já saltam direto para o valor final.
-    () => ({ parado: parado && !estatico, imediato: arrastando }),
-    [parado, estatico, arrastando],
+    () => ({
+      parado: parado && !estatico,
+      imediato: arrastando,
+      estatico,
+      relogioDeCena,
+    }),
+    [parado, estatico, arrastando, relogioDeCena],
   );
 
   const t = (ms: number, curva: Curva = ENTRADA): Transition =>

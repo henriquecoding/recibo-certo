@@ -12,7 +12,7 @@ describe("overlays por intenção", () => {
   it("um primeiro toque genérico não monta funcionalidades sem relação", () => {
     expect(LOADERS).not.toContain('addEventListener("pointerdown"');
     expect(LOADERS).not.toContain('addEventListener("touchstart"');
-    expect(LOADERS).not.toContain("Promise.all");
+    expect(LOADERS).not.toContain("DeferredOverlays");
     expect(LAYOUT).toContain("<IntentOverlays />");
     expect(LAYOUT).not.toContain("DeferredOverlays");
   });

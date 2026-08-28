@@ -182,7 +182,8 @@ export default function CookieConsent({
                 titulo="Cookies de estatística"
                 control={<Switch checked={estatistica} onChange={setEstatistica} label="Cookies de estatística" />}
               >
-                Ajudam-nos a perceber, de forma agregada e anónima, como o site é utilizado, para o melhorarmos.
+                Ajudam-nos a perceber, de forma pseudónima e agregada, como o site é utilizado e se as páginas
+                são rápidas. Nunca enviamos os valores que introduzes nos simuladores.
               </Categoria>
 
               <Categoria

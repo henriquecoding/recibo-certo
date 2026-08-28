@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AUDITORIA DE ACESSIBILIDADE DA HOMEPAGE DE «PREÇO» (`/?foco=preco`).
+ * AUDITORIA DE ACESSIBILIDADE DA HOMEPAGE DE «PREÇO» (`/inicio/preco`).
  * ----------------------------------------------------------------------
  * A calculadora completa já tem a sua auditoria (`auditar-a11y-preco.mjs`).
  * Esta é outra superfície e outro risco: o palco do hero move-se sozinho,
@@ -25,7 +25,7 @@
 
 import { auditar, BASE } from "./lib/auditoria-a11y.mjs";
 
-const ROTA = "/?foco=preco";
+const ROTA = "/inicio/preco";
 
 /** Espera que a sequência assente sozinha no último ato. */
 const assentar = async (p) => {

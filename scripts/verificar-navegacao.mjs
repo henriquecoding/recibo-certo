@@ -61,8 +61,8 @@ const VIEWPORTS = [
 
 const ROTAS = [
   "/",
-  "/?foco=descobrir",
-  "/?foco=preco",
+  "/inicio/preco",
+  "/inicio/recibos",
   "/ferramentas/calcular-preco",
   "/ferramentas/descobrir-negocio",
   "/guias",
@@ -469,7 +469,7 @@ for (const vp of VIEWPORTS) {
   //
   // O seletor contava só `/ferramentas/…`, o que era o mesmo que dizer «um
   // pilar é uma ferramenta». Deixou de ser: quando a homepage sabe contar a
-  // etapa por inteiro, o pilar abre `/?foco=…` e o CTA dessa página é que
+  // etapa por inteiro, o pilar abre `/inicio/…` e o CTA dessa página é que
   // entra no motor completo. Contar só uma das duas portas dava 3 de 5 e
   // dizia que faltavam pilares que estavam todos lá.
   //
@@ -481,7 +481,7 @@ for (const vp of VIEWPORTS) {
   const fila = await page.evaluate(() => {
     const sec = document.querySelector("#pilares");
     if (!sec) return null;
-    return [...sec.querySelectorAll("a[href^='/ferramentas/'], a[href^='/?foco=']")].map((a) =>
+    return [...sec.querySelectorAll("a[href^='/ferramentas/'], a[href^='/inicio/']")].map((a) =>
       a.getAttribute("href"),
     );
   });
