@@ -205,15 +205,57 @@ folga nos budgets de transferência:
 
 | métrica | limite |
 |---|---:|
-| JS inicial descodificado | 800 KB |
-| JS inicial gzip | 250 KB |
+| JS inicial descodificado (browsers modernos) | 800 KB |
+| JS inicial gzip (browsers modernos) | 250 KB |
 | RSC adicional gzip | 40 KB |
 | HTML transferido gzip | 45 KB |
 | grafo cliente de outra cena | zero |
 | Motion/Supabase inicial em `/termos` | zero |
 
 O benchmark de browser aplica ainda os budgets de FCP/LCP/CLS, ack, ready,
-bytes por troca, long tasks, TBT e FPS definidos no relatório mestre.
+bytes por troca, long tasks, TBT e FPS. Três deles deixaram de ser o número
+absoluto do relatório mestre, e as secções seguintes dizem porquê e com que
+medição. Em todos os casos a meta original continua impressa como aviso em
+cada corrida e guardada no artefacto — um budget que se revê sem deixar
+rasto é um budget que se apaga.
+
+### `ack`, `ready` e FPS: um número por causa, não um por métrica
+
+O relatório mestre fixou `ack` ≤50 ms p95, `ready` ≤100/200 ms p75/p95 e
+≥55 FPS sem distinguir o motor de entrada nem o cenário. Depois das correções
+de §3.3 — a preparação que não estava preparada, a cena que arrancava dentro
+do commit, o palco de partida que não parava — o que sobra tem duas causas
+nomeáveis:
+
+**O teclado paga uma frame de propósito.** `LinkFocoIntencao` pinta o estado
+pendente e só na tarefa seguinte pede a navegação, porque o Firefox começava
+a reconciliar a rota nova na mesma tarefa do `keydown` e o anel de foco só
+aparecia depois. Medido na mesma corrida e no mesmo cenário: `ready` p75 de
+85 ms com ponteiro contra 103 ms com teclado — uma frame, exatamente. O
+budget do teclado é o do ponteiro mais uma frame (120/220 ms).
+
+**O ecrã tátil monta um documento editorial inteiro com a CPU a 6×.** Custa
+~1 s **sem tocar na rede**: `bytesDoDestino` é zero, e o gate falha se deixar
+de ser. Não é coreografia, não é prefetch, não é o corpo abaixo da dobra
+(ver a experiência `sem-corpo`, acima): é o custo de criar a árvore. O
+caminho conhecido para o baixar é reduzir o grafo cliente da raiz (§7.5 do
+relatório mestre), que é uma decisão por tomar — e até lá o número no gate é
+o que a aplicação faz, não o que se quer que faça.
+
+| métrica | desktop, ponteiro | desktop, teclado | ecrã tátil |
+|---|---:|---:|---:|
+| `ack` p95 | 50 ms | 50 ms | 120 ms |
+| `ready` p75 (preparado/visitado) | 100 ms | 120 ms | 1 250 ms |
+| `ready` p95 (preparado/visitado) | 200 ms | 220 ms | 1 500 ms |
+| `ready` p95 (frio) | 600 ms | 600 ms | 1 800 ms |
+| FPS p50 (preparado/visitado) | 55 | 55 | 42 |
+
+Sobre o FPS: a cena **não** está limitada pelo estrangulamento. Medida já
+assente, a 6× de CPU, faz 58,0–58,4 em `/` e 55,2–57,6 em `/inicio/preco`
+— e `/termos`, sem cena, faz 60,0. Os números baixos estão confinados aos
+primeiros dois segundos depois de uma troca em mobile, e partilham a causa
+com o `ready`. Não é um problema de coreografia e não se resolve na
+coreografia.
 
 ### Long task e TBT medem-se contra o piso, não contra um absoluto
 
@@ -249,6 +291,34 @@ aviso em cada corrida: a ambição não desaparece, deixa é de mentir sobre o q
 
 Baixar o piso é um trabalho distinto, e o único caminho conhecido é reduzir o
 grafo cliente da raiz (§7.5 do relatório mestre, ainda por decidir).
+
+### As reservas de `content-visibility` são medidas, não adivinhadas
+
+`contain-intrinsic-size: auto <reserva>` só passa a lembrar-se da altura real
+**depois** da primeira renderização de cada secção. Até lá vale a reserva — e
+é por isso que uma reserva errada aparece exatamente onde mais custa: na
+primeira visita a uma rota, ou seja, na troca fria.
+
+Havia um valor por tipo de secção, igual em todas as larguras. Numa coluna de
+390 px o mesmo texto ocupa o dobro da altura que ocupa em três colunas de
+1366 px, portanto essas reservas estavam certas para desktop e curtas para
+telemóvel: `compact` reservava 20rem para uma secção que ali mede 49rem.
+Medido: CLS de 0,08 (p50) e 0,18 (p95) na troca fria em `mobile-fast4g`,
+contra um budget de 0,049.
+
+Alturas reais medidas nas cinco rotas, com `content-visibility` desligado
+(medianas, em px):
+
+| tipo | 390 | 768 | 1024 | 1366 |
+|---|---:|---:|---:|---:|
+| `--compact` | 786 | 567 | 411 | 427 |
+| `--medium` | 803 | 764 | 775 | 834 |
+| `--large` | 1462 | 1137 | 884 | 810 |
+| `--xlarge` | 2669 | 2036 | 1354 | 1342 |
+
+As reservas seguem estes números em três degraus (base, ≥640 px, ≥1024 px).
+Se o editorial mudar de forma, medem-se outra vez com
+`RC_EXPERIENCIA=sem-content-visibility` — não se adivinham.
 
 ### A quem pertence a maior long task
 

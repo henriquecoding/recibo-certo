@@ -305,6 +305,17 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(css).toContain("content-visibility: auto");
     expect(css).toContain("contain-intrinsic-size: auto var(--rc-home-intrinsic");
     expect(css).toContain("[data-homepage-foco] .rc-home-deferred");
+    // A reserva tem de mudar com a largura: o mesmo texto numa coluna de
+    // 390 px ocupa o dobro da altura que ocupa em três colunas. Um valor
+    // único estava certo para desktop e curto para telemóvel, e como `auto`
+    // só se lembra DEPOIS da primeira renderização, o erro aparecia na
+    // troca fria — CLS 0,08 p50 contra um budget de 0,049.
+    expect(css).toContain("@media (min-width: 640px)");
+    expect(css).toContain("@media (min-width: 1024px)");
+    for (const tipo of ["compact", "medium", "large", "xlarge"]) {
+      const ocorrencias = css.split(`.rc-home-deferred--${tipo} {`).length - 1;
+      expect(ocorrencias).toBeGreaterThanOrEqual(3);
+    }
   });
 
   it("mantém os palcos leves sem perder transições, presença ou redução de movimento", () => {

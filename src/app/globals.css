@@ -1643,6 +1643,21 @@ html.dark .dark\:placeholder-stone-50::placeholder {
  * abaixo da dobra durante a troca de foco. `auto` conserva a última medida
  * real depois da primeira visita; os valores seguintes são reservas por tipo
  * para que saltar por âncora não introduza CLS.
+ *
+ * ── As reservas são MEDIDAS, e mudam com a largura ───────────────────
+ *
+ * A primeira versão tinha um valor por tipo, igual em todas as larguras.
+ * Numa coluna de 390 px o mesmo texto ocupa o dobro da altura que ocupa em
+ * três colunas de 1366 px, portanto essas reservas estavam certas para
+ * desktop e curtas para telemóvel — `compact` reservava 20rem para uma
+ * secção que ali mede 49rem. Como `auto` só passa a lembrar-se DEPOIS da
+ * primeira renderização, era exatamente na primeira visita a uma rota que
+ * o erro aparecia: CLS de 0,08 (p50) e 0,18 (p95) na troca fria em
+ * `mobile-fast4g`, contra um budget de 0,049.
+ *
+ * Os números abaixo são medianas medidas nas cinco rotas com
+ * `content-visibility` desligado, a 390, 768 e 1024 px. Se o editorial
+ * mudar de forma, medem-se outra vez — não se adivinham.
  */
 @supports (content-visibility: auto) {
   [data-homepage-foco] .rc-home-deferred {
@@ -1651,19 +1666,57 @@ html.dark .dark\:placeholder-stone-50::placeholder {
   }
 
   [data-homepage-foco] .rc-home-deferred--compact {
-    --rc-home-intrinsic: 20rem;
+    --rc-home-intrinsic: 48rem;
   }
 
   [data-homepage-foco] .rc-home-deferred--medium {
-    --rc-home-intrinsic: 42rem;
+    --rc-home-intrinsic: 50rem;
   }
 
   [data-homepage-foco] .rc-home-deferred--large {
-    --rc-home-intrinsic: 68rem;
+    --rc-home-intrinsic: 90rem;
   }
 
   [data-homepage-foco] .rc-home-deferred--xlarge {
-    --rc-home-intrinsic: 112rem;
+    --rc-home-intrinsic: 166rem;
+  }
+
+  /* A partir daqui as grelhas começam a emparelhar cartões. */
+  @media (min-width: 640px) {
+    [data-homepage-foco] .rc-home-deferred--compact {
+      --rc-home-intrinsic: 36rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--medium {
+      --rc-home-intrinsic: 48rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--large {
+      --rc-home-intrinsic: 70rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--xlarge {
+      --rc-home-intrinsic: 127rem;
+    }
+  }
+
+  /* E aqui ficam com o número final de colunas. */
+  @media (min-width: 1024px) {
+    [data-homepage-foco] .rc-home-deferred--compact {
+      --rc-home-intrinsic: 26rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--medium {
+      --rc-home-intrinsic: 50rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--large {
+      --rc-home-intrinsic: 55rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--xlarge {
+      --rc-home-intrinsic: 85rem;
+    }
   }
 }
 

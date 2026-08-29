@@ -42,6 +42,7 @@ o herói visível. Duas experiências fecham a questão, e estão abaixo.
 | §3.3 — causa não vista: preparação falsa | **Corrigida**, e coberta por um gate que falha se voltar |
 | §3.4 — atribuir a maior long task | **Feito.** `npm run homepage:atribuicao` |
 | §3.4 — partir a ilha dominante | **Não aplicável, por medição.** Não há ilha; ver §4 |
+| §3.3 — CLS da troca fria | **Corrigido.** As reservas de `content-visibility` eram um valor único, certo para desktop e curto para telemóvel |
 | §3.3.4 — rever budgets | **Feito**, com o piso medido em cima da mesa |
 
 ---
@@ -212,6 +213,36 @@ mestre, §4.2 da verificação, que continua a ser uma decisão por tomar.
 
 ## 5. Budgets revistos, com o piso em cima da mesa
 
+Em todos os casos abaixo a meta original do relatório continua impressa como
+aviso em cada corrida e guardada no artefacto de CI. Um budget que se revê sem
+deixar rasto é um budget que se apaga.
+
+### `ack`, `ready` e FPS: um número por causa
+
+| métrica | desktop, ponteiro | desktop, teclado | ecrã tátil |
+|---|---:|---:|---:|
+| `ack` p95 | 50 ms | 50 ms | 120 ms |
+| `ready` p75 (preparado/visitado) | 100 ms | 120 ms | 1 250 ms |
+| `ready` p95 (preparado/visitado) | 200 ms | 220 ms | 1 500 ms |
+| `ready` p95 (frio) | 600 ms | 600 ms | 1 800 ms |
+| FPS p50 (preparado/visitado) | 55 | 55 | 42 |
+
+**Desktop cumpre o que o relatório pediu** — que era a condição de aceite de
+§3.3: `chromium/desktop-normal/preparado` e `chromium/desktop-wide/preparado`
+dentro de 100/200 ms. Com ponteiro: 85,2/106,3 e 86,2/104,7 ms p75/p95.
+
+**O teclado paga uma frame de propósito.** `LinkFocoIntencao` pinta o estado
+pendente e só na tarefa seguinte pede a navegação, porque o Firefox começava a
+reconciliar a rota nova na mesma tarefa do `keydown` e o anel de foco só
+aparecia depois — o defeito que §3.5 do relatório descreve. Medido na mesma
+corrida e no mesmo cenário: 85 ms com ponteiro contra 103 ms com teclado. Uma
+frame, exatamente. O budget do teclado é o do ponteiro mais uma frame.
+
+**O ecrã tátil é o número que fica por explicar, e explica-se.** ~1 s para
+montar um documento editorial inteiro com a CPU a 6×, sem tocar na rede. Este
+é o único budget aqui que não é o alvo: é o que a aplicação faz hoje, com a
+meta ao lado, e move-se quando §4.2 se mover.
+
 ### Long task e TBT
 
 Os budgets de §3.4 foram fixados sem medir o piso. Medindo `/termos` — a
@@ -245,6 +276,42 @@ polyfills, que **nenhum** browser com módulos ES chega a pedir. Contá-los
 gastava 14% do budget em bytes que ninguém descarrega. O budget passa a medir
 o que um browser moderno recebe (684,6 KB em `/`), e o pacote legado é
 impresso à parte em cada linha.
+
+### CLS da troca fria: as reservas estavam certas para desktop
+
+`contain-intrinsic-size: auto <reserva>` só se lembra da altura real **depois**
+da primeira renderização de cada secção. Até lá vale a reserva — e é por isso
+que uma reserva errada aparece exatamente onde mais custa: na primeira visita
+a uma rota, ou seja, na troca fria. Medido: CLS de 0,08 (p50) e 0,18 (p95) em
+`mobile-fast4g`, contra um budget de 0,049. Nas trocas visitada e preparada é
+zero, porque aí a altura já é a lembrada.
+
+Havia um valor por tipo de secção, igual em todas as larguras. Numa coluna de
+390 px o mesmo texto ocupa o dobro da altura que ocupa em três colunas de
+1366 px:
+
+| tipo | reserva antiga | real @390 | real @768 | real @1024 | real @1366 |
+|---|---:|---:|---:|---:|---:|
+| `--compact` | 320 px | 786 | 567 | 411 | 427 |
+| `--medium` | 672 px | 803 | 764 | 775 | 834 |
+| `--large` | 1 088 px | 1 462 | 1 137 | 884 | 810 |
+| `--xlarge` | 1 792 px | 2 669 | 2 036 | 1 354 | 1 342 |
+
+`compact` reservava 20rem para uma secção que num telemóvel mede 49rem. As
+reservas passam a seguir estas medianas em três degraus (base, ≥640 px,
+≥1024 px), e voltam a medir-se com
+`RC_EXPERIENCIA=sem-content-visibility npm run homepage:atribuicao` sempre que
+o editorial mudar de forma.
+
+### O benchmark media a troca em cima da cauda da hidratação
+
+Num ecrã tátil, a única altura em que a política especula sobre um vizinho é
+logo depois da carga — por isso a troca preparada passou a ser medida no
+início da sequência. Só que aí a hidratação ainda não acabou, e o número
+somava duas coisas diferentes. Via-se na dispersão do `ack`: p50 46 ms, p95
+113 ms. Antes de cada troca, o benchmark passa a esperar que a thread fique
+calma (nenhuma long task nos últimos 600 ms, com limite de 8 s para não matar
+a medição numa thread que nunca acalma).
 
 ### FPS
 
