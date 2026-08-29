@@ -204,10 +204,91 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(frame).toContain('no.toggleAttribute("data-palco-suspenso"');
     expect(frame).toContain('performance.mark("rc:foco:first-animation-frame"');
     expect(frame).toContain("ultimo.current === null ? 0");
-    expect(palco).toContain('window.addEventListener("rc:foco:navigation-start"');
+    // Sair de um foco pára o relógio do palco que fica para trás, e faz-lo
+    // sem passar por estado: um `setParado(true)` custava um render inteiro
+    // dentro da janela da troca. Vive no relógio — e não no `usePalco` —
+    // porque `PalcoDescobrir` e `HeroPreco` têm máquina própria e assim
+    // ficavam de fora, que era o caso antes.
+    expect(frame).toContain('window.addEventListener("rc:foco:navigation-start"');
+    expect(frame).toContain("abandonado.current = true");
+    expect(frame).toContain("!abandonado.current");
+    expect(palco).not.toContain('window.addEventListener("rc:foco:navigation-start"');
     expect(palco).toContain("sessionStorage.getItem(chave)");
     expect(palco).toContain("sessionStorage.setItem(chave, \"1\")");
     expect(palco).toContain("autoplayIgnorado || !montado || feito(beat)");
+  });
+
+  it("não deixa nenhuma cena arrancar dentro da tarefa que faz o commit da troca", () => {
+    const arranque = ler("components", "palco", "arranque.ts");
+    // A terceira licença. Sem ela, numa troca o palco de destino monta já
+    // dentro do ecrã e logo a seguir há um instante ocioso: as duas
+    // primeiras licenças passam e a cena arranca em cima da montagem.
+    expect(arranque).toContain('window.addEventListener("rc:foco:content-commit"');
+    expect(arranque).toContain("__rcNavegacaoPendente");
+    expect(arranque).toContain("LIMITE_TROCA_MS");
+    expect(arranque).toContain("quandoATrocaAssentar");
+
+    // Os dois palcos com máquina de estados própria — os de `/` e de
+    // `/inicio/preco` — têm de passar pela mesma disciplina. Estavam de fora.
+    for (const [pasta, ficheiro] of [
+      ["descobrir", "PalcoDescobrir.tsx"],
+      ["preco", "HeroPreco.tsx"],
+    ] as const) {
+      const fonte = ler("components", pasta, ficheiro);
+      expect(fonte).toContain('from "@/components/palco/arranque"');
+      expect(fonte).toContain("useArranque(palcoRef");
+      expect(fonte).toContain("if (!podeArrancar) return;");
+    }
+  });
+
+  it("não dá por preparada uma rota que a navegação anterior pode ter arrefecido", () => {
+    const controlador = ler("components", "foco", "ControladorPrefetchFocos.tsx");
+    // O agendador do Next descarta prefetches de ligações que saem do
+    // viewport, e isso não passa por `onInvalidate`. Uma crença sem prazo
+    // punha `preparado: true` na telemetria e mandava a troca pagar o RSC
+    // inteiro — que em 4G estrangulado é a diferença medida em §3.3.
+    expect(controlador).toContain("preparados.delete(foco)");
+    expect(controlador).toContain("performance.clearMarks(`rc:foco:prefetch-ready:${foco}`)");
+    expect(controlador).toContain("inicioPrefetch.current.clear()");
+    expect(controlador).toContain('type ViaPreparacao = "rede" | "silencio"');
+    expect(controlador).toContain("marcar(`rc:foco:prefetch-ready:${foco}`, { foco, via })");
+  });
+
+  it("mede long task e TBT contra o piso da própria corrida, e mantém a meta à vista", () => {
+    const benchmark = readFileSync(
+      join(process.cwd(), "scripts", "medir-desempenho.mjs"),
+      "utf8",
+    );
+    const gate = readFileSync(
+      join(process.cwd(), "scripts", "verificar-chunks-homepage.mjs"),
+      "utf8",
+    );
+    // Os budgets absolutos estavam abaixo do custo do próprio framework:
+    // `/termos`, sem palco nem corpo editorial, já faz 274 ms de long task
+    // e 676 ms de TBT a 6× de CPU. O gate passa a medir a DIFERENÇA para
+    // esse piso, medido na mesma corrida; a meta fica como aviso.
+    expect(benchmark).toContain('const ROTA_PISO = "/termos"');
+    expect(benchmark).toContain("MARGEM_SOBRE_PISO");
+    expect(benchmark).toContain("META_ABSOLUTA");
+    expect(benchmark).toContain('foco === "piso"');
+    expect(benchmark).toContain("Acima da meta absoluta do relatório");
+
+    // O pacote `noModule` são 110 KB que nenhum browser com módulos ES
+    // pede. Contá-los no budget punha este gate a discordar do gate de
+    // runtime, que mede o que o browser realmente descarregou.
+    expect(gate).toContain("nomodule");
+    expect(gate).toContain("legados.add(chunk)");
+    expect(gate).toContain("jsLegado");
+  });
+
+  it("não deixa a homepage chamar a API durante a hidratação nem durante a troca", () => {
+    const contador = ler("components", "ContadorVitalicio.tsx");
+    // O cartão de planos está nas cinco leituras e vive muito abaixo da
+    // dobra. Pedir à montagem punha um `fetch` dentro do pico de hidratação
+    // de cada rota e dentro da tarefa que faz o commit de cada troca.
+    expect(contador).toContain('usePerto<HTMLDivElement>("400px 0px")');
+    expect(contador).toContain("if (!perto) return;");
+    expect(contador).toContain("}, [perto]);");
   });
 
   it("mantém conteúdo editorial no servidor e adia layout abaixo da dobra", () => {
@@ -419,7 +500,14 @@ describe("homepage: animação, dados de campo e budgets", () => {
     expect(benchmark).not.toContain("catch(() => pagina.waitForTimeout(2_500))");
     expect(benchmark).toContain('type: "long-animation-frame"');
     expect(benchmark).toContain('entrada.name.startsWith("rc:overlay:load:")');
-    expect(benchmark).toContain('modo === "preparado" && metricas.bytesTransferidos > 0');
+    // «Preparado» promete que o DESTINO não custa rede — não que o browser
+    // fique calado. Somar tudo num número fazia o gate falhar por causa da
+    // especulação legítima da página de destino e do ícone, e convidava a
+    // desligá-la para passar. O destino é uma exigência de zero; o resto é
+    // um budget explícito, e uma chamada à nossa API durante a troca falha.
+    expect(benchmark).toContain('modo === "preparado" && metricas.bytesDoDestino > 0');
+    expect(benchmark).toContain("metricas.apiNaTroca.length > 0");
+    expect(benchmark).toContain("bytesAlheios");
     expect(benchmark).toContain("validarMovimentoReduzido");
     expect(benchmark).toContain("validarCacheCDN");
     expect(workflow).toContain("homepage-performance:");

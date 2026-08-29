@@ -41,6 +41,7 @@ import {
 } from "./coreografia";
 import type { ExemploDescoberta } from "./tipos";
 import { useRelogioDeCena } from "@/components/palco/frame";
+import { useArranque } from "@/components/palco/arranque";
 
 const CONTEXTO = [
   { id: "competencia", beat: "enviaCompetencia", curto: "Organizar e executar" },
@@ -166,20 +167,41 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
   const saidaRef = useRef<HTMLDivElement>(null);
   const lancadasRef = useRef(new Set<string>());
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A CENA PEDE LICENÇA — como em qualquer outro palco                │
+  // │                                                                   │
+  // │ Este palco e o `HeroPreco` têm máquina de estados própria e, por  │
+  // │ isso, tinham ficado de fora da disciplina de `arranque.ts`: a     │
+  // │ cena rebobinava no instante da montagem. São precisamente os      │
+  // │ palcos de `/` e de `/inicio/preco` — os dois de onde mais se sai  │
+  // │ e para onde mais se entra. Medido numa troca preparada:           │
+  // │ `first-animation-frame` a coincidir com `content-commit`, e 45    │
+  // │ FPS enquanto a página de destino ainda montava.                   │
+  // │                                                                   │
+  // │ Ver o cabeçalho de `arranque.ts` para as três licenças.           │
+  // └───────────────────────────────────────────────────────────────────┘
+  const reduzConhecido = montado ? Boolean(reduz) : null;
+  const arrancou = useArranque(palcoRef, reduzConhecido === false);
+  const podeArrancar = reduzConhecido !== false || arrancou;
+
   useEffect(() => {
-    const reduzAgora = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     setMontado(true);
-    if (reduzAgora) {
+  }, []);
+
+  useEffect(() => {
+    if (!montado) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setAto(ULTIMO_ATO_DESCOBRIR);
       setParado(true);
       setFinalizado(true);
       return;
     }
+    if (!podeArrancar) return;
     setAto(0);
     setParado(false);
     setFinalizado(false);
     setCiclo((atual) => atual + 1);
-  }, []);
+  }, [montado, podeArrancar]);
 
   useEffect(() => {
     if (!reduz) return;

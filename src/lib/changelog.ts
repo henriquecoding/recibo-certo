@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.135.0",
+    data: "2026-08-29",
+    titulo: "Trocar de separador na página inicial ficou mais fluido",
+    itens: [
+      "Ao mudar de separador na página inicial, a demonstração do separador novo começava a mexer no mesmo instante em que a página ainda estava a montar-se — e as duas coisas disputavam o telemóvel. Agora a demonstração espera que a página esteja mesmo no ecrã antes de arrancar. Em telemóvel, isso é a diferença entre uma animação aos soluços e uma animação a andar.",
+      "A demonstração do separador que deixas para trás pára no instante em que tocas no seguinte, em vez de continuar a correr durante toda a passagem. Dois dos cinco separadores — «Descobrir» e «Preço» — nunca tinham parado; continuavam a animar por baixo enquanto o novo tentava aparecer.",
+      "O site prepara em segundo plano o separador para onde é provável que vás, para a passagem ser instantânea. Só que dava por preparados separadores que, entretanto, tinham deixado de estar: a passagem parecia preparada e voltava a pedir a página inteira à rede. Numa ligação móvel isso são centenas de milissegundos que não deviam existir. A preparação passa a ser refeita a cada mudança de separador, e uma verificação automática falha se uma passagem «preparada» voltar a pedir o destino.",
+      "O contador de lugares vitalícios da secção de planos só é consultado quando essa secção se aproxima do ecrã. Estava a ser pedido em todas as cinco leituras da página inicial, logo à entrada e outra vez a cada troca de separador, para um número que só se lê ao chegar lá abaixo.",
+    ],
+  },
+  {
     version: "2.134.1",
     data: "2026-08-29",
     titulo: "A página do Preço não abria",

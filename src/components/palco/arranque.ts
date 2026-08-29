@@ -13,16 +13,36 @@
 //  frames exatamente lá dentro. Daí a sensação, nas palavras de quem a
 //  viu, de que «ao entrar na aba a animação carrega toda de uma vez».
 //
-//  ── As duas licenças ─────────────────────────────────────────────────
+//  ── As três licenças ─────────────────────────────────────────────────
 //
-//  Uma cena só arranca quando as DUAS forem verdade:
+//  Uma cena só arranca quando as TRÊS forem verdade:
 //
 //   1. **Está no ecrã** (`IntersectionObserver`). Uma demonstração que
 //      corre fora de vista gasta bateria e não demonstra nada — e quando
 //      a pessoa chega lá, já acabou.
-//   2. **O browser teve um momento livre** (`requestIdleCallback`). É o
+//   2. **A troca de foco que a trouxe já assentou.** Ver o bloco abaixo.
+//   3. **O browser teve um momento livre** (`requestIdleCallback`). É o
 //      que separa os frames da cena do pico de hidratação em vez de os
 //      pôr a competir com ele.
+//
+//  ── Porque é que a troca precisa de uma licença própria ──────────────
+//
+//  As duas primeiras versões deste ficheiro tinham só a 1 e a 3, e isso
+//  chegava na CARGA: aí a thread está mesmo ocupada, o `requestIdleCallback`
+//  espera, e a cena entra depois do pico.
+//
+//  Numa TROCA de foco é o contrário. O palco de destino monta já dentro
+//  do ecrã, portanto o `IntersectionObserver` dá licença na frame
+//  seguinte; e logo a seguir ao commit há um instante ocioso, portanto o
+//  `requestIdleCallback` também dispara. Medido: `first-animation-frame`
+//  a coincidir com `content-commit` — a cena a arrancar DENTRO da tarefa
+//  que ainda está a montar a página, que é exatamente o que este ficheiro
+//  existe para impedir. O sintoma eram 45 FPS numa troca preparada.
+//
+//  A licença nova é o evento `rc:foco:content-commit`, emitido pelo
+//  `ControladorPrefetchFocos` quando o conteúdo novo teve uma
+//  oportunidade real de pintura. Só é esperada quando há uma navegação
+//  pendente à montagem: quem chega por carga direta não espera por nada.
 //
 //  ── O que isto NÃO pode fazer, e não faz ────────────────────────────
 //
@@ -89,6 +109,45 @@ function observar(alvo: Element, aoEntrar: () => void) {
   };
 }
 
+/** Quanto tempo se espera por um commit que pode nunca chegar. */
+const LIMITE_TROCA_MS = 2_000;
+
+type JanelaComTroca = Window & { __rcNavegacaoPendente?: unknown };
+
+/**
+ * Espera que a troca de foco em curso confirme o conteúdo novo.
+ *
+ * Sem navegação pendente, a licença é imediata — é o caso de quem abre a
+ * rota diretamente, e fazer essa pessoa esperar por um evento que não vai
+ * acontecer seria trocar um defeito por outro.
+ */
+function quandoATrocaAssentar(fn: () => void): () => void {
+  const janela = window as JanelaComTroca;
+  if (!janela.__rcNavegacaoPendente) {
+    fn();
+    return () => {};
+  }
+  let vivo = true;
+  const limpar = () => {
+    window.clearTimeout(id);
+    window.removeEventListener("rc:foco:content-commit", aoConfirmar);
+  };
+  const aoConfirmar = () => {
+    if (!vivo) return;
+    vivo = false;
+    limpar();
+    fn();
+  };
+  // Rede de segurança: uma navegação que nunca confirma não pode deixar a
+  // cena presa no estado final para sempre.
+  const id = window.setTimeout(aoConfirmar, LIMITE_TROCA_MS);
+  window.addEventListener("rc:foco:content-commit", aoConfirmar);
+  return () => {
+    vivo = false;
+    limpar();
+  };
+}
+
 /** `requestIdleCallback` onde existe; um timeout curto onde não existe. */
 function quandoLivre(fn: () => void): () => void {
   if (typeof window === "undefined") return () => {};
@@ -130,19 +189,24 @@ export function useArranque(alvo: RefObject<Element | null>, ativo = true): bool
     const no = alvo.current;
     if (!no) return;
 
+    let cancelarTroca: (() => void) | undefined;
     let cancelarLivre: (() => void) | undefined;
     let vivo = true;
 
     const pararDeObservar = observar(no, () => {
       if (!vivo) return;
-      cancelarLivre = quandoLivre(() => {
-        if (vivo) setPronto(true);
+      cancelarTroca = quandoATrocaAssentar(() => {
+        if (!vivo) return;
+        cancelarLivre = quandoLivre(() => {
+          if (vivo) setPronto(true);
+        });
       });
     });
 
     return () => {
       vivo = false;
       pararDeObservar();
+      cancelarTroca?.();
       cancelarLivre?.();
     };
   }, [alvo, ativo]);

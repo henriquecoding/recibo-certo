@@ -7,6 +7,13 @@
 
 **Método:** `npm ci` + `npm run build` no commit exato, medição direta dos artefactos em `.next/`, leitura dos manifestos de referência cliente, inspeção do conteúdo dos chunks servidos, e leitura dos resultados de CI do mesmo commit (run [33196707388](https://github.com/henriquecoding/recibo-certo/actions/runs/33196707388)).
 
+> **Seguimento (29 de agosto de 2026).** §3.1, §3.2 e §4.1 foram fechados em
+> `5e93eaf`. §3.3 e §3.4 estão respondidos em
+> [`HOMEPAGE-PERFORMANCE-RESOLUCAO-2026-08.md`](./HOMEPAGE-PERFORMANCE-RESOLUCAO-2026-08.md),
+> que também documenta uma causa que este documento não podia ver — trocas
+> dadas por «preparadas» que voltavam a pedir o destino — e a revisão dos
+> budgets de long task e TBT contra o piso medido da aplicação.
+
 ---
 
 ## 1. Sumário

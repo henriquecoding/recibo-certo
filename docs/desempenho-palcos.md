@@ -22,6 +22,49 @@ ponteiro subscrevem o mesmo `delta`:
 runtime. Os controlos de pausa/replay, drag, teclado, leitor de ecrã e a região
 `aria-live` permanecem contratos funcionais, não opções de desempenho.
 
+## As três licenças para arrancar
+
+`arranque.ts` é a disciplina de quando uma cena tem direito a começar. São
+três condições, e todas têm de ser verdade:
+
+1. **está no ecrã** (`IntersectionObserver`, margem de 120 px);
+2. **a troca de foco que a trouxe já assentou** (`rc:foco:content-commit`);
+3. **o browser teve um momento livre** (`requestIdleCallback`, timeout 1 200 ms).
+
+A segunda é recente e existe por medição. As outras duas chegavam na CARGA,
+onde a thread está mesmo ocupada e o `requestIdleCallback` espera. Numa TROCA
+de foco é o contrário: o palco de destino monta já dentro do ecrã, portanto a
+primeira licença passa na frame seguinte, e logo a seguir ao commit há um
+instante ocioso, portanto a terceira também. Media-se
+`first-animation-frame` a coincidir com `content-commit` — a cena a arrancar
+dentro da tarefa que ainda estava a montar a página. Depois da terceira
+licença, a mesma troca põe o primeiro frame **438 ms depois** do commit.
+
+Sem navegação pendente à montagem, a licença é imediata: quem abre a rota
+diretamente não espera por um evento que não vai acontecer. Há um limite de
+2 000 ms para o caso de uma navegação que nunca confirma — uma cena presa no
+estado final para sempre seria trocar um defeito por outro.
+
+`PalcoDescobrir` e `HeroPreco` têm máquina de estados própria e tinham ficado
+de fora desta disciplina: rebobinavam à montagem. São precisamente os palcos
+de `/` e de `/inicio/preco`, os dois de onde mais se sai e para onde mais se
+entra. Passam agora pelas mesmas três licenças.
+
+## Sair de um foco pára a cena que fica para trás
+
+O relógio ouve `rc:foco:navigation-start` e cancela o `requestAnimationFrame`
+na mesma tarefa do evento, sem tocar em estado.
+
+Isto vivia no `usePalco` e respondia com `setParado(true)`. Duas consequências:
+os dois palcos com máquina própria não passavam por lá — continuavam a animar
+durante a troca inteira, a competir com a montagem do destino — e, onde havia
+listener, parar custava um render completo do palco que está a desaparecer,
+trabalho novo dentro da janela em que o orçamento é de 100 ms.
+
+Quem retoma é um sinal explícito de vida: a pessoa a carregar em «Retomar»
+(mudança de `parado`) ou uma cena a reinscrever-se no relógio («Rever», régua
+de atos). Uma navegação abortada deixa a cena parada, como antes.
+
 ## Instrumentação
 
 O primeiro frame útil de cada cena cria

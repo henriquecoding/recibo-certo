@@ -120,15 +120,12 @@ export function usePalco(
   const [ciclo, setCiclo] = useState(0);
   const [anuncio, setAnuncio] = useState("");
 
-  // O gesto de sair tem prioridade sobre o frame seguinte da cena atual.
-  // O controlador emite este evento antes de pedir a nova rota; parar aqui
-  // evita que o palco de partida consuma a mesma tarefa em que o destino é
-  // reconciliado, especialmente ao regressar pelo histórico no WebKit.
-  useEffect(() => {
-    const aoNavegar = () => setParado(true);
-    window.addEventListener("rc:foco:navigation-start", aoNavegar);
-    return () => window.removeEventListener("rc:foco:navigation-start", aoNavegar);
-  }, []);
+  // O gesto de sair tem prioridade sobre o frame seguinte da cena atual, e
+  // isso agora vive no relógio (`frame.ts`): a paragem é imperativa e não
+  // custa um render ao palco que está a desaparecer. Aqui ficava um
+  // `setParado(true)` que fazia esse render — trabalho novo dentro da janela
+  // da troca — e que, por viver neste hook, nem sequer chegava aos dois
+  // palcos com máquina de estados própria (`PalcoDescobrir`, `HeroPreco`).
 
   useEffect(() => {
     const consulta = window.matchMedia("(prefers-reduced-motion: reduce)");

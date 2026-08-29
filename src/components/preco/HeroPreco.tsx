@@ -36,6 +36,7 @@ import {
 } from "./coreografia";
 import { Anel, Contador, Ficha, PalcoContexto, TOM_FICHA, type FichaEmCena } from "./atores";
 import { useRelogioDeCena } from "@/components/palco/frame";
+import { useArranque } from "@/components/palco/arranque";
 import {
   ENTRADAS_DEMO_PADRAO,
   LIMITES_DEMO_PRECO,
@@ -177,15 +178,34 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
   /** O que cada ficha faz ao aterrar. */
   const aoAterrarRef = useRef<Record<string, (() => void) | undefined>>({});
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A CENA PEDE LICENÇA — ver o cabeçalho de `arranque.ts`            │
+  // │                                                                   │
+  // │ Este palco tem máquina de estados própria e tinha ficado de fora  │
+  // │ da disciplina de arranque: rebobinava à montagem, ou seja, dentro │
+  // │ da tarefa que monta a rota. Numa troca preparada para `/inicio/   │
+  // │ preco` isso media-se em `first-animation-frame` a coincidir com   │
+  // │ `content-commit` e a cena a correr a 45 FPS por competir com a    │
+  // │ própria montagem.                                                 │
+  // └───────────────────────────────────────────────────────────────────┘
+  const reduzConhecido = montado ? Boolean(reduz) : null;
+  const arrancou = useArranque(palcoRef, reduzConhecido === false);
+  const podeArrancar = reduzConhecido !== false || arrancou;
+
   useEffect(() => {
     setMontado(true);
+  }, []);
+
+  useEffect(() => {
+    if (!montado) return;
     // `useReducedMotion()` devolve `null` no primeiro render, por isso a
     // preferência lê-se aqui. Sem isto, a cena rebobinava por um instante a
     // quem pediu para nada se mexer.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!podeArrancar) return;
     setAto(0);
     setParado(false);
-  }, []);
+  }, [montado, podeArrancar]);
 
   const estatico = montado && Boolean(reduz);
   const relogioDeCena = useRelogioDeCena({ parado, estatico, alvo: palcoRef });

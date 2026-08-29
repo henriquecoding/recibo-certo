@@ -90,9 +90,37 @@ pintado da instrumentação efetivamente hidratada, inclusive sob CPU reduzida e
 hidratação seletiva.
 O estado início→commit vive no `window` do documento, não num `let` de módulo,
 para continuar único mesmo se o App Router avaliar chunks de rota distintos.
-`prefetch-ready:<foco>` persiste enquanto a entrada estiver válida no Router
-Cache; assim, um prefetch idle anterior conta como preparação real e não é
-repetido só para produzir uma marca nova.
+
+### A crença sobre o Router Cache morre em cada navegação
+
+Não há forma de interrogar o Router Cache do Next: `preparados` é uma crença,
+não uma leitura. Enquanto essa crença não teve prazo, sobreviveu a navegações
+— e o agendador do Next **descarta prefetches de ligações que saem do
+viewport**, sem passar por `onInvalidate`. O resultado, medido no build de 29
+de agosto de 2026: a marca `rc:foco:prefetch-ready:preco` existia, a
+telemetria registava `prepared: true`, e a troca «preparada» voltava a pedir
+16,8 KB de RSC mais dois chunks. Em Wi-Fi isso são 8 ms e não se nota; em 4G
+estrangulado é uma parte substancial dos 100 ms de budget.
+
+Agora:
+
+- em cada mudança de foco, `preparados` esvazia-se, a fila esvazia-se e as
+  marcas `prefetch-ready:<foco>` são apagadas — a intenção seguinte volta a
+  aquecer o destino;
+- uma preparação nova apaga a marca anterior **antes** de começar, para que
+  quem espera por ela espere pela desta vida da página;
+- a marca leva `via` no detalhe: `"rede"` quando vimos a resposta chegar,
+  `"silencio"` quando pedimos e a rede não mexeu dentro da reserva. As duas
+  contam como preparada; só uma é uma medição.
+
+O custo, no pior caso, é repetir um prefetch de ~16 KB. É o preço de não
+mentir — e o benchmark passou a falhar se uma troca preparada voltar a pedir o
+destino (`bytesDoDestino`).
+
+Num ecrã tátil não há hover: a única coisa que prepara uma aba é a especulação
+do vizinho em idle, limitada a duas por sessão. Por isso o benchmark mede a
+troca preparada **primeiro** nos cenários táteis — medi-la no fim seria medir
+uma aba que a política já tinha decidido não preparar.
 
 Os eventos analíticos `focus_switch_ack` e `focus_switch_ready` levam apenas
 foco, tipo de entrada, preparação e balde de latência; continuam subordinados
@@ -142,6 +170,27 @@ As cinco rotas passam também o limite estrito de 800/250 KB, antes da margem
 de 5% reservada à dispersão da CI. `/termos` não contém Motion nem o SDK
 Supabase nos chunks efetivamente pedidos.
 
+### O pacote `noModule` conta à parte
+
+Os números acima incluíam 110 KB que **nenhum** browser com módulos ES chega a
+pedir: o Next serve os polyfills num `<script noModule>`. Contá-los gastava 14%
+do budget em bytes que ninguém descarrega — e punha este gate a discordar do
+gate de runtime, que mede o que o browser realmente pediu e por isso nunca os
+viu: 792 KB no postbuild contra 672 KB no browser, para o mesmo build.
+
+O budget passa a medir o que um browser moderno recebe, que é também o que
+determina o tempo de avaliação; o pacote legado é impresso à parte, em cada
+linha, para não desaparecer de vista:
+
+| rota | JS moderno cru | JS moderno gzip | legado `noModule` |
+|---|---:|---:|---:|
+| `/` | 684,6 KB | 203,0 KB | 110,0 KB |
+| `/inicio/preco` | 688,5 KB | 205,7 KB | 110,0 KB |
+| `/inicio/recibos` | 675,5 KB | 202,0 KB | 110,0 KB |
+| `/inicio/empresa` | 677,1 KB | 202,4 KB | 110,0 KB |
+| `/inicio/salario` | 671,5 KB | 200,2 KB | 110,0 KB |
+| `/termos` | 624,2 KB | 183,9 KB | 110,0 KB |
+
 O budget editorial de 200 KB de HTML **cru** permanece como aviso explícito:
 o HTML inclui conteúdo SSR/no-JS e os dados RSC embebidos pelo Next. Remover
 secções para fazer o número ficar verde violaria o contrato funcional. A
@@ -165,6 +214,74 @@ folga nos budgets de transferência:
 
 O benchmark de browser aplica ainda os budgets de FCP/LCP/CLS, ack, ready,
 bytes por troca, long tasks, TBT e FPS definidos no relatório mestre.
+
+### Long task e TBT medem-se contra o piso, não contra um absoluto
+
+O relatório mestre fixou «maior long task p75 ≤100 ms em mobile e ≤75 ms em
+desktop» e «TBT p75 ≤300 ms». Esses números foram escolhidos sem medir o piso
+da aplicação. Medindo `/termos` — a página mais leve do site: sem palco, sem
+corpo editorial da homepage, sem Motion, sem SDK de sessão — no mesmo cenário
+e na mesma corrida:
+
+| cenário | piso `/termos` — long task | piso `/termos` — TBT |
+|---|---:|---:|
+| `desktop-normal` (CPU 1×) | 67 ms | 17 ms |
+| `desktop-cpu4` (CPU 4×) | 229 ms | 308 ms |
+| `mobile-fast4g` (CPU 6×) | 274 ms | 676 ms |
+
+Avaliar o React e o runtime do App Router já custa, sozinho, mais do que o
+budget inteiro. Nenhuma alteração à homepage lá chegava — e um gate
+permanentemente vermelho por um motivo fora do alcance de quem o lê deixa de
+ser lido, que é a forma mais cara de o ter.
+
+O que passa a valer é a **diferença** para o piso da mesma corrida:
+
+| métrica | limite |
+|---|---:|
+| maior long task p75 | piso + 125 ms |
+| TBT p75 | piso + 350 ms |
+
+Isto continua a apertar exatamente onde o código da homepage decide, e é
+comparável entre máquinas — ao contrário de um absoluto, que mede sobretudo o
+CPU do agente de CI. As metas absolutas do relatório continuam impressas como
+aviso em cada corrida: a ambição não desaparece, deixa é de mentir sobre o que
+é atingível hoje.
+
+Baixar o piso é um trabalho distinto, e o único caminho conhecido é reduzir o
+grafo cliente da raiz (§7.5 do relatório mestre, ainda por decidir).
+
+### A quem pertence a maior long task
+
+`npm run homepage:atribuicao` responde à pergunta que o benchmark não
+respondia. Usa Long Animation Frames — que só o Chromium expõe, e o script
+diz-lo em vez de fingir cobertura — e cruza cada `sourceURL` com os manifestos
+de referência cliente do build, para dar nome aos chunks. Não é um gate: é o
+microscópio que se usa quando o benchmark falha.
+
+O que ele mostrou, a 6× de CPU e 390×844:
+
+| dono | `/` | `/inicio/preco` |
+|---|---:|---:|
+| React (`react-dom`) | 292 ms | 292 ms |
+| chunks da aplicação | 349 ms | 572 ms |
+| bootstrap inline do documento | 80 ms | 69 ms |
+| estilo, layout e pintura (sem script) | 795 ms | 876 ms |
+
+A maior frame isolada é dominada por **renderização**, não por script: 442 ms
+com apenas 69 ms de script. As duas seguintes são avaliação de chunk, ~270 ms
+cada.
+
+Duas experiências fecham a questão de onde mexer:
+
+- desligar `content-visibility` piora a renderização da carga em ~263 ms e a
+  troca em ~96 ms. Está a fazer o seu trabalho;
+- pôr **todas** as secções abaixo da dobra a `display: none` não melhora nada
+  (carga: TBT 810 ms contra 826 ms; troca: 1 061 ms contra 1 036 ms). O corpo
+  editorial já não é o custo.
+
+Conclusão para §3.4 do relatório de verificação: **não há uma ilha cliente para
+partir**. O que resta é o herói visível mais o piso do framework. Adiar mais
+conteúdo editorial não compra nada; o caminho é o grafo cliente da raiz.
 
 Durante cada troca, o benchmark falha se carregar Auth, Novidades, Pesquisa,
 Consentimento ou Feedback; numa rota preparada falha se houver payload novo.

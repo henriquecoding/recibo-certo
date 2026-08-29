@@ -35,12 +35,32 @@ const NULO: ContextoFocos = {
 };
 
 const Contexto = createContext<ContextoFocos>(NULO);
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ O QUE ESTE CONJUNTO PODE DIZER — e o que não pode                   │
+// │                                                                     │
+// │ `preparados` é uma CRENÇA sobre o Router Cache do Next, não uma     │
+// │ leitura dele: não há forma de o interrogar. Enquanto a crença não   │
+// │ tinha prazo, sobrevivia a navegações — e o agendador do Next        │
+// │ DESCARTA prefetches de ligações que saem do viewport, sem passar    │
+// │ por `onInvalidate`. Resultado medido: a marca                       │
+// │ `rc:foco:prefetch-ready:preco` existia, `preparado: true` ia para a │
+// │ telemetria, e a troca «preparada» voltava a pedir 16,8 KB de RSC —  │
+// │ numa rede 4G estrangulada isso é a diferença entre o budget de      │
+// │ 100 ms e as centenas de milissegundos que o relatório mediu.        │
+// │                                                                     │
+// │ A crença passa a morrer em cada navegação (ver o efeito que a       │
+// │ esvazia). Custa, no pior caso, repetir um prefetch de ~16 KB à      │
+// │ intenção seguinte. É o preço de não mentir.                         │
+// └─────────────────────────────────────────────────────────────────────┘
 const preparados = new Set<FocoHomepage>();
 const intencaoAte = new Map<FocoHomepage, number>();
 const CHAVE_ESPECULACAO = "rc:focos:especulacao:v1";
 const MAX_ESPECULATIVOS = 2;
 const JANELA_INTENCAO_MS = 10_000;
 const RESERVA_CONCORRENCIA_MS = 2_500;
+
+/** Porque é que damos uma rota por preparada. Vai no detalhe da marca. */
+type ViaPreparacao = "rede" | "silencio";
 
 interface NavegacaoPendente {
   origem: OrigemEntrada;
@@ -141,7 +161,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const drenarRef = useRef<() => void>(() => {});
   const prepararRef = useRef<ContextoFocos["preparar"]>(() => {});
-  const concluirRef = useRef<(foco: FocoHomepage) => void>(() => {});
+  const concluirRef = useRef<(foco: FocoHomepage, via: ViaPreparacao) => void>(() => {});
 
   // Contrato de hidratação observável. O benchmark não pode assumir que o
   // evento `load` significa que os handlers do App Router já estão ligados,
@@ -165,9 +185,13 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     temporizadores.current.delete(id);
   }, []);
 
-  const concluir = useCallback((foco: FocoHomepage) => {
+  // `via: "rede"` é evidência — vimos a resposta chegar. `via: "silencio"` é
+  // inferência: pedimos e a rede não mexeu dentro da reserva, portanto o Next
+  // já a tinha. As duas contam como preparada; só uma é uma medição, e o
+  // detalhe da marca diz qual, para nenhum diagnóstico as voltar a confundir.
+  const concluir = useCallback((foco: FocoHomepage, via: ViaPreparacao) => {
     if (!preparados.has(foco)) {
-      marcar(`rc:foco:prefetch-ready:${foco}`, { foco });
+      marcar(`rc:foco:prefetch-ready:${foco}`, { foco, via });
     }
     preparados.add(foco);
     if (itemEmCurso.current?.foco !== foco) return;
@@ -178,6 +202,34 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   }, [cancelarAgendado]);
   concluirRef.current = concluir;
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A CRENÇA NÃO SOBREVIVE A UMA NAVEGAÇÃO                            │
+  // │                                                                   │
+  // │ O agendador do Next descarta prefetches de ligações que saem do   │
+  // │ viewport, e uma troca de foco troca a página inteira: as ligações │
+  // │ que aqueceram estas rotas deixam de existir. Nada disso passa por │
+  // │ `onInvalidate`, portanto a única crença defensável depois de uma  │
+  // │ navegação é NENHUMA — e a intenção seguinte volta a aquecer.      │
+  // │                                                                   │
+  // │ A fila também se esvazia: um prefetch pedido para a página        │
+  // │ anterior não pode concluir aqui e carimbar «preparado» a uma rota │
+  // │ que esta página nunca aqueceu. Era assim que uma marca de 10 s    │
+  // │ antes dava por preparada uma troca que pagava o RSC inteiro.      │
+  // └───────────────────────────────────────────────────────────────────┘
+  useEffect(() => {
+    fila.current = [];
+    if (itemEmCurso.current) {
+      cancelarAgendado(itemEmCurso.current.reserva);
+      itemEmCurso.current = null;
+    }
+    emCurso.current = false;
+    inicioPrefetch.current.clear();
+    for (const foco of FOCOS_HOMEPAGE) {
+      preparados.delete(foco);
+      performance.clearMarks(`rc:foco:prefetch-ready:${foco}`);
+    }
+  }, [cancelarAgendado, focoAtivo]);
+
   const drenar = useCallback(() => {
     if (emCurso.current || document.visibilityState === "hidden") return;
     const item = fila.current.shift();
@@ -186,9 +238,16 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     emCurso.current = true;
     if (item.origem === "idle") contarEspeculativo();
     const href = ROTA_POR_FOCO[item.foco];
+    // Uma preparação nova apaga a anterior ANTES de começar: quem espera pela
+    // marca tem de esperar por ESTA, não pela de uma vida anterior da página.
+    preparados.delete(item.foco);
+    performance.clearMarks(`rc:foco:prefetch-ready:${item.foco}`);
     inicioPrefetch.current.set(item.foco, { tempo: performance.now(), origem: item.origem });
     marcar("rc:foco:prefetch-start", { foco: item.foco, origem: item.origem });
-    const reserva = agendar(() => concluirRef.current(item.foco), RESERVA_CONCORRENCIA_MS);
+    const reserva = agendar(
+      () => concluirRef.current(item.foco, "silencio"),
+      RESERVA_CONCORRENCIA_MS,
+    );
     itemEmCurso.current = { foco: item.foco, reserva };
     const opcoes = {
       onInvalidate: () => {
@@ -345,7 +404,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
             comprimido: entrada.encodedBodySize,
           });
           inicioPrefetch.current.delete(focoRecurso);
-          concluirRef.current(focoRecurso);
+          concluirRef.current(focoRecurso, "rede");
         }
 
         const navegacao = lerNavegacaoPendente();

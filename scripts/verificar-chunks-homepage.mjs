@@ -103,12 +103,30 @@ function chunksDoManifesto(manifesto) {
  * O manifesto de referências cliente descreve o grafo da página, mas não
  * inclui bootstrap, React, polyfills nem o runtime do bundler. É útil para
  * provar isolamento; não é uma medição honesta do JavaScript inicial.
+ *
+ * ── `noModule` não conta para o budget, e conta à parte ───────────────
+ *
+ * O Next serve os polyfills num `<script noModule>` — 112 KB que NENHUM
+ * browser com módulos ES chega a pedir. Somá-los ao budget gastava 14%
+ * dele em bytes que ninguém descarrega, e punha este gate a discordar do
+ * gate de runtime (que mede o que o browser pediu, e por isso nunca os
+ * viu): 792 KB aqui contra 672 KB lá, para o mesmo build.
+ *
+ * O budget passa a medir o que um browser moderno recebe — que é o que
+ * determina o tempo de avaliação — e o pacote legado é impresso à parte,
+ * para não desaparecer de vista.
  */
 function chunksDoDocumento(html) {
-  const chunks = new Set();
-  const re = /<script\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+  const modernos = new Set();
+  const legados = new Set();
+  // A etiqueta inteira, e só depois os atributos: o `noModule` tanto pode
+  // vir antes como depois do `src` — no HTML que o React emite vem depois,
+  // e uma expressão que só olhasse para a frente do `src` nunca o via.
+  const re = /<script\b([^>]*)>/gi;
   for (const correspondencia of html.matchAll(re)) {
-    const src = correspondencia[1];
+    const atributos = correspondencia[1] ?? "";
+    const src = atributos.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    if (!src) continue;
     let pathname;
     try {
       pathname = new URL(src, "https://build.local").pathname;
@@ -116,9 +134,11 @@ function chunksDoDocumento(html) {
       continue;
     }
     if (!pathname.startsWith("/_next/") || !pathname.endsWith(".js")) continue;
-    chunks.add(pathname.slice("/_next/".length));
+    const chunk = pathname.slice("/_next/".length);
+    if (/\bnomodule\b/i.test(atributos)) legados.add(chunk);
+    else modernos.add(chunk);
   }
-  return [...chunks].sort();
+  return { modernos: [...modernos].sort(), legados: [...legados].sort() };
 }
 
 const ASSINATURAS_MOTION = [
@@ -191,9 +211,10 @@ for (const entrada of ROTAS) {
   }
 
   const chunksManifesto = chunksDoManifesto(manifesto);
-  const chunksDocumento = chunksDoDocumento(htmlTexto);
+  const { modernos: chunksDocumento, legados: chunksLegados } = chunksDoDocumento(htmlTexto);
   const jsManifesto = await tamanhos(chunksManifesto.map((chunk) => join(NEXT, chunk)));
   const jsInicial = await tamanhos(chunksDocumento.map((chunk) => join(NEXT, chunk)));
+  const jsLegado = await tamanhos(chunksLegados.map((chunk) => join(NEXT, chunk)));
   const chunksMedidos = await Promise.all(
     chunksDocumento.map(async (chunk) => ({
       ficheiro: chunk,
@@ -235,6 +256,7 @@ for (const entrada of ROTAS) {
     modulosCliente: modulos.length,
     chunks: chunksMedidos,
     js: { bytes: jsInicial.cru, gzipBytes: jsInicial.gzip },
+    jsLegado: { bytes: jsLegado.cru, gzipBytes: jsLegado.gzip, chunks: chunksLegados },
     jsManifesto: { bytes: jsManifesto.cru, gzipBytes: jsManifesto.gzip },
     html: { bytes: html.length, gzipBytes: htmlGzip },
     rsc: { bytes: rsc.length, gzipBytes: rscGzip },
@@ -254,7 +276,7 @@ const supabaseSDKNosTermos = modulosTermos.filter(
   (modulo) => modulo.includes("/node_modules/@supabase/supabase-js/"),
 );
 const htmlTermos = await readFile(join(SERVER_APP, "termos.html"), "utf8");
-const chunksTermos = chunksDoDocumento(htmlTermos);
+const { modernos: chunksTermos, legados: chunksLegadosTermos } = chunksDoDocumento(htmlTermos);
 const motionNosChunksTermos = await chunksComRuntimeMotion(chunksTermos);
 if (motionNosModulosTermos.length > 0 || motionNosChunksTermos.length > 0) {
   const detalhes = [
@@ -269,6 +291,7 @@ if (supabaseSDKNosTermos.length > 0) {
   falhas.push(`/termos: voltou a carregar o SDK Supabase no grafo inicial.`);
 }
 const jsTermos = await tamanhos(chunksTermos.map((chunk) => join(NEXT, chunk)));
+const jsLegadoTermos = await tamanhos(chunksLegadosTermos.map((chunk) => join(NEXT, chunk)));
 const pisoPublico = {
   rota: "/termos",
   modulosCliente: modulosTermos.length,
@@ -278,6 +301,7 @@ const pisoPublico = {
   },
   supabaseSDK: supabaseSDKNosTermos,
   js: { bytes: jsTermos.cru, gzipBytes: jsTermos.gzip },
+  jsLegado: { bytes: jsLegadoTermos.cru, gzipBytes: jsLegadoTermos.gzip },
 };
 
 const relatorio = {
@@ -303,12 +327,14 @@ for (const resultado of resultados) {
       `grafo ${formatar(resultado.jsManifesto.bytes)} / ` +
       `${formatar(resultado.jsManifesto.gzipBytes)} gzip · ` +
       `HTML ${formatar(resultado.html.bytes)} / ${formatar(resultado.html.gzipBytes)} gzip · ` +
-      `RSC ${formatar(resultado.rsc.gzipBytes)} gzip`,
+      `RSC ${formatar(resultado.rsc.gzipBytes)} gzip · ` +
+      `legado noModule ${formatar(resultado.jsLegado.bytes)} (fora do budget)`,
   );
 }
 console.log(
   `[homepage] /termos           piso · JS inicial ${formatar(jsTermos.cru)} / ` +
-    `${formatar(jsTermos.gzip)} gzip · sem Motion · sem SDK Supabase`,
+    `${formatar(jsTermos.gzip)} gzip · sem Motion · sem SDK Supabase · ` +
+    `legado noModule ${formatar(jsLegadoTermos.cru)}`,
 );
 for (const aviso of avisos) console.warn(`[homepage] AVISO: ${aviso}`);
 

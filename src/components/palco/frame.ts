@@ -25,6 +25,62 @@ export const RELOGIO_DE_CENA_NULO: RelogioDeCena = {
   inscrever: () => () => {},
 };
 
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ O PALCO QUE SAI PÁRA JÁ — e sem pagar um render por isso            │
+// │                                                                     │
+// │ Só o `usePalco` ouvia `rc:foco:navigation-start`, e respondia com   │
+// │ `setParado(true)`. Duas consequências medidas:                      │
+// │                                                                     │
+// │  · `PalcoDescobrir` e `HeroPreco` têm máquina de estados própria e  │
+// │    NÃO passavam por lá — ou seja, os dois palcos de onde mais se    │
+// │    sai (`/` e `/inicio/preco`) continuavam a animar durante a troca │
+// │    inteira, a competir com a montagem do destino;                   │
+// │  · onde havia listener, parar custava um render completo do palco   │
+// │    que está a desaparecer — trabalho novo dentro da janela em que   │
+// │    o orçamento é de 100 ms.                                         │
+// │                                                                     │
+// │ Aqui a paragem é imperativa: cancela o `requestAnimationFrame` na   │
+// │ mesma tarefa do evento, sem tocar em estado.                        │
+// │                                                                     │
+// │ Uma cena volta a ter direito a andar quando a troca CONFIRMA — se   │
+// │ este palco ainda estiver montado nessa altura, a navegação não o    │
+// │ levou e ele não pode ficar congelado com um botão a dizer «Pausar». │
+// │ Também a retomam os sinais explícitos de vida: a pessoa a carregar  │
+// │ em «Retomar» (mudança de `parado`) e uma cena a reinscrever-se no   │
+// │ relógio («Rever», régua de atos).                                   │
+// └─────────────────────────────────────────────────────────────────────┘
+interface OuvinteDeNavegacao {
+  aoSair: () => void;
+  aoConfirmar: () => void;
+}
+
+const ouvintesDeNavegacao = new Set<OuvinteDeNavegacao>();
+let listenerDeNavegacaoInstalado = false;
+
+const avisarSaida = () => {
+  for (const ouvinte of ouvintesDeNavegacao) ouvinte.aoSair();
+};
+const avisarConfirmacao = () => {
+  for (const ouvinte of ouvintesDeNavegacao) ouvinte.aoConfirmar();
+};
+
+function subscreverNavegacao(ouvinte: OuvinteDeNavegacao) {
+  ouvintesDeNavegacao.add(ouvinte);
+  if (!listenerDeNavegacaoInstalado) {
+    window.addEventListener("rc:foco:navigation-start", avisarSaida);
+    window.addEventListener("rc:foco:content-commit", avisarConfirmacao);
+    listenerDeNavegacaoInstalado = true;
+  }
+  return () => {
+    ouvintesDeNavegacao.delete(ouvinte);
+    if (ouvintesDeNavegacao.size === 0 && listenerDeNavegacaoInstalado) {
+      window.removeEventListener("rc:foco:navigation-start", avisarSaida);
+      window.removeEventListener("rc:foco:content-commit", avisarConfirmacao);
+      listenerDeNavegacaoInstalado = false;
+    }
+  };
+}
+
 // Todas as cenas partilham um único listener global. Cada relógio conserva o
 // seu próprio estado de execução, mas não multiplica trabalho no `document`.
 const ouvintesDeVisibilidade = new Set<() => void>();
@@ -75,7 +131,14 @@ export function useRelogioDeCena({
   const emVista = useRef(alvo == null);
   const passoRef = useRef<(agora: number) => void>(() => {});
   const marcouPrimeiroFrame = useRef(false);
+  const abandonado = useRef(false);
 
+  // Uma mudança de `parado` ou de `estatico` é sempre um sinal explícito:
+  // alguém carregou em «Retomar», ou a preferência de movimento mudou. Nos
+  // dois casos, a cena volta a ter direito a andar.
+  if (paradoRef.current !== parado || estaticoRef.current !== estatico) {
+    abandonado.current = false;
+  }
   paradoRef.current = parado;
   estaticoRef.current = estatico;
 
@@ -83,6 +146,7 @@ export function useRelogioDeCena({
     () =>
       !paradoRef.current &&
       !estaticoRef.current &&
+      !abandonado.current &&
       documentoVisivel.current &&
       emVista.current &&
       ouvintes.current.size > 0,
@@ -134,6 +198,9 @@ export function useRelogioDeCena({
 
   const inscrever = useCallback(
     (ouvinte: OuvinteDoPalco) => {
+      // Uma inscrição nova é a outra forma de dizer «esta cena vai andar»:
+      // é o que «Rever» e a régua de atos fazem, por via do `ciclo`.
+      abandonado.current = false;
       ouvintes.current.add(ouvinte);
       agendar();
       return () => {
@@ -143,6 +210,21 @@ export function useRelogioDeCena({
     },
     [agendar, cancelar],
   );
+
+  useEffect(() => {
+    return subscreverNavegacao({
+      aoSair: () => {
+        abandonado.current = true;
+        cancelar();
+      },
+      aoConfirmar: () => {
+        abandonado.current = false;
+        // `agendar` respeita `podeCorrer`: no palco de destino, que ainda
+        // não teve licença de arranque, isto não faz nada.
+        agendar();
+      },
+    });
+  }, [agendar, cancelar]);
 
   useEffect(() => {
     if (podeCorrer()) agendar();
