@@ -293,7 +293,7 @@ apontou para dentro de `section[data-palco]`.
 O cabeçalho de um palco tem duas coisas que mudam com o ato em curso:
 
 - **a legenda do ato.** A 390 px umas quebram em duas linhas e outras em uma:
-  o cabeçalho passava de 46 px para 32 px;
+  o bloco do título e da legenda passava de 46 px para 32 px;
 - **os controlos.** Com a cena terminada há um botão («Rever»); a correr há
   dois («Pausar», «Recomeçar»). O bloco mais largo já não cabe na mesma linha
   e o cabeçalho passava de 69 px para 113 px — 44 px de uma vez.
@@ -303,6 +303,9 @@ recusa `truncate` com razão. O que se fixa é a caixa — a legenda mais longa 
 o bloco de controlos mais largo ficam lá, invisíveis, a reservar o lugar de
 todos os estados. Vale para qualquer largura e qualquer conjunto de atos, sem
 número mágico para envelhecer quando alguém escrever um ato novo.
+
+CLS medido na carga de cada rota, `mobile-fast4g`, CPU 6× — a mesma janela
+onde a cena rebobina, e por isso o mesmo defeito que a troca fria apanha:
 
 | rota | antes | depois |
 |---|---:|---:|
