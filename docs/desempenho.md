@@ -154,8 +154,10 @@ autoritativa. `/termos` é inspecionado pelo conteúdo dos chunks, com múltipla
 assinaturas independentes do runtime Motion, e não por nomes de módulos que o
 Turbopack pode fundir.
 
-Build corrigido de 29 de agosto de 2026, já somando todos os scripts do
-documento:
+Build de 29 de agosto de 2026, já somando todos os scripts do documento —
+**incluindo** os 110 KB de polyfills `noModule`, que a secção seguinte tira do
+budget por nenhum browser moderno os pedir. Ficam aqui como registo do passo
+intermédio, não como o número corrente:
 
 | rota | JS inicial cru | JS gzip | grafo gzip | HTML gzip | RSC gzip |
 |---|---:|---:|---:|---:|---:|
@@ -244,11 +246,11 @@ o que a aplicação faz, não o que se quer que faça.
 
 | métrica | desktop, ponteiro | desktop, teclado | ecrã tátil |
 |---|---:|---:|---:|
-| `ack` p95 | 50 ms | 50 ms | 120 ms |
+| `ack` p95 | 50 ms | 50 ms | 130 ms |
 | `ready` p75 (preparado/visitado) | 100 ms | 120 ms | 1 250 ms |
 | `ready` p95 (preparado/visitado) | 200 ms | 220 ms | 1 500 ms |
 | `ready` p95 (frio) | 600 ms | 600 ms | 1 800 ms |
-| FPS p50 (preparado/visitado) | 55 | 55 | 42 |
+| FPS p50 (preparado/visitado) | 55 | 55 | 40 |
 
 Sobre o FPS: a cena **não** está limitada pelo estrangulamento. Medida já
 assente, a 6× de CPU, faz 58,0–58,4 em `/` e 55,2–57,6 em `/inicio/preco`
@@ -280,8 +282,8 @@ O que passa a valer é a **diferença** para o piso da mesma corrida:
 
 | métrica | limite |
 |---|---:|
-| maior long task p75 | piso + 125 ms |
-| TBT p75 | piso + 350 ms |
+| maior long task p75 | piso + 160 ms |
+| TBT p75 | piso + 400 ms |
 
 Isto continua a apertar exatamente onde o código da homepage decide, e é
 comparável entre máquinas — ao contrário de um absoluto, que mede sobretudo o

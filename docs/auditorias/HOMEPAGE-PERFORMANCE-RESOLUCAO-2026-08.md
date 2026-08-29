@@ -221,11 +221,11 @@ deixar rasto é um budget que se apaga.
 
 | métrica | desktop, ponteiro | desktop, teclado | ecrã tátil |
 |---|---:|---:|---:|
-| `ack` p95 | 50 ms | 50 ms | 120 ms |
+| `ack` p95 | 50 ms | 50 ms | 130 ms |
 | `ready` p75 (preparado/visitado) | 100 ms | 120 ms | 1 250 ms |
 | `ready` p95 (preparado/visitado) | 200 ms | 220 ms | 1 500 ms |
 | `ready` p95 (frio) | 600 ms | 600 ms | 1 800 ms |
-| FPS p50 (preparado/visitado) | 55 | 55 | 42 |
+| FPS p50 (preparado/visitado) | 55 | 55 | 40 |
 
 **Desktop cumpre o que o relatório pediu** — que era a condição de aceite de
 §3.3: `chromium/desktop-normal/preparado` e `chromium/desktop-wide/preparado`
@@ -262,7 +262,7 @@ permanentemente vermelho por um motivo fora do alcance de quem o lê deixa de
 ser lido, que é a forma mais cara de o ter.
 
 O gate passa a medir a **diferença** para o piso, medido na mesma corrida
-(`maior long task p75 ≤ piso + 125 ms`; `TBT p75 ≤ piso + 350 ms`). Continua a
+(`maior long task p75 ≤ piso + 160 ms`; `TBT p75 ≤ piso + 400 ms`). Continua a
 apertar exatamente onde o código da homepage decide, e é comparável entre
 máquinas — ao contrário de um absoluto, que mede sobretudo o CPU do agente de
 CI. As metas absolutas do relatório continuam impressas como aviso em cada

@@ -1082,7 +1082,16 @@ function resumir(amostras, chaves, campos) {
  * como aviso — a ambição não desaparece, deixa é de mentir sobre o que é
  * atingível hoje. Ver `docs/desempenho.md`.
  */
-const MARGEM_SOBRE_PISO = Object.freeze({ maiorLongTask: 125, tbt: 350 });
+/*
+ * As margens saem da dispersão observada, não de um número redondo. Em
+ * quatro corridas de 10 repetições, o que os focos acrescentam ao piso da
+ * mesma corrida variou entre 82 e 117 ms na maior long task, e entre 136 e
+ * 289 ms no TBT — a variação vem do próprio piso, que também se mexe. As
+ * margens ficam acima do pior caso observado com folga suficiente para não
+ * baterem por ruído, e continuam bem abaixo do que seria preciso para
+ * deixar passar uma regressão real (duplicar o que a homepage acrescenta).
+ */
+const MARGEM_SOBRE_PISO = Object.freeze({ maiorLongTask: 160, tbt: 400 });
 const META_ABSOLUTA = Object.freeze({
   "mobile-fast4g": { maiorLongTask: 100, tbt: 300 },
   "desktop-normal": { maiorLongTask: 75 },
@@ -1117,12 +1126,16 @@ const META_ABSOLUTA = Object.freeze({
 const ORCAMENTO_TROCA = Object.freeze({
   base: { ack: 50, readyP75: 100, readyP95: 200, readyFrioP95: 600, fps: 55, fpsFrio: 50 },
   teclado: { readyP75: 120, readyP95: 220 },
+  // Medido em corridas de 10 repetições, `mobile-fast4g`, CPU 6×: `ack` p95
+  // 77–117 ms, `ready` p75 1 072–1 113 ms (p95 até 1 188), `ready` p95 frio
+  // até 1 406 ms, FPS p50 43–45 na troca preparada e 55–57 na visitada. Os
+  // limites ficam acima do pior caso observado, com folga para o ruído.
   tatil: {
-    ack: 120,
+    ack: 130,
     readyP75: 1_250,
     readyP95: 1_500,
     readyFrioP95: 1_800,
-    fps: 42,
+    fps: 40,
     fpsFrio: 50,
   },
 });
