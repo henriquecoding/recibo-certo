@@ -96,18 +96,100 @@ const unidade = (valor: Valor, unidadePadrao: string) => {
   return String(valor);
 };
 
-function curvaCSS(transicao?: Transition) {
+/** A curva da marca (`ENTRADA` em `palco/curvas.ts`), já em CSS. */
+const CURVA_PADRAO = "cubic-bezier(.16,1,.3,1)";
+
+/**
+ * ┌───────────────────────────────────────────────────────────────────────┐
+ * │ AS CURVAS COM NOME DO MOTION NÃO SÃO VALORES CSS                      │
+ * │                                                                       │
+ * │ `Element.animate()` e a shorthand `transition` só aceitam um          │
+ * │ `<easing-function>`: as palavras-chave do CSS, `cubic-bezier()`,      │
+ * │ `steps()` e `linear()`. `"easeInOut"` é o nome do MOTION — o WAAPI    │
+ * │ atira `TypeError` e o CSS deita fora a declaração inteira.            │
+ * │                                                                       │
+ * │ Deixar passar a string crua custou a rota: o `TypeError` era atirado  │
+ * │ num efeito de layout DURANTE a hidratação, onde não há limite de erro │
+ * │ nenhum por baixo, e `/inicio/preco` inteira caía no `global-error`    │
+ * │ («This page couldn't load»). Uma pega decorativa a respirar derrubava │
+ * │ a página do Preço.                                                    │
+ * │                                                                       │
+ * │ Por isso este adaptador TRADUZ. Os quatro nomes de aceleração do      │
+ * │ Motion são exatamente as curvas com palavra-chave em CSS; os          │
+ * │ restantes são as aproximações de Bézier habituais das mesmas famílias │
+ * │ (`circ`, `back`), porque essas no Motion são funções e não curvas.    │
+ * └───────────────────────────────────────────────────────────────────────┘
+ */
+const CURVAS_DO_MOTION = new Map<string, string>([
+  ["linear", "linear"],
+  ["easeIn", "cubic-bezier(0.42, 0, 1, 1)"],
+  ["easeOut", "cubic-bezier(0, 0, 0.58, 1)"],
+  ["easeInOut", "cubic-bezier(0.42, 0, 0.58, 1)"],
+  ["circIn", "cubic-bezier(0.55, 0, 1, 0.45)"],
+  ["circOut", "cubic-bezier(0, 0.55, 0.45, 1)"],
+  ["circInOut", "cubic-bezier(0.85, 0, 0.15, 1)"],
+  ["backIn", "cubic-bezier(0.36, 0, 0.66, -0.56)"],
+  ["backOut", "cubic-bezier(0.34, 1.56, 0.64, 1)"],
+  ["backInOut", "cubic-bezier(0.68, -0.6, 0.32, 1.6)"],
+  ["anticipate", "cubic-bezier(0.36, 0, 0.66, -0.56)"],
+]);
+
+/** O que o CSS aceita tal e qual. */
+const PALAVRAS_CSS = new Set([
+  "linear",
+  "ease",
+  "ease-in",
+  "ease-out",
+  "ease-in-out",
+  "step-start",
+  "step-end",
+]);
+const FUNCOES_CSS = /^(cubic-bezier|steps|linear)\(.*\)$/;
+
+export function curvaCSS(transicao?: Transition) {
   const curva = transicao?.ease;
   if (
     Array.isArray(curva) &&
     curva.length === 4 &&
-    curva.every((valor) => Number.isFinite(Number(valor)))
+    curva.every((valor) => typeof valor === "number" && Number.isFinite(valor))
   ) {
-    return `cubic-bezier(${curva.map(Number).join(",")})`;
+    return `cubic-bezier(${curva.join(",")})`;
   }
-  if (typeof curva === "string") return curva;
-  if (transicao?.type === "spring") return "cubic-bezier(.16,1,.3,1)";
-  return "cubic-bezier(.16,1,.3,1)";
+  if (typeof curva === "string") {
+    const nome = curva.trim();
+    const traduzida = CURVAS_DO_MOTION.get(nome);
+    if (traduzida) return traduzida;
+    // Uma curva que já é CSS passa; qualquer outra coisa — um nome novo do
+    // Motion, uma função de `ease`, um erro de escrita — cai na da marca em
+    // vez de chegar crua ao browser.
+    if (PALAVRAS_CSS.has(nome) || FUNCOES_CSS.test(nome)) return nome;
+  }
+  return CURVA_PADRAO;
+}
+
+/**
+ * Anima, e se não conseguir não anima — mas nunca derruba a rota.
+ *
+ * Os dois efeitos que chamam isto correm no commit da hidratação, acima de
+ * qualquer `ErrorBoundary` do palco. O estado final já está aplicado por
+ * `style` antes de a animação começar, portanto falhar aqui degrada para o
+ * resultado certo sem trajeto — que é exatamente o que `prefers-reduced-motion`
+ * já entrega. É a mesma regra dos blocos pesados: uma camada decorativa não
+ * pode deixar a página em branco.
+ */
+function animar(
+  no: Element,
+  quadros: Keyframe[],
+  opcoes: KeyframeAnimationOptions,
+): Animation | null {
+  try {
+    return no.animate(quadros, opcoes);
+  } catch (erro) {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("[motion-lite] animação recusada pelo browser:", erro);
+    }
+    return null;
+  }
 }
 
 function alvoParaProps(alvo: Alvo | undefined, transicao?: Transition) {
@@ -214,13 +296,13 @@ function criar<T extends Etiqueta>(etiqueta: T) {
       const duracao = Math.max(0, Number(dados.transition?.duration ?? 0.3)) * 1_000;
       const atraso = Math.max(0, Number(dados.transition?.delay ?? 0)) * 1_000;
       if (duracao === 0) return;
-      const animacao = no.current.animate([de as Keyframe, para as Keyframe], {
+      const animacao = animar(no.current, [de as Keyframe, para as Keyframe], {
         duration: duracao,
         delay: atraso,
         easing: curvaCSS(dados.transition),
         fill: "both",
       });
-      return () => animacao.cancel();
+      return () => animacao?.cancel();
     }, [aSair]);
 
     useLayoutEffect(() => {
@@ -248,12 +330,12 @@ function criar<T extends Etiqueta>(etiqueta: T) {
         );
         return alvoParaProps(quadro).style as Keyframe;
       });
-      const animacao = no.current.animate(frames, {
+      const animacao = animar(no.current, frames, {
         duration: Math.max(0, Number(transition?.duration ?? 0.3)) * 1_000,
         delay: Math.max(0, Number(transition?.delay ?? 0)) * 1_000,
         easing: curvaCSS(transition),
       });
-      return () => animacao.cancel();
+      return () => animacao?.cancel();
     }, [aSair, assinaturaKeyframes]);
 
     return createElement(etiqueta, {

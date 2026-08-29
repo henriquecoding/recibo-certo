@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.134.1",
+    data: "2026-08-29",
+    titulo: "A página do Preço não abria",
+    itens: [
+      "Abrir o separador «Preço» dava um ecrã de erro do navegador — «This page couldn't load» — em vez da página. O texto chegava todo ao teu computador; o que rebentava era a animação a montar-se por cima dele, e ao rebentar levava a página inteira atrás. As outras quatro leituras não eram afetadas: o defeito estava numa única curva de movimento, a das pegas que respiram quando o preço recomendado assenta.",
+      "A camada de animação passou a traduzir as curvas que recebe para valores que o navegador aceita, e o que não souber traduzir usa a curva da casa em vez de ser entregue tal e qual. Uma animação que o navegador recuse deixou de poder derrubar a página: no pior caso o elemento aparece no sítio certo sem o trajeto, que é exatamente o que já acontece a quem pede menos movimento.",
+      "Ficou a faltar o guardião que devia ter apanhado isto antes de chegar a ti. A verificação visual da homepage corre com movimento reduzido — tem de correr, senão não há imagem estável para comparar — e por isso nunca executava a parte partida. Há agora uma verificação nova que abre as cinco leituras com movimento LIGADO, percorre a demonstração até ao último passo e falha se alguma delas não sobreviver.",
+    ],
+  },
+  {
     version: "2.134.0",
     data: "2026-08-27",
     titulo: "A curva voltou, e o recibo passou a explicar o erro",

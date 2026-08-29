@@ -164,6 +164,16 @@ jobs:
           done
           echo "o servidor não respondeu em 120 s" && exit 1
 
+      # A pergunta mais barata primeiro: as cinco rotas de foco estão VIVAS?
+      # `/inicio/preco` foi a deploy morta — HTTP 200, hidratação a rebentar,
+      # rota inteira no `global-error` — e passou por três gates. O smoke de
+      # produção lê o status HTTP; a matriz visual corre com movimento
+      # REDUZIDO, e o adaptador de movimento sai antes de tocar no WAAPI, pelo
+      # que as 20 screenshots nunca correram o caminho partido. Esta etapa
+      # corre com movimento LIGADO e é a única que faz essa pergunta.
+      - name: Homepage — as cinco rotas hidratam com movimento ligado
+        run: BASE_URL=http://localhost:3000 npm run homepage:hidratacao
+
       - name: Descoberta — 360 px e desktop, claro e escuro, com axe
         run: npm run descobrir:e2e
 

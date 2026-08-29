@@ -15,6 +15,7 @@ import {
   type FocoHomepage,
 } from "@/lib/foco-homepage";
 import { resolverPrazoSSAtual } from "@/components/foco/recibos/PrazoSSAtual";
+import { curvaCSS } from "@/components/palco/motion-lite";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { APP_VERSION } from "@/lib/version";
 import { CATALOGO } from "@/lib/analytics/eventos";
@@ -254,6 +255,70 @@ describe("homepage: animação, dados de campo e budgets", () => {
     const palcoPartilhado = ler("components", "simulador", "palco.tsx");
     expect(heroPreco).toContain("palco-controles");
     expect(palcoPartilhado).toContain('from "motion/react"');
+  });
+
+  // ┌─────────────────────────────────────────────────────────────────────┐
+  // │ ISTO NÃO LÊ CÓDIGO-FONTE: CHAMA A FUNÇÃO                            │
+  // │                                                                     │
+  // │ O teste acima dava verde com `/inicio/preco` MORTA. `ease:          │
+  // │ "easeInOut"` — um nome do Motion, não um valor CSS — chegava cru a  │
+  // │ `Element.animate()`, que atira `TypeError`; atirado num efeito de   │
+  // │ layout durante a hidratação, levava a rota inteira para o           │
+  // │ `global-error`. Nenhuma asserção sobre o TEXTO do adaptador podia   │
+  // │ ver isso, porque o defeito estava no VALOR que ele devolvia.        │
+  // └─────────────────────────────────────────────────────────────────────┘
+  it("traduz as curvas com nome do Motion para valores que o CSS aceita", () => {
+    // `<easing-function>` do CSS: palavra-chave, `cubic-bezier()`,
+    // `steps()` ou `linear()`. Mais nada. É o que `Element.animate()` e a
+    // shorthand `transition` sabem ler.
+    const ACEITE =
+      /^(linear|ease|ease-in|ease-out|ease-in-out|step-start|step-end|cubic-bezier\(.+\)|steps\(.+\)|linear\(.+\))$/;
+
+    const nomesDoMotion = [
+      "linear",
+      "easeIn",
+      "easeOut",
+      "easeInOut",
+      "circIn",
+      "circOut",
+      "circInOut",
+      "backIn",
+      "backOut",
+      "backInOut",
+      "anticipate",
+    ];
+    for (const nome of nomesDoMotion) {
+      expect(curvaCSS({ ease: nome }), nome).toMatch(ACEITE);
+    }
+
+    // O que já é CSS passa intacto; uma curva da marca sai como bézier.
+    expect(curvaCSS({ ease: "ease-in-out" })).toBe("ease-in-out");
+    expect(curvaCSS({ ease: [0.16, 1, 0.3, 1] })).toBe("cubic-bezier(0.16,1,0.3,1)");
+
+    // E o que NÃO se sabe traduzir nunca chega cru ao browser — cai na
+    // curva da marca em vez de derrubar a rota.
+    for (const invalida of [
+      "easeInOutQuint",
+      "spring",
+      "",
+      "cubic-bezier(",
+      "javascript:alert(1)",
+    ]) {
+      expect(curvaCSS({ ease: invalida }), invalida).toMatch(ACEITE);
+    }
+    expect(curvaCSS({ ease: (t: number) => t })).toMatch(ACEITE);
+    expect(curvaCSS(undefined)).toMatch(ACEITE);
+    expect(curvaCSS({ type: "spring", damping: 20 })).toMatch(ACEITE);
+  });
+
+  it("não deixa uma animação recusada pelo browser derrubar a rota", () => {
+    const leve = ler("components", "palco", "motion-lite.tsx");
+    // As duas chamadas ao WAAPI correm no commit da hidratação, acima de
+    // qualquer limite de erro do palco. Passam pelo guarda, e o guarda
+    // devolve `null` em vez de propagar.
+    expect(leve).not.toMatch(/no\.current\.animate\(/);
+    expect(leve.match(/animar\(no\.current,/g)).toHaveLength(2);
+    expect(leve.match(/animacao\?\.cancel\(\)/g)).toHaveLength(2);
   });
 
   it("carrega a folha completa só por intenção e leva Motion no mesmo chunk", () => {

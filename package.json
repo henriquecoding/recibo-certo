@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.134.0",
+  "version": "2.134.1",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -50,6 +50,7 @@
     "homepage:snapshots": "node scripts/gen-homepage-focos.mjs",
     "homepage:snapshots:check": "node scripts/gen-homepage-focos.mjs --check",
     "homepage:chunks:check": "node scripts/verificar-chunks-homepage.mjs",
+    "homepage:hidratacao": "node scripts/verificar-hidratacao-homepage.mjs",
     "homepage:visual": "node scripts/verificar-visual-homepage.mjs",
     "homepage:visual:update": "node scripts/verificar-visual-homepage.mjs --update",
     "market:check": "vitest run src/lib/__tests__/negocio-market-*.test.ts",

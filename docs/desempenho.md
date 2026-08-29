@@ -210,6 +210,25 @@ comparadas por pixel; dimensões diferentes ou diferença acima do limiar
 falham. O processo e a decisão explícita de não manter uma variante legada
 duplicada estão em [`rollout-homepage.md`](./rollout-homepage.md).
 
+**O movimento reduzido é obrigatório aqui e é também o ponto cego.** Sem ele
+não há pixel estável para comparar — mas o adaptador de movimento
+(`palco/motion-lite.tsx`) sai pela porta de `prefers-reduced-motion` ANTES de
+tocar no WAAPI, pelo que as vinte screenshots não executam uma única linha do
+caminho de animação. Foi assim que `/inicio/preco` chegou a deploy morta: HTTP
+200 com o HTML completo, `Element.animate()` a atirar `TypeError` num efeito de
+layout durante a hidratação, e a rota inteira no `global-error`. O smoke de
+produção lê o status HTTP e não vê isto; o teste de unidade lia o TEXTO do
+adaptador e também não.
+
+`npm run homepage:hidratacao`
+([`verificar-hidratacao-homepage.mjs`](../scripts/verificar-hidratacao-homepage.mjs))
+é a passagem que faltava: as mesmas cinco rotas com movimento **ligado**, sem
+screenshots, sem ImageMagick e sem baselines. Cada rota monta, percorre a régua
+até ao último ato e volta ao primeiro; falha se o documento cair no
+`global-error`, se o `main` do foco desaparecer ou se houver qualquer erro de
+browser. Corre na CI antes do gate visual, porque é a pergunta mais barata —
+não vale comparar píxeis de uma página que não existe.
+
 O antigo `desempenho.json` foi removido: misturava recursos pós-load, tinha
 `domContentLoaded: null`, bloqueio zero e URLs dinâmicos antigos. Resultados
 novos vivem em `artifacts/desempenho-*.json` e são publicados pela CI durante
