@@ -23,7 +23,9 @@ export interface CookieConsent {
 
 export const CONSENT_STORAGE_KEY = "recibocerto:cookie-consent";
 /** Subir quando as categorias/política mudarem → repede o consentimento. */
-export const CONSENT_VERSION = 1;
+// v2 inclui a medição consentida de Web Vitals pela Vercel. Uma decisão v1
+// não pode autorizar retroativamente um novo subprocessador/fim de medição.
+export const CONSENT_VERSION = 2;
 
 /** Evento para (re)abrir o painel de preferências (ex.: link do rodapé). */
 export const ABRIR_PREFERENCIAS_EVENT = "recibocerto:abrir-cookies";

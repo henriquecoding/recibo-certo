@@ -193,8 +193,10 @@ describe("correções da auditoria do PR #104", () => {
 
   it("o cliente recebe do servidor se tem cliente Stripe", () => {
     const ctx = read("src/lib/stripe/subscription.tsx");
+    const runtime = read("src/lib/stripe/subscription-runtime.tsx");
     expect(ctx).toMatch(/temClienteStripe: boolean;/);
-    expect(ctx).toContain("setTemClienteStripe(Boolean(result.temClienteStripe))");
+    expect(ctx).toContain('lazy(() => import("./subscription-runtime"))');
+    expect(runtime).toContain("setTemClienteStripe(Boolean(result.temClienteStripe))");
     expect(read("src/lib/billing/access.ts")).toContain("temClienteStripe");
   });
 });

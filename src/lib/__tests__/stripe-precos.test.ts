@@ -122,7 +122,7 @@ describe("RC-BILL-002 · a decisão vive no servidor", () => {
   it("o provider consulta o endpoint canónico e não a tabela diretamente", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
-    const fonte = readFileSync(join(__dirname, "..", "stripe", "subscription.tsx"), "utf8");
+    const fonte = readFileSync(join(__dirname, "..", "stripe", "subscription-runtime.tsx"), "utf8");
     expect(fonte).toContain("/api/entitlements");
     expect(fonte).not.toMatch(/\.from\("subscriptions"\)/);
   });

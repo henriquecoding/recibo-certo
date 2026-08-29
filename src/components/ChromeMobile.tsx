@@ -15,7 +15,7 @@
 //  │ OS CINCO LUGARES SÃO OS CINCO PILARES — E JÁ NÃO CINCO SECÇÕES       │
 //  │                                                                     │
 //  │      antes:  Início · Guias · Quiz · Contabilistas · Conta          │
-//  │      agora:  Descobrir · Preço · Recibos · Salário · Empresa        │
+//  │      agora:  Descobrir · Preço · Recibos · Empresa · Salário        │
 //  │                                                                     │
 //  │ A barra anterior tinha um problema que não dava erro nenhum: NÃO     │
 //  │ ERA A BARRA DE SECRETÁRIA. Lá dizia «Simular · Guias · Quiz ·       │
@@ -54,13 +54,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useReducedMotion } from "motion/react";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { PILARES } from "@/lib/navegacao";
+import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { DockMovel } from "@/components/busca/DockMovel";
 import ChromeMobileMarca from "@/components/ChromeMobileMarca";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
+import { focoDaRotaHomepage } from "@/lib/foco-homepage";
+import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
+import { usePrefereMovimentoReduzido } from "@/hooks/usePrefereMovimentoReduzido";
 
 /**
  * Os cinco lugares. A ordem vem da fonte e é fixa; o significado nunca
@@ -80,13 +82,17 @@ const SLOTS = PILARES.map((p) => ({
   id: p.id,
   label: p.curto,
   nomeCompleto: p.label,
-  href: p.href,
+  href: hrefDaSuperficiePilar(p),
+  hrefCanonico: p.href,
+  homepageHref: p.homepageHref,
   icone: p.icone,
 }));
 
 export default function ChromeMobile() {
   const pathname = usePathname();
-  const reduzMovimento = useReducedMotion();
+  const foco = focoDaRotaHomepage(pathname);
+  const reduzMovimento = usePrefereMovimentoReduzido();
+  const { pendente, preparar, iniciar } = useIntencaoFocos();
 
   // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
   // lê exactamente a mesma coisa. Ver `hooks/useQuizAJogar.ts`.
@@ -144,7 +150,14 @@ export default function ChromeMobile() {
           className="flex items-stretch justify-between gap-0.5 px-1 pt-1.5 md:gap-1 md:px-2"
         >
           {SLOTS.map((slot) => {
-            const on = ativo(slot.href);
+            const naSuperficieCanonica = ativo(slot.hrefCanonico);
+            const on =
+              foco === slot.id ||
+              naSuperficieCanonica;
+            const destacado = pendente ? pendente === slot.id : on;
+            // Um lugar activo tem de apontar para a superfície que declara
+            // como actual. Fora dela continua a abrir a porta editorial.
+            const destino = naSuperficieCanonica ? slot.hrefCanonico : slot.href;
             const Icon = iconeDe(slot.icone);
             /**
              * `min-w-0` e não um mínimo em `rem` — e é o que impede o
@@ -159,7 +172,7 @@ export default function ChromeMobile() {
              * rótulo com reticências — nunca uma página a rolar para o lado.
              */
             const classe = `focus-marca flex min-h-[44px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 py-1 no-underline transition-colors ${
-              on
+              destacado
                 ? // O anel não é decoração: `bg-brand-light` sobre o `cream`
                   // desta barra dá 1,032:1 — no claro, o separador aceso não
                   // se distinguia dos apagados, e este é o «estou aqui» do
@@ -191,18 +204,37 @@ export default function ChromeMobile() {
              * │ levar à página do pilar, que é outra página.                │
              * └───────────────────────────────────────────────────────────┘
              */
-            const naRotaExacta = pathname === slot.href;
+            const naRotaExacta =
+              pathname === slot.homepageHref ||
+              pathname === slot.hrefCanonico;
 
             return (
               <Link
+                prefetch={false}
+                scroll={false}
                 key={slot.id}
-                href={slot.href}
+                href={destino}
                 // O nome acessível é sempre o COMPLETO, mesmo quando o que
                 // se vê é o curto — o que um leitor de ecrã anuncia não
                 // pode depender da largura do ecrã.
                 aria-label={slot.nomeCompleto}
                 aria-current={on ? "page" : undefined}
+                aria-busy={pendente === slot.id || undefined}
+                onPointerEnter={() => preparar(slot.id)}
+                onFocus={() => preparar(slot.id)}
+                onPointerDown={(evento) => {
+                  if (
+                    evento.button === 0 &&
+                    !evento.metaKey &&
+                    !evento.ctrlKey &&
+                    !evento.shiftKey &&
+                    !evento.altKey
+                  ) {
+                    iniciar(slot.id, "pointer");
+                  }
+                }}
                 onClick={(e) => {
+                  if (e.detail === 0) iniciar(slot.id, "teclado");
                   medirNavegacao(slot.id, window.innerWidth >= 768 ? "tablet" : "movel");
                   if (!naRotaExacta) return;
                   // `⌘/Ctrl/Shift + clique` continuam a pertencer ao browser.

@@ -1,0 +1,603 @@
+{
+  "_meta": {
+    "schema": 1,
+    "appVersion": "2.134.0",
+    "fiscalYear": 2026,
+    "engineHash": "sha256:b3ace351d11f6a94eaff8cead42240f7315cb9a922eee54e9972b4c01f89c082"
+  },
+  "dados": {
+    "cenarios": [
+      {
+        "faturacao": 15000,
+        "freelancer": 11578,
+        "empresa": 7864,
+        "empresaSemCustos": 9018,
+        "rv": {
+          "irs": 1175,
+          "ss": 2247
+        },
+        "soc": {
+          "irc": 2158,
+          "dividendos": 3058,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 20000,
+        "freelancer": 14783,
+        "empresa": 10870,
+        "empresaSemCustos": 12024,
+        "rv": {
+          "irs": 2221,
+          "ss": 2996
+        },
+        "soc": {
+          "irc": 2983,
+          "dividendos": 4227,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 25000,
+        "freelancer": 18213,
+        "empresa": 13876,
+        "empresaSemCustos": 15030,
+        "rv": {
+          "irs": 3042,
+          "ss": 3745
+        },
+        "soc": {
+          "irc": 3808,
+          "dividendos": 5396,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 30000,
+        "freelancer": 21560,
+        "empresa": 16882,
+        "empresaSemCustos": 18036,
+        "rv": {
+          "irs": 3946,
+          "ss": 4494
+        },
+        "soc": {
+          "irc": 4633,
+          "dividendos": 6565,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 35000,
+        "freelancer": 24684,
+        "empresa": 19888,
+        "empresaSemCustos": 21042,
+        "rv": {
+          "irs": 5073,
+          "ss": 5243
+        },
+        "soc": {
+          "irc": 5458,
+          "dividendos": 7734,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 40000,
+        "freelancer": 27745,
+        "empresa": 22894,
+        "empresaSemCustos": 24048,
+        "rv": {
+          "irs": 6263,
+          "ss": 5992
+        },
+        "soc": {
+          "irc": 6283,
+          "dividendos": 8903,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 45000,
+        "freelancer": 30687,
+        "empresa": 25900,
+        "empresaSemCustos": 27054,
+        "rv": {
+          "irs": 7572,
+          "ss": 6741
+        },
+        "soc": {
+          "irc": 7108,
+          "dividendos": 10072,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 50000,
+        "freelancer": 33629,
+        "empresa": 28906,
+        "empresaSemCustos": 30060,
+        "rv": {
+          "irs": 8881,
+          "ss": 7490
+        },
+        "soc": {
+          "irc": 7933,
+          "dividendos": 11241,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 55000,
+        "freelancer": 36571,
+        "empresa": 31823,
+        "empresaSemCustos": 32922,
+        "rv": {
+          "irs": 10190,
+          "ss": 8239
+        },
+        "soc": {
+          "irc": 8881,
+          "dividendos": 12376,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 60000,
+        "freelancer": 39355,
+        "empresa": 34685,
+        "empresaSemCustos": 35784,
+        "rv": {
+          "irs": 11657,
+          "ss": 8988
+        },
+        "soc": {
+          "irc": 9906,
+          "dividendos": 13489,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 65000,
+        "freelancer": 41956,
+        "empresa": 37547,
+        "empresaSemCustos": 38646,
+        "rv": {
+          "irs": 13307,
+          "ss": 9737
+        },
+        "soc": {
+          "irc": 10931,
+          "dividendos": 14602,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 70000,
+        "freelancer": 44534,
+        "empresa": 40409,
+        "empresaSemCustos": 41508,
+        "rv": {
+          "irs": 14980,
+          "ss": 10486
+        },
+        "soc": {
+          "irc": 11956,
+          "dividendos": 15715,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 75000,
+        "freelancer": 47113,
+        "empresa": 43271,
+        "empresaSemCustos": 44370,
+        "rv": {
+          "irs": 16652,
+          "ss": 11235
+        },
+        "soc": {
+          "irc": 12981,
+          "dividendos": 16828,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 80000,
+        "freelancer": 49691,
+        "empresa": 46133,
+        "empresaSemCustos": 47232,
+        "rv": {
+          "irs": 18325,
+          "ss": 11984
+        },
+        "soc": {
+          "irc": 14006,
+          "dividendos": 17941,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 85000,
+        "freelancer": 52269,
+        "empresa": 48995,
+        "empresaSemCustos": 50094,
+        "rv": {
+          "irs": 19998,
+          "ss": 12733
+        },
+        "soc": {
+          "irc": 15031,
+          "dividendos": 19054,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 90000,
+        "freelancer": 54847,
+        "empresa": 51857,
+        "empresaSemCustos": 52956,
+        "rv": {
+          "irs": 21671,
+          "ss": 13482
+        },
+        "soc": {
+          "irc": 16056,
+          "dividendos": 20167,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 95000,
+        "freelancer": 57425,
+        "empresa": 54719,
+        "empresaSemCustos": 55818,
+        "rv": {
+          "irs": 23344,
+          "ss": 14231
+        },
+        "soc": {
+          "irc": 17081,
+          "dividendos": 21280,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 100000,
+        "freelancer": 60003,
+        "empresa": 57581,
+        "empresaSemCustos": 58680,
+        "rv": {
+          "irs": 25017,
+          "ss": 14980
+        },
+        "soc": {
+          "irc": 18106,
+          "dividendos": 22393,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 105000,
+        "freelancer": 62581,
+        "empresa": 60443,
+        "empresaSemCustos": 61542,
+        "rv": {
+          "irs": 26690,
+          "ss": 15729
+        },
+        "soc": {
+          "irc": 19131,
+          "dividendos": 23506,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 110000,
+        "freelancer": 65096,
+        "empresa": 63305,
+        "empresaSemCustos": 64404,
+        "rv": {
+          "irs": 28426,
+          "ss": 16478
+        },
+        "soc": {
+          "irc": 20156,
+          "dividendos": 24619,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 115000,
+        "freelancer": 67926,
+        "empresa": 66167,
+        "empresaSemCustos": 67266,
+        "rv": {
+          "irs": 30521,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 21181,
+          "dividendos": 25732,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 120000,
+        "freelancer": 70654,
+        "empresa": 69029,
+        "empresaSemCustos": 70128,
+        "rv": {
+          "irs": 32794,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 22206,
+          "dividendos": 26845,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 125000,
+        "freelancer": 73381,
+        "empresa": 71891,
+        "empresaSemCustos": 72990,
+        "rv": {
+          "irs": 35066,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 23231,
+          "dividendos": 27958,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 130000,
+        "freelancer": 76109,
+        "empresa": 74753,
+        "empresaSemCustos": 75852,
+        "rv": {
+          "irs": 37339,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 24256,
+          "dividendos": 29071,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 135000,
+        "freelancer": 78836,
+        "empresa": 77615,
+        "empresaSemCustos": 78714,
+        "rv": {
+          "irs": 39611,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 25281,
+          "dividendos": 30184,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 140000,
+        "freelancer": 81564,
+        "empresa": 80477,
+        "empresaSemCustos": 81576,
+        "rv": {
+          "irs": 41884,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 26306,
+          "dividendos": 31297,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 145000,
+        "freelancer": 84291,
+        "empresa": 83339,
+        "empresaSemCustos": 84438,
+        "rv": {
+          "irs": 44156,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 27331,
+          "dividendos": 32410,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 150000,
+        "freelancer": 87019,
+        "empresa": 86201,
+        "empresaSemCustos": 87300,
+        "rv": {
+          "irs": 46429,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 28356,
+          "dividendos": 33523,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 155000,
+        "freelancer": 89746,
+        "empresa": 89063,
+        "empresaSemCustos": 90162,
+        "rv": {
+          "irs": 48701,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 29381,
+          "dividendos": 34636,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 160000,
+        "freelancer": 92474,
+        "empresa": 91925,
+        "empresaSemCustos": 93024,
+        "rv": {
+          "irs": 50974,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 30406,
+          "dividendos": 35749,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 165000,
+        "freelancer": 95201,
+        "empresa": 94787,
+        "empresaSemCustos": 95886,
+        "rv": {
+          "irs": 53246,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 31431,
+          "dividendos": 36862,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 170000,
+        "freelancer": 97929,
+        "empresa": 97649,
+        "empresaSemCustos": 98748,
+        "rv": {
+          "irs": 55519,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 32456,
+          "dividendos": 37975,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 175000,
+        "freelancer": 100656,
+        "empresa": 100511,
+        "empresaSemCustos": 101610,
+        "rv": {
+          "irs": 57791,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 33481,
+          "dividendos": 39088,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 180000,
+        "freelancer": 103384,
+        "empresa": 103373,
+        "empresaSemCustos": 104472,
+        "rv": {
+          "irs": 60064,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 34506,
+          "dividendos": 40201,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 180500,
+        "freelancer": 103657,
+        "empresa": 103659,
+        "empresaSemCustos": 104758,
+        "rv": {
+          "irs": 60291,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 34609,
+          "dividendos": 40312,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 185000,
+        "freelancer": 106111,
+        "empresa": 106235,
+        "empresaSemCustos": 107334,
+        "rv": {
+          "irs": 62336,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 35531,
+          "dividendos": 41314,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 190000,
+        "freelancer": 108839,
+        "empresa": 109097,
+        "empresaSemCustos": 110196,
+        "rv": {
+          "irs": 64609,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 36556,
+          "dividendos": 42427,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 195000,
+        "freelancer": 111566,
+        "empresa": 111959,
+        "empresaSemCustos": 113058,
+        "rv": {
+          "irs": 66881,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 37581,
+          "dividendos": 43540,
+          "contabilidade": 1920
+        }
+      },
+      {
+        "faturacao": 200000,
+        "freelancer": 114294,
+        "empresa": 114821,
+        "empresaSemCustos": 115920,
+        "rv": {
+          "irs": 69154,
+          "ss": 16552
+        },
+        "soc": {
+          "irc": 38606,
+          "dividendos": 44653,
+          "contabilidade": 1920
+        }
+      }
+    ],
+    "cruzamento": 180500,
+    "limiteSimplificado": 200000,
+    "custoFixo": 1920,
+    "exemplo": 30000,
+    "exemploFreelancer": 21560,
+    "exemploEmpresa": 16882
+  }
+}

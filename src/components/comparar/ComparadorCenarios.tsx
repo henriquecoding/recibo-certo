@@ -117,11 +117,21 @@ export default function ComparadorCenarios() {
     return Math.round((frac * SLIDER_MAX) / STEP) * STEP;
   }, []);
 
+  // `setPointerCapture` atira `NotFoundError` quando o `pointerId` já não
+  // está ativo — um toque que acabou entre o evento e o tratador, um gesto
+  // cancelado pelo sistema. Uma exceção por tratar num tratador de eventos
+  // do React derruba a árvore, e o comparador desaparece do ecrã; e como a
+  // captura era a primeira linha, o valor nem chegava a mudar. A captura é
+  // uma comodidade — o valor não é, e por isso vem primeiro.
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
     setDragging(true);
     setHasInteracted(true);
     sincronizarSlider(valorDoPonteiro(e.clientX));
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* sem captura: o arrasto pára ao sair do elemento, e mais nada. */
+    }
   }, [valorDoPonteiro, sincronizarSlider]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {

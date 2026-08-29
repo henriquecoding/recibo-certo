@@ -711,6 +711,7 @@ export default function Resultados({
           return (
             <article
               key={candidato.id}
+              data-candidato-id={candidato.id}
               className={`overflow-hidden rounded-4xl border bg-white shadow-card dark:bg-stone-900 ${
                 open
                   ? "border-brand/60"

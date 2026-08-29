@@ -40,6 +40,7 @@ import {
   custosEstruturaIniciais,
   resolverEstadoEmpresa,
 } from "@/lib/empresa/importacao";
+import { FERRAMENTA_DO_FOCO } from "@/components/foco/focos";
 
 const ler = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 const perto = (a: number, b: number, tol = 0.02) => Math.abs(a - b) <= tol;
@@ -715,7 +716,17 @@ describe("handoff:integracao", () => {
   });
 
   it("o simulador continua acessível sem passar pelo estúdio (§2.5)", () => {
-    expect(ler("src/components/Hero.tsx")).toContain("/ferramentas/simulador-empresa");
+    // Isto lia-se em `src/components/Hero.tsx`, onde o perfil «empresa» tinha
+    // um botão secundário com o href escrito à mão. Esse hero foi substituído
+    // pela bússola, e o destino deixou de estar escrito num componente:
+    // vive na tabela dos focos, que é a fonte de verdade de onde cada
+    // pergunta leva. Verificar a tabela é mais forte do que verificar uma
+    // string num ficheiro de UI — a UI passou a derivar dela.
+    expect(FERRAMENTA_DO_FOCO.empresa).toBe("/ferramentas/simulador-empresa");
+    // E a bússola tem mesmo de a usar como destino do painel da resposta.
+    expect(ler("src/components/foco/HeroBussola.tsx")).toContain(
+      "ferramenta={focoAberto.ferramenta}",
+    );
   });
 });
 

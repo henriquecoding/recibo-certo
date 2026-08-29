@@ -77,6 +77,57 @@ jobs:
       - name: Auditoria de dependências (0 vulnerabilidades altas)
         run: npm audit --audit-level=high
 
+  homepage-performance:
+    name: Homepage · ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            cenarios: mobile-fast4g,mobile-slow4g,desktop-normal,desktop-cpu4,desktop-wide,mobile-reduced,desktop-reduced
+          - browser: webkit
+            cenarios: mobile-fast4g,mobile-reduced
+          - browser: firefox
+            cenarios: desktop-normal,desktop-reduced
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+
+      - name: Arrancar o artefacto de produção
+        run: |
+          npm start -- --hostname 127.0.0.1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/ >/dev/null && exit 0
+            sleep 2
+          done
+          echo "o servidor não respondeu em 120 s" && exit 1
+
+      - name: Medir carga, trocas, FPS e política de prefetch
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          RC_BROWSERS: ${{ matrix.browser }}
+          RC_CENARIOS: ${{ matrix.cenarios }}
+          RC_REPETICOES: 10
+          RC_PERF_OUTPUT: artifacts/desempenho-${{ matrix.browser }}.json
+        run: npm run desempenho:ci
+
+      - name: Guardar medições e dispersão
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: homepage-performance-${{ matrix.browser }}
+          path: artifacts/desempenho-${{ matrix.browser }}.json
+          if-no-files-found: warn
+          retention-days: 30
+
   # ── O que build, testes e type-check não apanham ────────────────────
   #  `verificar-descobrir-negocio.mjs` foi escrito precisamente para os
   #  defeitos que vivem no ecrã: a leitura NACIONAL filtrada contra `null`
@@ -118,6 +169,38 @@ jobs:
 
       - name: Estúdio de empresa — fim a fim
         run: npm run negocio:e2e
+
+      # Bootstrap único das referências: usa exatamente o deployment/commit
+      # auditado pelo relatório, e compara já o artefacto candidato contra as
+      # 20 imagens. No commit seguinte, as referências passam a versionadas e
+      # esta etapa fica apenas como `npm run homepage:visual`.
+      - name: Homepage — referência visual do commit auditado
+        run: |
+          git fetch --depth=1 origin 233b0a5e2d85d69f6b2be7bf4ce922cd39a537f8
+          git worktree add --detach /tmp/recibo-homepage-baseline 233b0a5e2d85d69f6b2be7bf4ce922cd39a537f8
+          cp -al node_modules /tmp/recibo-homepage-baseline/node_modules
+          cd /tmp/recibo-homepage-baseline
+          npm run build
+          npm start -- --hostname 127.0.0.1 --port 3001 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3001/ >/dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:3001/ >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          BASE_URL=http://127.0.0.1:3001 npm run homepage:visual:update
+          BASE_URL=http://127.0.0.1:3000 npm run homepage:visual
+
+      - name: Guardar matriz visual e diferenças
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: homepage-visual-bootstrap
+          path: |
+            tests/visual/homepage
+            artifacts/visual-homepage
+          if-no-files-found: warn
+          retention-days: 14
 
   documentos:
     name: Documentos — normas e tipografia

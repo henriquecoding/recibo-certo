@@ -1548,3 +1548,194 @@ html.dark .dark\:placeholder-stone-50::placeholder {
     break-inside: auto;
   }
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   A RESPOSTA DA BÚSSOLA — a chegada do painel do hero
+   ---------------------------------------------------------------------
+   O painel trocava de conteúdo de um fotograma para o outro. Um número
+   que substitui outro sem chegar não se lê como uma resposta nova: lê-se
+   como um erro de renderização, e o olho não sabe se mudou tudo ou só
+   uma linha.
+
+   As cinco partes entram desfasadas a 90 ms — `PASSO.uno` da gramática
+   de movimento (`palco/curvas.ts`), o degrau que está abaixo do limiar
+   em que se julga a ordem de dois acontecimentos. Não são cinco coisas a
+   chegar: é UMA a chegar com espessura.
+
+   `both` conserva o estado inicial durante o atraso — sem ele as partes
+   piscavam visíveis antes de começarem.
+   ═════════════════════════════════════════════════════════════════════ */
+
+@keyframes rc-resposta-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.resposta-entra > * {
+  animation: rc-resposta-entra 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.resposta-entra > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+.resposta-entra > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+.resposta-entra > *:nth-child(4) {
+  animation-delay: 270ms;
+}
+.resposta-entra > *:nth-child(5) {
+  animation-delay: 360ms;
+}
+.resposta-entra > *:nth-child(n + 6) {
+  animation-delay: 360ms;
+}
+
+/* Quem pediu menos movimento recebe a resposta inteira, de uma vez e no
+   sítio. Não é uma versão pobre: é a mesma informação sem o trajeto. */
+@media (prefers-reduced-motion: reduce) {
+  .resposta-entra > * {
+    animation: none;
+  }
+}
+
+/* A barra de `app/loading.tsx`: atravessa e volta enquanto a leitura
+   seguinte não chega. Com movimento reduzido não anda — fica uma barra
+   inteira a meio tom, que diz o mesmo sem se mexer. */
+@keyframes carregar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+/* Revelação progressiva sem runtime JS. O conteúdo permanece visível em
+   browsers sem scroll-driven animations e quando scripting está desligado. */
+@keyframes rc-view-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@supports (animation-timeline: view()) {
+  .rc-view-reveal {
+    animation: rc-view-reveal 1ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 28%;
+    animation-delay: var(--rc-reveal-delay, 0s);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-view-reveal { animation: none; opacity: 1; transform: none; }
+  .rc-motion-lite { animation: none !important; transition: none !important; }
+}
+
+/*
+ * As rotas de foco continuam a servir todo o texto no HTML — SEO, leitura
+ * sem JavaScript, pesquisa na página e acessibilidade não perdem conteúdo.
+ * O browser, porém, não precisa calcular layout e paint de vários ecrãs
+ * abaixo da dobra durante a troca de foco. `auto` conserva a última medida
+ * real depois da primeira visita; os valores seguintes são reservas por tipo
+ * para que saltar por âncora não introduza CLS.
+ */
+@supports (content-visibility: auto) {
+  [data-homepage-foco] .rc-home-deferred {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--rc-home-intrinsic, 48rem);
+  }
+
+  [data-homepage-foco] .rc-home-deferred--compact {
+    --rc-home-intrinsic: 20rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--medium {
+    --rc-home-intrinsic: 42rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--large {
+    --rc-home-intrinsic: 68rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--xlarge {
+    --rc-home-intrinsic: 112rem;
+  }
+}
+
+@keyframes rc-aviso-entrada {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rc-aviso-saida {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(10px) scale(0.98); }
+}
+
+@keyframes rc-overlay-entrada {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rc-overlay-saida {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes rc-dialogo-entrada {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rc-dialogo-saida {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(14px) scale(0.985); }
+}
+
+.rc-aviso-entrada { animation: rc-aviso-entrada 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+.rc-aviso-saida { animation: rc-aviso-saida 180ms ease-in both; }
+.rc-overlay-entrada { animation: rc-overlay-entrada 180ms ease-out; }
+.rc-overlay-saida { animation: rc-overlay-saida 180ms ease-in both; }
+.rc-dialogo-entrada { animation: rc-dialogo-entrada 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+.rc-dialogo-saida { animation: rc-dialogo-saida 180ms ease-in both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-aviso-entrada, .rc-aviso-saida,
+  .rc-overlay-entrada, .rc-overlay-saida,
+  .rc-dialogo-entrada, .rc-dialogo-saida { animation: none; }
+}
+
+/* Efeitos breves dos palcos ficam no compositor; o único relógio JavaScript
+   da cena trata apenas o que precisa de ler medidas ou disparar causalidade. */
+@keyframes rc-anel-palco {
+  from { opacity: 0.5; transform: translate(-50%, -50%) scale(0.4); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+}
+
+@keyframes rc-toque-palco {
+  from { opacity: 0.9; transform: translate(-50%, -50%) scale(0.2); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+}
+
+.rc-anel-palco {
+  animation: rc-anel-palco 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rc-toque-palco {
+  animation: rc-toque-palco 500ms ease-out both;
+}
+
+/* O relógio central marca a moldura ao sair do viewport. As animações CSS
+   dentro da mesma cena obedecem à mesma suspensão que os atores em JS. */
+[data-palco-suspenso] *,
+[data-palco-suspenso]::before,
+[data-palco-suspenso]::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-anel-palco,
+  .rc-toque-palco { animation: none; opacity: 0; }
+}

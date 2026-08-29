@@ -93,7 +93,9 @@ export type NomeEvento =
   | "header_search_zero_results"
   | "header_search_abandon"
   | "header_nav_click"
-  | "header_overlay_conflict";
+  | "header_overlay_conflict"
+  | "focus_switch_ack"
+  | "focus_switch_ready";
 
 /** Propriedades de cada evento. O `Payload` de um evento é o seu contrato. */
 export interface PayloadsEvento {
@@ -273,6 +275,8 @@ export interface PayloadsEvento {
     requested: string;
     active: string;
   };
+  focus_switch_ack: ContextoTrocaFoco;
+  focus_switch_ready: ContextoTrocaFoco;
 }
 
 /** Telemóvel, tablet ou secretária — pela largura, não pelo user-agent. */
@@ -282,6 +286,14 @@ interface ContextoBusca {
   viewport_class: ClasseViewport;
   /** Família da rota (`/guias`, `/ferramentas`, …). Nunca o URL completo. */
   route_group: string;
+}
+
+interface ContextoTrocaFoco {
+  from_focus: string;
+  to_focus: string;
+  input: "pointer" | "teclado";
+  prepared: boolean;
+  latency_bucket: string;
 }
 
 interface AcaoResultado {
@@ -484,6 +496,16 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   header_overlay_conflict: {
     disparo: "Um overlay pediu para abrir com outro modal já activo.",
     serve: "Guardrail: o número tem de ser zero (§15, SLO absoluto).",
+    origem: "cliente",
+  },
+  focus_switch_ack: {
+    disparo: "Primeira pintura visual depois de pedir outro foco da homepage.",
+    serve: "SLO de reconhecimento do gesto em até 50 ms, apenas em baldes.",
+    origem: "cliente",
+  },
+  focus_switch_ready: {
+    disparo: "Conteúdo do foco pedido confirmado depois do commit e da pintura.",
+    serve: "SLO de conteúdo correto, distinguindo rotas preparadas e frias.",
     origem: "cliente",
   },
 };

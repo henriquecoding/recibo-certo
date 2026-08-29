@@ -75,7 +75,7 @@ export default function Fontes() {
         {/* Lista completa de fontes — fechada por defeito para não alongar a
             página; abre num clique (o registo SOURCES tem dezenas de entradas). */}
         <details className="group rounded-3xl border border-stone-100 bg-white/70 shadow-card">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-semibold text-stone-700">
+          <summary className="flex min-h-[24px] cursor-pointer list-none items-center justify-between gap-3 p-5 text-sm font-semibold text-stone-700">
             <span>Ver as {nFontes} fontes oficiais consultadas</span>
             <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-stone-500 transition-transform group-open:rotate-45 dark:bg-stone-800">
               <Plus size={12} />
@@ -88,7 +88,9 @@ export default function Fontes() {
                   href={s.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="group/link flex items-start gap-2 text-sm text-stone-500 hover:text-brand-dark transition-colors"
+                  // `min-h-[24px]` + `py-1`: as ligações mediam 423×20 e ficavam abaixo
+                  // do alvo mínimo de 24 px. O texto não muda — muda a área tocável.
+                  className="group/link flex min-h-[24px] items-start gap-2 py-1 text-sm text-stone-500 transition-colors hover:text-brand-dark"
                 >
                   <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-brand flex-shrink-0" />
                   <span className="underline decoration-stone-200 group-hover/link:decoration-brand underline-offset-2">
