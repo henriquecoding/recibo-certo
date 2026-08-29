@@ -28,6 +28,7 @@
 
 import { useRef, type ReactNode } from "react";
 import { Pause, Play, RotateCcw } from "@/components/ui/Icons";
+import LegendaDoAto from "./legenda";
 import { PalcoContexto } from "./atores";
 import type { Ato } from "./relogio";
 import { usePalco } from "./usePalco";
@@ -52,6 +53,9 @@ export interface CenaDoPalco {
   /** O elemento onde as fichas são medidas e posicionadas. */
   palcoRef: React.RefObject<HTMLDivElement | null>;
 }
+
+/** As duas legendas que não vêm da coreografia. A ordem importa: [fim, pausa]. */
+const LEGENDAS_DE_ESTADO = ["Demonstração concluída", "Demonstração em pausa"] as const;
 
 const PELE = {
   claro: {
@@ -169,22 +173,45 @@ export default function MolduraPalco({
               </h2>
               {/* Sem `truncate`: a auditoria trata texto cortado como
                   texto que não cabe, e tem razão — uma legenda que acaba
-                  em reticências a 320 px não diz o que o ato faz. Deixa-se
-                  quebrar em duas linhas, que é o que o cabeçalho já
-                  suporta por ser `flex-wrap`. */}
-              <p className={`mt-0.5 text-[10px] leading-snug ${pele.legenda}`}>
-                {finalizado || estatico
-                  ? "Demonstração concluída"
-                  : parado
-                    ? "Demonstração em pausa"
-                    : atos[ato]?.legenda}
-              </p>
+                  em reticências a 320 px não diz o que o ato faz. Quebra,
+                  e a caixa reserva o pior caso para não mudar de altura a
+                  cada ato — ver `legenda.tsx`. */}
+              <LegendaDoAto
+                className={`mt-0.5 text-[10px] leading-snug ${pele.legenda}`}
+                candidatas={[...LEGENDAS_DE_ESTADO, ...atos.map((item) => item.legenda)]}
+                texto={
+                  finalizado || estatico
+                    ? LEGENDAS_DE_ESTADO[0]
+                    : parado
+                      ? LEGENDAS_DE_ESTADO[1]
+                      : atos[ato]?.legenda ?? ""
+                }
+              />
             </div>
           </div>
 
           {!estatico && (
             <div className="flex items-center gap-2">
-              {!finalizado && (
+              {finalizado ? (
+                // ┌─────────────────────────────────────────────────────┐
+                // │ O LUGAR DO BOTÃO FICA; O BOTÃO É QUE SAI            │
+                // │                                                     │
+                // │ Quando a cena acaba não há nada para pausar. Só que │
+                // │ tirar o botão estreita o bloco de controlos, o      │
+                // │ cabeçalho deixa de precisar de duas linhas e a      │
+                // │ página salta 44 px — medido em `/inicio/recibos`,   │
+                // │ 0,078 de CLS contra um budget de 0,049, a 2,7 s da  │
+                // │ carga. `visibility: hidden` guarda o espaço sem     │
+                // │ deixar nada perceptível, focável ou clicável.       │
+                // └─────────────────────────────────────────────────────┘
+                <span
+                  aria-hidden
+                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold"
+                >
+                  <Pause size={12} />
+                  Pausar
+                </span>
+              ) : (
                 <button
                   type="button"
                   onClick={alternarPausa}
@@ -198,10 +225,20 @@ export default function MolduraPalco({
               <button
                 type="button"
                 onClick={rever}
-                className={`focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold transition-colors ${pele.botao}`}
+                className={`focus-marca relative inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold transition-colors ${pele.botao}`}
               >
                 <RotateCcw size={12} />
-                {finalizado ? "Rever" : "Recomeçar"}
+                {/* «Rever» e «Recomeçar» têm larguras diferentes, e a
+                    diferença chega para o cabeçalho voltar a quebrar. A
+                    palavra mais larga reserva o lugar das duas. */}
+                <span className="grid">
+                  <span aria-hidden className="invisible col-start-1 row-start-1">
+                    Recomeçar
+                  </span>
+                  <span className="col-start-1 row-start-1">
+                    {finalizado ? "Rever" : "Recomeçar"}
+                  </span>
+                </span>
               </button>
             </div>
           )}

@@ -292,19 +292,42 @@ aviso em cada corrida: a ambição não desaparece, deixa é de mentir sobre o q
 Baixar o piso é um trabalho distinto, e o único caminho conhecido é reduzir o
 grafo cliente da raiz (§7.5 do relatório mestre, ainda por decidir).
 
-### As reservas de `content-visibility` são medidas, não adivinhadas
+### O CLS da troca fria estava no cabeçalho do palco
 
-`contain-intrinsic-size: auto <reserva>` só passa a lembrar-se da altura real
-**depois** da primeira renderização de cada secção. Até lá vale a reserva — e
-é por isso que uma reserva errada aparece exatamente onde mais custa: na
-primeira visita a uma rota, ou seja, na troca fria.
+Medido em `mobile-fast4g`: CLS de 0,08 (p50) e 0,18 (p95) na carga de `/` e na
+troca fria para `/inicio/empresa`, contra um budget de 0,049. Nas trocas
+visitada e preparada é zero — e é essa diferença que diz onde procurar: o
+salto acontece **uma vez por rota**, a ~2,5 s, quando a cena rebobina.
+
+O cabeçalho de um palco tem duas coisas que mudam de largura e de altura com o
+ato em curso:
+
+- **a legenda do ato.** A 390 px umas quebram em duas linhas e outras em uma;
+- **os controlos.** Com a cena terminada há um botão («Rever»); a correr há
+  dois («Pausar», «Recomeçar»). O bloco mais largo já não cabe na mesma linha
+  do cabeçalho, que quebra e cresce 44 px de uma vez.
+
+Nenhum dos dois se corrige a cortar texto — a auditoria de acessibilidade
+recusa `truncate` com razão: a 320 px, «Eliminar padrões incompatíveis a…» não
+diz o que o ato faz. O que se fixa é a caixa: a legenda mais longa e o bloco de
+controlos mais largo ficam lá, invisíveis, a reservar o lugar de todos os
+estados (`src/components/palco/legenda.tsx` e o cabeçalho de `MolduraPalco`).
+Vale para qualquer largura e qualquer conjunto de atos, sem número mágico para
+envelhecer quando alguém escrever um ato novo.
+
+Depois: 0,014 em `/`, `/inicio/empresa` e `/inicio/recibos`, 0,012 em
+`/inicio/salario`, 0 em `/inicio/preco` — que nunca teve o defeito porque não
+mostra a legenda do ato no cabeçalho.
+
+### As reservas de `content-visibility` são medidas, não adivinhadas
 
 Havia um valor por tipo de secção, igual em todas as larguras. Numa coluna de
 390 px o mesmo texto ocupa o dobro da altura que ocupa em três colunas de
 1366 px, portanto essas reservas estavam certas para desktop e curtas para
-telemóvel: `compact` reservava 20rem para uma secção que ali mede 49rem.
-Medido: CLS de 0,08 (p50) e 0,18 (p95) na troca fria em `mobile-fast4g`,
-contra um budget de 0,049.
+telemóvel: `compact` reservava 20rem para uma secção que ali mede 49rem — 2,5×
+ao lado. Não é o que causava o CLS acima, mas faz o browser reservar espaço a
+mais ou a menos em cada rolagem e desfaz parte do que o `content-visibility`
+vem poupar.
 
 Alturas reais medidas nas cinco rotas, com `content-visibility` desligado
 (medianas, em px):

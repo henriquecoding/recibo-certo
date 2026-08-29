@@ -42,6 +42,7 @@ import {
 import type { ExemploDescoberta } from "./tipos";
 import { useRelogioDeCena } from "@/components/palco/frame";
 import { useArranque } from "@/components/palco/arranque";
+import LegendaDoAto from "@/components/palco/legenda";
 
 const CONTEXTO = [
   { id: "competencia", beat: "enviaCompetencia", curto: "Organizar e executar" },
@@ -131,6 +132,9 @@ const PAPEL = {
   avisoTitulo: "text-[#97553C]",
   avisoCorpo: "text-[#5F5650]",
 } as const;
+
+/** As duas legendas que não vêm da coreografia. A ordem importa: [fim, pausa]. */
+const LEGENDAS_DE_ESTADO = ["Demonstração concluída", "Demonstração em pausa"] as const;
 
 export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta }) {
   const reduz = useReducedMotion();
@@ -470,20 +474,37 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               {/* Sem `truncate` — a legenda do ato quebra em vez de ser
                   cortada. A 320 px «Eliminar padrões incompatíveis a…»
                   transbordava 50 px, e uma legenda com reticências não
-                  diz o que o ato faz. */}
-              <p className="mt-0.5 text-[10px] leading-snug text-white/45">
-                {finalizado || estatico
-                  ? "Demonstração concluída"
-                  : parado
-                    ? "Demonstração em pausa"
-                    : ATOS_DESCOBRIR[ato]?.legenda}
-              </p>
+                  diz o que o ato faz. A caixa reserva o pior caso para
+                  não mudar de altura a cada ato — ver `legenda.tsx`. */}
+              <LegendaDoAto
+                className="mt-0.5 text-[10px] leading-snug text-white/45"
+                candidatas={[...LEGENDAS_DE_ESTADO, ...ATOS_DESCOBRIR.map((item) => item.legenda)]}
+                texto={
+                  finalizado || estatico
+                    ? LEGENDAS_DE_ESTADO[0]
+                    : parado
+                      ? LEGENDAS_DE_ESTADO[1]
+                      : ATOS_DESCOBRIR[ato]?.legenda ?? ""
+                }
+              />
             </div>
           </div>
 
           {!estatico && (
             <div className="flex items-center gap-2">
-              {!finalizado && (
+              {finalizado ? (
+                // O lugar do botão fica; o botão é que sai. Tirá-lo
+                // estreitava o bloco, o cabeçalho deixava de precisar de
+                // duas linhas e a página saltava — ver `MolduraPalco`,
+                // onde o mesmo defeito está medido.
+                <span
+                  aria-hidden
+                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold"
+                >
+                  <Pause size={12} />
+                  Pausar
+                </span>
+              ) : (
                 <button
                   type="button"
                   onClick={() => setParado((valor) => !valor)}
@@ -497,10 +518,17 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               <button
                 type="button"
                 onClick={rever}
-                className="focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 text-[10px] font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
+                className="focus-marca relative inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 text-[10px] font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
               >
                 <RotateCcw size={12} />
-                {finalizado ? "Rever" : "Recomeçar"}
+                <span className="grid">
+                  <span aria-hidden className="invisible col-start-1 row-start-1">
+                    Recomeçar
+                  </span>
+                  <span className="col-start-1 row-start-1">
+                    {finalizado ? "Rever" : "Recomeçar"}
+                  </span>
+                </span>
               </button>
             </div>
           )}

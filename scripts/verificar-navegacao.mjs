@@ -479,11 +479,15 @@ for (const vp of VIEWPORTS) {
   await page.evaluate(() => document.querySelector("#pilares")?.scrollIntoView({ block: "center" }));
   await page.waitForTimeout(700);
   const fila = await page.evaluate(() => {
-    const sec = document.querySelector("#pilares");
-    if (!sec) return null;
-    return [...sec.querySelectorAll("a[href^='/ferramentas/'], a[href^='/inicio/']")].map((a) =>
-      a.getAttribute("href"),
-    );
+    // A lista, e não a secção: a secção também tem o «Ver tudo». E as
+    // ligações da lista contam-se TODAS, sem lista de prefixos — foi um
+    // prefixo que partiu isto. Quando o pilar de Descobrir passou a abrir
+    // `/`, deixou de casar com `/ferramentas/` e com `/inicio/`, e o gate
+    // dizia «fila com 4 pilares» sobre cinco ligações servidas, todas
+    // presentes no HTML. Um destino novo não pode partir a contagem.
+    const lista = document.querySelector("#pilares ul");
+    if (!lista) return null;
+    return [...lista.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
   });
   if (!fila) mal(`${vp.nome}px: fila de pilares ausente na homepage`);
   else if (fila.length !== 5) mal(`${vp.nome}px: fila com ${fila.length} pilares`);

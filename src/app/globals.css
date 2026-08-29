@@ -1649,11 +1649,13 @@ html.dark .dark\:placeholder-stone-50::placeholder {
  * A primeira versão tinha um valor por tipo, igual em todas as larguras.
  * Numa coluna de 390 px o mesmo texto ocupa o dobro da altura que ocupa em
  * três colunas de 1366 px, portanto essas reservas estavam certas para
- * desktop e curtas para telemóvel — `compact` reservava 20rem para uma
- * secção que ali mede 49rem. Como `auto` só passa a lembrar-se DEPOIS da
- * primeira renderização, era exatamente na primeira visita a uma rota que
- * o erro aparecia: CLS de 0,08 (p50) e 0,18 (p95) na troca fria em
- * `mobile-fast4g`, contra um budget de 0,049.
+ * desktop e curtas para telemóvel: `compact` reservava 20rem para uma
+ * secção que ali mede 49rem — 2,5× ao lado.
+ *
+ * Uma reserva errada não muda o CLS medido (o defeito que se procurava
+ * estava no cabeçalho do palco, ver `palco/legenda.tsx`), mas faz o
+ * browser reservar espaço a mais ou a menos em cada rolagem e desfaz
+ * parte do que o `content-visibility` vem poupar.
  *
  * Os números abaixo são medianas medidas nas cinco rotas com
  * `content-visibility` desligado, a 390, 768 e 1024 px. Se o editorial

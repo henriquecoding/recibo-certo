@@ -42,7 +42,7 @@ o herói visível. Duas experiências fecham a questão, e estão abaixo.
 | §3.3 — causa não vista: preparação falsa | **Corrigida**, e coberta por um gate que falha se voltar |
 | §3.4 — atribuir a maior long task | **Feito.** `npm run homepage:atribuicao` |
 | §3.4 — partir a ilha dominante | **Não aplicável, por medição.** Não há ilha; ver §4 |
-| §3.3 — CLS da troca fria | **Corrigido.** As reservas de `content-visibility` eram um valor único, certo para desktop e curto para telemóvel |
+| §3.3 — CLS da troca fria | **Corrigido.** 0,081 → 0,014 em `/`. A legenda do ato e os controlos mudavam a altura do cabeçalho do palco |
 | §3.3.4 — rever budgets | **Feito**, com o piso medido em cima da mesa |
 
 ---
@@ -277,18 +277,48 @@ gastava 14% do budget em bytes que ninguém descarrega. O budget passa a medir
 o que um browser moderno recebe (684,6 KB em `/`), e o pacote legado é
 impresso à parte em cada linha.
 
-### CLS da troca fria: as reservas estavam certas para desktop
+### CLS da troca fria: estava no cabeçalho do palco
 
-`contain-intrinsic-size: auto <reserva>` só se lembra da altura real **depois**
-da primeira renderização de cada secção. Até lá vale a reserva — e é por isso
-que uma reserva errada aparece exatamente onde mais custa: na primeira visita
-a uma rota, ou seja, na troca fria. Medido: CLS de 0,08 (p50) e 0,18 (p95) em
-`mobile-fast4g`, contra um budget de 0,049. Nas trocas visitada e preparada é
-zero, porque aí a altura já é a lembrada.
+Medido: CLS de 0,08 (p50) e 0,18 (p95) na troca fria em `mobile-fast4g`,
+contra um budget de 0,049. Nas trocas visitada e preparada é zero — e é essa
+diferença que diz onde procurar: o salto acontece **uma vez por rota**, a
+~2,5 s, quando a cena rebobina.
 
-Havia um valor por tipo de secção, igual em todas as larguras. Numa coluna de
-390 px o mesmo texto ocupa o dobro da altura que ocupa em três colunas de
-1366 px:
+A primeira hipótese era a reserva de `content-visibility` das secções abaixo
+da dobra. Estava errada, e vale a pena registá-lo: a reserva **está** mal
+calibrada (ver abaixo), corrigi-la é uma melhoria — e o CLS não se mexeu um
+milésimo. A atribuição por `layout-shift` foi o que resolveu a pergunta, e
+apontou para dentro de `section[data-palco]`.
+
+O cabeçalho de um palco tem duas coisas que mudam com o ato em curso:
+
+- **a legenda do ato.** A 390 px umas quebram em duas linhas e outras em uma:
+  o cabeçalho passava de 46 px para 32 px;
+- **os controlos.** Com a cena terminada há um botão («Rever»); a correr há
+  dois («Pausar», «Recomeçar»). O bloco mais largo já não cabe na mesma linha
+  e o cabeçalho passava de 69 px para 113 px — 44 px de uma vez.
+
+Nenhum dos dois se corrige a cortar texto: a auditoria de acessibilidade
+recusa `truncate` com razão. O que se fixa é a caixa — a legenda mais longa e
+o bloco de controlos mais largo ficam lá, invisíveis, a reservar o lugar de
+todos os estados. Vale para qualquer largura e qualquer conjunto de atos, sem
+número mágico para envelhecer quando alguém escrever um ato novo.
+
+| rota | antes | depois |
+|---|---:|---:|
+| `/` | 0,081 | **0,014** |
+| `/inicio/empresa` | 0,079 | **0,014** |
+| `/inicio/recibos` | 0,079 | **0,014** |
+| `/inicio/salario` | 0,066 | **0,012** |
+| `/inicio/preco` | 0,000 | 0,000 |
+
+`/inicio/preco` nunca teve o defeito porque não mostra a legenda do ato no
+cabeçalho — o que também explica por que uma inspeção só a essa rota não o
+teria encontrado.
+
+### E as reservas de `content-visibility`, já agora
+
+Havia um valor por tipo de secção, igual em todas as larguras:
 
 | tipo | reserva antiga | real @390 | real @768 | real @1024 | real @1366 |
 |---|---:|---:|---:|---:|---:|
@@ -297,9 +327,11 @@ Havia um valor por tipo de secção, igual em todas as larguras. Numa coluna de
 | `--large` | 1 088 px | 1 462 | 1 137 | 884 | 810 |
 | `--xlarge` | 1 792 px | 2 669 | 2 036 | 1 354 | 1 342 |
 
-`compact` reservava 20rem para uma secção que num telemóvel mede 49rem. As
-reservas passam a seguir estas medianas em três degraus (base, ≥640 px,
-≥1024 px), e voltam a medir-se com
+`compact` reservava 20rem para uma secção que num telemóvel mede 49rem. Não
+era isto que causava o CLS, mas é o browser a reservar espaço a mais ou a
+menos em cada rolagem, e desfaz parte do que o `content-visibility` vem
+poupar. As reservas passam a seguir estas medianas em três degraus (base,
+≥640 px, ≥1024 px) e voltam a medir-se com
 `RC_EXPERIENCIA=sem-content-visibility npm run homepage:atribuicao` sempre que
 o editorial mudar de forma.
 

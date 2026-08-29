@@ -241,6 +241,30 @@ describe("homepage: animação, dados de campo e budgets", () => {
     }
   });
 
+  it("não deixa o cabeçalho do palco mudar de tamanho a cada ato", () => {
+    const legenda = ler("components", "palco", "legenda.tsx");
+    // A legenda do ato quebra em duas linhas ou em uma conforme o texto, e
+    // os controlos passam de um botão («Rever») para dois. As duas coisas
+    // mudavam a altura do cabeçalho e faziam a página saltar 44 px a ~2,5 s
+    // da carga: 0,08 de CLS contra um budget de 0,049. Reserva-se o pior
+    // caso em vez de o adivinhar com um número.
+    expect(legenda).toContain('aria-hidden className="invisible block"');
+    expect(legenda).toContain("candidata.length > maior.length");
+
+    for (const [pasta, ficheiro] of [
+      ["palco", "MolduraPalco.tsx"],
+      ["descobrir", "PalcoDescobrir.tsx"],
+    ] as const) {
+      const fonte = ler("components", pasta, ficheiro);
+      expect(fonte).toContain("LegendaDoAto");
+      expect(fonte).toContain("LEGENDAS_DE_ESTADO");
+      // O lugar do botão de pausa fica quando a cena acaba; o botão é que sai.
+      expect(fonte).toContain('className="invisible inline-flex min-h-[36px]');
+      // «Rever» e «Recomeçar» ocupam o mesmo lugar.
+      expect(fonte).toContain('<span aria-hidden className="invisible col-start-1 row-start-1">');
+    }
+  });
+
   it("não dá por preparada uma rota que a navegação anterior pode ter arrefecido", () => {
     const controlador = ler("components", "foco", "ControladorPrefetchFocos.tsx");
     // O agendador do Next descarta prefetches de ligações que saem do
