@@ -194,7 +194,27 @@ jobs:
       # aconteceu na primeira corrida em que ele chegou a ser executado: as 20
       # referências foram capturadas e a comparação não chegou a existir.
       - name: ImageMagick para a comparação por píxel
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends imagemagick
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends imagemagick
+          # A política que a distribuição instala limita o cache de píxeis a
+          # 256 MiB. Estas capturas de página inteira chegam a 390×17 500, e
+          # com esse limite o `compare` passa a trabalhar em disco: minutos
+          # por imagem em vez de segundos. Os limites sobem para o que a
+          # máquina tem — e o passo tem `timeout-minutes` para nunca mais
+          # poder ficar uma hora sem dizer nada.
+          POLITICA=$(ls /etc/ImageMagick-*/policy.xml 2>/dev/null | head -1)
+          if [ -n "$POLITICA" ]; then
+            sudo sed -i \
+              -e 's/name="memory" value="[^"]*"/name="memory" value="4GiB"/' \
+              -e 's/name="map" value="[^"]*"/name="map" value="8GiB"/' \
+              -e 's/name="area" value="[^"]*"/name="area" value="4GP"/' \
+              -e 's/name="disk" value="[^"]*"/name="disk" value="16GiB"/' \
+              -e 's/name="height" value="[^"]*"/name="height" value="64KP"/' \
+              -e 's/name="width" value="[^"]*"/name="width" value="64KP"/' \
+              "$POLITICA"
+          fi
+          identify -list resource
 
       # As 20 referências são REGENERADAS a cada corrida, a partir de um commit
       # fixo — não são versionadas. Vinte capturas de página inteira pesam
@@ -208,6 +228,7 @@ jobs:
       # — que é o que acontece a um baseline quando o desenho muda de
       # propósito. Quando voltar a mudar, é este SHA que se atualiza.
       - name: Homepage — referência visual do commit fixado
+        timeout-minutes: 25
         run: |
           git fetch --depth=1 origin 8d81e553e03391c50474c7f8af6dbcea7138daa9
           git worktree add --detach /tmp/recibo-homepage-baseline 8d81e553e03391c50474c7f8af6dbcea7138daa9

@@ -235,28 +235,45 @@ async function comparar(nome, atual) {
     };
   }
 
-  let diferentes = 0;
-  try {
-    const resultado = await executar("compare", [
-      "-metric",
-      "AE",
-      "-fuzz",
-      "1%",
-      baseline,
-      atual,
-      diff,
-    ]);
-    diferentes = Number(resultado.stderr.trim() || "0");
-  } catch (erro) {
-    // ImageMagick usa exit 1 para "há diferenças" e escreve a métrica em
-    // stderr. Exit >1 ou uma métrica ilegível continuam a ser erro real.
-    const codigo = erro?.code;
-    const metrica = Number(String(erro?.stderr ?? "").trim());
-    if (codigo !== 1 || !Number.isFinite(metrica)) throw erro;
-    diferentes = metrica;
-  }
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A IMAGEM DE DIFERENÇAS SÓ SE ESCREVE QUANDO HÁ DIFERENÇAS          │
+  // │                                                                   │
+  // │ Contar píxeis é barato; escrever o PNG do diff não é — estas       │
+  // │ capturas de página inteira vão até 390×17 500, e codificar 20      │
+  // │ delas custa mais do que todas as comparações juntas. No runner do  │
+  // │ CI, onde o cache de píxeis do ImageMagick é limitado e vai a       │
+  // │ disco, o passo passou de minutos a mais de uma hora sem terminar.  │
+  // │                                                                   │
+  // │ Duas passagens: a primeira conta contra `null:` e não escreve      │
+  // │ nada; a segunda só acontece quando a primeira reprova, e é essa    │
+  // │ que deixa o diff no artefacto — que é quando ele serve para        │
+  // │ alguma coisa.                                                     │
+  // └───────────────────────────────────────────────────────────────────┘
+  const contar = async (destino) => {
+    try {
+      const resultado = await executar("compare", [
+        "-metric",
+        "AE",
+        "-fuzz",
+        "1%",
+        baseline,
+        atual,
+        destino,
+      ]);
+      return Number(resultado.stderr.trim() || "0");
+    } catch (erro) {
+      // ImageMagick usa exit 1 para "há diferenças" e escreve a métrica em
+      // stderr. Exit >1 ou uma métrica ilegível continuam a ser erro real.
+      const codigo = erro?.code;
+      const metrica = Number(String(erro?.stderr ?? "").trim());
+      if (codigo !== 1 || !Number.isFinite(metrica)) throw erro;
+      return metrica;
+    }
+  };
+  const diferentes = await contar("null:");
   const total = dEsperada.largura * dEsperada.altura;
   const proporcao = diferentes / total;
+  if (proporcao > LIMIAR) await contar(diff);
   return {
     nome,
     passou: proporcao <= LIMIAR,
