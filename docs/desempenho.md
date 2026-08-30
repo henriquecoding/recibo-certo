@@ -259,6 +259,29 @@ primeiros dois segundos depois de uma troca em mobile, e partilham a causa
 com o `ready`. Não é um problema de coreografia e não se resolve na
 coreografia.
 
+### A CPU a 4× é a mesma causa do táctil, num ecrã largo
+
+`desktop-cpu4` entrou na matriz com o budget base — o de uma máquina sem
+travão — e nunca chegou a ser verificado: as corridas morriam antes, no gate
+da preparação, e os budgets só se avaliam no fim. Quando a matriz correu
+inteira pela primeira vez no runner do CI, o que apareceu foi o custo de
+construir a árvore do destino com a CPU travada, sem rede pelo meio
+(`bytesDoDestino` é zero em todas estas trocas) — exatamente a causa que o
+budget táctil já nomeia.
+
+Primeira série, 10 repetições no runner:
+
+| modo | entrada | ready p75/p95 | budget |
+|---|---|---:|---:|
+| visitado | ponteiro | 215/225 ms | 420/480 ms |
+| preparado | ponteiro | 304/322 ms | 420/480 ms |
+| preparado | teclado | 355/371 ms | 460/520 ms |
+
+`ack` p95 (até 34 ms) e FPS p50 (59–60) ficam dentro do budget base e não
+foram relaxados. A meta absoluta de 100/200 ms continua impressa como aviso
+em cada corrida — e é ela, não o budget, que diz onde a aplicação ainda tem
+de chegar.
+
 ### Long task e TBT medem-se contra o piso, não contra um absoluto
 
 O relatório mestre fixou «maior long task p75 ≤100 ms em mobile e ≤75 ms em

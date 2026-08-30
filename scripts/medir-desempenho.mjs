@@ -1218,13 +1218,37 @@ const ORCAMENTO_TROCA = Object.freeze({
     fps: 40,
     fpsFrio: 50,
   },
+  // · A CPU A 4× É A MESMA CAUSA, NUM ECRÃ LARGO. `desktop-cpu4` ficou
+  //   com o budget base — o de uma máquina sem travão — desde que entrou
+  //   na matriz, e nunca chegou a ser verificado: as corridas morriam
+  //   antes, no gate da preparação, e os budgets só se avaliam no fim.
+  //   Quando a matriz correu inteira pela primeira vez, o que apareceu
+  //   foi o custo de construir a árvore do destino com a CPU travada —
+  //   exatamente o que o `tatil` já nomeia, sem a rede pelo meio
+  //   (`bytesDoDestino` é zero em todas estas trocas).
+  //
+  //   Medido no runner do CI, 10 repetições: `ready` p75/p95 de
+  //   215/225 ms na troca visitada, 304/322 na preparada por ponteiro e
+  //   355/371 por teclado. `ack` p95 até 34 ms e FPS p50 59–60 ficam
+  //   dentro do budget base e não são relaxados. É a PRIMEIRA série neste
+  //   cenário; se a dispersão entre corridas mostrar mais, sobe-se com a
+  //   medição ao lado, como se fez para o táctil. A meta absoluta
+  //   continua impressa como aviso em cada corrida.
+  cpu4: { readyP75: 420, readyP95: 480 },
+  cpu4Teclado: { readyP75: 460, readyP95: 520 },
 });
 const META_TROCA = Object.freeze({ ack: 50, readyP75: 100, readyP95: 200, fps: 55 });
 
 function orcamentoDaTroca(grupo) {
+  const teclado = grupo.entrada === "teclado";
   return {
     ...ORCAMENTO_TROCA.base,
-    ...(grupo.entrada === "teclado" ? ORCAMENTO_TROCA.teclado : {}),
+    ...(teclado ? ORCAMENTO_TROCA.teclado : {}),
+    ...(grupo.cenario === "desktop-cpu4"
+      ? teclado
+        ? ORCAMENTO_TROCA.cpu4Teclado
+        : ORCAMENTO_TROCA.cpu4
+      : {}),
     ...(/^mobile-/.test(grupo.cenario) ? ORCAMENTO_TROCA.tatil : {}),
   };
 }
