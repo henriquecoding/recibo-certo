@@ -538,9 +538,10 @@ describe("homepage: animação, dados de campo e budgets", () => {
     // «Preparado» promete que o DESTINO não custa rede — não que o browser
     // fique calado. Somar tudo num número fazia o gate falhar por causa da
     // especulação legítima da página de destino e do ícone, e convidava a
-    // desligá-la para passar. O destino é uma exigência de zero; o resto é
-    // um budget explícito, e uma chamada à nossa API durante a troca falha.
-    expect(benchmark).toContain('modo === "preparado" && metricas.bytesDoDestino > 0');
+    // desligá-la para passar. O RSC continua a ser uma exigência de zero;
+    // só um microchunk específico do Firefox tem margem explícita.
+    expect(benchmark).toContain("metricas.rscDoDestino > 0");
+    expect(benchmark).toContain("metricas.jsDoDestino > 12_000");
     expect(benchmark).toContain("metricas.apiNaTroca.length > 0");
     expect(benchmark).toContain("bytesAlheios");
     expect(benchmark).toContain("validarMovimentoReduzido");
