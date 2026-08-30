@@ -60,6 +60,7 @@
     "mercado:ingerir": "node --max-old-space-size=2048 scripts/ingerir-mercado.mjs",
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
+    "movel:e2e": "node scripts/verificar-movel.mjs",
     "navegacao:e2e": "node scripts/verificar-navegacao.mjs",
     "palcos:e2e": "node scripts/verificar-palcos.mjs",
     "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
