@@ -22,7 +22,7 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ OS PILARES DEIXAM DE SER UM INTERRUPTOR E PASSAM A SER DESTINOS      │
+//  │ O CANÓNICO E A EXPERIÊNCIA DA HOMEPAGE SÃO DUAS PORTAS DIFERENTES    │
 //  │                                                                     │
 //  │ Os quatro pilares da homepage — recibos verdes, por conta de outrem, │
 //  │ empresa, comparar — nunca foram navegação. Eram um valor em          │
@@ -31,12 +31,13 @@
 //  │ barra, não estavam no menu, e não havia URL que abrisse um deles     │
 //  │ sem passar pelo topo da homepage.                                    │
 //  │                                                                     │
-//  │ Cada pilar é agora um destino real, com a rota canónica que a        │
-//  │ ferramenta já tinha em `/ferramentas/<slug>` — indexável,            │
-//  │ partilhável e alcançável sem JavaScript. O interruptor continua a    │
-//  │ existir onde é legítimo: dentro da secção `#calculadora`, a          │
-//  │ escolher o que AQUELE simulador calcula. São duas perguntas          │
-//  │ diferentes e deixam de partilhar um controlo.                        │
+//  │ Cada pilar continua a ter uma rota canónica da ferramenta, indexável │
+//  │ e alcançável sem JavaScript. Quando a homepage já sabe contar essa   │
+//  │ etapa por inteiro, as superfícies de descoberta podem abrir também   │
+//  │ uma experiência editorial numa rota `/inicio/…`; o CTA dessa leitura │
+//  │ que entra no motor completo. O rodapé, o menu e a pesquisa continuam │
+//  │ a apontar para o canónico. Duas portas explícitas, nunca um URL que   │
+//  │ muda de significado por baixo da pessoa.                             │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
@@ -69,17 +70,21 @@
 //     Coberto por `busca-fronteira.test.ts`.
 //   · O ícone é uma CHAVE (`components/ferramentas/icon-map.tsx` resolve-a),
 //     pela mesma razão que o catálogo das ferramentas o faz.
-//   · Todo o pilar aponta para o destino CANÓNICO da ferramenta. Nunca
-//     para `/?modo=…`, que era mandar a pessoa para o topo da homepage.
+//   · `href` é sempre o destino CANÓNICO da ferramenta. `homepageHref` é
+//     opcional e só existe quando a homepage já implementa esse modo de
+//     ponta a ponta. Nunca se confunde com queries que escolhem estado.
 // ═══════════════════════════════════════════════════════════════════════
 
 import { TOTAL_FERRAMENTAS } from "@/lib/ferramentas";
+import { ROTA_POR_FOCO, type FocoHomepage, type RotaFocoHomepage } from "@/lib/foco-homepage";
 
 /** Um destino da navegação principal. */
 export interface Pilar {
-  id: string;
+  id: FocoHomepage;
   /** Rota canónica. É sempre a da ferramenta, nunca uma query da homepage. */
   href: string;
+  /** Experiência editorial da homepage, quando já está implementada. */
+  homepageHref?: RotaFocoHomepage;
   /** O nome completo. É SEMPRE o nome acessível, em qualquer largura. */
   label: string;
   /**
@@ -99,13 +104,17 @@ export interface Pilar {
 }
 
 /**
- * OS CINCO PILARES, pela ordem do ciclo de vida e não por identidade.
+ * OS CINCO PILARES, pela ordem da decisão e não por identidade.
  *
  * A pergunta que a ordem responde deixou de ser «quem és?» (independente,
  * dependente, empresa) e passou a ser «em que ponto estás?»:
  *
  *     que negócio abrir → quanto cobrar → quanto fica de cada recibo →
- *     quanto fica do salário → e se fosse uma empresa
+ *     e se fosse uma empresa → conferir um salário
+ *
+ * Os quatro primeiros são um arco contínuo de atividade independente.
+ * «Salário» é uma tarefa paralela e fecha a fila sem separar «Recibos» de
+ * «Empresa», que são precisamente os dois lados da mesma decisão.
  *
  * Os dois primeiros lugares são exactamente os dois motores que antes só
  * existiam dentro de `/ferramentas`. A ordem é contrato: quem aprendeu
@@ -116,6 +125,7 @@ export const PILARES: Pilar[] = [
   {
     id: "descobrir",
     href: "/ferramentas/descobrir-negocio",
+    homepageHref: ROTA_POR_FOCO.descobrir,
     label: "Descobrir",
     curto: "Descobrir",
     resultado: "Que negócio testar, a partir do que sabes fazer e de sinais oficiais.",
@@ -126,6 +136,7 @@ export const PILARES: Pilar[] = [
   {
     id: "preco",
     href: "/ferramentas/calcular-preco",
+    homepageHref: ROTA_POR_FOCO.preco,
     label: "Preço",
     curto: "Preço",
     resultado: "Quanto cobrar para cobrir custos, comissões e impostos.",
@@ -136,6 +147,7 @@ export const PILARES: Pilar[] = [
   {
     id: "recibos",
     href: "/ferramentas/recibos-verdes",
+    homepageHref: ROTA_POR_FOCO.recibos,
     label: "Recibos verdes",
     curto: "Recibos",
     resultado: "Quanto de cada recibo fica mesmo para ti, depois de tudo.",
@@ -144,18 +156,9 @@ export const PILARES: Pilar[] = [
     toolId: "recibos-verdes",
   },
   {
-    id: "salario",
-    href: "/ferramentas/recibo-vencimento",
-    label: "Salário",
-    curto: "Salário",
-    resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",
-    icone: "Briefcase",
-    prefixos: ["/ferramentas/recibo-vencimento"],
-    toolId: "recibo-vencimento",
-  },
-  {
     id: "empresa",
     href: "/ferramentas/simulador-empresa",
+    homepageHref: ROTA_POR_FOCO.empresa,
     label: "Empresa",
     curto: "Empresa",
     resultado: "IRC, salário de gerência e dividendos — o que sobra ao fim do ano.",
@@ -163,7 +166,27 @@ export const PILARES: Pilar[] = [
     prefixos: ["/ferramentas/simulador-empresa"],
     toolId: "simulador-empresa",
   },
+  {
+    id: "salario",
+    href: "/ferramentas/recibo-vencimento",
+    homepageHref: ROTA_POR_FOCO.salario,
+    label: "Salário",
+    curto: "Salário",
+    resultado: "O líquido de quem trabalha por conta de outrem, linha a linha.",
+    icone: "Briefcase",
+    prefixos: ["/ferramentas/recibo-vencimento"],
+    toolId: "recibo-vencimento",
+  },
 ];
+
+/**
+ * Nas superfícies que apresentam o percurso, abre primeiro a homepage
+ * adaptada quando ela existe. Tudo o que é índice, pesquisa ou SEO continua
+ * a ler `pilar.href`, o canónico da ferramenta.
+ */
+export function hrefDaSuperficiePilar(pilar: Pilar): string {
+  return pilar.homepageHref ?? pilar.href;
+}
 
 /** Uma entrada do menu completo. */
 export interface EntradaMenu {

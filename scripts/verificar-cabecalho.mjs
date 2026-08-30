@@ -91,7 +91,7 @@ async function sessao(viewport = { width: 1440, height: 900 }, tema) {
     ({ t, versao }) => {
       localStorage.setItem(
         "recibocerto:cookie-consent",
-        JSON.stringify({ versao: 1, estatistica: false, marketing: false, em: new Date().toISOString() }),
+        JSON.stringify({ versao: 2, estatistica: false, marketing: false, em: new Date().toISOString() }),
       );
       localStorage.setItem("recibocerto:changelog_visto", versao);
       if (t) localStorage.setItem("recibocerto:theme", t);

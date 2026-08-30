@@ -48,7 +48,7 @@ export default function PrivacidadePage() {
     <LegalPage
       title="Política de Privacidade"
       subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Plus, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
-      lastUpdated="Junho de 2026"
+      lastUpdated="Agosto de 2026"
       toc={TOC}
     >
       {/* 0 — Resumo */}
@@ -295,6 +295,7 @@ export default function PrivacidadePage() {
           items={[
             "Cookies estritamente necessários: sessão e autenticação (plano Plus), preferências essenciais e segurança. Não exigem consentimento.",
             "localStorage: preferências e dados do plano gratuito guardados no teu dispositivo.",
+            "Estatística opcional: eventos pseudónimos e Web Vitals das cinco páginas iniciais, só após opt-in e sem valores fiscais, query ou hash.",
             "Não utilizamos Google Analytics, Meta Pixel, heatmaps nem publicidade comportamental.",
           ]}
         />
@@ -317,7 +318,7 @@ export default function PrivacidadePage() {
           colunas={["Fornecedor", "Finalidade", "Localização", "Garantias"]}
           linhas={[
             ["Supabase", "Base de dados, autenticação e armazenamento. Plano Plus, e também a plataforma de contabilistas — que é gratuita.", "União Europeia", "Acordo de tratamento + cláusulas contratuais-tipo"],
-            ["Vercel Inc.", "Alojamento do site e funções serverless", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
+            ["Vercel Inc.", "Alojamento, funções serverless e Web Vitals consentidos", "União Europeia (Frankfurt)", "Acordo de tratamento de dados"],
             ["Stripe", "Processamento de pagamentos da subscrição", "UE / EUA", "PCI-DSS nível 1 + cláusulas contratuais-tipo"],
             ["Resend", "Envio de emails transacionais e alertas", "EUA", "Acordo de tratamento + cláusulas contratuais-tipo"],
             ["FIZ", "Execução fiscal — só com consentimento explícito ou conta ligada (ver secção própria). Ainda não ativo.", "União Europeia (Portugal)", "Acordo de partilha de dados + acordo de tratamento"],

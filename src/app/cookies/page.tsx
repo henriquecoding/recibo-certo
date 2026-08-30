@@ -6,13 +6,13 @@ import LegalPage, {
 export const metadata: Metadata = {
   title: "Política de Cookies — ReciboCerto",
   description:
-    "Como o ReciboCerto utiliza cookies e armazenamento local. Plataforma sem tracking, sem publicidade comportamental, dados fiscais apenas no teu dispositivo.",
+    "Como o ReciboCerto utiliza cookies, armazenamento local e medição de desempenho consentida, sem publicidade comportamental.",
   alternates: { canonical: "/cookies" },
   robots: { index: true, follow: true },
   openGraph: {
     title: "Política de Cookies — ReciboCerto",
     description:
-      "ReciboCerto não usa cookies de tracking. Apenas armazenamento local (localStorage) no teu dispositivo para guardar os teus dados fiscais.",
+      "ReciboCerto não usa publicidade comportamental; a medição de desempenho só é carregada depois do teu consentimento.",
     url: "https://www.recibocerto.pt/cookies",
     type: "website",
   },
@@ -33,8 +33,8 @@ export default function CookiesPage() {
   return (
     <LegalPage
       title="Política de Cookies"
-      subtitle="O ReciboCerto foi desenhado para respeitar a tua privacidade. Não usamos cookies de tracking, não exibimos publicidade e os teus dados fiscais ficam no teu dispositivo."
-      lastUpdated="Janeiro de 2026"
+      subtitle="O ReciboCerto foi desenhado para respeitar a tua privacidade. A medição opcional só arranca com consentimento, não exibimos publicidade e não enviamos os teus valores fiscais para analytics."
+      lastUpdated="Agosto de 2026"
       toc={TOC}
     >
       {/* 1 */}
@@ -81,8 +81,9 @@ export default function CookiesPage() {
         <p>
           O ReciboCerto adota uma abordagem de privacidade em primeiro lugar (
           <em>privacy-first</em>). Ao contrário da maioria dos websites, a nossa plataforma
-          foi concebida para funcionar <strong className="text-stone-700 dark:text-stone-200">
-          sem cookies de tracking ou analytics</strong>.
+          funciona sem medição não essencial por defeito. Só carregamos a medição de utilização
+          e desempenho depois de um <strong className="text-stone-700 dark:text-stone-200">
+          consentimento explícito para estatística</strong>.
         </p>
 
         <Sub title="Resumo da nossa política de cookies">
@@ -102,7 +103,12 @@ export default function CookiesPage() {
               [
                 "Google Analytics",
                 "Não",
-                "Não utilizamos qualquer serviço de analytics",
+                "Não utilizamos produtos da Google para analytics",
+              ],
+              [
+                "Medição de utilização e desempenho",
+                "Sim (só com opt-in)",
+                "Métricas próprias e Vercel Speed Insights, sem valores fiscais, query ou hash",
               ],
               [
                 "Meta / Facebook Pixel",
@@ -182,7 +188,9 @@ export default function CookiesPage() {
       {/* 4 */}
       <Section id="cookies-terceiros" title="Cookies de terceiros">
         <p>
-          O ReciboCerto não integra serviços de terceiros que instalem cookies no teu browser.
+          O ReciboCerto não integra serviços de terceiros que instalem cookies de analytics no teu browser.
+          O Vercel Speed Insights mede Web Vitals apenas depois do consentimento de estatística e
+          não recebe os valores introduzidos nos simuladores, nem a query ou o fragmento do URL.
           Especificamente, <strong className="text-stone-700 dark:text-stone-200">não utilizamos</strong>:
         </p>
         <Lista

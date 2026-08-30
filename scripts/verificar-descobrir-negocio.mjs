@@ -61,7 +61,7 @@ const semear = () => {
         estatistica: false,
         marketing: false,
         data: new Date().toISOString(),
-        versao: 1,
+        versao: 2,
       }),
     );
   } catch {
@@ -201,7 +201,14 @@ async function semViolacoesAxe(pagina, onde) {
 
 /** O cartão do piloto turístico, aberto e pronto a ler. */
 async function abrirCartaoTurismo(pagina) {
-  const cartao = pagina.locator("article").filter({ hasText: "alojamento turístico" }).first();
+  const encontrado = pagina.locator("article").filter({ hasText: "alojamento turístico" }).first();
+  const candidatoId = await encontrado.getAttribute("data-candidato-id");
+  if (!candidatoId) throw new Error("O cartão turístico ficou sem identidade estável.");
+  // A prova pode reordenar a lista. Um locator só por texto voltava a
+  // resolver `.first()` depois do registo e, no mobile, podia ler outro
+  // candidato com a mesma expressão. A identidade pertence ao candidato e
+  // sobrevive à reordenação.
+  const cartao = pagina.locator(`article[data-candidato-id="${candidatoId}"]`);
   await cartao.scrollIntoViewIfNeeded();
   if ((await cartao.getByRole("button", { expanded: true }).count()) === 0) {
     await cartao.locator("button").first().click();
@@ -250,7 +257,9 @@ try {
       //  └────────────────────────────────────────────────────────────┘
       await pagina.goto(`${BASE}/ferramentas/descobrir-negocio`, { waitUntil: "domcontentloaded" });
       await fecharOverlays(pagina);
-      await pagina.locator("#contexto-descoberta").waitFor({ timeout: 20000 });
+      // Durante a reconciliação responsiva pode existir por instantes uma
+      // cópia oculta. O contrato de usabilidade é o configurador visível.
+      await pagina.locator("#contexto-descoberta:visible").waitFor({ timeout: 20000 });
 
       await semErroDeRuntime(pagina, "descoberta: fase A");
       await semOverflow(pagina, "descoberta: fase A");
@@ -566,7 +575,9 @@ try {
       await cartao.getByRole("button", { name: "Piloto pago", exact: true }).click();
       await cartao.locator('input[type="date"]').fill("2026-08-01");
       await cartao.getByRole("button", { name: /Registar/ }).click();
-      await pagina.waitForTimeout(500);
+      await cartao
+        .getByText(/Isto deixou de ser uma hipótese: alguém pagou/)
+        .waitFor({ timeout: 5000 });
       texto = await cartao.innerText();
       verificar(
         "um piloto pago é registado como prova de mercado",

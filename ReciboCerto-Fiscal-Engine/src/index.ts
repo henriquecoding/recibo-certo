@@ -13,6 +13,13 @@ export * from "./domains/payroll/audit";
 export * from "./domains/payroll/social-benefits";
 export * from "./domains/payroll/rule";
 export * from "./domains/payroll/policy-2026";
+export * from "./domains/employment-offer/types";
+export * from "./domains/employment-offer/engine";
+export * from "./domains/employment-offer/inverse";
+export * from "./domains/employment-offer/range";
+export * from "./domains/employment-offer/calendar";
+export * from "./domains/employment-offer/explanation";
+export * from "./domains/employment-offer/policy-2026";
 export * from "./legal/catalogue";
 export * from "./legal/semantic-check";
 

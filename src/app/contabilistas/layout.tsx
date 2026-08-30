@@ -10,12 +10,13 @@
 import type { ReactNode } from "react";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 
 export default function ContabilistasLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <Nav />
-      {children}
+      <MotionProvider>{children}</MotionProvider>
       <Footer />
     </>
   );

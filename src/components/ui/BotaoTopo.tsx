@@ -22,8 +22,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { m, AnimatePresence, useReducedMotion } from "motion/react";
 import { ChevronUp } from "@/components/ui/Icons";
+import { usePrefereMovimentoReduzido } from "@/hooks/usePrefereMovimentoReduzido";
 
 /** Onde há um hero declarado (`data-hero`), a régua é o próprio hero: o botão
  *  entra quando ele acaba de sair do ecrã. Nas páginas sem hero — guias,
@@ -40,7 +40,7 @@ function passouOPrimeiroEcra(): boolean {
 export default function BotaoTopo() {
   const pathname = usePathname();
   const [visivel, setVisivel] = useState(false);
-  const reduz = useReducedMotion();
+  const reduz = usePrefereMovimentoReduzido();
 
   useEffect(() => {
     const avaliar = () => setVisivel(passouOPrimeiroEcra());
@@ -69,22 +69,20 @@ export default function BotaoTopo() {
   }
 
   return (
-    <AnimatePresence>
-      {visivel && (
-        <m.button
-          type="button"
-          onClick={subir}
-          aria-label="Voltar ao topo da página"
-          title="Voltar ao topo"
-          initial={reduz ? false : { opacity: 0, y: 12, scale: 0.9 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={reduz ? { opacity: 0 } : { opacity: 0, y: 12, scale: 0.9 }}
-          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-          className="group fixed right-3 bottom-[calc(var(--rc-chrome-movel)_+_0.5rem)] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-200/80 bg-white/90 text-stone-500 shadow-lift backdrop-blur-md transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-700 dark:text-stone-400 dark:hover:text-brand lg:right-6 lg:bottom-6 lg:h-12 lg:w-12"
-        >
-          <ChevronUp size={20} className="transition-transform group-hover:-translate-y-0.5" />
-        </m.button>
-      )}
-    </AnimatePresence>
+    <button
+      type="button"
+      onClick={subir}
+      aria-label="Voltar ao topo da página"
+      aria-hidden={!visivel}
+      tabIndex={visivel ? 0 : -1}
+      title="Voltar ao topo"
+      className={`group fixed right-3 bottom-[calc(var(--rc-chrome-movel)_+_0.5rem)] z-40 flex h-11 w-11 items-center justify-center rounded-full border border-stone-200/80 bg-white/90 text-stone-500 shadow-lift backdrop-blur-md transition-[opacity,transform,border-color,color] duration-[220ms] ease-[cubic-bezier(.16,1,.3,1)] hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-700 dark:text-stone-400 dark:hover:text-brand lg:right-6 lg:bottom-6 lg:h-12 lg:w-12 ${
+        visivel
+          ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+          : `pointer-events-none opacity-0 ${reduz ? "" : "translate-y-3 scale-90"}`
+      }`}
+    >
+      <ChevronUp size={20} className="transition-transform group-hover:-translate-y-0.5" />
+    </button>
   );
 }

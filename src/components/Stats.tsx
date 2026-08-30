@@ -54,6 +54,7 @@ export default function Stats() {
         {NUMEROS.map((p) => (
           <StaggerItem key={p.label}>
             <Link
+              prefetch={false}
               href={p.href}
               className="group flex h-full flex-col rounded-3xl border border-stone-100 bg-white p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
             >
@@ -74,15 +75,16 @@ export default function Stats() {
                 <CountUp value={p.valor} />
               </div>
               <div className="mt-2 text-xs font-semibold text-stone-700">{p.label}</div>
-              <p className="mt-0.5 texto-mini leading-snug text-stone-400">{p.sub}</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-stone-400">{p.sub}</p>
             </Link>
           </StaggerItem>
         ))}
       </StaggerGroup>
       <div className="mx-auto mt-4 max-w-5xl text-center">
         <Link
+          prefetch={false}
           href="/#fontes"
-          className="inline-flex min-h-[36px] items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
+          className="focus-marca inline-flex min-h-[36px] items-center gap-1.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand sm:min-h-[24px]"
         >
           <Bank size={12} className="text-brand" />
           Tudo verificado em {N_FONTES} fontes oficiais — AT, Segurança Social e Diário da República
