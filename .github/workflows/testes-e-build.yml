@@ -185,6 +185,9 @@ jobs:
       - name: Telemóvel — 360 e 320 px, dois temas, quatro perfis
         run: npm run movel:e2e
 
+      - name: Planeador patronal — fluxo completo a 360 px
+        run: BASE_URL=http://localhost:3000 npm run contratacao:e2e
+
       # Bootstrap único das referências: usa exatamente o deployment/commit
       # auditado pelo relatório, e compara já o artefacto candidato contra as
       # 20 imagens. No commit seguinte, as referências passam a versionadas e
