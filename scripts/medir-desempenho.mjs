@@ -280,6 +280,17 @@ async function exigirHomepage(pagina, foco) {
   // visível. Esperar primeiro pelo destino evita transformar esse intervalo
   // legítimo numa falsa ausência de selector nos três motores.
   await principal.first().waitFor({ state: "visible", timeout: 10_000 });
+  // O mesmo intervalo, do outro lado: enquanto a árvore nova ainda não
+  // substituiu a antiga há dois `main` do foco no documento. Esperar que
+  // sobre um é esperar pelo fim da troca; exigi-lo no primeiro instante é
+  // transformar o intervalo legítimo numa falha.
+  await pagina
+    .waitForFunction(
+      (alvo) => document.querySelectorAll(alvo).length === 1,
+      seletor,
+      { timeout: 10_000 },
+    )
+    .catch(() => {});
   if ((await principal.count()) !== 1) {
     throw erroDeSelector(`Esperava exatamente ${seletor}`, pagina);
   }

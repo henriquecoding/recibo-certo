@@ -111,9 +111,28 @@ async function verificar(navegador, foco, rota) {
     if (!resposta || resposta.status() !== 200) {
       throw new Error(`${rota} devolveu HTTP ${resposta?.status() ?? "sem resposta"}.`);
     }
-    await pagina
-      .locator(`main[data-homepage-foco="${foco}"]`)
-      .waitFor({ state: "visible", timeout: 15_000 });
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ ESPERAR PELO ESTADO ESTÁVEL, NÃO PELO PRIMEIRO QUE APARECE     │
+    // │                                                               │
+    // │ Há um instante, na primeira carga, com DOIS `main` do mesmo    │
+    // │ foco — o que já está e o que o React ainda tem escondido       │
+    // │ enquanto o põe no sítio. O modo estrito do Playwright não      │
+    // │ espera por isso: rebenta com «resolved to 2 elements» e a rota │
+    // │ conta como morta, quando o que morreu foi a medição. Apanhado  │
+    // │ no runner do CI, onde a primeira carga é mais lenta.           │
+    // │                                                               │
+    // │ A espera é pelo estado FINAL: um `main` só, com altura. Se ele │
+    // │ nunca chegar, isso sim é a rota a não sobreviver — e o erro    │
+    // │ que sai daqui diz o que estava no ecrã.                        │
+    // └───────────────────────────────────────────────────────────────┘
+    await pagina.waitForFunction(
+      (alvo) => {
+        const todos = document.querySelectorAll(`main[data-homepage-foco="${alvo}"]`);
+        return todos.length === 1 && todos[0].getBoundingClientRect().height > 0;
+      },
+      foco,
+      { timeout: 30_000 },
+    );
 
     // A cena arranca no primeiro ato e o defeito vivia no ÚLTIMO — a pega a
     // respirar quando o resultado assenta. A régua leva lá em três cliques
