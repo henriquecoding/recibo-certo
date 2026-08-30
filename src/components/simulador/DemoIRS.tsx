@@ -303,11 +303,11 @@ function AtoPerfil({ perfil, decl }: { perfil: PerfilDemo; decl: DeclaracaoResul
             variants={linha}
             className="flex items-center justify-between gap-3 rounded-lg bg-stone-50 px-2.5 py-1.5 dark:bg-stone-800/50"
           >
-            <span className="flex min-w-0 items-center gap-2 text-[11px] text-stone-500 dark:text-stone-400">
+            <span className="flex min-w-0 items-center gap-2 texto-mini text-stone-500 dark:text-stone-400">
               <f.Icon size={12} className="flex-shrink-0 text-stone-400" />
               <span className="truncate">{f.rotulo}</span>
             </span>
-            <span className="flex-shrink-0 text-[11px] font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+            <span className="flex-shrink-0 texto-mini font-semibold tabular-nums text-stone-700 dark:text-stone-200">
               {f.valor}
             </span>
           </m.div>
@@ -435,7 +435,7 @@ function AtoColetavel({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
               <span className="relative flex items-center justify-between gap-2">
                 <span className="min-w-0">
                   <span
-                    className={`block truncate text-[11px] ${
+                    className={`block truncate texto-mini ${
                       total
                         ? "font-bold text-brand-dark dark:text-brand"
                         : "font-medium text-stone-600 dark:text-stone-300"
@@ -445,11 +445,11 @@ function AtoColetavel({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
                     {r.rotulo}
                   </span>
                   {r.nota && (
-                    <span className="block truncate text-[9px] leading-tight text-stone-400">{r.nota}</span>
+                    <span className="block truncate texto-micro leading-tight text-stone-400">{r.nota}</span>
                   )}
                 </span>
                 <span
-                  className={`flex-shrink-0 text-[11px] font-semibold tabular-nums ${
+                  className={`flex-shrink-0 texto-mini font-semibold tabular-nums ${
                     total
                       ? "text-brand-dark dark:text-brand"
                       : r.tipo === "menos"
@@ -524,21 +524,48 @@ function AtoEscaloes({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
           const usado = idx < revelados;
           const ativo = idx === indiceAtivo && revelados > 0;
           const altura = alturaBarra(e.taxa);
+          // ┌───────────────────────────────────────────────────────────┐
+          // │ A ETIQUETA ENCOSTA-SE ÀS PONTAS EM VEZ DE SAIR PELA BORDA  │
+          // │                                                           │
+          // │ Estava sempre centrada na coluna (`left-1/2` + −50%). No   │
+          // │ computador isso não custa nada: a coluna tem 40px e a      │
+          // │ etiqueta 48, o excedente cai por cima das colunas          │
+          // │ vizinhas e ninguém dá por isso. A 360px a coluna tem 26px  │
+          // │ — e no PRIMEIRO e no ÚLTIMO escalão os 11px que sobram de  │
+          // │ cada lado não caem em cima de vizinho nenhum: caem fora do │
+          // │ cartão, onde o `overflow-hidden` os corta a meio. A taxa   │
+          // │ marginal aparecia como «4.º · 24,» com o resto por trás da │
+          // │ borda.                                                     │
+          // │                                                           │
+          // │ Nas pontas a etiqueta alinha pela ponta; no meio continua  │
+          // │ centrada. É o que um tooltip bem-comportado faz, e o       │
+          // │ desenho no computador fica exactamente como estava.        │
+          // └───────────────────────────────────────────────────────────┘
+          const naPontaEsq = idx === 0;
+          const naPontaDir = idx === ESC.length - 1;
+          const desloc = naPontaEsq ? "0%" : naPontaDir ? "-100%" : "-50%";
+          const ancora = naPontaEsq ? "0" : naPontaDir ? "100%" : "50%";
           return (
             <div key={idx} className="relative flex flex-1 items-end justify-center self-stretch">
               {ativo && (
                 <m.span
-                  // x:"-50%" vem do motion, não do Tailwind: uma classe
+                  // O deslocamento vem do motion, não do Tailwind: uma classe
                   // -translate-x-1/2 seria anulada pelo transform que o motion
                   // escreve para o y/scale.
-                  initial={reduz ? false : { opacity: 0, y: 4, scale: 0.9, x: "-50%" }}
-                  animate={{ opacity: 1, y: 0, scale: 1, x: "-50%" }}
+                  initial={reduz ? false : { opacity: 0, y: 4, scale: 0.9, x: desloc }}
+                  animate={{ opacity: 1, y: 0, scale: 1, x: desloc }}
                   transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                  style={{ bottom: `calc(${altura}% + 5px)`, transformOrigin: "bottom center" }}
-                  className="absolute left-1/2 z-10 whitespace-nowrap rounded-lg bg-brand-deep px-1.5 py-0.5 text-[9px] font-bold text-white shadow-lift"
+                  style={{ bottom: `calc(${altura}% + 5px)`, left: ancora, transformOrigin: "bottom center" }}
+                  className="absolute z-10 whitespace-nowrap rounded-lg bg-brand-deep px-1.5 py-0.5 texto-micro font-bold text-white shadow-lift"
                 >
                   {idx + 1}.º · {pct(e.taxa)}
-                  <span className="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[3px] border-x-transparent border-t-brand-deep" />
+                  {/* O bico segue a coluna, não a etiqueta: quando ela
+                      encosta a uma ponta, é ele que continua a apontar
+                      para a barra certa. */}
+                  <span
+                    className="absolute top-full h-0 w-0 -translate-x-1/2 border-x-[3px] border-t-[3px] border-x-transparent border-t-brand-deep"
+                    style={{ left: naPontaEsq ? "13px" : naPontaDir ? "calc(100% - 13px)" : "50%" }}
+                  />
                 </m.span>
               )}
               {/* Trilho (a estrutura dos escalões) + preenchimento (o que este
@@ -563,10 +590,10 @@ function AtoEscaloes({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
 
       <m.div variants={linha} className="mt-2.5 flex items-center justify-between gap-2 rounded-xl bg-stone-50 px-3 py-2 dark:bg-stone-800/50">
         <span className="min-w-0">
-          <span className="block text-[10px] font-medium uppercase tracking-wider text-stone-400">
+          <span className="block texto-micro font-medium uppercase tracking-wider text-stone-400">
             Coleta acumulada
           </span>
-          <span className="block truncate text-[10px] text-stone-400">
+          <span className="block truncate texto-micro text-stone-400">
             {revelados} de {nAplicados} escalões percorridos
           </span>
         </span>
@@ -576,19 +603,19 @@ function AtoEscaloes({ sim, reduz }: { sim: SimulacaoIRS; reduz: boolean }) {
       </m.div>
 
       <m.div variants={linha} className="mt-1.5 flex flex-wrap gap-1.5">
-        <span className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-bold text-brand-dark dark:bg-brand/10 dark:text-brand">
+        <span className="rounded-full bg-brand-light px-2 py-0.5 texto-micro font-bold text-brand-dark dark:bg-brand/10 dark:text-brand">
           marginal {pct(marginal)}
         </span>
-        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 texto-micro font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
           média {pct(sim.taxaMediaEfetiva)}
         </span>
         {sim.conjunta && (
-          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 texto-micro font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
             quociente conjugal
           </span>
         )}
         {sim.adicionalSolidariedade > 0.5 && (
-          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 texto-micro font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
             + solidariedade {eur0(sim.adicionalSolidariedade)}
           </span>
         )}
@@ -625,7 +652,7 @@ function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
     <m.div variants={palco} initial="oculto" animate="entra">
       <div className="flex items-center gap-3">
         <m.div variants={linha} className="min-w-0 flex-1">
-          <div className="text-[11px] font-medium uppercase tracking-wider text-stone-400">
+          <div className="texto-mini font-medium uppercase tracking-wider text-stone-400">
             {reembolso ? "Reembolso estimado" : "Imposto a pagar"}
           </div>
           <div
@@ -635,7 +662,7 @@ function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
           >
             <AnimatedNumber value={resultado} format={eur0} />
           </div>
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 text-[10px] font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-stone-100 px-2.5 py-1 texto-micro font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-300">
             <Scale size={11} className="text-brand" />
             Taxa efetiva
             <span className="tabular-nums text-stone-700 dark:text-stone-100">{pct(decl.taxaEfetiva)}</span>
@@ -678,7 +705,7 @@ function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
             <span className="font-display text-lg font-semibold leading-none tabular-nums text-stone-800 dark:text-stone-100">
               <AnimatedNumber value={pctContigo} format={pctInteiro} />
             </span>
-            <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide text-stone-400">contigo</span>
+            <span className="mt-0.5 texto-micro font-medium uppercase tracking-wide text-stone-400">contigo</span>
           </div>
         </m.div>
       </div>
@@ -695,9 +722,9 @@ function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
             variants={linha}
             className="flex items-center justify-between gap-3 bg-stone-50/70 px-2.5 py-1.5 dark:bg-stone-800/40"
           >
-            <span className="truncate text-[11px] text-stone-500 dark:text-stone-400">{r.rotulo}</span>
+            <span className="truncate texto-mini text-stone-500 dark:text-stone-400">{r.rotulo}</span>
             <span
-              className={`flex-shrink-0 text-[11px] font-semibold tabular-nums ${
+              className={`flex-shrink-0 texto-mini font-semibold tabular-nums ${
                 r.tom === "out"
                   ? "text-brand-deep dark:text-brand-mint"
                   : r.tom === "in"
@@ -715,7 +742,7 @@ function AtoSaldo({ decl, reduz }: { decl: DeclaracaoResult; reduz: boolean }) {
             reembolso ? "bg-brand-light dark:bg-brand/10" : "bg-brand-deep/[0.06] dark:bg-brand/[0.08]"
           }`}
         >
-          <span className={`text-[11px] font-bold ${reembolso ? "text-brand-dark" : "text-brand-deep dark:text-brand-mint"}`}>
+          <span className={`texto-mini font-bold ${reembolso ? "text-brand-dark" : "text-brand-deep dark:text-brand-mint"}`}>
             = {reembolso ? "Reembolso" : "A pagar"}
           </span>
           <span
@@ -750,7 +777,7 @@ function AtoFiz({ decl, aoTrancar }: { decl: DeclaracaoResult; aoTrancar: () => 
           <div className="text-[12px] font-semibold text-stone-800 dark:text-stone-100">
             A estimativa é nossa. A entrega é da FIZ.
           </div>
-          <div className="text-[10px] leading-relaxed text-stone-600 dark:text-stone-400">
+          <div className="texto-micro leading-relaxed text-stone-600 dark:text-stone-400">
             Contabilistas certificados, para o passo seguinte.
           </div>
         </div>
@@ -779,7 +806,7 @@ function AtoFiz({ decl, aoTrancar }: { decl: DeclaracaoResult; aoTrancar: () => 
             <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md bg-white text-stone-500 shadow-sm dark:bg-stone-900 dark:text-stone-300">
               <p.Icon size={11} />
             </span>
-            <span className="min-w-0 truncate text-[11px] text-stone-600 dark:text-stone-300">{p.texto}</span>
+            <span className="min-w-0 truncate texto-mini text-stone-600 dark:text-stone-300">{p.texto}</span>
             <ArrowRight size={11} className="ml-auto flex-shrink-0 text-stone-300 dark:text-stone-600" />
           </m.div>
         ))}
@@ -790,7 +817,7 @@ function AtoFiz({ decl, aoTrancar }: { decl: DeclaracaoResult; aoTrancar: () => 
           resultado real. Em modo LIGACAO nada segue. Interpolar um valor
           calculado numa promessa de transporte que não existe é pior do que
           uma promessa vaga, porque é concreta e verificável — e falsa. */}
-      <m.p variants={linha} className="mt-2 text-[10px] leading-relaxed text-stone-400">
+      <m.p variants={linha} className="mt-2 texto-micro leading-relaxed text-stone-400">
         {NOTA_LIGACAO}
       </m.p>
     </m.div>
@@ -870,7 +897,12 @@ export default function DemoIRS() {
 
   return (
     <div
-      className="relative w-full max-w-md"
+      // `min-w-0`: este cartão é um item de flex e tem texto `truncate` lá
+      // dentro, cujo `whitespace-nowrap` conta a frase inteira para o
+      // min-content (287px a 360). Sem isto o item recusa-se a encolher
+      // abaixo disso e sai pela direita do cartão que o contém — era assim
+      // que os valores apareciam cortados a meio no telemóvel.
+      className="relative w-full min-w-0 max-w-md"
       onMouseEnter={() => setSobrevoo(true)}
       onMouseLeave={() => setSobrevoo(false)}
       onFocusCapture={() => setSobrevoo(true)}
@@ -898,7 +930,7 @@ export default function DemoIRS() {
 
         {/* ── Cabeçalho ─────────────────────────────────────────────── */}
         <div className="mb-3 flex items-center justify-between gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 texto-micro font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand">
             <span className="relative flex h-1.5 w-1.5">
               {!reduz && !emPausa && (
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand opacity-70" />
@@ -908,7 +940,7 @@ export default function DemoIRS() {
             Demo em direto
           </span>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-medium text-stone-400">IRS 2026</span>
+            <span className="texto-micro font-medium text-stone-400">IRS 2026</span>
             {!reduz && <BotaoPausa parado={parado} onAlternar={() => setParado((p) => !p)} />}
           </div>
         </div>
@@ -936,11 +968,11 @@ export default function DemoIRS() {
                 <span className="block truncate text-[12px] font-semibold text-stone-700 dark:text-stone-200">
                   {perfil.persona}
                 </span>
-                <span className="block truncate text-[10px] font-medium text-stone-400">{perfil.detalhe}</span>
+                <span className="block truncate texto-micro font-medium text-stone-400">{perfil.detalhe}</span>
               </span>
             </m.div>
           </AnimatePresence>
-          <div className="flex flex-shrink-0 items-center gap-1.5" role="tablist" aria-label="Perfis de exemplo">
+          <div className="flex flex-shrink-0 items-center" role="tablist" aria-label="Perfis de exemplo">
             {PERFIS.map((p, idx) => (
               <button
                 key={p.id}
@@ -949,10 +981,21 @@ export default function DemoIRS() {
                 aria-selected={idx === idxPerfil}
                 aria-label={`Ver o exemplo: ${p.persona}`}
                 onClick={() => irParaPerfil(idx)}
-                className={`h-1.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${
-                  idx === idxPerfil ? "w-5 bg-brand" : "w-1.5 bg-stone-200 hover:bg-stone-300 dark:bg-stone-700"
-                }`}
-              />
+                // O ponto continua a ter 6px — é o que o desenho pede. O que
+                // muda é o ALVO: o botão passa a ter 36px de altura com o
+                // ponto centrado lá dentro. Estes quatro pontos trocam o
+                // exemplo em cena e eram alvos de 6×6 — dava para lá chegar
+                // com um rato e não dava com um dedo, que é precisamente
+                // quem está deste lado da demo.
+                className="flex h-9 min-w-[28px] items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+              >
+                <span
+                  aria-hidden
+                  className={`block h-1.5 rounded-full transition-all duration-300 ${
+                    idx === idxPerfil ? "w-5 bg-brand" : "w-1.5 bg-stone-200 hover:bg-stone-300 dark:bg-stone-700"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -992,7 +1035,7 @@ export default function DemoIRS() {
       </div>
 
       {/* Rodapé: o que está em jogo neste ato, e o aviso de estimativa. */}
-      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[10px] text-stone-400">
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 texto-micro text-stone-400">
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-brand" /> Fica contigo
         </span>

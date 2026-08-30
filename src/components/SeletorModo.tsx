@@ -50,7 +50,7 @@ function Grupo({
 }) {
   return (
     <div>
-      <span className="mb-1.5 block px-1 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-400">
+      <span className="mb-1.5 block px-1 texto-micro font-bold uppercase tracking-[0.14em] text-stone-400">
         {titulo}
       </span>
       {/* Duas colunas iguais: as opções deixam de ter a largura do seu próprio

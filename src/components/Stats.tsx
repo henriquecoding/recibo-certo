@@ -74,7 +74,7 @@ export default function Stats() {
                 <CountUp value={p.valor} />
               </div>
               <div className="mt-2 text-xs font-semibold text-stone-700">{p.label}</div>
-              <p className="mt-0.5 text-[11px] leading-snug text-stone-400">{p.sub}</p>
+              <p className="mt-0.5 texto-mini leading-snug text-stone-400">{p.sub}</p>
             </Link>
           </StaggerItem>
         ))}
@@ -82,7 +82,7 @@ export default function Stats() {
       <div className="mx-auto mt-4 max-w-5xl text-center">
         <Link
           href="/#fontes"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
+          className="inline-flex min-h-[36px] items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
         >
           <Bank size={12} className="text-brand" />
           Tudo verificado em {N_FONTES} fontes oficiais — AT, Segurança Social e Diário da República

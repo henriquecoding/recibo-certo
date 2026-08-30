@@ -88,7 +88,7 @@ export default function Home() {
               secções e do hero. Com as duas classes no mesmo elemento, o
               conteúdo desta faixa nascia 24px mais à direita do que tudo o que
               tem por cima e por baixo. */}
-          <div className="px-6">
+          <div className="px-4 sm:px-6">
             <div className="mx-auto max-w-5xl">
               <FizFaixaDemo superficie="demo.hero.faixa" />
             </div>
@@ -102,7 +102,15 @@ export default function Home() {
            */}
           <section
             id="calculadora"
-            className="grain border-y border-stone-100 bg-white px-6 py-14 scroll-mt-20 sm:py-20"
+            // `px-4` na base e `px-6` a partir de `sm:`: a 360px cada 8px de
+            // margem custa 4,4% da largura útil, e a secção ainda tem um
+            // cartão com padding próprio por dentro — eram 96px dos 360 só em
+            // ar lateral. O `scroll-mt` segue a mesma lógica do chrome: no
+            // telemóvel a barra vive toda EM BAIXO, portanto reservar 80px no
+            // topo era abrir um buraco por baixo de um cabeçalho que não
+            // existe. A partir de `lg:` há cápsula fixa no topo e os 80
+            // voltam.
+            className="grain border-y border-stone-100 bg-white px-4 py-14 scroll-mt-4 sm:px-6 sm:py-20 lg:scroll-mt-20"
           >
             <CalculadoraSecao />
           </section>
@@ -120,7 +128,7 @@ export default function Home() {
            * navegar já tem os cinco destinos acima da dobra, na cápsula (ou
            * na barra, no telemóvel); isto é para quem rolou.
            */}
-          <section className="px-6 pt-14 sm:pt-20">
+          <section className="px-4 pt-14 sm:px-6 sm:pt-20">
             <div className="mx-auto max-w-5xl">
               <FilaPilares />
             </div>
@@ -134,7 +142,7 @@ export default function Home() {
            * cartão-chave), a fila de ferramentas relevantes e a de guias + Quiz.
            * `nAtividades` é calculado no servidor para o chip nunca inventar.
            */}
-          <section id="explorar" className="px-6 py-14 scroll-mt-20 sm:py-20">
+          <section id="explorar" className="px-4 py-14 scroll-mt-4 sm:px-6 sm:py-20 lg:scroll-mt-20">
             <ExplorarSecao nAtividades={ATIVIDADES.length} />
           </section>
 

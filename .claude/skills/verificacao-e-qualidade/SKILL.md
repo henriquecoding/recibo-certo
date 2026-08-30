@@ -55,6 +55,21 @@ estilos COMPUTADOS antes/depois (não pixels — animações e conteúdo vivo fa
 variar). Foi o que apanhou 378 nós de texto do modo escuro a mudar de cor por
 causa de uma afinação do modo claro.
 
+## 4c. Telemóvel (quando mexes na homepage, ou em qualquer layout)
+```
+npm run start            (noutro terminal)
+npm run movel:e2e
+```
+Percorre a página inicial a 360 e a 320px, nos dois temas e nos quatro perfis, e
+reprova o que rola de lado, o que sai da própria caixa, o texto abaixo de 12px e
+os alvos abaixo de 36px. Corre-o contra o BUILD, não contra o `dev`: no `dev` a
+página traz o indicador do Next por cima do rodapé e os chunks chegam noutro
+tempo — já deu um verde e quatro falhas para o mesmo código.
+
+Se ele disser «medição inválida — a página não chegou a montar», NÃO é um verde
+por resolver à pressa: quer dizer que o simulador ainda estava no esqueleto e
+não se mediu nada. Ver a skill `design-system-recibocerto`.
+
 ## 5. Checklist final (gate)
 - [ ] Requisito resolvido; casos-limite e estados (vazio/erro/carregamento) tratados
 - [ ] Modo claro intacto; dark mode coerente; responsivo (mobile→desktop)
