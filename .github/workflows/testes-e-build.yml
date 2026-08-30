@@ -188,6 +188,14 @@ jobs:
       - name: Planeador patronal — fluxo completo a 360 px
         run: BASE_URL=http://localhost:3000 npm run contratacao:e2e
 
+      # O runner não traz o ImageMagick, e a comparação é feita com `compare
+      # -metric AE` — píxeis diferentes, não hashes. Sem ele o passo seguinte
+      # morre antes de comparar seja o que for, e foi exatamente isso que
+      # aconteceu na primeira corrida em que ele chegou a ser executado: as 20
+      # referências foram capturadas e a comparação não chegou a existir.
+      - name: ImageMagick para a comparação por píxel
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends imagemagick
+
       # As 20 referências são REGENERADAS a cada corrida, a partir de um commit
       # fixo — não são versionadas. Vinte capturas de página inteira pesam
       # ~20 MB; guardá-las no repositório duplicava-o, e cada re-baseline
