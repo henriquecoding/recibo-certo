@@ -214,7 +214,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
     setFinalizado(true);
   }, [reduz]);
 
-  const estatico = !montado || Boolean(reduz);
+  // Enquanto a preferência ainda é desconhecida, a cena fica estática.
+  // Tratar `undefined` como movimento permitido deixava o WebKit arrancar
+  // uma animação por um frame antes de confirmar `reduce`.
+  const estatico = !montado || reduz !== false;
   const relogioDeCena = useRelogioDeCena({ parado, estatico, alvo: palcoRef });
 
   const terminarAto = useCallback(() => {

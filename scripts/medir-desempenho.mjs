@@ -709,6 +709,7 @@ async function interagir({
       caminho(recurso) === rotaDestino ||
       recurso.initiatorType === "script" ||
       /_next\/static\//.test(recurso.name);
+    const recursosDoDestino = recursos.filter(doDestino);
     const alheios = recursos.filter((recurso) => !doDestino(recurso));
     const tarefas = window.__rcPerf.longtasks.filter(
       (t) => t.start >= pointer && t.start <= fim,
@@ -737,8 +738,12 @@ async function interagir({
       requests: recursos.length,
       bytesTransferidos: recursos.reduce((total, r) => total + r.transferSize, 0),
       bytesComprimidos: recursos.reduce((total, r) => total + r.encodedBodySize, 0),
-      bytesDoDestino: recursos
-        .filter(doDestino)
+      bytesDoDestino: recursosDoDestino.reduce((total, r) => total + r.transferSize, 0),
+      rscDoDestino: recursosDoDestino
+        .filter((r) => caminho(r) === rotaDestino || /_rsc=|\.rsc(?:\?|$)/.test(r.name))
+        .reduce((total, r) => total + r.transferSize, 0),
+      jsDoDestino: recursosDoDestino
+        .filter((r) => r.initiatorType === "script" || /_next\/static\/chunks\//.test(r.name))
         .reduce((total, r) => total + r.transferSize, 0),
       bytesAlheios: alheios.reduce((total, r) => total + r.transferSize, 0),
       jsNovo: recursos
@@ -773,12 +778,21 @@ async function interagir({
       `Trocar de foco carregou overlays alheios: ${metricas.overlaysCarregados.join(", ")}.`,
     );
   }
-  if (modo === "preparado" && metricas.bytesDoDestino > 0) {
+  // O App Router aquece sempre o RSC; esse contrato continua absoluto.
+  // O Firefox pode materializar na navegação um microchunk já descoberto
+  // pelo prefetch (8,7 KB medidos), ao contrário de Chromium/WebKit. Um
+  // budget de 12 KB admite essa diferença do motor, mas continua a falhar
+  // se voltar o RSC (~16 KB) ou um chunk de rota substancial.
+  if (
+    modo === "preparado" &&
+    (metricas.rscDoDestino > 0 || metricas.jsDoDestino > 12_000)
+  ) {
     console.error(
       `[homepage:diagnostico-preparacao] ${JSON.stringify(diagnosticoAposRender)}`,
     );
     throw new Error(
-      `Foco preparado voltou a pedir o destino: ${metricas.bytesDoDestino} bytes em ` +
+      `Foco preparado voltou a pedir o destino: RSC=${metricas.rscDoDestino} bytes; ` +
+        `JS=${metricas.jsDoDestino} bytes em ` +
         `${metricas.recursos.join(", ")}.`,
     );
   }
