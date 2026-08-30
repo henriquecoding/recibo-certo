@@ -29,6 +29,8 @@ describe("contrato mobile da homepage", () => {
     expect(ruler).toContain("snap-x snap-mandatory");
     expect(ruler).toContain("sm:min-w-[58rem]");
     expect(ruler).not.toContain('className="grid min-w-[58rem]');
+    expect(ruler).not.toContain(".scrollIntoView(");
+    expect(ruler).toContain("contentor.scrollLeft =");
   });
 
   it("recolhe pesquisa e marca quando a leitura desce, deixando a navegação acessível", () => {

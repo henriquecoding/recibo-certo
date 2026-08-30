@@ -18,8 +18,16 @@ export default function ReguaPerguntasHero({ focoAtivo }: { focoAtivo: FocoHomep
 
   useEffect(() => {
     const contentor = calha.current;
-    if (!contentor || contentor.scrollWidth <= contentor.clientWidth) return;
-    itemAtivo.current?.scrollIntoView({ behavior: "auto", block: "nearest", inline: "center" });
+    const item = itemAtivo.current;
+    if (!contentor || !item || contentor.scrollWidth <= contentor.clientWidth) return;
+    // `scrollIntoView` sobe por TODOS os antepassados scrolláveis. Na
+    // pergunta 05 a calha já estava no limite e o browser continuava no
+    // antepassado seguinte — o próprio hero com `overflow-hidden` —,
+    // deixando palco e H1 deslocados para a esquerda sem o dedo conseguir
+    // repor. Mover exclusivamente `scrollLeft` torna esse estado impossível.
+    const centro = item.offsetLeft - (contentor.clientWidth - item.offsetWidth) / 2;
+    const maximo = Math.max(0, contentor.scrollWidth - contentor.clientWidth);
+    contentor.scrollLeft = Math.max(0, Math.min(maximo, centro));
   }, [focoAtivo]);
 
   return (
