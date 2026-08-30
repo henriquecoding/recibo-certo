@@ -471,7 +471,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               }`}
             />
             <div className="min-w-0">
-              <h2 id="palco-descobrir-titulo" className="truncate text-[11px] font-bold uppercase tracking-[.16em] text-white">
+              <h2 id="palco-descobrir-titulo" className="truncate texto-mini font-bold uppercase tracking-[.16em] text-white">
                 Mesa de decisão
               </h2>
               {/* Sem `truncate` — a legenda do ato quebra em vez de ser
@@ -480,7 +480,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   diz o que o ato faz. A caixa reserva o pior caso para
                   não mudar de altura a cada ato — ver `legenda.tsx`. */}
               <LegendaDoAto
-                className="mt-0.5 text-[10px] leading-snug text-white/45"
+                className="mt-0.5 texto-micro leading-snug text-white/45"
                 candidatas={[...LEGENDAS_DE_ESTADO, ...ATOS_DESCOBRIR.map((item) => item.legenda)]}
                 texto={
                   finalizado || estatico
@@ -502,7 +502,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                 // onde o mesmo defeito está medido.
                 <span
                   aria-hidden
-                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold"
+                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 texto-micro font-semibold"
                 >
                   <Pause size={12} />
                   Pausar
@@ -512,7 +512,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   type="button"
                   onClick={() => setParado((valor) => !valor)}
                   aria-pressed={parado}
-                  className="focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 text-[10px] font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
+                  className="focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 texto-micro font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
                 >
                   {parado ? <Play size={12} /> : <Pause size={12} />}
                   {parado ? "Retomar" : "Pausar"}
@@ -521,7 +521,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               <button
                 type="button"
                 onClick={rever}
-                className="focus-marca relative inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 text-[10px] font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
+                className="focus-marca relative inline-flex min-h-[36px] items-center gap-2 rounded-full border border-white/15 px-3 texto-micro font-semibold text-white/75 transition-colors hover:border-brand-mint/60 hover:text-white"
               >
                 <RotateCcw size={12} />
                 <span className="grid">
@@ -568,7 +568,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
             <div className="relative flex min-h-[178px] flex-col overflow-hidden rounded-3xl border border-white/10 bg-white/[.045] p-4 backdrop-blur-sm md:min-h-[360px] lg:min-h-[410px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">Entrada · 01</div>
+                  <div className="texto-micro font-bold uppercase tracking-[.17em] text-white/35">Entrada · 01</div>
                   <div className="mt-1 text-xs font-semibold text-white/80">{tituloEntrada}</div>
                 </div>
                 <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-black/10 text-brand-mint">
@@ -582,39 +582,39 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
               <AnimatePresence mode="popLayout" initial={false}>
                 {ato === 0 && (
                   <m.div key="contexto" initial={estatico ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-4 space-y-2">
-                    <span ref={origemCompetenciaRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 text-[11px] text-white/80">
+                    <span ref={origemCompetenciaRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 texto-mini text-white/80">
                       <span className="truncate">{exemplo.competencia}</span><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-mint" />
                     </span>
-                    <span ref={origemDadosRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 text-[11px] text-white/80">
+                    <span ref={origemDadosRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 texto-mini text-white/80">
                       <span>Trabalhar com dados</span><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-mint" />
                     </span>
-                    <span ref={origemTempoRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 text-[11px] text-white/80">
+                    <span ref={origemTempoRef} className="flex min-h-[40px] items-center justify-between gap-2 rounded-2xl border border-brand-mint/25 bg-brand/10 px-3 texto-mini text-white/80">
                       <span>Part-time</span><span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-brand-mint" />
                     </span>
-                    <p className="pt-1 text-[10px] leading-relaxed text-white/40">Contexto, não destino. Nenhuma resposta isolada escolhe um negócio.</p>
+                    <p className="pt-1 texto-micro leading-relaxed text-white/40">Contexto, não destino. Nenhuma resposta isolada escolhe um negócio.</p>
                   </m.div>
                 )}
 
                 {ato === 1 && (
                   <m.div key="fronteiras" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-4 space-y-2">
-                    <span ref={origemStockRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 text-[11px] text-white/80"><span>Sem stock nem espaço</span><Filter size={12} className="text-[#e7c98e]" /></span>
-                    <span ref={origemDisponibilidadeRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 text-[11px] text-white/80"><span>Só algumas horas</span><Filter size={12} className="text-[#e7c98e]" /></span>
-                    <span ref={origemEquipaRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 text-[11px] text-white/80"><span>Operação a solo</span><Filter size={12} className="text-[#e7c98e]" /></span>
-                    <p className="pt-1 text-[10px] leading-relaxed text-white/40">Uma fronteira elimina; uma preferência apenas reordena.</p>
+                    <span ref={origemStockRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 texto-mini text-white/80"><span>Sem stock nem espaço</span><Filter size={12} className="text-[#e7c98e]" /></span>
+                    <span ref={origemDisponibilidadeRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 texto-mini text-white/80"><span>Só algumas horas</span><Filter size={12} className="text-[#e7c98e]" /></span>
+                    <span ref={origemEquipaRef} className="flex min-h-[42px] items-center justify-between gap-2 rounded-2xl border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-3 texto-mini text-white/80"><span>Operação a solo</span><Filter size={12} className="text-[#e7c98e]" /></span>
+                    <p className="pt-1 texto-micro leading-relaxed text-white/40">Uma fronteira elimina; uma preferência apenas reordena.</p>
                   </m.div>
                 )}
 
                 {ato === 2 && (
                   <m.div key="evidencia" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={transicao} className="mt-4 space-y-3">
                     <span ref={origemFonteRef} className="block rounded-2xl border border-[#9fc8e7]/25 bg-[#9fc8e7]/10 p-3">
-                      <span className="block text-[9px] font-bold uppercase tracking-wide text-[#a9d5f3]">Fonte pública</span>
-                      <span className="mt-1.5 flex items-center justify-between text-[11px] text-white/80">INE · Eurostat <ShieldCheck size={12} className="text-[#a9d5f3]" /></span>
+                      <span className="block texto-micro font-bold uppercase tracking-wide text-[#a9d5f3]">Fonte pública</span>
+                      <span className="mt-1.5 flex items-center justify-between texto-mini text-white/80">INE · Eurostat <ShieldCheck size={12} className="text-[#a9d5f3]" /></span>
                     </span>
                     <span ref={origemProvaRef} className="block rounded-2xl border border-clay-border/35 bg-clay-bg/10 p-3">
-                      <span className="block text-[9px] font-bold uppercase tracking-wide text-[#e7b59f]">Prova ainda necessária</span>
-                      <span className="mt-1.5 flex items-center justify-between text-[11px] text-white/80">Piloto local <Target size={12} className="text-[#e7b59f]" /></span>
+                      <span className="block texto-micro font-bold uppercase tracking-wide text-[#e7b59f]">Prova ainda necessária</span>
+                      <span className="mt-1.5 flex items-center justify-between texto-mini text-white/80">Piloto local <Target size={12} className="text-[#e7b59f]" /></span>
                     </span>
-                    <p className="text-[10px] leading-relaxed text-white/40">Uma fonte descreve o contexto. Um piloto testa a compra.</p>
+                    <p className="texto-micro leading-relaxed text-white/40">Uma fonte descreve o contexto. Um piloto testa a compra.</p>
                   </m.div>
                 )}
 
@@ -668,10 +668,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                         transition={estatico ? { duration: 0 } : { ...transicao, delay: 0.06 + indice * 0.08 }}
                         className={`flex flex-1 flex-col justify-center rounded-2xl border px-3 py-2.5 ${grupo.cor}`}
                       >
-                        <div className="text-[9px] font-bold uppercase tracking-[.14em] text-white/45">{grupo.rotulo}</div>
+                        <div className="texto-micro font-bold uppercase tracking-[.14em] text-white/45">{grupo.rotulo}</div>
                         <ul className="mt-1.5 space-y-1">
                           {grupo.itens.map((item) => (
-                            <li key={item} className="flex items-center gap-2 text-[11px] leading-snug text-white/75">
+                            <li key={item} className="flex items-center gap-2 texto-mini leading-snug text-white/75">
                               <span className={`h-1 w-1 flex-shrink-0 rounded-full ${grupo.ponto}`} />
                               <span className="truncate">{item}</span>
                             </li>
@@ -679,7 +679,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                         </ul>
                       </m.div>
                     ))}
-                    <p className="pt-0.5 text-[10px] leading-relaxed text-white/40">Tudo o que a hipótese teve de respeitar. A saída recebe uma hipótese — nunca uma promessa.</p>
+                    <p className="pt-0.5 texto-micro leading-relaxed text-white/40">Tudo o que a hipótese teve de respeitar. A saída recebe uma hipótese — nunca uma promessa.</p>
                   </m.div>
                 )}
               </AnimatePresence>
@@ -689,10 +689,10 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
             <div className="relative min-h-[360px] rounded-3xl border border-white/10 bg-black/15 p-4 md:min-h-[410px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">Motor · 02</div>
+                  <div className="texto-micro font-bold uppercase tracking-[.17em] text-white/35">Motor · 02</div>
                   <div className="mt-1 text-xs font-semibold text-white/85">Raciocínio à vista</div>
                 </div>
-                <span className={`rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide ${marcaDeEstado(contextoPronto)}`}>
+                <span className={`rounded-full border px-2.5 py-1 texto-micro font-bold uppercase tracking-wide ${marcaDeEstado(contextoPronto)}`}>
                   {contextoPronto ? "Contexto lido" : "A receber"}
                 </span>
               </div>
@@ -705,7 +705,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                 ].map(([id, ref, rotulo]) => {
                   const pronto = chegou(id as string, 0);
                   return (
-                    <span key={id as string} ref={ref as React.RefObject<HTMLSpanElement>} className={`flex min-h-[38px] min-w-0 items-center justify-center rounded-xl border px-1.5 text-center text-[9px] font-semibold leading-tight transition-colors ${marcaDeEstado(pronto)}`}>
+                    <span key={id as string} ref={ref as React.RefObject<HTMLSpanElement>} className={`flex min-h-[38px] min-w-0 items-center justify-center rounded-xl border px-1.5 text-center texto-micro font-semibold leading-tight transition-colors ${marcaDeEstado(pronto)}`}>
                       {pronto ? (rotulo as string) : "—"}
                     </span>
                   );
@@ -714,8 +714,8 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
 
               <div className="mt-3 rounded-2xl border border-white/10 bg-white/[.035] p-3">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-bold uppercase tracking-wide text-white/40">Compatibilidade estrutural</span>
-                  <span className="text-[9px] text-white/30">sem score opaco</span>
+                  <span className="texto-micro font-bold uppercase tracking-wide text-white/40">Compatibilidade estrutural</span>
+                  <span className="texto-micro text-white/30">sem score opaco</span>
                 </div>
                 <div className="mt-2 space-y-1.5">
                   {[
@@ -724,7 +724,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                     ["equipa", alvoEquipaRef, FRONTEIRAS[2].alvo, equipaFora],
                   ].map(([id, ref, rotulo, fora]) => (
                     <m.div key={id as string} ref={ref as React.RefObject<HTMLDivElement>} initial={false} animate={fora ? { opacity: 0.34, x: -7, scale: 0.985 } : { opacity: contextoPronto ? 1 : 0.28, x: 0, scale: 1 }} transition={transicao} className="flex min-h-[34px] items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/10 px-2.5">
-                      <span className={`truncate text-[9px] ${fora ? "text-white/45 line-through" : "text-white/65"}`}>{rotulo as string}</span>
+                      <span className={`truncate texto-micro ${fora ? "text-white/45 line-through" : "text-white/65"}`}>{rotulo as string}</span>
                       {fora ? <Close size={11} className="flex-shrink-0 text-[#e7c98e]" /> : <span className="h-1.5 w-1.5 flex-shrink-0 rounded-full bg-white/20" />}
                     </m.div>
                   ))}
@@ -747,8 +747,8 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                     {hipoteseChegou ? (
                       <>
                         <div className="min-w-0">
-                          <span className="block text-[8px] font-bold uppercase tracking-wide text-white/40">Entregue à saída</span>
-                          <span className="mt-1 block text-[10px] leading-relaxed text-white/60">
+                          <span className="block texto-micro font-bold uppercase tracking-wide text-white/40">Entregue à saída</span>
+                          <span className="mt-1 block texto-micro leading-relaxed text-white/60">
                             Composta a partir de {CONTEXTO.length} capacidades, {FRONTEIRAS.length} eliminações e 1 fonte observada.
                           </span>
                         </div>
@@ -757,7 +757,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                     ) : (
                       <>
                         <div className="min-w-0">
-                          <span className="block text-[8px] font-bold uppercase tracking-wide text-brand-mint/75">Candidato que permanece</span>
+                          <span className="block texto-micro font-bold uppercase tracking-wide text-brand-mint/75">Candidato que permanece</span>
                           <span className="mt-1 block font-display text-sm font-semibold leading-tight text-white">{exemplo.titulo}</span>
                         </div>
                         <Lightbulb size={14} className="mt-0.5 flex-shrink-0 text-brand-mint" />
@@ -769,16 +769,16 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
 
               <m.div initial={false} animate={{ opacity: ato >= 2 || estatico ? 1 : 0.24 }} transition={transicao} className="mt-3 grid grid-cols-2 gap-2">
                 <div ref={alvoFonteRef} className={`min-h-[58px] rounded-2xl border p-2.5 transition-colors ${fonteChegou ? "border-[#9fc8e7]/45 bg-[#9fc8e7]/10" : "border-white/10 bg-white/[.025]"}`}>
-                  <span className="block text-[8px] font-bold uppercase tracking-wide text-[#a9d5f3]">Observado</span>
-                  <span className="mt-1 block text-[9px] leading-tight text-white/65">{fonteChegou ? "Contexto público · INE / Eurostat" : "À espera da fonte"}</span>
+                  <span className="block texto-micro font-bold uppercase tracking-wide text-[#a9d5f3]">Observado</span>
+                  <span className="mt-1 block texto-micro leading-tight text-white/65">{fonteChegou ? "Contexto público · INE / Eurostat" : "À espera da fonte"}</span>
                 </div>
                 <div ref={alvoProvaRef} className={`min-h-[58px] rounded-2xl border p-2.5 transition-colors ${provaChegou ? "border-clay-border/45 bg-clay-bg/10" : "border-white/10 bg-white/[.025]"}`}>
-                  <span className="block text-[8px] font-bold uppercase tracking-wide text-[#e7b59f]">Plano de prova</span>
-                  <span className="mt-1 block text-[9px] leading-tight text-white/65">{provaChegou ? "Mapear 5 empresas · piloto local" : "Por definir"}</span>
+                  <span className="block texto-micro font-bold uppercase tracking-wide text-[#e7b59f]">Plano de prova</span>
+                  <span className="mt-1 block texto-micro leading-tight text-white/65">{provaChegou ? "Mapear 5 empresas · piloto local" : "Por definir"}</span>
                 </div>
               </m.div>
 
-              <m.div initial={false} animate={{ opacity: estatico || (ato === 2 && feito("abreLacunas")) || ato > 2 ? 1 : 0 }} transition={transicao} className="mt-2 flex flex-wrap gap-1.5 text-[8px] font-semibold uppercase tracking-wide text-[#e7c98e]">
+              <m.div initial={false} animate={{ opacity: estatico || (ato === 2 && feito("abreLacunas")) || ato > 2 ? 1 : 0 }} transition={transicao} className="mt-2 flex flex-wrap gap-1.5 texto-micro font-semibold uppercase tracking-wide text-[#e7c98e]">
                 <span className="rounded-full border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-2 py-1">Oferta local · em aberto</span>
                 <span className="rounded-full border border-[#e7c98e]/25 bg-[#e7c98e]/10 px-2 py-1">Vontade de pagar · em aberto</span>
               </m.div>
@@ -788,7 +788,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
             <div className="relative min-h-[210px] overflow-hidden rounded-3xl border border-white/10 bg-white/[.045] p-4 md:col-span-2 md:min-h-[220px] lg:col-span-1 lg:min-h-[410px]">
               <div className="flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">Saída · 03</div>
+                  <div className="texto-micro font-bold uppercase tracking-[.17em] text-white/35">Saída · 03</div>
                   <div className="mt-1 text-xs font-semibold text-white/80">Hipótese testável</div>
                 </div>
                 <span className={`flex h-8 w-8 items-center justify-center rounded-xl border ${marcaDeEstado(hipoteseChegou)}`}><Lightbulb size={14} /></span>
@@ -800,7 +800,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   ["Fronteiras", fronteirasProntas],
                   ["Evidência", evidenciaPronta],
                 ].map(([rotulo, pronto]) => (
-                  <div key={rotulo as string} className={`flex min-h-[32px] items-center justify-center gap-1.5 rounded-xl border px-2 text-[8px] font-bold uppercase tracking-wide ${marcaDeEstado(Boolean(pronto))}`}>
+                  <div key={rotulo as string} className={`flex min-h-[32px] items-center justify-center gap-1.5 rounded-xl border px-2 texto-micro font-bold uppercase tracking-wide ${marcaDeEstado(Boolean(pronto))}`}>
                     {pronto ? <Check size={10} /> : <span className="h-1 w-1 rounded-full bg-current" />}{rotulo as string}
                   </div>
                 ))}
@@ -811,13 +811,13 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                   {!hipoteseChegou ? (
                     <m.div key="vazio" initial={false} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 0.97 }} transition={transicao} className="flex min-h-[258px] flex-col items-center justify-center rounded-3xl border border-dashed border-white/15 bg-black/10 px-4 text-center sm:min-h-[230px] lg:min-h-[278px]">
                       <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[.04] text-white/35"><Sparkle size={16} /></span>
-                      <span className="mt-3 text-[10px] font-semibold text-white/55">A hipótese ainda não existe.</span>
-                      <span className="mt-1 text-[9px] leading-relaxed text-white/30">Só aparece depois de sobreviver ao contexto, às fronteiras e às lacunas.</span>
+                      <span className="mt-3 texto-micro font-semibold text-white/55">A hipótese ainda não existe.</span>
+                      <span className="mt-1 texto-micro leading-relaxed text-white/30">Só aparece depois de sobreviver ao contexto, às fronteiras e às lacunas.</span>
                     </m.div>
                   ) : (
                     <m.article key="hipotese" initial={estatico ? false : { opacity: 0, scale: 0.92, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={estatico ? { duration: 0 } : { duration: DUR.assenta / 1000, ease: ASSENTA }} className={`relative min-h-[258px] overflow-hidden rounded-3xl border border-brand-mint/45 p-4 shadow-[0_16px_46px_rgba(2,24,18,.28)] sm:min-h-[230px] lg:min-h-[278px] ${PAPEL.fundo} ${PAPEL.corpo}`}>
                       <div aria-hidden className={`absolute -right-10 -top-10 h-28 w-28 rounded-full blur-2xl ${PAPEL.halo}`} />
-                      <div className={`relative text-[8px] font-bold uppercase tracking-[.16em] ${PAPEL.marca}`}>Hipótese composta</div>
+                      <div className={`relative texto-micro font-bold uppercase tracking-[.16em] ${PAPEL.marca}`}>Hipótese composta</div>
                       <m.span
                         aria-hidden
                         initial={false}
@@ -830,18 +830,18 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                       <h3 className={`relative mt-1.5 font-display text-lg font-semibold leading-[1.08] ${PAPEL.titulo}`}>{exemplo.titulo}</h3>
 
                       <m.div initial={false} animate={{ opacity: mostraModelo ? 1 : 0, y: mostraModelo ? 0 : 5 }} transition={transicao} className="relative mt-3 flex flex-wrap gap-1.5">
-                        <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${PAPEL.chipMarca}`}>{exemplo.modelo}</span>
-                        <span className={`rounded-full px-2.5 py-1 text-[8px] font-bold ${PAPEL.chipNeutro}`}>B2B</span>
+                        <span className={`rounded-full px-2.5 py-1 texto-micro font-bold ${PAPEL.chipMarca}`}>{exemplo.modelo}</span>
+                        <span className={`rounded-full px-2.5 py-1 texto-micro font-bold ${PAPEL.chipNeutro}`}>B2B</span>
                       </m.div>
 
                       <m.div initial={false} animate={{ opacity: mostraTeste ? 1 : 0, y: mostraTeste ? 0 : 6 }} transition={transicao} className={`relative mt-3 border-t pt-2.5 ${PAPEL.risco}`}>
-                        <div className={`flex items-center gap-1.5 text-[8px] font-bold uppercase tracking-wide ${PAPEL.marca}`}><Target size={10} /> Primeiro teste</div>
-                        <p className={`mt-1 text-[9px] leading-relaxed ${PAPEL.corpo}`}>{exemplo.primeiroTeste}</p>
+                        <div className={`flex items-center gap-1.5 texto-micro font-bold uppercase tracking-wide ${PAPEL.marca}`}><Target size={10} /> Primeiro teste</div>
+                        <p className={`mt-1 texto-micro leading-relaxed ${PAPEL.corpo}`}>{exemplo.primeiroTeste}</p>
                       </m.div>
 
                       <m.div initial={false} animate={{ opacity: mostraCriterio ? 1 : 0, y: mostraCriterio ? 0 : 6 }} transition={transicao} className={`relative mt-2 rounded-2xl border px-2.5 py-2 ${PAPEL.aviso}`}>
-                        <div className={`text-[8px] font-bold uppercase tracking-wide ${PAPEL.avisoTitulo}`}>O que a faria falhar</div>
-                        <p className={`mt-1 text-[8px] leading-relaxed ${PAPEL.avisoCorpo}`}>{exemplo.testeDeFalsificacao}</p>
+                        <div className={`texto-micro font-bold uppercase tracking-wide ${PAPEL.avisoTitulo}`}>O que a faria falhar</div>
+                        <p className={`mt-1 texto-micro leading-relaxed ${PAPEL.avisoCorpo}`}>{exemplo.testeDeFalsificacao}</p>
                       </m.div>
                     </m.article>
                   )}
@@ -875,7 +875,7 @@ export default function PalcoDescobrir({ exemplo }: { exemplo: ExemploDescoberta
                     style={{ transform: `scaleX(${indice < ato || (indice === ato && (estatico || finalizado)) ? 1 : 0})` }}
                   />
                 </span>
-                <span className={`mt-1.5 block truncate text-[8px] font-bold uppercase tracking-wide transition-colors sm:text-[9px] ${indice === ato ? "text-white" : indice < ato ? "text-brand-mint/65" : "text-white/30"}`}>
+                <span className={`mt-1.5 block truncate texto-micro font-bold uppercase tracking-wide transition-colors sm:text-[9px] ${indice === ato ? "text-white" : indice < ato ? "text-brand-mint/65" : "text-white/30"}`}>
                   {item.rotulo}
                 </span>
               </button>

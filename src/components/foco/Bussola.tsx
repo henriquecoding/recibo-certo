@@ -63,7 +63,7 @@ export default function Bussola({
           className={
             compacta
               ? "font-display text-lg font-semibold text-ink"
-              : "text-[10px] font-bold uppercase tracking-[0.14em] text-stone-500 dark:text-stone-400"
+              : "texto-micro font-bold uppercase tracking-[0.14em] text-stone-500 dark:text-stone-400"
           }
         >
           {titulo}
@@ -92,7 +92,7 @@ export default function Bussola({
                   <span className="block text-[13px] font-semibold leading-tight text-stone-800 dark:text-stone-100">
                     {foco.pergunta}
                   </span>
-                  <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                  <span className="mt-0.5 block texto-micro font-semibold uppercase tracking-wide text-stone-500 dark:text-stone-400">
                     {foco.label}
                   </span>
                 </span>

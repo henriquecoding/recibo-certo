@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.137.0",
+    data: "2026-08-30",
+    titulo: "A nova página inicial passa a ser medida ao telemóvel — e o que estava ilegível deixou de estar",
+    itens: [
+      "A página inicial passou a ser cinco páginas (Descobrir, Preço, Recibos verdes, Empresa, Salário), mas a verificação de telemóvel continuava a medir a página antiga. Deixou de medir seja o que for sem dar erro: procurava secções que já não existem. Agora percorre as cinco, a 360 e a 320 pixéis, nos dois temas — e foi isso que trouxe à superfície tudo o que vem a seguir.",
+      "Havia 39 sítios com texto abaixo dos 12 pixéis nas cinco leituras — rótulos de passos, etiquetas de cenário, legendas de cartões, os números das faixas. Passam todos a ter um piso de 12px no telemóvel e voltam ao tamanho miúdo em ecrãs largos, onde faz sentido.",
+      "No gráfico do palco da Empresa, as três anotações («valem o mesmo», «empresa à frente», «recibos verdes à frente») e os valores do eixo chegavam ao ecrã com três a quatro pixéis de altura: o desenho tem 720 unidades de largura e num telemóvel é desenhado em 276. Não era texto pequeno — era texto que ninguém conseguia ler. Passam a ser dimensionados na escala do próprio gráfico.",
+      "O rodapé tinha voltado atrás: as ligações estavam outra vez com 16 e 19 pixéis de altura, abaixo do que um dedo acerta, e vários rótulos abaixo do piso de 12px. Tinha sido corrigido na versão anterior e perdeu-se ao juntar os ramos. Está reposto, sem desfazer o que o rodapé ganhou entretanto (deixou de carregar a biblioteca de animação).",
+      "Com «reduzir movimento» ligado, a barra de progresso da demonstração aparecia vazia em vez de aparecer cheia: quem pede menos movimento via o passo atual como se ainda não tivesse acontecido.",
+      "Dois defeitos de toque na leitura do Preço: o botão que recomeça a demonstração tinha 28×28 pixéis e o «Repor exemplo» saía quatro pixéis para fora da coluna.",
+      "A verificação de velocidade das trocas entre leituras passou a separar o que a troca custa do que a página nova decide preparar a seguir. Estavam somados no mesmo número, e isso escondia a única promessa que interessa: uma leitura preparada não volta a pedir a página à rede — e não volta, em nenhum dos três motores testados.",
+    ],
+  },
+  {
     version: "2.136.0",
     data: "2026-08-30",
     titulo: "Salário ganhou um caminho para quem contrata — sem perder a velocidade da nova homepage",

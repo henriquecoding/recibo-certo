@@ -494,7 +494,7 @@ export default function HeroBussola({
             <div>
               <h2
                 id="bussola-hero-titulo"
-                className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400"
+                className="px-1 texto-micro font-bold uppercase tracking-[0.16em] text-stone-500 dark:text-stone-400"
               >
                 As cinco perguntas
               </h2>
@@ -535,7 +535,7 @@ export default function HeroBussola({
               </div>
 
               <div className="relative flex h-full flex-col p-4 sm:p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">
+                <p className="texto-micro font-bold uppercase tracking-[0.18em] text-white/40">
                   {resposta ? `A resposta · ${focoAberto?.label}` : "A resposta"}
                 </p>
 
@@ -723,7 +723,7 @@ const Linha = memo(function Linha({
       >
         <span
           aria-hidden
-          className={`w-6 flex-shrink-0 text-right font-display text-[11px] font-semibold tabular-nums transition-colors ${
+          className={`w-6 flex-shrink-0 text-right font-display texto-mini font-semibold tabular-nums transition-colors ${
             ativo ? "text-brand" : "text-stone-300 dark:text-stone-600"
           }`}
         >
@@ -747,7 +747,7 @@ const Linha = memo(function Linha({
           >
             {foco.pergunta}
           </span>
-          <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
+          <span className="mt-0.5 block texto-micro font-semibold uppercase tracking-wide text-stone-400 dark:text-stone-500">
             {/* No ecrã tátil, o que o PRÓXIMO toque faz — porque muda. Um
                 primeiro toque que não navega, sem nada a dizê-lo, lê-se
                 como uma ligação avariada. */}
@@ -834,7 +834,7 @@ function Resposta({
                 frase ? "" : "flex items-baseline justify-between gap-3"
               }`}
             >
-              <span className="min-w-0 text-[11px] leading-snug text-white/55">{linha.rotulo}</span>
+              <span className="min-w-0 texto-mini leading-snug text-white/55">{linha.rotulo}</span>
               <span
                 className={`text-[12px] font-semibold ${
                   frase ? "mt-1 block leading-snug" : "flex-shrink-0 text-right tabular-nums"
@@ -847,7 +847,7 @@ function Resposta({
         })}
       </ul>
 
-      <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-relaxed text-white/40">
+      <p className="mt-3 flex items-start gap-1.5 texto-micro leading-relaxed text-white/40">
         <FileSign size={11} className="mt-px flex-shrink-0" />
         <span className="min-w-0">{resposta.base}</span>
       </p>
@@ -943,7 +943,7 @@ const Controlos = memo(function Controlos({
                 />
               </span>
               <span
-                className={`mt-1 block truncate text-[9px] font-bold uppercase tracking-wide transition-colors ${
+                className={`mt-1 block truncate texto-micro font-bold uppercase tracking-wide transition-colors ${
                   i === p.ato && !entregue
                     ? "text-stone-700 dark:text-stone-200"
                     : i < p.ato

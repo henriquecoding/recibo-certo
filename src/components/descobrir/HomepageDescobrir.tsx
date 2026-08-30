@@ -114,7 +114,7 @@ function MetodoDescobrir() {
                   <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-light text-brand dark:bg-brand/15">
                     <Icon size={18} />
                   </span>
-                  <span className="font-mono text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+                  <span className="font-mono texto-mini font-semibold text-stone-500 dark:text-stone-400">
                     {String(indice + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -144,7 +144,7 @@ function MetodoDescobrir() {
                   key={estado.rotulo}
                   className={`p-5 sm:p-7 ${indice > 0 ? "border-t border-stone-100 dark:border-stone-800 md:border-l md:border-t-0" : ""}`}
                 >
-                  <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${cores}`}>
+                  <span className={`inline-flex rounded-full px-3 py-1 texto-micro font-bold uppercase tracking-wide ${cores}`}>
                     {estado.rotulo}
                   </span>
                   <h3 className="mt-4 text-sm font-semibold text-stone-800 dark:text-stone-100">{estado.titulo}</h3>
@@ -178,9 +178,9 @@ function PercursoDescobrir() {
           <div className="relative rounded-4xl border border-brand bg-brand-light p-5 shadow-card dark:bg-brand/15 sm:p-6">
             <div className="flex items-center justify-between">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white"><Lightbulb size={18} /></span>
-              <span className="font-mono text-[11px] font-bold text-brand-dark dark:text-brand-mint">01</span>
+              <span className="font-mono texto-mini font-bold text-brand-dark dark:text-brand-mint">01</span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-brand">Agora</div>
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-brand">Agora</div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">Descobrir</h3>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">Escolher uma hipótese e tentar refutá-la com clientes reais.</p>
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand-dark dark:text-brand-mint">
@@ -194,9 +194,9 @@ function PercursoDescobrir() {
           >
             <div className="flex items-center justify-between">
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-categoria-areia-bg text-categoria-areia-text dark:bg-stone-800 dark:text-[#e7c98e]"><Coin size={18} /></span>
-              <span className="font-mono text-[11px] font-bold text-stone-500 dark:text-stone-400">02</span>
+              <span className="font-mono texto-mini font-bold text-stone-500 dark:text-stone-400">02</span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">Se passar o teste</div>
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">Se passar o teste</div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">Definir o preço</h3>
             <p className="mt-2 text-sm leading-relaxed text-stone-500">Transformar tempo, custos, impostos e margem num preço sustentável.</p>
             <div className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold text-brand transition-transform group-hover:translate-x-1">
@@ -207,7 +207,7 @@ function PercursoDescobrir() {
           <div className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
             <div className="flex items-center justify-between px-1">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">03 · Escolher estrutura</div>
+                <div className="texto-micro font-bold uppercase tracking-[.14em] text-stone-400">03 · Escolher estrutura</div>
                 <h3 className="mt-1 font-display text-xl font-semibold text-ink">O percurso bifurca aqui.</h3>
               </div>
             </div>
@@ -264,7 +264,7 @@ function FontesDescobrir() {
             Se a série não mede intenção de compra, o ReciboCerto não diz que mede. Se uma fonte falha,
             o valor desaparece e a incerteza sobe — não há um fallback “plausível”.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-semibold text-stone-600">
+          <div className="mt-5 flex flex-wrap gap-2 texto-mini font-semibold text-stone-600">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 dark:border-stone-700 dark:bg-stone-900"><Lock size={12} className="text-brand" /> Sem dados pessoais no servidor</span>
             <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 dark:border-stone-700 dark:bg-stone-900"><ShieldCheck size={12} className="text-brand" /> Proveniência por leitura</span>
           </div>

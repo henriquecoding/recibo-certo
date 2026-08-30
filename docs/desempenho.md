@@ -378,6 +378,87 @@ Conclusão para §3.4 do relatório de verificação: **não há uma ilha client
 partir**. O que resta é o herói visível mais o piso do framework. Adiar mais
 conteúdo editorial não compra nada; o caminho é o grafo cliente da raiz.
 
+### Tempo e FPS: exigidos onde foram calibrados
+
+Os números de `ack`, `ready` e FPS desta página saíram de séries medidas em
+**Chromium**. Firefox e WebKit entraram na matriz depois e nunca chegaram a
+esta verificação: as corridas morriam antes, no gate da preparação. Quando
+passaram a chegar, falharam por 70 a 80%.
+
+Subir o budget até os três passarem apaga o significado do número nos três.
+Por isso: **o tempo é exigido em Chromium** — onde há calibração e onde uma
+regressão aparece — e nos outros dois motores mede-se tudo na mesma, o número
+vai para o log e para o artefacto, e o que reprova a corrida são as
+**invariantes estruturais**: destino preparado sem rede, nenhum overlay
+alheio, nenhuma chamada à API durante a troca, movimento reduzido sem cena
+ativa, Save-Data sem especulação, bytes e CLS.
+
+Primeira série dos dois motores (10 repetições, artefacto de produção, máquina
+de desenvolvimento com 4 núcleos — **ponto de partida, não budget**):
+
+| motor | cenário | modo | entrada | ack p95 | ready p75/p95 | FPS p50 |
+|---|---|---|---|---:|---:|---:|
+| Firefox 153 | desktop-normal | frio | ponteiro | 23 ms | 115/126 ms | 57,8 |
+| Firefox 153 | desktop-normal | visitado | ponteiro | 23 ms | 166/176 ms | 54,4 |
+| Firefox 153 | desktop-normal | preparado | ponteiro | 76 ms | 178/187 ms | 56,0 |
+| Firefox 153 | desktop-normal | preparado | teclado | 82 ms | 176/187 ms | 55,4 |
+| WebKit 26.5 | mobile-fast4g | frio | toque | 168 ms | 275/316 ms | 35,6 |
+| WebKit 26.5 | mobile-fast4g | visitado | toque | 148 ms | 454/466 ms | 41,5 |
+| WebKit 26.5 | mobile-fast4g | preparado | toque | 144 ms | 527/586 ms | 36,0 |
+
+Para os transformar em budget falta uma série no runner do CI, que é a máquina
+onde eles teriam de valer. Até lá, ficam medidos e publicados.
+
+### O que «preparado» promete: atribuição, não budget por motor
+
+Uma troca preparada promete que o **destino não custa rede**. A medição
+somava, na mesma janela, três coisas diferentes:
+
+1. a resposta **RSC do destino** — 16 KB e uma ida à rede no caminho crítico:
+   é isto que a preparação existe para eliminar;
+2. os **chunks do destino** — ficheiros estáticos, pedidos em paralelo;
+3. o que a **página de destino aquece a seguir** — assim que monta, o
+   controlador volta a especular sobre os outros quatro focos.
+
+O ponto 3 não é o custo desta troca; é a preparação da próxima. Entrava na
+conta porque tem nome de chunk e cai dentro da janela — 24 a 35 KB em Firefox
+e WebKit, onde a montagem é mais lenta e a especulação começa antes do commit.
+Em Chromium caía fora por milissegundos. O mesmo trabalho, dois veredictos: e
+foi assim que o gate acabou calibrado por motor (16 KB para Firefox, 28 para
+WebKit) para lhe fugir — números que nunca chegaram a passar em CI.
+
+A separação passou a ser por **atribuição**: a primeira marca
+`rc:foco:prefetch-start` posterior ao clique cujo foco **não é o destino** abre
+a especulação. O que vem antes é esta troca; o que vem depois vai para
+`bytesEspeculacao` e mede-se à parte, sem budget.
+
+Com isso medido (2.137.0, artefacto de produção local):
+
+| motor | RSC do destino | JS do destino (p95) |
+|---|---:|---:|
+| Chromium | 0 B | 0 B |
+| Firefox 153 | 0 B | 24,5 KB |
+| WebKit 26.5 | 0 B | 24,5 KB |
+
+O RSC é zero em todos — a promessa que interessa está cumprida. O JS que
+sobra são chunks que a rota nova não partilha com a anterior: o Turbopack
+duplica módulos partilhados por entrada, e as secções diferidas pedem os seus
+assim que montam. Em Chromium isso acontece **depois** do commit e a janela
+fecha a zero; nos outros dois o commit é mais lento e os mesmos pedidos caem
+lá dentro.
+
+O contrato ficou: **RSC a zero em todos os motores** (sem budget) e **JS do
+destino a zero em Chromium**, o motor de referência onde uma regressão
+aparece, com um teto medido de 48 KB nos outros dois.
+
+**Como o zerar em todos os motores** (não está feito): a preparação teria de
+pedir os chunks do destino **por URL**, em vez de esperar que o motor os
+pré-carregue. A lista existe no build —
+`.next/server/app/**/page_client-reference-manifest.js`, campo `entryJSFiles`,
+que `scripts/verificar-chunks-homepage.mjs` já lê — mas só existe DEPOIS do
+build, e embebê-la na aplicação exigiria uma segunda compilação. Fica anotado
+como o caminho, não como uma dívida escondida num budget.
+
 Durante cada troca, o benchmark falha se carregar Auth, Novidades, Pesquisa,
 Consentimento ou Feedback; numa rota preparada falha se houver payload novo.
 Também guarda a atribuição de `long-animation-frame` quando o motor a expõe,

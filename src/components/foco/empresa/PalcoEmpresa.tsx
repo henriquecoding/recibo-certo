@@ -185,20 +185,20 @@ function Cena({
           transition={t}
           className="rounded-3xl border border-[#e7c98e]/25 bg-[#e7c98e]/[.07] p-4"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-[#e7c98e]">
+          <div className="flex items-center gap-2 texto-micro font-bold uppercase tracking-[.14em] text-[#e7c98e]">
             <Warning size={12} /> O custo que afasta as curvas
           </div>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="font-display text-2xl font-semibold tabular-nums text-white">
               {eur0(dados.custoFixo)}
             </span>
-            <span className="text-[11px] font-semibold text-white/45">por ano</span>
+            <span className="texto-mini font-semibold text-white/45">por ano</span>
           </div>
           <m.p
             initial={false}
             animate={{ opacity: explicaCusto ? 1 : 0 }}
             transition={t}
-            className="mt-2 text-[11px] leading-relaxed text-white/55"
+            className="mt-2 texto-mini leading-relaxed text-white/55"
           >
             A linha tracejada é o contrafactual sem contabilidade. A distância até à linha real não
             é uma soma direta: o custo é dedutível e também altera IRC, derrama e dividendos.
@@ -211,7 +211,7 @@ function Cena({
           transition={t}
           className="rounded-3xl border border-brand-mint/25 bg-brand-mint/[.06] p-4"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-brand-mint">
+          <div className="flex items-center gap-2 texto-micro font-bold uppercase tracking-[.14em] text-brand-mint">
             <Scale size={12} /> A viragem deste cenário
           </div>
           {dados.cruzamento ? (
@@ -235,14 +235,14 @@ function Cena({
                 initial={false}
                 animate={{ opacity: resolve ? 1 : 0 }}
                 transition={t}
-                className="mt-2 text-[11px] leading-relaxed text-white/55"
+                className="mt-2 texto-mini leading-relaxed text-white/55"
               >
                 Sem remuneração de gerência e com todo o lucro distribuído. Não é um limiar
                 universal: despesas, salário de gerente e lucros retidos mudam a curva.
               </m.p>
             </>
           ) : (
-            <p className="mt-2 text-[11px] leading-relaxed text-white/55">
+            <p className="mt-2 texto-mini leading-relaxed text-white/55">
               A curva não cruza o zero nesta escala e com estes pressupostos.
             </p>
           )}
@@ -352,7 +352,7 @@ function GraficoVantagem({
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-[9px] font-bold uppercase tracking-[.17em] text-white/35">
+          <div className="texto-micro font-bold uppercase tracking-[.17em] text-white/35">
             A diferença · empresa menos recibos verdes
           </div>
           <h3 className="mt-1 text-xs font-semibold text-white/85">
@@ -363,7 +363,7 @@ function GraficoVantagem({
           initial={false}
           animate={{ opacity: leituraVisivel ? 1 : 0 }}
           transition={transicao}
-          className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] font-semibold text-white/60"
+          className="flex flex-wrap items-center gap-x-3 gap-y-1 texto-micro font-semibold text-white/60"
         >
           <span className="inline-flex items-center gap-1.5">
             <span className="h-0.5 w-5 rounded-full bg-[#e7c98e]" /> conta real
@@ -433,13 +433,13 @@ function GraficoVantagem({
           stroke="rgba(255,255,255,.46)"
           strokeWidth="1.5"
         />
-        <text x={GRAFICO.margem.esq + 4} y={geometria.yZero - 7} fill="rgba(255,255,255,.48)" fontSize="9" fontWeight="700">
+        <text x={GRAFICO.margem.esq + 4} y={geometria.yZero - 7} fill="rgba(255,255,255,.48)" className="rotulo-grafico" fontWeight="700">
           valem o mesmo
         </text>
-        <text x={GRAFICO.margem.esq + 4} y={16} fill="rgba(231,201,142,.58)" fontSize="8" fontWeight="700">
+        <text x={GRAFICO.margem.esq + 4} y={22} fill="rgba(231,201,142,.58)" className="rotulo-grafico" fontWeight="700">
           EMPRESA À FRENTE
         </text>
-        <text x={GRAFICO.margem.esq + 4} y={GRAFICO.altura - GRAFICO.margem.base - 5} fill="rgba(79,209,163,.58)" fontSize="8" fontWeight="700">
+        <text x={GRAFICO.margem.esq + 4} y={GRAFICO.altura - GRAFICO.margem.base - 5} fill="rgba(79,209,163,.58)" className="rotulo-grafico" fontWeight="700">
           RECIBOS VERDES À FRENTE
         </text>
 
@@ -534,7 +534,7 @@ function GraficoVantagem({
             y={GRAFICO.altura - 8}
             textAnchor={indice === 0 ? "start" : indice === marcas.length - 1 ? "end" : "middle"}
             fill="rgba(255,255,255,.38)"
-            fontSize="9"
+            className="rotulo-grafico"
             fontWeight="600"
           >
             {mil(faturacao)}
@@ -550,11 +550,11 @@ function GraficoVantagem({
       >
         <CartaoLiquido titulo="Recibos verdes" curto="Recibos" Icone={Receipt} valor={ponto.freelancer} vence={!empresaVence && !empate} cor={TINTA.rv} />
         <div className="order-3 col-span-2 flex min-h-[4.5rem] flex-col items-center justify-center rounded-2xl border border-white/10 bg-white/[.035] px-3 text-center lg:order-none lg:col-span-1">
-          <span className="text-[9px] font-bold uppercase tracking-[.12em] text-white/35">diferença anual</span>
+          <span className="texto-micro font-bold uppercase tracking-[.12em] text-white/35">diferença anual</span>
           <span className="mt-1 font-display text-lg font-semibold tabular-nums" style={{ color: empate ? "rgba(255,255,255,.75)" : empresaVence ? TINTA.empresa : TINTA.rv }}>
             {empate ? "≈ 0 €" : `+${eur0(Math.abs(diferenca))}`}
           </span>
-          <m.span initial={false} animate={{ opacity: veredictoVisivel ? 1 : 0 }} transition={transicao} className="mt-0.5 text-[9px] text-white/45">
+          <m.span initial={false} animate={{ opacity: veredictoVisivel ? 1 : 0 }} transition={transicao} className="mt-0.5 texto-micro text-white/45">
             {empate ? "ponto de viragem" : empresaVence ? "para a empresa" : "para recibos verdes"}
           </m.span>
         </div>
@@ -596,7 +596,7 @@ function CartaoLiquido({
           catorze letras valem ~12 px, e eram eles que faziam «Recibos
           verdes» sair como «Recibos verd…». Reticências num nome não são
           um nome — a mesma regra que a auditoria aplica em todo o site. */}
-      <div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-normal text-white/45 sm:tracking-[.1em]">
+      <div className="flex items-center gap-1.5 texto-micro font-bold uppercase tracking-normal text-white/45 sm:tracking-[.1em]">
         <Icone size={11} className="flex-shrink-0" />{" "}
         <span className="truncate">
           <span className="sm:hidden">{curto ?? titulo}</span>
@@ -726,10 +726,10 @@ function ReguaFaturacao({
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-24 h-48 w-48 rounded-full bg-brand/25 blur-3xl" />
       <div className="relative flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0">
-          <span id="empresa-regua-rotulo" className="block text-[10px] font-bold uppercase tracking-[.16em] text-brand-mint">Faturação anual do cenário</span>
+          <span id="empresa-regua-rotulo" className="block texto-micro font-bold uppercase tracking-[.16em] text-brand-mint">Faturação anual do cenário</span>
           <m.output initial={false} animate={{ opacity: valorAberto ? 1 : 0 }} transition={transicao} className="mt-0.5 block font-display text-[clamp(1.9rem,5vw,3rem)] font-semibold leading-none tabular-nums text-white">{eur0(ponto.faturacao)}</m.output>
         </div>
-        <m.p initial={false} animate={{ opacity: valorAberto ? 1 : 0 }} transition={transicao} className="min-w-0 max-w-[17rem] text-[11px] font-semibold leading-relaxed text-white/70">{frase}</m.p>
+        <m.p initial={false} animate={{ opacity: valorAberto ? 1 : 0 }} transition={transicao} className="min-w-0 max-w-[17rem] texto-mini font-semibold leading-relaxed text-white/70">{frase}</m.p>
       </div>
 
       <div
@@ -771,7 +771,7 @@ function ReguaFaturacao({
         </div>
       </div>
 
-      <m.div initial={false} animate={{ opacity: escalaAberta ? 1 : 0 }} transition={transicao} className="mt-0.5 flex items-center justify-between text-[9px] font-semibold tabular-nums text-white/35">
+      <m.div initial={false} animate={{ opacity: escalaAberta ? 1 : 0 }} transition={transicao} className="mt-0.5 flex items-center justify-between texto-micro font-semibold tabular-nums text-white/35">
         <span>{mil(primeiro)}</span><span className="text-white/45">arrasta, toca ou usa as setas</span><span>{mil(fim)}</span>
       </m.div>
 
@@ -780,7 +780,7 @@ function ReguaFaturacao({
           <span className="absolute inset-y-0 left-0 bg-brand/45" style={{ width: `${partido && pctViragem !== null ? pctViragem : 100}%`, transition: estatico ? "none" : `width 620ms ${CURVA_CSS}` }} />
           {pctViragem !== null ? <span className="absolute inset-y-0 right-0 bg-[#e7c98e]/45" style={{ width: `${partido ? 100 - pctViragem : 0}%`, transition: estatico ? "none" : `width 620ms ${CURVA_CSS}` }} /> : null}
         </div>
-        <m.div initial={false} animate={{ opacity: partido ? 1 : 0 }} transition={transicao} className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[9px] font-semibold">
+        <m.div initial={false} animate={{ opacity: partido ? 1 : 0 }} transition={transicao} className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 texto-micro font-semibold">
           {pctViragem !== null && dados.cruzamento !== null ? (
             <>
               <span className="inline-flex items-center gap-1.5 text-white/60"><span className="h-1.5 w-1.5 rounded-full bg-brand" />Recibos verdes até {eur0(dados.cruzamento)}</span>

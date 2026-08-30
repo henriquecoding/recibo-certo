@@ -111,10 +111,10 @@ export default function LaboratorioDescobrir({ exemplo }: { exemplo: ExemploDesc
             <div aria-hidden className="absolute right-0 top-0 h-48 w-48 rounded-full bg-brand-light/70 blur-3xl dark:bg-brand/10" />
             <div className="relative flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[10px] font-bold uppercase tracking-[.16em] text-brand">Depois do corte</div>
+                <div className="texto-micro font-bold uppercase tracking-[.16em] text-brand">Depois do corte</div>
                 <h3 className="mt-1 font-display text-2xl font-semibold text-ink">O que continua de pé</h3>
               </div>
-              <span className="rounded-full border border-brand/25 bg-brand-light px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
+              <span className="rounded-full border border-brand/25 bg-brand-light px-3 py-1.5 texto-micro font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
                 {ativas.length === 0 ? "Contexto aberto" : `${ativas.length} ${ativas.length === 1 ? "fronteira ativa" : "fronteiras ativas"}`}
               </span>
             </div>
@@ -125,7 +125,7 @@ export default function LaboratorioDescobrir({ exemplo }: { exemplo: ExemploDesc
                   <Lightbulb size={18} />
                 </span>
                 <div>
-                  <div className="text-[10px] font-bold uppercase tracking-[.14em] text-stone-500">Hipótese compatível</div>
+                  <div className="texto-micro font-bold uppercase tracking-[.14em] text-stone-500">Hipótese compatível</div>
                   <h4 className="mt-1 font-display text-xl font-semibold leading-tight text-ink">
                     {exemplo.titulo}
                   </h4>

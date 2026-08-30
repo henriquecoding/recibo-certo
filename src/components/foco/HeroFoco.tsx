@@ -86,7 +86,7 @@ export default function HeroFoco({
           </a>
         </div>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-stone-500">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 texto-mini font-medium text-stone-500">
           {selos.map(({ Icon: SeloIcon, texto }) => (
             <span key={texto} className="inline-flex items-center gap-1.5">
               <SeloIcon size={12} className="text-brand" /> {texto}

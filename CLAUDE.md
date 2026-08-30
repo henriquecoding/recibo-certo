@@ -47,8 +47,9 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    Secções pesadas (mapas/gráficos) carregam com `next/dynamic({ ssr:false })` e
    ficam dentro de um `ErrorBoundary` para nunca deixarem a página em branco.
    Verificar SEMPRE em viewport estreito antes de concluir — e a verificação é
-   `npm run movel:e2e` (contra o BUILD, não contra o `dev`), que mede a homepage
-   a 360 e a 320px nos dois temas e nos quatro perfis. O piso tipográfico é uma
+   `npm run movel:e2e` (contra o BUILD, não contra o `dev`), que mede as CINCO
+   rotas da homepage (`/`, `/inicio/preco`, `/inicio/recibos`, `/inicio/empresa`,
+   `/inicio/salario`) a 360 e a 320px, nos dois temas. O piso tipográfico é uma
    classe (`.texto-micro` / `.texto-mini` em `globals.css`), não disciplina.
 6. **Verificar antes de concluir** — `npm run build` + `npm audit --audit-level=high`
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.

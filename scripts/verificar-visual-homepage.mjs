@@ -141,6 +141,32 @@ async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
     if (!resposta || resposta.status() !== 200) {
       throw new Error(`${rota} devolveu HTTP ${resposta?.status() ?? "sem resposta"}.`);
     }
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ ESPERAR PELO ESTADO ESTÁVEL ANTES DE EXIGIR A UNICIDADE        │
+    // │                                                               │
+    // │ Duas coisas, ambas apanhadas a capturar as 20 imagens seguidas │
+    // │ numa máquina carregada:                                        │
+    // │                                                               │
+    // │ · o React insere os segmentos que ainda estão a chegar num     │
+    // │   contentor escondido antes de os pôr no sítio — há um instante│
+    // │   com DOIS `main` do mesmo foco, e o modo estrito do Playwright│
+    // │   rebenta com «resolved to 2 elements» em vez de esperar;      │
+    // │ · o `main` existe com altura zero enquanto o palco não monta,  │
+    // │   e 15 s podem não chegar quando o processo está a competir    │
+    // │   com uma captura de página inteira de 9 000 px.               │
+    // │                                                               │
+    // │ Nenhuma das duas é um defeito da página: são estados por onde  │
+    // │ ela passa. A espera é pelo estado FINAL — um `main` só, com    │
+    // │ altura — e só depois se exige o que tem de ser verdade.        │
+    // └───────────────────────────────────────────────────────────────┘
+    await pagina.waitForFunction(
+      (alvo) => {
+        const todos = document.querySelectorAll(`main[data-homepage-foco="${alvo}"]`);
+        return todos.length === 1 && todos[0].getBoundingClientRect().height > 0;
+      },
+      foco,
+      { timeout: 45_000 },
+    );
     const principal = pagina.locator(`main[data-homepage-foco="${foco}"]`);
     await principal.waitFor({ state: "visible", timeout: 15_000 });
     if ((await principal.count()) !== 1 || (await principal.locator("h1").count()) < 1) {

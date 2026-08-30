@@ -80,6 +80,10 @@ export default function Footer() {
           style={{ background: "linear-gradient(90deg, transparent, rgba(29,158,117,0.5) 30%, rgba(159,225,203,0.6) 50%, rgba(29,158,117,0.5) 70%, transparent)" }}
         />
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
+          {/* Duas colunas só a partir de 360px. Abaixo disso cada célula
+              tem 74px úteis e «Monitorização» sozinha pede 80 — não há
+              quebra de linha que salve, a palavra é indivisível. Numa
+              coluna a prova cabe inteira e continua a ler-se. */}
           <div className="rc-view-reveal grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4">
             {TRUST.map((p) => {
               const Icon = p.icon;
@@ -92,6 +96,13 @@ export default function Footer() {
                     <Icon size={13} className="text-brand-mint" />
                   </div>
                   <div className="min-w-0">
+                    {/* Sem `truncate`: a 360px estas quatro provas vivem em
+                        duas colunas de ~98px úteis, e «Fontes oficiais AT ·
+                        SS · OE» não cabe lá em NENHUM tamanho de letra — a
+                        faixa prometia quatro garantias e mostrava quatro
+                        reticências. Uma prova cortada a meio não é uma prova;
+                        quebrar em duas linhas custa 14px de altura e diz a
+                        frase inteira. */}
                     <p className="texto-mini font-bold leading-tight text-stone-100">{p.label}</p>
                     {/* ┌────────────────────────────────────────────────┐
                         │ ESTA FAIXA É ESCURA NOS DOIS TEMAS — e é isso   │
@@ -169,16 +180,16 @@ export default function Footer() {
           <div className="rc-view-reveal grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4">
             {/* Ferramentas — com ícones */}
             <div className="col-span-2 sm:col-span-1">
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+              <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Ferramentas
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-0 sm:space-y-2">
                 {NAV_FERRAMENTAS.map((l) => (
                   <li key={l.label}>
                     <Link
                       prefetch={false}
                       href={l.href}
-                      className="group flex items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                      className="group flex min-h-[36px] items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
                       <l.Icon size={12} className="shrink-0 text-stone-400 transition-colors group-hover:text-brand dark:text-stone-600" />
                       {l.label}
@@ -190,16 +201,16 @@ export default function Footer() {
 
             {/* Aprender */}
             <div>
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+              <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Aprender
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-0 sm:space-y-2">
                 {NAV_APRENDER.map((l) => (
                   <li key={l.label}>
                     <Link
                       prefetch={false}
                       href={l.href}
-                      className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                      className="flex min-h-[36px] items-center text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
                       {l.label}
                     </Link>
@@ -210,16 +221,16 @@ export default function Footer() {
 
             {/* Empresa */}
             <div>
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+              <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 ReciboCerto
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-0 sm:space-y-2">
                 {NAV_EMPRESA.map((l) => (
                   <li key={l.label}>
                     <Link
                       prefetch={false}
                       href={l.href}
-                      className="text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100"
+                      className="flex min-h-[36px] items-center text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
                       {l.label}
                     </Link>
@@ -230,26 +241,35 @@ export default function Footer() {
 
             {/* Contacto + newsletter */}
             <div>
-              <h3 className="mb-4 text-[11px] font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
+              <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Contacto
               </h3>
               <a
                 href="mailto:recibocerto.pt@gmail.com"
-                className="group flex items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-brand dark:text-stone-400"
+                className="group flex min-h-[36px] items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-brand dark:text-stone-400 sm:min-h-0"
               >
                 <Mail size={13} className="shrink-0 text-stone-400 transition-colors group-hover:text-brand dark:text-stone-600" />
-                recibocerto.pt@gmail.com
+                {/* `break-all` e `min-w-0`: um endereço de email não tem
+                    espaços por onde quebrar, e a coluna do rodapé tem 144px a
+                    360px — o texto saía por fora dela e ia parar por cima da
+                    coluna do lado. Não há tamanho de letra que resolva isto;
+                    ou quebra, ou transborda. */}
+                <span className="min-w-0 break-all">recibocerto.pt@gmail.com</span>
               </a>
 
               <div className="mt-6 rounded-xl border border-stone-200/60 bg-white/60 p-4 dark:border-stone-800 dark:bg-stone-900/40">
-                <p className="text-[11px] font-semibold text-stone-700 dark:text-stone-200">Dados oficiais {FISCAL_YEAR}</p>
-                <p className="mt-1 text-[11px] leading-relaxed text-stone-400 dark:text-stone-500">
+                <p className="texto-mini font-semibold text-stone-700 dark:text-stone-200">Dados oficiais {FISCAL_YEAR}</p>
+                {/* `break-words`: a 320px esta caixa tem 90px úteis e
+                    «monitorizados» sozinha pede 88 — uma palavra longa numa
+                    coluna estreita sai por fora da caixa em silêncio, porque
+                    o `overflow` por omissão é `visible`. */}
+                <p className="mt-1 texto-mini leading-relaxed text-stone-400 break-words dark:text-stone-500">
                   Tabelas AT, taxas SS e limites do Orçamento de Estado — monitorizados automaticamente e revistos por humanos.
                 </p>
                 <Link
                   prefetch={false}
                   href="/#fontes"
-                  className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-brand transition-colors hover:text-brand-dark"
+                  className="mt-2 inline-flex min-h-[36px] items-center gap-1 texto-mini font-semibold text-brand transition-colors hover:text-brand-dark"
                 >
                   Ver fontes <ArrowRight size={10} />
                 </Link>
@@ -260,7 +280,7 @@ export default function Footer() {
           {/* ── Aviso legal ── */}
           <div className="rc-view-reveal mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40">
             <Warning size={12} className="mt-0.5 shrink-0 text-alert-text dark:text-yellow-500" />
-            <p className="text-[11px] leading-relaxed text-alert-text/90 dark:text-stone-400">
+            <p className="texto-mini leading-relaxed text-alert-text/90 dark:text-stone-400">
               <strong className="font-semibold">Não vinculativo.</strong>{" "}
               Calculadora informativa baseada nas taxas fiscais de {FISCAL_YEAR}. Não substitui
               aconselhamento de um contabilista certificado. Confirma sempre com a AT.
@@ -270,11 +290,11 @@ export default function Footer() {
           {/* ── Barra inferior ── */}
           <div className="mt-8 border-t border-stone-200/50 dark:border-stone-800 pb-8 pt-6">
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-              <p className="text-[11px] font-medium text-stone-400 dark:text-stone-500">
+              <p className="texto-mini font-medium text-stone-400 dark:text-stone-500">
                 © {FISCAL_YEAR} ReciboCerto · Portugal
               </p>
 
-              <div className="flex items-center gap-1.5 text-[11px] font-medium text-stone-400 dark:text-stone-500">
+              <div className="flex items-center gap-1.5 texto-mini font-medium text-stone-400 dark:text-stone-500">
                 Feito com
                 <Heart size={10} className="fill-brand/70 text-brand/70" />
                 para quem trabalha em Portugal
@@ -290,7 +310,7 @@ export default function Footer() {
                     prefetch={false}
                     key={l.label}
                     href={l.href}
-                    className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
+                    className="inline-flex min-h-[36px] items-center texto-mini font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
                   >
                     {l.label}
                   </Link>
@@ -298,7 +318,7 @@ export default function Footer() {
                 <button
                   type="button"
                   onClick={abrirPreferenciasCookies}
-                  className="text-[11px] font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
+                  className="inline-flex min-h-[36px] items-center texto-mini font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"
                 >
                   Cookies
                 </button>

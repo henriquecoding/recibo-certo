@@ -29,7 +29,7 @@ function Variacao({ valor }: { valor: number }) {
     // DESIGN.md diz nunca ter passado AA. Um degrau acima resolve nos dois
     // temas sem mexer no token.
     return (
-      <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-300">
+      <span className="texto-mini font-semibold text-stone-500 dark:text-stone-300">
         referência
       </span>
     );
@@ -45,7 +45,7 @@ function Variacao({ valor }: { valor: number }) {
   // veredicto: o sinal chega, a valência não.
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 texto-mini font-semibold tabular-nums ${
         sobe
           ? "bg-categoria-areia-bg text-categoria-areia-text dark:bg-stone-800 dark:text-[#e7c98e]"
           : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-300"
@@ -156,7 +156,7 @@ export default function LaboratorioPreco({ cenarios }: { cenarios: CenarioDemoPr
                 {cenarios.map((c) => (
                   <li key={c.id} className="grid grid-cols-[7.5rem_1fr_4.5rem] items-center gap-2">
                     <span
-                      className={`truncate text-[11px] ${c.id === cenario.id ? "font-semibold text-stone-700 dark:text-stone-200" : "text-stone-400"}`}
+                      className={`truncate texto-mini ${c.id === cenario.id ? "font-semibold text-stone-700 dark:text-stone-200" : "text-stone-400"}`}
                     >
                       {c.rotulo}
                     </span>
@@ -169,7 +169,7 @@ export default function LaboratorioPreco({ cenarios }: { cenarios: CenarioDemoPr
                       />
                     </span>
                     <span
-                      className={`text-right text-[11px] tabular-nums ${c.id === cenario.id ? "font-semibold text-stone-700 dark:text-stone-200" : "text-stone-400"}`}
+                      className={`text-right texto-mini tabular-nums ${c.id === cenario.id ? "font-semibold text-stone-700 dark:text-stone-200" : "text-stone-400"}`}
                     >
                       {eur(c.pvp)}
                     </span>
@@ -184,11 +184,11 @@ export default function LaboratorioPreco({ cenarios }: { cenarios: CenarioDemoPr
                   { rotulo: "Margem", valor: pct1(cenario.margem), nota: "sobre o líquido" },
                 ].map((metrica) => (
                   <div key={metrica.rotulo} className="min-w-0">
-                    <dt className="text-[10px] leading-tight text-stone-400">{metrica.rotulo}</dt>
+                    <dt className="texto-micro leading-tight text-stone-400">{metrica.rotulo}</dt>
                     <dd className="mt-1 font-display text-lg font-semibold tabular-nums text-ink">
                       {metrica.valor}
                     </dd>
-                    <dd className="text-[10px] text-stone-400">{metrica.nota}</dd>
+                    <dd className="texto-micro text-stone-400">{metrica.nota}</dd>
                   </div>
                 ))}
               </dl>
@@ -199,7 +199,7 @@ export default function LaboratorioPreco({ cenarios }: { cenarios: CenarioDemoPr
                   <p className="text-xs leading-relaxed text-stone-600 dark:text-stone-300">
                     {cenario.explicacao}
                   </p>
-                  <p className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium text-stone-400">
+                  <p className="mt-2 inline-flex items-center gap-1.5 texto-micro font-medium text-stone-400">
                     <ShieldCheck size={11} className="text-brand" />
                     {cenario.fonte}
                   </p>

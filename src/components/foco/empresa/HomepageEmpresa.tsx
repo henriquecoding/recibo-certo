@@ -152,12 +152,12 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
               >
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${coluna.cores}`}
+                    className={`inline-flex rounded-full px-3 py-1 texto-micro font-bold uppercase tracking-wide ${coluna.cores}`}
                   >
                     {coluna.rotulo}
                   </span>
                   {coluna.vence ? (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-brand">
+                    <span className="inline-flex items-center gap-1 texto-micro font-bold text-brand">
                       <Check size={11} /> mais líquido
                     </span>
                   ) : null}
@@ -189,11 +189,11 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
                 <Coin size={18} />
               </span>
-              <span className="font-mono text-[11px] font-bold text-stone-500 dark:text-stone-400">
+              <span className="font-mono texto-mini font-bold text-stone-500 dark:text-stone-400">
                 01
               </span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">
               Primeiro
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">
@@ -215,11 +215,11 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
                 <Receipt size={18} />
               </span>
-              <span className="font-mono text-[11px] font-bold text-stone-500 dark:text-stone-400">
+              <span className="font-mono texto-mini font-bold text-stone-500 dark:text-stone-400">
                 02
               </span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">
               Depois
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">
@@ -238,11 +238,11 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white">
                 <Scale size={18} />
               </span>
-              <span className="font-mono text-[11px] font-bold text-brand-dark dark:text-brand-mint">
+              <span className="font-mono texto-mini font-bold text-brand-dark dark:text-brand-mint">
                 03
               </span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-brand">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-brand">
               Estás aqui
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">

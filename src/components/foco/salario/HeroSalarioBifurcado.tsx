@@ -81,7 +81,7 @@ export default function HeroSalarioBifurcado({
           className={`focus-marca flex min-h-[68px] items-center gap-3 rounded-xl px-3.5 py-3 no-underline transition sm:px-4 ${!employer ? "bg-brand text-white shadow-glow" : "text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"}`}
         >
           <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${!employer ? "bg-white/15" : "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint"}`}><User size={17} /></span>
-          <span className="min-w-0"><span className="block text-[10px] font-bold uppercase tracking-[.12em] opacity-70">Para quem recebe</span><span className="mt-0.5 block text-sm font-bold">Simular o meu salário</span><span className={`mt-0.5 block text-xs leading-relaxed ${!employer ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>Quanto vou receber — e o recibo está certo?</span></span>
+          <span className="min-w-0"><span className="block texto-micro font-bold uppercase tracking-[.12em] opacity-70">Para quem recebe</span><span className="mt-0.5 block text-sm font-bold">Simular o meu salário</span><span className={`mt-0.5 block text-xs leading-relaxed ${!employer ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>Quanto vou receber — e o recibo está certo?</span></span>
           {!employer ? <Check size={15} className="ml-auto flex-none" /> : null}
         </button>
         <button
@@ -92,7 +92,7 @@ export default function HeroSalarioBifurcado({
           className={`focus-marca flex min-h-[68px] items-center gap-3 rounded-xl px-3.5 py-3 no-underline transition sm:px-4 ${employer ? "bg-brand-deep text-white shadow-glow" : "text-stone-700 hover:bg-stone-50 dark:text-stone-200 dark:hover:bg-stone-800"}`}
         >
           <span className={`flex h-9 w-9 flex-none items-center justify-center rounded-xl ${employer ? "bg-white/15" : "bg-brand-light text-brand-dark dark:bg-brand/15 dark:text-brand-mint"}`}><Briefcase size={17} /></span>
-          <span className="min-w-0"><span className="block text-[10px] font-bold uppercase tracking-[.12em] opacity-70">Para quem contrata</span><span className="mt-0.5 block text-sm font-bold">Planear uma contratação</span><span className={`mt-0.5 block text-xs leading-relaxed ${employer ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>Quanto posso pagar para contratar?</span></span>
+          <span className="min-w-0"><span className="block texto-micro font-bold uppercase tracking-[.12em] opacity-70">Para quem contrata</span><span className="mt-0.5 block text-sm font-bold">Planear uma contratação</span><span className={`mt-0.5 block text-xs leading-relaxed ${employer ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>Quanto posso pagar para contratar?</span></span>
           {employer ? <Check size={15} className="ml-auto flex-none" /> : null}
         </button>
       </div>

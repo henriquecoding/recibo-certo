@@ -499,6 +499,32 @@ body {
   }
 }
 
+/* ┌────────────────────────────────────────────────────────────────────┐
+   │ UM RÓTULO DENTRO DE UM SVG NÃO SE MEDE EM PIXÉIS — MEDE-SE EM      │
+   │ UNIDADES DO DESENHO                                                │
+   │                                                                    │
+   │ O gráfico do palco da Empresa desenha 720 unidades e, a 360px,     │
+   │ ocupa 276 CSS px: tudo lá dentro sai a 0,38× do que diz. Os três   │
+   │ rótulos («valem o mesmo», «EMPRESA À FRENTE», «RECIBOS VERDES À    │
+   │ FRENTE») estavam a `fontSize=8`/`9` — chegavam ao ecrã com 3 a 4   │
+   │ pixéis de altura. Não era texto pequeno: era texto que ninguém     │
+   │ pode ler, dentro de um `role="img"` que já se descreve por         │
+   │ `aria-label`.                                                      │
+   │                                                                    │
+   │ O piso do telemóvel tem de ser dito na escala DELE: 32 unidades    │
+   │ dão ~12px reais nessa largura. A partir de `sm:` o gráfico volta a │
+   │ desenhar-se quase 1:1 e o rótulo volta ao tamanho que o desenho    │
+   │ pediu.                                                             │
+   └────────────────────────────────────────────────────────────────────┘ */
+.rotulo-grafico {
+  font-size: 32px; /* unidades do viewBox — ~12px reais a 360 */
+}
+@media (min-width: 640px) {
+  .rotulo-grafico {
+    font-size: 12px;
+  }
+}
+
 /* Grão subtil para dar atmosfera a fundos planos. */
 .grain {
   position: relative;

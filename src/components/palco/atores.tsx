@@ -225,7 +225,7 @@ export function Ficha({
     <span
       ref={ref}
       aria-hidden
-      className={`pointer-events-none absolute z-30 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold tabular-nums shadow-card ${ficha.tom}`}
+      className={`pointer-events-none absolute z-30 whitespace-nowrap rounded-full border px-2.5 py-1 texto-mini font-semibold tabular-nums shadow-card ${ficha.tom}`}
       style={{ left: ficha.origem.x, top: ficha.origem.y, opacity: 0 }}
     >
       {/* O VALOR é o que viaja. Uma pastilha vazia a atravessar o palco é

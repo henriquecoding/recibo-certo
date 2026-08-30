@@ -126,7 +126,7 @@ function MetodoPreco() {
                   <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-light text-brand dark:bg-brand/15">
                     <Icon size={18} />
                   </span>
-                  <span className="font-mono text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+                  <span className="font-mono texto-mini font-semibold text-stone-500 dark:text-stone-400">
                     {String(indice + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -156,7 +156,7 @@ function MetodoPreco() {
                   key={camada.rotulo}
                   className={`p-5 sm:p-7 ${indice > 0 ? "border-t border-stone-100 dark:border-stone-800 md:border-l md:border-t-0" : ""}`}
                 >
-                  <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${cores}`}>
+                  <span className={`inline-flex rounded-full px-3 py-1 texto-micro font-bold uppercase tracking-wide ${cores}`}>
                     {camada.rotulo}
                   </span>
                   <h3 className="mt-4 text-sm font-semibold text-stone-800 dark:text-stone-100">{camada.titulo}</h3>
@@ -196,9 +196,9 @@ function PercursoPreco() {
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
                 <Lightbulb size={18} />
               </span>
-              <span className="font-mono text-[11px] font-bold text-stone-500 dark:text-stone-400">01</span>
+              <span className="font-mono texto-mini font-bold text-stone-500 dark:text-stone-400">01</span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">Antes</div>
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">Antes</div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">Descobrir</h3>
             <p className="mt-2 text-sm leading-relaxed text-stone-500">
               Escolher uma hipótese e tentar refutá-la com clientes reais.
@@ -213,9 +213,9 @@ function PercursoPreco() {
               <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white">
                 <Coin size={18} />
               </span>
-              <span className="font-mono text-[11px] font-bold text-brand-dark dark:text-brand-mint">02</span>
+              <span className="font-mono texto-mini font-bold text-brand-dark dark:text-brand-mint">02</span>
             </div>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-brand">Agora</div>
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-brand">Agora</div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">Definir o preço</h3>
             <p className="mt-2 text-sm leading-relaxed text-stone-600">
               Transformar custos, tempo, impostos e margem num valor que aguenta o negócio.
@@ -227,7 +227,7 @@ function PercursoPreco() {
 
           <div className="rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-5">
             <div className="px-1">
-              <div className="text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">
+              <div className="texto-micro font-bold uppercase tracking-[.14em] text-stone-400">
                 03 · Escolher estrutura
               </div>
               <h3 className="mt-1 font-display text-xl font-semibold text-ink">O percurso bifurca aqui.</h3>
@@ -311,7 +311,7 @@ function FontesPreco() {
             canal, com a data em que foi verificado. Um pressuposto de mercado sem data envelhece
             em silêncio, por isso o build falha quando algum passa de 400 dias por confirmar.
           </p>
-          <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-semibold text-stone-600">
+          <div className="mt-5 flex flex-wrap gap-2 texto-mini font-semibold text-stone-600">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-3 py-1.5 dark:border-stone-700 dark:bg-stone-900">
               <Lock size={12} className="text-brand" /> Os teus números não saem do dispositivo
             </span>

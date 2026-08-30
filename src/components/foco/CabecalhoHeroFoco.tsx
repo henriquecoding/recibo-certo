@@ -43,7 +43,7 @@ export default function CabecalhoHeroFoco({
               <span aria-hidden className="h-1 w-1 rounded-full bg-brand/50" />
               Portugal
             </div>
-            <span className="font-mono text-[10px] font-bold uppercase tracking-[.16em] text-stone-400 dark:text-stone-500">
+            <span className="font-mono texto-micro font-bold uppercase tracking-[.16em] text-stone-400 dark:text-stone-500">
               Questão {numero} de {total}
             </span>
           </div>
@@ -58,7 +58,7 @@ export default function CabecalhoHeroFoco({
         </div>
 
         <div className="border-t border-stone-200 pt-5 dark:border-stone-800 lg:border-l lg:border-t-0 lg:pb-1 lg:pl-8 lg:pt-0">
-          <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-[.16em] text-stone-400 dark:text-stone-500">
+          <div className="flex items-center justify-between gap-4 texto-micro font-bold uppercase tracking-[.16em] text-stone-400 dark:text-stone-500">
             <span>O instrumento</span>
             <span className="text-brand dark:text-brand-mint">
               {palcoAlternativo ?? <>{foco.palco}</>}

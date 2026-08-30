@@ -312,7 +312,7 @@ function Cena({
         <div className="rounded-3xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-bold uppercase tracking-[.17em] text-stone-400">
+              <div className="texto-micro font-bold uppercase tracking-[.17em] text-stone-400">
                 Recibo · 01
               </div>
               <div className="mt-1 text-xs font-semibold text-stone-700 dark:text-stone-200">
@@ -329,7 +329,7 @@ function Cena({
               `setTimeout`, que não sabe o que é uma pausa. Agora são beats
               do relógio do ato. */}
           <div className="mt-4">
-            <span className="block text-[9px] font-semibold uppercase tracking-wide text-stone-400">
+            <span className="block texto-micro font-semibold uppercase tracking-wide text-stone-400">
               Valor do serviço
             </span>
             <m.div
@@ -363,7 +363,7 @@ function Cena({
                 texto pequeno. O 500 sobe para 5,4:1 e no claro mantém-se
                 acima. Apanhado pela varredura de contraste de
                 `palcos:e2e`, que o axe não apanha. */}
-            <div className="mt-2 flex items-center gap-1.5 text-[9px] text-stone-500 dark:text-stone-300">
+            <div className="mt-2 flex items-center gap-1.5 texto-micro text-stone-500 dark:text-stone-300">
               <span className="rounded-full bg-stone-100 px-2 py-0.5 font-semibold dark:bg-stone-800">
                 Art. 151.º
               </span>
@@ -410,7 +410,7 @@ function Cena({
             transition={t}
             className="mt-4 rounded-2xl border border-brand/30 bg-brand-light px-3 py-2.5 dark:bg-brand/15"
           >
-            <span className="block text-[8px] font-bold uppercase tracking-wide text-brand-dark dark:text-brand-mint">
+            <span className="block texto-micro font-bold uppercase tracking-wide text-brand-dark dark:text-brand-mint">
               Entra na conta
             </span>
             <span className="mt-0.5 block font-display text-lg font-semibold tabular-nums text-ink">
@@ -423,7 +423,7 @@ function Cena({
         <div className="rounded-3xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-bold uppercase tracking-[.17em] text-stone-400">
+              <div className="texto-micro font-bold uppercase tracking-[.17em] text-stone-400">
                 Repartição · 02
               </div>
               <div className="mt-1 text-xs font-semibold text-stone-700 dark:text-stone-200">
@@ -479,7 +479,7 @@ function Cena({
             initial={false}
             animate={{ opacity: emCena("parcelas") && (ato >= 1 || estatico) ? 1 : 0 }}
             transition={t}
-            className="mt-3 rounded-2xl border border-dashed border-stone-300 px-3 py-2 text-[10px] tabular-nums text-stone-500 dark:border-stone-700"
+            className="mt-3 rounded-2xl border border-dashed border-stone-300 px-3 py-2 texto-micro tabular-nums text-stone-500 dark:border-stone-700"
           >
             {eur(dados.liquido)} + {eur(dados.retencaoIRS)} + {eur(dados.segSocial)} ={" "}
             <strong className="text-stone-700 dark:text-stone-200">{eur(dados.bruto)}</strong>
@@ -493,7 +493,7 @@ function Cena({
             className="mt-2 flex items-center gap-2 rounded-2xl border border-categoria-areia-border bg-categoria-areia-bg px-3 py-2 dark:border-stone-600 dark:bg-stone-800"
           >
             <Calendar size={13} className="flex-shrink-0 text-categoria-areia-text dark:text-[#e7c98e]" />
-            <span className="text-[10px] font-semibold text-categoria-areia-text dark:text-[#e7c98e]">
+            <span className="texto-micro font-semibold text-categoria-areia-text dark:text-[#e7c98e]">
               Faltam{" "}
               <span className="tabular-nums">
                 {prazo && contaDias && !estatico ? (
@@ -516,7 +516,7 @@ function Cena({
         <div className="flex flex-col rounded-3xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-700 dark:bg-stone-800/50">
           <div className="flex items-center justify-between gap-2">
             <div>
-              <div className="text-[9px] font-bold uppercase tracking-[.17em] text-stone-400">
+              <div className="texto-micro font-bold uppercase tracking-[.17em] text-stone-400">
                 Saída · 03
               </div>
               <div className="mt-1 text-xs font-semibold text-stone-700 dark:text-stone-200">
@@ -540,7 +540,7 @@ function Cena({
               a desfazer é «recebi 2 000 €», e uma animação que só soma
               nunca a desfaz. */}
           <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-4 text-center dark:border-stone-700 dark:bg-stone-900">
-            <span className="block text-[9px] font-bold uppercase tracking-wide text-stone-400">
+            <span className="block texto-micro font-bold uppercase tracking-wide text-stone-400">
               Disponível para gastar
             </span>
             <m.div
@@ -564,7 +564,7 @@ function Cena({
               initial={false}
               animate={{ opacity: desceu ? 1 : 0 }}
               transition={t}
-              className="mt-2 text-[10px] leading-relaxed text-clay-text"
+              className="mt-2 texto-micro leading-relaxed text-clay-text"
             >
               Desceu {eur(dados.bruto - dados.liquido)}. Essa parte nunca foi tua.
             </m.p>
@@ -582,7 +582,7 @@ function Cena({
           >
             <div className="flex items-center gap-1.5">
               <ShieldCheck size={12} className="text-clay-text" />
-              <span className="text-[9px] font-bold uppercase tracking-wide text-clay-text">
+              <span className="texto-micro font-bold uppercase tracking-wide text-clay-text">
                 Reservado — não é para gastar
               </span>
             </div>
@@ -598,7 +598,7 @@ function Cena({
                 />
               )}
             </div>
-            <p className="mt-1 text-[9px] leading-relaxed text-stone-500">
+            <p className="mt-1 texto-micro leading-relaxed text-stone-500">
               Retenção já entregue + Segurança Social por pagar até {prazo?.rotulo ?? "ao próximo dia 20"}.
             </p>
           </m.div>
@@ -610,7 +610,7 @@ function Cena({
             className="mt-auto flex items-start gap-2 pt-3"
           >
             <Warning size={12} className="mt-0.5 flex-shrink-0 text-categoria-areia-text" />
-            <p className="text-[10px] leading-relaxed text-stone-500">
+            <p className="texto-micro leading-relaxed text-stone-500">
               Quem gasta o recibo inteiro paga a Segurança Social com o dinheiro do mês
               seguinte. É assim que a dívida começa.
             </p>
@@ -680,17 +680,17 @@ function Destino({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className={`block text-[9px] font-bold uppercase tracking-wide ${chegou ? texto : "text-stone-400"}`}>
+          <span className={`block texto-micro font-bold uppercase tracking-wide ${chegou ? texto : "text-stone-400"}`}>
             {rotulo}
           </span>
-          <span className="mt-0.5 block text-[9px] leading-tight text-stone-500">{nota}</span>
+          <span className="mt-0.5 block texto-micro leading-tight text-stone-500">{nota}</span>
         </div>
         <span className="flex-shrink-0 text-right">
           <span className="block font-display text-base font-semibold tabular-nums text-ink">
             {chegou ? eur(valor) : "—"}
           </span>
           {data ? (
-            <span className={`mt-0.5 block whitespace-nowrap text-[8px] font-bold uppercase tracking-wide ${texto}`}>
+            <span className={`mt-0.5 block whitespace-nowrap texto-micro font-bold uppercase tracking-wide ${texto}`}>
               {data}
             </span>
           ) : null}

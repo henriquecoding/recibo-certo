@@ -46,7 +46,7 @@ export default function HeroDescobrir({ exemplo }: { exemplo: ExemploDescoberta 
             Ver como decide <Sparkle size={14} />
           </a>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-stone-500">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 texto-mini font-medium text-stone-500">
           <span className="inline-flex items-center gap-1.5">
             <Lock size={12} className="text-brand" /> O teu contexto fica neste dispositivo
           </span>

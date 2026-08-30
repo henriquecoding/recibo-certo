@@ -72,7 +72,7 @@ export function CartaoMetodo({
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-light text-brand dark:bg-brand/15">
           <Icon size={18} />
         </span>
-        <span className="font-mono text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+        <span className="font-mono texto-mini font-semibold text-stone-500 dark:text-stone-400">
           {String(indice + 1).padStart(2, "0")}
         </span>
       </div>

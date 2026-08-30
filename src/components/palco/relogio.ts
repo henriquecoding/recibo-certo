@@ -97,12 +97,29 @@ export function useRelogioDeAtos({
 
   const chave = `${ciclo}-${ato}`;
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ COM MOVIMENTO REDUZIDO A BARRA NÃO SE REPÕE A ZERO                │
+  // │                                                                   │
+  // │ A reposição escrevia `scaleX(0)` em todos os casos, e com         │
+  // │ `prefers-reduced-motion` ninguém a volta a encher: o relógio sai  │
+  // │ no `if (estatico) return`. O ato ativo ficava com a barra vazia   │
+  // │ — o contrário do que o JSX declara (`estatico → scaleX(1)`).      │
+  // │                                                                   │
+  // │ E não era só o desenho. Com movimento reduzido o `globals.css`    │
+  // │ deixa uma transição de 0,01 ms em TUDO (`transition-duration`     │
+  // │ com `!important`), portanto reescrever o transform criava uma     │
+  // │ animação — que o portão do desempenho apanhava como «a cena       │
+  // │ continua ativa», de forma intermitente, consoante o instante da   │
+  // │ amostra. Não escrever nada é a correção das duas coisas.          │
+  // └───────────────────────────────────────────────────────────────────┘
   useEffect(() => {
     feitosRef.current = new Set();
     setFeitos(new Set());
     setCumprido(false);
-    if (barraRef.current) barraRef.current.style.transform = "scaleX(0)";
-  }, [chave]);
+    if (barraRef.current) {
+      barraRef.current.style.transform = estatico ? "scaleX(1)" : "scaleX(0)";
+    }
+  }, [chave, estatico]);
 
   useEffect(() => {
     if (estatico) return;

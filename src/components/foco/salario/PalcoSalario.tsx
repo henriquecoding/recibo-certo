@@ -115,10 +115,10 @@ function Cena({
       <div className="relative border-b border-stone-200/80 px-4 py-4 dark:border-stone-700 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <m.div initial={false} animate={{ opacity: origem ? 1 : 0.25 }} transition={t}>
-            <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-brand-dark dark:text-brand-mint">
+            <p className="flex items-center gap-2 texto-micro font-bold uppercase tracking-[.16em] text-brand-dark dark:text-brand-mint">
               <Briefcase size={12} /> Recibo em inspeção
             </p>
-            <p className="mt-1 text-[10px] text-stone-500 dark:text-stone-400">
+            <p className="mt-1 texto-micro text-stone-500 dark:text-stone-400">
               Continente · 2026 · não casado · 1 dependente declarado
             </p>
           </m.div>
@@ -126,7 +126,7 @@ function Cena({
             initial={false}
             animate={{ opacity: origem ? 1 : 0 }}
             transition={t}
-            className="flex flex-wrap gap-1.5 text-[9px] font-semibold"
+            className="flex flex-wrap gap-1.5 texto-micro font-semibold"
           >
             <span className="rounded-full border border-stone-200 bg-white/80 px-2.5 py-1 text-stone-500 dark:border-stone-700 dark:bg-stone-900/70 dark:text-stone-300">
               Base {eur(dados.bruto)}
@@ -146,7 +146,7 @@ function Cena({
             transition={t}
             className="relative z-10 mx-auto flex max-w-[20rem] items-center justify-between gap-3 rounded-2xl border border-brand/25 bg-brand-light px-3.5 py-2.5 shadow-sm dark:bg-brand/15"
           >
-            <span className="text-[9px] font-bold uppercase tracking-[.13em] text-brand-dark dark:text-brand-mint">
+            <span className="texto-micro font-bold uppercase tracking-[.13em] text-brand-dark dark:text-brand-mint">
               Vencimento base
             </span>
             <span className="font-display text-xl font-semibold tabular-nums text-ink">
@@ -218,13 +218,13 @@ function Cena({
             className="relative z-10 mx-auto mt-3 flex max-w-md flex-wrap items-center justify-center gap-x-2 gap-y-1 rounded-2xl border border-clay-border bg-clay-bg/65 px-3 py-2.5 text-center"
           >
             <Warning size={12} className="text-clay-text" />
-            <span className="text-[10px] font-bold uppercase tracking-[.1em] text-clay-text">
+            <span className="texto-micro font-bold uppercase tracking-[.1em] text-clay-text">
               Só o IRS diverge
             </span>
             <span className="font-display text-lg font-semibold tabular-nums text-clay-text">
               {eur(diferencaMensal)}
             </span>
-            <span className="text-[10px] text-stone-500 dark:text-stone-300">
+            <span className="texto-micro text-stone-500 dark:text-stone-300">
               {aMais ? "retidos a mais" : "retidos a menos"} neste pagamento
             </span>
           </m.div>
@@ -236,7 +236,7 @@ function Cena({
           transition={t}
           className="flex min-w-0 flex-col rounded-3xl border border-clay-border bg-clay-bg/45 p-4"
         >
-          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.14em] text-clay-text">
+          <div className="flex items-center gap-2 texto-micro font-bold uppercase tracking-[.14em] text-clay-text">
             <Calculator size={12} /> A linha que muda
           </div>
 
@@ -257,7 +257,7 @@ function Cena({
             initial={false}
             animate={{ opacity: motivo ? 1 : 0 }}
             transition={t}
-            className="mt-3 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300"
+            className="mt-3 texto-mini leading-relaxed text-stone-600 dark:text-stone-300"
           >
             {dados.motivo}
           </m.p>
@@ -271,10 +271,10 @@ function Cena({
             <div className="flex items-start gap-2">
               <Calendar size={13} className="mt-0.5 flex-shrink-0 text-clay-text" />
               <div>
-                <p className="text-[9px] font-bold uppercase tracking-[.11em] text-stone-500 dark:text-stone-400">
+                <p className="texto-micro font-bold uppercase tracking-[.11em] text-stone-500 dark:text-stone-400">
                   Projeção, se o erro se repetir
                 </p>
-                <p className="mt-0.5 text-[9px] text-stone-400">
+                <p className="mt-0.5 texto-micro text-stone-400">
                   12 vencimentos + férias + Natal
                 </p>
               </div>
@@ -302,7 +302,7 @@ function Cena({
               transition={t}
               className="mt-3 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1 border-t border-stone-200 pt-3 dark:border-stone-700"
             >
-              <span className="text-[10px] font-semibold text-stone-500 dark:text-stone-400">
+              <span className="texto-micro font-semibold text-stone-500 dark:text-stone-400">
                 {eur(diferencaMensal)} × {dados.pagamentosProjetados}
               </span>
               <span className="font-display text-2xl font-semibold tabular-nums text-clay-text">
@@ -324,7 +324,7 @@ function Cena({
             initial={false}
             animate={{ opacity: resolve ? 1 : 0 }}
             transition={t}
-            className="mt-3 text-[9px] leading-relaxed text-stone-500 dark:text-stone-400"
+            className="mt-3 texto-micro leading-relaxed text-stone-500 dark:text-stone-400"
           >
             É uma projeção, não um valor garantido: os subsídios são calculados em separado e só
             entram aqui se a mesma situação errada também lhes for aplicada.
@@ -379,10 +379,10 @@ function ReciboCompacto({
       className={`min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm dark:bg-stone-900 ${certo ? "border-brand/30" : "border-stone-200 dark:border-stone-700"}`}
     >
       <div className={`border-b px-3 py-2.5 ${certo ? "border-brand/20 bg-brand-light/70 dark:bg-brand/15" : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50"}`}>
-        <p className={`flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-[.1em] ${certo ? "text-brand-dark dark:text-brand-mint" : "text-stone-500 dark:text-stone-300"}`}>
+        <p className={`flex items-center gap-1.5 texto-micro font-bold uppercase tracking-[.1em] ${certo ? "text-brand-dark dark:text-brand-mint" : "text-stone-500 dark:text-stone-300"}`}>
           <Icone size={11} /> {titulo}
         </p>
-        <p className="mt-0.5 text-[9px] text-stone-400">{subtitulo}</p>
+        <p className="mt-0.5 texto-micro text-stone-400">{subtitulo}</p>
       </div>
 
       <div className="divide-y divide-stone-100 px-3 dark:divide-stone-800">
@@ -412,7 +412,7 @@ function ReciboCompacto({
         className="border-t border-stone-200 px-3 py-3 dark:border-stone-700"
       >
         <div className="flex items-end justify-between gap-2">
-          <span className="text-[9px] font-bold uppercase tracking-[.1em] text-stone-400">Líquido</span>
+          <span className="texto-micro font-bold uppercase tracking-[.1em] text-stone-400">Líquido</span>
           <span className={`font-display text-[clamp(1.2rem,3.5vw,1.75rem)] font-semibold leading-none tabular-nums ${certo && irsDiverge ? "text-brand-dark dark:text-brand-mint" : irsDiverge ? "text-clay-text" : "text-ink"}`}>
             {eur(liquido)}
           </span>
@@ -452,10 +452,10 @@ function LinhaDeducao({
         className={`pointer-events-none absolute inset-0 ${diverge ? (certa ? "bg-brand-light/60" : "bg-clay-bg/70") : "bg-brand-light/45"}`}
       />
       <div className="relative flex min-h-[3rem] items-center gap-2 py-2">
-        <m.span initial={false} animate={{ opacity: visivel ? 1 : 0, x: visivel ? 0 : -4 }} transition={transicao} className="min-w-0 flex-1 text-[10px] font-semibold text-stone-600 dark:text-stone-300">
+        <m.span initial={false} animate={{ opacity: visivel ? 1 : 0, x: visivel ? 0 : -4 }} transition={transicao} className="min-w-0 flex-1 texto-micro font-semibold text-stone-600 dark:text-stone-300">
           {rotulo}
         </m.span>
-        <m.span initial={false} animate={{ opacity: visivel ? 1 : 0 }} transition={transicao} className={`text-[10px] font-semibold tabular-nums ${diverge && !certa ? "text-clay-text" : "text-stone-600 dark:text-stone-300"}`}>
+        <m.span initial={false} animate={{ opacity: visivel ? 1 : 0 }} transition={transicao} className={`texto-micro font-semibold tabular-nums ${diverge && !certa ? "text-clay-text" : "text-stone-600 dark:text-stone-300"}`}>
           − {eur(valor)}
         </m.span>
         <m.span
@@ -509,10 +509,10 @@ function TabelaRetencao({
 }) {
   return (
     <div className={`min-w-0 rounded-2xl border p-2.5 ${certa ? "border-brand/30 bg-brand-light/55 dark:bg-brand/15" : "border-clay-border bg-white/70 dark:bg-stone-900/60"}`}>
-      <span className={`block text-[8px] font-bold uppercase tracking-[.1em] ${certa ? "text-brand-dark dark:text-brand-mint" : "text-clay-text"}`}>{rotulo}</span>
-      <span className="mt-1 block truncate text-[10px] font-semibold text-stone-700 dark:text-stone-200">{tabela}</span>
-      <span className="block text-[9px] text-stone-400">{dependentes}</span>
-      <span className={`mt-2 block text-[11px] font-bold tabular-nums ${certa ? "text-brand-dark dark:text-brand-mint" : "text-clay-text"}`}>− {eur(valor)}</span>
+      <span className={`block texto-micro font-bold uppercase tracking-[.1em] ${certa ? "text-brand-dark dark:text-brand-mint" : "text-clay-text"}`}>{rotulo}</span>
+      <span className="mt-1 block truncate texto-micro font-semibold text-stone-700 dark:text-stone-200">{tabela}</span>
+      <span className="block texto-micro text-stone-400">{dependentes}</span>
+      <span className={`mt-2 block texto-mini font-bold tabular-nums ${certa ? "text-brand-dark dark:text-brand-mint" : "text-clay-text"}`}>− {eur(valor)}</span>
     </div>
   );
 }

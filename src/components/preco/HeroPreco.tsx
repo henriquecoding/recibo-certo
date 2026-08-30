@@ -556,19 +556,23 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 )}
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand" />
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-[.14em] text-stone-500 dark:text-stone-400">
+              <span className="texto-mini font-bold uppercase tracking-[.14em] text-stone-500 dark:text-stone-400">
                 Composição do exemplo
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="hidden text-[11px] text-stone-400 sm:inline">Peça física · Continente</span>
+              <span className="hidden texto-mini text-stone-400 sm:inline">Peça física · Continente</span>
               {!estatico && <BotaoPausa parado={parado} onAlternar={() => setParado((p) => !p)} />}
               <button
                 type="button"
                 onClick={recomecar}
                 aria-label="Repetir a demonstração desde o início"
-                className="focus-marca flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand dark:border-stone-700 dark:text-stone-400"
+                // 36px no telemóvel, 28 a partir de `sm:` — o mesmo que o
+                // `BotaoPausa` ao lado. Recomeçar a demonstração é das poucas
+                // coisas que se toca neste cartão; tinha 28×28, abaixo do
+                // alvo mínimo, e o polegar não acerta em 28.
+                className="focus-marca flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand dark:border-stone-700 dark:text-stone-400 sm:h-7 sm:w-7"
               >
                 <RotateCcw size={11} />
               </button>
@@ -583,7 +587,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
           <div className="relative grid gap-x-0 gap-y-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,.95fr)_minmax(0,.6fr)_minmax(0,1.55fr)] lg:gap-y-0 lg:py-7">
             {/* ── 1. Entradas ──────────────────────────────────────── */}
             <div className="lg:pr-5">
-              <div className="relative flex items-center justify-between pb-2 text-[10px] font-bold uppercase tracking-[.12em] text-stone-400">
+              <div className="relative flex items-center justify-between pb-2 texto-micro font-bold uppercase tracking-[.12em] text-stone-400">
                 <span>Entradas</span>
                 <span className="normal-case tracking-normal">arrasta ou usa as setas</span>
                 {/* A régua do cabeçalho desenha-se da esquerda: é o «começa
@@ -685,7 +689,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                             por cima do dedo. */}
                         {activo && arrastoDe !== null && Math.abs(valor - arrastoDe) > 1e-9 ? (
                           <span
-                            className={`block truncate text-[10px] font-semibold tabular-nums ${
+                            className={`block truncate texto-micro font-semibold tabular-nums ${
                               valor > arrastoDe
                                 ? "text-categoria-areia-text"
                                 : "text-brand dark:text-brand-mint"
@@ -695,7 +699,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                             {formatarEntrada(chave, Math.abs(valor - arrastoDe))}
                           </span>
                         ) : (
-                          <span className="block truncate text-[10px] text-stone-400">{nota}</span>
+                          <span className="block truncate texto-micro text-stone-400">{nota}</span>
                         )}
                       </span>
                       <span className="flex items-center gap-2">
@@ -732,14 +736,14 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 })}
               </div>
 
-              <div className="mt-1 flex items-center justify-between border-t border-stone-200 pt-1 text-[10px] text-stone-400 dark:border-stone-700">
+              <div className="mt-1 flex items-center justify-between border-t border-stone-200 pt-1 texto-micro text-stone-400 dark:border-stone-700">
                 <span>Valores sem IVA</span>
                 {/* `min-h-[36px]`: com `py-1` o alvo media 88×23 e falhava o
                     mínimo de 24×24 do WCAG 2.2 (2.5.8) em todas as vistas. */}
                 <button
                   type="button"
                   onClick={reporExemplo}
-                  className="focus-marca -mr-1 inline-flex min-h-[36px] items-center rounded-full px-3 font-semibold text-brand underline decoration-stone-300 underline-offset-4 hover:decoration-brand"
+                  className="focus-marca inline-flex min-h-[36px] items-center rounded-full px-3 sm:-mr-1 font-semibold text-brand underline decoration-stone-300 underline-offset-4 hover:decoration-brand"
                 >
                   Repor exemplo
                 </button>
@@ -768,7 +772,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   }
                   className="w-full max-w-[13rem] rounded-2xl border border-stone-200 bg-white px-3.5 py-3 text-center shadow-card dark:border-stone-700 dark:bg-stone-800"
                 >
-                  <div className="text-[9px] font-bold uppercase tracking-[.12em] text-stone-400">
+                  <div className="texto-micro font-bold uppercase tracking-[.12em] text-stone-400">
                     Base de custos
                   </div>
                   <div className="mt-1 font-display text-[22px] font-semibold tabular-nums text-ink">
@@ -782,7 +786,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                     initial={false}
                     animate={{ opacity: emCena("parcelas") || ato >= 2 ? 1 : 0 }}
                     transition={t(280)}
-                    className="mt-1 text-[9px] tabular-nums text-stone-400"
+                    className="mt-1 texto-micro tabular-nums text-stone-400"
                   >
                     {eur(entradas.materiais)} + {eur(entradas.trabalho)} + {eur(entradas.estrutura)}
                   </m.div>
@@ -834,7 +838,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
               transition={t(520)}
               className="min-w-0 lg:pl-6"
             >
-              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.12em] text-stone-400">
+              <div className="flex items-center gap-2 texto-micro font-bold uppercase tracking-[.12em] text-stone-400">
                 <m.span
                   initial={false}
                   animate={
@@ -860,7 +864,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                      
                     />
                   </div>
-                  <div className="mt-1.5 text-[11px] text-stone-500 dark:text-stone-400">
+                  <div className="mt-1.5 texto-mini text-stone-500 dark:text-stone-400">
                     {precoFinal ? "Preço recomendado, com IVA" : "Mínimo para cobrir custos"}
                   </div>
                 </div>
@@ -880,7 +884,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                     const existe = ato >= metrica.desde || estatico || !montado;
                     return (
                       <div key={metrica.rotulo} className={`min-w-0 px-2 ${i === 0 ? "pl-0" : ""}`}>
-                        <dt className="text-[9px] leading-tight text-stone-400">{metrica.rotulo}</dt>
+                        <dt className="texto-micro leading-tight text-stone-400">{metrica.rotulo}</dt>
                         <dd className="mt-1 font-display text-[15px] font-semibold tabular-nums text-ink">
                           {existe ? (
                             <Contador valor={metrica.valor} formato={metrica.formato} />
@@ -924,7 +928,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                   ].map((zona, i) => (
                     <m.span
                       key={zona.texto}
-                      className={`grid place-items-center text-[8px] font-semibold ${zona.classe}`}
+                      className={`grid place-items-center texto-micro font-semibold ${zona.classe}`}
                       style={{ width: zona.largura }}
                       initial={false}
                       // Zero, e não 0.25: com a régua encolhida a `scaleX(.04)`
@@ -973,7 +977,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                     className="absolute top-0 h-4 border-l border-dashed border-clay transition-[left] duration-700"
                     style={{ left: `${regua.minimo}%` }}
                   >
-                    <span className="absolute left-0 top-[1.05rem] -translate-x-1/2 text-[8px] font-medium text-clay-text">
+                    <span className="absolute left-0 top-[1.05rem] -translate-x-1/2 texto-micro font-medium text-clay-text">
                       mínimo
                     </span>
                   </div>
@@ -1016,7 +1020,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 </m.div>
 
                 <m.div
-                  className="flex justify-between text-[9px] tabular-nums text-stone-400"
+                  className="flex justify-between texto-micro tabular-nums text-stone-400"
                   aria-hidden
                   initial={false}
                   animate={{ opacity: reguaAberta || estatico || ato > 3 ? 1 : 0 }}
@@ -1036,7 +1040,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                 transition={t(360)}
                 className="mt-5"
               >
-                <div className="flex items-baseline justify-between gap-2 text-[10px] text-stone-400">
+                <div className="flex items-baseline justify-between gap-2 texto-micro text-stone-400">
                   <span>A composição do preço</span>
                   <span className="font-semibold tabular-nums text-stone-600 dark:text-stone-300">
                     total · <Contador valor={composicao.pvp} formato={eur} />
@@ -1075,10 +1079,10 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                           : { duration: 0.3, delay: composicaoVisivel ? i * 0.09 + 0.08 : 0 }
                       }
                     >
-                      <span className="block text-[11px] font-semibold tabular-nums text-stone-700 dark:text-stone-200">
+                      <span className="block texto-mini font-semibold tabular-nums text-stone-700 dark:text-stone-200">
                         <Contador valor={p.valor} formato={eur} />
                       </span>
-                      <span className="mt-0.5 block text-[9px] leading-tight text-stone-400">
+                      <span className="mt-0.5 block texto-micro leading-tight text-stone-400">
                         {p.rotulo}
                       </span>
                     </m.li>
@@ -1118,7 +1122,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
                       setRegimeIdx(i);
                       fixarNoResultado();
                     }}
-                    className={`focus-marca inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold transition-colors ${
+                    className={`focus-marca inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3 texto-mini font-semibold transition-colors ${
                       regimeIdx === i
                         ? "bg-brand text-white shadow-card"
                         : "text-stone-500 hover:text-brand-dark dark:text-stone-400"
@@ -1169,7 +1173,7 @@ export default function HeroPreco({ parametros }: { parametros: ParametrosDemoPr
             Ver como se forma <Coin size={14} />
           </a>
         </div>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[11px] font-medium text-stone-500">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 texto-mini font-medium text-stone-500">
           <span className="inline-flex items-center gap-1.5">
             <Lock size={12} className="text-brand" /> Os teus números ficam neste dispositivo
           </span>
@@ -1216,9 +1220,9 @@ function ChipFormula({
       transition={estatico ? { duration: 0 } : { duration: DUR.entrada / 1000, ease: ENTRADA }}
       className={`flex w-full max-w-[13rem] items-center justify-between gap-2 rounded-full border px-3 py-1.5 ${cores}`}
     >
-      <span className="text-[9px] font-bold uppercase tracking-wide">{rotulo}</span>
-      <span className="flex items-center gap-1.5 text-[11px] font-semibold tabular-nums">
-        {anotacao && <span className="text-[8px] font-medium opacity-70">{anotacao}</span>}+{" "}
+      <span className="texto-micro font-bold uppercase tracking-wide">{rotulo}</span>
+      <span className="flex items-center gap-1.5 texto-mini font-semibold tabular-nums">
+        {anotacao && <span className="texto-micro font-medium opacity-70">{anotacao}</span>}+{" "}
         <Contador
           valor={valor}
           formato={(n) => `${n.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`}

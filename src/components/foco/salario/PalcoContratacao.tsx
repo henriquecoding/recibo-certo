@@ -87,14 +87,14 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
 
       <section className={`mt-4 rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${active(0) ? "border-brand-mint/70 bg-white/10" : "border-white/10 bg-white/[.035]"}`}>
         <div className="flex items-end justify-between gap-4">
-          <div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Régua do orçamento anual</p><p className="mt-1 font-display text-2xl font-semibold tabular-nums text-white">{eur(dados.orcamentoAnual)}</p></div>
+          <div><p className="texto-micro font-bold uppercase tracking-[.14em] text-white/45">Régua do orçamento anual</p><p className="mt-1 font-display text-2xl font-semibold tabular-nums text-white">{eur(dados.orcamentoAnual)}</p></div>
           <p className="text-right text-xs leading-relaxed text-white/55"><strong className="text-brand-mint">{eur(dados.orcamentoUtilizavel)}</strong><br />pode ser usado</p>
         </div>
         <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
           <span className="absolute inset-y-0 left-0 rounded-full bg-brand-mint transition-[width] duration-700" style={{ width: reached(0) ? `${spentPercent}%` : "0%" }} />
           <span className="absolute inset-y-0 w-px bg-white/80" style={{ left: `${safePercent}%` }} />
         </div>
-        <div className="mt-2 flex justify-between text-[10px] text-white/40"><span>{eur(dados.custoAnual)} composto</span><span>{dados.margemSegurancaPercentagem}% protegido</span></div>
+        <div className="mt-2 flex justify-between texto-micro text-white/40"><span>{eur(dados.custoAnual)} composto</span><span>{dados.margemSegurancaPercentagem}% protegido</span></div>
       </section>
 
       <div className="mt-3 grid gap-3 lg:grid-cols-[1.05fr_.95fr]">
@@ -106,13 +106,13 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
             <Metric label="Primeiro ano" value={eur(dados.custoPrimeiroAno)} />
           </div>
           <div className="mt-4 flex h-5 overflow-hidden rounded-lg bg-white/10">
-            <span className="flex items-center bg-brand-mint/80 px-2 text-[9px] font-bold text-brand-deep transition-[width] duration-700" style={{ width: reached(1) ? `${companyPercent}%` : "0%" }}>Empresa</span>
-            <span className="flex items-center justify-end bg-clay/80 px-2 text-[9px] font-bold text-white transition-[width] duration-700" style={{ width: reached(2) ? `${publicPercent}%` : "0%" }}>Estado</span>
+            <span className="flex items-center bg-brand-mint/80 px-2 texto-micro font-bold text-brand-deep transition-[width] duration-700" style={{ width: reached(1) ? `${companyPercent}%` : "0%" }}>Empresa</span>
+            <span className="flex items-center justify-end bg-clay/80 px-2 texto-micro font-bold text-white transition-[width] duration-700" style={{ width: reached(2) ? `${publicPercent}%` : "0%" }}>Estado</span>
           </div>
         </section>
 
         <section className={`rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${active(2) ? "border-brand-mint/70 bg-white/10" : "border-white/10 bg-white/[.035]"}`}>
-          <p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Os três dinheiros</p>
+          <p className="texto-micro font-bold uppercase tracking-[.14em] text-white/45">Os três dinheiros</p>
           <div className="mt-3 space-y-2">
             <MoneyLine Icon={Building} label="Sai da empresa" value={eur(dados.custoAnual)} visible={reached(2)} />
             <MoneyLine Icon={User} label="Chega ao trabalhador" value={`${eur(dados.liquidoMensalMinimo)}–${eur(dados.liquidoMensalMaximo)}/mês`} visible={reached(2)} />
@@ -123,7 +123,7 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
 
       <section className={`mt-3 grid gap-3 rounded-2xl border p-3.5 transition-all duration-500 sm:grid-cols-[1fr_auto] sm:items-center sm:p-4 ${active(3) ? "border-brand-mint/75 bg-brand/20" : "border-white/10 bg-white/[.035]"}`}>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[.14em] text-brand-mint">Linha de equilíbrio</p>
+          <p className="texto-micro font-bold uppercase tracking-[.14em] text-brand-mint">Linha de equilíbrio</p>
           <p className="mt-1 font-display text-xl font-semibold text-white">{dados.receitaAnualNecessaria ? `${eur(dados.receitaAnualNecessaria)} de receita/ano` : "Capacidade por validar"}</p>
           <p className="mt-1 text-xs leading-relaxed text-white/55">{dados.custoHoraProdutiva ? `${eur(dados.custoHoraProdutiva, 2)} por hora produtiva · ${Math.round(dados.horasProdutivasAno ?? 0).toLocaleString("pt-PT")} h/ano` : "Indica margem e produtividade na ferramenta completa."}</p>
         </div>
@@ -134,9 +134,9 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-xl bg-white/[.055] p-2.5"><p className="text-[9px] uppercase tracking-wide text-white/40">{label}</p><p className="mt-1 text-xs font-semibold tabular-nums text-white/85">{value}</p></div>;
+  return <div className="rounded-xl bg-white/[.055] p-2.5"><p className="texto-micro uppercase tracking-wide text-white/40">{label}</p><p className="mt-1 text-xs font-semibold tabular-nums text-white/85">{value}</p></div>;
 }
 
 function MoneyLine({ Icon, label, value, visible }: { Icon: typeof Building; label: string; value: string; visible: boolean }) {
-  return <div className={`flex items-center gap-2.5 rounded-xl bg-white/[.045] p-2.5 transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-30"}`}><Icon size={14} className="flex-none text-brand-mint" /><div className="min-w-0"><p className="text-[10px] text-white/45">{label}</p><p className="truncate text-xs font-semibold tabular-nums text-white/85">{value}</p></div></div>;
+  return <div className={`flex items-center gap-2.5 rounded-xl bg-white/[.045] p-2.5 transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-30"}`}><Icon size={14} className="flex-none text-brand-mint" /><div className="min-w-0"><p className="texto-micro text-white/45">{label}</p><p className="truncate text-xs font-semibold tabular-nums text-white/85">{value}</p></div></div>;
 }

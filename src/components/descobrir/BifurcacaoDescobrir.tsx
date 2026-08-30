@@ -124,13 +124,13 @@ export default function BifurcacaoDescobrir() {
 
                 <dl className="mt-4 space-y-2.5 border-t border-stone-200/70 pt-4 dark:border-stone-700">
                   <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-[.13em] text-stone-400">
+                    <dt className="texto-micro font-bold uppercase tracking-[.13em] text-stone-400">
                       Exige
                     </dt>
                     <dd className="mt-0.5 text-xs leading-relaxed text-stone-500">{exige}</dd>
                   </div>
                   <div>
-                    <dt className="text-[10px] font-bold uppercase tracking-[.13em] text-stone-400">
+                    <dt className="texto-micro font-bold uppercase tracking-[.13em] text-stone-400">
                       Faz sentido quando
                     </dt>
                     <dd className="mt-0.5 text-xs leading-relaxed text-stone-500">{quando}</dd>

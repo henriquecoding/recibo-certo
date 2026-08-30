@@ -60,9 +60,11 @@ causa de uma afinação do modo claro.
 npm run start            (noutro terminal)
 npm run movel:e2e
 ```
-Percorre a página inicial a 360 e a 320px, nos dois temas e nos quatro perfis, e
-reprova o que rola de lado, o que sai da própria caixa, o texto abaixo de 12px e
-os alvos abaixo de 36px. Corre-o contra o BUILD, não contra o `dev`: no `dev` a
+Percorre as cinco rotas da homepage a 360 e a 320px, nos dois temas, e reprova o
+que rola de lado, o que sai da própria caixa, o texto abaixo de 12px e os alvos
+abaixo de 36px. (Os quatro perfis saíram da matriz quando a homepage deixou de
+ramificar por perfil: a ramificação passou a ser a ROTA, e o que faltava medir
+eram as outras quatro.) Corre-o contra o BUILD, não contra o `dev`: no `dev` a
 página traz o indicador do Next por cima do rodapé e os chunks chegam noutro
 tempo — já deu um verde e quatro falhas para o mesmo código.
 

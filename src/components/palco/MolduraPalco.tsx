@@ -145,6 +145,12 @@ export default function MolduraPalco({
     <PalcoContexto.Provider value={estadoPalco}>
       <section
         ref={molduraRef}
+        // O `id` era só um prefixo para `aria-labelledby`/`aria-describedby`,
+        // e o palco não existia como âncora: `#palco-contratacao` — que o
+        // portão do planeador espera e a que a própria página se refere — não
+        // estava no DOM. Passa a estar, com o mesmo valor que já nomeia tudo
+        // o resto aqui dentro.
+        id={id}
         data-palco={id.replace(/^palco-/, "")}
         aria-labelledby={`${id}-titulo`}
         aria-describedby={`${id}-resumo`}
@@ -297,7 +303,7 @@ export default function MolduraPalco({
                   />
                 </span>
                 <span
-                  className={`mt-1.5 block text-center text-[10px] font-bold uppercase leading-tight tracking-wide transition-colors sm:text-left sm:text-[11px] ${
+                  className={`mt-1.5 block text-center texto-micro font-bold uppercase leading-tight tracking-wide transition-colors sm:text-left sm:text-[11px] ${
                     indice === ato
                       ? pele.rotuloAtivo
                       : indice < ato

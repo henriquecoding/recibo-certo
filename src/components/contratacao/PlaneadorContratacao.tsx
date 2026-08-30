@@ -483,7 +483,17 @@ function ComparisonPanel({
         </div>
         <button type="button" onClick={onClear} className="min-h-[40px] rounded-xl px-3 text-xs font-semibold text-stone-500 hover:bg-white dark:hover:bg-stone-900">Remover comparação</button>
       </div>
-      <div className="mt-4 overflow-x-auto">
+      {/* A tabela tem `min-w-[34rem]` e rola de lado num telemóvel: uma
+          região que rola tem de ser alcançável por teclado, senão quem não
+          usa rato não chega às colunas da direita (axe:
+          `scrollable-region-focusable`). É o mesmo padrão de
+          `/ferramentas/calcular-preco`. */}
+      <div
+        className="mt-4 overflow-x-auto"
+        tabIndex={0}
+        role="region"
+        aria-label="Pacote A e proposta atual, lado a lado"
+      >
         <table className="w-full min-w-[34rem] text-left text-sm">
           <thead className="text-xs uppercase tracking-wide text-stone-500">
             <tr><th className="pb-2 font-semibold">Conta</th><th className="pb-2 text-right font-semibold">Pacote A</th><th className="pb-2 text-right font-semibold">Atual</th><th className="pb-2 text-right font-semibold">Diferença</th></tr>

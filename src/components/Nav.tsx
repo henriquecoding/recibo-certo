@@ -394,7 +394,7 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
               aria-expanded={corpoVisivel}
               aria-controls="rc-cabecalho-corpo"
               onClick={alternar}
-              className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+              className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 texto-mini font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
             >
               {corpoVisivel ? "Recolher" : "Navegação e pesquisa"}
               <ChevronDown

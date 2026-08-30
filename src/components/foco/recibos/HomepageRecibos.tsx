@@ -161,7 +161,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
                 className={`p-5 sm:p-7 ${indice > 0 ? "border-t border-stone-100 dark:border-stone-800 md:border-l md:border-t-0" : ""}`}
               >
                 <span
-                  className={`inline-flex rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-wide ${parte.cores}`}
+                  className={`inline-flex rounded-full px-3 py-1 texto-micro font-bold uppercase tracking-wide ${parte.cores}`}
                 >
                   {parte.rotulo}
                 </span>
@@ -191,7 +191,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
               <Coin size={18} />
             </span>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">
               Se o que fica não chega
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">Rever o preço</h3>
@@ -211,7 +211,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
               <Scale size={18} />
             </span>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-stone-400">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-stone-400">
               Se a faturação cresceu
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">
@@ -230,7 +230,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand text-white">
               <Calendar size={18} />
             </span>
-            <div className="mt-5 text-[10px] font-bold uppercase tracking-[.14em] text-brand">
+            <div className="mt-5 texto-micro font-bold uppercase tracking-[.14em] text-brand">
               A seguir, na prática
             </div>
             <h3 className="mt-1 font-display text-xl font-semibold text-ink">
