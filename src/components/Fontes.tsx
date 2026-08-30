@@ -67,7 +67,7 @@ export default function Fontes() {
                 <span className="text-sm font-semibold text-stone-700">{p.label}</span>
                 <span className="font-display text-base font-semibold text-brand tabular-nums">{p.valor}</span>
               </div>
-              <p className="text-[11px] leading-snug text-stone-400">{p.base}</p>
+              <p className="texto-mini leading-snug text-stone-400">{p.base}</p>
             </div>
           ))}
         </div>

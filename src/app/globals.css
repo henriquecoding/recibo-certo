@@ -432,6 +432,49 @@ body {
   text-transform: uppercase;
 }
 
+/* ════════════════════════════════════════════════════════════════════
+   O PISO TIPOGRÁFICO DO TELEMÓVEL
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ PORQUE É UMA CLASSE E NÃO UMA REGRA DE BOM SENSO                  │
+   │                                                                  │
+   │ A homepage tinha 31 sítios abaixo de 12px a 360 px: rótulos a     │
+   │ 9px na régua dos atos, a 10px na barra de navegação do telemóvel  │
+   │ e no seletor de perfil, e uma nuvem de 11px pelo rodapé, pelas    │
+   │ fontes e pelos mini-rótulos das secções. Nenhum deles nasceu      │
+   │ errado: cada um foi escolhido a olhar para um ecrã de 1440px,     │
+   │ onde 10px é um rótulo discreto e não um rótulo ilegível.          │
+   │                                                                  │
+   │ Escrever `text-xs sm:text-[10px]` em 31 sítios corrige os 31 e    │
+   │ não corrige o 32.º, que alguém escreve amanhã a olhar para o      │
+   │ mesmo ecrã largo. Por isso o piso é uma classe: quem quer um      │
+   │ rótulo pequeno pede um rótulo pequeno, e o telemóvel fica         │
+   │ protegido sem ter de se lembrar dele.                             │
+   │                                                                  │
+   │ 12px é o piso porque é onde a régua de contraste da WCAG muda de  │
+   │ patamar e onde o texto deixa de exigir aproximar o telemóvel da   │
+   │ cara. Acima de `sm:` (640px, já não é um telemóvel na mão) cada   │
+   │ classe volta ao tamanho pequeno que o desenho pediu.              │
+   └──────────────────────────────────────────────────────────────────┘
+
+   · .texto-micro — o mais pequeno que existe: 10px em ecrã largo.
+   · .texto-mini  — o degrau acima: 11px em ecrã largo.
+
+   Medido pelo portão `npm run movel:e2e`, que reprova qualquer texto
+   abaixo do piso a 360px. */
+.texto-micro,
+.texto-mini {
+  font-size: 0.75rem; /* 12px — o piso, e é o telemóvel que o vê */
+}
+@media (min-width: 640px) {
+  .texto-micro {
+    font-size: 0.625rem; /* 10px */
+  }
+  .texto-mini {
+    font-size: 0.6875rem; /* 11px */
+  }
+}
+
 /* Grão subtil para dar atmosfera a fundos planos. */
 .grain {
   position: relative;

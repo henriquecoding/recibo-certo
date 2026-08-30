@@ -119,6 +119,18 @@ jobs:
       - name: Estúdio de empresa — fim a fim
         run: npm run negocio:e2e
 
+      # A regra 5b do CLAUDE.md («mobile-first, sempre — inegociável») não
+      # tinha portão nenhum, e por isso a homepage chegou a produção com a
+      # demonstração do IRS cortada pela berma do ecrã, títulos espremidos a
+      # sete pixéis e texto a 9px. Nada disso reprovava aqui, porque nada
+      # disso é um erro — é um layout medido no ecrã errado.
+      #
+      # Contra o artefacto de PRODUÇÃO, que é o que a pessoa recebe: no
+      # `dev` o indicador do Next tapa o rodapé e os chunks chegam noutro
+      # tempo.
+      - name: Telemóvel — 360 e 320 px, dois temas, quatro perfis
+        run: npm run movel:e2e
+
   documentos:
     name: Documentos — normas e tipografia
     runs-on: ubuntu-latest

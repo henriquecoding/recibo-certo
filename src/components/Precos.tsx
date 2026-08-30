@@ -311,7 +311,7 @@ export default function Precos() {
           <Reveal className="mt-14">
             <div className="mb-6 flex items-center gap-4" aria-hidden>
               <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+              <span className="texto-mini font-semibold uppercase tracking-wider text-stone-400">
                 E depois dos planos
               </span>
               <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />

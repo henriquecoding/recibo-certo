@@ -52,8 +52,8 @@ export const linha = {
 export function TituloAto({ children, nota }: { children: React.ReactNode; nota?: string }) {
   return (
     <m.div variants={linha} className="mb-2.5 flex items-baseline justify-between gap-2">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">{children}</span>
-      {nota && <span className="flex-shrink-0 text-[10px] font-medium text-stone-400">{nota}</span>}
+      <span className="texto-mini font-bold uppercase tracking-wider text-stone-400">{children}</span>
+      {nota && <span className="flex-shrink-0 texto-micro font-medium text-stone-400">{nota}</span>}
     </m.div>
   );
 }
@@ -77,9 +77,14 @@ export function BotaoPausa({
       type="button"
       onClick={onAlternar}
       aria-label={parado ? "Retomar a demonstração" : "Pausar a demonstração"}
-      className={`flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 dark:border-stone-700 dark:text-stone-400 ${className}`}
+      // 36px no telemóvel e 28 a partir de `sm:`. Este botão é a única forma
+      // de parar uma animação num ecrã tátil (WCAG 2.2.2 — não há `hover` num
+      // dedo), e estava a 28×28: abaixo do alvo mínimo do design system, num
+      // canto do cartão, para uma pessoa que já está a tentar travar algo que
+      // se mexe. O rato acerta em 28; o polegar não.
+      className={`flex h-9 w-9 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 dark:border-stone-700 dark:text-stone-400 sm:h-7 sm:w-7 ${className}`}
     >
-      {parado ? <Play size={11} /> : <Pause size={11} />}
+      {parado ? <Play size={13} /> : <Pause size={13} />}
     </button>
   );
 }
@@ -114,13 +119,25 @@ export function ReguaDeAtos({
   return (
     <ol className={`flex gap-1 ${className}`}>
       {atos.map((a, idx) => (
-        <li key={a.id} className="flex-1">
+        // `min-w-0` — sem isto a régua deixava de caber quando os rótulos
+        // subiram de 9px para o piso de 12: um item de flex não encolhe
+        // abaixo do seu min-content, e `truncate` é `whitespace-nowrap`,
+        // portanto o min-content de cada passo é a PALAVRA INTEIRA. A 320px
+        // «Coletável» sozinho pedia mais do que a coluna tinha, e a régua
+        // empurrava o cartão da demo para fora do ecrã. Com `min-w-0` os
+        // quatro passos voltam a repartir a largura em partes iguais e o
+        // `truncate` faz o que promete.
+        <li key={a.id} className="min-w-0 flex-1">
           <button
             type="button"
             onClick={() => onIr(idx)}
             aria-current={idx === indiceAtivo ? "step" : undefined}
             aria-label={`Passo ${idx + 1} de ${atos.length}: ${a.legenda}`}
-            className="group block w-full py-1 focus-visible:outline-none"
+            // A régua é navegável — cada passo leva ao seu ato. Tinha 30px de
+            // altura, e o que se toca não é a barra de 1px: é a coluna
+            // inteira. `min-h-[36px]` no telemóvel dá-lhe o alvo que ela já
+            // pedia sem o dizer, sem mudar nada do que se vê.
+            className="group block min-h-[36px] w-full py-1 focus-visible:outline-none sm:min-h-0"
           >
             <span className="block h-1 w-full overflow-hidden rounded-full bg-stone-200 group-focus-visible:ring-2 group-focus-visible:ring-brand group-focus-visible:ring-offset-2 dark:bg-stone-700">
               <span
@@ -132,7 +149,7 @@ export function ReguaDeAtos({
               />
             </span>
             <span
-              className={`mt-1 block truncate text-[9px] font-semibold uppercase tracking-wide transition-colors ${
+              className={`mt-1 block truncate texto-micro font-semibold uppercase tracking-wide transition-colors ${
                 idx === indiceAtivo ? "text-brand-dark dark:text-brand" : "text-stone-300 dark:text-stone-600"
               }`}
             >

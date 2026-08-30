@@ -43,7 +43,7 @@ export default function FilaPilares() {
         </div>
         <Link
           href="/ferramentas"
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand no-underline transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
+          className="inline-flex min-h-[36px] items-center gap-1.5 text-sm font-semibold text-brand no-underline transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
         >
           Ver tudo <ArrowRight size={14} />
         </Link>
@@ -79,7 +79,7 @@ export default function FilaPilares() {
                         `globals.css` dão 5,15:1 e 7,16:1. */}
                     <span
                       aria-hidden
-                      className="font-mono text-[11px] font-semibold tabular-nums text-stone-500 dark:text-stone-400"
+                      className="font-mono texto-mini font-semibold tabular-nums text-stone-500 dark:text-stone-400"
                     >
                       {String(i + 1).padStart(2, "0")}
                     </span>

@@ -221,7 +221,7 @@ export default function ChromeMobile() {
                     cinco vezes. */}
                 <span
                   aria-hidden
-                  className="w-full truncate text-center text-[10px] font-semibold leading-none tracking-tight"
+                  className="w-full truncate text-center texto-micro font-semibold leading-none tracking-tight"
                 >
                   {slot.label}
                 </span>

@@ -728,7 +728,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
       <div className="mb-3 flex items-center justify-between gap-3">
         <span
           aria-hidden
-          className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand"
+          className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-light px-2.5 py-1 texto-mini font-bold uppercase tracking-wider text-brand-dark dark:bg-brand/10 dark:text-brand"
         >
           <span className="relative flex h-1.5 w-1.5">
             {!reduzNoDesenho && !emPausa && (
@@ -746,7 +746,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
       {/* Cartão — sombra/borda acompanham a fase; palco do cursor encenado */}
       <div
         ref={cardRef}
-        className={`relative rounded-4xl border bg-white p-6 transition-all duration-700 dark:bg-stone-900 sm:p-7 ${
+        className={`relative rounded-4xl border bg-white p-4 transition-all duration-700 dark:bg-stone-900 sm:p-7 ${
           isResult && !fading
             ? "border-brand/20 shadow-float dark:border-brand/15"
             : isFocused && !fading
@@ -763,7 +763,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
           {/* Cabeçalho */}
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-stone-400">{card.etiqueta}</span>
-            <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-semibold text-brand-dark">
+            <span className="rounded-full bg-brand-light px-2.5 py-1 texto-mini font-semibold text-brand-dark">
               Exemplo
             </span>
           </div>
@@ -788,7 +788,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
               }`}
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="text-[10px] font-semibold uppercase tracking-wider text-stone-400">
+                <div className="texto-micro font-semibold uppercase tracking-wider text-stone-400">
                   {card.heroLabel}
                 </div>
                 {/* Botão «Calcular» encenado — o cursor clica-o de verdade */}
@@ -797,7 +797,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                   type="button"
                   tabIndex={-1}
                   aria-hidden
-                  className={`pointer-events-none inline-flex h-8 min-w-[88px] flex-shrink-0 select-none items-center justify-center gap-1.5 rounded-xl px-3 text-[11px] font-bold transition-all duration-300 ${btnCls}`}
+                  className={`pointer-events-none inline-flex h-8 min-w-[88px] flex-shrink-0 select-none items-center justify-center gap-1.5 rounded-xl px-3 texto-mini font-bold transition-all duration-300 ${btnCls}`}
                   style={{ transform: btnPremido ? "scale(0.92)" : "scale(1)" }}
                 >
                   {btnEstado === "calc" ? (
@@ -992,7 +992,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                         <span className="block font-semibold tabular-nums text-stone-700 dark:text-stone-200">
                           {pctTeu}% {card.pctSufixo}
                         </span>
-                        <span className="mt-0.5 block text-[11px]">o resto é do Estado</span>
+                        <span className="mt-0.5 block texto-mini">o resto é do Estado</span>
                       </m.div>
                     </>
                   )}
@@ -1024,7 +1024,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                           </div>
                         </div>
                       </m.div>
-                      <m.p variants={linhaVar} className="mt-2.5 text-[11px] leading-relaxed text-stone-400">
+                      <m.p variants={linhaVar} className="mt-2.5 texto-mini leading-relaxed text-stone-400">
                         {card.nota}
                       </m.p>
                     </>
@@ -1045,7 +1045,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                             <div className="text-xs font-semibold text-stone-800 dark:text-stone-100">
                               {card.fiz.titulo}
                             </div>
-                            <div className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
+                            <div className="texto-mini leading-relaxed text-stone-500 dark:text-stone-400">
                               {card.fiz.sub}
                             </div>
                           </div>
@@ -1067,7 +1067,7 @@ function HeroCard({ perfil, card }: { perfil: Perfil; card: CardData }) {
                           {card.fiz.cta}
                         </FizActionButton>
                       </m.div>
-                      <m.p variants={linhaVar} className="mt-2 text-[11px] leading-relaxed text-stone-400">
+                      <m.p variants={linhaVar} className="mt-2 texto-mini leading-relaxed text-stone-400">
                         {NOTA_LIGACAO}
                       </m.p>
                     </>
@@ -1177,7 +1177,7 @@ export default function Hero({
     // que o botão de voltar ao topo entra em cena.
     <section
       data-hero
-      className="grain relative overflow-hidden px-6 pt-6 pb-14 sm:pt-8 lg:pt-10 lg:pb-20"
+      className="grain relative overflow-hidden px-4 pt-6 pb-14 sm:px-6 sm:pt-8 lg:pt-10 lg:pb-20"
     >
       {/* Atmosfera: dois halos que seguem a composição — um por trás do cartão
           (canto superior direito), outro a apoiar o bloco de texto (em baixo, à
@@ -1292,7 +1292,7 @@ export default function Hero({
                 transition={{ duration: 0.25, ease: EASE }}
                 className="flex flex-wrap items-center gap-2"
               >
-                <span className="mr-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-stone-400">
+                <span className="mr-0.5 texto-mini font-semibold uppercase tracking-[0.12em] text-stone-400">
                   Para ti
                 </span>
                 {[

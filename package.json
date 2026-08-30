@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.123.0",
+  "version": "2.124.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -48,6 +48,7 @@
     "mercado:ingerir": "node --max-old-space-size=2048 scripts/ingerir-mercado.mjs",
     "migracoes:check": "node scripts/juntar-migracoes.mjs --check",
     "migracoes:juntar": "node scripts/juntar-migracoes.mjs",
+    "movel:e2e": "node scripts/verificar-movel.mjs",
     "navegacao:e2e": "node scripts/verificar-navegacao.mjs",
     "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",

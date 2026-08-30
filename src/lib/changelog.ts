@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.124.0",
+    data: "2026-08-30",
+    titulo: "A página inicial no telemóvel: a demonstração deixa de ser cortada e nada volta a ser escrito a 9px",
+    itens: [
+      "A demonstração do IRS saía por fora do cartão que a contém e era a berma do ecrã que a cortava: os valores apareciam sem o último algarismo e sem o «€». Não era um problema de tamanho de letra — era a coluna a recusar-se a encolher. Agora a demonstração cabe no cartão em qualquer telemóvel, e os números leem-se inteiros.",
+      "Metade dos cartões de ferramentas anunciava-se com reticências. O título disputava a linha com uma etiqueta que não encolhia, e quem cedia era sempre o título: a 360px sobravam-lhe sete pixéis. «Descobrir que negócio testar» era, no ecrã, um travessão. A etiqueta passa a mudar de linha quando não cabe, e o título tem direito a duas linhas em vez de ser cortado.",
+      "Havia 31 sítios com texto abaixo dos 12px — dois deles a 9. Os passos da demonstração, os rótulos da barra de navegação, o seletor de perfil, as garantias do rodapé. Nada disso é decorativo: são os rótulos que dizem onde se está e o que se está a ver. Passam todos a ter, no telemóvel, um piso de 12px, e voltam ao tamanho miúdo em ecrãs largos, onde faz sentido.",
+      "Trinta alvos eram pequenos de mais para um dedo: o botão que pausa a demonstração tinha 28px, os pontos que trocam o exemplo tinham 6, e as ligações do rodapé tinham 16 de altura. O que se toca passa a ter 36px, sem mudar nada do que se vê — o ponto continua a ser um ponto, é a área à volta dele que cresce.",
+      "As garantias do rodapé prometiam quatro e mostravam quatro reticências: «Fontes oficiais AT · SS · OE» não cabia em coluna nenhuma. Em ecrãs muito estreitos passam a uma coluna só, e dizem-se por inteiro. O endereço de email, que saía por cima da coluna do lado, passa a quebrar.",
+      "Ganhámos 32px de largura útil em cada secção — a 360px são 9% da página que estavam a ser gastos em ar lateral, com um cartão de margens próprias por dentro. E o salto das âncoras deixou de reservar 80px para um cabeçalho que no telemóvel não existe, porque aqui a barra vive toda em baixo.",
+      "A regra «mobile-first, sempre» passa a ser medida e não prometida: há um novo teste que percorre a página inicial a 360 e a 320 pixéis, nos dois temas e nos quatro perfis, e reprova se alguma coisa rolar de lado, transbordar da sua caixa, ficar abaixo dos 12px ou abaixo dos 36px de alvo. Nenhum destes defeitos dava erro — é por isso que sobreviveram tanto tempo.",
+    ],
+  },
+  {
     version: "2.123.0",
     data: "2026-08-25",
     titulo: "«Tenho carrinha» deixou de ser uma resposta: a viatura passa a ter idade, quilos e medidas",

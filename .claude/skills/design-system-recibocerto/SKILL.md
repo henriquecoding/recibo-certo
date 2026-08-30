@@ -89,6 +89,36 @@ Semântica HTML, `aria-pressed/checked/expanded`, foco visível, contraste nos d
 temas, alvos ≥ 36px, navegação por teclado (combobox, tooltips, toggles),
 `prefers-reduced-motion` respeitado.
 
+## Telemóvel — medir, não sentir (`npm run movel:e2e`)
+Mexeste na homepage? Corre isto. Percorre-a a **360 e a 320px**, nos dois temas
+e nos quatro perfis, e reprova quatro coisas que nunca dão erro:
+
+· a página a rolar de lado · uma caixa cujo conteúdo lhe sai por fora (com o
+recorte da janela a cortá-lo) · texto abaixo de **12px** · alvos abaixo de
+**36px**.
+
+Foi assim que se apanhou a demonstração do IRS a sair do cartão com os valores
+cortados a meio, títulos de ferramentas espremidos a **sete pixéis** por um badge
+que não encolhia, e 31 sítios abaixo do piso — dois deles a 9px. Nenhum destes
+dava erro: o build passava, os 3 880 testes passavam, e a 1440px **não se via
+nenhum deles**. Uma regra que só se verifica no ecrã errado é uma intenção.
+
+Duas armadilhas aprendidas a construí-lo, que valem para qualquer medição destas:
+1. **Um verde pode querer dizer «não cheguei a ver a página».** O simulador e a
+   demo entram por `IntersectionObserver` + `next/dynamic`; enquanto não chegam,
+   o que está no DOM é um esqueleto — sem texto e sem alvos, passa em tudo. Daí
+   a sentinela: se as secções ainda anunciarem «A carregar», a medição é
+   declarada INVÁLIDA em vez de ser dada por boa.
+2. **Quem transborda não é quem o `scrollWidth` acusa.** Um halo `-inset-6` é
+   maior do que a caixa de propósito, e o `scrollWidth` do pai, do avô e do
+   bisavô contam-no todos — uma mancha decorativa gerava quatro «defeitos». Só
+   conta se houver um descendente NÃO decorativo a sair; e uma etiqueta
+   flutuante só conta se sair do ECRÃ, porque overhang é o que ela faz.
+
+O piso tipográfico é uma CLASSE (`.texto-micro`, `.texto-mini` em `globals.css`),
+não disciplina: 12px no telemóvel, 10/11px a partir de `sm:`. Corrigir 31 sítios
+à mão corrige 31 e não corrige o 32.º.
+
 ## Hierarquia visual — medir, não sentir (`npm run hierarquia:e2e`)
 Mexeste num token de cor, borda ou sombra? Corre isto. Mede, superfície a
 superfície, a MELHOR das três pistas que a delimitam (degrau de fundo, aresta de
