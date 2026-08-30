@@ -778,14 +778,12 @@ async function interagir({
       `Trocar de foco carregou overlays alheios: ${metricas.overlaysCarregados.join(", ")}.`,
     );
   }
-  // O App Router aquece sempre o RSC; esse contrato continua absoluto.
-  // O Firefox pode materializar na navegação um microchunk já descoberto
-  // pelo prefetch (8,7 KB medidos), ao contrário de Chromium/WebKit. Um
-  // budget de 12 KB admite essa diferença do motor, mas continua a falhar
-  // se voltar o RSC (~16 KB) ou um chunk de rota substancial.
+  // A preparação aquece em paralelo o RSC e os módulos cliente do foco.
+  // A marca `ready` só existe depois dos dois; qualquer byte do destino
+  // durante a navegação volta a ser uma regressão real nos três motores.
   if (
     modo === "preparado" &&
-    (metricas.rscDoDestino > 0 || metricas.jsDoDestino > 12_000)
+    (metricas.rscDoDestino > 0 || metricas.jsDoDestino > 0)
   ) {
     console.error(
       `[homepage:diagnostico-preparacao] ${JSON.stringify(diagnosticoAposRender)}`,

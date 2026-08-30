@@ -509,6 +509,7 @@ describe("homepage: animação, dados de campo e budgets", () => {
 
   it("protege a matriz real, a amostra e a dispersão no CI", () => {
     const benchmark = ler("..", "scripts", "medir-desempenho.mjs");
+    const controlador = ler("components", "foco", "ControladorPrefetchFocos.tsx");
     const workflow = ler("..", ".github", "workflows", "testes-e-build.yml");
     const esperaDestino = benchmark.indexOf(
       'await principal.first().waitFor({ state: "visible"',
@@ -538,10 +539,11 @@ describe("homepage: animação, dados de campo e budgets", () => {
     // «Preparado» promete que o DESTINO não custa rede — não que o browser
     // fique calado. Somar tudo num número fazia o gate falhar por causa da
     // especulação legítima da página de destino e do ícone, e convidava a
-    // desligá-la para passar. O RSC continua a ser uma exigência de zero;
-    // só um microchunk específico do Firefox tem margem explícita.
+    // desligá-la para passar. RSC e módulos cliente são aquecidos em
+    // paralelo; os dois continuam a ser uma exigência de zero no clique.
     expect(benchmark).toContain("metricas.rscDoDestino > 0");
-    expect(benchmark).toContain("metricas.jsDoDestino > 12_000");
+    expect(benchmark).toContain("metricas.jsDoDestino > 0");
+    expect(controlador).toContain("const carregarCliente");
     expect(benchmark).toContain("metricas.apiNaTroca.length > 0");
     expect(benchmark).toContain("bytesAlheios");
     expect(benchmark).toContain("validarMovimentoReduzido");

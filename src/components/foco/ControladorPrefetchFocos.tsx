@@ -108,6 +108,29 @@ const ROTULO_FOCO: Record<FocoHomepage, string> = {
   salario: "Salário",
 };
 
+// O App Router aquece o RSC, mas Firefox e WebKit podem deixar os módulos
+// cliente para o clique. Estes imports continuam partidos por foco; só são
+// executados por intenção/idle, nunca no carregamento inicial.
+const carregarCliente: Record<FocoHomepage, () => Promise<unknown>> = {
+  descobrir: () =>
+    Promise.all([
+      import("@/components/descobrir/PalcoDescobrir"),
+      import("@/components/descobrir/LaboratorioDescobrir"),
+    ]),
+  preco: () =>
+    Promise.all([
+      import("@/components/preco/HeroPreco"),
+      import("@/components/preco/LaboratorioPreco"),
+    ]),
+  recibos: () =>
+    Promise.all([
+      import("@/components/foco/recibos/PalcoRecibos"),
+      import("@/components/foco/recibos/PrazoSSAtual"),
+    ]),
+  empresa: () => import("@/components/foco/empresa/PalcoEmpresa"),
+  salario: () => import("@/components/foco/salario/HeroSalarioBifurcado"),
+};
+
 type Ligacao = Navigator & {
   connection?: { saveData?: boolean; effectiveType?: string };
 };
@@ -158,6 +181,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     reserva: ReturnType<typeof setTimeout>;
   } | null>(null);
   const inicioPrefetch = useRef(new Map<FocoHomepage, { tempo: number; origem: OrigemPrefetch }>());
+  const clienteEmCurso = useRef(new Map<FocoHomepage, Promise<unknown>>());
   const temporizadores = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
   const drenarRef = useRef<() => void>(() => {});
   const prepararRef = useRef<ContextoFocos["preparar"]>(() => {});
@@ -190,13 +214,14 @@ export default function ControladorPrefetchFocos({ children }: { children: React
   // já a tinha. As duas contam como preparada; só uma é uma medição, e o
   // detalhe da marca diz qual, para nenhum diagnóstico as voltar a confundir.
   const concluir = useCallback((foco: FocoHomepage, via: ViaPreparacao) => {
+    if (itemEmCurso.current?.foco !== foco) return;
     if (!preparados.has(foco)) {
       marcar(`rc:foco:prefetch-ready:${foco}`, { foco, via });
     }
     preparados.add(foco);
-    if (itemEmCurso.current?.foco !== foco) return;
     cancelarAgendado(itemEmCurso.current.reserva);
     itemEmCurso.current = null;
+    clienteEmCurso.current.delete(foco);
     emCurso.current = false;
     drenarRef.current();
   }, [cancelarAgendado]);
@@ -224,6 +249,7 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     }
     emCurso.current = false;
     inicioPrefetch.current.clear();
+    clienteEmCurso.current.clear();
     for (const foco of FOCOS_HOMEPAGE) {
       preparados.delete(foco);
       performance.clearMarks(`rc:foco:prefetch-ready:${foco}`);
@@ -244,11 +270,23 @@ export default function ControladorPrefetchFocos({ children }: { children: React
     performance.clearMarks(`rc:foco:prefetch-ready:${item.foco}`);
     inicioPrefetch.current.set(item.foco, { tempo: performance.now(), origem: item.origem });
     marcar("rc:foco:prefetch-start", { foco: item.foco, origem: item.origem });
+    const clientePronto = carregarCliente[item.foco]();
+    clienteEmCurso.current.set(item.foco, clientePronto);
     const reserva = agendar(
-      () => concluirRef.current(item.foco, "silencio"),
+      () => {
+        void clientePronto.then(() => concluirRef.current(item.foco, "silencio"));
+      },
       RESERVA_CONCORRENCIA_MS,
     );
     itemEmCurso.current = { foco: item.foco, reserva };
+    void clientePronto.catch(() => {
+      if (itemEmCurso.current?.foco !== item.foco) return;
+      cancelarAgendado(itemEmCurso.current.reserva);
+      itemEmCurso.current = null;
+      clienteEmCurso.current.delete(item.foco);
+      emCurso.current = false;
+      drenarRef.current();
+    });
     const opcoes = {
       onInvalidate: () => {
         preparados.delete(item.foco);
@@ -404,7 +442,10 @@ export default function ControladorPrefetchFocos({ children }: { children: React
             comprimido: entrada.encodedBodySize,
           });
           inicioPrefetch.current.delete(focoRecurso);
-          concluirRef.current(focoRecurso, "rede");
+          const clientePronto = clienteEmCurso.current.get(focoRecurso);
+          if (clientePronto) {
+            void clientePronto.then(() => concluirRef.current(focoRecurso, "rede"));
+          }
         }
 
         const navegacao = lerNavegacaoPendente();
