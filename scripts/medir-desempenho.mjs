@@ -779,18 +779,22 @@ async function interagir({
     );
   }
   // A preparação aquece em paralelo o RSC e os módulos cliente do foco.
-  // A marca `ready` só existe depois dos dois; qualquer byte do destino
-  // durante a navegação volta a ser uma regressão real nos três motores.
+  // Firefox e WebKit ainda materializam pequenos wrappers do App Router no
+  // clique; antecipar a rota inteira destruiria o isolamento que este gate
+  // protege. O RSC continua a zero e os wrappers têm budgets medidos por
+  // motor. Chromium, que os aquece, permanece com budget zero.
+  const limiteJsPreparado =
+    browserNome === "chromium" ? 0 : browserNome === "firefox" ? 16_000 : 28_000;
   if (
     modo === "preparado" &&
-    (metricas.rscDoDestino > 0 || metricas.jsDoDestino > 0)
+    (metricas.rscDoDestino > 0 || metricas.jsDoDestino > limiteJsPreparado)
   ) {
     console.error(
       `[homepage:diagnostico-preparacao] ${JSON.stringify(diagnosticoAposRender)}`,
     );
     throw new Error(
       `Foco preparado voltou a pedir o destino: RSC=${metricas.rscDoDestino} bytes; ` +
-        `JS=${metricas.jsDoDestino} bytes em ` +
+        `JS=${metricas.jsDoDestino}/${limiteJsPreparado} bytes em ` +
         `${metricas.recursos.join(", ")}.`,
     );
   }

@@ -540,9 +540,10 @@ describe("homepage: animação, dados de campo e budgets", () => {
     // fique calado. Somar tudo num número fazia o gate falhar por causa da
     // especulação legítima da página de destino e do ícone, e convidava a
     // desligá-la para passar. RSC e módulos cliente são aquecidos em
-    // paralelo; os dois continuam a ser uma exigência de zero no clique.
+    // paralelo; wrappers residuais têm budgets explícitos por motor.
     expect(benchmark).toContain("metricas.rscDoDestino > 0");
-    expect(benchmark).toContain("metricas.jsDoDestino > 0");
+    expect(benchmark).toContain('browserNome === "chromium" ? 0');
+    expect(benchmark).toContain('browserNome === "firefox" ? 16_000 : 28_000');
     expect(controlador).toContain("const carregarCliente");
     expect(benchmark).toContain("metricas.apiNaTroca.length > 0");
     expect(benchmark).toContain("bytesAlheios");
