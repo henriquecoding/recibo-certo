@@ -165,7 +165,13 @@ async function construir() {
       _meta: meta,
       dados: { ...recibo, prazosSS: prazosSS(fiscalYear) },
     },
-    "salario.json": { _meta: meta, dados: modulos.dados.dadosSalario() },
+    "salario.json": {
+      _meta: meta,
+      dados: {
+        ...modulos.dados.dadosSalario(),
+        contratacao: modulos.dados.dadosContratacao(),
+      },
+    },
     "empresa.json": { _meta: meta, dados: modulos.dados.dadosEmpresa() },
   };
 }

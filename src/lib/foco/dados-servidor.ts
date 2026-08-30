@@ -23,7 +23,17 @@ import { REGIME_SIMPLIFICADO } from "@/lib/fiscal-data";
 import { AVENCA_SOCIEDADE_ANUAL_MEDIA } from "@/lib/contabilista";
 import type { DadosRecibo } from "@/components/foco/recibos/PalcoRecibos";
 import type { DadosSalario } from "@/components/foco/salario/PalcoSalario";
+import type { DadosContratacao } from "@/components/foco/salario/PalcoContratacao";
 import type { DadosEmpresa, PontoComparacao } from "@/components/foco/empresa/PalcoEmpresa";
+import {
+  EMPLOYMENT_OFFER_POLICY_DATE,
+  PORTUGAL_PAYROLL_POLICY_2026,
+  eurFromDecimal,
+  planEmploymentOffer,
+  productiveShareRate,
+  ratePpm,
+} from "../../../ReciboCerto-Fiscal-Engine/src";
+import { legacy2026WithholdingResolver } from "@/lib/payroll-engine-adapter";
 
 const RECIBO_EXEMPLO = 2_000;
 const SALARIO_EXEMPLO = 1_500;
@@ -111,6 +121,82 @@ export function dadosSalario(): DadosSalario {
     diferenca14Pagamentos: diferencaMensal * 14,
     motivo:
       "A retenção foi calculada pela tabela de quem não tem dependentes. Com um dependente declarado, a tabela é outra e a retenção é mais baixa.",
+  };
+}
+
+// ── Planeamento da contratação ────────────────────────────────────────
+
+/**
+ * A demonstração patronal usa exatamente o mesmo motor da ferramenta.
+ * Para o browser seguem apenas números serializáveis; regras, tabelas e
+ * resolução inversa ficam no servidor e fora do chunk da homepage.
+ */
+export function dadosContratacao(): DadosContratacao {
+  const orcamentoAnual = 42_000;
+  const margemSegurancaPercentagem = 5;
+  const preparacao = planEmploymentOffer({
+    period: "2026-08",
+    policyDate: EMPLOYMENT_OFFER_POLICY_DATE,
+    goal: "employer_budget",
+    employer: {
+      annualBudget: eurFromDecimal(orcamentoAnual),
+      safetyMargin: ratePpm(margemSegurancaPercentagem * 10_000),
+    },
+    role: {
+      startMonth: 1,
+      weeklyHoursHundredths: 4_000,
+      jurisdiction: "PT-CONTINENTE",
+      productive: true,
+      productiveShare: productiveShareRate(65),
+    },
+    package: {
+      baseSalaryMonthly: eurFromDecimal(0),
+      subsidyPayment: "normal",
+      mealAllowance: {
+        dailyAmount: eurFromDecimal(10.2),
+        daysPerMonth: 22,
+        method: "card_or_voucher",
+      },
+    },
+    postCosts: {
+      equipmentFirstYear: eurFromDecimal(1_200),
+    },
+    capacity: {
+      contributionMargin: productiveShareRate(65),
+      expectedBillableHoursMonthly: 100,
+    },
+  }, PORTUGAL_PAYROLL_POLICY_2026, legacy2026WithholdingResolver);
+
+  if (preparacao.kind !== "ready") {
+    throw new Error("A demonstração patronal deixou de produzir um resultado suportado.");
+  }
+
+  const resultado = preparacao.result;
+  const liquido = resultado.workerOutcome.monthlyReference;
+  const encargos = resultado.publicCharges.total;
+
+  return {
+    orcamentoAnual,
+    margemSegurancaPercentagem,
+    orcamentoUtilizavel: orcamentoAnual * (1 - margemSegurancaPercentagem / 100),
+    vencimentoBaseMensal: resultado.resolvedBaseSalaryMonthly.cents / 100,
+    refeicaoDia: 10.2,
+    refeicaoDiasMes: 22,
+    custoAnual: resultado.employerCost.annualStabilized.cents / 100,
+    custoPrimeiroAno: resultado.employerCost.firstYear.cents / 100,
+    liquidoMensalMinimo: ("min" in liquido ? liquido.min : liquido).cents / 100,
+    liquidoMensalMaximo: ("max" in liquido ? liquido.max : liquido).cents / 100,
+    encargosPublicosMinimos: ("min" in encargos ? encargos.min : encargos).cents / 100,
+    encargosPublicosMaximos: ("max" in encargos ? encargos.max : encargos).cents / 100,
+    custoHoraProdutiva: resultado.capacity?.costPerProductiveHour?.cents
+      ? resultado.capacity.costPerProductiveHour.cents / 100
+      : null,
+    receitaAnualNecessaria: resultado.capacity?.revenueRequired?.cents
+      ? resultado.capacity.revenueRequired.cents / 100
+      : null,
+    horasProdutivasAno: resultado.capacity
+      ? resultado.capacity.annualProductiveHoursHundredths / 100
+      : null,
   };
 }
 

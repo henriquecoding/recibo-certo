@@ -95,7 +95,20 @@ export type NomeEvento =
   | "header_nav_click"
   | "header_overlay_conflict"
   | "focus_switch_ack"
-  | "focus_switch_ready";
+  | "focus_switch_ready"
+  // ── Salário bifurcado e planeador de contratação ───────────────────
+  | "salary_path_impression"
+  | "salary_path_selected"
+  | "hiring_planner_started"
+  | "hiring_goal_selected"
+  | "hiring_result_viewed"
+  | "hiring_range_explained"
+  | "hiring_scenario_saved"
+  | "hiring_comparison_created"
+  | "hiring_offer_exported"
+  | "hiring_support_opened"
+  | "hiring_share_created"
+  | "hiring_share_revoked";
 
 /** Propriedades de cada evento. O `Payload` de um evento é o seu contrato. */
 export interface PayloadsEvento {
@@ -277,6 +290,24 @@ export interface PayloadsEvento {
   };
   focus_switch_ack: ContextoTrocaFoco;
   focus_switch_ready: ContextoTrocaFoco;
+  salary_path_impression: ContextoContratacao & { path: PercursoSalario };
+  salary_path_selected: ContextoContratacao & { path: PercursoSalario };
+  hiring_planner_started: ContextoContratacao;
+  hiring_goal_selected: ContextoContratacao & { goal: ObjetivoContratacao };
+  hiring_result_viewed: ContextoContratacao & {
+    goal: ObjetivoContratacao;
+    certainty: CertezaContratacao;
+    completion_step: string;
+  };
+  hiring_range_explained: ContextoContratacao & { certainty: "range" };
+  hiring_scenario_saved: ContextoContratacao & {
+    saved_destination: "dispositivo" | "nuvem";
+  };
+  hiring_comparison_created: ContextoContratacao & { goal: ObjetivoContratacao };
+  hiring_offer_exported: ContextoContratacao & { export_format: "pdf" };
+  hiring_support_opened: ContextoContratacao & { support_id: string };
+  hiring_share_created: ContextoContratacao;
+  hiring_share_revoked: ContextoContratacao;
 }
 
 /** Telemóvel, tablet ou secretária — pela largura, não pelo user-agent. */
@@ -294,6 +325,20 @@ interface ContextoTrocaFoco {
   input: "pointer" | "teclado";
   prepared: boolean;
   latency_bucket: string;
+}
+
+export type PercursoSalario = "trabalhador" | "empregador";
+export type ObjetivoContratacao =
+  | "employer_budget"
+  | "target_net"
+  | "known_offer"
+  | "required_capacity";
+export type CertezaContratacao = "exact" | "range";
+
+export interface ContextoContratacao {
+  device: ClasseViewport;
+  theme: "claro" | "escuro";
+  source: "salario" | "ferramenta";
 }
 
 interface AcaoResultado {
@@ -506,6 +551,66 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   focus_switch_ready: {
     disparo: "Conteúdo do foco pedido confirmado depois do commit e da pintura.",
     serve: "SLO de conteúdo correto, distinguindo rotas preparadas e frias.",
+    origem: "cliente",
+  },
+  salary_path_impression: {
+    disparo: "Um dos dois percursos da homepage de salário fica ativo.",
+    serve: "Distribuição de procura entre receber e contratar.",
+    origem: "cliente",
+  },
+  salary_path_selected: {
+    disparo: "A pessoa escolhe explicitamente um percurso na bifurcação.",
+    serve: "Conversão da bifurcação para cada palco e CTA.",
+    origem: "cliente",
+  },
+  hiring_planner_started: {
+    disparo: "O planeador patronal é montado no browser.",
+    serve: "Denominador de utilização do planeador de contratação.",
+    origem: "cliente",
+  },
+  hiring_goal_selected: {
+    disparo: "O ponto de partida da contratação é alterado.",
+    serve: "Que decisão patronal traz procura real.",
+    origem: "cliente",
+  },
+  hiring_result_viewed: {
+    disparo: "Um resultado válido do planeador é apresentado.",
+    serve: "Conclusão por objetivo e nível de certeza.",
+    origem: "cliente",
+  },
+  hiring_range_explained: {
+    disparo: "Um resultado sem dados pessoais explica o intervalo.",
+    serve: "Quantas decisões preservam privacidade em vez de pedir dados do candidato.",
+    origem: "cliente",
+  },
+  hiring_scenario_saved: {
+    disparo: "A gravação do cenário termina com sucesso.",
+    serve: "Memória criada no dispositivo ou na conta.",
+    origem: "cliente",
+  },
+  hiring_comparison_created: {
+    disparo: "Dois pacotes calculados passam a ser comparados.",
+    serve: "Utilização da comparação antes de emitir proposta.",
+    origem: "cliente",
+  },
+  hiring_offer_exported: {
+    disparo: "A pessoa pede a versão PDF da proposta.",
+    serve: "Handoff do cálculo para uma decisão externa.",
+    origem: "cliente",
+  },
+  hiring_support_opened: {
+    disparo: "Um apoio oficial é aberto a partir do resultado.",
+    serve: "Interesse útil por medida sem confundir triagem com aprovação.",
+    origem: "cliente",
+  },
+  hiring_share_created: {
+    disparo: "É criado um link revogável de partilha patronal.",
+    serve: "Adoção futura da partilha sem conteúdo fiscal em analytics.",
+    origem: "cliente",
+  },
+  hiring_share_revoked: {
+    disparo: "Um link patronal é revogado.",
+    serve: "Controlo efetivo da memória partilhada.",
     origem: "cliente",
   },
 };

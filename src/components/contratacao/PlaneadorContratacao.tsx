@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useReducer, useRef, useState } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
   EMPLOYMENT_OFFER_POLICY_DATE,
   PORTUGAL_PAYROLL_POLICY_2026,
@@ -16,6 +16,8 @@ import {
 import { legacy2026WithholdingResolver } from "@/lib/payroll-engine-adapter";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import { registar } from "@/lib/analytics/cliente";
+import { contextoContratacao } from "@/lib/analytics/contratacao";
 import {
   ArrowRight,
   Briefcase,
@@ -440,6 +442,68 @@ function workerMonthly(result: EmploymentOfferResult): string {
     : `${fmt(worker.monthlyReference.min.cents)}–${fmt(worker.monthlyReference.max.cents)}`;
 }
 
+function delta(current: number, base: number): string {
+  const difference = current - base;
+  return `${difference > 0 ? "+" : ""}${fmt(difference)}`;
+}
+
+function ComparisonPanel({
+  base,
+  current,
+  onClear,
+}: {
+  base: EmploymentOfferResult;
+  current: EmploymentOfferResult;
+  onClear: () => void;
+}) {
+  const rows = [
+    {
+      label: "Vencimento base mensal",
+      base: base.resolvedBaseSalaryMonthly.cents,
+      current: current.resolvedBaseSalaryMonthly.cents,
+    },
+    {
+      label: "Custo anual estabilizado",
+      base: base.employerCost.annualStabilized.cents,
+      current: current.employerCost.annualStabilized.cents,
+    },
+    {
+      label: "Custo do primeiro ano",
+      base: base.employerCost.firstYear.cents,
+      current: current.employerCost.firstYear.cents,
+    },
+  ];
+  return (
+    <section className="mt-6 rounded-2xl border border-brand/25 bg-brand-light/55 p-4 dark:bg-brand/10 sm:p-5" aria-labelledby="hiring-comparison-title">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[.14em] text-brand">Comparação criada</p>
+          <h3 id="hiring-comparison-title" className="mt-1 font-display text-xl font-semibold text-ink">Pacote A e proposta atual</h3>
+          <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">Altera os campos acima e volta a calcular; o pacote A fica fixo até o removeres.</p>
+        </div>
+        <button type="button" onClick={onClear} className="min-h-[40px] rounded-xl px-3 text-xs font-semibold text-stone-500 hover:bg-white dark:hover:bg-stone-900">Remover comparação</button>
+      </div>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-left text-sm">
+          <thead className="text-xs uppercase tracking-wide text-stone-500">
+            <tr><th className="pb-2 font-semibold">Conta</th><th className="pb-2 text-right font-semibold">Pacote A</th><th className="pb-2 text-right font-semibold">Atual</th><th className="pb-2 text-right font-semibold">Diferença</th></tr>
+          </thead>
+          <tbody className="divide-y divide-brand/10">
+            {rows.map((row) => (
+              <tr key={row.label}>
+                <th className="py-3 pr-4 font-medium text-stone-700 dark:text-stone-200">{row.label}</th>
+                <td className="py-3 text-right tabular-nums text-stone-500">{fmt(row.base)}</td>
+                <td className="py-3 text-right font-semibold tabular-nums text-stone-900 dark:text-white">{fmt(row.current)}</td>
+                <td className="py-3 text-right font-semibold tabular-nums text-brand-dark dark:text-brand-mint">{delta(row.current, row.base)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function ResultPanel({ result, tab }: { result: EmploymentOfferResult; tab: ResultTab }) {
   if (tab === "calendar") {
     return (
@@ -516,7 +580,18 @@ function ResultPanel({ result, tab }: { result: EmploymentOfferResult; tab: Resu
             </div>
             <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{support.explanation}</p>
             {support.missingFacts.length > 0 ? <p className="mt-2 text-xs leading-relaxed text-stone-500">Falta confirmar: {support.missingFacts.join(", ")}.</p> : null}
-            <a href={support.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex min-h-[40px] items-center text-sm font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint">Confirmar no IEFP <ArrowRight size={13} className="ml-1" /></a>
+            <a
+              href={support.sourceUrl}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => registar("hiring_support_opened", {
+                ...contextoContratacao("ferramenta"),
+                support_id: support.id,
+              })}
+              className="mt-3 inline-flex min-h-[40px] items-center text-sm font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+            >
+              Confirmar no IEFP <ArrowRight size={13} className="ml-1" />
+            </a>
           </article>
         ))}
       </div>
@@ -580,6 +655,7 @@ export default function PlaneadorContratacao() {
   const [state, dispatch] = useReducer(reducer, INITIAL);
   const [tab, setTab] = useState<ResultTab>("package");
   const [saveOpen, setSaveOpen] = useState(false);
+  const [comparisonBase, setComparisonBase] = useState<EmploymentOfferResult | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
   const input = useMemo(() => inputFromState(state), [state]);
   const preparation = useMemo(
@@ -589,8 +665,26 @@ export default function PlaneadorContratacao() {
   const set = <K extends keyof PlannerState>(key: K, value: PlannerState[K]) =>
     dispatch({ type: "set", key, value });
 
+  useEffect(() => {
+    registar("hiring_planner_started", contextoContratacao("ferramenta"));
+  }, []);
+
   const calculate = () => {
     dispatch({ type: "calculate" });
+    if (preparation.kind === "ready") {
+      registar("hiring_result_viewed", {
+        ...contextoContratacao("ferramenta"),
+        goal: state.goal,
+        certainty: preparation.result.certainty,
+        completion_step: "resultado",
+      });
+      if (preparation.result.certainty === "range") {
+        registar("hiring_range_explained", {
+          ...contextoContratacao("ferramenta"),
+          certainty: "range",
+        });
+      }
+    }
     requestAnimationFrame(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   };
 
@@ -607,7 +701,13 @@ export default function PlaneadorContratacao() {
                 type="button"
                 role="radio"
                 aria-checked={active}
-                onClick={() => set("goal", value)}
+                onClick={() => {
+                  set("goal", value);
+                  registar("hiring_goal_selected", {
+                    ...contextoContratacao("ferramenta"),
+                    goal: value,
+                  });
+                }}
                 className={`min-h-[132px] rounded-2xl border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${active ? "border-brand bg-brand-light shadow-sm dark:bg-brand/15" : "border-stone-200 bg-stone-50 hover:border-brand/40 dark:border-stone-700 dark:bg-stone-800/60"}`}
               >
                 <Icon size={19} className={active ? "text-brand" : "text-stone-500"} />
@@ -647,13 +747,19 @@ export default function PlaneadorContratacao() {
 
       <section className="rounded-3xl border border-stone-200 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6 lg:p-7">
         <SectionTitle step="03" title="Contar o posto inteiro" description="Se um custo é desconhecido, fica assumido como zero e aparece no resultado como lacuna — não é inventado." />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <MoneyField id="insurance" label="Seguro de acidentes / ano" value={state.accidentInsurance} onChange={(value) => set("accidentInsurance", value)} />
-          <MoneyField id="sst" label="Saúde e segurança / ano" value={state.healthAndSafety} onChange={(value) => set("healthAndSafety", value)} />
-          <MoneyField id="training" label="Formação / ano" value={state.training} onChange={(value) => set("training", value)} />
-          <MoneyField id="equipment" label="Equipamento no 1.º ano" value={state.equipment} onChange={(value) => set("equipment", value)} />
-          <MoneyField id="other-costs" label="Outros custos / ano" value={state.otherAnnual} onChange={(value) => set("otherAnnual", value)} />
-        </div>
+        <details className="rounded-2xl border border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-stone-800 dark:text-stone-100">
+            Custos do posto — opcionais
+            <span className="ml-2 font-normal text-stone-500">equipamento, seguro, SST e formação</span>
+          </summary>
+          <div className="grid gap-4 border-t border-stone-200 p-4 dark:border-stone-700 sm:grid-cols-2 lg:grid-cols-5">
+            <MoneyField id="insurance" label="Seguro de acidentes / ano" value={state.accidentInsurance} onChange={(value) => set("accidentInsurance", value)} />
+            <MoneyField id="sst" label="Saúde e segurança / ano" value={state.healthAndSafety} onChange={(value) => set("healthAndSafety", value)} />
+            <MoneyField id="training" label="Formação / ano" value={state.training} onChange={(value) => set("training", value)} />
+            <MoneyField id="equipment" label="Equipamento no 1.º ano" value={state.equipment} onChange={(value) => set("equipment", value)} />
+            <MoneyField id="other-costs" label="Outros custos / ano" value={state.otherAnnual} onChange={(value) => set("otherAnnual", value)} />
+          </div>
+        </details>
 
         <div className="mt-5 border-t border-stone-100 pt-5 dark:border-stone-800">
           <Toggle checked={state.productive} onChange={(value) => set("productive", value)} label="Este posto gera trabalho faturável" description="Ativa custo por hora produtiva, receita necessária e folga de capacidade." />
@@ -720,8 +826,33 @@ export default function PlaneadorContratacao() {
                     <p className="mt-2 max-w-2xl text-sm leading-relaxed text-brand-light">Custo, líquido e capacidade são três números diferentes. O resultado mantém os três separados.</p>
                   </div>
                   <div className="flex flex-wrap gap-2 print:hidden">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setComparisonBase(preparation.result);
+                        registar("hiring_comparison_created", {
+                          ...contextoContratacao("ferramenta"),
+                          goal: state.goal,
+                        });
+                      }}
+                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-sm font-semibold hover:bg-white/15"
+                    >
+                      <Calculator size={15} /> {comparisonBase ? "Atualizar pacote A" : "Fixar pacote A"}
+                    </button>
                     <button type="button" onClick={() => setSaveOpen(true)} className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-sm font-semibold hover:bg-white/15"><Download size={15} /> Guardar cenário</button>
-                    <button type="button" onClick={() => window.print()} className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-brand-dark hover:bg-brand-light"><FileSign size={15} /> Guardar em PDF</button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        registar("hiring_offer_exported", {
+                          ...contextoContratacao("ferramenta"),
+                          export_format: "pdf",
+                        });
+                        window.print();
+                      }}
+                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-brand-dark hover:bg-brand-light"
+                    >
+                      <FileSign size={15} /> Guardar em PDF
+                    </button>
                   </div>
                 </div>
                 <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -742,6 +873,13 @@ export default function PlaneadorContratacao() {
 
               <div className="p-4 sm:p-6 lg:p-7">
                 <ResultPanel result={preparation.result} tab={tab} />
+                {comparisonBase ? (
+                  <ComparisonPanel
+                    base={comparisonBase}
+                    current={preparation.result}
+                    onClear={() => setComparisonBase(null)}
+                  />
+                ) : null}
                 {preparation.result.assumptions.length > 0 ? (
                   <details className="mt-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900" open={preparation.result.assumptions.some((item) => item.severity === "blocking") || undefined}>
                     <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-stone-800 dark:text-stone-100">Pressupostos e lacunas ({preparation.result.assumptions.length})</summary>
@@ -756,7 +894,7 @@ export default function PlaneadorContratacao() {
                   </details>
                 ) : null}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                  <button type="button" onClick={() => { dispatch({ type: "reset" }); setTab("package"); setSaveOpen(false); }} className="inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3 text-sm font-semibold text-stone-500 hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"><RotateCcw size={15} /> Começar de novo</button>
+                  <button type="button" onClick={() => { dispatch({ type: "reset" }); setTab("package"); setSaveOpen(false); setComparisonBase(null); }} className="inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3 text-sm font-semibold text-stone-500 hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"><RotateCcw size={15} /> Começar de novo</button>
                   <span className="text-xs text-stone-500">Motor {preparation.result.engineVersion} · política verificada em {preparation.result.policyDate}</span>
                 </div>
                 {saveOpen ? <GuardarCenario input={input} result={preparation.result} onClose={() => setSaveOpen(false)} /> : null}

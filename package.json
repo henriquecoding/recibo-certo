@@ -18,6 +18,8 @@
     "concelhos:geo:check": "node scripts/gen-concelhos-geo.mjs --check",
     "contrato:check": "node scripts/check-contrato-publico.mjs",
     "contrato:check:producao": "node scripts/check-contrato-publico.mjs --exigir-ambiente",
+    "contratacao:check": "vitest run ReciboCerto-Fiscal-Engine/tests/employment-offer-*.test.ts src/lib/__tests__/salario-contratacao-mobile.test.ts",
+    "contratacao:e2e": "node scripts/verificar-contratacao.mjs",
     "dashboard:e2e": "node scripts/verificar-dashboard.mjs",
     "descobrir:e2e": "node scripts/verificar-descobrir-negocio.mjs",
     "desempenho": "node scripts/medir-desempenho.mjs",

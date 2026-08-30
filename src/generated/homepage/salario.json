@@ -3,7 +3,7 @@
     "schema": 1,
     "appVersion": "2.135.0",
     "fiscalYear": 2026,
-    "engineHash": "sha256:e0d022de784cbec1f821257030b68c8432f78c89dce6d84f9c1e6a0a3cb0b1ab"
+    "engineHash": "sha256:606a5312b50114b6332c88ee830bd1a85f283ea3e04bf56081ebe98233799cd7"
   },
   "dados": {
     "bruto": 1500,
@@ -14,6 +14,23 @@
     "liquidoCerto": 1201.12,
     "pagamentosProjetados": 14,
     "diferenca14Pagamentos": 480.0599999999995,
-    "motivo": "A retenção foi calculada pela tabela de quem não tem dependentes. Com um dependente declarado, a tabela é outra e a retenção é mais baixa."
+    "motivo": "A retenção foi calculada pela tabela de quem não tem dependentes. Com um dependente declarado, a tabela é outra e a retenção é mais baixa.",
+    "contratacao": {
+      "orcamentoAnual": 42000,
+      "margemSegurancaPercentagem": 5,
+      "orcamentoUtilizavel": 39900,
+      "vencimentoBaseMensal": 2147.59,
+      "refeicaoDia": 10.2,
+      "refeicaoDiasMes": 22,
+      "custoAnual": 39899.76,
+      "custoPrimeiroAno": 41099.76,
+      "liquidoMensalMinimo": 1787.44,
+      "liquidoMensalMaximo": 1975.95,
+      "encargosPublicosMinimos": 12685.26,
+      "encargosPublicosMaximos": 15324.4,
+      "custoHoraProdutiva": 32.93,
+      "receitaAnualNecessaria": 61384.25,
+      "horasProdutivasAno": 1211.6
+    }
   }
 }

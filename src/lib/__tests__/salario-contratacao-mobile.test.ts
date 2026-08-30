@@ -7,10 +7,22 @@ const read = (path: string) => readFileSync(join(process.cwd(), path), "utf8");
 describe("Salário com dois caminhos", () => {
   it("preserva o palco do trabalhador e acrescenta um palco patronal completo", () => {
     const fork = read("src/components/foco/salario/HeroSalarioBifurcado.tsx");
-    expect(fork).toContain("?percurso=trabalhador");
-    expect(fork).toContain("?percurso=empregador");
+    expect(fork).toContain('params.set("percurso", percurso)');
+    expect(fork).toContain("router.replace(");
+    expect(fork).toContain('role="radiogroup"');
+    expect(fork).toContain('aria-label="Escolhe o teu percurso"');
     expect(fork).toContain("<PalcoSalario dados={dados}");
-    expect(fork).toContain("<PalcoContratacao");
+    expect(fork).toContain("<PalcoContratacao dados={contratacao}");
+  });
+
+  it("calcula o palco patronal no servidor e entrega apenas dados serializáveis", () => {
+    const server = read("src/lib/foco/dados-servidor.ts");
+    const stage = read("src/components/foco/salario/PalcoContratacao.tsx");
+    expect(server).toContain("export function dadosContratacao()");
+    expect(server).toContain("planEmploymentOffer(");
+    expect(stage).not.toContain("planEmploymentOffer");
+    expect(stage).toContain("Régua do orçamento anual");
+    expect(stage).toContain("Linha de equilíbrio");
   });
 
   it("não carrega persistência até existir uma ação explícita de guardar", () => {
@@ -20,6 +32,15 @@ describe("Salário com dois caminhos", () => {
     expect(planner).toContain('dynamic(() => import("./GuardarCenarioContratacao")');
     expect(save).toContain('from "@/lib/store/cenarios"');
     expect(save).toContain("Confirmar gravação");
+  });
+
+  it("declara telemetria patronal sem valores monetários ou texto livre", () => {
+    const events = read("src/lib/analytics/eventos.ts");
+    const planner = read("src/components/contratacao/PlaneadorContratacao.tsx");
+    expect(events).toContain('"hiring_result_viewed"');
+    expect(events).toContain('"hiring_comparison_created"');
+    expect(planner).toContain('registar("hiring_offer_exported"');
+    expect(planner).toContain("<ComparisonPanel");
   });
 });
 

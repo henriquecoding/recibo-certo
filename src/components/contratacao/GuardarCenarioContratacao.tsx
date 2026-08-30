@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { EmploymentOfferInput, EmploymentOfferResult } from "../../../ReciboCerto-Fiscal-Engine/src";
 import { useCenarios } from "@/lib/store/cenarios";
 import { Check, Close, Lock, Warning } from "@/components/ui/Icons";
+import { registar } from "@/lib/analytics/cliente";
+import { contextoContratacao } from "@/lib/analytics/contratacao";
 
 export default function GuardarCenarioContratacao({
   input,
@@ -41,6 +43,10 @@ export default function GuardarCenarioContratacao({
     if (saved.ok) {
       setStatus("saved");
       setMessage(naNuvem ? "Cenário sincronizado na tua conta." : "Cenário guardado neste dispositivo.");
+      registar("hiring_scenario_saved", {
+        ...contextoContratacao("ferramenta"),
+        saved_destination: naNuvem ? "nuvem" : "dispositivo",
+      });
     } else {
       setStatus("error");
       setMessage(saved.erro.mensagem);

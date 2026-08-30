@@ -19,6 +19,7 @@ import Bussola from "@/components/foco/Bussola";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 import type { DadosSalario } from "./PalcoSalario";
+import type { DadosContratacao } from "./PalcoContratacao";
 import HeroSalarioBifurcado from "./HeroSalarioBifurcado";
 
 const eur = (n: number) =>
@@ -79,12 +80,16 @@ const FAQS = [
   },
 ] as const;
 
-export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
+export default function HomepageSalario({
+  dados,
+}: {
+  dados: DadosSalario & { contratacao: DadosContratacao };
+}) {
   const diferencaMensal = Math.abs(dados.liquidoCerto - dados.liquidoRecibo);
 
   return (
     <>
-      <HeroSalarioBifurcado dados={dados} />
+      <HeroSalarioBifurcado dados={dados} contratacao={dados.contratacao} />
 
       {/* ── Método ──────────────────────────────────────────────── */}
       <SeccaoFoco

@@ -6,119 +6,137 @@ import {
   ArrowRight,
   Briefcase,
   Building,
-  Calendar,
   Check,
-  Coin,
   ShieldCheck,
   Target,
   User,
 } from "@/components/ui/Icons";
 
+export interface DadosContratacao {
+  orcamentoAnual: number;
+  margemSegurancaPercentagem: number;
+  orcamentoUtilizavel: number;
+  vencimentoBaseMensal: number;
+  refeicaoDia: number;
+  refeicaoDiasMes: number;
+  custoAnual: number;
+  custoPrimeiroAno: number;
+  liquidoMensalMinimo: number;
+  liquidoMensalMaximo: number;
+  encargosPublicosMinimos: number;
+  encargosPublicosMaximos: number;
+  custoHoraProdutiva: number | null;
+  receitaAnualNecessaria: number | null;
+  horasProdutivasAno: number | null;
+}
+
 const ATOS_CONTRATACAO: Ato[] = [
   { id: "budget", rotulo: "Orçamento", legenda: "Reservar o custo anual máximo", duracao: 2100, beats: [] },
   { id: "package", rotulo: "Pacote", legenda: "Compor salário, refeição e custos do posto", duracao: 2300, beats: [] },
   { id: "money", rotulo: "3 dinheiros", legenda: "Separar empresa, trabalhador e Estado", duracao: 2400, beats: [] },
-  { id: "decision", rotulo: "Decisão", legenda: "Ver o pacote que cabe antes da proposta", duracao: 2600, beats: [] },
+  { id: "decision", rotulo: "Decisão", legenda: "Validar capacidade antes da proposta", duracao: 2600, beats: [] },
 ];
 
-const eur = (value: number) => `${value.toLocaleString("pt-PT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} €`;
+const eur = (value: number, digits = 0) => value.toLocaleString("pt-PT", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: digits,
+  maximumFractionDigits: digits,
+});
 
-export default function PalcoContratacao() {
+export default function PalcoContratacao({ dados }: { dados: DadosContratacao }) {
   return (
     <MolduraPalco
       id="palco-contratacao"
       tom="escuro"
-      nome="O planeamento da contratação"
-      resumo="Um orçamento anual é repartido entre pacote salarial, encargos públicos e custos do posto até chegar a uma proposta que cabe na empresa."
+      nome="O planeamento"
+      resumo="O orçamento passa por pacote, encargos públicos e capacidade até chegar a uma proposta que cabe na empresa."
       narracao={[
-        "A empresa começa com 42 000 euros por ano e preserva cinco por cento como margem de segurança.",
-        "O posto soma vencimento base, subsídio de refeição, Segurança Social patronal e custos que não aparecem no recibo.",
-        "O mesmo pacote é lido em três contas distintas: o que sai da empresa, o que chega ao trabalhador e o que é entregue ao Estado.",
-        "A decisão mostra o custo anual, o intervalo de líquido sem dados pessoais e a capacidade que ainda precisa de ser validada.",
+        `A empresa começa com ${eur(dados.orcamentoAnual)} por ano e preserva ${dados.margemSegurancaPercentagem} por cento como margem de segurança.`,
+        `O motor compõe um vencimento base mensal de ${eur(dados.vencimentoBaseMensal)} com refeição e custos do posto.`,
+        `O custo anual estabilizado é ${eur(dados.custoAnual)}; o líquido mensal provável fica entre ${eur(dados.liquidoMensalMinimo)} e ${eur(dados.liquidoMensalMaximo)} sem dados pessoais.`,
+        dados.custoHoraProdutiva && dados.receitaAnualNecessaria
+          ? `Cada hora produtiva custa ${eur(dados.custoHoraProdutiva, 2)} e o posto precisa de suportar ${eur(dados.receitaAnualNecessaria)} de receita anual à margem indicada.`
+          : "A proposta só avança depois de a empresa confirmar a capacidade necessária para pagar o posto.",
       ]}
       atos={ATOS_CONTRATACAO}
     >
-      {(scene) => <HiringScene scene={scene} />}
+      {(scene) => <HiringScene scene={scene} dados={dados} />}
     </MolduraPalco>
   );
 }
 
-function HiringScene({ scene }: { scene: CenaDoPalco }) {
-  const visible = (index: number) => scene.estatico || scene.ato >= index;
+function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContratacao }) {
+  const reached = (index: number) => scene.estatico || scene.ato >= index;
   const active = (index: number) => !scene.estatico && scene.ato === index;
-  const panel = (index: number) => `min-w-0 rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${
-    active(index)
-      ? "border-brand-mint/65 bg-white/10 shadow-[0_12px_35px_rgba(0,0,0,.18)]"
-      : visible(index)
-        ? "border-white/15 bg-white/[.055]"
-        : "border-white/10 bg-white/[.025] opacity-35"
-  }`;
+  const spentPercent = Math.min(100, (dados.custoAnual / dados.orcamentoAnual) * 100);
+  const safePercent = Math.max(0, 100 - dados.margemSegurancaPercentagem);
+  const publicMiddle = (dados.encargosPublicosMinimos + dados.encargosPublicosMaximos) / 2;
+  const publicPercent = dados.custoAnual > 0 ? (publicMiddle / dados.custoAnual) * 100 : 0;
+  const companyPercent = Math.max(0, 100 - publicPercent);
 
   return (
     <div aria-hidden className="relative overflow-hidden rounded-[1.6rem] border border-white/10 bg-[#0a211b]/80 p-3 sm:p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-white/10 bg-white/[.045] px-3.5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3">
         <div>
           <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.12em] text-brand-mint"><Briefcase size={14} /> Contratação em estudo</p>
-          <p className="mt-1 text-xs leading-relaxed text-white/55">Continente · 40 h/semana · entrada em janeiro</p>
+          <p className="mt-1 text-xs text-white/50">Continente · 40 h/semana · sem dados pessoais</p>
         </div>
-        <span className="rounded-full border border-brand-mint/25 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-brand-mint">Sem dados pessoais</span>
+        <span className="rounded-full border border-brand-mint/25 bg-brand/20 px-3 py-1.5 text-xs font-semibold text-brand-mint">Motor fiscal 2026</span>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <section className={panel(0)}>
-          <div className="flex items-center justify-between gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-mint/15 text-brand-mint"><Target size={16} /></span>
-            {visible(0) ? <Check size={15} className="text-brand-mint" /> : null}
+      <section className={`mt-4 rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${active(0) ? "border-brand-mint/70 bg-white/10" : "border-white/10 bg-white/[.035]"}`}>
+        <div className="flex items-end justify-between gap-4">
+          <div><p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Régua do orçamento anual</p><p className="mt-1 font-display text-2xl font-semibold tabular-nums text-white">{eur(dados.orcamentoAnual)}</p></div>
+          <p className="text-right text-xs leading-relaxed text-white/55"><strong className="text-brand-mint">{eur(dados.orcamentoUtilizavel)}</strong><br />pode ser usado</p>
+        </div>
+        <div className="relative mt-4 h-3 overflow-hidden rounded-full bg-white/10">
+          <span className="absolute inset-y-0 left-0 rounded-full bg-brand-mint transition-[width] duration-700" style={{ width: reached(0) ? `${spentPercent}%` : "0%" }} />
+          <span className="absolute inset-y-0 w-px bg-white/80" style={{ left: `${safePercent}%` }} />
+        </div>
+        <div className="mt-2 flex justify-between text-[10px] text-white/40"><span>{eur(dados.custoAnual)} composto</span><span>{dados.margemSegurancaPercentagem}% protegido</span></div>
+      </section>
+
+      <div className="mt-3 grid gap-3 lg:grid-cols-[1.05fr_.95fr]">
+        <section className={`rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${active(1) ? "border-brand-mint/70 bg-white/10" : "border-white/10 bg-white/[.035]"}`}>
+          <div className="flex items-center justify-between gap-3"><p className="flex items-center gap-2 text-sm font-bold text-white"><Target size={15} className="text-brand-mint" /> Pacote composto</p>{reached(1) ? <Check size={15} className="text-brand-mint" /> : null}</div>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            <Metric label="Base mensal" value={eur(dados.vencimentoBaseMensal)} />
+            <Metric label="Refeição" value={`${eur(dados.refeicaoDia, 2)} × ${dados.refeicaoDiasMes}`} />
+            <Metric label="Primeiro ano" value={eur(dados.custoPrimeiroAno)} />
           </div>
-          <p className="mt-3 text-xs font-bold uppercase tracking-[.12em] text-white/45">Orçamento anual</p>
-          <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-white">{eur(42_000)}</p>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-            <span className="block h-full w-[95%] rounded-full bg-brand-mint transition-[width] duration-700" />
+          <div className="mt-4 flex h-5 overflow-hidden rounded-lg bg-white/10">
+            <span className="flex items-center bg-brand-mint/80 px-2 text-[9px] font-bold text-brand-deep transition-[width] duration-700" style={{ width: reached(1) ? `${companyPercent}%` : "0%" }}>Empresa</span>
+            <span className="flex items-center justify-end bg-clay/80 px-2 text-[9px] font-bold text-white transition-[width] duration-700" style={{ width: reached(2) ? `${publicPercent}%` : "0%" }}>Estado</span>
           </div>
-          <p className="mt-2 text-xs leading-relaxed text-white/55">5% fica intocável para imprevistos.</p>
         </section>
 
-        <section className={panel(1)}>
-          <div className="flex items-center gap-2 text-sm font-bold text-white"><Coin size={16} className="text-brand-mint" /> O pacote</div>
-          <dl className="mt-3 space-y-2.5 text-xs">
-            {[
-              ["Vencimento base", "2 000 € × 14"],
-              ["Refeição em cartão", "10,20 € × 22"],
-              ["Custos do posto", "870 € / ano"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex items-start justify-between gap-3 border-b border-white/10 pb-2 last:border-0">
-                <dt className="text-white/55">{label}</dt><dd className="text-right font-semibold tabular-nums text-white/85">{value}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-
-        <section className={panel(2)}>
-          <p className="text-xs font-bold uppercase tracking-[.12em] text-white/45">Os três dinheiros</p>
+        <section className={`rounded-2xl border p-3.5 transition-all duration-500 sm:p-4 ${active(2) ? "border-brand-mint/70 bg-white/10" : "border-white/10 bg-white/[.035]"}`}>
+          <p className="text-[10px] font-bold uppercase tracking-[.14em] text-white/45">Os três dinheiros</p>
           <div className="mt-3 space-y-2">
-            {[
-              [Building, "Empresa", "≈ 38 200 € / ano"],
-              [User, "Trabalhador", "≈ 1 500–1 650 € / mês"],
-              [ShieldCheck, "Estado", "IRS + duas contribuições"],
-            ].map(([Icon, label, value]) => {
-              const ItemIcon = Icon as typeof Building;
-              return (
-                <div key={String(label)} className="flex items-center gap-2.5 rounded-xl bg-white/[.055] p-2.5">
-                  <ItemIcon size={15} className="flex-none text-brand-mint" />
-                  <div className="min-w-0"><p className="text-xs font-semibold text-white">{String(label)}</p><p className="mt-0.5 text-xs leading-snug text-white/50">{String(value)}</p></div>
-                </div>
-              );
-            })}
+            <MoneyLine Icon={Building} label="Sai da empresa" value={eur(dados.custoAnual)} visible={reached(2)} />
+            <MoneyLine Icon={User} label="Chega ao trabalhador" value={`${eur(dados.liquidoMensalMinimo)}–${eur(dados.liquidoMensalMaximo)}/mês`} visible={reached(2)} />
+            <MoneyLine Icon={ShieldCheck} label="Segue para o Estado" value={`${eur(dados.encargosPublicosMinimos)}–${eur(dados.encargosPublicosMaximos)}/ano`} visible={reached(2)} />
           </div>
         </section>
-
-        <section className={`${panel(3)} border-brand-mint/35 bg-brand/15`}>
-          <div className="flex items-center gap-2 text-sm font-bold text-brand-mint"><Calendar size={16} /> A decisão</div>
-          <p className="mt-3 font-display text-2xl font-semibold text-white">Cabe, com margem.</p>
-          <p className="mt-2 text-xs leading-relaxed text-white/60">O primeiro ano inclui equipamento. Apoios potenciais não reduzem o custo até serem aprovados.</p>
-          <div className="mt-4 inline-flex min-h-[38px] items-center gap-1.5 rounded-xl bg-brand-mint px-3 text-xs font-bold text-brand-deep">Ver a conta inteira <ArrowRight size={13} /></div>
-        </section>
       </div>
+
+      <section className={`mt-3 grid gap-3 rounded-2xl border p-3.5 transition-all duration-500 sm:grid-cols-[1fr_auto] sm:items-center sm:p-4 ${active(3) ? "border-brand-mint/75 bg-brand/20" : "border-white/10 bg-white/[.035]"}`}>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[.14em] text-brand-mint">Linha de equilíbrio</p>
+          <p className="mt-1 font-display text-xl font-semibold text-white">{dados.receitaAnualNecessaria ? `${eur(dados.receitaAnualNecessaria)} de receita/ano` : "Capacidade por validar"}</p>
+          <p className="mt-1 text-xs leading-relaxed text-white/55">{dados.custoHoraProdutiva ? `${eur(dados.custoHoraProdutiva, 2)} por hora produtiva · ${Math.round(dados.horasProdutivasAno ?? 0).toLocaleString("pt-PT")} h/ano` : "Indica margem e produtividade na ferramenta completa."}</p>
+        </div>
+        <div className={`inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-brand-mint px-4 text-xs font-bold text-brand-deep transition-opacity duration-500 ${reached(3) ? "opacity-100" : "opacity-35"}`}>A proposta cabe <ArrowRight size={13} /></div>
+      </section>
     </div>
   );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-xl bg-white/[.055] p-2.5"><p className="text-[9px] uppercase tracking-wide text-white/40">{label}</p><p className="mt-1 text-xs font-semibold tabular-nums text-white/85">{value}</p></div>;
+}
+
+function MoneyLine({ Icon, label, value, visible }: { Icon: typeof Building; label: string; value: string; visible: boolean }) {
+  return <div className={`flex items-center gap-2.5 rounded-xl bg-white/[.045] p-2.5 transition-opacity duration-500 ${visible ? "opacity-100" : "opacity-30"}`}><Icon size={14} className="flex-none text-brand-mint" /><div className="min-w-0"><p className="text-[10px] text-white/45">{label}</p><p className="truncate text-xs font-semibold tabular-nums text-white/85">{value}</p></div></div>;
 }
