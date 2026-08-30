@@ -595,6 +595,7 @@ async function interagir({
   entrada,
   modo,
   motion,
+  browserNome,
   preparacao = "hover",
   offline = false,
 }) {
@@ -838,7 +839,7 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
         foco: "preco",
         entrada: "touch",
         ...await interagir({
-          pagina, contexto, foco: "preco", entrada: "touch",
+          pagina, contexto, browserNome, foco: "preco", entrada: "touch",
           modo: "preparado", motion: cenario.motion, preparacao: "idle",
           // A prova offline é feita uma vez no Chromium, que expõe o modo
           // offline real do CDP. Firefox/WebKit continuam a validar a mesma
@@ -851,14 +852,14 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
     }
 
     const fria = await interagir({
-      pagina, contexto, foco: "empresa", entrada: entradaFria,
+      pagina, contexto, browserNome, foco: "empresa", entrada: entradaFria,
       modo: "frio", motion: cenario.motion,
     });
 
     await pagina.goBack({ waitUntil: "commit", timeout: 10_000 });
     await exigirHomepage(pagina, "descobrir");
     const visitada = await interagir({
-      pagina, contexto, foco: "empresa", entrada: entradaFria,
+      pagina, contexto, browserNome, foco: "empresa", entrada: entradaFria,
       modo: "visitado", motion: cenario.motion,
     });
 
@@ -870,7 +871,7 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
         foco: "recibos",
         entrada: "pointer",
         ...await interagir({
-          pagina, contexto, foco: "recibos", entrada: "pointer",
+          pagina, contexto, browserNome, foco: "recibos", entrada: "pointer",
           modo: "preparado", motion: cenario.motion, preparacao: "hover",
           offline: repeticao === 0 && browserNome === "chromium",
         }),
@@ -882,7 +883,7 @@ async function medirTrocas(navegador, browserNome, cenarioId, repeticao) {
         foco: "preco",
         entrada: "teclado",
         ...await interagir({
-          pagina, contexto, foco: "preco", entrada: "teclado",
+          pagina, contexto, browserNome, foco: "preco", entrada: "teclado",
           modo: "preparado", motion: cenario.motion, preparacao: "focus",
         }),
       });
