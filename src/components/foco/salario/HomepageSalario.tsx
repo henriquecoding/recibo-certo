@@ -15,12 +15,11 @@ import {
 import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
-import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
-import { FOCO_POR_ID } from "@/components/foco/focos";
 import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
-import PalcoSalario, { type DadosSalario } from "./PalcoSalario";
+import type { DadosSalario } from "./PalcoSalario";
+import HeroSalarioBifurcado from "./HeroSalarioBifurcado";
 
 const eur = (n: number) =>
   `${n.toLocaleString("pt-PT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
@@ -81,22 +80,11 @@ const FAQS = [
 ] as const;
 
 export default function HomepageSalario({ dados }: { dados: DadosSalario }) {
-  const foco = FOCO_POR_ID.get("salario")!;
   const diferencaMensal = Math.abs(dados.liquidoCerto - dados.liquidoRecibo);
 
   return (
     <>
-      <HeroFoco
-        foco={foco}
-        ancora="#metodo-salario"
-        rotuloAncora="Ver como se confere"
-        selos={[
-          { Icon: Lock, texto: "O teu recibo não sai do dispositivo" },
-          { Icon: ShieldCheck, texto: "Tabelas de retenção de 2026" },
-        ]}
-      >
-        <PalcoSalario dados={dados} />
-      </HeroFoco>
+      <HeroSalarioBifurcado dados={dados} />
 
       {/* ── Método ──────────────────────────────────────────────── */}
       <SeccaoFoco

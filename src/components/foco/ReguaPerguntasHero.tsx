@@ -23,9 +23,9 @@ export default function ReguaPerguntasHero({ focoAtivo }: { focoAtivo: FocoHomep
   }, [focoAtivo]);
 
   return (
-    <nav aria-label="Escolher uma das cinco perguntas" className="mt-7 sm:mt-9">
-      <div ref={calha} className="overflow-x-auto pb-3 [scrollbar-width:thin]">
-        <div className="grid min-w-[58rem] grid-cols-5 rounded-[1.75rem] border border-stone-200 bg-white p-1.5 shadow-[0_18px_55px_rgba(36,31,24,.08)] dark:border-stone-700 dark:bg-stone-900">
+    <nav aria-label="Escolher uma das cinco perguntas" className="-mx-4 mt-7 sm:mx-0 sm:mt-9">
+      <div ref={calha} className="overflow-x-auto scroll-smooth px-4 pb-3 [scrollbar-width:thin] sm:px-0">
+        <div className="flex w-max snap-x snap-mandatory gap-2 sm:grid sm:min-w-[58rem] sm:grid-cols-5 sm:gap-0 sm:rounded-[1.75rem] sm:border sm:border-stone-200 sm:bg-white sm:p-1.5 sm:shadow-[0_18px_55px_rgba(36,31,24,.08)] sm:dark:border-stone-700 sm:dark:bg-stone-900">
           {FOCOS.map((item, indice) => {
             const ativo = item.id === focoAtivo;
             const destacado = pendente ? pendente === item.id : ativo;
@@ -57,9 +57,9 @@ export default function ReguaPerguntasHero({ focoAtivo }: { focoAtivo: FocoHomep
                 onClick={(evento) => {
                   if (evento.detail === 0) iniciar(item.id, "teclado");
                 }}
-                className={`focus-marca group relative flex min-h-[84px] items-center justify-center gap-3 rounded-[1.35rem] px-4 py-3 text-center no-underline transition-[background-color,color,box-shadow,transform] duration-200 ${
+                className={`focus-marca group relative flex min-h-[84px] w-[calc(100vw-3.5rem)] max-w-[21rem] snap-center items-center justify-center gap-3 rounded-[1.35rem] border border-stone-200 bg-white px-4 py-3 text-center no-underline shadow-card transition-[background-color,color,box-shadow,transform] duration-200 dark:border-stone-700 dark:bg-stone-900 sm:w-auto sm:max-w-none sm:border-0 sm:bg-transparent sm:shadow-none ${
                   destacado
-                    ? "z-10 bg-brand text-white shadow-[0_16px_35px_rgba(15,107,82,.24)]"
+                    ? "z-10 !border-brand !bg-brand text-white shadow-[0_16px_35px_rgba(15,107,82,.24)]"
                     : "text-stone-700 hover:-translate-y-0.5 hover:bg-stone-50 hover:text-brand-dark dark:text-stone-200 dark:hover:bg-stone-800 dark:hover:text-brand-mint"
                 }`}
               >

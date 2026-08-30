@@ -28,6 +28,11 @@ export default function HeroFoco({
   ancora,
   rotuloAncora = "Ver como funciona",
   selos,
+  ferramentaHref,
+  ctaPrimario,
+  tituloAlternativo,
+  subtituloAlternativo,
+  palcoAlternativo,
   children,
 }: {
   foco: DefinicaoFoco;
@@ -35,6 +40,11 @@ export default function HeroFoco({
   ancora: string;
   rotuloAncora?: string;
   selos: readonly SeloConfianca[];
+  ferramentaHref?: string;
+  ctaPrimario?: string;
+  tituloAlternativo?: string;
+  subtituloAlternativo?: string;
+  palcoAlternativo?: string;
   /** O palco. */
   children: ReactNode;
 }) {
@@ -49,7 +59,11 @@ export default function HeroFoco({
       </div>
 
       <div className="mx-auto max-w-6xl">
-        <CabecalhoHeroFoco foco={foco} />
+        <CabecalhoHeroFoco foco={foco}
+          tituloAlternativo={tituloAlternativo}
+          subtituloAlternativo={subtituloAlternativo}
+          palcoAlternativo={palcoAlternativo}
+        />
 
         <div className="mt-1 sm:mt-2">{children}</div>
 
@@ -59,10 +73,10 @@ export default function HeroFoco({
             são uma indecisão a pedir emprestada a atenção de quem lê. */}
         <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
-            href={foco.ferramenta}
+            href={ferramentaHref ?? foco.ferramenta}
             className="btn-shine focus-marca inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white no-underline shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-float sm:w-auto"
           >
-            {foco.ctaPrimario} <ArrowRight size={15} />
+            {ctaPrimario ?? foco.ctaPrimario} <ArrowRight size={15} />
           </Link>
           <a
             href={ancora}

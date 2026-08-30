@@ -184,6 +184,30 @@
   }
 }
 
+/* Auditoria mobile dos cinco palcos: a tipografia de demonstração tinha
+   chegado a 8–10 px e obrigava a ampliar o ecrã. No telemóvel, nenhum texto
+   informativo dentro de um palco fica abaixo de 12 px; o contentor também
+   bloqueia qualquer largura intrínseca de transformar a página numa calha
+   horizontal. */
+@media (max-width: 639px) {
+  [data-palco] {
+    max-width: 100%;
+    overflow: clip;
+  }
+
+  [data-palco] [class*="text-[8px]"],
+  [data-palco] [class*="text-[9px]"],
+  [data-palco] [class*="text-[10px]"] {
+    font-size: 0.75rem !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-palco] [class*="text-[11px]"] {
+    font-size: 0.8125rem !important;
+    line-height: 1.4 !important;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    O PAINEL DE PESQUISA DO CABEÇALHO
 

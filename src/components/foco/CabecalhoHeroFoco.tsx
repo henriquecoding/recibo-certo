@@ -16,7 +16,17 @@ import { FOCOS } from "./focos";
 import { SubtituloHero, TituloHero } from "./TextosHero";
 import ReguaPerguntasHero from "./ReguaPerguntasHero";
 
-export default function CabecalhoHeroFoco({ foco }: { foco: DefinicaoFoco }) {
+export default function CabecalhoHeroFoco({
+  foco,
+  tituloAlternativo,
+  subtituloAlternativo,
+  palcoAlternativo,
+}: {
+  foco: DefinicaoFoco;
+  tituloAlternativo?: string;
+  subtituloAlternativo?: string;
+  palcoAlternativo?: string;
+}) {
   const Icon = iconeDe(foco.icone);
   const posicao = Math.max(0, FOCOS.findIndex((item) => item.id === foco.id));
   const numero = String(posicao + 1).padStart(2, "0");
@@ -38,15 +48,29 @@ export default function CabecalhoHeroFoco({ foco }: { foco: DefinicaoFoco }) {
             </span>
           </div>
 
-          <TituloHero foco={foco.id} className="mt-5" escala="editorial" />
+          {tituloAlternativo ? (
+            <h1 className="mt-5 text-balance font-display text-[clamp(2.25rem,5.1vw,4.25rem)] font-semibold leading-[1.04] tracking-[-.035em] text-ink sm:[text-wrap:pretty]">
+              {tituloAlternativo}
+            </h1>
+          ) : (
+            <TituloHero foco={foco.id} className="mt-5" escala="editorial" />
+          )}
         </div>
 
         <div className="border-t border-stone-200 pt-5 dark:border-stone-800 lg:border-l lg:border-t-0 lg:pb-1 lg:pl-8 lg:pt-0">
           <div className="flex items-center justify-between gap-4 text-[10px] font-bold uppercase tracking-[.16em] text-stone-400 dark:text-stone-500">
             <span>O instrumento</span>
-            <span className="text-brand dark:text-brand-mint">{foco.palco}</span>
+            <span className="text-brand dark:text-brand-mint">
+              {palcoAlternativo ?? <>{foco.palco}</>}
+            </span>
           </div>
-          <SubtituloHero foco={foco.id} alinhamento="inicio" />
+          {subtituloAlternativo ? (
+            <p className="mx-0 mt-3 max-w-none text-balance text-left text-base leading-relaxed text-stone-600 sm:text-lg dark:text-stone-400">
+              {subtituloAlternativo}
+            </p>
+          ) : (
+            <SubtituloHero foco={foco.id} alinhamento="inicio" />
+          )}
         </div>
       </div>
 

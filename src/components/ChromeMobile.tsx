@@ -63,6 +63,7 @@ import { useQuizAJogar } from "@/hooks/useQuizAJogar";
 import { focoDaRotaHomepage } from "@/lib/foco-homepage";
 import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
 import { usePrefereMovimentoReduzido } from "@/hooks/usePrefereMovimentoReduzido";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 /**
  * Os cinco lugares. A ordem vem da fonte e é fixa; o significado nunca
@@ -93,6 +94,29 @@ export default function ChromeMobile() {
   const foco = focoDaRotaHomepage(pathname);
   const reduzMovimento = usePrefereMovimentoReduzido();
   const { pendente, preparar, iniciar } = useIntencaoFocos();
+  const [compacto, setCompacto] = useState(false);
+  const ultimaPosicao = useRef(0);
+
+  useEffect(() => {
+    ultimaPosicao.current = window.scrollY;
+    let frame = 0;
+    const aoRolar = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const atual = window.scrollY;
+        const diferenca = atual - ultimaPosicao.current;
+        if (atual < 72) setCompacto(false);
+        else if (diferenca > 10) setCompacto(true);
+        else if (diferenca < -10) setCompacto(false);
+        ultimaPosicao.current = atual;
+      });
+    };
+    window.addEventListener("scroll", aoRolar, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", aoRolar);
+    };
+  }, [pathname]);
 
   // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
   // lê exactamente a mesma coisa. Ver `hooks/useQuizAJogar.ts`.
@@ -110,8 +134,16 @@ export default function ChromeMobile() {
   const ativo = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
+  const geometriaCompacta = compacto
+    ? ({
+        "--rc-dock-movel-h": "0px",
+        "--rc-dock-movel-ar": "0px",
+        "--rc-barra-marca": "0px",
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <>
+    <div className="contents" style={geometriaCompacta} data-chrome-compacto={compacto || undefined}>
       {/* Espaço para o conteúdo não ficar tapado pelo chrome inferior — a
           pilha toda (barra + dock) e a área segura do dispositivo. O número
           vive em `globals.css` porque o dock e o botão «voltar ao topo»
@@ -119,7 +151,7 @@ export default function ChromeMobile() {
       <div className="h-[var(--rc-chrome-movel)] lg:hidden" aria-hidden />
 
       {/* O dock de pesquisa, imediatamente acima da barra. */}
-      <DockMovel />
+      {!compacto ? <DockMovel /> : null}
 
       {/**
        * ┌───────────────────────────────────────────────────────────────┐
@@ -253,7 +285,7 @@ export default function ChromeMobile() {
                     cinco vezes. */}
                 <span
                   aria-hidden
-                  className="w-full truncate text-center text-[10px] font-semibold leading-none tracking-tight"
+                  className="w-full truncate text-center text-[11px] font-semibold leading-none tracking-tight"
                 >
                   {slot.label}
                 </span>
@@ -267,9 +299,9 @@ export default function ChromeMobile() {
             não é montada no `layout.tsx`, e é também por isso que já não
             traz guardas de rota próprias: as deste componente valem para
             as três linhas. */}
-        <ChromeMobileMarca />
+        {!compacto ? <ChromeMobileMarca /> : null}
         </div>
       </div>
-    </>
+    </div>
   );
 }

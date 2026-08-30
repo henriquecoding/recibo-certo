@@ -2,7 +2,7 @@
 //  O QUE CADA FERRAMENTA PEDE A UM CONTABILISTA
 //  ---------------------------------------------------------------------
 //  Esta tabela é a ponte entre dois catálogos que até aqui não se
-//  conheciam: as dezasseis ferramentas (`lib/ferramentas/catalogo.ts`) e as
+//  conheciam: as dezassete ferramentas (`lib/ferramentas/catalogo.ts`) e as
 //  dez áreas do eixo canónico (`contabilistas/catalogo.ts`).
 //
 //  ── Porque é que é escrita à mão e não derivada dos `topics` ──────────
@@ -74,6 +74,18 @@ export const AFINIDADE_POR_FERRAMENTA: Readonly<Record<string, PedidoDaFerrament
       A("IRS", 0.5),
     ],
     vocabulario: ["processamento salarial", "subsidio de alimentacao", "duodecimos", "rh"],
+  },
+  "planeador-contratacao": {
+    areas: [
+      A("Trabalhadores e salários", 1),
+      A("Sociedades e IRC", 0.35),
+      A("Contabilidade organizada", 0.3),
+      A("IRS", 0.25),
+    ],
+    vocabulario: [
+      "contratacao", "custo patronal", "processamento salarial", "tsu",
+      "apoios a contratacao", "pacote remuneratorio", "recursos humanos",
+    ],
   },
   "regime-simplificado": {
     areas: [

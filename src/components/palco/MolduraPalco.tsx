@@ -151,7 +151,7 @@ export default function MolduraPalco({
         className={`relative overflow-hidden rounded-[2rem] border sm:rounded-[2.5rem] ${pele.seccao}`}
       >
         <div
-          className={`relative flex flex-wrap items-center justify-between gap-3 border-b px-4 py-4 sm:px-6 ${pele.cabecalho}`}
+          className={`relative flex flex-col items-stretch justify-between gap-3 border-b px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center sm:px-6 ${pele.cabecalho}`}
         >
           <div className="flex min-w-0 items-center gap-2.5">
             <span
@@ -167,7 +167,7 @@ export default function MolduraPalco({
             <div className="min-w-0">
               <h2
                 id={`${id}-titulo`}
-                className={`truncate text-[11px] font-bold uppercase tracking-[.16em] ${pele.titulo}`}
+                className={`text-xs font-bold uppercase tracking-[.14em] ${pele.titulo}`}
               >
                 {nome}
               </h2>
@@ -177,7 +177,7 @@ export default function MolduraPalco({
                   e a caixa reserva o pior caso para não mudar de altura a
                   cada ato — ver `legenda.tsx`. */}
               <LegendaDoAto
-                className={`mt-0.5 text-[10px] leading-snug ${pele.legenda}`}
+                className={`mt-1 text-xs leading-snug ${pele.legenda}`}
                 candidatas={[...LEGENDAS_DE_ESTADO, ...atos.map((item) => item.legenda)]}
                 texto={
                   finalizado || estatico
@@ -191,7 +191,7 @@ export default function MolduraPalco({
           </div>
 
           {!estatico && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:justify-end">
               {finalizado ? (
                 // ┌─────────────────────────────────────────────────────┐
                 // │ O LUGAR DO BOTÃO FICA; O BOTÃO É QUE SAI            │
@@ -206,7 +206,7 @@ export default function MolduraPalco({
                 // └─────────────────────────────────────────────────────┘
                 <span
                   aria-hidden
-                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold"
+                  className="invisible inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-xs font-semibold sm:min-h-[42px]"
                 >
                   <Pause size={12} />
                   Pausar
@@ -216,7 +216,7 @@ export default function MolduraPalco({
                   type="button"
                   onClick={alternarPausa}
                   aria-pressed={parado}
-                  className={`focus-marca inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold transition-colors ${pele.botao}`}
+                  className={`focus-marca inline-flex min-h-[42px] items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors ${pele.botao}`}
                 >
                   {parado ? <Play size={12} /> : <Pause size={12} />}
                   {parado ? "Retomar" : "Pausar"}
@@ -225,7 +225,7 @@ export default function MolduraPalco({
               <button
                 type="button"
                 onClick={rever}
-                className={`focus-marca relative inline-flex min-h-[36px] items-center gap-2 rounded-full border px-3 text-[10px] font-semibold transition-colors ${pele.botao}`}
+                className={`focus-marca relative inline-flex min-h-[42px] items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors ${pele.botao}`}
               >
                 <RotateCcw size={12} />
                 {/* «Rever» e «Recomeçar» têm larguras diferentes, e a
@@ -297,7 +297,7 @@ export default function MolduraPalco({
                   />
                 </span>
                 <span
-                  className={`mt-1.5 block truncate text-[8px] font-bold uppercase tracking-wide transition-colors sm:text-[9px] ${
+                  className={`mt-1.5 block text-center text-[10px] font-bold uppercase leading-tight tracking-wide transition-colors sm:text-left sm:text-[11px] ${
                     indice === ato
                       ? pele.rotuloAtivo
                       : indice < ato
