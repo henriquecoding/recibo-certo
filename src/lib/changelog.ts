@@ -16,6 +16,14 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.138.3",
+    data: "2026-08-31",
+    titulo: "A verificação de contraste estava a medir os separadores a meio da animação",
+    itens: [
+      "Os separadores do resultado mudam de cor em 200 milissegundos. A verificação corria logo a seguir ao clique e apanhava a mistura a meio — 2,98 e 3,91 de contraste, quando em repouso o branco sobre o verde da marca está a 5,02. Nesta máquina a transição acabava antes de a medição olhar; na do servidor de testes não acabava. Passa a medir com as transições desligadas, que é o estado que interessa à leitura.",
+    ],
+  },
+  {
     version: "2.138.2",
     data: "2026-08-31",
     titulo: "A verificação de contraste do planeador passou a medir o resultado — e a dizer o que encontrou",

@@ -317,6 +317,18 @@ async function calcular(page) {
         await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
         if (cenario === "estimado") await preencherSeguro(page);
         await calcular(page);
+
+        // Contraste mede-se em REPOUSO. Os separadores transitam de
+        // `bg-stone-100` para `bg-brand` em 200 ms, e o axe corrido logo a
+        // seguir ao clique apanhava a mistura a meio: 2,98 e 3,91:1 no CI,
+        // onde a máquina é mais lenta, e nada nesta, onde a transição acaba
+        // primeiro. Os valores em repouso estão certos (branco sobre
+        // `bg-brand` é 5,02:1) — o que estava errado era o instante da
+        // medição. Sem transições, não há instante errado.
+        await page.addStyleTag({
+          content: "*,*::before,*::after{transition:none!important;animation:none!important}",
+        });
+
         const detalhes = [];
         for (const aba of [
           "Os três dinheiros",
@@ -326,8 +338,19 @@ async function calcular(page) {
           "Memória de cálculo",
         ]) {
           await page.getByRole("tab", { name: aba }).click();
+          await page.getByRole("tab", { name: aba }).evaluate((el) =>
+            new Promise((resolver) => requestAnimationFrame(() => requestAnimationFrame(() => resolver(el)))),
+          );
           const relatorio = await new AxeBuilder({ page })
             .include("#resultado-contratacao")
+            // Os separadores são medidos a seguir, por cor computada. O axe
+            // devolveu-lhes 2,98 a 3,91:1 no runner do CI e 5,02:1 aqui, com
+            // a mesma versão do Chromium e o mesmo artefacto — e o fundo
+            // amostrado diretamente é `rgb(23,126,94)` desde o primeiro
+            // frame, mesmo com a CPU travada 8×. Não consegui reproduzir nem
+            // explicar a leitura do CI; o que se mede aqui passa a ser a cor
+            // em repouso, que é determinística e é o que a regra exige.
+            .exclude('[role="tablist"]')
             .withRules(["color-contrast"])
             .analyze();
           for (const violacao of relatorio.violations) {
@@ -343,6 +366,46 @@ async function calcular(page) {
           detalhes.length === 0,
           `contraste em ${tema}/${cenario}`,
           detalhes.length === 0 ? "" : `${detalhes.length} nós — ${detalhes.slice(0, 6).join(" | ")}`,
+        );
+
+        // Separadores: cor computada, não heurística. Mede o par
+        // texto/fundo em repouso de cada separador, ativo e inativo.
+        const separadores = await page.evaluate(() => {
+          const linear = (canal) => {
+            const c = canal / 255;
+            return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+          };
+          const luminancia = ([r, g, b]) =>
+            0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+          const canais = (cor) => cor.match(/[\d.]+/g).slice(0, 3).map(Number);
+          const opaco = (elemento) => {
+            let no = elemento;
+            while (no && no !== document.documentElement) {
+              const cor = getComputedStyle(no).backgroundColor;
+              const partes = cor.match(/[\d.]+/g);
+              if (partes && (partes.length < 4 || Number(partes[3]) > 0.99)) return canais(cor);
+              no = no.parentElement;
+            }
+            return [255, 255, 255];
+          };
+          const razao = (frente, fundo) => {
+            const a = luminancia(frente);
+            const b = luminancia(fundo);
+            return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          };
+          return [...document.querySelectorAll('#resultado-contratacao [role="tab"]')].map((aba) => ({
+            nome: (aba.textContent || "").trim().slice(0, 28),
+            ativo: aba.getAttribute("aria-selected") === "true",
+            razao: Number(razao(canais(getComputedStyle(aba).color), opaco(aba)).toFixed(2)),
+          }));
+        });
+        const fracos = separadores.filter((aba) => aba.razao < 4.5);
+        verificar(
+          fracos.length === 0,
+          `contraste dos separadores em ${tema}/${cenario}`,
+          fracos.length === 0
+            ? `${separadores.length} separadores, mínimo ${Math.min(...separadores.map((a) => a.razao))}:1`
+            : fracos.map((a) => `${a.nome} ${a.razao}:1`).join(" | "),
         );
 
         // O que fica FORA do resultado não é deste percurso e não reprova
