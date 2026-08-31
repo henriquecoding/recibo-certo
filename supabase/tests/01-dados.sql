@@ -133,6 +133,18 @@ BEGIN
 END;
 $$;
 
+-- Um horário publicado que nunca envelhece. Os testes usavam 1 de setembro
+-- de 2026 e passaram a falhar na véspera: a RPC recusava primeiro por falta
+-- de antecedência, antes de chegar à regra que cada caso queria provar.
+-- A semana começa na segunda; +15 dias é a terça-feira daqui a duas semanas,
+-- sempre dentro da janela anual e com mais de 24 horas de antecedência.
+CREATE OR REPLACE FUNCTION t.instante_agenda(hora time) RETURNS timestamptz
+LANGUAGE sql STABLE AS $$
+  SELECT (
+    date_trunc('week', now() AT TIME ZONE 'Europe/Lisbon')::date + 15 + hora
+  ) AT TIME ZONE 'Europe/Lisbon';
+$$;
+
 -- ── Dados de partida (como postgres, fora de RLS) ────────────────────
 INSERT INTO auth.users (id, email) VALUES
   ('11111111-1111-1111-1111-111111111111', 'contabilista@exemplo.pt'),
