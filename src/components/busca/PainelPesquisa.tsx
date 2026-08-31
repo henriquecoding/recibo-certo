@@ -33,9 +33,10 @@
 
 import { useEffect, useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { TETO_DIALOGO, TETO_POPOVER } from "@/lib/busca/pontuar";
-import { focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
+import { CHROME_MOVEL, CHROME_SECRETARIA, focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
 import { useFecharAoSair } from "./ancoragem";
 import { ChipsIntencao, CorpoResultados, EstadoAcessivel, FormularioBusca, RodapeBusca } from "./partes";
 import { useControladorBusca } from "./useControladorBusca";
@@ -66,13 +67,7 @@ import { useControladorBusca } from "./useControladorBusca";
  */
 export type VariantePainel = "secretaria" | "movel";
 
-export default function PainelPesquisa({
-  id,
-  idCampo,
-  aoFechar,
-  aoFecharComFoco,
-  variante = "secretaria",
-}: {
+interface PropsPainel {
   id: string;
   idCampo: string;
   /** Fecha sem mexer no foco: clique fora, saída por Tab, navegação. */
@@ -80,7 +75,61 @@ export default function PainelPesquisa({
   /** Fecha e devolve o foco à barra: Escape e o botão ✕. */
   aoFecharComFoco: () => void;
   variante?: VariantePainel;
-}) {
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  O PAINEL TRAZ O SEU PRÓPRIO MOTOR DE ANIMAÇÃO — E ISTO NÃO É ZELO
+ *  ---------------------------------------------------------------------
+ *  ┌─────────────────────────────────────────────────────────────────────┐
+ *  │ O DEFEITO: A PESQUISA ABRIA A `opacity: 0`                           │
+ *  │                                                                     │
+ *  │ Este painel entra com `m.div initial={{opacity:0}} animate={{        │
+ *  │ opacity:1}}`. Um `m.*` só anima se tiver um `LazyMotion` por cima:   │
+ *  │ sem ele o elemento RENDERIZA e o `animate` nunca chega a ser         │
+ *  │ aplicado — fica parado no `initial`. Ou seja, transparente.          │
+ *  │                                                                     │
+ *  │ O `MotionProvider` vivia no layout de raiz e saiu de lá quando os    │
+ *  │ overlays passaram a carregar por intenção. Cada superfície de        │
+ *  │ `IntentOverlays` recebeu o seu; as rotas com layout próprio          │
+ *  │ (guias, ferramentas, painel, quiz…) também. Este painel não é nem    │
+ *  │ uma coisa nem outra: vive no CHROME, montado pelo `LancadorBusca` e  │
+ *  │ pelo `DockMovel`, e ficou sem nenhum.                                │
+ *  │                                                                     │
+ *  │ O resultado é o pior tipo de avaria: o painel abria, ocupava         │
+ *  │ 1370×330 px, tinha o campo com foco, tinha os resultados certos, e   │
+ *  │ NINGUÉM O VIA. Quem carregava na barra concluía, com razão, que a    │
+ *  │ pesquisa não fazia nada.                                            │
+ *  │                                                                     │
+ *  │ E não foi apanhado por nenhum portão porque `isVisible()` do         │
+ *  │ Playwright e o axe dão `opacity: 0` como VISÍVEL — tem caixa, não    │
+ *  │ tem `visibility:hidden`. Um ficheiro inteiro de verificações passou  │
+ *  │ verde por cima de uma superfície invisível. O `visivel:e2e` passa a  │
+ *  │ medir a opacidade computada, que é o que o olho mede.                │
+ *  │                                                                     │
+ *  │ Por isso o provider vive AQUI dentro e não em quem monta o painel:   │
+ *  │ uma superfície nova que o monte não tem de se lembrar de nada, e     │
+ *  │ não há forma de o painel existir sem o motor que o torna visível.    │
+ *  │ (`LazyMotion` aninhado é suportado — nas rotas que já têm provider   │
+ *  │ isto não duplica trabalho nem features.)                             │
+ *  └─────────────────────────────────────────────────────────────────────┘
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export default function PainelPesquisa(props: PropsPainel) {
+  return (
+    <MotionProvider>
+      <PainelPesquisaInterno {...props} />
+    </MotionProvider>
+  );
+}
+
+function PainelPesquisaInterno({
+  id,
+  idCampo,
+  aoFechar,
+  aoFecharComFoco,
+  variante = "secretaria",
+}: PropsPainel) {
   const movel = variante === "movel";
   const caixa = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -116,7 +165,7 @@ export default function PainelPesquisa({
    * consentimento é uma superfície que a pessoa vê e não consegue usar.
    * Pedir vaga é a forma de ele simplesmente não aparecer nesse caso.
    */
-  const permitido = useOverlay("busca", true, { modal: false, iniciadoPeloUtilizador: true });
+  const permitido = useOverlay("busca", true, { modal: false, iniciadoPeloUtilizador: true }, aoFechar);
 
   useEffect(() => {
     if (permitido) input.current?.focus();
@@ -158,15 +207,20 @@ export default function PainelPesquisa({
    * Escape) e a excepção do chrome estão explicados lá.
    *
    * `CHROME` é o que muda entre as duas variantes: o cabeçalho de
-   * secretária, ou a barra de navegação do telemóvel. É o que não pode ser
+   * secretária, ou o chrome inferior do telemóvel. É o que não pode ser
    * destruído pelo próprio gesto que o toca — com o painel aberto e a
    * página rolada, fechar no `pointerdown` tirava o alvo ao `click` que
    * vinha a seguir, e carregar em «Guias» fechava a pesquisa sem navegar.
+   *
+   * Os dois selectores vivem em `motor.ts` e são MARCADORES que o chrome
+   * declara, não descrições dele: escritos à mão aqui, ficaram para trás na
+   * reescrita do cabeçalho e a excepção deixou de casar com nada, em
+   * silêncio. Ver o quadro em `motor.ts`.
    */
   useFecharAoSair({
     ativo: permitido,
     caixa,
-    chrome: movel ? 'nav[aria-label="Navegação"]' : "nav[data-compacto]",
+    chrome: movel ? CHROME_MOVEL : CHROME_SECRETARIA,
     aoFechar,
     aoFecharComFoco,
   });

@@ -15,8 +15,15 @@ export default function AuthModal() {
     disponivel,
   } = useAuth();
 
-  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo.
-  const modalAberto = useOverlay("auth", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
+  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo. Perder a
+  // vaga fecha, senão o modal ficava a querer abrir sem estar no ecrã e
+  // reaparecia sozinho quando ela libertasse.
+  const modalAberto = useOverlay(
+    "auth",
+    querAbrir,
+    { modal: true, iniciadoPeloUtilizador: true },
+    fecharModal,
+  );
 
   const [modo, setModo] = useState<"entrar" | "criar" | "recuperar">(modoModal);
   const [email, setEmail] = useState("");

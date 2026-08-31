@@ -46,6 +46,34 @@ export const CONSULTA_MOVEL = "(max-width: 1023.98px)";
 export const EVENTO_BUSCA_ABRIR = "recibocerto:busca:abrir";
 
 /**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O CHROME QUE O PAINEL NÃO PODE DESTRUIR — ESCRITO UMA VEZ            │
+ * │                                                                     │
+ * │ O painel fecha no `pointerdown` de tudo o que é fora dele, e há uma  │
+ * │ excepção: o próprio chrome. Ver o quadro em `ancoragem.ts` — dentro  │
+ * │ do chrome espera-se pelo `click`, senão fechar destrói o alvo do     │
+ * │ gesto que ainda vem a caminho e carregar num destino não navega.     │
+ * │                                                                     │
+ * │ O selector estava escrito à mão dentro do painel: `nav[data-compacto]│
+ * │ ` para a secretária. O cabeçalho foi reescrito (passou a ser o       │
+ * │ cartão do desenho, com `data-expandido`), o atributo desapareceu do  │
+ * │ DOM e o selector passou a casar com ZERO elementos. Nada falhou,     │
+ * │ nada avisou: a excepção simplesmente deixou de existir, e a          │
+ * │ protecção que este código descreve em três parágrafos era, na        │
+ * │ prática, uma string morta. O do telemóvel apontava só à fila dos     │
+ * │ cinco pilares e deixava de fora a linha da marca e do menu — meia    │
+ * │ excepção, que é o mesmo defeito em ponto pequeno.                    │
+ * │                                                                     │
+ * │ Passa a ser um MARCADOR declarado pelo próprio chrome, e o par       │
+ * │ (constante aqui, atributo lá) é verificado por teste. Um cabeçalho   │
+ * │ novo tem de o levar consigo, ou o teste reprova antes de sair daqui. │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const MARCA_CHROME = "data-rc-chrome";
+export const CHROME_SECRETARIA = `[${MARCA_CHROME}="secretaria"]`;
+export const CHROME_MOVEL = `[${MARCA_CHROME}="movel"]`;
+
+/**
  * A pesquisa anuncia quando abre e quando fecha.
  *
  * Serve a barra fixa do telemóvel, que fica POR BAIXO do diálogo: sem

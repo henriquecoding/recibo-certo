@@ -74,6 +74,37 @@ const reg = (nome, condicao, extra = "") => {
 };
 const seccao = (titulo) => linhas.push(`\n${titulo}`);
 
+/**
+ * ┌─────────────────────────────────────────────────────────────────────────┐
+ * │ UM PORTÃO QUE REBENTA NÃO É UM PORTÃO — E ESTE REBENTOU MESES            │
+ * │                                                                         │
+ * │ Cada secção era um bloco solto no topo do ficheiro. Um `waitForSelector` │
+ * │ a falhar não reprovava nada: atirava uma excepção, o processo morria com │
+ * │ um stack trace e NENHUMA das secções seguintes chegava a correr.          │
+ * │                                                                         │
+ * │ Foi exactamente o que aconteceu. O cabeçalho foi reescrito, os cinco     │
+ * │ pilares passaram a apontar para `/inicio/*`, e este ficheiro continuou a │
+ * │ esperar por um destino de ferramenta que deixou de estar lá.             │
+ * │ A partir daí o portão morria na secção 2, e as                           │
+ * │ oito seguintes — as regressões de interação, o telemóvel, o teclado, o   │
+ * │ axe — deixaram de ser medidas. Um selector desactualizado calou o        │
+ * │ verificador inteiro, e a leitura de quem passasse por aqui era «o script │
+ * │ está avariado», não «o produto está avariado».                            │
+ * │                                                                         │
+ * │ Uma secção que rebenta passa a ser UMA falha, com o nome dela, e as      │
+ * │ outras continuam. É a diferença entre um relatório e um acidente.        │
+ * └─────────────────────────────────────────────────────────────────────────┘
+ */
+const bloco = async (nome, fn) => {
+  try {
+    await fn();
+  } catch (erro) {
+    falhas++;
+    linhas.push(`\n${nome}`);
+    linhas.push(`  ✗ a secção rebentou — ${String(erro?.message ?? erro).split("\n")[0]}`);
+  }
+};
+
 const browser = await chromium.launch(EXECUTAVEL ? { executablePath: EXECUTAVEL } : {});
 
 /**
@@ -123,7 +154,7 @@ const abrirPainel = async (page) => {
 };
 
 /* ═══ 1. Primeira visita — a invariante dos overlays (P0-05) ════════ */
-{
+await bloco("Primeira visita", async () => {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
@@ -141,10 +172,10 @@ const abrirPainel = async (page) => {
     (await page.locator('[aria-modal="true"]:visible').count()) === modais,
   );
   await ctx.close();
-}
+});
 
 /* ═══ 2. Painel de secretária — contrato de a11y e teclado ══════════ */
-{
+await bloco("Painel de secretária", async () => {
   const { ctx, page } = await sessao();
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
@@ -178,11 +209,11 @@ const abrirPainel = async (page) => {
 
   // Um PILAR e já não «Guias»: a barra passou a ser os cinco pilares e os
   // guias vivem na folha do menu (ver `lib/navegacao.ts`).
-  const abas = page.locator('header a[href="/ferramentas/recibos-verdes"]').first();
+  const abas = page.locator('header a[href="/inicio/preco"]').first();
   reg("com a pesquisa aberta e a página rolada, os pilares continuam visíveis", await abas.isVisible());
 
   const sobreposto = await page.evaluate(() => {
-    const aba = document.querySelector('header a[href="/ferramentas/recibos-verdes"]');
+    const aba = document.querySelector('header a[href="/inicio/preco"]');
     const painel = document.querySelector('[data-busca-painel="aberto"]');
     if (!aba || !painel) return null;
     const a = aba.getBoundingClientRect();
@@ -244,10 +275,10 @@ const abrirPainel = async (page) => {
   reg("e fecha o painel", (await page.locator('[data-busca-painel="aberto"]').count()) === 0);
 
   await ctx.close();
-}
+});
 
 /* ═══ 3. Regressões de interação (§13.5) ════════════════════════════ */
-{
+await bloco("Regressões de interação", async () => {
   const { ctx, page } = await sessao();
   seccao("Regressões de interação");
 
@@ -277,9 +308,9 @@ const abrirPainel = async (page) => {
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
   await abrirPainel(page);
-  await page.locator('header a[href="/ferramentas/recibos-verdes"]').first().click();
+  await page.locator('header a[href="/inicio/preco"]').first().click();
   await page.waitForTimeout(1800);
-  reg("clicar na navegação com o painel aberto navega", page.url().includes("/ferramentas/recibos-verdes"));
+  reg("clicar na navegação com o painel aberto navega", page.url().includes("/inicio/preco"));
 
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
@@ -293,10 +324,10 @@ const abrirPainel = async (page) => {
   );
 
   await ctx.close();
-}
+});
 
 /* ═══ 4. Telemóvel — diálogo modal completo (P1-05, P1-06) ══════════ */
-{
+await bloco("Telemóvel", async () => {
   const { ctx, page } = await sessao({ width: 360, height: 780 });
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
@@ -355,10 +386,10 @@ const abrirPainel = async (page) => {
   );
   reg("e o painel fecha", (await page.locator('[data-busca-painel="aberto"]').count()) === 0);
   await ctx.close();
-}
+});
 
 /* ═══ 5. Tablet — composição própria (P2-05) ════════════════════════ */
-{
+await bloco("Tablet", async () => {
   const { ctx, page } = await sessao({ width: 820, height: 1100 });
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1200);
@@ -367,20 +398,33 @@ const abrirPainel = async (page) => {
   reg("a doca não vai de extremo a extremo", caixa.width < 820, `${Math.round(caixa.width)}px de 820`);
   reg("e está centrada", Math.abs(caixa.x + caixa.width / 2 - 410) < 2);
   await ctx.close();
-}
+});
 
 /* ═══ 6. Âncoras sob cabeçalho fixo (P2-06) ═════════════════════════ */
-{
+await bloco("Âncoras sob cabeçalho fixo", async () => {
+  /**
+   * A âncora é `#como-decide`, e já não `#calculadora`.
+   *
+   * A homepage passou a ser cinco palcos e a calculadora deixou de ter
+   * secção própria: `#calculadora` desapareceu do documento. Este bloco
+   * continuou a pedi-lo, e como o `boundingBox` de um elemento que não
+   * existe espera 30 s e rebenta, o portão morria aqui — mais um selector
+   * a sobreviver à página que descrevia. A regra medida (uma âncora não
+   * pode aterrar debaixo do cabeçalho fixo) é a mesma; o que muda é
+   * apontá-la a um alvo que existe, e verificá-lo ANTES de o medir.
+   */
+  const ANCORA = "como-decide";
   const { ctx, page } = await sessao();
-  await page.goto(`${BASE}/#calculadora`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE}/#${ANCORA}`, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(2000);
-  seccao("Âncora /#calculadora");
+  seccao(`Âncora /#${ANCORA}`);
 
-  reg(
-    "o alvo da âncora é único no documento",
-    (await page.locator("#calculadora").count()) === 1,
-    `${await page.locator("#calculadora").count()} elementos`,
-  );
+  const quantos = await page.locator(`#${ANCORA}`).count();
+  reg("o alvo da âncora é único no documento", quantos === 1, `${quantos} elementos`);
+  if (quantos !== 1) {
+    await ctx.close();
+    return;
+  }
 
   /**
    * ┌───────────────────────────────────────────────────────────────────┐
@@ -401,7 +445,7 @@ const abrirPainel = async (page) => {
    * └───────────────────────────────────────────────────────────────────┘
    */
   const scrollY = await page.evaluate(() => Math.round(window.scrollY));
-  const alvo = await page.locator("#calculadora").boundingBox();
+  const alvo = await page.locator(`#${ANCORA}`).boundingBox();
   if (scrollY > 0) {
     reg("o alvo não fica debaixo do cabeçalho", alvo && alvo.y >= 0, `y=${Math.round(alvo.y)}`);
     reg("e está no ecrã", alvo && alvo.y < 900, `y=${Math.round(alvo.y)}`);
@@ -409,10 +453,10 @@ const abrirPainel = async (page) => {
     linhas.push("    · a reposição de scroll do App Router chegou primeiro — residual conhecido, ver o quadro no script");
   }
   await ctx.close();
-}
+});
 
 /* ═══ 7. Os dois temas — o claro tem de ficar intacto ═══════════════ */
-for (const tema of [null, "dark"]) {
+for (const tema of [null, "dark"]) await bloco(`Tema ${tema ?? "claro"}`, async () => {
   const { ctx, page } = await sessao({ width: 1440, height: 900 }, tema);
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1500);
@@ -446,10 +490,10 @@ for (const tema of [null, "dark"]) {
   reg("o foco tem contorno de 2 px na cor da marca", contorno.largura === "2px", contorno.cor);
 
   await ctx.close();
-}
+});
 
 /* ═══ 8. axe — o que uma inspeção automática consegue apanhar ═══════ */
-{
+await bloco("axe", async () => {
   const { ctx, page } = await sessao();
   seccao("axe (WCAG 2.0/2.1 A e AA)");
 
@@ -535,7 +579,157 @@ for (const tema of [null, "dark"]) {
   await analisar("/pesquisar", ["main, .max-w-3xl"]);
 
   await ctx.close();
-}
+});
+
+/* ═══ 9. O PRIMEIRO gesto, onde não há barra ancorada ══════════════════
+   ┌─────────────────────────────────────────────────────────────────────┐
+   │ O BURACO POR ONDE ISTO PASSOU                                        │
+   │                                                                     │
+   │ Tudo acima mede as superfícies públicas, que têm barra no cabeçalho  │
+   │ ou dock no telemóvel. No /dashboard e no /admin não há nenhuma das   │
+   │ duas: quem responde é o diálogo global, montado só quando alguém     │
+   │ pede a pesquisa. Essa superfície nunca era medida — e foi lá que o   │
+   │ defeito viveu: o diálogo fechava-se a si próprio na montagem, e o    │
+   │ PRIMEIRO `⌘K` não fazia nada. O segundo abria, o que é a assinatura  │
+   │ mais confusa possível para quem usa o produto.                       │
+   │                                                                     │
+   │ A regra medida é «o primeiro gesto abre». Uma pessoa não carrega     │
+   │ duas vezes: conclui que a pesquisa está avariada.                    │
+   └─────────────────────────────────────────────────────────────────────┘ */
+await bloco("Sem barra ancorada", async () => {
+  const { ctx, page } = await sessao();
+  await page.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(2500);
+
+  seccao("Sem barra ancorada (/dashboard) — o primeiro gesto");
+
+  reg("não há lançador ancorado nesta superfície", (await page.locator("#rc-header-busca").count()) === 0);
+
+  await page.keyboard.press("Control+k");
+  const abriu = await page
+    .waitForSelector('[role="dialog"] input[name="q"], [data-busca-painel="aberto"]', { timeout: 6000 })
+    .then(() => true)
+    .catch(() => false);
+  reg("o PRIMEIRO ⌘K abre a pesquisa", abriu);
+
+  if (abriu) {
+    await page.locator('input[name="q"]:visible').first().fill("iva");
+    await page.waitForTimeout(900);
+    const n = await page.locator("[data-resultado]").count();
+    reg("e há resultados", n > 0, `${n}`);
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(400);
+  }
+
+  // O botão da própria superfície tem de valer o mesmo que o atalho.
+  const gatilho = page.locator("[data-busca-gatilho], button[aria-keyshortcuts]").first();
+  if (await gatilho.count()) {
+    const { ctx: ctx2, page: page2 } = await sessao();
+    await page2.goto(`${BASE}/dashboard`, { waitUntil: "domcontentloaded" });
+    await page2.waitForTimeout(2500);
+    await page2.locator("[data-busca-gatilho], button[aria-keyshortcuts]").first().click();
+    const abriuClique = await page2
+      .waitForSelector('[role="dialog"] input[name="q"], [data-busca-painel="aberto"]', { timeout: 6000 })
+      .then(() => true)
+      .catch(() => false);
+    reg("o PRIMEIRO clique no botão de pesquisa abre", abriuClique);
+    await ctx2.close();
+  }
+
+  await ctx.close();
+});
+
+/* ═══ 10. A vaga do coordenador não pode ficar presa ═══════════════════
+   O menu e a pesquisa valem o mesmo no coordenador, e com a regra
+   anterior («ganha quem valer mais») isso queria dizer que o primeiro a
+   chegar ficava lá para sempre: com a folha do menu aberta, `⌘K` e a
+   barra de pesquisa não faziam NADA. E a folha atravessava a navegação —
+   um «voltar» no browser deixava-a aberta a segurar a vaga. */
+await bloco("Vaga do coordenador", async () => {
+  const { ctx, page } = await sessao();
+  await page.goto(`${BASE}/guias`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1800);
+
+  seccao("A vaga do coordenador não fica presa");
+
+  await page.locator("[data-menu-gatilho]").first().click();
+  await page.waitForTimeout(900);
+  await page.keyboard.press("Control+k");
+  const roubou = await page
+    .waitForSelector('[data-busca-painel="aberto"]', { timeout: 6000 })
+    .then(() => true)
+    .catch(() => false);
+  reg("com o menu aberto, ⌘K abre a pesquisa", roubou);
+  reg("e a folha do menu sai do ecrã", (await page.locator(".rc-menu-folha").count()) === 0);
+
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(700);
+  reg(
+    "e não reaparece sozinha quando a pesquisa fecha",
+    (await page.locator(".rc-menu-folha").count()) === 0,
+  );
+
+  // «Voltar» com o menu aberto: a folha tem de fechar com a navegação.
+  await page.goto(`${BASE}/ferramentas`, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  await page.locator("[data-menu-gatilho]").first().click();
+  await page.waitForTimeout(900);
+  await page.goBack({ waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+  reg("«voltar» fecha a folha do menu", (await page.locator(".rc-menu-folha").count()) === 0);
+
+  await page.keyboard.press("Control+k");
+  const vivaDepois = await page
+    .waitForSelector('[data-busca-painel="aberto"]', { timeout: 6000 })
+    .then(() => true)
+    .catch(() => false);
+  reg("e a pesquisa continua a abrir depois disso", vivaDepois);
+
+  await ctx.close();
+});
+
+/* ═══ 11. O chrome que o painel não pode destruir existe mesmo ═════════
+   O selector estava escrito à mão dentro do painel e ficou para trás na
+   reescrita do cabeçalho: passou a casar com zero elementos, sem aviso.
+   Aqui pergunta-se ao DOM, que é quem sabe. */
+await bloco("Marcadores de chrome", async () => {
+  const { ctx, page } = await sessao();
+  await page.goto(BASE, { waitUntil: "domcontentloaded" });
+  await page.waitForTimeout(1500);
+
+  seccao("O chrome declara-se ao painel");
+  reg(
+    "o cabeçalho de secretária traz o marcador",
+    (await page.locator('[data-rc-chrome="secretaria"]').count()) === 1,
+  );
+
+  const movel = await browser.newContext({ viewport: { width: 390, height: 780 } });
+  const pMovel = await movel.newPage();
+  await pMovel.addInitScript(
+    ({ versao }) => {
+      localStorage.setItem(
+        "recibocerto:cookie-consent",
+        JSON.stringify({ versao: 2, estatistica: false, marketing: false, em: new Date().toISOString() }),
+      );
+      localStorage.setItem("recibocerto:changelog_visto", versao);
+    },
+    { versao: APP_VERSION },
+  );
+  await pMovel.goto(BASE, { waitUntil: "domcontentloaded" });
+  await pMovel.waitForTimeout(1500);
+  reg("o chrome do telemóvel traz o marcador", (await pMovel.locator('[data-rc-chrome="movel"]').count()) === 1);
+  reg(
+    "e cobre a barra inteira, não só os pilares",
+    await pMovel.evaluate(() => {
+      const chrome = document.querySelector('[data-rc-chrome="movel"]');
+      const nav = document.querySelector('nav[aria-label="Navegação"]');
+      return !!chrome && !!nav && chrome.contains(nav) && chrome !== nav;
+    }),
+  );
+  await movel.close();
+
+  await ctx.close();
+});
 
 await browser.close();
 console.log(linhas.join("\n"));

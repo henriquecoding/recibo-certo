@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.140.0",
+    version: "2.142.0",
     data: "2026-08-31",
     titulo: "A marca deixou de acabar onde o site acaba",
     itens: [
@@ -29,6 +29,30 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Passou a existir recuperação de palavra-passe. Havia como mudá-la com sessão iniciada, o que não serve a quem não consegue entrar: quem a esquecesse ficava sem caminho de volta para a sua conta e o seu histórico.",
       "O ícone do site no ecrã principal do telemóvel passou a ser a marca. Estava em SVG, formato que o iPhone ignora, e o resultado era um quadrado genérico. O site ganhou também nome, cor e ícone próprios quando é instalado.",
       "O pagamento passa a ter as cores e a lista de benefícios do Recibo Certo, em vez do azul de origem da Stripe, e os dois preços antigos que ainda estavam ativos foram arquivados.",
+    ],
+  },
+  {
+    version: "2.141.0",
+    data: "2026-08-31",
+    titulo: "A pesquisa abria transparente — estava lá, com os resultados certos, e ninguém a via",
+    itens: [
+      "Carregar na barra de pesquisa não fazia nada. O painel abria: ocupava 1370×330 px, tinha o campo com o cursor lá dentro, tinha os oito resultados certos, o teclado respondia. Só que abria com opacidade zero — completamente transparente. Do lado de quem usa o site isso é indistinguível de uma barra avariada, e é o que estava a acontecer em todas as rotas do site menos uma.",
+      "A causa: o painel entra com uma animação de aparecimento, e uma animação dessas só corre se houver um motor de animação montado por cima dela. Esse motor vivia na raiz do site e saiu de lá quando as janelas passaram a ser carregadas só quando alguém as pede. Cada uma delas recebeu o seu motor, e as secções com desenho próprio também — o painel da pesquisa não é nem uma coisa nem outra (vive na barra do topo) e ficou sem nenhum. Sem motor, a animação nunca arranca e o painel fica onde começou: invisível.",
+      "O painel passa a trazer o motor consigo. Uma superfície nova que o monte não tem de se lembrar de nada, e deixa de haver forma de a pesquisa existir sem aquilo que a torna visível.",
+      "E passa a haver uma verificação que mede o que o olho mede. Nenhum dos portões apanhou isto: o que verifica a interação pergunta «este elemento tem tamanho e não está escondido?» — e um elemento transparente responde que sim; o que verifica a acessibilidade mede contraste entre cores, e um elemento transparente não tem cores para comparar. Trinta verificações sobre este painel passaram verdes por cima dele. A nova lê a opacidade real de cada superfície que abre — a pesquisa nas nove famílias de página, no telemóvel, a folha do menu e o aviso de cookies.",
+    ],
+  },
+  {
+    version: "2.140.0",
+    data: "2026-08-31",
+    titulo: "A pesquisa deixa de ficar muda — e o que a calava passa a ser medido",
+    itens: [
+      "Onde não há barra de pesquisa no cabeçalho — no painel de gestão e na administração —, o primeiro Ctrl+K e o primeiro clique no botão de pesquisa não faziam nada. A pesquisa só era montada quando alguém a pedia, e fechava-se a si própria no instante em que nascia: o pedido era deitado fora pelo próprio ato de o servir. Só o segundo gesto abria. Agora abre à primeira.",
+      "Com a folha do «Menu» aberta, o Ctrl+K e a barra de pesquisa deixavam de responder. As duas superfícies valem o mesmo por dentro, e «nenhuma manda na outra» estava a funcionar como «a primeira manda para sempre» — sem erro e sem nada no ecrã que o explicasse. Passa a decidir o gesto mais recente: pedir a pesquisa com o menu aberto abre a pesquisa.",
+      "A folha do «Menu» atravessava a navegação: carregar em «voltar» no browser deixava-a aberta por cima da página nova, a bloquear a pesquisa. Passa a fechar quando a rota muda.",
+      "Uma superfície que perde a vez deixa de ficar à espera invisível para reaparecer sozinha mais tarde. Quem perde, arruma-se.",
+      "Com a pesquisa aberta, o cabeçalho tinha deixado de ser reconhecido como cabeçalho: a proteção que impede um clique num destino de ser engolido pelo fecho do painel apontava a um atributo que a reescrita do cabeçalho tinha removido, e casava com zero elementos. No telemóvel apontava só à fila dos cinco lugares e deixava de fora a marca, o menu e a ação. Ficou a valer para a barra inteira nos dois sítios.",
+      "O portão de verificação passa a medir estas quatro coisas num browser a sério, incluindo as superfícies sem barra ancorada, que nunca tinham sido medidas — que é por onde isto passou.",
     ],
   },
   {

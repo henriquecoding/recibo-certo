@@ -26,6 +26,7 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { m, AnimatePresence } from "motion/react";
@@ -62,7 +63,29 @@ export default function MenuCompleto({
    * superfícies que o montam — é o que garante que a regra é a mesma no
    * computador e no telemóvel, sem ninguém ter de se lembrar dela.
    */
-  const permitido = useOverlay("menu", aberto, { modal: true, iniciadoPeloUtilizador: true });
+  const permitido = useOverlay("menu", aberto, { modal: true, iniciadoPeloUtilizador: true }, aoFechar);
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ NAVEGAR FECHA A FOLHA — E ISTO NÃO É COSMÉTICA                       │
+   * │                                                                     │
+   * │ Todas as ligações daqui de dentro chamam `aoFechar` no clique, e     │
+   * │ isso cobria o caminho comum. Não cobria o botão «voltar» do browser: │
+   * │ o cabeçalho vive no layout e não desmonta, portanto `menuAberto`     │
+   * │ atravessava a navegação e a folha ficava aberta por cima da página   │
+   * │ nova — a segurar a vaga do coordenador, com a pesquisa a não abrir   │
+   * │ enquanto isso durasse.                                              │
+   * │                                                                     │
+   * │ Fechar na MUDANÇA de rota, e não na montagem: montar não é navegar,  │
+   * │ e um efeito com dependências corre também à entrada.                 │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const rotaMontada = useRef(pathname);
+  useEffect(() => {
+    if (rotaMontada.current === pathname) return;
+    rotaMontada.current = pathname;
+    aoFechar();
+  }, [pathname, aoFechar]);
 
   return (
     <SuperficieModal
