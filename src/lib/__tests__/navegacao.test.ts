@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { MENU_GRUPOS, PILARES, SECOES, SECOES_TOPO, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
 import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
+import { ROTA_POR_FOCO } from "@/lib/foco-homepage";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  A SINCRONIA DAS SUPERFÍCIES DE NAVEGAÇÃO
@@ -216,6 +217,26 @@ describe("navegacao:contrato-dos-destinos", () => {
     }
   });
 
+  it("uma experiência editorial nunca substitui o canónico da ferramenta", () => {
+    // ⚠️ Media a LISTA («descobrir», «preco») e por isso partiu quando os
+    // cinco pilares passaram a ter porta editorial — que é precisamente a
+    // correção que a régua precisava. O que interessa proteger é a
+    // separação entre a porta e o canónico, e essa vale para todos.
+    const adaptativos = PILARES.filter((pilar) => pilar.homepageHref);
+    expect(adaptativos).toHaveLength(PILARES.length);
+
+    for (const pilar of adaptativos) {
+      // A porta editorial é uma rota estática; o canónico é a rota da
+      // ferramenta. Se um dia o `homepageHref` passasse a apontar para
+      // `/ferramentas/…`, o menu, o rodapé e a pesquisa deixavam de ter um
+      // destino distinto — e a homepage adaptada deixava de ser alcançável.
+      expect(pilar.homepageHref).toBe(ROTA_POR_FOCO[pilar.id]);
+      expect(pilar.homepageHref).not.toContain("?");
+      expect(pilar.href.startsWith("/ferramentas/")).toBe(true);
+      expect(pilar.href).not.toContain("?");
+    }
+  });
+
   it("não há um único destino repetido em toda a navegação", () => {
     // Dois caminhos para o mesmo sítio na mesma superfície ensinam duas
     // convenções para a mesma coisa.
@@ -280,6 +301,18 @@ describe("navegacao:acessibilidade", () => {
       expect(fonte, `${nome} sem aria-current`).toContain('aria-current=');
       expect(fonte, `${nome} devia anunciar "page"`).toContain('"page"');
     }
+  });
+
+  it("um pilar activo aponta para a mesma superfície que declara como actual", () => {
+    // «Descobrir» tem uma porta editorial e uma ferramenta canónica. Quando
+    // a ferramenta está activa, anunciar a porta editorial como `page`
+    // transformaria uma ligação para outra página na página actual.
+    expect(CAPSULA).toContain("const destino = naSuperficieCanonica");
+    expect(CAPSULA).toContain("? pilar.href");
+    expect(CAPSULA).toContain("href={destino}");
+    expect(CHROME).toContain("const destino = naSuperficieCanonica");
+    expect(CHROME).toContain("? slot.hrefCanonico : slot.href");
+    expect(CHROME).toContain("href={destino}");
   });
 
   it("o gatilho do menu declara que abre um diálogo, nas duas superfícies", () => {

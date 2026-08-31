@@ -96,6 +96,7 @@ export default function MenuCompleto({
         >
           <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4 dark:border-stone-800">
             <Link
+              prefetch={false}
               href="/"
               onClick={aoFechar}
               aria-label="ReciboCerto — início"
@@ -131,6 +132,7 @@ export default function MenuCompleto({
             <div className="mb-4 border-b border-stone-100 pb-4 dark:border-stone-800">
               {user ? (
                 <Link
+                  prefetch={false}
                   href="/dashboard"
                   onClick={aoFechar}
                   className="focus-marca flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white no-underline shadow-glow"
@@ -152,6 +154,7 @@ export default function MenuCompleto({
                     </button>
                   )}
                   <Link
+                    prefetch={false}
                     href={disponivel ? "#" : "/dashboard"}
                     onClick={(e) => {
                       if (!disponivel) {
@@ -236,6 +239,7 @@ function LinhaMenu({
   const Icon = entrada.icone ? iconeDe(entrada.icone) : null;
   return (
     <Link
+      prefetch={false}
       href={entrada.href}
       onClick={aoNavegar}
       // `page` e não `true`: o item aceso É a página onde se está.

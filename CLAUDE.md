@@ -46,7 +46,11 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    (e `max-h-[90dvh]` + safe-area), e respeitar `dvh`/`env(safe-area-inset-*)`.
    Secções pesadas (mapas/gráficos) carregam com `next/dynamic({ ssr:false })` e
    ficam dentro de um `ErrorBoundary` para nunca deixarem a página em branco.
-   Verificar SEMPRE em viewport estreito antes de concluir.
+   Verificar SEMPRE em viewport estreito antes de concluir — e a verificação é
+   `npm run movel:e2e` (contra o BUILD, não contra o `dev`), que mede as CINCO
+   rotas da homepage (`/`, `/inicio/preco`, `/inicio/recibos`, `/inicio/empresa`,
+   `/inicio/salario`) a 360 e a 320px, nos dois temas. O piso tipográfico é uma
+   classe (`.texto-micro` / `.texto-mini` em `globals.css`), não disciplina.
 6. **Verificar antes de concluir** — `npm run build` + `npm audit --audit-level=high`
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.
 7. **Planear e validar** mudanças grandes com o utilizador antes de implementar.
@@ -118,6 +122,17 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   gerado por `npm run mercado:ingerir` e **é para commitar** — é ele que a
   aplicação serve. Atualizado por `.github/workflows/mercado-ingestao.yml`,
   que abre PR e nunca faz push para `main`.
+- `ReciboCerto-Fiscal-Engine/src/releases/` — ★ **motor patronal por releases**. Um
+  release declara estado, vigência, jurisdições, compatibilidade de engine e
+  cobertura POR DOMÍNIO; `select.ts` é o único sítio que fabrica o
+  `EmploymentPolicyBundle`, e `planEmploymentOffer` não aceita outra coisa.
+  Nenhum componente importa uma `policy-YYYY.ts` — o portão
+  `npm run motor:no-hardcodes` reprova se voltar a acontecer. A fronteira da
+  aplicação é `src/lib/motor/release.ts`. Ver
+  `docs/architecture/motor-patronal.md`.
+  **Regra absoluta:** nenhuma copy diz «verificado» ou «validado» sem o estado
+  do release por trás. `userReviewedInputs`, `policyApproved` e
+  `calculationReproducible` são três coisas diferentes.
 - `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.
 - `src/lib/routing.ts` — motor de routing comercial (FIZ / contabilista / Plus /
   sem parceiro) e as fronteiras que nunca se atravessam.
@@ -128,6 +143,7 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/app/` — landing (`page.tsx`) + `dashboard/*` (visão geral, recibos, receitas, prazos, simulador, comparador) + `api/fiscal-data`.
 - `src/components/ui/` — primitivas (Button, Badge, InfoTip, ActivityCombobox, Reveal, CountUp, ThemeToggle, Icons…).
 - `scripts/check-fiscal-data.mjs` + `.github/workflows/` — monitor fiscal + auditoria de segurança.
+- `scripts/verificar-movel.mjs` — ★ o portão do telemóvel (`npm run movel:e2e`). Ver a regra 5b.
 - `DESIGN.md` — design system documentado.
 
 ## Próximos passos conhecidos

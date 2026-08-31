@@ -41,9 +41,13 @@ export { BuscaTrigger } from "./BuscaTrigger";
  * │ de `SuperficieModal`, que o escreve UMA vez para todos os diálogos.      │
  * └─────────────────────────────────────────────────────────────────────────┘
  */
-export default function BuscaOverlay() {
+export default function BuscaOverlay({
+  abrirInicialmente = false,
+}: {
+  abrirInicialmente?: boolean;
+}) {
   const pathname = usePathname();
-  const [querAbrir, setQuerAbrir] = useState(false);
+  const [querAbrir, setQuerAbrir] = useState(abrirInicialmente);
 
   // A vaga do coordenador: nunca há dois `aria-modal` ao mesmo tempo.
   const aberto = useOverlay("busca", querAbrir, { modal: true, iniciadoPeloUtilizador: true });

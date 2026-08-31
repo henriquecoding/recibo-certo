@@ -12,12 +12,10 @@ import { Lightbulb, Warning, Info, Heart, Close, Check, Zap, Mail, ShieldCheck }
 import { useAuth } from "@/lib/supabase/auth";
 import type { TipoFeedback } from "@/lib/supabase/feedback";
 import { contemCodigo, emailValido } from "@/lib/feedback-sanitize";
-import { EVENTO_ABRIR_FEEDBACK } from "@/components/feedback/abrir";
-
-interface AberturaDetalhe {
-  tipo?: TipoFeedback;
-  area?: string;
-}
+import {
+  EVENTO_ABRIR_FEEDBACK,
+  type DetalheFeedback,
+} from "@/components/feedback/abrir";
 
 const TIPOS: { id: TipoFeedback; label: string; desc: string; Icon: typeof Lightbulb }[] = [
   { id: "sugestao", label: "Sugestão", desc: "Uma ideia", Icon: Lightbulb },
@@ -30,7 +28,11 @@ import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 
 const MAX = 4000;
 
-export default function FeedbackModal() {
+export default function FeedbackModal({
+  pedidoInicial,
+}: {
+  pedidoInicial?: DetalheFeedback;
+}) {
   const { user } = useAuth();
   const pathname = usePathname();
   const [querAbrir, setAberto] = useState(false);
@@ -45,6 +47,7 @@ export default function FeedbackModal() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const consumiuPedidoInicial = useRef(false);
 
   const repor = useCallback(() => {
     setTipo("sugestao");
@@ -60,16 +63,24 @@ export default function FeedbackModal() {
 
   // Abertura por evento global (header desktop, chrome móvel, contextos do site).
   useEffect(() => {
-    function abrir(e: Event) {
-      const det = (e as CustomEvent<AberturaDetalhe>).detail;
+    function aplicar(det?: DetalheFeedback) {
       repor();
       if (det?.tipo) setTipo(det.tipo);
       setAreaOrigem(det?.area || pathname || "");
       setAberto(true);
     }
+    function abrir(e: Event) {
+      aplicar((e as CustomEvent<DetalheFeedback>).detail);
+    }
     window.addEventListener(EVENTO_ABRIR_FEEDBACK, abrir);
+
+    if (pedidoInicial && !consumiuPedidoInicial.current) {
+      consumiuPedidoInicial.current = true;
+      aplicar(pedidoInicial);
+    }
+
     return () => window.removeEventListener(EVENTO_ABRIR_FEEDBACK, abrir);
-  }, [pathname, repor]);
+  }, [pathname, pedidoInicial, repor]);
 
   // Foco no campo de mensagem + fechar com Esc + bloquear scroll de fundo.
   useEffect(() => {

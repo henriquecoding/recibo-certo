@@ -86,7 +86,6 @@ describe("RC-LEGAL-002 · a FIZ só é anunciada quando está ligada", () => {
     // desaparece por omissão — mas só se a consultar.
     for (const ficheiro of [
       ["components", "Precos.tsx"],
-      ["components", "Hero.tsx"],
       ["components", "fiz", "FizConnectionCard.tsx"],
       ["app", "integracoes", "fiz", "page.tsx"],
     ]) {
@@ -94,6 +93,26 @@ describe("RC-LEGAL-002 · a FIZ só é anunciada quando está ligada", () => {
       expect(fonte, `${ficheiro.join("/")} mostra a FIZ sem consultar fizAtiva()`).toMatch(
         /fizAtiva\(\)/,
       );
+    }
+  });
+
+  it("a superfície da FIZ na homepage consulta o catálogo do servidor", () => {
+    // `components/Hero.tsx` estava na lista acima e desapareceu: o hero da
+    // homepage passou a ser a bússola, que não mostra a FIZ em lado nenhum.
+    //
+    // A presença da FIZ na homepage é agora só a `FizFaixaDemo`, que é um
+    // componente de SERVIDOR e por isso não consulta `fizAtiva()` (a bandeira
+    // do cliente) mas sim o catálogo de parcerias — que falha fechado da
+    // mesma maneira. A superfície mudou; a regra não.
+    const faixa = ler("components", "fiz", "FizFaixaDemo.tsx");
+    expect(faixa, "a faixa mostra a FIZ sem consultar o catálogo").toMatch(
+      /parceriaAtiva|parceriaUtilizavel/,
+    );
+
+    // E o hero novo não pode anunciar a FIZ sem passar por nenhuma das duas.
+    const hero = ler("components", "foco", "HeroBussola.tsx");
+    if (/\bFiz[A-Z]/.test(hero)) {
+      expect(hero, "o hero anuncia a FIZ sem consultar a bandeira").toMatch(/fizAtiva\(\)/);
     }
   });
 });

@@ -57,6 +57,7 @@ export default function BarraSecoes() {
         const ativo = aceso === secao.href;
         return (
           <Link
+            prefetch={false}
             key={secao.href}
             href={secao.href}
             // `page` e não `true`: o item aceso É a página onde se está.

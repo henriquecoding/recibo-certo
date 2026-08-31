@@ -36,7 +36,7 @@ export default function OnboardingGate({ onSelect }: OnboardingGateProps) {
           onClick={() => onSelect("guiado")}
           className="group relative flex flex-col rounded-4xl border-2 border-brand bg-white p-6 text-left shadow-card transition-all hover:-translate-y-0.5 hover:shadow-float focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:bg-stone-900 sm:p-7"
         >
-          <span className="absolute right-4 top-4 rounded-full bg-brand px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+          <span className="absolute right-4 top-4 rounded-full bg-brand px-2.5 py-0.5 texto-micro font-bold uppercase tracking-wide text-white">
             Recomendado
           </span>
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-white shadow-glow">
@@ -78,13 +78,13 @@ export default function OnboardingGate({ onSelect }: OnboardingGateProps) {
 
       {/* Nota de confiança + saltar */}
       <div className="mx-auto mt-6 flex max-w-3xl flex-col items-center gap-3">
-        <p className="inline-flex items-center gap-1.5 text-[11px] font-medium text-stone-400">
+        <p className="inline-flex items-center gap-1.5 texto-mini font-medium text-stone-400">
           <ShieldCheck size={13} className="text-brand" /> Taxas oficiais de 2026 · grátis, sem registo
         </p>
         <button
           type="button"
           onClick={() => onSelect("profissional")}
-          className="px-3 py-2 text-xs font-medium text-stone-400 underline-offset-2 transition-colors hover:text-stone-600 hover:underline dark:hover:text-stone-300"
+          className="inline-flex min-h-[36px] items-center px-3 py-2 text-xs font-medium text-stone-400 underline-offset-2 transition-colors hover:text-stone-600 hover:underline dark:hover:text-stone-300"
         >
           Já escolhi antes — ignorar esta pergunta
         </button>

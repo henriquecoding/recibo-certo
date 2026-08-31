@@ -1,6 +1,8 @@
-import type { LegalSource } from "../core/model";
+import type { LegalLocator, LegalSource } from "../core/model";
 
 const reviewed = "2026-07-22" as const;
+/** Levantamento patronal do relatório de 31 de agosto de 2026. */
+const verifiedEmployer2026 = "2026-08-31" as const;
 
 export const LEGAL_SOURCES = {
   cirs2: {
@@ -289,6 +291,72 @@ export const LEGAL_SOURCES = {
     lastHumanReview: reviewed,
     status: "active",
   },
+  minimumWageMadeira2026: {
+    id: "pt.dr.decreto-legislativo-regional-1-2026-m",
+    authority: "JORAM",
+    title: "Decreto Legislativo Regional n.º 1/2026/M — RMMG na Madeira",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-legislativo-regional/1-2026-1033291312",
+    effective: { from: "2026-01-01", to: "2026-12-31" },
+    expectedAnchors: ["1/2026/M", "980", "Região Autónoma da Madeira"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
+  minimumWageAzores: {
+    id: "pt.dr.decreto-legislativo-regional-8-2002-a",
+    authority: "JO_ACORES",
+    title: "Decreto Legislativo Regional n.º 8/2002/A — acréscimo regional de 5%",
+    url: "https://diariodarepublica.pt/dr/detalhe/decreto-legislativo-regional/8-2002-546201",
+    effective: { from: "2002-03-01" },
+    expectedAnchors: ["8/2002/A", "Região Autónoma dos Açores", "5 %"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
+  iefpMaisEmprego2026: {
+    id: "pt.iefp.mais-emprego.2026",
+    authority: "IEFP",
+    title: "IEFP — Medida +Emprego, período de candidaturas de 2026",
+    url: "https://iefponline.iefp.pt/IEFP/medida/mais-emprego.do?action=overview",
+    effective: { from: "2026-07-15", to: "2026-12-15" },
+    expectedAnchors: ["+Emprego", "15 de dezembro de 2026", "6.445,56"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
+  iefpEmpregoMaisTalento2026: {
+    id: "pt.iefp.emprego-mais-talento.2026",
+    authority: "IEFP",
+    title: "IEFP — Medida Emprego +Talento, período de candidaturas de 2026",
+    url: "https://iefponline.iefp.pt/IEFP/medida/emprego-mais-talento.do?action=overview",
+    effective: { from: "2026-07-15", to: "2026-12-15" },
+    expectedAnchors: ["+Talento", "15 de dezembro de 2026", "9.668,34"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
+  iefpApoiosContratacao: {
+    id: "pt.iefp.apoios-a-contratacao",
+    authority: "IEFP",
+    title: "IEFP — catálogo de apoios à contratação",
+    url: "https://www.iefp.pt/apoios-a-contratacao",
+    effective: { from: "2026-01-01" },
+    expectedAnchors: ["Apoios à contratação"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
+  workAccidentInsurance: {
+    id: "pt.dr.lei-98-2009",
+    authority: "DR",
+    title: "Lei n.º 98/2009 — reparação de acidentes de trabalho",
+    url: "https://diariodarepublica.pt/dr/detalhe/lei/98-2009-489505",
+    effective: { from: "2010-01-01" },
+    expectedAnchors: ["Lei n.º 98/2009", "Artigo 79.º", "seguro"],
+    forbiddenAnchors: [],
+    lastHumanReview: verifiedEmployer2026,
+    status: "active",
+  },
 } as const satisfies Record<string, LegalSource>;
 
 export type LegalSourceKey = keyof typeof LEGAL_SOURCES;
@@ -299,4 +367,71 @@ export const LEGAL_SOURCE_LIST: readonly LegalSource[] = Object.freeze(
 
 export function legalSourceById(id: string): LegalSource | undefined {
   return LEGAL_SOURCE_LIST.find((source) => source.id === id);
+}
+
+// ─── Localizadores ─────────────────────────────────────────────────────────
+
+const ct = (article: string, label: string): LegalLocator => ({
+  id: `pt.dr.codigo-trabalho.artigo-${article}`,
+  sourceId: LEGAL_SOURCES.labourCode.id,
+  article: `Artigo ${article}.º`,
+  label,
+});
+
+/**
+ * Cada citação do motor aponta para um artigo concreto de um diploma
+ * concreto. Sem isto, «citations: [pt.dr.codigo-trabalho.current]» dizia
+ * apenas que a regra vem de algum sítio de 400 artigos.
+ */
+export const LEGAL_LOCATORS: readonly LegalLocator[] = Object.freeze([
+  ct("155", "Tempo parcial: proporcionalidade da retribuição"),
+  ct("203", "Período normal de trabalho: 8 h diárias e 40 h semanais"),
+  ct("204", "Adaptabilidade por regulamentação coletiva"),
+  ct("205", "Adaptabilidade individual"),
+  ct("207", "Período de referência"),
+  ct("211", "Duração média do trabalho semanal: limite de 48 h"),
+  ct("234", "Feriados obrigatórios"),
+  ct("237", "Direito a férias"),
+  ct("238", "Duração do período de férias: 22 dias úteis"),
+  ct("239", "Férias no ano da admissão e no ano seguinte"),
+  ct("263", "Subsídio de Natal"),
+  ct("264", "Retribuição do período de férias e subsídio de férias"),
+  ct("131", "Formação contínua: 40 horas anuais"),
+  {
+    id: "pt.dr.lei-98-2009.artigo-79",
+    sourceId: LEGAL_SOURCES.workAccidentInsurance.id,
+    article: "Artigo 79.º",
+    label: "Obrigação de transferir a responsabilidade para seguradora",
+  },
+  {
+    id: "pt.dr.codigo-contributivo.artigo-46",
+    sourceId: LEGAL_SOURCES.socialSecurityCode.id,
+    article: "Artigo 46.º",
+    label: "Delimitação da base de incidência contributiva",
+  },
+  {
+    id: "pt.dr.codigo-contributivo.artigo-53",
+    sourceId: LEGAL_SOURCES.socialSecurityCode.id,
+    article: "Artigo 53.º",
+    label: "Taxa contributiva do regime geral",
+  },
+]);
+
+export function legalLocatorById(id: string): LegalLocator | undefined {
+  return LEGAL_LOCATORS.find((locator) => locator.id === id);
+}
+
+/**
+ * Resolve uma citação — fonte inteira ou localizador dentro dela. Uma citação
+ * que não resolve é um erro de integridade, não um aviso de estilo.
+ */
+export function resolveCitation(
+  id: string,
+): { source: LegalSource; locator?: LegalLocator } | undefined {
+  const direct = legalSourceById(id);
+  if (direct) return { source: direct };
+  const locator = legalLocatorById(id);
+  if (!locator) return undefined;
+  const source = legalSourceById(locator.sourceId);
+  return source ? { source, locator } : undefined;
 }

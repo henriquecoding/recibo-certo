@@ -1,7 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { m } from "motion/react";
 import { Check, Lock, ShieldCheck, Flag, Sparkle } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
 import {
@@ -96,7 +93,7 @@ export default function Precos() {
   const mostrarFiz = fizAtiva();
 
   return (
-    <section id="precos" className="scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20">
+    <section id="precos" className="rc-home-deferred rc-home-deferred--xlarge scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Planos</div>
@@ -133,6 +130,8 @@ export default function Precos() {
               </ul>
 
               <Link
+
+                prefetch={false}
                 href="/dashboard"
                 className="mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl border border-stone-200 px-5 py-3 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200 dark:hover:border-stone-600"
               >
@@ -143,10 +142,8 @@ export default function Precos() {
 
           {/* ── Plus ── */}
           <Reveal delay={0.08}>
-            <m.div
-              whileHover={{ y: -4 }}
-              transition={{ type: "spring", stiffness: 300, damping: 24 }}
-              className="flex h-full flex-col rounded-4xl border border-brand bg-white p-6 shadow-glow sm:-mt-3 sm:p-7 sm:pb-9"
+            <div
+              className="flex h-full flex-col rounded-4xl border border-brand bg-white p-6 shadow-glow transition-transform duration-300 hover:-translate-y-1 motion-reduce:transition-none sm:-mt-3 sm:p-7 sm:pb-9"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-stone-500">{PLUS.nome}</h3>
@@ -172,6 +169,8 @@ export default function Precos() {
               </ul>
 
               <Link
+
+                prefetch={false}
                 href="/dashboard/upgrade"
                 className="btn-shine mt-7 inline-flex min-h-[44px] items-center justify-center rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-shadow hover:shadow-float"
               >
@@ -193,7 +192,7 @@ export default function Precos() {
                   dispositivo fica contigo.
                 </span>
               </p>
-            </m.div>
+            </div>
           </Reveal>
 
           {/* ── Vitalício ── */}
@@ -311,7 +310,7 @@ export default function Precos() {
           <Reveal className="mt-14">
             <div className="mb-6 flex items-center gap-4" aria-hidden>
               <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />
-              <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-400">
+              <span className="texto-mini font-semibold uppercase tracking-wider text-stone-400">
                 E depois dos planos
               </span>
               <span className="h-px flex-1 bg-stone-200 dark:bg-stone-700" />

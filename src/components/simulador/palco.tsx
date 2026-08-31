@@ -2,7 +2,11 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { m } from "motion/react";
-import { Pause, Play } from "@/components/ui/Icons";
+export {
+  BotaoPausa,
+  ReguaDeAtos,
+  type AtoDaRegua,
+} from "@/components/simulador/palco-controles";
 
 // ═════════════════════════════════════════════════════════════════════════
 //  PALCO DAS DEMONSTRAÇÕES — peças partilhadas
@@ -52,96 +56,9 @@ export const linha = {
 export function TituloAto({ children, nota }: { children: React.ReactNode; nota?: string }) {
   return (
     <m.div variants={linha} className="mb-2.5 flex items-baseline justify-between gap-2">
-      <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400">{children}</span>
-      {nota && <span className="flex-shrink-0 text-[10px] font-medium text-stone-400">{nota}</span>}
+      <span className="texto-mini font-bold uppercase tracking-wider text-stone-400">{children}</span>
+      {nota && <span className="flex-shrink-0 texto-micro font-medium text-stone-400">{nota}</span>}
     </m.div>
-  );
-}
-
-// ── Botão de pausa ───────────────────────────────────────────────────────
-//  Conteúdo que se move sozinho tem de poder ser parado (WCAG 2.2.2). A
-//  pausa ao passar o rato não chega: não existe em ecrã tátil nem para quem
-//  navega por teclado.
-
-export function BotaoPausa({
-  parado,
-  onAlternar,
-  className = "",
-}: {
-  parado: boolean;
-  onAlternar: () => void;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onAlternar}
-      aria-label={parado ? "Retomar a demonstração" : "Pausar a demonstração"}
-      className={`flex h-7 w-7 items-center justify-center rounded-full border border-stone-200 text-stone-500 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-1 dark:border-stone-700 dark:text-stone-400 ${className}`}
-    >
-      {parado ? <Play size={11} /> : <Pause size={11} />}
-    </button>
-  );
-}
-
-// ── Régua de atos ────────────────────────────────────────────────────────
-
-export interface AtoDaRegua {
-  id: string;
-  /** Curto — cabe por baixo da barra, em maiúsculas pequenas. */
-  rotulo: string;
-  /** Frase inteira, para o leitor de ecrã. */
-  legenda: string;
-}
-
-export function ReguaDeAtos({
-  atos,
-  indiceAtivo,
-  barraRef,
-  estatico,
-  onIr,
-  className = "",
-}: {
-  atos: AtoDaRegua[];
-  indiceAtivo: number;
-  /** A barra do ato ativo é escrita por `ref`, pelo relógio. */
-  barraRef: RefObject<HTMLSpanElement | null>;
-  /** `prefers-reduced-motion`: a barra do ato ativo aparece já cheia. */
-  estatico: boolean;
-  onIr: (idx: number) => void;
-  className?: string;
-}) {
-  return (
-    <ol className={`flex gap-1 ${className}`}>
-      {atos.map((a, idx) => (
-        <li key={a.id} className="flex-1">
-          <button
-            type="button"
-            onClick={() => onIr(idx)}
-            aria-current={idx === indiceAtivo ? "step" : undefined}
-            aria-label={`Passo ${idx + 1} de ${atos.length}: ${a.legenda}`}
-            className="group block w-full py-1 focus-visible:outline-none"
-          >
-            <span className="block h-1 w-full overflow-hidden rounded-full bg-stone-200 group-focus-visible:ring-2 group-focus-visible:ring-brand group-focus-visible:ring-offset-2 dark:bg-stone-700">
-              <span
-                ref={idx === indiceAtivo ? barraRef : undefined}
-                className="block h-full w-full origin-left rounded-full bg-brand"
-                style={{
-                  transform: `scaleX(${idx < indiceAtivo || (idx === indiceAtivo && estatico) ? 1 : 0})`,
-                }}
-              />
-            </span>
-            <span
-              className={`mt-1 block truncate text-[9px] font-semibold uppercase tracking-wide transition-colors ${
-                idx === indiceAtivo ? "text-brand-dark dark:text-brand" : "text-stone-300 dark:text-stone-600"
-              }`}
-            >
-              {a.rotulo}
-            </span>
-          </button>
-        </li>
-      ))}
-    </ol>
   );
 }
 

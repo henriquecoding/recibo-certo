@@ -184,6 +184,30 @@
   }
 }
 
+/* Auditoria mobile dos cinco palcos: a tipografia de demonstração tinha
+   chegado a 8–10 px e obrigava a ampliar o ecrã. No telemóvel, nenhum texto
+   informativo dentro de um palco fica abaixo de 12 px; o contentor também
+   bloqueia qualquer largura intrínseca de transformar a página numa calha
+   horizontal. */
+@media (max-width: 639px) {
+  [data-palco] {
+    max-width: 100%;
+    overflow: clip;
+  }
+
+  [data-palco] [class*="text-[8px]"],
+  [data-palco] [class*="text-[9px]"],
+  [data-palco] [class*="text-[10px]"] {
+    font-size: 0.75rem !important;
+    line-height: 1.35 !important;
+  }
+
+  [data-palco] [class*="text-[11px]"] {
+    font-size: 0.8125rem !important;
+    line-height: 1.4 !important;
+  }
+}
+
 /* ════════════════════════════════════════════════════════════════════
    O PAINEL DE PESQUISA DO CABEÇALHO
 
@@ -380,6 +404,28 @@ html {
      │ os que não passam por este caminho.                             │
      └────────────────────────────────────────────────────────────────┘ */
   scroll-padding-top: calc(var(--rc-header-atual) + 12px);
+
+  /* ┌────────────────────────────────────────────────────────────────┐
+     │ E QUE TAMBÉM NÃO ATERRAM DEBAIXO DA BARRA DE BAIXO             │
+     │                                                                │
+     │ O topo estava reservado; o fundo não. No telemóvel há duas      │
+     │ camadas fixas coladas ao fim do ecrã — a navegação e o dock de  │
+     │ busca — e um campo alcançado por teclado, por âncora ou por     │
+     │ `scrollIntoView` podia aterrar por baixo delas. O espaçador do  │
+     │ fim do documento salvava o ÚLTIMO elemento e mais nenhum.        │
+     │                                                                │
+     │ `scroll-padding-bottom` diz ao browser qual é a região de       │
+     │ leitura útil, e é ela que ele respeita ao levar o foco a um     │
+     │ campo (relatório de 31-08-2026, MOT-P0-020 e §9.5).             │
+     └────────────────────────────────────────────────────────────────┘ */
+  scroll-padding-bottom: calc(var(--rc-chrome-movel) + 12px);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    /* A partir de `lg` as barras móveis desaparecem (`lg:hidden`). */
+    scroll-padding-bottom: 12px;
+  }
 }
 
 [id],
@@ -430,6 +476,75 @@ body {
   font-weight: 600;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   O PISO TIPOGRÁFICO DO TELEMÓVEL
+
+   ┌──────────────────────────────────────────────────────────────────┐
+   │ PORQUE É UMA CLASSE E NÃO UMA REGRA DE BOM SENSO                  │
+   │                                                                  │
+   │ A homepage tinha 31 sítios abaixo de 12px a 360 px: rótulos a     │
+   │ 9px na régua dos atos, a 10px na barra de navegação do telemóvel  │
+   │ e no seletor de perfil, e uma nuvem de 11px pelo rodapé, pelas    │
+   │ fontes e pelos mini-rótulos das secções. Nenhum deles nasceu      │
+   │ errado: cada um foi escolhido a olhar para um ecrã de 1440px,     │
+   │ onde 10px é um rótulo discreto e não um rótulo ilegível.          │
+   │                                                                  │
+   │ Escrever `text-xs sm:text-[10px]` em 31 sítios corrige os 31 e    │
+   │ não corrige o 32.º, que alguém escreve amanhã a olhar para o      │
+   │ mesmo ecrã largo. Por isso o piso é uma classe: quem quer um      │
+   │ rótulo pequeno pede um rótulo pequeno, e o telemóvel fica         │
+   │ protegido sem ter de se lembrar dele.                             │
+   │                                                                  │
+   │ 12px é o piso porque é onde a régua de contraste da WCAG muda de  │
+   │ patamar e onde o texto deixa de exigir aproximar o telemóvel da   │
+   │ cara. Acima de `sm:` (640px, já não é um telemóvel na mão) cada   │
+   │ classe volta ao tamanho pequeno que o desenho pediu.              │
+   └──────────────────────────────────────────────────────────────────┘
+
+   · .texto-micro — o mais pequeno que existe: 10px em ecrã largo.
+   · .texto-mini  — o degrau acima: 11px em ecrã largo.
+
+   Medido pelo portão `npm run movel:e2e`, que reprova qualquer texto
+   abaixo do piso a 360px. */
+.texto-micro,
+.texto-mini {
+  font-size: 0.75rem; /* 12px — o piso, e é o telemóvel que o vê */
+}
+@media (min-width: 640px) {
+  .texto-micro {
+    font-size: 0.625rem; /* 10px */
+  }
+  .texto-mini {
+    font-size: 0.6875rem; /* 11px */
+  }
+}
+
+/* ┌────────────────────────────────────────────────────────────────────┐
+   │ UM RÓTULO DENTRO DE UM SVG NÃO SE MEDE EM PIXÉIS — MEDE-SE EM      │
+   │ UNIDADES DO DESENHO                                                │
+   │                                                                    │
+   │ O gráfico do palco da Empresa desenha 720 unidades e, a 360px,     │
+   │ ocupa 276 CSS px: tudo lá dentro sai a 0,38× do que diz. Os três   │
+   │ rótulos («valem o mesmo», «EMPRESA À FRENTE», «RECIBOS VERDES À    │
+   │ FRENTE») estavam a `fontSize=8`/`9` — chegavam ao ecrã com 3 a 4   │
+   │ pixéis de altura. Não era texto pequeno: era texto que ninguém     │
+   │ pode ler, dentro de um `role="img"` que já se descreve por         │
+   │ `aria-label`.                                                      │
+   │                                                                    │
+   │ O piso do telemóvel tem de ser dito na escala DELE: 32 unidades    │
+   │ dão ~12px reais nessa largura. A partir de `sm:` o gráfico volta a │
+   │ desenhar-se quase 1:1 e o rótulo volta ao tamanho que o desenho    │
+   │ pediu.                                                             │
+   └────────────────────────────────────────────────────────────────────┘ */
+.rotulo-grafico {
+  font-size: 32px; /* unidades do viewBox — ~12px reais a 360 */
+}
+@media (min-width: 640px) {
+  .rotulo-grafico {
+    font-size: 12px;
+  }
 }
 
 /* Grão subtil para dar atmosfera a fundos planos. */
@@ -1547,4 +1662,250 @@ html.dark .dark\:placeholder-stone-50::placeholder {
   body.a-imprimir-ficha article[data-ficha-a-imprimir] {
     break-inside: auto;
   }
+}
+
+/* ═════════════════════════════════════════════════════════════════════
+   A RESPOSTA DA BÚSSOLA — a chegada do painel do hero
+   ---------------------------------------------------------------------
+   O painel trocava de conteúdo de um fotograma para o outro. Um número
+   que substitui outro sem chegar não se lê como uma resposta nova: lê-se
+   como um erro de renderização, e o olho não sabe se mudou tudo ou só
+   uma linha.
+
+   As cinco partes entram desfasadas a 90 ms — `PASSO.uno` da gramática
+   de movimento (`palco/curvas.ts`), o degrau que está abaixo do limiar
+   em que se julga a ordem de dois acontecimentos. Não são cinco coisas a
+   chegar: é UMA a chegar com espessura.
+
+   `both` conserva o estado inicial durante o atraso — sem ele as partes
+   piscavam visíveis antes de começarem.
+   ═════════════════════════════════════════════════════════════════════ */
+
+@keyframes rc-resposta-entra {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.resposta-entra > * {
+  animation: rc-resposta-entra 320ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.resposta-entra > *:nth-child(2) {
+  animation-delay: 90ms;
+}
+.resposta-entra > *:nth-child(3) {
+  animation-delay: 180ms;
+}
+.resposta-entra > *:nth-child(4) {
+  animation-delay: 270ms;
+}
+.resposta-entra > *:nth-child(5) {
+  animation-delay: 360ms;
+}
+.resposta-entra > *:nth-child(n + 6) {
+  animation-delay: 360ms;
+}
+
+/* Quem pediu menos movimento recebe a resposta inteira, de uma vez e no
+   sítio. Não é uma versão pobre: é a mesma informação sem o trajeto. */
+@media (prefers-reduced-motion: reduce) {
+  .resposta-entra > * {
+    animation: none;
+  }
+}
+
+/* A barra de `app/loading.tsx`: atravessa e volta enquanto a leitura
+   seguinte não chega. Com movimento reduzido não anda — fica uma barra
+   inteira a meio tom, que diz o mesmo sem se mexer. */
+@keyframes carregar {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+/* Revelação progressiva sem runtime JS. O conteúdo permanece visível em
+   browsers sem scroll-driven animations e quando scripting está desligado. */
+@keyframes rc-view-reveal {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@supports (animation-timeline: view()) {
+  .rc-view-reveal {
+    animation: rc-view-reveal 1ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 28%;
+    animation-delay: var(--rc-reveal-delay, 0s);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-view-reveal { animation: none; opacity: 1; transform: none; }
+  .rc-motion-lite { animation: none !important; transition: none !important; }
+}
+
+/*
+ * As rotas de foco continuam a servir todo o texto no HTML — SEO, leitura
+ * sem JavaScript, pesquisa na página e acessibilidade não perdem conteúdo.
+ * O browser, porém, não precisa calcular layout e paint de vários ecrãs
+ * abaixo da dobra durante a troca de foco. `auto` conserva a última medida
+ * real depois da primeira visita; os valores seguintes são reservas por tipo
+ * para que saltar por âncora não introduza CLS.
+ *
+ * ── As reservas são MEDIDAS, e mudam com a largura ───────────────────
+ *
+ * A primeira versão tinha um valor por tipo, igual em todas as larguras.
+ * Numa coluna de 390 px o mesmo texto ocupa o dobro da altura que ocupa em
+ * três colunas de 1366 px, portanto essas reservas estavam certas para
+ * desktop e curtas para telemóvel: `compact` reservava 20rem para uma
+ * secção que ali mede 49rem — 2,5× ao lado.
+ *
+ * Uma reserva errada não muda o CLS medido (o defeito que se procurava
+ * estava no cabeçalho do palco, ver `palco/legenda.tsx`), mas faz o
+ * browser reservar espaço a mais ou a menos em cada rolagem e desfaz
+ * parte do que o `content-visibility` vem poupar.
+ *
+ * Os números abaixo são medianas medidas nas cinco rotas com
+ * `content-visibility` desligado, a 390, 768 e 1024 px. Se o editorial
+ * mudar de forma, medem-se outra vez — não se adivinham.
+ */
+@supports (content-visibility: auto) {
+  [data-homepage-foco] .rc-home-deferred {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--rc-home-intrinsic, 48rem);
+  }
+
+  [data-homepage-foco] .rc-home-deferred--compact {
+    --rc-home-intrinsic: 48rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--medium {
+    --rc-home-intrinsic: 50rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--large {
+    --rc-home-intrinsic: 90rem;
+  }
+
+  [data-homepage-foco] .rc-home-deferred--xlarge {
+    --rc-home-intrinsic: 166rem;
+  }
+
+  /* A partir daqui as grelhas começam a emparelhar cartões. */
+  @media (min-width: 640px) {
+    [data-homepage-foco] .rc-home-deferred--compact {
+      --rc-home-intrinsic: 36rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--medium {
+      --rc-home-intrinsic: 48rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--large {
+      --rc-home-intrinsic: 70rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--xlarge {
+      --rc-home-intrinsic: 127rem;
+    }
+  }
+
+  /* E aqui ficam com o número final de colunas. */
+  @media (min-width: 1024px) {
+    [data-homepage-foco] .rc-home-deferred--compact {
+      --rc-home-intrinsic: 26rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--medium {
+      --rc-home-intrinsic: 50rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--large {
+      --rc-home-intrinsic: 55rem;
+    }
+
+    [data-homepage-foco] .rc-home-deferred--xlarge {
+      --rc-home-intrinsic: 85rem;
+    }
+  }
+}
+
+@keyframes rc-aviso-entrada {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rc-aviso-saida {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(10px) scale(0.98); }
+}
+
+@keyframes rc-overlay-entrada {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes rc-overlay-saida {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes rc-dialogo-entrada {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes rc-dialogo-saida {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(14px) scale(0.985); }
+}
+
+.rc-aviso-entrada { animation: rc-aviso-entrada 260ms cubic-bezier(0.16, 1, 0.3, 1); }
+.rc-aviso-saida { animation: rc-aviso-saida 180ms ease-in both; }
+.rc-overlay-entrada { animation: rc-overlay-entrada 180ms ease-out; }
+.rc-overlay-saida { animation: rc-overlay-saida 180ms ease-in both; }
+.rc-dialogo-entrada { animation: rc-dialogo-entrada 320ms cubic-bezier(0.16, 1, 0.3, 1); }
+.rc-dialogo-saida { animation: rc-dialogo-saida 180ms ease-in both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-aviso-entrada, .rc-aviso-saida,
+  .rc-overlay-entrada, .rc-overlay-saida,
+  .rc-dialogo-entrada, .rc-dialogo-saida { animation: none; }
+}
+
+/* Efeitos breves dos palcos ficam no compositor; o único relógio JavaScript
+   da cena trata apenas o que precisa de ler medidas ou disparar causalidade. */
+@keyframes rc-anel-palco {
+  from { opacity: 0.5; transform: translate(-50%, -50%) scale(0.4); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.6); }
+}
+
+@keyframes rc-toque-palco {
+  from { opacity: 0.9; transform: translate(-50%, -50%) scale(0.2); }
+  to { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+}
+
+.rc-anel-palco {
+  animation: rc-anel-palco 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.rc-toque-palco {
+  animation: rc-toque-palco 500ms ease-out both;
+}
+
+/* O relógio central marca a moldura ao sair do viewport. As animações CSS
+   dentro da mesma cena obedecem à mesma suspensão que os atores em JS. */
+[data-palco-suspenso] *,
+[data-palco-suspenso]::before,
+[data-palco-suspenso]::after {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-anel-palco,
+  .rc-toque-palco { animation: none; opacity: 0; }
 }

@@ -10,24 +10,38 @@
 //  Este contador NÃO é o limite. O limite é um gatilho na base de dados,
 //  que corre dentro da transação da compra. Aqui só se explica — e
 //  desativa-se o botão, que é uma cortesia, não uma garantia.
+//
+//  ── Porque é que o pedido espera pelo ecrã ───────────────────────────
+//
+//  O cartão de planos vive muito abaixo da dobra e está nas CINCO leituras
+//  editoriais da homepage. Pedir à montagem queria dizer um `fetch` dentro
+//  do pico de hidratação de cada rota — e outro dentro da tarefa que faz o
+//  commit de cada troca de foco, onde o orçamento é de 100 ms. Um número
+//  que só se lê quando se chega ao cartão não tem de competir com isso.
+//
+//  Não é adiamento cosmético: o benchmark falha se uma troca de foco tocar
+//  na nossa API (`apiNaTroca`, em `scripts/medir-desempenho.mjs`).
 // ═══════════════════════════════════════════════════════════════════════
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, Lock } from "@/components/ui/Icons";
+import { usePerto } from "@/lib/use-perto";
 import { textoLugares, type LugaresVitalicios } from "@/lib/plus/vitalicio";
 
 export default function ContadorVitalicio({ cta }: { cta: string }) {
   const [lugares, setLugares] = useState<LugaresVitalicios | null>(null);
+  const { ref, perto } = usePerto<HTMLDivElement>("400px 0px");
 
   useEffect(() => {
+    if (!perto) return;
     let vivo = true;
     fetch("/api/vitalicio/lugares")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => { if (vivo && d) setLugares(d as LugaresVitalicios); })
       .catch(() => {});
     return () => { vivo = false; };
-  }, []);
+  }, [perto]);
 
   // A leitura também pode falhar. Nesse estado não enviamos ninguém para um
   // pagamento que não conseguimos validar; o checkout repete a verificação.
@@ -42,7 +56,7 @@ export default function ContadorVitalicio({ cta }: { cta: string }) {
     <>
       {/* Barra de lugares. Enquanto não se sabe, fica um espaço reservado
           com a mesma altura — senão o cartão salta quando o número chega. */}
-      <div className="mt-4 min-h-[3.25rem]">
+      <div ref={ref} className="mt-4 min-h-[3.25rem]">
         {lugares ? (
           <>
             <div className="mb-1.5 flex items-baseline justify-between gap-2">

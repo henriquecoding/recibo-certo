@@ -9,6 +9,7 @@ import { ChevronRight, ChevronDown, Menu, Megaphone } from "@/components/ui/Icon
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { GUIDE_MANIFESTS, HUB_GRUPOS, type GuideManifest, type HubGroup } from "@/lib/guias/manifests";
 import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Navegação dos Guias — DERIVADA dos manifestos.
@@ -150,7 +151,7 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
             {/* Conteúdo principal. O rodapé editorial (ferramentas, guias
                 relacionados, fontes, histórico e aviso) é responsabilidade do
                 `GuiaLayout` de cada página — assim nunca fica um Guia sem ele. */}
-            <main className="min-w-0 flex-1">{children}</main>
+            <main className="min-w-0 flex-1"><MotionProvider>{children}</MotionProvider></main>
           </div>
         </div>
       </div>

@@ -62,7 +62,7 @@ const semear = `
   localStorage.setItem("recibocerto:onboarded", "1");
   localStorage.setItem("recibocerto:changelog_visto", ${JSON.stringify(VERSAO)});
   localStorage.setItem("recibocerto:cookie-consent", ${JSON.stringify(
-    JSON.stringify({ necessarios: true, estatistica: false, marketing: false, data: new Date().toISOString(), versao: 1 }),
+    JSON.stringify({ necessarios: true, estatistica: false, marketing: false, data: new Date().toISOString(), versao: 2 }),
   )});
 `;
 

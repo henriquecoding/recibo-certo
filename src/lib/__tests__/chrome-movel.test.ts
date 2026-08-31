@@ -77,7 +77,7 @@ describe("chrome-movel:barra", () => {
     // «Recibos» acerta-lhe sem olhar, e trocar as posições desfaz isso sem
     // aviso nenhum. Por isso o número vive na fonte e não aqui.
     expect(PILARES).toHaveLength(5);
-    expect(PILARES.map((p) => p.id)).toEqual(["descobrir", "preco", "recibos", "salario", "empresa"]);
+    expect(PILARES.map((p) => p.id)).toEqual(["descobrir", "preco", "recibos", "empresa", "salario"]);
   });
 
   it("«Pesquisar» não é um dos lugares — a pesquisa é o dock", () => {
@@ -129,7 +129,10 @@ describe("chrome-movel:barra", () => {
     // isso também não repõe o scroll. Quem estava no fim da página e
     // carregava no separador aceso ficava no fim, sem sinal nenhum de que
     // tinha tocado.
-    expect(CHROME).toContain("const naRotaExacta = pathname === slot.href");
+    expect(CHROME).toContain("const naRotaExacta =");
+    expect(CHROME).toContain("pathname === slot.homepageHref");
+    expect(CHROME).toContain("focoDaRotaHomepage(pathname)");
+    expect(CHROME).toContain("pathname === slot.hrefCanonico");
     expect(CHROME).toContain("window.scrollTo({ top: 0");
     // A rota EXACTA, e não o prefixo que acende o separador.
     expect(CHROME).not.toContain("naRotaExacta = on");

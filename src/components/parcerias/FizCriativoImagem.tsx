@@ -45,8 +45,14 @@ export default function FizCriativoImagem({
       target="_blank"
       rel="noopener noreferrer nofollow sponsored"
       aria-label={`${ALT} — publicidade`}
-      className={`block overflow-hidden rounded-2xl border border-fiz-200 transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-fiz-600 focus-visible:ring-offset-2 dark:border-stone-700 ${className}`}
+      className={`block w-full max-w-full overflow-hidden rounded-2xl border border-fiz-200 transition-opacity hover:opacity-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-fiz-600 focus-visible:ring-offset-2 dark:border-stone-700 ${className}`}
     >
+      {/* `block w-full max-w-full` e não só `block`: o cartaz do telemóvel é um
+          ficheiro de 1080 px de largura, e bastava o link deixar de ser um
+          bloco — dentro de uma secção com `content-visibility`, por exemplo —
+          para a imagem assumir a largura intrínseca e pôr 1 088 px de página
+          num ecrã de 360. A largura passa a estar presa em três sítios, e
+          nenhum deles depende de o `display` ser o que se espera. */}
       {/* `<picture>` em vez de `next/image`: a escolha aqui é de COMPOSIÇÃO,
           não de resolução, e o `next/image` só troca o tamanho do mesmo
           ficheiro. As dimensões explícitas em cada `<source>` reservam o
@@ -109,7 +115,7 @@ export default function FizCriativoImagem({
           alt={ALT}
           loading={prioridade ? "eager" : "lazy"}
           decoding="async"
-          className="h-auto w-full"
+          className="h-auto w-full max-w-full"
         />
       </picture>
     </a>
