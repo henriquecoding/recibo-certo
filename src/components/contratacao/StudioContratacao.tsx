@@ -175,7 +175,7 @@ export function CabecalhoStudio({ releaseStatus }: { releaseStatus: ReleaseStatu
             Uma contratação inteira, vista uma decisão de cada vez.
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-light">
-            {ETAPAS_CONTRATACAO.length} etapas livres, um resumo sempre à vista e nenhum número escondido. Podes avançar,
+            {ETAPAS_CONTRATACAO.length} etapas livres, um resumo que acompanha o cenário e nenhum número escondido. Podes avançar,
             voltar e comparar sem perder o cenário.
           </p>
         </div>
