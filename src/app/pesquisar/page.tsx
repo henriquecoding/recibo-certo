@@ -32,9 +32,9 @@ import { FormularioPagina } from "./FormularioPagina";
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "Pesquisar no ReciboCerto — ferramentas, guias e atividades",
+  title: "Pesquisar no Recibo Certo — ferramentas, guias e atividades",
   description:
-    "Procura em todos os simuladores, guias fiscais e atividades do Art. 151.º do ReciboCerto. Resultados por intenção: simular, compreender ou cumprir.",
+    "Procura em todos os simuladores, guias fiscais e atividades do Art. 151.º do Recibo Certo. Resultados por intenção: simular, compreender ou cumprir.",
   alternates: { canonical: `${SITE_URL}/pesquisar` },
   // Uma página de resultados não é conteúdo: é uma vista sobre conteúdo que
   // já está indexado nas suas próprias páginas. Indexá-la produziria
@@ -91,7 +91,7 @@ export default async function PesquisarPage({
           </nav>
 
           <h1 className="font-display display-2 mb-3 text-balance font-semibold text-ink">
-            {consulta.trim() ? <>Resultados para «{consulta.trim()}»</> : <>Pesquisar no ReciboCerto</>}
+            {consulta.trim() ? <>Resultados para «{consulta.trim()}»</> : <>Pesquisar no Recibo Certo</>}
           </h1>
           <p className="mb-6 text-stone-600 dark:text-stone-400">
             {totais.total} destinos indexados: {totais.ferramentas} ferramentas, {totais.guias} guias e{" "}

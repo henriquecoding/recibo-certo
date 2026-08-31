@@ -1,4 +1,4 @@
-# Plano mestre de proteção dos ativos do ReciboCerto
+# Plano mestre de proteção dos ativos do Recibo Certo
 
 **Estado:** proteção imediata implementada na branch
 `agent/protecao-ativos-proprietarios`  
@@ -28,7 +28,7 @@ respostas ou resultados introduzidos pelo utilizador.
 
 Há uma escolha de segurança deliberada: código e perguntas necessários para
 execução local têm de chegar ao browser e, por isso, são tecnicamente
-observáveis. O ReciboCerto privilegia a privacidade e o acesso sem conta sobre
+observáveis. O Recibo Certo privilegia a privacidade e o acesso sem conta sobre
 esconder essa lógica num servidor. A proteção desses ativos assenta no
 repositório privado, reserva jurídica, redução de superfícies de extração,
 bloqueio de crawlers e ausência de source maps — nunca na recolha dos dados do
@@ -83,7 +83,7 @@ utilizador.
 - remoção das respostas e explicações em massa das páginas de categoria;
 - amostra pública reduzida de 20 para 5 enunciados e remoção do Quiz JSON-LD.
 
-**Equilíbrio deliberado:** o ReciboCerto permanece plenamente descobrível nos
+**Equilíbrio deliberado:** o Recibo Certo permanece plenamente descobrível nos
 motores de pesquisa convencionais e acessível em navegadores normais. Crawlers
 de treino, datasets, scraping comercial e motores de resposta de IA que
 respeitem estes controlos continuam bloqueados. A reserva de direitos não deve
@@ -133,11 +133,11 @@ DevTools, requests HTTP, screenshots ou automação.
 
 ### 4.3 Factos fiscais não são exclusivos
 
-Taxas, escalões, artigos e regras legais não pertencem ao ReciboCerto. O ativo
+Taxas, escalões, artigos e regras legais não pertencem ao Recibo Certo. O ativo
 defensável é a seleção, validação, explicação, manutenção, arquitetura,
 experiência, banco original e implementação. Um concorrente pode implementar
 as mesmas leis de forma independente; não pode copiar a expressão protegida ou
-a compilação do ReciboCerto.
+a compilação do Recibo Certo.
 
 ## 5. P0 — preservar a arquitetura local-first
 

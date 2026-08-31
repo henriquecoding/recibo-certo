@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migration 004: Sistema de Anúncios + Fix RLS
+-- Recibo Certo — Migration 004: Sistema de Anúncios + Fix RLS
 -- Cola no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================

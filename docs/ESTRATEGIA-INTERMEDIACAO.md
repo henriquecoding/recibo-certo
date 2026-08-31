@@ -80,7 +80,7 @@ isso convém dizer com precisão o que se mantém e o que cai.
 | Conversa | Livre, direta, em tempo real | **Mediada**: quem quer dizer algo submete, a administração analisa e encaminha |
 | Resultado | Consultas marcadas | **Proposta** com valor, contrato e anexos |
 | Aceitação | Implícita | Só depois de **ler até ao fim** e confirmar |
-| Reencontro | Contacto direto fora da plataforma | Tem de voltar à conta no ReciboCerto |
+| Reencontro | Contacto direto fora da plataforma | Tem de voltar à conta no Recibo Certo |
 
 ## 2. Porque é que isto é mais defensável do que parece
 
@@ -282,7 +282,7 @@ Nomes propostos, a decidir: **«Pedido»** para o caso, **«Acompanhamento»** p
 o histórico mediado, **«Proposta»** para a resposta. E uma frase visível no
 topo, sempre:
 
-> As mensagens passam pela equipa do ReciboCerto antes de seguirem. É assim
+> As mensagens passam pela equipa do Recibo Certo antes de seguirem. É assim
 > que os teus contactos não chegam a ninguém sem tu quereres.
 
 ## 8. As decisões que estavam por tomar, tomadas

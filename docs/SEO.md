@@ -1,4 +1,4 @@
-# SEO — ReciboCerto
+# SEO — Recibo Certo
 
 Guia operacional de visibilidade orgânica. Lê isto antes de mexer em metadados,
 sitemap ou esquemas. Para o design/voz, ver `DESIGN.md` e as skills.

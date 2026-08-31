@@ -138,7 +138,7 @@ const config: Config = {
         // ── Paleta FIZ (parceiro de execução fiscal) ────────────────────
         // Escala do amarelo pastel até ao amarelo da marca FIZ (#FAC72B,
         // o fundo da logo). Usada EXCLUSIVAMENTE em superfícies FIZ, para
-        // que o utilizador distinga sempre o que é ReciboCerto (verde) do
+        // que o utilizador distinga sempre o que é Recibo Certo (verde) do
         // que é operado pela FIZ (amarelo). Os tons 700–900 existem para
         // garantir contraste AA de texto sobre as superfícies claras — o
         // amarelo da marca nunca é usado como cor de texto.

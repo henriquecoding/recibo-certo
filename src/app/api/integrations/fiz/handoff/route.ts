@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
     if (!parceriasAtivas()) {
       return NextResponse.json(
         {
-          erro: "As parcerias estão desativadas. Nenhum dado é enviado para fora do ReciboCerto.",
+          erro: "As parcerias estão desativadas. Nenhum dado é enviado para fora do Recibo Certo.",
           codigo: "parcerias_desligadas",
         },
         { status: 409, headers: semCache },

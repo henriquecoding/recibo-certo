@@ -373,7 +373,7 @@ function FontesPreco() {
                 Preço de mercado
               </h3>
               <p className="mt-2 text-xs leading-relaxed text-stone-600">
-                Sem fonte fiável para o teu setor e para a tua zona, o ReciboCerto diz que não tem
+                Sem fonte fiável para o teu setor e para a tua zona, o Recibo Certo diz que não tem
                 dados — em vez de desenhar uma faixa plausível que ninguém mediu.
               </p>
             </div>

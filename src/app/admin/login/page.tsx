@@ -86,7 +86,7 @@ export default function AdminLogin() {
           </div>
           <div className="text-center">
             <div className="font-display text-xl font-semibold text-stone-800">
-              Recibo<span className="text-brand">Certo</span>
+              Recibo <span className="text-brand">Certo</span>
             </div>
             <div className="mt-0.5 text-xs font-semibold uppercase tracking-widest text-stone-400">
               Área de administração

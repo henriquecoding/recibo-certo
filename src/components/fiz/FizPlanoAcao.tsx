@@ -65,7 +65,7 @@ interface FizPlanoAcaoProps {
   simulador: SimuladorId;
   /** O que o utilizador acabou de calcular. */
   valores: ValoresSimulacao;
-  /** Passos de preparação do lado do ReciboCerto, antes de sair daqui. */
+  /** Passos de preparação do lado do Recibo Certo, antes de sair daqui. */
   passosPreparacao?: string[];
   className?: string;
 }
@@ -274,7 +274,7 @@ export default function FizPlanoAcao({
         <p className="mt-1.5 flex items-start gap-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           <Info size={13} className="mt-1 flex-shrink-0 text-fiz-700" />
           <span>
-            Os valores acima são uma <strong>estimativa do ReciboCerto</strong>, não um documento
+            Os valores acima são uma <strong>estimativa do Recibo Certo</strong>, não um documento
             nem uma declaração. Quem emite, declara e submete é a FIZ, com a tua revisão.
           </span>
         </p>
@@ -338,7 +338,7 @@ export default function FizPlanoAcao({
               <div className="flex flex-col gap-2">
                 <p className="rounded-2xl bg-white px-3 py-2 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
                   Esta ação está sujeita às condições comerciais da FIZ e é independente do
-                  ReciboCerto Plus.
+                  Recibo Certo Plus.
                 </p>
                 <FizActionButton
                   variante="secundaria"

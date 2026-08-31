@@ -1113,7 +1113,7 @@ export default function SimuladorIRS({ semCabecalho = false }: { semCabecalho?: 
                     if (coefImovelRaw === null) {
                       return <p className="rounded-xl border border-alert-border bg-alert-bg px-3 py-2 text-xs text-alert-text">Detido há cerca de {meses} meses, mas o coeficiente do ano {anoAqImovel} não está na nossa tabela ({COEF_DESVALORIZACAO_MOEDA.value.anoTabela}). Introduz o valor de aquisição já corrigido para maior precisão.</p>;
                     }
-                    return <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">Detido há cerca de {meses} meses. Aplicámos a tabela de coeficientes de {COEF_DESVALORIZACAO_MOEDA.value.anoTabela} (Portaria 382/2025); assim que a tabela de 2026 for publicada, a ReciboCerto atualiza automaticamente.</p>;
+                    return <p className="rounded-xl bg-stone-100 px-3 py-2 text-xs text-stone-500 dark:bg-stone-800 dark:text-stone-400">Detido há cerca de {meses} meses. Aplicámos a tabela de coeficientes de {COEF_DESVALORIZACAO_MOEDA.value.anoTabela} (Portaria 382/2025); assim que a tabela de 2026 for publicada, a Recibo Certo atualiza automaticamente.</p>;
                   })()}
                   <Checkbox checked={vendaReinveste} onChange={setVendaReinveste} label="Era habitação própria e vou reinvestir noutra HPP"
                     sub="O reinvestimento (sem crédito) até 36 meses após a venda exclui a mais-valia da tributação, na proporção do valor reinvestido (Art. 10.º n.º 5)." />

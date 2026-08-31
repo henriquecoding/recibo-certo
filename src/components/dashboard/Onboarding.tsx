@@ -19,7 +19,7 @@ const PASSOS: Passo[] = [
     icon: <Wallet size={26} />,
     titulo: "Bem-vindo ao teu copiloto financeiro",
     descricao:
-      "O ReciboCerto mostra-te quanto do teu dinheiro é mesmo teu — e quanto pertence ao Estado. Sem folhas de cálculo, sem surpresas.",
+      "O Recibo Certo mostra-te quanto do teu dinheiro é mesmo teu — e quanto pertence ao Estado. Sem folhas de cálculo, sem surpresas.",
   },
   {
     icon: <BellAlert size={26} />,

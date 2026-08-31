@@ -173,7 +173,7 @@ export function escolherRota(s: SinaisDoUtilizador): Encaminhamento {
 // ─── §13.1 — a fronteira que nunca se atravessa ────────────────────────
 
 /**
- * O que o ReciboCerto NUNCA pode comunicar. Não é uma nota de rodapé:
+ * O que o Recibo Certo NUNCA pode comunicar. Não é uma nota de rodapé:
  * cada uma destas frases seria uma afirmação falsa sobre o estado fiscal
  * de alguém, e é essa a diferença entre uma simulação e uma submissão.
  *

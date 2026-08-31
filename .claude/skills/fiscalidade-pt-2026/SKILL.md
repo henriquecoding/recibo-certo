@@ -1,9 +1,9 @@
 ---
 name: fiscalidade-pt-2026
-description: Disciplina de exatidão fiscal do ReciboCerto. Usar SEMPRE antes de tocar em taxas, coeficientes, deduções, atividades, na calculadora, no simulador de IRS ou no comparador. Garante que nenhum dado fiscal é inventado ou desatualizado.
+description: Disciplina de exatidão fiscal do Recibo Certo. Usar SEMPRE antes de tocar em taxas, coeficientes, deduções, atividades, na calculadora, no simulador de IRS ou no comparador. Garante que nenhum dado fiscal é inventado ou desatualizado.
 ---
 
-# Exatidão fiscal — ReciboCerto (Portugal)
+# Exatidão fiscal — Recibo Certo (Portugal)
 
 ## Regra absoluta
 **Nunca inventar nem usar de memória um número fiscal.** Taxas mudam todos os anos

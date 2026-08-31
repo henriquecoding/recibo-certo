@@ -190,7 +190,7 @@ export function DockMovel() {
               // Marcador do gatilho móvel: é por aqui que o diálogo global
               // devolve o foco nos sítios onde ele ainda responde.
               data-busca-gatilho="movel"
-              aria-label="Pesquisar no ReciboCerto"
+              aria-label="Pesquisar no Recibo Certo"
               aria-expanded={false}
               aria-controls={ID_PAINEL}
               /**

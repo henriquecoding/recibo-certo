@@ -1,5 +1,5 @@
 -- ============================================================
--- ReciboCerto — schema de admin
+-- Recibo Certo — schema de admin
 -- Executar no SQL Editor do Supabase (dashboard → SQL Editor)
 -- ============================================================
 

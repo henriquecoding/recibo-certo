@@ -8,7 +8,7 @@ import FizLogo from "./FizLogo";
 //  Botão de ação FIZ.
 //  Usa o amarelo da marca FIZ como preenchimento com tinta escura por cima
 //  (o amarelo #FAC72B não tem contraste suficiente para texto branco). O
-//  verde da marca ReciboCerto fica reservado às ações próprias — o
+//  verde da marca Recibo Certo fica reservado às ações próprias — o
 //  utilizador distingue sempre quem executa o quê.
 // ─────────────────────────────────────────────────────────────────────────
 

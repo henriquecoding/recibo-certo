@@ -3,7 +3,7 @@
 //  ---------------------------------------------------------------------
 //  A fronteira do §42 não se atravessa:
 //
-//      ReciboCerto  compreende · calcula · compara · prepara
+//      Recibo Certo  compreende · calcula · compara · prepara
 //      FIZ          emite · fatura · declara · executa
 //
 //  O Business Studio melhora o CONTEXTO anterior à execução. Não passa a

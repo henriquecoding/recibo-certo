@@ -8,16 +8,16 @@ import { ComparadorCAE } from "@/components/guias/ComparadorCAE";
 const TOOL = porId("classificar-atividade")!;
 
 export const metadata: Metadata = {
-  title: "Classificar atividade fiscal — Art. 151.º ou Categoria B 2026 | ReciboCerto",
+  title: "Classificar atividade fiscal — Art. 151.º ou Categoria B 2026 | Recibo Certo",
   description:
     "Pesquisa a tua profissão e descobre a retenção na fonte, o coeficiente IRS e a base de Segurança Social. Baseado na tabela do Art. 151.º CIRS 2026.",
   keywords: ["art 151 CIRS", "classificar atividade", "retenção na fonte", "coeficiente IRS", "recibos verdes"],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Classificar atividade fiscal 2026 | ReciboCerto",
+    title: "Classificar atividade fiscal 2026 | Recibo Certo",
     description: "Pesquisa a tua profissão. Vê retenção, coeficiente e base SS aplicável.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

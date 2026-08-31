@@ -7,7 +7,7 @@ import ExplorarMercado from "./ExplorarMercado";
 const TOOL = porId("descobrir-negocio")!;
 
 export const metadata: Metadata = {
-  title: "Que negócio abrir em Portugal? Motor de oportunidades | ReciboCerto",
+  title: "Que negócio abrir em Portugal? Motor de oportunidades | Recibo Certo",
   description:
     "Cruza o que sabes fazer com sinais oficiais atuais de Portugal. Separa compatibilidade pessoal, evidência de mercado, preço sustentável e validação paga.",
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },

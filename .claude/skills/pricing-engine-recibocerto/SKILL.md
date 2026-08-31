@@ -3,7 +3,7 @@ name: pricing-engine-recibocerto
 description: Disciplina da engine de formação de preço (`src/lib/pricing/`, `/ferramentas/calcular-preco`). Usar SEMPRE antes de tocar em custos, margem, markup, comissões, IVA de venda, faixa de preço, break-even, cenários ou avisos legais de preço. Garante que a matemática, a proveniência e as regras portuguesas não se partem.
 ---
 
-# Engine de preço — ReciboCerto
+# Engine de preço — Recibo Certo
 
 ## Antes de mexer
 

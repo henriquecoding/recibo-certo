@@ -27,7 +27,7 @@ import { PRECO_PLUS_MENSAL } from "./market";
    ══════════════════════════════════════════════════════════════════════════ */
 
 export const TESE =
-  "O ReciboCerto é a camada de decisão fiscal para quem trabalha em Portugal: " +
+  "O Recibo Certo é a camada de decisão fiscal para quem trabalha em Portugal: " +
   "transforma regras de IRS, IVA e Segurança Social em números claros, antecipa " +
   "obrigações e liga o utilizador à execução certificada quando chega a altura de agir.";
 
@@ -157,7 +157,7 @@ export const RONDA_NOTA =
    A frase antiga — "as ferramentas existentes limitam-se a gerar faturas.
    Nenhuma responde…" — é uma afirmação absoluta e frágil, e é falsa sobre
    produtos que fazem bastante mais do que isso. A matriz abaixo descreve o que
-   cada um faz bem e onde o ReciboCerto entra, que é antes.
+   cada um faz bem e onde o Recibo Certo entra, que é antes.
    ══════════════════════════════════════════════════════════════════════════ */
 
 export interface LinhaConcorrencia {
@@ -173,7 +173,7 @@ export interface LinhaConcorrencia {
 
 export const CONCORRENCIA: LinhaConcorrencia[] = [
   {
-    produto: "ReciboCerto",
+    produto: "Recibo Certo",
     wedge: "Decisão fiscal e simulação",
     faturacao: "nao",
     execucao: "parceiro",
@@ -220,7 +220,7 @@ export const CONCORRENCIA: LinhaConcorrencia[] = [
 ];
 
 export const CONCORRENCIA_NOTA =
-  "As soluções de faturação resolvem bem a emissão e a gestão documental. O ReciboCerto " +
+  "As soluções de faturação resolvem bem a emissão e a gestão documental. O Recibo Certo " +
   "entra antes: ajuda a compreender o impacto fiscal, comparar cenários e decidir o passo " +
   "seguinte. É uma categoria complementar, não um substituto — e é por isso que a execução " +
   "é uma parceria e não um concorrente.";

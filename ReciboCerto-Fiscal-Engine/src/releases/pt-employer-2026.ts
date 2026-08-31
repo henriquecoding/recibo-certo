@@ -451,7 +451,7 @@ export const PT_EMPLOYER_2026: EmployerPolicyRelease = Object.freeze({
     {
       id: "technical-review-2026-08-31",
       role: "technical_review",
-      by: "Equipa de engenharia do ReciboCerto",
+      by: "Equipa de engenharia do Recibo Certo",
       at: KNOWLEDGE_AS_OF,
       scope: [
         "payroll",

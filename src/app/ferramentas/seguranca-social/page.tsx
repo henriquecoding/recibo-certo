@@ -30,7 +30,7 @@ import { fmt, pct } from "@/lib/format";
 const TOOL = porId("seguranca-social")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora Segurança Social trabalhador independente 2026 | ReciboCerto",
+  title: "Calculadora Segurança Social trabalhador independente 2026 | Recibo Certo",
   description:
     "Quanto declarar e quanto pagar de Segurança Social por mês, como trabalhador independente: média do trimestre, coeficiente, ajuste de ±25%, mínimos e máximos, e o calendário de declaração e pagamento em 2026.",
   keywords: [
@@ -42,11 +42,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Calculadora de Segurança Social trimestral 2026 | ReciboCerto",
+    title: "Calculadora de Segurança Social trimestral 2026 | Recibo Certo",
     description:
       "A declaração trimestral de quem passa recibos verdes: base de incidência, contribuição mensal e datas — com as regras oficiais de 2026.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

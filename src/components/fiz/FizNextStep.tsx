@@ -165,7 +165,7 @@ export default function FizNextStep({
         <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {indisponivelTemporario
             ? "Não conseguimos falar com a FIZ neste momento. Este guia e os simuladores continuam a funcionar normalmente."
-            : "O ReciboCerto explica e prepara. A execução — faturação, declarações e prazos — acontece na FIZ."}
+            : "O Recibo Certo explica e prepara. A execução — faturação, declarações e prazos — acontece na FIZ."}
         </p>
 
         {acao.exigeRevisaoHumana && !indisponivelTemporario && (
@@ -219,7 +219,7 @@ export default function FizNextStep({
                 {/* Ponto 8.4: um serviço pago da FIZ nunca se confunde com o Plus. */}
                 <p className="rounded-2xl bg-white px-3 py-2 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
                   Esta ação está sujeita às condições comerciais da FIZ e é independente do
-                  ReciboCerto Plus.
+                  Recibo Certo Plus.
                 </p>
                 <FizActionButton variante="secundaria" href="/dashboard/conta?ligar=fiz">
                   {acao.rotulo}

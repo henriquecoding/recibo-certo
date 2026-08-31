@@ -17,7 +17,7 @@ interface Passo {
   aviso?: string;
 }
 
-// ── Dados dos 3 passos fiscais (fonte: Plano Estratégico ReciboCerto 2026) ───
+// ── Dados dos 3 passos fiscais (fonte: Plano Estratégico Recibo Certo 2026) ───
 
 const PASSOS: Passo[] = [
   {
@@ -70,7 +70,7 @@ const FAQ = [
   {
     pergunta: "Como declaro este rendimento no IRS?",
     resposta:
-      "O payout mensal entra como rendimento de Categoria B (serviços). Na declaração anual de IRS, declaras o total recebido ao longo do ano — tal como qualquer outro recibo verde. O ReciboCerto ajuda-te a estimar o valor ao longo do ano.",
+      "O payout mensal entra como rendimento de Categoria B (serviços). Na declaração anual de IRS, declaras o total recebido ao longo do ano — tal como qualquer outro recibo verde. O Recibo Certo ajuda-te a estimar o valor ao longo do ano.",
   },
   {
     pergunta: "A taxa de 5% do Lemon Squeezy compensa?",

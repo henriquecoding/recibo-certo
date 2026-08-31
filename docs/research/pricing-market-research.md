@@ -97,7 +97,7 @@ um pressuposto editável — porque é.
 
 ## 6. Oportunidade de produto
 
-O ReciboCerto tem três coisas que nenhum concorrente tem juntas:
+O Recibo Certo tem três coisas que nenhum concorrente tem juntas:
 
 1. **A camada fiscal já verificada** (`fiscal-data.ts`, com base legal e data de
    verificação em cada valor).

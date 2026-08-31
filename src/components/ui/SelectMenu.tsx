@@ -22,7 +22,7 @@ interface SelectMenuProps {
  * Não usa o menu nativo de `<select>` porque esse popup é desenhado pelo
  * sistema operativo e, em especial no Edge/Windows, pode ignorar o tema da
  * página (texto claro sobre fundo claro ou uma lista cinzenta sem o desenho
- * do ReciboCerto). A lista continua totalmente navegável por teclado.
+ * do Recibo Certo). A lista continua totalmente navegável por teclado.
  */
 export default function SelectMenu({
   id,

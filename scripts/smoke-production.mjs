@@ -59,7 +59,7 @@ async function executar() {
   const inicial = await esperarServidor();
   const htmlInicial = await inicial.text();
 
-  exigir(htmlInicial.includes("ReciboCerto"), "A página inicial não contém a aplicação.");
+  exigir(htmlInicial.includes("Recibo Certo"), "A página inicial não contém a aplicação.");
 
   const metaRobots = htmlInicial.match(/<meta name="robots" content="([^"]+)"/i)?.[1] || "";
   const metaGooglebot =

@@ -8,6 +8,7 @@ import { FRONTEIRA, NUNCA_COMUNICAR, POLITICA_AFILIADOS } from "@/lib/routing";
 import { DATA_LAST_REVIEW } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { generateBreadcrumbSchema } from "@/lib/seo";
+import { EMAIL_APOIO } from "@/lib/contacto";
 
 // ─────────────────────────────────────────────────────────────────────
 //  §10.3 do relatório estratégico — programa de autoridade.
@@ -28,7 +29,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Metodologia — como calculamos e como verificamos",
   description:
-    "Como o ReciboCerto calcula: fonte de verdade fiscal, base legal por parâmetro, versões do motor, limites conhecidos, política editorial e contacto de correção. Sem promessas de resultado fiscal.",
+    "Como o Recibo Certo calcula: fonte de verdade fiscal, base legal por parâmetro, versões do motor, limites conhecidos, política editorial e contacto de correção. Sem promessas de resultado fiscal.",
   keywords: [
     "metodologia calculadora fiscal portugal",
     "como é calculado o IRS simulador",
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/metodologia" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Metodologia — ReciboCerto",
+    title: "Metodologia — Recibo Certo",
     description:
       "Como calculamos, com que fontes, com que limites e como corrigimos. A metodologia completa do motor fiscal.",
     url: "https://www.recibocerto.pt/metodologia",
@@ -87,7 +88,7 @@ export default function MetodologiaPage() {
       >
         <Section id="principio" title="O princípio">
           <p>
-            O ReciboCerto não inventa nem estima regras fiscais. Todos os parâmetros de
+            O Recibo Certo não inventa nem estima regras fiscais. Todos os parâmetros de
             cálculo — taxas, escalões, coeficientes, limites, prazos — vivem num único
             ficheiro com base legal, fonte oficial e data de verificação. Se um valor não
             tiver os três, não entra.
@@ -242,14 +243,14 @@ export default function MetodologiaPage() {
 
         <Section id="comercial" title="Fronteira comercial">
           <p>
-            O ReciboCerto tem parcerias e diz sempre quais são. O que a parceria nunca
+            O Recibo Certo tem parcerias e diz sempre quais são. O que a parceria nunca
             faz é alterar um resultado, comprar prioridade editorial ou condicionar o
             acesso ao cálculo.
           </p>
           <Tabela
             colunas={["Quem", "Faz o quê"]}
             linhas={[
-              ["ReciboCerto", FRONTEIRA.reciboCerto],
+              ["Recibo Certo", FRONTEIRA.reciboCerto],
               ["FIZ (parceiro de execução)", FRONTEIRA.fiz],
               ["Contabilista ou especialista", FRONTEIRA.contabilista],
             ]}
@@ -275,7 +276,7 @@ export default function MetodologiaPage() {
           </p>
           <Lista
             items={[
-              "Escreve para recibocerto.pt@gmail.com com a ferramenta, as premissas e o valor que esperavas.",
+              `Escreve para ${EMAIL_APOIO} com a ferramenta, as premissas e o valor que esperavas.`,
               "Confirmamos contra a fonte oficial e, quando o erro existe, corrigimos o motor e os conteúdos afetados.",
               "A correção fica registada publicamente no changelog fiscal, com a data e a razão.",
               "Se a correção alterar resultados já vistos, dizemo-lo na página e explicamos a diferença entre versões.",

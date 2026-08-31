@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migração MoR: Lemon Squeezy (v8)
+-- Recibo Certo — Migração MoR: Lemon Squeezy (v8)
 --
 -- Adiciona suporte a subscrições do Lemon Squeezy (Merchant of Record)
 -- à tabela `subscriptions` existente, sem quebrar as subscrições

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Verificador em ciclo da expansão editorial dos Guias — ReciboCerto
+ * Verificador em ciclo da expansão editorial dos Guias — Recibo Certo
  * ----------------------------------------------------------------------
  * A secção 5 do pacote é uma checklist de aceitação por guia; a secção 6
  * pede cinco verificações automáticas. Este script corre as duas coisas em

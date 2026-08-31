@@ -79,7 +79,7 @@ desenhar o esquema — está em **manter as migrações executáveis fora do amb
 de build completo**, ao ponto de a API do Grafana guardar o JSON que recebe sem
 aplicar migração nenhuma.
 
-O ReciboCerto está num sítio melhor: `migrarV1` é uma função pura, sem
+O Recibo Certo está num sítio melhor: `migrarV1` é uma função pura, sem
 dependências de React nem de Supabase, e `validarLayout` normaliza sempre à
 entrada — em `paraVista()`, um layout gravado por uma versão futura é
 normalizado em vez de rebentar o painel. **O que falta é o registo**: existe uma
@@ -577,7 +577,7 @@ Traduzido para o que este produto tem e pode medir sem inventar nada:
   `contabilista_tarefas`.
 
 O que **não** deve entrar, e vale a pena escrever para não se voltar a discutir:
-taxa de realização, faturação, rentabilidade por cliente. O ReciboCerto é uma
+taxa de realização, faturação, rentabilidade por cliente. O Recibo Certo é uma
 plataforma de intermediação entre trabalhador independente e contabilista, não
 um sistema de gestão de escritório. Os dados não existem, e ir buscá-los mudaria
 a natureza do produto e as fronteiras de `routing.ts`.

@@ -127,7 +127,7 @@ export const KPIS: readonly KPI[] = [
   {
     id: "citacao-ia",
     nome: "Taxa de citação em IA",
-    formula: "Prompts com citação do ReciboCerto / prompts do conjunto",
+    formula: "Prompts com citação do Recibo Certo / prompts do conjunto",
     frequencia: "mensal",
     dono: "Growth",
     guardrail: "Registar baseline e evolução; validar sempre a exatidão do que é citado",

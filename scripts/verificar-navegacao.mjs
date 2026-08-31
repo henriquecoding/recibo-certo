@@ -239,7 +239,7 @@ for (const vp of VIEWPORTS) {
           const b = el.getBoundingClientRect();
           return { e: Math.round(b.left), d: Math.round(b.right), w: Math.round(b.width) };
         };
-        const marca = cartao.querySelector('a[aria-label^="ReciboCerto"]');
+        const marca = cartao.querySelector('a[aria-label^="Recibo Certo"]');
         const accoes = linhas[0].lastElementChild;
         const cruza = (x, y) => {
           if (!x || !y) return 0;

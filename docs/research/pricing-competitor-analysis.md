@@ -41,7 +41,7 @@ cenários, objetivo invertido, regiões autónomas, canais. E, sobretudo, não f
 **Oportunidade**
 
 Não é «fazer o mesmo mais bonito». É que a decisão de preço em Portugal depende
-de variáveis que esta ferramenta não conhece — e o ReciboCerto já as tem
+de variáveis que esta ferramenta não conhece — e o Recibo Certo já as tem
 modeladas e verificadas em `fiscal-data.ts`.
 
 ---
@@ -100,7 +100,7 @@ que descobre o cenário e constrói o preço com a pessoa**.
 - Harvest / QuickBooks — captura para SaaS de faturação.
 - Calculadoras genéricas — publicidade.
 
-O ReciboCerto tem uma quarta via, que nenhuma delas tem: o cálculo é grátis e o
+O Recibo Certo tem uma quarta via, que nenhuma delas tem: o cálculo é grátis e o
 que se segue — exportar, guardar cenários, ligar ao contabilista ou à FIZ — é
 onde vive o valor. Isso mantém a regra do catálogo (`core: "free"`) intacta e não
 transforma a ferramenta num muro de captura de email.

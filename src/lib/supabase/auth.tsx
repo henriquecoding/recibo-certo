@@ -1,6 +1,6 @@
 "use client";
 
-// Autenticação do ReciboCerto (client-side, via Supabase Auth).
+// Autenticação do Recibo Certo (client-side, via Supabase Auth).
 // Modelo: LOCAL por defeito; ao entrar, abre-se a porta à nuvem (a sincronização
 // dos recibos é tratada no repositório, no passo seguinte). Sem login, a app
 // funciona toda em localStorage — mantém a promessa "Sem registo".
@@ -67,7 +67,7 @@ function haEvidenciaDeSessao() {
   return false;
 }
 
-type ModoModal = "entrar" | "criar";
+type ModoModal = "entrar" | "criar" | "recuperar";
 
 interface AuthContexto {
   user: User | null;
@@ -77,6 +77,8 @@ interface AuthContexto {
   disponivel: boolean;
   entrar: (email: string, password: string) => Promise<{ erro?: string }>;
   registar: (email: string, password: string) => Promise<{ erro?: string; confirmarEmail?: boolean }>;
+  /** Pede o email de redefinição de palavra-passe. */
+  recuperarPassword: (email: string) => Promise<{ erro?: string }>;
   sair: () => Promise<void>;
   entrarComGoogle: () => Promise<{ erro?: string }>;
   entrarComLinkedin: () => Promise<{ erro?: string }>;
@@ -215,6 +217,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [ativarAuth]);
 
+  // ── RECUPERAR A PALAVRA-PASSE — RC-AUTH-001 ────────────────────────
+  //  Não existia. Havia mudança de palavra-passe COM sessão iniciada
+  //  (`/dashboard/conta`), mas nada para quem já não conseguia entrar: as
+  //  contas de email/palavra-passe que a esquecessem ficavam sem caminho
+  //  de volta, e a única saída era criar outra conta e perder o histórico.
+  //
+  //  ⚠️ Isto depende de SMTP próprio configurado na Supabase. Com o
+  //  serviço de origem, o email só chega a endereços da equipa e falha
+  //  com «Email address not authorized» para toda a gente.
+  const recuperarPassword = useCallback(async (email: string) => {
+    try {
+      const cliente = await ativarAuth();
+      if (!cliente) return { erro: "Autenticação indisponível." };
+      const { error } = await cliente.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${window.location.origin}/redefinir-password`,
+      });
+      return error ? { erro: traduzErro(error.message) } : {};
+    } catch (e) {
+      return { erro: (e as Error).message };
+    }
+  }, [ativarAuth]);
+
   const sair = useCallback(async () => {
     if (!disponivel) return;
     const cliente = await ativarAuth();
@@ -270,6 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       disponivel,
       entrar,
       registar,
+      recuperarPassword,
       sair,
       entrarComGoogle,
       entrarComLinkedin,
@@ -288,6 +313,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       fecharModal,
       modalAberto,
       modoModal,
+      recuperarPassword,
       registar,
       sair,
       user,

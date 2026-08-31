@@ -7,7 +7,7 @@ import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import { ATIVIDADES, SOURCES } from "@/lib/fiscal-data";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// "O ReciboCerto em números" — social proof honesto: TODAS as contagens são
+// "O Recibo Certo em números" — social proof honesto: TODAS as contagens são
 // derivadas dos arrays reais do código (sitemap, catálogo de atividades, banco
 // do quiz, registo de fontes). Nada inventado, nada hardcoded — se o site
 // crescer, os números acompanham. Server Component: fiscal-data fica no build.
@@ -49,7 +49,7 @@ const N_FONTES = Object.keys(SOURCES).length;
 
 export default function Stats() {
   return (
-    <section className="px-6 py-10" aria-label="O ReciboCerto em números">
+    <section className="px-6 py-10" aria-label="O Recibo Certo em números">
       <StaggerGroup className="mx-auto grid max-w-5xl grid-cols-2 gap-3 lg:grid-cols-4">
         {NUMEROS.map((p) => (
           <StaggerItem key={p.label}>

@@ -5,7 +5,7 @@
 //  `pricing/tipos.ts`: quem importa o contrato não arrasta o motor.
 //
 //  ── O QUE ESTA CAMADA É ────────────────────────────────────────────
-//  Um ORQUESTRADOR. O ReciboCerto já sabe calcular preços, IRC, IRS,
+//  Um ORQUESTRADOR. O Recibo Certo já sabe calcular preços, IRC, IRS,
 //  Segurança Social, IVA e comparar regimes. O que faltava era o objeto
 //  que diz: «estas três ofertas, estes volumes e esta estrutura formam o
 //  MESMO negócio».

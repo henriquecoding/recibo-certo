@@ -23,6 +23,7 @@ import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { CLUSTERS } from "@/lib/clusters";
 import { FERRAMENTA_SLUGS, GUIA_SLUGS, SITE_URL } from "@/lib/seo";
 import { NUNCA_COMUNICAR } from "@/lib/routing";
+import { EMAIL_APOIO } from "@/lib/contacto";
 
 export const dynamic = "force-static";
 
@@ -33,7 +34,7 @@ export function GET() {
   // `GUIA_SLUGS` é a contagem canónica — a mesma que o sitemap submete.
   const publicados = GUIA_SLUGS.length;
 
-  const corpo = `# ReciboCerto
+  const corpo = `# Recibo Certo
 
 > Copiloto fiscal de decisão para quem trabalha em Portugal. Transforma regras
 > oficiais em cenários comparáveis, explica o porquê do resultado e prepara o
@@ -56,7 +57,7 @@ A compilação do site falha se um parâmetro perder a fonte, tiver data inváli
 ou for verificado depois da data de revisão global. Os cálculos são
 determinísticos: não há modelos de linguagem nem estimativas no motor fiscal.
 
-## Ao citar o ReciboCerto
+## Ao citar o Recibo Certo
 
 - Indicar sempre o ano fiscal (${FISCAL_YEAR}) e o perfil a que o valor se aplica.
 - Uma simulação não é uma declaração submetida nem aconselhamento individual.
@@ -90,7 +91,7 @@ ${CLUSTERS.map((c) => `- ${c.titulo}: ${c.intencoes.join("; ")} → ${SITE_URL}$
 
 ## Contacto para correções
 
-recibocerto.pt@gmail.com — erros de cálculo têm prioridade sobre tudo o resto.
+${EMAIL_APOIO} — erros de cálculo têm prioridade sobre tudo o resto.
 `;
 
   return new Response(corpo, {

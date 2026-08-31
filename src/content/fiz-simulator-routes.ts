@@ -211,7 +211,7 @@ export const SIMULADORES_SEM_ACAO_FIZ: { simulador: SimuladorId; razao: string }
   },
   {
     simulador: "auditoria-recibo",
-    razao: "A auditoria é uma ferramenta de verificação do ReciboCerto. O passo seguinte é falar com a entidade empregadora.",
+    razao: "A auditoria é uma ferramenta de verificação do Recibo Certo. O passo seguinte é falar com a entidade empregadora.",
   },
   {
     simulador: "simulador-herancas",

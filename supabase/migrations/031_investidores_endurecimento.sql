@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migration 031: endurecimento dos contactos de investidores
+-- Recibo Certo — Migration 031: endurecimento dos contactos de investidores
 -- Cola no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================
@@ -64,7 +64,7 @@ create unique index if not exists propostas_idempotency_unique
 
 -- ── 4 · Estados do pipeline ────────────────────────────────────
 -- "aprovado/rejeitado" descrevia mal um primeiro contacto: dava a entender que
--- o ReciboCerto aprova unilateralmente uma proposta antes de haver relação ou
+-- o Recibo Certo aprova unilateralmente uma proposta antes de haver relação ou
 -- diligência. Os estados novos descrevem onde a CONVERSA está.
 -- Os antigos continuam aceites para não invalidar linhas existentes.
 do $$ begin

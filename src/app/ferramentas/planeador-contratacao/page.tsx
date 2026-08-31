@@ -17,10 +17,10 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Planeador de contratação 2026 | ReciboCerto",
+    title: "Planeador de contratação 2026 | Recibo Certo",
     description: "Custo, pacote, líquido e capacidade do posto — separados e explicados antes de fazer a proposta.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "website",
   },

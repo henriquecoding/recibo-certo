@@ -1,5 +1,5 @@
 -- ============================================================
--- ReciboCerto — Setup completo (versão idempotente)
+-- Recibo Certo — Setup completo (versão idempotente)
 -- Cola TUDO isto no Supabase → SQL Editor e clica RUN.
 -- Seguro para correr múltiplas vezes.
 -- ============================================================

@@ -13,7 +13,7 @@ import { join } from "node:path";
 
 export const runtime = "nodejs";
 export const alt =
-  "ReciboCerto — Simuladores de IRS, Recibos Verdes, Salário Líquido e Empresa 2026";
+  "Recibo Certo — Simuladores de IRS, Recibos Verdes, Salário Líquido e Empresa 2026";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -85,7 +85,7 @@ export default async function OpengraphImage() {
             left: 0,
             width: "100%",
             height: "8px",
-            backgroundImage: "linear-gradient(90deg, #0F6E56 0%, #1D9E75 55%, #3FBE93 100%)",
+            backgroundImage: "linear-gradient(90deg, #0F6E56 0%, #177E5E 55%, #9FE1CB 100%)",
           }}
         />
 
@@ -102,8 +102,8 @@ export default async function OpengraphImage() {
               letterSpacing: "-0.5px",
             }}
           >
-            <span style={{ color: "#1A1A17" }}>Recibo</span>
-            <span style={{ color: "#1D9E75" }}>Certo</span>
+            <span style={{ color: "#1A1A17" }}>Recibo </span>
+            <span style={{ color: "#177E5E" }}>Certo</span>
           </div>
         </div>
 
@@ -117,7 +117,7 @@ export default async function OpengraphImage() {
               fontWeight: 600,
               letterSpacing: "3px",
               textTransform: "uppercase",
-              color: "#1D9E75",
+              color: "#177E5E",
               marginBottom: "22px",
             }}
           >
@@ -174,7 +174,7 @@ export default async function OpengraphImage() {
                 width: "12px",
                 height: "12px",
                 borderRadius: "50%",
-                backgroundColor: "#1D9E75",
+                backgroundColor: "#177E5E",
                 marginRight: "14px",
               }}
             />

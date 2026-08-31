@@ -1,5 +1,5 @@
 /**
- * ReciboCerto — SEO v1.0
+ * Recibo Certo — SEO v1.0
  *
  * Geradores de schema JSON-LD e constantes partilhadas por todas as páginas.
  *
@@ -22,7 +22,7 @@ import { SLUGS_PUBLICOS } from "@/lib/ferramentas/selecionar";
 // do site já usa. Duas declarações da mesma origem foi exatamente como o
 // canónico e os `redirect_uri` de OAuth acabaram em hosts diferentes.
 export const SITE_URL = ORIGEM_CANONICA;
-export const SITE_NAME = "ReciboCerto";
+export const SITE_NAME = "Recibo Certo";
 
 // ─── Registo central de rotas públicas indexáveis ────────────────────────────
 // Fonte única para o sitemap. Ao criar uma página pública nova, adicioná-la aqui

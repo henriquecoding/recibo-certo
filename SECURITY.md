@@ -9,7 +9,7 @@ branches de trabalho podem estar incompletas e não devem receber dados reais.
 ## Comunicar uma vulnerabilidade
 
 Não abras uma issue pública. Envia um email para
-`recibocerto.pt@gmail.com` com o assunto **[SEGURANÇA] ReciboCerto** e inclui:
+`recibocerto.pt@gmail.com` com o assunto **[SEGURANÇA] Recibo Certo** e inclui:
 
 - descrição e impacto;
 - URL, rota ou ficheiro afetado;

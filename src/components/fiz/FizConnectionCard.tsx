@@ -199,7 +199,7 @@ export default function FizConnectionCard({ className = "" }: { className?: stri
         </div>
 
         <FizDisclosure
-          texto="A FIZ é um parceiro de execução fiscal. O ReciboCerto explica e prepara; a FIZ executa. A parceria é remunerada e o acesso à FIZ não depende do ReciboCerto Plus."
+          texto="A FIZ é um parceiro de execução fiscal. O Recibo Certo explica e prepara; a FIZ executa. A parceria é remunerada e o acesso à FIZ não depende do Recibo Certo Plus."
           className="mt-4"
         />
       </div>

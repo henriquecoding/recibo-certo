@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migration 020: Tabela propostas_investidores (+ RLS)
+-- Recibo Certo — Migration 020: Tabela propostas_investidores (+ RLS)
 -- Cola no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================

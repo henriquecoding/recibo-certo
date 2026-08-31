@@ -11,7 +11,7 @@
 //    fazia um recibo de março inserido em agosto entrar no mês, trimestre e
 //    ano errados, contaminando gráfico, acumulados, IVA, retenção, SS e IRS;
 //  · só diz "registado" depois de a gravação confirmar (RC-P0-03);
-//  · a copy não sugere emissão fiscal: o ReciboCerto regista, não emite
+//  · a copy não sugere emissão fiscal: o Recibo Certo regista, não emite
 //    (RC-P2-02).
 // ─────────────────────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export default function RegistarRecibo({
   return (
     <div className="space-y-3 rounded-2xl border border-brand/30 bg-brand-light/50 p-4 dark:border-brand/20 dark:bg-brand/5">
       <p className="text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-        Guarda no painel um recibo que já emitiste no Portal das Finanças. O ReciboCerto organiza e calcula — não
+        Guarda no painel um recibo que já emitiste no Portal das Finanças. O Recibo Certo organiza e calcula — não
         emite documentos fiscais nem submete declarações.
       </p>
 

@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export const metadata: Metadata = {
   title: "Política de Privacidade — Proteção de Dados RGPD",
   description:
-    "Como o ReciboCerto recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Plus guardados na nuvem.",
+    "Como o Recibo Certo recolhe, trata e protege os teus dados pessoais. Conformidade com o RGPD (Regulamento (UE) 2016/679) e a Lei n.º 58/2019 — Portugal. Inclui o tratamento de dados do plano Plus guardados na nuvem.",
   alternates: { canonical: "/privacidade" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Política de Privacidade — ReciboCerto",
+    title: "Política de Privacidade — Recibo Certo",
     description:
       "Proteção de dados RGPD. No plano gratuito os dados ficam no teu dispositivo; no plano Plus são guardados de forma segura na nuvem (UE), nunca vendidos nem usados para publicidade.",
     url: "https://www.recibocerto.pt/privacidade",
@@ -47,7 +48,7 @@ export default function PrivacidadePage() {
   return (
     <LegalPage
       title="Política de Privacidade"
-      subtitle="O ReciboCerto trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Plus, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
+      subtitle="O Recibo Certo trata a privacidade como princípio central. No plano gratuito, os teus dados ficam no teu dispositivo. No plano Plus, são guardados de forma segura na nuvem (servidores na União Europeia) para sincronização entre dispositivos. Em nenhum caso vendemos dados ou exibimos publicidade."
       lastUpdated="Agosto de 2026"
       toc={TOC}
     >
@@ -72,17 +73,17 @@ export default function PrivacidadePage() {
         <p>
           O responsável pelo tratamento dos dados pessoais recolhidos através de{" "}
           <strong className="text-stone-700 dark:text-stone-200">recibocerto.pt</strong> é a
-          plataforma ReciboCerto, contactável através do endereço{" "}
+          plataforma Recibo Certo, contactável através do endereço{" "}
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="font-medium text-brand underline-offset-2 hover:underline dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           .
         </p>
         <p>
-          Esta política aplica-se a todos os utilizadores do site e dos serviços ReciboCerto —
+          Esta política aplica-se a todos os utilizadores do site e dos serviços Recibo Certo —
           calculadora de recibos verdes, simulador de IRS, simulador de recibo de vencimento,
           simulador de empresa, comparador de regimes, guias fiscais e área de cliente (Dashboard) —
           independentemente do dispositivo ou browser utilizado, e tanto no plano gratuito como no
@@ -199,7 +200,7 @@ export default function PrivacidadePage() {
           teu dispositivo, sem nunca os enviar para servidores externos.
         </Nota>
         <p>
-          No plano gratuito, o ReciboCerto utiliza o{" "}
+          No plano gratuito, o Recibo Certo utiliza o{" "}
           <strong className="text-stone-700 dark:text-stone-200">localStorage</strong> do teu browser.
           Estes dados:
         </p>
@@ -257,7 +258,7 @@ export default function PrivacidadePage() {
         </p>
         <ListaCheck
           items={[
-            "Os dados do cartão são introduzidos e tratados diretamente pela Stripe — o ReciboCerto nunca tem acesso ao número completo do cartão.",
+            "Os dados do cartão são introduzidos e tratados diretamente pela Stripe — o Recibo Certo nunca tem acesso ao número completo do cartão.",
             "Guardamos apenas o necessário para gerir a tua subscrição: identificador de cliente Stripe, estado e datas da subscrição.",
             "A faturação e os recibos de pagamento são geridos através da Stripe.",
           ]}
@@ -352,8 +353,8 @@ export default function PrivacidadePage() {
         </Nota>
         <p>
           A FIZ é um parceiro que executa operações fiscais (faturação certificada, declarações e
-          lembretes de obrigações). O ReciboCerto explica, calcula e prepara; a execução acontece na
-          FIZ. É uma relação comercial remunerada, e nada disto depende do ReciboCerto Plus.
+          lembretes de obrigações). O Recibo Certo explica, calcula e prepara; a execução acontece na
+          FIZ. É uma relação comercial remunerada, e nada disto depende do Recibo Certo Plus.
         </p>
         <p>
           <strong>Só há partilha se tu a iniciares.</strong> Existem duas formas, ambas
@@ -451,7 +452,7 @@ export default function PrivacidadePage() {
           aqui é um tratamento que não devia estar a acontecer. */}
       <Section id="contabilistas" title="O teu contabilista: partilhas, conversa e ficheiros">
         <p>
-          Se te ligares a um contabilista no ReciboCerto, passam a existir três tipos de
+          Se te ligares a um contabilista no Recibo Certo, passam a existir três tipos de
           dados que só existem por causa dessa relação. Nenhum deles é criado sem uma ação
           tua, e todos desaparecem do lado dele quando terminares o acompanhamento.
         </p>
@@ -589,10 +590,10 @@ export default function PrivacidadePage() {
         <p>
           Para acederes, corrigires ou apagares o teu contacto, escreve para{" "}
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="font-medium text-brand hover:underline dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           . Apagamos sem perguntar porquê.
         </p>
@@ -630,8 +631,8 @@ export default function PrivacidadePage() {
         />
         <p className="mt-4">
           Para exportar ou eliminar os teus dados, usa as opções na tua conta ou envia um email para{" "}
-          <a href="mailto:recibocerto.pt@gmail.com" className="font-medium text-brand hover:underline dark:text-brand-mint">
-            recibocerto.pt@gmail.com
+          <a href={mailtoApoio()} className="font-medium text-brand hover:underline dark:text-brand-mint">
+            {EMAIL_APOIO}
           </a>
           .
         </p>
@@ -709,7 +710,7 @@ export default function PrivacidadePage() {
       {/* 16 — Menores */}
       <Section id="menores" title="Menores de idade">
         <p>
-          O ReciboCerto é uma ferramenta fiscal destinada a adultos. Não recolhemos intencionalmente
+          O Recibo Certo é uma ferramenta fiscal destinada a adultos. Não recolhemos intencionalmente
           dados de menores de 16 anos. Se tomares conhecimento de que um menor nos forneceu dados sem
           consentimento dos titulares das responsabilidades parentais, contacta-nos para procedermos à
           eliminação imediata.
@@ -738,12 +739,12 @@ export default function PrivacidadePage() {
           relacionadas com a privacidade, contacta-nos:
         </p>
         <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-800/50">
-          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">ReciboCerto</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Recibo Certo</p>
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="mt-1 flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           <p className="mt-2 text-xs text-stone-400">
             Prazo de resposta: até um mês, conforme o artigo 12.º do RGPD (prorrogável por dois meses

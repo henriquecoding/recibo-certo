@@ -31,7 +31,7 @@ export const metadata: Metadata = {
       `Banco de ${PERGUNTAS_FMT} perguntas sobre fiscalidade portuguesa, cada uma com base legal e fonte oficial. ` +
       `Sessões de 5 a 20 perguntas, em dois modos: Normal (com cronómetro) e Guiado (com explicações).`,
     url: "https://www.recibocerto.pt/quiz-fiscal",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "website",
   },

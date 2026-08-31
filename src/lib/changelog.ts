@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.140.0",
+    data: "2026-08-31",
+    titulo: "A marca deixou de acabar onde o site acaba",
+    itens: [
+      "O nome passa a ser «Recibo Certo», em duas palavras, em todo o lado — no site, nos emails, no logótipo e nos painéis da Stripe, da Supabase e do Google. Circulavam três formas diferentes, e uma delas anunciava no portal de faturação um plano «Pro» que nunca existiu.",
+      "Os emails do produto estavam no verde antigo da marca, que tinha sido substituído em agosto por falhar o contraste mínimo. Ficaram para trás na migração e ninguém deu por isso, porque ninguém compara um email com o site lado a lado. O mesmo acontecia no logótipo, no cartão que aparece quando o site é partilhado e na cor da barra do telemóvel.",
+      "Trinta palavras sem acentos nos emails de alerta — «Guardiao Fiscal», «limite de isencao», «Seguranca Social». Estavam nos assuntos, que é a primeira linha que se lê na caixa de entrada.",
+      "Responder a um email nosso deixou de cair no vazio. O remetente passa a ser um endereço que recebe, todas as mensagens levam um contacto para resposta e os avisos passam a dizer não só porque chegaram, mas onde se desligam.",
+      "Os emails passam a ter modo escuro e uma versão em texto. Num cliente escuro eram um retângulo branco a arder; sem versão em texto, os filtros de spam penalizam-nos e alguns leitores de ecrã mostravam uma mensagem vazia.",
+      "O contacto público deixou de ser um Gmail. Aparecia em nove sítios, incluindo a política de privacidade — onde era o canal de exercício dos direitos de proteção de dados — e os termos.",
+      "Passou a existir recuperação de palavra-passe. Havia como mudá-la com sessão iniciada, o que não serve a quem não consegue entrar: quem a esquecesse ficava sem caminho de volta para a sua conta e o seu histórico.",
+      "O ícone do site no ecrã principal do telemóvel passou a ser a marca. Estava em SVG, formato que o iPhone ignora, e o resultado era um quadrado genérico. O site ganhou também nome, cor e ícone próprios quando é instalado.",
+      "O pagamento passa a ter as cores e a lista de benefícios do Recibo Certo, em vez do azul de origem da Stripe, e os dois preços antigos que ainda estavam ativos foram arquivados.",
+    ],
+  },
+  {
     version: "2.139.0",
     data: "2026-08-31",
     titulo: "O planeador de contratação deixou de dizer «verificado» sobre regras que ninguém tinha aprovado",
@@ -451,7 +467,7 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "O simulador calculava dividendos sem nunca dizer de que depende poder distribuí-los. Com o Registo Central do Beneficiário Efetivo por declarar, a lei proíbe a empresa de distribuir lucros — além da coima de 1 000 € a 50 000 €. O aviso passa a estar no passo em que decides os dividendos, e o RCBE entra na checklist de abertura com o prazo de 30 dias.",
       "A checklist de abertura ganha também o software de faturação certificado pela AT, que uma sociedade é obrigada a ter e não estava lá.",
       "Os dois interruptores do simulador (incluir custos de constituição, empresa com imóvel) tinham 20 píxeis de altura — abaixo do mínimo confortável no telemóvel. Passam a ter 36, sem mudar de aspeto, e ganham anel de foco visível para quem navega por teclado. Também não tinham nome nenhum para um leitor de ecrã: eram anunciados como «interruptor, ligado», sem dizer ligado o quê.",
-      "Quem usava o ReciboCerto sem conta antes de os dados passarem a viver num cofre por pessoa perdeu tudo o que tinha guardado — e sem aviso. As chaves antigas só eram recuperadas ao entrar numa conta, e para quem nunca entrou a recuperação nunca acontecia. Efeito prático: dizias qual era o teu regime de IVA e o painel de prazos voltava a perguntar, mostrando-te declarações de que estás isento; os recibos e os cenários guardados também não apareciam. Passa a acontecer à primeira visita, com ou sem conta.",
+      "Quem usava o Recibo Certo sem conta antes de os dados passarem a viver num cofre por pessoa perdeu tudo o que tinha guardado — e sem aviso. As chaves antigas só eram recuperadas ao entrar numa conta, e para quem nunca entrou a recuperação nunca acontecia. Efeito prático: dizias qual era o teu regime de IVA e o painel de prazos voltava a perguntar, mostrando-te declarações de que estás isento; os recibos e os cenários guardados também não apareciam. Passa a acontecer à primeira visita, com ou sem conta.",
       "No mapa de prazos, o calendário anunciava-se aos leitores de ecrã como uma tabela de dados com linhas e colunas para percorrer — que nunca existiram. Passa a dizer o que é: um grupo de dias, cada um com o seu nome e o número de prazos.",
       "Os extremos das escalas do simulador de empresa («0 €», «300 000 €+») eram quase invisíveis no modo escuro, e os rótulos dos passos ainda por fazer eram-no no modo claro, em todos os simuladores guiados. Ambos corrigidos, com a hierarquia intacta.",
       "A faixa de confiança do rodapé («Fontes oficiais», «Sem conta obrigatória») estava abaixo do contraste mínimo nos dois temas.",
@@ -1433,8 +1449,8 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
     titulo: "Progressão e comissão no painel do contabilista",
     itens: [
       "O painel de gestão ganha o separador «Progressão»: mostra a comissão em vigor, em que patamar estás dos seis, e exatamente o que falta para o próximo — quanto XP e quantos clientes elegíveis.",
-      "A comissão começa nos 10% e desce até 5%, um ponto por patamar. Sobe-se por trabalho feito: cada cliente que chega pelo ReciboCerto e cada serviço concluído contam, e um cartão de fidelidade fechado conta mais, porque é prova de relação continuada.",
-      "O ecrã diz, sem ser preciso procurar, sobre o que a comissão incide — o valor das propostas aceites e das consultas realizadas através da plataforma — e que é faturada ao contabilista: o cliente paga-lhe diretamente, e o ReciboCerto não retém nem processa esse pagamento.",
+      "A comissão começa nos 10% e desce até 5%, um ponto por patamar. Sobe-se por trabalho feito: cada cliente que chega pelo Recibo Certo e cada serviço concluído contam, e um cartão de fidelidade fechado conta mais, porque é prova de relação continuada.",
+      "O ecrã diz, sem ser preciso procurar, sobre o que a comissão incide — o valor das propostas aceites e das consultas realizadas através da plataforma — e que é faturada ao contabilista: o cliente paga-lhe diretamente, e o Recibo Certo não retém nem processa esse pagamento.",
       "Os cartões de fidelidade que os teus clientes concluem dão desconto no desbloqueio de patamares: 5% a partir do primeiro, 15% aos cinco, 20% aos dez.",
       "O desbloqueio pago está desenhado e o preço é o final, já com desconto — mas a cobrança ainda não está ligada, e o ecrã di-lo no sítio onde se ia clicar, em vez de aceitar um clique que não faz nada. Até lá os patamares sobem por trabalho feito.",
       "Um patamar desbloqueado compra a percentagem e mais nada: não compra posição no diretório, prioridade no encaminhamento de casos nem selo no perfil público. Fica escrito no ecrã e garantido no código — a progressão não é visível a quem consulta o diretório.",
@@ -1535,7 +1551,7 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
     data: "2026-08-14",
     titulo: "O painel de contabilistas ficou mais claro — e texto executável fica à porta",
     itens: [
-      "O painel profissional foi redesenhado como um sistema único: navegação, formulários, listas, tabelas e calendários ganharam a mesma hierarquia, profundidade, foco e modo escuro do resto do ReciboCerto. No telemóvel, os oito destinos deixam de ser comprimidos numa grelha de seis lugares: mantêm alvos confortáveis e a barra leva o destino atual para o centro.",
+      "O painel profissional foi redesenhado como um sistema único: navegação, formulários, listas, tabelas e calendários ganharam a mesma hierarquia, profundidade, foco e modo escuro do resto do Recibo Certo. No telemóvel, os oito destinos deixam de ser comprimidos numa grelha de seis lugares: mantêm alvos confortáveis e a barra leva o destino atual para o centro.",
       "Os campos do painel passam a aplicar a mesma regra de segurança da Ajuda & Suporte a HTML, scripts e código executável. A interface trava antes de enviar e a base de dados repete a validação, por isso contornar o browser não contorna a proteção.",
     ],
   },

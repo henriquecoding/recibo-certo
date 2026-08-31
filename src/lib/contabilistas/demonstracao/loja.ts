@@ -983,7 +983,7 @@ export async function obterLinkedInPublico(): Promise<{ url: string | null; avat
 }
 
 /**
- * Ligar o LinkedIn sai do ReciboCerto — e a demonstração não sai.
+ * Ligar o LinkedIn sai do Recibo Certo — e a demonstração não sai.
  *
  * Este é o único sítio do painel onde a demonstração não pode imitar o
  * comportamento, porque o comportamento é ir para outro site. Diz-se em vez
@@ -991,7 +991,7 @@ export async function obterLinkedInPublico(): Promise<{ url: string | null; avat
  * do que um botão que explica porquê.
  */
 export async function ligarLinkedIn(): Promise<{ erro?: string }> {
-  return { erro: "Na demonstração não se liga o LinkedIn: isso sai do ReciboCerto para o consentimento real." };
+  return { erro: "Na demonstração não se liga o LinkedIn: isso sai do Recibo Certo para o consentimento real." };
 }
 
 export async function desligarLinkedIn(): Promise<{ erro?: string }> {
@@ -1002,7 +1002,7 @@ export async function desligarLinkedIn(): Promise<{ erro?: string }> {
 }
 
 export async function renovarLinkedIn(): Promise<{ erro?: string }> {
-  return { erro: "Na demonstração não se renova a autorização: isso sai do ReciboCerto." };
+  return { erro: "Na demonstração não se renova a autorização: isso sai do Recibo Certo." };
 }
 
 export async function sincronizarLinkedIn(): Promise<{ ligado: boolean; avatarUrl: string | null; erro?: string }> {

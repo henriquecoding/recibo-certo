@@ -54,7 +54,7 @@ export interface PropostaHandoff {
 
 /** NIF português: 9 dígitos com dígito de controlo módulo 11.
     Validar aqui evita enviar à FIZ um número que ela vai recusar — e
-    apanha erros de digitação antes de o utilizador sair do ReciboCerto. */
+    apanha erros de digitação antes de o utilizador sair do Recibo Certo. */
 export function nifValido(nif: string): boolean {
   const limpo = nif.replace(/\s/g, "");
   if (!/^\d{9}$/.test(limpo)) return false;

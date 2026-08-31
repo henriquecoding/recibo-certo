@@ -5,7 +5,7 @@
 //  servia trabalhadores independentes, mas não oferecia a calculadora
 //  principal de IRS, Segurança Social e IVA dos recibos verdes. A pessoa
 //  encontrava o wizard do Merchant of Record antes de encontrar o núcleo
-//  do ReciboCerto. Existia na homepage (`/?modo=independente`) e no painel
+//  do Recibo Certo. Existia na homepage (`/?modo=independente`) e no painel
 //  — nenhum dos dois é uma URL canónica de ferramenta.
 //
 //  O componente é o mesmo do painel (`SimuladorIntegrado vista="rv"`): uma
@@ -25,7 +25,7 @@ import SimuladorRecibosVerdesLazy from "./lazy";
 const TOOL = porId("recibos-verdes")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora de recibos verdes 2026 — quanto recebes mesmo | ReciboCerto",
+  title: "Calculadora de recibos verdes 2026 — quanto recebes mesmo | Recibo Certo",
   description:
     "Do valor faturado ao líquido real: IRS, retenção na fonte, Segurança Social e IVA dos recibos verdes em 2026. Descobre quanto reservar para impostos e quanto fica mesmo para ti. Grátis e sem conta.",
   keywords: [
@@ -38,11 +38,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Calculadora de recibos verdes 2026 — quanto fica mesmo para ti | ReciboCerto",
+    title: "Calculadora de recibos verdes 2026 — quanto fica mesmo para ti | Recibo Certo",
     description:
       "IRS, Segurança Social e IVA em camadas separadas, com o que reservar e o que sobra para a conta. Regras oficiais de 2026.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

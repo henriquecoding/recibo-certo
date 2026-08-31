@@ -53,8 +53,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default:
-      "Simulador de IRS, Recibos Verdes, Salário e Empresa 2026 | ReciboCerto",
-    template: "%s | ReciboCerto",
+      "Simulador de IRS, Recibos Verdes, Salário e Empresa 2026 | Recibo Certo",
+    template: "%s | Recibo Certo",
   },
   description:
     "O copiloto fiscal de quem trabalha em Portugal: simula o IRS anual, recibos verdes, salário líquido e abrir empresa. IRS, Segurança Social e IVA com taxas de 2026 verificadas com fonte legal. Guias, ferramentas e quiz. Grátis, sem registo.",
@@ -78,31 +78,36 @@ export const metadata: Metadata = {
     "comparar regime simplificado e empresa",
     "classificar atividade CIRS portugal",
   ],
-  authors: [{ name: "ReciboCerto", url: SITE_URL }],
-  creator: "ReciboCerto",
-  publisher: "ReciboCerto",
+  authors: [{ name: "Recibo Certo", url: SITE_URL }],
+  creator: "Recibo Certo",
+  publisher: "Recibo Certo",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
+      // Para quem não lê SVG. O browser escolhe; ter os dois não custa.
+      { url: "/marca/icone-256.png", type: "image/png", sizes: "256x256" },
     ],
     shortcut: "/icon.svg",
-    apple: "/icon.svg",
+    // ⚠️ TEM de ser PNG. O iOS ignora SVG no `apple-touch-icon`, e apontava
+    // para `/icon.svg`: quem punha o site no ecrã principal ficava com um
+    // quadrado genérico em vez da marca.
+    apple: [{ url: "/marca/icone-180.png", sizes: "180x180", type: "image/png" }],
   },
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     locale: "pt_PT",
     url: SITE_URL,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     title:
-      "ReciboCerto — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
+      "Recibo Certo — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
     description:
       "O copiloto fiscal de quem trabalha em Portugal. Simula IRS, recibos verdes, salário líquido e empresa — Segurança Social e IVA com taxas 2026 verificadas. Grátis.",
   },
   twitter: {
     card: "summary_large_image",
     title:
-      "ReciboCerto — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
+      "Recibo Certo — Simuladores de IRS, Recibos Verdes, Salário e Empresa 2026",
     description:
       "Copiloto fiscal em Portugal: simula IRS, recibos verdes, salário líquido e empresa. IRS, SS e IVA com taxas 2026. Guias e ferramentas grátis.",
   },
@@ -130,7 +135,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1D9E75",
+  themeColor: "#177E5E",
   width: "device-width",
   initialScale: 1,
 };

@@ -3,17 +3,18 @@ import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
 import { precoPlusFormatado, precoVitalicioFormatado } from "@/lib/entitlements";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export const metadata: Metadata = {
-  title: "Termos de Utilização — ReciboCerto",
+  title: "Termos de Utilização — Recibo Certo",
   description:
-    "Termos e condições de utilização da plataforma ReciboCerto. Calculadora de recibos verdes gratuita para trabalhadores independentes em Portugal.",
+    "Termos e condições de utilização da plataforma Recibo Certo. Calculadora de recibos verdes gratuita para trabalhadores independentes em Portugal.",
   alternates: { canonical: "/termos" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Termos de Utilização — ReciboCerto",
+    title: "Termos de Utilização — Recibo Certo",
     description:
-      "Condições de utilização da calculadora de recibos verdes ReciboCerto. Serviço gratuito, sem publicidade, dados no teu dispositivo.",
+      "Condições de utilização da calculadora de recibos verdes Recibo Certo. Serviço gratuito, sem publicidade, dados no teu dispositivo.",
     url: "https://www.recibocerto.pt/termos",
     type: "website",
   },
@@ -38,27 +39,27 @@ export default function TermosPage() {
   return (
     <LegalPage
       title="Termos de Utilização"
-      subtitle="Ao utilizar o ReciboCerto, aceitas estas condições. Lê-as com atenção — são escritas em linguagem clara, sem jargão jurídico desnecessário."
+      subtitle="Ao utilizar o Recibo Certo, aceitas estas condições. Lê-as com atenção — são escritas em linguagem clara, sem jargão jurídico desnecessário."
       lastUpdated="13 de agosto de 2026"
       toc={TOC}
     >
       {/* 1 */}
       <Section id="servico" title="O serviço">
         <p>
-          O <strong className="text-stone-700 dark:text-stone-200">ReciboCerto</strong> é uma
+          O <strong className="text-stone-700 dark:text-stone-200">Recibo Certo</strong> é uma
           calculadora informativa para trabalhadores independentes em Portugal (emissores de recibos
           verdes). O serviço permite calcular estimativas de IRS, Segurança Social e IVA com base
           nos parâmetros fiscais do ano em curso.
         </p>
         <p>
-          O ReciboCerto é disponibilizado por{" "}
+          O Recibo Certo é disponibilizado por{" "}
           <strong className="text-stone-700 dark:text-stone-200">recibocerto.pt</strong>, contactável
           em{" "}
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="font-medium text-brand underline-offset-2 hover:underline dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           .
         </p>
@@ -146,10 +147,10 @@ export default function TermosPage() {
             direitos de livre resolução que sejam aplicáveis. Para pedir o reembolso, envia um
             email a{" "}
             <a
-              href="mailto:recibocerto.pt@gmail.com"
+              href={mailtoApoio()}
               className="font-medium text-brand hover:underline dark:text-brand-mint"
             >
-              recibocerto.pt@gmail.com
+              {EMAIL_APOIO}
             </a>{" "}
             com o assunto "Reembolso" e o email da conta. Quando o reembolso for confirmado, o
             acesso Plus é revogado e os dados sujeitos à política de retenção abaixo.
@@ -163,7 +164,7 @@ export default function TermosPage() {
           </p>
           <p className="mt-3">
             Neste contexto, “vitalício” significa acesso durante a vida operacional do serviço
-            ReciboCerto e enquanto a conta respeitar estes Termos; não constitui uma garantia de
+            Recibo Certo e enquanto a conta respeitar estes Termos; não constitui uma garantia de
             funcionamento perpétuo. A limitação a 1000 lugares inclui compras e concessões
             fundadoras já atribuídas, e não será aumentada silenciosamente enquanto esta oferta
             for anunciada como limitada.
@@ -179,7 +180,7 @@ export default function TermosPage() {
       {/* 4 */}
       <Section id="utilizacao-aceite" title="Utilização aceitável">
         <p>
-          Podes utilizar o ReciboCerto para fins pessoais, profissionais e informativos
+          Podes utilizar o Recibo Certo para fins pessoais, profissionais e informativos
           relacionados com a tua atividade como trabalhador independente. É expressamente
           proibido:
         </p>
@@ -208,7 +209,7 @@ export default function TermosPage() {
           Salvo indicação expressa em contrário, o software, arquitetura, motores de cálculo,
           seleção e organização das bases de dados, banco de perguntas, explicações, textos,
           design, identidade visual, marca, logótipo, ícones e demais materiais originais do
-          ReciboCerto são propriedade exclusiva do respetivo titular ou dos seus licenciadores.
+          Recibo Certo são propriedade exclusiva do respetivo titular ou dos seus licenciadores.
           Todos os direitos não concedidos expressamente ficam reservados.
         </p>
 
@@ -223,7 +224,7 @@ export default function TermosPage() {
             items={[
               "Utilizar a interface para cálculos pessoais e profissionais próprios",
               "Exportar os dados que o próprio utilizador introduziu",
-              "Partilhar uma ligação para uma página pública do ReciboCerto",
+              "Partilhar uma ligação para uma página pública do Recibo Certo",
               "Citar uma estimativa pontual, em extensão razoável, identificando claramente a fonte",
             ]}
           />
@@ -259,16 +260,16 @@ export default function TermosPage() {
             items={[
               "É proibido copiar, adaptar, traduzir, descompilar, reconstruir ou criar obras derivadas do código, design ou conteúdo",
               "É proibido replicar a seleção, estrutura ou investimento substancial do banco de perguntas e das bases compiladas",
-              "É proibido disponibilizar um serviço concorrente que reproduza elementos protegidos do ReciboCerto",
+              "É proibido disponibilizar um serviço concorrente que reproduza elementos protegidos do Recibo Certo",
               "É proibido remover avisos de autoria, marcas, identificadores de proveniência ou medidas de proteção",
-              "É proibido usar a marca ReciboCerto ou elementos confundíveis sem autorização",
+              "É proibido usar a marca Recibo Certo ou elementos confundíveis sem autorização",
             ]}
           />
         </Sub>
 
         <p className="mt-3">
           A legislação, os atos oficiais e os factos fiscais subjacentes não são apropriados
-          pelo ReciboCerto. Componentes de terceiros mantêm as respetivas licenças. A proteção
+          pelo Recibo Certo. Componentes de terceiros mantêm as respetivas licenças. A proteção
           incide sobre as criações originais e, quando aplicável, sobre a seleção, organização,
           validação, explicação e investimento na compilação e manutenção dos dados.
         </p>
@@ -277,11 +278,11 @@ export default function TermosPage() {
       {/* 6 */}
       <Section id="responsabilidade" title="Limitação de responsabilidade">
         <Nota tipo="aviso">
-          O ReciboCerto é uma ferramenta informativa. Os resultados são estimativas e não
+          O Recibo Certo é uma ferramenta informativa. Os resultados são estimativas e não
           constituem declarações fiscais oficiais nem aconselhamento jurídico ou contabilístico.
         </Nota>
         <p>
-          Na máxima extensão permitida pela lei aplicável, o ReciboCerto não se responsabiliza por:
+          Na máxima extensão permitida pela lei aplicável, o Recibo Certo não se responsabiliza por:
         </p>
         <Lista
           items={[
@@ -310,7 +311,7 @@ export default function TermosPage() {
       {/* 7 */}
       <Section id="dados-fiscais" title="Dados fiscais — aviso importante">
         <p>
-          Os parâmetros fiscais utilizados pelo ReciboCerto (taxas de retenção na fonte,
+          Os parâmetros fiscais utilizados pelo Recibo Certo (taxas de retenção na fonte,
           contribuições para a Segurança Social, limiares de IVA, escalões de IRS) são
           verificados anualmente com base no Orçamento do Estado e na legislação publicada
           em Diário da República.
@@ -334,7 +335,7 @@ export default function TermosPage() {
       {/* 8 */}
       <Section id="disponibilidade" title="Disponibilidade do serviço">
         <p>
-          O ReciboCerto é disponibilizado numa base de "tal como está" (<em>as-is</em>) e
+          O Recibo Certo é disponibilizado numa base de "tal como está" (<em>as-is</em>) e
           "conforme disponível" (<em>as-available</em>). Não garantimos disponibilidade
           ininterrupta, embora nos esforcemos por manter um nível de serviço elevado.
         </p>
@@ -378,13 +379,13 @@ export default function TermosPage() {
       <Section id="rescisao" title="Rescisão">
         <Sub title="Rescisão pelo utilizador">
           <p>
-            Podes deixar de utilizar o ReciboCerto a qualquer momento. Para contas Plus, podes
+            Podes deixar de utilizar o Recibo Certo a qualquer momento. Para contas Plus, podes
             cancelar a subscrição e solicitar a eliminação da conta enviando um email para{" "}
             <a
-              href="mailto:recibocerto.pt@gmail.com"
+              href={mailtoApoio()}
               className="font-medium text-brand hover:underline dark:text-brand-mint"
             >
-              recibocerto.pt@gmail.com
+              {EMAIL_APOIO}
             </a>
             .
           </p>
@@ -412,7 +413,7 @@ export default function TermosPage() {
       <Section id="legislacao" title="Legislação aplicável e resolução de litígios">
         <p>
           Estes Termos de Utilização são regidos pela legislação portuguesa. Para qualquer
-          litígio decorrente da utilização do ReciboCerto, é competente o tribunal da comarca
+          litígio decorrente da utilização do Recibo Certo, é competente o tribunal da comarca
           de Lisboa, sem prejuízo de foro imperativo do consumidor.
         </p>
         <Sub title="Resolução alternativa de litígios">
@@ -447,12 +448,12 @@ export default function TermosPage() {
           Para questões sobre estes termos, dúvidas de serviço ou reclamações, contacta-nos:
         </p>
         <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-800/50">
-          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">ReciboCerto</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Recibo Certo</p>
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="mt-1 flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           <p className="mt-2 text-xs text-stone-400">
             Prazo de resposta: até 10 dias úteis para questões gerais, até 30 dias para pedidos RGPD.

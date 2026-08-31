@@ -148,7 +148,7 @@ export default function FormularioCandidatura() {
     return (
       <div className="mt-8 rounded-4xl border border-stone-200 bg-white p-6 text-center shadow-card">
         <p className="text-sm leading-relaxed text-stone-600">
-          Precisas de uma conta ReciboCerto para te candidatares. É a mesma conta que
+          Precisas de uma conta Recibo Certo para te candidatares. É a mesma conta que
           usarás depois para entrar no painel.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2.5">
@@ -293,7 +293,7 @@ export default function FormularioCandidatura() {
       </div>
 
       <p className="border-t border-stone-100 pt-4 text-xs leading-relaxed text-stone-400">
-        Só a administração do ReciboCerto vê esta candidatura. Aprovar cria a tua conta de
+        Só a administração do Recibo Certo vê esta candidatura. Aprovar cria a tua conta de
         contabilista; recusar não apaga nada e explica-te porquê, para poderes corrigir.
       </p>
     </form>

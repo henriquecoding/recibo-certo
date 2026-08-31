@@ -32,7 +32,7 @@ export default function AfiliadoCard({
           Programa de afiliados
         </h2>
         <p className="mt-0.5 text-xs text-stone-400">
-          Partilha o ReciboCerto e ganha comissao por cada referido.
+          Partilha o Recibo Certo e ganha comissao por cada referido.
         </p>
       </div>
 

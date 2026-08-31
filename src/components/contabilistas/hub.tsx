@@ -328,7 +328,7 @@ export function Cupoes({
 
       <p className="mt-2.5 text-xs leading-relaxed text-stone-500">
         Apresenta o código na consulta. O desconto é aplicado pelo contabilista; o
-        ReciboCerto regista-o e mostra-to, não cobra a consulta nem processa pagamentos.
+        Recibo Certo regista-o e mostra-to, não cobra a consulta nem processa pagamentos.
       </p>
     </section>
   );

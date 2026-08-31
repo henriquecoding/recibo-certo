@@ -187,7 +187,7 @@ export default function FeedbackModal({
                     <Check size={30} />
                   </span>
                   <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">
-                    A equipa do ReciboCerto vai analisar a tua {tipoAtual.label.toLowerCase()}. Se for válida e concreta,
+                    A equipa do Recibo Certo vai analisar a tua {tipoAtual.label.toLowerCase()}. Se for válida e concreta,
                     entra no nosso plano de melhorias.
                   </p>
                   <div className={`mt-4 flex items-start gap-2.5 rounded-2xl border px-4 py-3 text-left text-xs leading-relaxed ${user ? "border-brand/20 bg-brand-light/60 text-brand-dark dark:bg-brand/10 dark:text-brand" : "border-stone-200 bg-stone-50 text-stone-500 dark:border-stone-700 dark:bg-stone-800/60 dark:text-stone-400"}`}>

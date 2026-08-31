@@ -2,7 +2,7 @@
 // Lê as chaves das variáveis NEXT_PUBLIC_* (definidas em .env.local e na Vercel).
 // A chave é a "publishable" — segura no cliente DESDE QUE a RLS esteja ativa.
 //
-// NOTA: o ReciboCerto ainda usa localStorage como fonte de dados. Este cliente
+// NOTA: o Recibo Certo ainda usa localStorage como fonte de dados. Este cliente
 // é a fundação para a migração do repositório (`src/lib/store/recibos.ts`) e
 // para a autenticação (conta na nuvem do plano Plus). Ainda não é usado nas páginas.
 

@@ -1,9 +1,9 @@
 ---
 name: verificacao-e-qualidade
-description: Protocolo de verificação e qualidade do ReciboCerto. Usar ANTES de declarar qualquer alteração concluída — build, type-check, auditoria de segurança, smoke em runtime e checklist final.
+description: Protocolo de verificação e qualidade do Recibo Certo. Usar ANTES de declarar qualquer alteração concluída — build, type-check, auditoria de segurança, smoke em runtime e checklist final.
 ---
 
-# Verificação e qualidade — ReciboCerto
+# Verificação e qualidade — Recibo Certo
 
 Nunca dizer "deve funcionar". Verificar com evidência. Nada está concluído sem isto.
 

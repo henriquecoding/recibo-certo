@@ -31,7 +31,7 @@ const ISENCOES = [
 ];
 
 export const metadata: Metadata = {
-  title: "Simulador IRS Jovem 2026 — sou elegível e quanto poupo? | ReciboCerto",
+  title: "Simulador IRS Jovem 2026 — sou elegível e quanto poupo? | Recibo Certo",
   description:
     "Descobre se és elegível para o IRS Jovem em 2026 e quanto o benefício muda no teu imposto: ano de carreira, percentagem de isenção, teto em IAS traduzido para euros e comparação lado a lado com e sem o benefício.",
   keywords: [
@@ -43,11 +43,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Simulador IRS Jovem 2026 — elegibilidade e poupança real | ReciboCerto",
+    title: "Simulador IRS Jovem 2026 — elegibilidade e poupança real | Recibo Certo",
     description:
       "Triagem de elegibilidade e comparação com e sem o benefício, com o teto em IAS já traduzido para euros.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

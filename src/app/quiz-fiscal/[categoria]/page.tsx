@@ -50,10 +50,10 @@ export async function generateMetadata(
     description: `${meta.descricao} ${total} perguntas interativas com base legal e ligação à fonte oficial.`,
     alternates: { canonical: `${SITE_URL}${url}` },
     openGraph: {
-      title: `Quiz de ${meta.label} ${FISCAL_YEAR} — ReciboCerto`,
+      title: `Quiz de ${meta.label} ${FISCAL_YEAR} — Recibo Certo`,
       description: `${meta.descricao} ${total} perguntas interativas com base legal.`,
       url: `${SITE_URL}${url}`,
-      siteName: "ReciboCerto",
+      siteName: "Recibo Certo",
       locale: "pt_PT",
       type: "article",
     },

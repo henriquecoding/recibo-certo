@@ -40,7 +40,7 @@ export default function QuizHeader({
         <LogoMark size={34} />
         <div className="flex flex-col leading-none">
           <span className="font-display text-[15px] font-bold leading-tight tracking-tight">
-            <span style={{ color: "#145532" }}>Recibo</span>
+            <span style={{ color: "#145532" }}>Recibo</span>{" "}
             <span style={{ color: "#55b15a" }}>Certo</span>
           </span>
           <span className="mt-0.5 text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ color: "#8a7355" }}>

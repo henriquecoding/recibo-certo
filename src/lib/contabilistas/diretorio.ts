@@ -51,7 +51,7 @@ const VISTA_PUBLICA = "contabilistas_publico";
  * `linkedin_avatar_url` é a única exceção a «só o que se mostra», e não
  * chega a sair deste módulo: serve para responder sim/não à pergunta
  * «há fotografia?» e é descartada em `paraCartao`. A fotografia em si
- * continua a ser servida pelo proxy do ReciboCerto (§8).
+ * continua a ser servida pelo proxy do Recibo Certo (§8).
  */
 export const CAMPOS_DO_CARTAO =
   "user_id,slug,nome,occ,occ_verificado,titulo_profissional,apresentacao_curta," +
@@ -171,7 +171,7 @@ export function paraCartao(l: Linha): CartaoDoDiretorio {
     aceitaNovosClientes: Boolean(l.aceita_novos_clientes),
     linkedinLigado: Boolean(l.linkedin_ligado),
     // A URL assinada morre aqui: o cartão leva um sim/não, e o `src` da
-    // imagem é sempre o endpoint do ReciboCerto.
+    // imagem é sempre o endpoint do Recibo Certo.
     avatarDisponivel: Boolean(avatar) && !avatarLinkedInExpirou(avatar),
     fidelidadeAtiva: Boolean(l.fidelidade_ativa),
     recebePagamentos: Boolean(l.recebe_pagamentos),

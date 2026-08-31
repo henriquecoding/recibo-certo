@@ -92,11 +92,11 @@ export const GUIAS_SEM_ACAO_FIZ: { slug: string; razao: string }[] = GUIDE_MANIF
     slug: m.slug,
     razao:
       m.slug === "recibo-vencimento"
-        ? "Sem envio por defeito: o conteúdo é de trabalho dependente e a continuação natural é uma ferramenta do ReciboCerto."
+        ? "Sem envio por defeito: o conteúdo é de trabalho dependente e a continuação natural é uma ferramenta do Recibo Certo."
         : m.slug === "subsidios-ferias-natal"
           ? "Guia informativo de direito laboral — não existe ação operacional fiscal a executar."
           : m.slug === "trabalho-suplementar"
-            ? "A continuação é a calculadora do ReciboCerto, não uma operação fiscal."
+            ? "A continuação é a calculadora do Recibo Certo, não uma operação fiscal."
             : "Sem ação operacional correspondente no catálogo da FIZ.",
   }));
 

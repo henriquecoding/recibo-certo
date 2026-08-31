@@ -32,6 +32,10 @@ const PRIVADAS = [
   "/ir/",
   "/contabilista/",
   "/contabilista$",
+  // Destino do link de recuperação de palavra-passe. Não tem conteúdo:
+  // sem um token válido no URL só sabe dizer que o link expirou. Indexá-la
+  // punha uma página de erro nos resultados com o nome da marca.
+  "/redefinir-password",
 ];
 
 /**

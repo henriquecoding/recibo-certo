@@ -352,7 +352,7 @@ export const LEGAL_CLAIMS: LegalClaim[] = [
     appliesFrom: DE,
     confidence: "verified",
     reviewSeverity: "critical",
-    nota: "Ponto 4.7 da auditoria: o ReciboCerto não mantém uma segunda verdade operacional.",
+    nota: "Ponto 4.7 da auditoria: o Recibo Certo não mantém uma segunda verdade operacional.",
   },
 
   // ── escaloes-irs ─────────────────────────────────────────────────────

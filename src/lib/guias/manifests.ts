@@ -163,7 +163,7 @@ export interface GuideManifest {
   status: GuideStatus;
 }
 
-/** Ferramentas do ReciboCerto que um Guia pode recomendar. Os `slug`
+/** Ferramentas do Recibo Certo que um Guia pode recomendar. Os `slug`
     correspondem a `FERRAMENTAS`; os três últimos são rotas próprias. */
 export type ToolId =
   | "simulador-irs" | "recibo-vencimento" | "auditoria-recibo" | "mapa-contabilistas"
@@ -192,7 +192,7 @@ export const TOOL_HREFS: Record<ToolId, string> = {
 
 const DE = `${FISCAL_YEAR}-01-01`;
 const REVISTO = "2026-07-26";
-const EQUIPA = "Equipa editorial ReciboCerto";
+const EQUIPA = "Equipa editorial Recibo Certo";
 // Ponto 11 da auditoria: os grupos P0 têm de ser revistos por pessoa
 // competente antes do lançamento. Até lá o revisor fica explicitamente
 // por atribuir — e `guias:lint` avisa (não falha) enquanto assim for.
@@ -575,7 +575,7 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     relatedGuideIds: ["subsidios-ferias-natal", "trabalho-suplementar", "escaloes-irs", "acumulacao-emprego", "penhora-limites", "falsos-recibos-verdes"],
     relatedToolIds: ["recibo-vencimento", "auditoria-recibo"],
     // Ponto 5/#15: sem envio por defeito. A continuação é uma ferramenta
-    // do ReciboCerto, não uma ação FIZ.
+    // do Recibo Certo, não uma ação FIZ.
     seo: { description: "Recibo de vencimento linha a linha: bruto, Segurança Social, IRS retido, subsídio de refeição e o líquido que sobra.", aliases: ["recibo de vencimento", "recibo de salario", "quanto recebo liquido", "descontos no salário", "folha de vencimento"], schema: ["Article"] },
     owner: EQUIPA, reviewer: EQUIPA, lastReviewedAt: REVISTO, status: "published",
   },

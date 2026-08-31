@@ -2,7 +2,7 @@
 // painel está aberto. Ver `nucleo.ts`.
 //
 // Este é o único bloco do painel onde a demonstração NÃO consegue imitar o
-// real, e a razão é honesta: ligar o LinkedIn sai do ReciboCerto para o
+// real, e a razão é honesta: ligar o LinkedIn sai do Recibo Certo para o
 // consentimento do LinkedIn. A loja recusa com essa frase em vez de fingir
 // uma ligação — ver `loja.ts`. Tudo o resto (estado, endereço público,
 // desligar) comporta-se como no painel real.

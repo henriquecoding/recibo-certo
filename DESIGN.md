@@ -1,4 +1,4 @@
-# ReciboCerto — Design System
+# Recibo Certo — Design System
 
 Sistema de design do copiloto financeiro. Premium, calmo, editorial e de alta
 confiança. Tokens em `tailwind.config.ts` + `src/app/globals.css`.

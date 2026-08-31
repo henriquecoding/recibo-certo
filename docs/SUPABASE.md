@@ -1,6 +1,6 @@
 # Supabase — ligação e operação
 
-Runbook da integração Supabase do ReciboCerto. **Nenhuma chave deve ser
+Runbook da integração Supabase do Recibo Certo. **Nenhuma chave deve ser
 commitada.** As chaves vivem no `.env.local` (dev, ignorado pelo git) e nas
 variáveis de ambiente da Vercel (produção).
 

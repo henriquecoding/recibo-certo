@@ -17,7 +17,7 @@
 //  LegalSource cujo domínio não conste de DOMINIOS_AUTORIZADOS.
 //
 //  Semântica de `effectiveFrom` / `effectiveTo`:
-//    período a que se aplica a AFIRMAÇÃO do ReciboCerto que cita a fonte —
+//    período a que se aplica a AFIRMAÇÃO do Recibo Certo que cita a fonte —
 //    não a data de entrada em vigor do diploma. Para conteúdo do ano fiscal
 //    corrente é o início desse ano. `consolidada: true` indica que o URL
 //    aponta para uma versão permanentemente atualizada.

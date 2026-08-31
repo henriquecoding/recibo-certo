@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  «O QUE JÁ SABEMOS» — o componente da continuidade entre ferramentas
 //  ---------------------------------------------------------------------
-//  §66 do relatório. O ReciboCerto tem cinco pontes possíveis entre
+//  §66 do relatório. O Recibo Certo tem cinco pontes possíveis entre
 //  ferramentas — recibo de vencimento → IRS, empresa → IRS, negócio →
 //  empresa, preço → negócio — e cada uma que nascesse com o seu próprio
 //  cartão daria cinco vocabulários diferentes para a mesma ideia.

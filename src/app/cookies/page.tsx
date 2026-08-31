@@ -2,17 +2,18 @@ import type { Metadata } from "next";
 import LegalPage, {
   Section, Sub, Nota, Lista, ListaCheck, Tabela,
 } from "@/components/LegalPage";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export const metadata: Metadata = {
-  title: "Política de Cookies — ReciboCerto",
+  title: "Política de Cookies — Recibo Certo",
   description:
-    "Como o ReciboCerto utiliza cookies, armazenamento local e medição de desempenho consentida, sem publicidade comportamental.",
+    "Como o Recibo Certo utiliza cookies, armazenamento local e medição de desempenho consentida, sem publicidade comportamental.",
   alternates: { canonical: "/cookies" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Política de Cookies — ReciboCerto",
+    title: "Política de Cookies — Recibo Certo",
     description:
-      "ReciboCerto não usa publicidade comportamental; a medição de desempenho só é carregada depois do teu consentimento.",
+      "Recibo Certo não usa publicidade comportamental; a medição de desempenho só é carregada depois do teu consentimento.",
     url: "https://www.recibocerto.pt/cookies",
     type: "website",
   },
@@ -33,7 +34,7 @@ export default function CookiesPage() {
   return (
     <LegalPage
       title="Política de Cookies"
-      subtitle="O ReciboCerto foi desenhado para respeitar a tua privacidade. A medição opcional só arranca com consentimento, não exibimos publicidade e não enviamos os teus valores fiscais para analytics."
+      subtitle="O Recibo Certo foi desenhado para respeitar a tua privacidade. A medição opcional só arranca com consentimento, não exibimos publicidade e não enviamos os teus valores fiscais para analytics."
       lastUpdated="Agosto de 2026"
       toc={TOC}
     >
@@ -71,15 +72,15 @@ export default function CookiesPage() {
           ]}
         />
         <Nota tipo="info">
-          O ReciboCerto não utiliza cookies de terceiros para tracking, analytics comportamentais
+          O Recibo Certo não utiliza cookies de terceiros para tracking, analytics comportamentais
           nem publicidade. A nossa abordagem é radicalmente minimalista.
         </Nota>
       </Section>
 
       {/* 2 */}
-      <Section id="como-usamos" title="Como o ReciboCerto usa cookies">
+      <Section id="como-usamos" title="Como o Recibo Certo usa cookies">
         <p>
-          O ReciboCerto adota uma abordagem de privacidade em primeiro lugar (
+          O Recibo Certo adota uma abordagem de privacidade em primeiro lugar (
           <em>privacy-first</em>). Ao contrário da maioria dos websites, a nossa plataforma
           funciona sem medição não essencial por defeito. Só carregamos a medição de utilização
           e desempenho depois de um <strong className="text-stone-700 dark:text-stone-200">
@@ -123,7 +124,7 @@ export default function CookiesPage() {
               [
                 "Cookies de terceiros",
                 "Não",
-                "Nenhum domínio externo instala cookies via ReciboCerto",
+                "Nenhum domínio externo instala cookies via Recibo Certo",
               ],
             ]}
           />
@@ -138,7 +139,7 @@ export default function CookiesPage() {
           É mais privado do que cookies — só o próprio site pode ler os seus dados.
         </Nota>
         <p>
-          O ReciboCerto utiliza o <strong className="text-stone-700 dark:text-stone-200">
+          O Recibo Certo utiliza o <strong className="text-stone-700 dark:text-stone-200">
           localStorage</strong> do teu browser como mecanismo principal de persistência no
           plano gratuito. Isto significa que os teus dados fiscais ficam exclusivamente no
           teu dispositivo.
@@ -167,7 +168,7 @@ export default function CookiesPage() {
           />
         </Sub>
 
-        <Sub title="Características do localStorage no ReciboCerto">
+        <Sub title="Características do localStorage no Recibo Certo">
           <ListaCheck
             items={[
               "Dados armazenados apenas no teu dispositivo — nunca transmitidos para servidores",
@@ -180,7 +181,7 @@ export default function CookiesPage() {
         </Sub>
 
         <p className="mt-3">
-          Para eliminares os dados do localStorage do ReciboCerto, acede às definições
+          Para eliminares os dados do localStorage do Recibo Certo, acede às definições
           do teu browser em <em>Privacidade → Dados do site → recibocerto.pt → Limpar</em>.
         </p>
       </Section>
@@ -188,7 +189,7 @@ export default function CookiesPage() {
       {/* 4 */}
       <Section id="cookies-terceiros" title="Cookies de terceiros">
         <p>
-          O ReciboCerto não integra serviços de terceiros que instalem cookies de analytics no teu browser.
+          O Recibo Certo não integra serviços de terceiros que instalem cookies de analytics no teu browser.
           O Vercel Speed Insights mede Web Vitals apenas depois do consentimento de estatística e
           não recebe os valores introduzidos nos simuladores, nem a query ou o fragmento do URL.
           Especificamente, <strong className="text-stone-700 dark:text-stone-200">não utilizamos</strong>:
@@ -247,7 +248,7 @@ export default function CookiesPage() {
       {/* 6 */}
       <Section id="gerir-cookies" title="Gerir e eliminar cookies">
         <p>
-          Tens controlo total sobre os cookies e dados armazenados pelo ReciboCerto no teu
+          Tens controlo total sobre os cookies e dados armazenados pelo Recibo Certo no teu
           browser. Podes gerir estas preferências de duas formas:
         </p>
 
@@ -269,7 +270,7 @@ export default function CookiesPage() {
         <Sub title="Bloquear todos os cookies">
           <p>
             Podes configurar o teu browser para bloquear todos os cookies. Nota que, no caso
-            do ReciboCerto:
+            do Recibo Certo:
           </p>
           <Lista
             items={[
@@ -281,7 +282,7 @@ export default function CookiesPage() {
 
         <Sub title="Ferramentas de opt-out de terceiros">
           <p>
-            Embora o ReciboCerto não use cookies de terceiros, podes instalar extensões
+            Embora o Recibo Certo não use cookies de terceiros, podes instalar extensões
             de bloqueio de tracking como uBlock Origin ou Privacy Badger para uma proteção
             adicional durante a navegação geral na web.
           </p>
@@ -315,12 +316,12 @@ export default function CookiesPage() {
           dados, contacta-nos:
         </p>
         <div className="mt-4 rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-800/50">
-          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">ReciboCerto</p>
+          <p className="text-sm font-semibold text-stone-700 dark:text-stone-200">Recibo Certo</p>
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="mt-1 flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark dark:text-brand-mint"
           >
-            recibocerto.pt@gmail.com
+            {EMAIL_APOIO}
           </a>
           <p className="mt-2 text-xs text-stone-400">
             Prazo de resposta: até 30 dias úteis, conforme exigido pelo RGPD.

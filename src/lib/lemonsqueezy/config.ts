@@ -19,8 +19,8 @@ export const LS_CONFIG = {
   variantMonthly: process.env.LS_VARIANT_MONTHLY ?? "",
   variantAnnual:  process.env.LS_VARIANT_ANNUAL  ?? "",
 
-  // Botão com a cor da marca ReciboCerto
-  checkoutButtonColor: "#1D9E75",
+  // Botão com a cor da marca Recibo Certo
+  checkoutButtonColor: "#177E5E",
 
   successUrl: `${APP_URL}/dashboard?plano=ativo`,
   cancelUrl:  `${APP_URL}/dashboard/upgrade`,

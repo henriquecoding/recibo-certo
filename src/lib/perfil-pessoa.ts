@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 //  A SITUAÇÃO PESSOAL — um contrato, não cinco
 //  ---------------------------------------------------------------------
-//  §43 do relatório. O ReciboCerto tem quatro sítios que descrevem a
+//  §43 do relatório. O Recibo Certo tem quatro sítios que descrevem a
 //  mesma coisa — a situação pessoal de quem é tributado — e cada um
 //  descrevia-a à sua maneira:
 //

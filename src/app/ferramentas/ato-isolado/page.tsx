@@ -7,16 +7,16 @@ import { DecisorAtoVsAtividade } from "@/components/guias/DecisorAtoVsAtividade"
 const TOOL = porId("ato-isolado")!;
 
 export const metadata: Metadata = {
-  title: "Ato isolado ou abrir atividade? Decisor interativo 2026 | ReciboCerto",
+  title: "Ato isolado ou abrir atividade? Decisor interativo 2026 | Recibo Certo",
   description:
     "Responde a 4 perguntas e fica a saber se deves emitir um ato isolado ou abrir atividade nas Finanças — com o raciocínio explicado e os próximos passos. Gratuito e imediato.",
   keywords: ["ato isolado", "abrir atividade", "recibos verdes", "trabalhador independente"],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Ato isolado ou abrir atividade? | ReciboCerto",
+    title: "Ato isolado ou abrir atividade? | Recibo Certo",
     description: "Decisor interativo: 4 perguntas para saber a resposta certa para a tua situação.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

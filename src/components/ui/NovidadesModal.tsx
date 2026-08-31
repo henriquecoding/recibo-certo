@@ -202,7 +202,7 @@ export default function NovidadesModal() {
                     <p className="mt-0.5 text-[12px] text-stone-400 dark:text-stone-500">
                       {indice?.mesAtual
                         ? `${indice.mesAtual.rotulo} · ${indice.totalVersoes} versões no total`
-                        : "Fique a par das últimas melhorias no ReciboCerto."}
+                        : "Fique a par das últimas melhorias no Recibo Certo."}
                     </p>
                   </div>
                 </div>

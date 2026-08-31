@@ -1,6 +1,6 @@
-# ReciboCerto Fiscal Engine
+# Recibo Certo Fiscal Engine
 
-Fundação executável para o próximo motor fiscal do ReciboCerto, centrado no sistema fiscal português. Este pacote ainda não substitui os motores em `src/lib/` (raiz do repositório) e não está ligado às páginas do site.
+Fundação executável para o próximo motor fiscal do Recibo Certo, centrado no sistema fiscal português. Este pacote ainda não substitui os motores em `src/lib/` (raiz do repositório) e não está ligado às páginas do site.
 
 ## Estado
 

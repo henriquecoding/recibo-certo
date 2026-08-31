@@ -3,7 +3,7 @@ Há uma linguagem para páginas públicas, outra na shell antiga do cliente e ou
 
 ### O que extrair das referências — sem copiar
 
-| Referência | Princípio a reaproveitar no ReciboCerto |
+| Referência | Princípio a reaproveitar no Recibo Certo |
 |---|---|
 | Tabato / bookings | Lista cronológica densa, filtros de estado, data como âncora, hora/local/pessoa numa linha |
 | Calendar dashboard | Overview composto por agenda, atividade e tarefas; cada painel responde a uma pergunta diferente |

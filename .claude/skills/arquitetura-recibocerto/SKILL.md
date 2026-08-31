@@ -1,9 +1,9 @@
 ---
 name: arquitetura-recibocerto
-description: Arquitetura, estrutura de ficheiros e convenções do ReciboCerto. Usar ao adicionar páginas/rotas/funcionalidades, ao mexer em estado/dados, ou para perceber onde vive cada coisa neste codebase.
+description: Arquitetura, estrutura de ficheiros e convenções do Recibo Certo. Usar ao adicionar páginas/rotas/funcionalidades, ao mexer em estado/dados, ou para perceber onde vive cada coisa neste codebase.
 ---
 
-# Arquitetura — ReciboCerto
+# Arquitetura — Recibo Certo
 
 ## Stack
 Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind v3

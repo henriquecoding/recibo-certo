@@ -1,4 +1,4 @@
-# ReciboCerto — Manual de operação do projeto
+# Recibo Certo — Manual de operação do projeto
 
 > **LÊ ISTO PRIMEIRO.** Antes de programar neste projeto, consulta as skills em
 > `.claude/skills/`. Elas contêm a disciplina aprendida e são obrigatórias:
@@ -54,7 +54,17 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 6. **Verificar antes de concluir** — `npm run build` + `npm audit --audit-level=high`
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.
 7. **Planear e validar** mudanças grandes com o utilizador antes de implementar.
-8. Manter o nome **ReciboCerto**. Não inventar testemunhos nem métricas.
+8. **O nome é «Recibo Certo», duas palavras.** Decidido a 31/08/2026 pelo dono do
+   projeto, e aplicado a TUDO o que uma pessoa lê: a UI, a copy, os emails, os
+   metadados, o logótipo, e também os painéis de terceiros — Stripe (nome da conta,
+   `display_name`, nome do produto), Supabase (nome do projeto) e Google (nome da
+   aplicação no ecrã de consentimento). A forma antiga «ReciboCerto», colada, não
+   volta a aparecer em texto visível.
+   O que **NÃO** muda, porque são identificadores e não nome: o domínio
+   `recibocerto.pt`, o pacote `recibo-certo`, as `lookup_key` da Stripe
+   (`recibocerto_plus_*`), as chaves idempotentes, os `User-Agent`
+   (`ReciboCertoLinkCheck/1.0`) e a pasta `ReciboCerto-Fiscal-Engine/`.
+   Não inventar testemunhos nem métricas.
 9. **Changelog a cada merge para `main`.** Sobe `APP_VERSION` e acrescenta uma
    entrada (pt-PT, voltada ao utilizador) NO TOPO de `CHANGELOG` em
    `src/lib/version.ts` — é o que alimenta o popup "Novidades & Atualizações".

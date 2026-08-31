@@ -65,7 +65,7 @@ export default function ChromeMobileMarca() {
       <div className="flex h-[var(--rc-barra-marca)] items-center justify-between gap-2 border-t border-stone-100 px-3 max-[359px]:px-2 dark:border-stone-800">
         <Link
           href="/"
-          aria-label="ReciboCerto — início"
+          aria-label="Recibo Certo — início"
           className="focus-marca -ml-1 flex min-h-[36px] flex-shrink-0 items-center rounded-xl px-1"
         >
           <Logo small />

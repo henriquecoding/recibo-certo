@@ -4,7 +4,7 @@
 //  É a alternativa à assinatura digital, e é melhor do que ela para o que este
 //  produto precisa. Um certificado qualificado obriga a gerir chaves num
 //  ambiente efémero, e a faixa verde do Acrobat diz apenas «este ficheiro não
-//  foi alterado desde que a ReciboCerto o assinou» — não diz «os números estão
+//  foi alterado desde que a Recibo Certo o assinou» — não diz «os números estão
 //  certos». Vender selo por exatidão é prometer o que não se cumpre.
 //
 //  Esta página responde à pergunta que a pessoa tem mesmo: «isto foi mesmo
@@ -40,8 +40,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { referencia } = await params;
   return {
-    title: `Verificar documento ${referencia} · ReciboCerto`,
-    description: "Confirma que um documento do ReciboCerto foi mesmo emitido por nós.",
+    title: `Verificar documento ${referencia} · Recibo Certo`,
+    description: "Confirma que um documento do Recibo Certo foi mesmo emitido por nós.",
     robots: { index: false, follow: false },
   };
 }
@@ -85,7 +85,7 @@ export default async function VerificarDocumento({
               <Check size={18} className="mt-0.5 flex-none text-brand" />
               <p className="text-sm leading-relaxed text-brand-dark dark:text-brand-light">
                 A referência <strong>{emissao.referencia}</strong> corresponde a um documento emitido
-                pelo ReciboCerto.
+                pelo Recibo Certo.
               </p>
             </div>
 
@@ -149,7 +149,7 @@ export default async function VerificarDocumento({
 
       <p className="mt-6 text-center text-xs text-stone-400">
         <Link href="/" className="font-semibold text-brand-dark underline dark:text-brand-light">
-          ReciboCerto
+          Recibo Certo
         </Link>{" "}
         · copiloto fiscal para trabalhadores em Portugal
       </p>

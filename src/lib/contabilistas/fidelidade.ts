@@ -11,7 +11,7 @@
 //  Pro): validar QUEM escreve não chega, é preciso validar O QUE é escrito —
 //  e para isso o cálculo tem de viver num sítio onde o cliente não chega.
 //
-//  ⚠️ O cupão é um acordo entre o cliente e o contabilista. O ReciboCerto
+//  ⚠️ O cupão é um acordo entre o cliente e o contabilista. O Recibo Certo
 //  regista-o e mostra-o; NÃO cobra a consulta, não processa o pagamento e
 //  não garante o desconto. A interface tem de dizer isto.
 // ═══════════════════════════════════════════════════════════════════════

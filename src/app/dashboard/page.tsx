@@ -518,7 +518,7 @@ function SaudeCard({ saude }: { saude: SaudeFiscal }) {
   const corClasse = score >= 80 ? "text-brand" : score >= 60 ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400";
   const corSVG =
     score >= 80
-      ? "var(--color-brand, #1D9E75)"
+      ? "var(--color-brand, #177E5E)"
       : score >= 60
         ? "var(--color-saude-medio, #b45309)"
         : "var(--color-saude-mau, #b91c1c)";

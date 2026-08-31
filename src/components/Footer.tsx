@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/Icons";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { abrirPreferenciasCookies } from "@/lib/cookie-consent";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 const TRUST = [
   { icon: CheckTrend, label: "Dados " + FISCAL_YEAR, sub: "Fontes oficiais AT · SS · OE" },
@@ -222,7 +223,7 @@ export default function Footer() {
             {/* Empresa */}
             <div>
               <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
-                ReciboCerto
+                Recibo Certo
               </h3>
               <ul className="space-y-0 sm:space-y-2">
                 {NAV_EMPRESA.map((l) => (
@@ -245,7 +246,7 @@ export default function Footer() {
                 Contacto
               </h3>
               <a
-                href="mailto:recibocerto.pt@gmail.com"
+                href={mailtoApoio()}
                 className="group flex min-h-[36px] items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-brand dark:text-stone-400 sm:min-h-0"
               >
                 <Mail size={13} className="shrink-0 text-stone-400 transition-colors group-hover:text-brand dark:text-stone-600" />
@@ -254,7 +255,7 @@ export default function Footer() {
                     360px — o texto saía por fora dela e ia parar por cima da
                     coluna do lado. Não há tamanho de letra que resolva isto;
                     ou quebra, ou transborda. */}
-                <span className="min-w-0 break-all">recibocerto.pt@gmail.com</span>
+                <span className="min-w-0 break-all">{EMAIL_APOIO}</span>
               </a>
 
               <div className="mt-6 rounded-xl border border-stone-200/60 bg-white/60 p-4 dark:border-stone-800 dark:bg-stone-900/40">
@@ -291,7 +292,7 @@ export default function Footer() {
           <div className="mt-8 border-t border-stone-200/50 dark:border-stone-800 pb-8 pt-6">
             <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
               <p className="texto-mini font-medium text-stone-400 dark:text-stone-500">
-                © {FISCAL_YEAR} ReciboCerto · Portugal
+                © {FISCAL_YEAR} Recibo Certo · Portugal
               </p>
 
               <div className="flex items-center gap-1.5 texto-mini font-medium text-stone-400 dark:text-stone-500">

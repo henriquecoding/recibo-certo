@@ -157,7 +157,7 @@ describe("coerência entre formatos", () => {
 
     // Um livro sem título chama-se «Livro1» para sempre.
     expect(lido.title).toContain("Relatório de vencimento");
-    expect(lido.creator).toBe("ReciboCerto");
+    expect(lido.creator).toBe("Recibo Certo");
 
     // A folha de verificação existe e traz a proveniência.
     const verificacao = lido.getWorksheet("Fonte e verificação")!;

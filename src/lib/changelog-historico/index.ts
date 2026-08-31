@@ -56,12 +56,12 @@ export const CHANGELOG: EntradaChangelog[] = [
   {
     version: "2.47.0",
     data: "2026-08-12",
-    titulo: "O teu contabilista, dentro do ReciboCerto",
+    titulo: "O teu contabilista, dentro do Recibo Certo",
     itens: [
       "Há agora um diretório de contabilistas certificados. Podes ligar-te a um, enviar-lhe as simulações que fizeste aqui e marcar consulta — tudo gratuito, sem precisares do Plus. Isto não é um plano nem um extra: é o que a app passa a fazer.",
       "Ligares-te a alguém não lhe dá acesso aos teus dados. Continua a valer o que a página de privacidade diz: só tu acedes ao que é teu. O que o contabilista vê é aquilo que lhe enviares, um envio de cada vez — e antes de confirmares vês, campo a campo, exatamente o que segue. Podes revogar o acesso quando quiseres, e terminar o acompanhamento fecha-lhe a porta a tudo o que já tinha recebido.",
       "A cada consulta realizada, carimbas o cartão de fidelidade do teu contabilista. Ao completá-lo, ganhas um cupão de desconto na consulta seguinte — a percentagem é definida por ele, entre 10% e 50%. Se ele mudar a percentagem a meio, o teu cartão mantém a que tinha quando começou: a promessa que te foi feita não muda a meio do caminho.",
-      "O desconto é acordado e aplicado pelo contabilista. O ReciboCerto regista o cartão e mostra-te o código; não cobra a consulta nem processa pagamentos.",
+      "O desconto é acordado e aplicado pelo contabilista. O Recibo Certo regista o cartão e mostra-te o código; não cobra a consulta nem processa pagamentos.",
       "Se és contabilista, podes pedir acesso a um painel de gestão com agenda, clientes, partilhas recebidas e o cartão de fidelidade configurável. Candidatas-te com uma justificação e, se quiseres, com o número de inscrição na Ordem ou documentos comprovativos — que só tu e a administração conseguem ler. Também podes não anexar nada e tratar disso por email. Cada candidatura é analisada por uma pessoa antes de ser aprovada; uma recusa explica-te porquê, e podes corrigir e voltar a candidatar-te.",
       "Dois horários iguais deixaram de ser possíveis: se duas pessoas tentarem marcar o mesmo, a segunda é avisada na hora em vez de ficar com uma marcação que não existe.",
       "Marcar consulta são dois passos, não uma lista infinita: escolhes o dia numa tira com as horas livres de cada um, depois a hora, e só então vês o que vais pedir — dia, hora, duração, preço e modalidade — antes de confirmares. As horas são as de Lisboa, e está escrito no ecrã.",
@@ -259,7 +259,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-08-11",
     titulo: "Protegido sem desaparecer dos motores de pesquisa",
     itens: [
-      "O Google e o Bing voltam a poder mostrar o ReciboCerto com excertos completos, imagens grandes e vídeos nos resultados. As páginas públicas continuam com indexação e seguimento permitidos: proteger o conteúdo não significa esconder o site.",
+      "O Google e o Bing voltam a poder mostrar o Recibo Certo com excertos completos, imagens grandes e vídeos nos resultados. As páginas públicas continuam com indexação e seguimento permitidos: proteger o conteúdo não significa esconder o site.",
       "A proteção contra treino, prospeção de textos e dados, bases derivadas e scraping declarado mantém-se: robots, bloqueio HTTP, TDMRep, termos proprietários, source maps desativados e fronteiras de servidor continuam ativos.",
       "Os simuladores e o Quiz Fiscal continuam gratuitos, sem conta obrigatória e a funcionar no dispositivo. Nenhum valor fiscal, resposta ou resultado foi movido para uma API para tentar esconder o código.",
       "As atualizações automáticas de dependências continuam disponíveis, mas as branches de agentes e do Dependabot deixam de criar previews na Vercel. Só uma integração validada na main pode originar o deploy final.",
@@ -920,7 +920,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-07-22",
     titulo: "«Como funciona» que funciona + motores mais rigorosos",
     itens: [
-      "O botão «Como funciona» na página inicial não fazia nada — apontava para uma secção que tinha sido removida. Agora abre uma janela clara, em três passos, a explicar como o ReciboCerto trabalha por ti: escolhes o que fazes, dizes só o valor, e mostramos-te quanto é mesmo teu, quanto reservar e quando pagar.",
+      "O botão «Como funciona» na página inicial não fazia nada — apontava para uma secção que tinha sido removida. Agora abre uma janela clara, em três passos, a explicar como o Recibo Certo trabalha por ti: escolhes o que fazes, dizes só o valor, e mostramos-te quanto é mesmo teu, quanto reservar e quando pagar.",
       "Continuámos a auditar os motores de cálculo para garantir que nenhum número fiscal está «escrito à mão» solto no código: a redução de retenção na fonte para famílias com 3 ou mais dependentes, a taxa dos dividendos e a taxa do regime IFICI passaram a vir sempre da mesma fonte fiscal usada nos cálculos — assim o que se mostra nunca pode divergir do que se calcula.",
     ],
   },
@@ -950,7 +950,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-07-22",
     titulo: "Pré-visualização dos links com a marca real",
     itens: [
-      "Quando partilhas uma ligação do ReciboCerto (WhatsApp, redes sociais, mensagens), a pré-visualização passou a mostrar o logótipo real do site num cartão limpo e profissional — deixou de aparecer aquele símbolo genérico.",
+      "Quando partilhas uma ligação do Recibo Certo (WhatsApp, redes sociais, mensagens), a pré-visualização passou a mostrar o logótipo real do site num cartão limpo e profissional — deixou de aparecer aquele símbolo genérico.",
       "O cartão de partilha usa agora a tipografia e as cores da casa, com a mensagem «Poucos dados. Zero contas.» e o essencial: IRS, recibos verdes, salário e empresa, com taxas de 2026.",
     ],
   },
@@ -1000,7 +1000,7 @@ export const CHANGELOG: EntradaChangelog[] = [
       "A página inicial passou a mostrar todo o ecossistema: uma secção de ferramentas que se molda ao teu perfil (independente, por conta de outrem, empresa ou comparar), com uma sugestão em destaque para ti.",
       "O Simulador de IRS anual — a ferramenta mais completa do site — ganhou palco próprio na página inicial, com a demonstração ao vivo e acesso direto.",
       "Nova secção «Aprender»: os guias certos para o teu perfil e o Quiz Fiscal com as suas 1 592 perguntas, agora visíveis logo à entrada.",
-      "Os números do ReciboCerto (ferramentas, guias, perguntas do quiz, atividades classificadas e fontes oficiais) passam a ser contados diretamente do site — e cada cartão leva-te lá.",
+      "Os números do Recibo Certo (ferramentas, guias, perguntas do quiz, atividades classificadas e fontes oficiais) passam a ser contados diretamente do site — e cada cartão leva-te lá.",
       "Cada funcionalidade apresentada na página inicial passou a ter link direto para a página respetiva, e os atalhos do topo adaptam-se ao teu perfil.",
       "O link da página inicial passa a refletir o simulador selecionado (/?modo=…): ao partilhares, quem abre vê exatamente o mesmo simulador — não a versão genérica.",
       "Todos os 29 guias ficaram visíveis para os motores de busca e os menus passaram a apontar para as páginas públicas corretas.",
@@ -1119,7 +1119,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-06-24",
     titulo: "Central de sugestões e reportes, header do telemóvel unificado e mais",
     itens: [
-      "Nova Central de Feedback: em qualquer página podes mandar uma sugestão, reportar um erro, tirar uma dúvida ou deixar uma mensagem — pelo botão no cabeçalho (ou no menu do telemóvel). A equipa do ReciboCerto valida cada mensagem e, se tiveres sessão iniciada e o contributo for útil, ganhas XP no Quiz Fiscal.",
+      "Nova Central de Feedback: em qualquer página podes mandar uma sugestão, reportar um erro, tirar uma dúvida ou deixar uma mensagem — pelo botão no cabeçalho (ou no menu do telemóvel). A equipa do Recibo Certo valida cada mensagem e, se tiveres sessão iniciada e o contributo for útil, ganhas XP no Quiz Fiscal.",
       "No telemóvel deixou de haver dois cabeçalhos: passa a existir só a barra de baixo (na zona do polegar), agora com tudo o que há no cabeçalho de computador — simuladores, ferramentas, guias, planos e conta — organizado por secções.",
       "O botão da conta passa a mostrar a tua foto de perfil também no telemóvel.",
       "O popup de Novidades volta a comportar-se como deve: aparece na primeira visita e só reaparece quando há uma nova versão — nunca a cada atualização da página.",
@@ -1216,7 +1216,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-06-23",
     titulo: "Mais fácil de encontrar nas pesquisas",
     itens: [
-      "Melhorámos a forma como o ReciboCerto aparece no Google e no Bing: passa a refletir todos os simuladores — IRS, recibos verdes, salário e empresa — e não apenas a calculadora de recibos verdes.",
+      "Melhorámos a forma como o Recibo Certo aparece no Google e no Bing: passa a refletir todos os simuladores — IRS, recibos verdes, salário e empresa — e não apenas a calculadora de recibos verdes.",
       "A nova página do Simulador de IRS e a página de Investidores entram no mapa do site (sitemap), para serem indexadas pelos motores de busca.",
       "Correção interna na data-limite de pagamento da Segurança Social do 1.º trimestre nos testes (o painel já apresentava a data correta).",
     ],
@@ -1459,7 +1459,7 @@ export const CHANGELOG: EntradaChangelog[] = [
     data: "2026-06-22",
     titulo: "Página de investidores redesenhada com demos animados",
     itens: [
-      "Página /investidores completamente redesenhada: design alinhado com a linguagem visual do ReciboCerto (cream, brand green, organic glows, rounded-4xl), animações 3D com tilt interativo nos cartões, e secções de produto, problema, visão, modelo de negócio e vantagens competitivas.",
+      "Página /investidores completamente redesenhada: design alinhado com a linguagem visual do Recibo Certo (cream, brand green, organic glows, rounded-4xl), animações 3D com tilt interativo nos cartões, e secções de produto, problema, visão, modelo de negócio e vantagens competitivas.",
       "Novos mini-simuladores animados em loop na secção «O produto em ação»: recibos verdes, vencimento e empresa preenchem-se automaticamente com contagem animada e resultados em cascata — mostrando a plataforma a funcionar em tempo real.",
     ],
   },

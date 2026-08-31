@@ -12,8 +12,8 @@ import { ArrowRight, ExternalLink, Info } from "@/components/ui/Icons";
 const TOOL = porId("calcular-preco")!;
 
 export const metadata: Metadata = {
-  // Sem «| ReciboCerto»: o `template` do layout raiz já o acrescenta, e
-  // escrevê-lo aqui produzia «… | ReciboCerto | ReciboCerto» no separador.
+  // Sem «| Recibo Certo»: o `template` do layout raiz já o acrescenta, e
+  // escrevê-lo aqui produzia «… | Recibo Certo | Recibo Certo» no separador.
   title: "Calculadora de preço de venda 2026 — quanto cobrar",
   description:
     "Calcula o preço de venda do teu produto ou serviço em Portugal: custo, margem, markup, comissões, IVA por região, Segurança Social e IRS. Com ponto de equilíbrio e simulação de cenários.",
@@ -30,11 +30,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Calculadora de preço de venda 2026 | ReciboCerto",  // openGraph não passa pelo template
+    title: "Calculadora de preço de venda 2026 | Recibo Certo",  // openGraph não passa pelo template
     description:
       "Descobre o teu cenário e constrói o preço connosco: custos, comissões, IVA, Segurança Social e o que te fica mesmo de cada venda.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

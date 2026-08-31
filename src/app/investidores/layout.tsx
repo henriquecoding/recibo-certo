@@ -22,13 +22,13 @@ import type { ReactNode } from "react";
 // `index: true`. Nada mais neste ficheiro precisa de mudar.
 
 export const metadata: Metadata = {
-  title: "Investir no ReciboCerto — a camada de decisão fiscal em Portugal",
+  title: "Investir no Recibo Certo — a camada de decisão fiscal em Portugal",
   description:
-    "O que o ReciboCerto é hoje, para quem, como ganha dinheiro e o que a ronda compra. " +
+    "O que o Recibo Certo é hoje, para quem, como ganha dinheiro e o que a ronda compra. " +
     "Com definição, fonte e data em cada número — e o que ainda não medimos identificado como tal.",
   alternates: { canonical: "/investidores" },
   openGraph: {
-    title: "Investir no ReciboCerto — a camada de decisão fiscal em Portugal",
+    title: "Investir no Recibo Certo — a camada de decisão fiscal em Portugal",
     description:
       "Produto, mercado bottom-up, modelo e riscos, com evidência em cada afirmação.",
     url: "https://www.recibocerto.pt/investidores",

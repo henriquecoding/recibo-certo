@@ -24,7 +24,7 @@ import type { ModeloReceita } from "../tipos";
 /** A proveniência partilhada por todos os intervalos deste ficheiro. */
 const estrutural = (limitacao: string): Proveniencia => ({
   origem: "estimativa",
-  fonte: "Estrutura do modelo de receita (ReciboCerto)",
+  fonte: "Estrutura do modelo de receita (Recibo Certo)",
   limitacao,
 });
 

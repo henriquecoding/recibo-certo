@@ -5148,7 +5148,7 @@ export default function SimuladorIntegrado({
                           tooltip={
                             <>
                               Valor do recibo. Com o toggle "com IVA" ativo, o
-                              ReciboCerto extrai a base pré-IVA; com "sem IVA", o
+                              Recibo Certo extrai a base pré-IVA; com "sem IVA", o
                               IVA acresce por cima. Em ambos os casos calcula IRS,
                               SS e quanto podes gastar.
                             </>

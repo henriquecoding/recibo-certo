@@ -13,11 +13,12 @@
  * que publicar um Gmail — os contactos desapareciam em silêncio, que é
  * exatamente o problema que o relatório quer resolver.
  *
- * O caminho de migração é uma variável de ambiente: no dia em que o domínio
- * receber correio, define-se `INVESTIDORES_EMAIL` e nada mais muda.
+ * Esse dia chegou a 31/08/2026: o domínio passou a receber correio (MX da
+ * Resend, reencaminhado em `/api/email/receber`), e o endereço deixou de ser
+ * um Gmail. `INVESTIDORES_EMAIL` continua a poder sobrepor-se.
  */
 export const EMAIL_INVESTIDORES =
-  process.env.INVESTIDORES_EMAIL || "recibocerto.pt@gmail.com";
+  process.env.INVESTIDORES_EMAIL || "investidores@recibocerto.pt";
 
 /** Prazo assumido publicamente para a primeira resposta humana. */
 export const SLA_RESPOSTA = "até ao próximo dia útil";
@@ -60,7 +61,7 @@ export const NOTA_PRIVACIDADE = {
 /**
  * Frase curta que acompanha o botão. Substitui "Nunca partilhamos informação
  * com terceiros", que era falso: pelo menos a base de dados e o serviço de
- * email tratam os dados em nome do ReciboCerto. O que é verdade — e o que
+ * email tratam os dados em nome do Recibo Certo. O que é verdade — e o que
  * importa a quem escreve — é que não os vendemos.
  */
 export const RESUMO_PRIVACIDADE =

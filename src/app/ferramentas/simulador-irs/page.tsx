@@ -17,7 +17,7 @@ import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 const TOOL = porId("simulador-irs")!;
 
 export const metadata: Metadata = {
-  title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | ReciboCerto",
+  title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | Recibo Certo",
   description:
     "Simula o IRS anual de 2026 em Portugal: trabalho dependente, recibos verdes, pensões, capitais, rendas, mais-valias e estrangeiro. Deduções à coleta, tributação conjunta, escalões e memória de cálculo — guiado, gratuito e com as taxas oficiais.",
   keywords: [
@@ -32,11 +32,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Simulador de IRS 2026 — o teu IRS anual, explicado | ReciboCerto",
+    title: "Simulador de IRS 2026 — o teu IRS anual, explicado | Recibo Certo",
     description:
       "Do rendimento bruto ao reembolso (ou valor a pagar): simula o IRS anual com todas as categorias, deduções e tributação conjunta, com memória de cálculo passo a passo.",
     url: "https://www.recibocerto.pt/ferramentas/simulador-irs",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

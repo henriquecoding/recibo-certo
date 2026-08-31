@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 /**
  * Obrigações do utilizador ligado, tal como a FIZ as reporta.
  *
- * Estes são ESTADOS RECEBIDOS DA FIZ, não estimativas do ReciboCerto — a
+ * Estes são ESTADOS RECEBIDOS DA FIZ, não estimativas do Recibo Certo — a
  * interface tem de os identificar como tal (ponto 9.2 da arquitetura).
  * `atualizadoEm` existe para que nunca se apresente um estado antigo como
  * se fosse atual.

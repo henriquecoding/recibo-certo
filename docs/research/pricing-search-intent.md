@@ -26,7 +26,7 @@ design: é de jurisdição.
 
 ## Matriz
 
-| Intenção / query | Intenção real | Perfil | Dificuldade | Lacuna atual | Funcionalidade ReciboCerto |
+| Intenção / query | Intenção real | Perfil | Dificuldade | Lacuna atual | Funcionalidade Recibo Certo |
 |---|---|---|---|---|---|
 | como calcular preço de venda | «diz-me a fórmula e um exemplo» | comerciante iniciante | média | conteúdo BR | Modo rápido + explicação passo a passo |
 | calculadora preço de venda | quer a ferramenta, não o artigo | qualquer | baixa | existe, básica | `/ferramentas/calcular-preco` |
@@ -44,7 +44,7 @@ design: é de jurisdição.
 | calcular preço de custo | o que conta como custo | todos | média | superficial | Motor de custos com as 4 categorias |
 | desconto quanto posso dar | até onde sem perder | comerciante | alta | inexistente | Motor de desconto com alerta de margem |
 | regras dos saldos / preço anterior | conformidade legal | comerciante | média | jurídico, denso | Aviso da regra dos 30 dias no módulo de promoções |
-| recibos verdes quanto cobrar ao cliente | IVA? retenção? | TI | alta | **só o ReciboCerto pode responder bem** | Ponte com o motor fiscal existente |
+| recibos verdes quanto cobrar ao cliente | IVA? retenção? | TI | alta | **só o Recibo Certo pode responder bem** | Ponte com o motor fiscal existente |
 | isento de IVA posso deduzir | consequência do Art. 53.º | TI / micro | alta | mal explicado | Regra do IVA não dedutível no custo |
 | preço para loja online | canal próprio vs marketplace | e-commerce | média | comercial | Cenários por canal |
 | quanto custa vender uma coisa | soma das taxas | qualquer | média | disperso | Decomposição «a cada venda» |

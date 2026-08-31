@@ -4,7 +4,7 @@ import GuiasIndex from "@/components/guias/GuiasIndex";
 import { Calculator, Briefcase, ChevronRight, ArrowRight } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Guias fiscais e laborais 2026 | ReciboCerto",
+  title: "Guias fiscais e laborais 2026 | Recibo Certo",
   description:
     "Guias práticos sobre IRS, Segurança Social, IVA, IRC e direitos laborais para trabalhadores independentes, por conta de outrem e empresas em Portugal — com base legal e taxas oficiais de 2026.",
   keywords: [
@@ -13,10 +13,10 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "https://www.recibocerto.pt/guias" },
   openGraph: {
-    title: "Guias fiscais e laborais 2026 | ReciboCerto",
+    title: "Guias fiscais e laborais 2026 | Recibo Certo",
     description: "Independentes, conta de outrem e empresas — tudo explicado em português simples, com base legal.",
     url: "https://www.recibocerto.pt/guias",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "website",
   },

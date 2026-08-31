@@ -45,7 +45,7 @@ import { bindingsDoGuia } from "./dados-motor";
 
 /** Data em que o pacote foi gerado e as fontes verificadas. */
 export const DATA_EXPANSAO = "2026-08-06";
-const EQUIPA = "Equipa editorial ReciboCerto";
+const EQUIPA = "Equipa editorial Recibo Certo";
 /** 102 dos 112 guias trazem matéria que depende do caso concreto. Nascem
     com revisor por atribuir — e o rodapé diz isso ao leitor, em vez de
     deixar supor que um contabilista já assinou por baixo. */

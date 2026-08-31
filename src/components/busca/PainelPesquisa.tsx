@@ -200,7 +200,7 @@ export default function PainelPesquisa({
         data-busca-painel="aberto"
         data-variante={variante}
         role="search"
-        aria-label="Pesquisa no ReciboCerto"
+        aria-label="Pesquisa no Recibo Certo"
         className={`flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5 ${
           movel ? "rc-dock-painel-movel" : "rc-dock-painel"
         }`}

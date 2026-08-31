@@ -3,7 +3,7 @@
   "version": "0.1.0-draft.0",
   "private": true,
   "type": "module",
-  "description": "Núcleo versionado de regras fiscais portuguesas do ReciboCerto.",
+  "description": "Núcleo versionado de regras fiscais portuguesas do Recibo Certo.",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run tests"

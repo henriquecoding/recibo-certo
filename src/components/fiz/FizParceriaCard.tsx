@@ -107,7 +107,7 @@ export default function FizParceriaCard({ className = "" }: { className?: string
                         passo.nosso ? "text-brand-dark" : "text-fiz-700"
                       }`}
                     >
-                      {passo.nosso ? "ReciboCerto" : "FIZ"}
+                      {passo.nosso ? "Recibo Certo" : "FIZ"}
                     </span>
                   </span>
                   <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
@@ -195,7 +195,7 @@ export default function FizParceriaCard({ className = "" }: { className?: string
         </div>
         <FizDisclosure texto={DIVULGACAO_LIGACAO} className="mt-3 max-w-2xl" />
         <p className="mt-2 max-w-2xl text-[11px] leading-relaxed text-stone-500 dark:text-stone-400">
-          A FIZ é um parceiro independente. O ReciboCerto mantém liberdade editorial sobre o que
+          A FIZ é um parceiro independente. O Recibo Certo mantém liberdade editorial sobre o que
           escreve.
         </p>
       </div>

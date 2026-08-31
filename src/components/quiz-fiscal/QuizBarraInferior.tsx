@@ -93,7 +93,7 @@ export default function QuizBarraInferior({ acertos, tempo, pontos, erros, onCon
         {/* Header: logótipo · nível · histórico · configurações */}
         <nav className="flex items-center gap-2 border-t border-stone-200 bg-white px-3 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 dark:border-stone-800 dark:bg-stone-900" aria-label="Navegação do quiz">
           {/* Logótipo → home (maior) */}
-          <Link href="/" aria-label="Início — ReciboCerto" className="flex h-12 items-center justify-center rounded-xl px-1.5 text-brand transition-colors hover:bg-brand/10">
+          <Link href="/" aria-label="Início — Recibo Certo" className="flex h-12 items-center justify-center rounded-xl px-1.5 text-brand transition-colors hover:bg-brand/10">
             <LogoMark size={36} />
           </Link>
 

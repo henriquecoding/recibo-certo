@@ -13,7 +13,7 @@
 //      resultado, para explicar discrepâncias.
 //   5. Nada disto pode transportar dados fiscais pessoais.
 //
-//  Porque é que o first touch importa: alguém descobre o ReciboCerto num
+//  Porque é que o first touch importa: alguém descobre o Recibo Certo num
 //  vídeo em setembro, volta em janeiro por pesquisa direta e subscreve em
 //  abril. Sem first touch, o vídeo nunca recebe crédito nenhum e o
 //  relatório conclui que o YouTube não funciona. É exatamente a conclusão

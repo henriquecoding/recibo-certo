@@ -48,7 +48,7 @@ export default function AvatarContabilista({
 
   if (disponivel) {
     return (
-      // O browser fala apenas com o proxy do ReciboCerto. A URL assinada do
+      // O browser fala apenas com o proxy do Recibo Certo. A URL assinada do
       // LinkedIn serve para decidir se ainda vale a pena pedir a fotografia;
       // nunca é exposta como `src` nem hotlinked diretamente.
       // eslint-disable-next-line @next/next/no-img-element

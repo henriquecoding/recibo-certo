@@ -17,7 +17,7 @@ por esta ordem, a quatro perguntas diferentes:
 2. **Há um sinal atual?** Observações externas, oficiais ou transacionais,
    datadas e geograficamente compatíveis.
 3. **As contas aguentam?** Preço, margem, capacidade e ponto de equilíbrio
-   calculados nos motores canónicos do ReciboCerto.
+   calculados nos motores canónicos do Recibo Certo.
 4. **Alguém pagou?** Entrevista não basta: orçamento aceite, pré-venda, piloto
    pago e repetição promovem a hipótese por estados distintos.
 

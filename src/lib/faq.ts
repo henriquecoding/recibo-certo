@@ -17,8 +17,8 @@ export const faqs: FaqItem[] = [
   // ── Geral (aplica-se a qualquer perfil) ──────────────────────────────
   {
     categoria: "Geral",
-    q: "O ReciboCerto emite os meus recibos ou processa o meu salário?",
-    a: "Não. A emissão de recibos verdes faz-se gratuitamente no Portal das Finanças e o teu salário é processado pela entidade empregadora. O ReciboCerto é o teu copiloto financeiro: calcula ao cêntimo quanto é teu, quanto reservar para impostos e Segurança Social, e avisa-te dos prazos para não pagares coimas.",
+    q: "O Recibo Certo emite os meus recibos ou processa o meu salário?",
+    a: "Não. A emissão de recibos verdes faz-se gratuitamente no Portal das Finanças e o teu salário é processado pela entidade empregadora. O Recibo Certo é o teu copiloto financeiro: calcula ao cêntimo quanto é teu, quanto reservar para impostos e Segurança Social, e avisa-te dos prazos para não pagares coimas.",
   },
   {
     categoria: "Geral",
@@ -55,7 +55,7 @@ export const faqs: FaqItem[] = [
   {
     categoria: "Recibos Verdes",
     q: "Tenho de entregar declarações trimestrais à Segurança Social?",
-    a: "Sim, em janeiro, abril, julho e outubro. O incumprimento destes prazos pode gerar coimas. O ReciboCerto avisa-te com antecedência.",
+    a: "Sim, em janeiro, abril, julho e outubro. O incumprimento destes prazos pode gerar coimas. O Recibo Certo avisa-te com antecedência.",
   },
   {
     categoria: "Recibos Verdes",
@@ -87,7 +87,7 @@ export const faqs: FaqItem[] = [
   {
     categoria: "Contratos de Trabalho",
     q: "Como se calcula o meu salário líquido?",
-    a: "Ao salário bruto descontam-se 11% para a Segurança Social e a retenção na fonte de IRS (segundo a tabela da tua situação familiar). Soma-se depois o subsídio de refeição, isento até aos limites legais. O ReciboCerto mostra cada parcela e o líquido final com as tabelas oficiais de 2026.",
+    a: "Ao salário bruto descontam-se 11% para a Segurança Social e a retenção na fonte de IRS (segundo a tabela da tua situação familiar). Soma-se depois o subsídio de refeição, isento até aos limites legais. O Recibo Certo mostra cada parcela e o líquido final com as tabelas oficiais de 2026.",
   },
   {
     categoria: "Contratos de Trabalho",
@@ -107,12 +107,12 @@ export const faqs: FaqItem[] = [
   {
     categoria: "Contratos de Trabalho",
     q: "A minha situação familiar muda a retenção de IRS?",
-    a: "Sim. Existem tabelas de retenção diferentes consoante sejas casado ou não, o número de titulares de rendimentos, os dependentes e situações de deficiência. O ReciboCerto seleciona automaticamente a tabela certa e aplica a parcela a abater por cada dependente.",
+    a: "Sim. Existem tabelas de retenção diferentes consoante sejas casado ou não, o número de titulares de rendimentos, os dependentes e situações de deficiência. O Recibo Certo seleciona automaticamente a tabela certa e aplica a parcela a abater por cada dependente.",
   },
   {
     categoria: "Contratos de Trabalho",
     q: "Quanto custa o meu salário à entidade empregadora?",
-    a: "Além do salário bruto, a entidade paga a Taxa Social Única (TSU) de 23,75% sobre a remuneração (22,3% nas IPSS e entidades sem fins lucrativos). O ReciboCerto mostra-te o custo total para a empresa — útil para enquadrares uma negociação salarial.",
+    a: "Além do salário bruto, a entidade paga a Taxa Social Única (TSU) de 23,75% sobre a remuneração (22,3% nas IPSS e entidades sem fins lucrativos). O Recibo Certo mostra-te o custo total para a empresa — útil para enquadrares uma negociação salarial.",
   },
 ];
 
