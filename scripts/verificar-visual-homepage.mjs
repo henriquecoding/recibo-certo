@@ -217,7 +217,7 @@ async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
       } catch {}
     },
     {
-      appVersion: pacote.version,
+      appVersion: VERSAO_SERVIDA,
       consentVersion: consentimento,
       escuro: tema === "escuro",
     },
@@ -421,8 +421,47 @@ async function comparar(nome, atual) {
   };
 }
 
+/* ┌────────────────────────────────────────────────────────────────────────┐
+   │ A VERSÃO TEM DE SER A DO SERVIDOR QUE SE ESTÁ A FOTOGRAFAR             │
+   │                                                                        │
+   │ O popup de Novidades abre quando `changelog_visto` difere de           │
+   │ `APP_VERSION`. Este script silenciava-o escrevendo a versão do         │
+   │ package.json do WORKTREE — e o workflow corre as duas passagens a      │
+   │ partir do mesmo worktree: a referência é servida por um build antigo   │
+   │ noutra porta, com outra `APP_VERSION`. Resultado: a referência ficava  │
+   │ fotografada COM o modal por cima e a atual sem ele. Uma diferença de   │
+   │ 5 a 10 % em todas as rotas, incluindo as que ninguém tinha tocado —    │
+   │ e intermitente, porque o modal abre por temporizador e nem sempre      │
+   │ chegava a pintar antes da captura.                                     │
+   │                                                                        │
+   │ A versão passa a vir do próprio servidor, que a publica em             │
+   │ `/novidades/indice.json`. Se não vier, cai no package.json — mas com   │
+   │ aviso, porque é aí que o portão volta a poder mentir.                  │
+   └────────────────────────────────────────────────────────────────────────┘ */
+async function versaoDoServidor() {
+  try {
+    const resposta = await fetch(`${BASE}/novidades/indice.json`);
+    if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+    const indice = await resposta.json();
+    if (typeof indice.appVersion === "string" && indice.appVersion.length > 0) {
+      return indice.appVersion;
+    }
+    throw new Error("sem appVersion");
+  } catch (erro) {
+    console.warn(
+      `[visual] AVISO: não consegui ler a versão de ${BASE} (${erro.message}); ` +
+        `uso a do package.json (${pacote.version}). Se o servidor for outro build, ` +
+        "o popup de Novidades entra nas capturas.",
+    );
+    return pacote.version;
+  }
+}
+
 if (!ATUALIZAR) await exigirImageMagick();
 await mkdir(ATUALIZAR ? BASELINES : SAIDA, { recursive: true });
+
+const VERSAO_SERVIDA = await versaoDoServidor();
+console.log(`[visual] ${BASE} anuncia a versão ${VERSAO_SERVIDA}.`);
 
 const navegador = await chromium.launch();
 const versaoChromium = navegador.version();
@@ -461,7 +500,7 @@ if (ATUALIZAR) {
   const metadata = {
     schemaVersion: 1,
     baseUrl: BASE,
-    appVersion: pacote.version,
+    appVersion: VERSAO_SERVIDA,
     chromium: versaoChromium,
     capturas: capturas.map(({ nome }) => nome),
   };

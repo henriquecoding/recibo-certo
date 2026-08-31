@@ -294,7 +294,44 @@ async function calcular(page) {
   }
 }
 
-// ─── 6. Guardar e reabrir ─────────────────────────────────────────────────
+// ─── 6. Contraste em todos os estados da decisão ──────────────────────────
+//
+// O axe corre acima com `color-contrast` desligado, e foi assim que nove
+// textos do cabeçalho incompleto e três por cada mês inativo do calendário
+// passaram despercebidos: estavam entre 2,45 e 4,49 porque o cartão levava
+// `opacity`, que dilui a tinta contra o papel. Aqui a regra é ligada de
+// propósito, nos dois temas e nos dois estados que mudam de paleta.
+{
+  console.log("\n▸ Planeador · contraste do resultado · 390 px");
+  for (const tema of ["light", "dark"]) {
+    for (const cenario of ["incompleto", "estimado"]) {
+      const { context, page } = await novaPagina({ width: 390, height: 844, colorScheme: tema });
+      try {
+        await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+        await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+        if (cenario === "estimado") await preencherSeguro(page);
+        await calcular(page);
+        let violacoes = 0;
+        for (const aba of [
+          "Os três dinheiros",
+          "Composição do custo",
+          "Calendário e caixa",
+          "Viabilidade",
+          "Memória de cálculo",
+        ]) {
+          await page.getByRole("tab", { name: aba }).click();
+          const relatorio = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+          violacoes += relatorio.violations.reduce((total, item) => total + item.nodes.length, 0);
+        }
+        verificar(violacoes === 0, `contraste em ${tema}/${cenario}`, `${violacoes} nós abaixo de 4,5:1`);
+      } finally {
+        await context.close();
+      }
+    }
+  }
+}
+
+// ─── 7. Guardar e reabrir ─────────────────────────────────────────────────
 {
   console.log("\n▸ Planeador · guardar e reabrir · 360 px");
   const { context, page, erros } = await novaPagina({ width: 360, height: 800 });
