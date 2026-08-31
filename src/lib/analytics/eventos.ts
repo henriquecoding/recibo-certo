@@ -102,10 +102,16 @@ export type NomeEvento =
   | "hiring_planner_started"
   | "hiring_goal_selected"
   | "hiring_result_viewed"
+  | "hiring_calculation_started"
+  | "hiring_calculation_completed"
+  | "hiring_result_incomplete"
+  | "hiring_blocking_fact_resolved"
   | "hiring_range_explained"
   | "hiring_scenario_saved"
+  | "hiring_scenario_reopened"
   | "hiring_comparison_created"
   | "hiring_offer_exported"
+  | "hiring_export_generated"
   | "hiring_support_opened"
   | "hiring_share_created"
   | "hiring_share_revoked";
@@ -299,12 +305,27 @@ export interface PayloadsEvento {
     certainty: CertezaContratacao;
     completion_step: string;
   };
+  hiring_calculation_started: ContextoContratacao & { goal: ObjetivoContratacao };
+  hiring_calculation_completed: ContextoContratacao & {
+    goal: ObjetivoContratacao;
+    readiness: ProntidaoContratacao;
+    projection: ProjecaoContratacao;
+    completion_step: string;
+  };
+  hiring_result_incomplete: ContextoContratacao & { blocking_count: number };
+  hiring_blocking_fact_resolved: ContextoContratacao & { fact_id: string };
   hiring_range_explained: ContextoContratacao & { certainty: "range" };
   hiring_scenario_saved: ContextoContratacao & {
     saved_destination: "dispositivo" | "nuvem";
+    readiness: ProntidaoContratacao;
   };
+  hiring_scenario_reopened: ContextoContratacao;
   hiring_comparison_created: ContextoContratacao & { goal: ObjetivoContratacao };
   hiring_offer_exported: ContextoContratacao & { export_format: "pdf" };
+  hiring_export_generated: ContextoContratacao & {
+    export_format: "pdf";
+    readiness: ProntidaoContratacao;
+  };
   hiring_support_opened: ContextoContratacao & { support_id: string };
   hiring_share_created: ContextoContratacao;
   hiring_share_revoked: ContextoContratacao;
@@ -334,6 +355,13 @@ export type ObjetivoContratacao =
   | "known_offer"
   | "required_capacity";
 export type CertezaContratacao = "exact" | "range";
+/** Nível de confiança da decisão patronal. Nunca acompanha valores pessoais. */
+export type ProntidaoContratacao =
+  | "incomplete"
+  | "estimated"
+  | "personalized"
+  | "validated";
+export type ProjecaoContratacao = "personalized_projection" | "reference_scenarios";
 
 export interface ContextoContratacao {
   device: ClasseViewport;
@@ -578,6 +606,26 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
     serve: "Conclusão por objetivo e nível de certeza.",
     origem: "cliente",
   },
+  hiring_calculation_started: {
+    disparo: "A pessoa pede o cálculo da contratação.",
+    serve: "Denominador do funil: quantas revisões chegam a pedir conta.",
+    origem: "cliente",
+  },
+  hiring_calculation_completed: {
+    disparo: "O motor devolve um resultado para o objetivo escolhido.",
+    serve: "Funil separado por incompleto, estimado, personalizado e validado.",
+    origem: "cliente",
+  },
+  hiring_result_incomplete: {
+    disparo: "O resultado sai com custos obrigatórios por confirmar.",
+    serve: "Quantas decisões param por falta de dados — e em quantos pontos.",
+    origem: "cliente",
+  },
+  hiring_blocking_fact_resolved: {
+    disparo: "Um custo obrigatório deixa de estar por preencher.",
+    serve: "Se a interface consegue mesmo desbloquear a decisão.",
+    origem: "cliente",
+  },
   hiring_range_explained: {
     disparo: "Um resultado sem dados pessoais explica o intervalo.",
     serve: "Quantas decisões preservam privacidade em vez de pedir dados do candidato.",
@@ -588,6 +636,11 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
     serve: "Memória criada no dispositivo ou na conta.",
     origem: "cliente",
   },
+  hiring_scenario_reopened: {
+    disparo: "Um cenário guardado é reidratado no planeador.",
+    serve: "Continuidade real: quantas decisões voltam a ser abertas.",
+    origem: "cliente",
+  },
   hiring_comparison_created: {
     disparo: "Dois pacotes calculados passam a ser comparados.",
     serve: "Utilização da comparação antes de emitir proposta.",
@@ -596,6 +649,11 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   hiring_offer_exported: {
     disparo: "A pessoa pede a versão PDF da proposta.",
     serve: "Handoff do cálculo para uma decisão externa.",
+    origem: "cliente",
+  },
+  hiring_export_generated: {
+    disparo: "Um documento do planeador é gerado, com o nível de confiança do cenário.",
+    serve: "Saber quantos documentos saem de cenários ainda incompletos.",
     origem: "cliente",
   },
   hiring_support_opened: {

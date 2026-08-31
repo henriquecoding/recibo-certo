@@ -42,6 +42,7 @@ import {
 } from "@/lib/store/persistencia";
 import { chaveAtiva } from "./cofre";
 import { destinoDosDados, aindaSemDestino } from "./persistencia";
+import { marcarReaberturaDe } from "@/lib/store/reabertura";
 
 export type TipoCenario = "recibos" | "vencimento" | "contratacao" | "empresa" | "irs" | "herancas" | "negocio";
 
@@ -55,7 +56,10 @@ export type TipoCenario = "recibos" | "vencimento" | "contratacao" | "empresa" |
 export const META_TIPO_CENARIO: Record<TipoCenario, { label: string; sub: string; rota: string; icone: string }> = {
   recibos: { label: "Recibos verdes", sub: "Trabalho independente", rota: "/dashboard/recibos-verdes", icone: "Invoice" },
   vencimento: { label: "Recibo de vencimento", sub: "Trabalho por conta de outrem", rota: "/dashboard/recibo-vencimento", icone: "Wallet" },
-  contratacao: { label: "Contratação", sub: "Custo, pacote e capacidade do posto", rota: "/dashboard/cenarios", icone: "Briefcase" },
+  // A rota apontava para a própria página de gestão: abrir um cenário de
+  // contratação devolvia a pessoa à lista de onde tinha vindo, em vez de a
+  // levar ao planeador que sabe reidratá-lo (relatório, CON-P0-22).
+  contratacao: { label: "Contratação", sub: "Custo, pacote e capacidade do posto", rota: "/dashboard/contratacao", icone: "Briefcase" },
   empresa: { label: "Abrir empresa", sub: "Sociedade / unipessoal", rota: "/dashboard/empresa", icone: "Building" },
   irs: { label: "Simulador de IRS", sub: "Declaração anual", rota: "/dashboard/simulador", icone: "Calculator" },
   herancas: { label: "Heranças e sucessões", sub: "Partilha e Imposto do Selo", rota: "/dashboard/herancas", icone: "Scale" },
@@ -399,26 +403,12 @@ export function useCenarios() {
 }
 
 // ─── Handoff de reabertura (gestão → simulador) ─────────────────────────
-// A página de gestão escreve o instantâneo aqui e navega para o simulador;
-// o simulador lê na montagem, hidrata o estado e limpa a chave.
-const PENDENTE_KEY = (tipo: TipoCenario) => `recibocerto:cenario-pendente:${tipo}`;
+// A página de gestão escreve o instantâneo e navega para o simulador; o
+// simulador lê na montagem, hidrata o estado e limpa a chave. O mecanismo
+// mudou-se para `store/reabertura.ts` para que um simulador o possa consumir
+// sem arrastar Supabase e Stripe para o seu chunk inicial — ver a nota lá.
+export { consumirReabertura, haReabertura } from "@/lib/store/reabertura";
 
 export function marcarReabertura(c: Cenario): void {
-  gravarChave(PENDENTE_KEY(c.tipo), JSON.stringify({ ...c.dados, __versao: c.versao }));
-}
-
-export function consumirReabertura(tipo: TipoCenario): Record<string, unknown> | null {
-  const raw = lerChave(PENDENTE_KEY(tipo));
-  if (!raw) return null;
-  removerChave(PENDENTE_KEY(tipo));
-  try {
-    return JSON.parse(raw) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
-}
-
-/** Peek não-destrutivo: há um cenário marcado para reabrir deste tipo? */
-export function haReabertura(tipo: TipoCenario): boolean {
-  return lerChave(PENDENTE_KEY(tipo)) !== null;
+  marcarReaberturaDe(c.tipo, c.dados, c.versao);
 }

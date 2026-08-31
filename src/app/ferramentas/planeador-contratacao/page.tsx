@@ -35,7 +35,7 @@ export default function PlaneadorContratacaoPage() {
         <section className="grid gap-4 sm:grid-cols-3">
           {[
             ["Custo não é salário", "A empresa vê remuneração, TSU patronal e custos do posto em parcelas separadas."],
-            ["Líquido sem adivinhação", "Sem autorização do candidato, o resultado é um intervalo — nunca um falso valor exato."],
+            ["Desconhecido não é zero", "Um custo obrigatório por preencher impede a conclusão em vez de entrar no total como se fosse zero."],
             ["Apoio não é desconto", "Medidas do IEFP são apenas triadas e nunca abatidas automaticamente ao custo."],
           ].map(([title, text]) => (
             <article key={title} className="rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
