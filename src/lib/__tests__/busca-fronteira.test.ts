@@ -242,3 +242,53 @@ describe("busca:pedido-inicial", () => {
     expect(MENU).not.toMatch(/useEffect\(\(\)\s*=>\s*\{\s*aoFechar\(\);?\s*\}\s*,\s*\[pathname\]\)/);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  O PAINEL TRAZ O MOTOR DE ANIMAÇÃO CONSIGO
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ O DEFEITO: A PESQUISA ABRIA TRANSPARENTE                             │
+//  │                                                                     │
+//  │ O painel entra com `m.div initial={{opacity:0}} animate={{opacity:1}}│
+//  │ `. Um `m.*` sem `LazyMotion` por cima renderiza e NUNCA aplica o     │
+//  │ `animate`: fica parado no `initial`. O `MotionProvider` vivia no     │
+//  │ layout de raiz e saiu de lá quando os overlays passaram a carregar   │
+//  │ por intenção; cada superfície de `IntentOverlays` recebeu o seu, as  │
+//  │ rotas com layout próprio também, e este painel — que vive no CHROME  │
+//  │ e não pertence a nenhum dos dois — ficou sem nenhum.                 │
+//  │                                                                     │
+//  │ Durante semanas a pesquisa abriu com 1370×330 px de resultados       │
+//  │ certos, foco no campo, teclado a responder, e opacidade ZERO.        │
+//  │                                                                     │
+//  │ Este teste é o aviso rápido; quem mede a verdade é o `visivel:e2e`,  │
+//  │ que lê a opacidade computada num browser — porque `isVisible()` do   │
+//  │ Playwright e o axe dão `opacity: 0` como visível, e foi por isso que │
+//  │ trinta verificações sobre este painel passaram verdes por cima dele. │
+//  └─────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("busca:painel-visivel", () => {
+  const PAINEL = readFileSync(join(SRC, "components", "busca", "PainelPesquisa.tsx"), "utf8");
+
+  it("o painel monta o seu próprio MotionProvider", () => {
+    expect(PAINEL).toContain('import MotionProvider from "@/components/ui/motion/MotionProvider"');
+    expect(PAINEL).toMatch(/<MotionProvider>\s*<PainelPesquisaInterno/);
+  });
+
+  it("e o provider fica FORA do componente que anima", () => {
+    // Se o provider ficasse dentro, o `m.div` continuaria sem features: o
+    // que importa é ele envolver quem anima, não estar no ficheiro.
+    const posProvider = PAINEL.indexOf("<MotionProvider>");
+    const posAnima = PAINEL.indexOf("initial={{ opacity: 0 }}");
+    expect(posProvider).toBeGreaterThan(-1);
+    expect(posAnima).toBeGreaterThan(posProvider);
+  });
+
+  it("quem anima continua a declarar a entrada", () => {
+    // Guarda contra a «correção» tentadora: tirar a animação em vez de lhe
+    // dar o motor. Sem `initial` o defeito desaparecia por acidente, e a
+    // próxima superfície animada voltaria a apanhá-lo.
+    expect(PAINEL).toContain("initial={{ opacity: 0 }}");
+    expect(PAINEL).toContain("animate={{ opacity: 1 }}");
+  });
+});

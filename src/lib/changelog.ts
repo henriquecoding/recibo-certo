@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.141.0",
+    data: "2026-08-31",
+    titulo: "A pesquisa abria transparente — estava lá, com os resultados certos, e ninguém a via",
+    itens: [
+      "Carregar na barra de pesquisa não fazia nada. O painel abria: ocupava 1370×330 px, tinha o campo com o cursor lá dentro, tinha os oito resultados certos, o teclado respondia. Só que abria com opacidade zero — completamente transparente. Do lado de quem usa o site isso é indistinguível de uma barra avariada, e é o que estava a acontecer em todas as rotas do site menos uma.",
+      "A causa: o painel entra com uma animação de aparecimento, e uma animação dessas só corre se houver um motor de animação montado por cima dela. Esse motor vivia na raiz do site e saiu de lá quando as janelas passaram a ser carregadas só quando alguém as pede. Cada uma delas recebeu o seu motor, e as secções com desenho próprio também — o painel da pesquisa não é nem uma coisa nem outra (vive na barra do topo) e ficou sem nenhum. Sem motor, a animação nunca arranca e o painel fica onde começou: invisível.",
+      "O painel passa a trazer o motor consigo. Uma superfície nova que o monte não tem de se lembrar de nada, e deixa de haver forma de a pesquisa existir sem aquilo que a torna visível.",
+      "E passa a haver uma verificação que mede o que o olho mede. Nenhum dos portões apanhou isto: o que verifica a interação pergunta «este elemento tem tamanho e não está escondido?» — e um elemento transparente responde que sim; o que verifica a acessibilidade mede contraste entre cores, e um elemento transparente não tem cores para comparar. Trinta verificações sobre este painel passaram verdes por cima dele. A nova lê a opacidade real de cada superfície que abre — a pesquisa nas nove famílias de página, no telemóvel, a folha do menu e o aviso de cookies.",
+    ],
+  },
+  {
     version: "2.140.0",
     data: "2026-08-31",
     titulo: "A pesquisa deixa de ficar muda — e o que a calava passa a ser medido",
