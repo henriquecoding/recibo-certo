@@ -5,31 +5,13 @@ import {
   planEmploymentOffer,
   ratePpm,
   solveBaseSalaryForEmployerBudget,
-  type EmploymentOfferInput,
-  type WithholdingResolver,
 } from "../src";
+import { offerInput, withholding8 } from "./employment-offer-fixtures";
 
-const withholding: WithholdingResolver = (request) => ({
-  amount: eurCents(Math.round(request.taxableAmount.cents * 0.08)),
-  effectiveRate: ratePpm(80_000),
-  trace: [],
-});
+const plan = (input: Parameters<typeof planEmploymentOffer>[0]) =>
+  planEmploymentOffer(input, PORTUGAL_PAYROLL_POLICY_2026, withholding8);
 
-const common: Omit<EmploymentOfferInput, "goal" | "employer" | "package"> = {
-  period: "2026-08",
-  policyDate: "2026-08-30",
-  role: {
-    startMonth: 1,
-    weeklyHoursHundredths: 4_000,
-    jurisdiction: "PT-CONTINENTE",
-    productive: false,
-  },
-  postCosts: {
-    accidentInsuranceAnnual: eurCents(350_00),
-    healthAndSafetyAnnual: eurCents(150_00),
-    trainingAnnual: eurCents(250_00),
-  },
-};
+const naoProdutivo = { productive: false, productiveShare: undefined } as const;
 
 describe("inversos do planeador", () => {
   it("encontra o maior valor conservador dentro de um orçamento", () => {
@@ -45,36 +27,99 @@ describe("inversos do planeador", () => {
   });
 
   it("resolve orçamento anual pelo custo completo, com margem reservada", () => {
-    const prepared = planEmploymentOffer({
-      ...common,
+    const prepared = plan(offerInput({
       goal: "employer_budget",
       employer: { annualBudget: eurCents(4_000_000), safetyMargin: ratePpm(50_000) },
-      package: { baseSalaryMonthly: eurCents(0), subsidyPayment: "normal" },
-    }, PORTUGAL_PAYROLL_POLICY_2026, withholding);
+      package: { baseSalaryMonthly: eurCents(0) },
+      role: naoProdutivo,
+      capacity: undefined,
+    }));
     expect(prepared.kind).toBe("ready");
     if (prepared.kind !== "ready") return;
     expect(prepared.result.resolvedBaseSalaryMonthly.cents).toBeGreaterThan(0);
     expect(prepared.result.employerCost.annualStabilized.cents).toBeLessThanOrEqual(3_800_000);
-    expect(prepared.result.employerCost.budgetHeadroom?.cents).toBeGreaterThanOrEqual(200_000);
+    expect(prepared.result.employerCost.budgetHeadroom?.cents).toBeGreaterThanOrEqual(0);
+  });
+
+  it("INVARIANTE: o custo resolvido nunca ultrapassa o orçamento efetivo", () => {
+    for (const orcamento of [3_000_000, 4_200_000, 6_000_000]) {
+      const prepared = plan(offerInput({
+        goal: "employer_budget",
+        employer: { annualBudget: eurCents(orcamento), safetyMargin: ratePpm(50_000) },
+        package: { baseSalaryMonthly: eurCents(0) },
+        role: naoProdutivo,
+        capacity: undefined,
+      }));
+      if (prepared.kind !== "ready") continue;
+      const { annualStabilized, effectiveBudget } = prepared.result.employerCost;
+      expect(effectiveBudget!.cents).toBeLessThanOrEqual(orcamento);
+      expect(annualStabilized.cents).toBeLessThanOrEqual(effectiveBudget!.cents);
+    }
+  });
+
+  it("INVARIANTE: aumentar o orçamento nunca reduz a base", () => {
+    const bases = [3_600_000, 4_200_000, 4_800_000].map((orcamento) => {
+      const prepared = plan(offerInput({
+        goal: "employer_budget",
+        employer: { annualBudget: eurCents(orcamento) },
+        package: { baseSalaryMonthly: eurCents(0) },
+        role: naoProdutivo,
+        capacity: undefined,
+      }));
+      return prepared.kind === "ready" ? prepared.result.resolvedBaseSalaryMonthly.cents : 0;
+    });
+    expect(bases[1]!).toBeGreaterThanOrEqual(bases[0]!);
+    expect(bases[2]!).toBeGreaterThanOrEqual(bases[1]!);
+  });
+
+  it("INVARIANTE: aumentar um custo recorrente nunca aumenta a base", () => {
+    const semExtra = plan(offerInput({
+      goal: "employer_budget",
+      employer: { annualBudget: eurCents(4_200_000) },
+      package: { baseSalaryMonthly: eurCents(0) },
+      role: naoProdutivo,
+      capacity: undefined,
+    }));
+    const comExtra = plan(offerInput({
+      goal: "employer_budget",
+      employer: { annualBudget: eurCents(4_200_000) },
+      package: { baseSalaryMonthly: eurCents(0) },
+      postCosts: { software: { kind: "confirmed", amount: eurCents(120_000) } },
+      role: naoProdutivo,
+      capacity: undefined,
+    }));
+    if (semExtra.kind !== "ready" || comExtra.kind !== "ready") throw new Error("esperava resultados");
+    expect(comExtra.result.resolvedBaseSalaryMonthly.cents)
+      .toBeLessThanOrEqual(semExtra.result.resolvedBaseSalaryMonthly.cents);
+  });
+
+  it("INVARIANTE: aumentar a margem reservada nunca aumenta a base", () => {
+    const bases = [0, 50_000, 150_000].map((margem) => {
+      const prepared = plan(offerInput({
+        goal: "employer_budget",
+        employer: { annualBudget: eurCents(4_200_000), safetyMargin: ratePpm(margem) },
+        package: { baseSalaryMonthly: eurCents(0) },
+        role: naoProdutivo,
+        capacity: undefined,
+      }));
+      return prepared.kind === "ready" ? prepared.result.resolvedBaseSalaryMonthly.cents : 0;
+    });
+    expect(bases[1]!).toBeLessThanOrEqual(bases[0]!);
+    expect(bases[2]!).toBeLessThanOrEqual(bases[1]!);
   });
 
   it("resolve líquido alvo e volta a validar o payroll", () => {
-    const prepared = planEmploymentOffer({
-      ...common,
+    const prepared = plan(offerInput({
       goal: "target_net",
-      employer: {},
       targetNetMonthly: eurCents(150_000),
-      package: { baseSalaryMonthly: eurCents(0), subsidyPayment: "normal" },
-      candidate: {
-        dependants: 0,
-        maritalStatus: "not_married",
-        disability: false,
-        jurisdiction: "PT-CONTINENTE",
-        authorizationConfirmed: true,
-      },
-    }, PORTUGAL_PAYROLL_POLICY_2026, withholding);
+      package: { baseSalaryMonthly: eurCents(0) },
+      role: naoProdutivo,
+      capacity: undefined,
+    }));
     expect(prepared.kind).toBe("ready");
-    if (prepared.kind !== "ready" || prepared.result.workerOutcome.kind !== "exact") return;
-    expect(prepared.result.workerOutcome.monthlyReference.cents).toBeGreaterThanOrEqual(149_999);
+    if (prepared.kind !== "ready") return;
+    const worker = prepared.result.workerOutcome;
+    if (worker.kind !== "personalized_projection") throw new Error("esperava projeção personalizada");
+    expect(worker.monthlyReference.cents).toBeGreaterThanOrEqual(149_999);
   });
 });

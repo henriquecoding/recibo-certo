@@ -5,6 +5,14 @@ import type {
   PayrollResult,
   RoutedBenefitKind,
 } from "../payroll/types";
+import type { CapacityResult } from "./capacity";
+import type { CashCalendarMonth } from "./calendar";
+import type {
+  CostKnowledge,
+  CostSummary,
+  EmploymentDecisionStatus,
+} from "./completeness";
+import type { WorkCalendarResult } from "./work-calendar";
 
 export type PlannerGoal =
   | "employer_budget"
@@ -12,34 +20,83 @@ export type PlannerGoal =
   | "known_offer"
   | "required_capacity";
 
-export type ResultCertainty = "exact" | "range" | "needs_input" | "unsupported";
+/**
+ * Nível da projeção do líquido. Deixou de haver «exact»: um conjunto
+ * incompleto de factos fiscais nunca produz um valor exato, produz uma
+ * projeção personalizada (relatório, CON-P0-17).
+ */
+export type ProjectionLevel = "personalized_projection" | "reference_scenarios";
 
 export type SubsidyPayment = "normal" | "duodecimos";
+
+/**
+ * Enquadramento contributivo da entidade. A taxa nunca é inferida pelo nome:
+ * ou o regime é declarado e suportado, ou o motor recusa em vez de
+ * aproximar (relatório, CON-P0-08).
+ */
+export type EmployerContributionRegime = "regime_geral" | "outro" | "nao_sei";
+
+/**
+ * Regime de tempo de trabalho. Os limites são os do Código do Trabalho:
+ * 8 h/dia e 40 h/semana no regime normal (artigo 203.º, n.º 1); 10 h e 50 h na
+ * adaptabilidade individual (artigo 205.º); 12 h e 60 h na adaptabilidade por
+ * regulamentação coletiva (artigo 204.º, n.º 1).
+ */
+export type WorkingTimeRegime =
+  | "standard"
+  | "adaptability_individual"
+  | "adaptability_collective";
+
+export interface WorkingTimeLimits {
+  dailyHoursHundredths: number;
+  weeklyHoursHundredths: number;
+  citation: string;
+}
 
 export interface EmployerFacts {
   /** Orçamento anual máximo, já com todos os custos do posto. */
   annualBudget?: Money;
   /** Parte do orçamento que fica intocável. Zero por omissão. */
   safetyMargin?: Rate;
+  contributionRegime: EmployerContributionRegime;
 }
+
+export type ContractKind = "permanent" | "fixed_term" | "unknown";
 
 export interface RoleFacts {
   title?: string;
-  /** Janeiro = 1, dezembro = 12. */
-  startMonth: number;
+  /** Data de entrada real. Substitui o mês solto que prendia tudo a 2026-08. */
+  startDate: ISODate;
+  contractEndDate?: ISODate;
+  contractKind: ContractKind;
+  /** Dias da semana contratados: 1 = segunda … 7 = domingo. */
+  workingWeekdays: readonly number[];
   weeklyHoursHundredths: number;
+  workingTimeRegime: WorkingTimeRegime;
+  /** IRCT aplicável. Desconhecido é um risco declarado, não uma inexistência. */
+  collectiveAgreement: { status: "unknown" } | { status: "none" } | { status: "declared"; name: string };
   jurisdiction: PayrollEmployee["jurisdiction"];
+  /** Feriado municipal do local de trabalho, quando conhecido. */
+  municipalHoliday?: ISODate;
+  /** Mês do gozo principal de férias — comanda o subsídio de férias. */
+  mainVacationMonth: number;
   productive: boolean;
   /** Fração das horas disponíveis que é realmente faturável. */
   productiveShare?: Rate;
-  annualVacationHoursHundredths?: number;
+  /** Horas de formação contínua do ano (CT, artigo 131.º: mínimo 40 h). */
   annualTrainingHoursHundredths?: number;
+  /** Horas de integração no arranque. */
+  onboardingHoursHundredths?: number;
 }
 
 export interface MealAllowanceOffer {
   dailyAmount: Money;
-  daysPerMonth: number;
   method: "cash" | "card_or_voucher";
+  /**
+   * Dias por mês declarados pela empresa. Quando ausente, o motor usa os dias
+   * elegíveis do calendário laboral em vez de assumir 22 × 12.
+   */
+  daysPerMonth?: number;
 }
 
 export interface EmploymentBenefitOffer {
@@ -62,14 +119,24 @@ export interface CompensationPackage {
   variableBonusSocialSecurityRegularity?: "regular" | "not_regular" | "unknown";
   mealAllowance?: MealAllowanceOffer;
   benefits?: readonly EmploymentBenefitOffer[];
+  /** Mês de pagamento do prémio anual. Dezembro por omissão declarada. */
+  bonusMonth?: number;
 }
 
+/**
+ * Custos do posto. Todas as parcelas são obrigatórias em ESTADO — não em
+ * valor: o formulário tem de dizer se confirma, estima, exclui ou desconhece.
+ * É a tradução em tipo do invariante «um custo desconhecido não é zero».
+ */
 export interface PostCosts {
-  accidentInsuranceAnnual?: Money;
-  healthAndSafetyAnnual?: Money;
-  trainingAnnual?: Money;
-  equipmentFirstYear?: Money;
-  otherAnnual?: Money;
+  accidentInsurance: CostKnowledge;
+  healthAndSafety: CostKnowledge;
+  training: CostKnowledge;
+  equipmentFirstYear: CostKnowledge;
+  recruitmentFirstYear: CostKnowledge;
+  software: CostKnowledge;
+  remoteWork: CostKnowledge;
+  other: CostKnowledge;
 }
 
 export interface CandidateTaxFacts extends PayrollEmployee {
@@ -78,7 +145,7 @@ export interface CandidateTaxFacts extends PayrollEmployee {
 }
 
 export interface CapacityFacts {
-  /** Preço líquido/margem por hora produtiva. */
+  /** Preço de venda por hora produtiva. */
   pricePerProductiveHour?: Money;
   /** Margem de contribuição da receita, em ppm. */
   contributionMargin?: Rate;
@@ -108,6 +175,8 @@ export interface EmploymentOfferInput {
   candidate?: CandidateTaxFacts;
   capacity?: CapacityFacts;
   supportFacts?: HiringSupportFacts;
+  /** Revisão explícita da pessoa: é o que autoriza o estado «validado». */
+  review?: { reviewedAt: ISODate };
 }
 
 export interface EmployerCostBreakdown {
@@ -119,22 +188,37 @@ export interface EmployerCostBreakdown {
   healthAndSafety: Money;
   training: Money;
   equipment: Money;
+  recruitment: Money;
+  software: Money;
+  remoteWork: Money;
   other: Money;
 }
 
 export interface EmployerCostResult {
+  /** Ano recorrente, sem custos de arranque. */
   annualStabilized: Money;
   monthlyAverageStabilized: Money;
-  firstYear: Money;
-  firstYearMonthlyAverage: Money;
+  /** Ano civil da entrada. */
+  firstCalendarYear: Money;
+  /** Doze primeiros meses do vínculo, que atravessam dois anos civis. */
+  firstTwelveMonths: Money;
+  firstCalendarYearMonthlyAverage: Money;
   monthsWorkedFirstYear: number;
+  /** Mês mais pesado dos doze primeiros e a razão do pico. */
+  peakMonth: { year: number; month: number; amount: Money; labels: readonly string[] } | null;
   budget?: Money;
+  effectiveBudget?: Money;
   budgetHeadroom?: Money;
+  /** Intervalo do custo anual com estimativas e lacunas incluídas. */
+  annualRange: { low: Money; high: Money };
+  /** Só o que foi mesmo confirmado. */
+  annualConfirmed: Money;
   breakdown: EmployerCostBreakdown;
+  postCostSummary: CostSummary;
 }
 
-export interface ExactWorkerOutcome {
-  kind: "exact";
+export interface PersonalizedWorkerOutcome {
+  kind: "personalized_projection";
   monthlyReference: Money;
   annualNet: Money;
   annualGross: Money;
@@ -143,42 +227,25 @@ export interface ExactWorkerOutcome {
   profile: PayrollEmployee;
 }
 
-export interface WorkerOutcomeRange {
-  kind: "range";
+export interface ReferenceScenarioOutcome {
+  kind: "reference_scenarios";
   monthlyReference: { min: Money; max: Money };
   annualNet: { min: Money; max: Money };
   annualGross: Money;
   annualEmployeeSocialSecurity: Money;
   annualIrsWithheld: { min: Money; max: Money };
   profilesEvaluated: number;
+  /** Os cenários avaliados, nomeados. Não são um envelope universal. */
+  scenarioLabels: readonly string[];
 }
 
-export type WorkerOutcome = ExactWorkerOutcome | WorkerOutcomeRange;
+export type WorkerOutcome = PersonalizedWorkerOutcome | ReferenceScenarioOutcome;
 
 export interface PublicChargesResult {
   employerSocialSecurity: Money;
   employeeSocialSecurity: Money;
   irsWithheld: Money | { min: Money; max: Money };
   total: Money | { min: Money; max: Money };
-}
-
-export interface CashCalendarMonth {
-  month: number;
-  active: boolean;
-  labels: readonly string[];
-  employerCost: Money;
-  workerNet: Money | { min: Money; max: Money };
-  publicCharges: Money | { min: Money; max: Money };
-}
-
-export interface CapacityResult {
-  annualAvailableHoursHundredths: number;
-  annualProductiveHoursHundredths: number;
-  costPerProductiveHour: Money | null;
-  revenueRequired: Money | null;
-  billableHoursRequired: number | null;
-  expectedAnnualBillableHours: number | null;
-  capacityGapHours: number | null;
 }
 
 export type SupportAssessmentStatus =
@@ -208,13 +275,16 @@ export interface Assumption {
 }
 
 export interface EmploymentOfferResult {
-  certainty: Exclude<ResultCertainty, "needs_input" | "unsupported">;
+  /** O estado que autoriza — ou proíbe — qualquer veredicto. */
+  status: EmploymentDecisionStatus;
+  projection: ProjectionLevel;
   goal: PlannerGoal;
   resolvedBaseSalaryMonthly: Money;
   employerCost: EmployerCostResult;
   workerOutcome: WorkerOutcome;
   publicCharges: PublicChargesResult;
   calendar: readonly CashCalendarMonth[];
+  workCalendar: WorkCalendarResult;
   capacity?: CapacityResult;
   supports: readonly SupportAssessment[];
   assumptions: readonly Assumption[];
@@ -232,4 +302,3 @@ export type EmploymentOfferPreparation =
   | { kind: "needs_input"; missing: readonly MissingInput[]; trace: readonly TraceStep[] }
   | { kind: "unsupported"; reasons: readonly string[]; trace: readonly TraceStep[] }
   | { kind: "conflict"; reasons: readonly string[]; trace: readonly TraceStep[] };
-

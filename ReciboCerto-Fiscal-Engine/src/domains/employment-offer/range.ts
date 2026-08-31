@@ -1,9 +1,11 @@
 import type { PayrollEmployee } from "../payroll/types";
 
 /**
- * Perfis públicos e documentados para formar um intervalo sem inventar a
- * situação de uma pessoa concreta. Não inclui incapacidade nem IRS Jovem:
- * esses regimes exigem factos e invocação explícita.
+ * Cenários de referência públicos e documentados, para formar um intervalo sem
+ * inventar a situação de uma pessoa concreta. Não incluem incapacidade nem
+ * IRS Jovem: esses regimes exigem factos e invocação explícita — e é por isso
+ * que estes quatro perfis NÃO são um envelope universal, apenas quatro casos
+ * nomeados (relatório, CON-P0-17).
  */
 export function workerRangeProfiles(
   jurisdiction: PayrollEmployee["jurisdiction"],
@@ -16,3 +18,15 @@ export function workerRangeProfiles(
   ];
 }
 
+/** Os mesmos perfis, nomeados para poderem ser lidos no resultado. */
+export function workerRangeProfileLabels(
+  jurisdiction: PayrollEmployee["jurisdiction"],
+): readonly string[] {
+  void jurisdiction;
+  return [
+    "Não casado, sem dependentes",
+    "Não casado, dois dependentes",
+    "Casado, único titular, um dependente",
+    "Casado, dois titulares, um dependente",
+  ];
+}

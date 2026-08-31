@@ -1,5 +1,17 @@
 import { eurCents, type Money } from "../../core/money";
-import type { CashCalendarMonth } from "./types";
+
+/**
+ * Calendário de caixa da contratação. Projeta 24 meses a partir de janeiro do
+ * ano de entrada para conseguir responder às três contas que o relatório
+ * separa (INV-03): o primeiro ano CIVIL, os primeiros DOZE MESES do vínculo e
+ * o ano estabilizado — mais o mês de pico, que nenhuma média mostra.
+ *
+ * Os subsídios chegam já calculados pelo Payroll Engine; esta função apenas os
+ * posiciona no tempo. O mês do subsídio de férias acompanha o gozo declarado
+ * (CT, artigo 264.º, n.º 3: pago antes do início das férias) e o de Natal fica
+ * em dezembro (CT, artigo 263.º, n.º 1: até 15 de dezembro) — deixou de estar
+ * preso a junho.
+ */
 
 export interface MoneyRange {
   min: Money;
@@ -12,15 +24,52 @@ export interface CalendarPeriodProjection {
   publicCharges: Money | MoneyRange;
 }
 
+export interface CashCalendarMonth {
+  year: number;
+  month: number;
+  active: boolean;
+  labels: readonly string[];
+  employerCost: Money;
+  workerNet: Money | MoneyRange;
+  publicCharges: Money | MoneyRange;
+}
+
 export interface EmploymentCalendarInput {
+  startYear: number;
+  /** Janeiro = 1. */
   startMonth: number;
-  normalMonth: CalendarPeriodProjection;
-  holidaySubsidy?: CalendarPeriodProjection;
-  christmasSubsidy?: CalendarPeriodProjection;
-  annualBonus?: CalendarPeriodProjection;
-  /** Custos anuais recorrentes que não pertencem ao payroll. */
-  annualPostCosts: Money;
-  equipmentFirstYear: Money;
+  /**
+   * Projeção de um mês normal. É uma função porque os meses não são iguais:
+   * os dias elegíveis a refeição mudam com feriados e férias.
+   */
+  monthlyProjection: (year: number, month: number) => CalendarPeriodProjection;
+  /** Encargos recorrentes do posto imputados a este mês. */
+  postCostsForMonth: (year: number, month: number) => Money;
+  /** Subsídios proporcionais do ano da admissão. */
+  admissionHolidaySubsidy?: CalendarPeriodProjection;
+  admissionChristmasSubsidy?: CalendarPeriodProjection;
+  admissionAnnualBonus?: CalendarPeriodProjection;
+  /** Subsídios completos, a partir do primeiro ano civil inteiro. */
+  fullHolidaySubsidy?: CalendarPeriodProjection;
+  fullChristmasSubsidy?: CalendarPeriodProjection;
+  fullAnnualBonus?: CalendarPeriodProjection;
+  /** Mês de pagamento do subsídio de férias, quando não é em duodécimos. */
+  holidaySubsidyMonth: number;
+  christmasSubsidyMonth: number;
+  bonusMonth: number;
+  /** Custos únicos do arranque: equipamento, recrutamento, instalação. */
+  startupCosts: Money;
+  /** Último mês ativo, quando o contrato termina dentro do horizonte. */
+  lastActiveMonth?: { year: number; month: number };
+}
+
+export interface CalendarSummary {
+  months: readonly CashCalendarMonth[];
+  /** Saída de caixa dentro do ano civil da entrada. */
+  firstCalendarYear: Money;
+  /** Saída de caixa nos doze primeiros meses do vínculo. */
+  firstTwelveMonths: Money;
+  peak: { year: number; month: number; amount: Money; labels: readonly string[] } | null;
 }
 
 const isRange = (value: Money | MoneyRange): value is MoneyRange => "min" in value;
@@ -54,63 +103,83 @@ function combine(
   };
 }
 
-/**
- * Calendário de caixa do primeiro ano. Os subsídios proporcionais chegam já
- * calculados pelo Payroll Engine; esta função apenas os posiciona no tempo.
- */
+const clampMonth = (value: number): number =>
+  Math.max(1, Math.min(12, Math.round(value)));
+
+/** Projeta 24 meses de caixa a partir de janeiro do ano de entrada. */
 export function buildEmploymentCalendar(
   input: EmploymentCalendarInput,
 ): readonly CashCalendarMonth[] {
-  const start = Math.max(1, Math.min(12, Math.round(input.startMonth)));
-  const activeMonths = 13 - start;
-  const fixedPerActiveMonth = activeMonths > 0
-    ? eurCents(Math.round(input.annualPostCosts.cents * (activeMonths / 12) / activeMonths))
-    : eurCents(0);
-  const holidayMonth = start <= 6 ? 6 : 12;
-  const christmasMonth = Math.max(start, 11);
+  const start = clampMonth(input.startMonth);
+  const holidayMonth = clampMonth(input.holidaySubsidyMonth);
+  const christmasMonth = clampMonth(input.christmasSubsidyMonth);
+  const bonusMonth = clampMonth(input.bonusMonth);
 
-  return Array.from({ length: 12 }, (_, index) => {
-    const month = index + 1;
-    const active = month >= start;
+  const last = input.lastActiveMonth;
+  return Array.from({ length: 24 }, (_, index) => {
+    const year = input.startYear + Math.floor(index / 12);
+    const month = (index % 12) + 1;
+    const admissionYear = year === input.startYear;
+    const started = !admissionYear || month >= start;
+    const ended = last !== undefined
+      && (year > last.year || (year === last.year && month > last.month));
+    const active = started && !ended;
     if (!active) {
       return {
+        year,
         month,
         active: false,
-        labels: ["Antes da entrada"],
+        labels: [ended ? "Depois do termo do contrato" : "Antes da entrada"],
         ...zeroProjection(),
       } satisfies CashCalendarMonth;
     }
 
-    let projection = input.normalMonth;
+    let projection = input.monthlyProjection(year, month);
     const labels = ["Vencimento e pacote mensal"];
-    if (month === holidayMonth && input.holidaySubsidy) {
-      projection = combine(projection, input.holidaySubsidy);
-      labels.push("Subsídio de férias proporcional");
+
+    // No ano da admissão o subsídio de férias só é pago se o mês do gozo já
+    // for depois da entrada; caso contrário o direito transita e é pago no
+    // ano seguinte, como manda o artigo 239.º, n.º 2.
+    const holidaySubsidy = admissionYear
+      ? (holidayMonth >= start ? input.admissionHolidaySubsidy : undefined)
+      : input.fullHolidaySubsidy;
+    if (month === holidayMonth && holidaySubsidy) {
+      projection = combine(projection, holidaySubsidy);
+      labels.push(admissionYear ? "Subsídio de férias proporcional" : "Subsídio de férias");
     }
-    if (month === christmasMonth && input.christmasSubsidy) {
-      projection = combine(projection, input.christmasSubsidy);
-      labels.push("Subsídio de Natal proporcional");
+
+    const christmasSubsidy = admissionYear
+      ? input.admissionChristmasSubsidy
+      : input.fullChristmasSubsidy;
+    if (month === christmasMonth && christmasSubsidy) {
+      projection = combine(projection, christmasSubsidy);
+      labels.push(admissionYear ? "Subsídio de Natal proporcional" : "Subsídio de Natal");
     }
-    if (month === 12 && input.annualBonus) {
-      projection = combine(projection, input.annualBonus);
-      labels.push("Prémio anual proporcional");
+
+    const bonus = admissionYear ? input.admissionAnnualBonus : input.fullAnnualBonus;
+    if (month === bonusMonth && bonus) {
+      projection = combine(projection, bonus);
+      labels.push(admissionYear ? "Prémio anual proporcional" : "Prémio anual");
     }
-    if (fixedPerActiveMonth.cents > 0) {
+
+    const postCosts = input.postCostsForMonth(year, month);
+    if (postCosts.cents > 0) {
       projection = {
         ...projection,
-        employerCost: add(projection.employerCost, fixedPerActiveMonth),
+        employerCost: add(projection.employerCost, postCosts),
       };
       labels.push("Custos do posto rateados");
     }
-    if (month === start && input.equipmentFirstYear.cents > 0) {
+    if (admissionYear && month === start && input.startupCosts.cents > 0) {
       projection = {
         ...projection,
-        employerCost: add(projection.employerCost, input.equipmentFirstYear),
+        employerCost: add(projection.employerCost, input.startupCosts),
       };
-      labels.push("Equipamento inicial");
+      labels.push("Custos únicos do arranque");
     }
 
     return {
+      year,
       month,
       active: true,
       labels,
@@ -121,3 +190,37 @@ export function buildEmploymentCalendar(
   });
 }
 
+/**
+ * Reparte a mesma projeção pelas três leituras que decidem coisas diferentes:
+ * o ano civil fecha contas com a contabilidade, os doze meses do vínculo
+ * dizem o que a tesouraria aguenta, e o pico diz em que mês dói.
+ */
+export function summariseCalendar(
+  months: readonly CashCalendarMonth[],
+  startYear: number,
+  startMonth: number,
+): CalendarSummary {
+  const start = clampMonth(startMonth);
+  const calendarYear = months.filter((month) => month.year === startYear);
+  const window = months.filter(
+    (month) =>
+      (month.year === startYear && month.month >= start)
+      || (month.year === startYear + 1 && month.month < start),
+  );
+  const peakSource = window.length > 0 ? window : calendarYear;
+  const peak = peakSource.reduce<CashCalendarMonth | null>(
+    (best, month) =>
+      month.active && (best === null || month.employerCost.cents > best.employerCost.cents)
+        ? month
+        : best,
+    null,
+  );
+  return {
+    months,
+    firstCalendarYear: add(...calendarYear.map((month) => month.employerCost)),
+    firstTwelveMonths: add(...window.map((month) => month.employerCost)),
+    peak: peak
+      ? { year: peak.year, month: peak.month, amount: peak.employerCost, labels: peak.labels }
+      : null,
+  };
+}
