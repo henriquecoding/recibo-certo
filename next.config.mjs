@@ -92,6 +92,14 @@ const nextConfig = {
         source: "/api/:path*",
         headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
+      // Prova de propriedade do Search Console: uma linha de texto, não uma
+      // página. Fora do índice para não entrar nos resultados como conteúdo
+      // fino. Não interfere com a validação — o Google lê o ficheiro
+      // diretamente, e `noindex` trava a indexação, não a leitura.
+      {
+        source: "/google3874ac9e9ed1ae13.html",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
     ];
   },
 };

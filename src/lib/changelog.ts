@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.142.0",
+    data: "2026-08-31",
+    titulo: "A propriedade do site no Google deixa de caber numa conta só",
+    itens: [
+      "A prova de propriedade que o Google Search Console lê nas páginas do site estava escrita como se nunca pudesse haver mais do que uma. Uma segunda conta Google não conseguia reclamar o site sem ocupar o lugar da primeira — e ocupar o lugar é perder: o Google revalida a prova de tempos a tempos, e a conta cuja prova desapareceu perde a propriedade sem aviso e sem erro nenhum pelo caminho.",
+      "Passa a ser uma lista. Cada conta traz o seu código, sai uma etiqueta por código em todas as páginas, e acrescentar uma conta deixou de implicar tirar outra.",
+      "A segunda conta fica com duas provas independentes: a etiqueta nas páginas e um ficheiro próprio servido pelo site. A lista pode ser reescrita pela configuração do alojamento — e essa substitui-a por inteiro, não acrescenta —, e é precisamente aí que a etiqueta sozinha se perderia; o ficheiro sustenta a propriedade sem depender dela. Fica fora do índice de pesquisa: é uma linha de texto, não uma página, e não tem nada que aparecer nos resultados.",
+      "Fica escrito em docs/SEO.md quem está reclamado, com que prova e onde ela vive — incluindo o caminho que não passa por aqui: o registo DNS, que verifica o domínio inteiro e sobrevive a qualquer alteração no código.",
+    ],
+  },
+  {
     version: "2.141.0",
     data: "2026-08-31",
     titulo: "A pesquisa abria transparente — estava lá, com os resultados certos, e ninguém a via",
