@@ -26,15 +26,11 @@ export function SectionTitle({
   acao?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-light text-sm font-bold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-          {step}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-xl font-semibold text-ink">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{description}</p>
-        </div>
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 max-w-2xl">
+        <p className="eyebrow text-brand-dark dark:text-brand-mint">Etapa {step}</p>
+        <h2 className="mt-1.5 font-display text-2xl font-semibold leading-tight text-ink sm:text-3xl">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{description}</p>
       </div>
       {acao}
     </div>

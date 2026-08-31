@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.140.0",
+    data: "2026-08-31",
+    titulo: "O planeador de contratação passou de formulário comprido a estúdio de decisão",
+    itens: [
+      "As seis partes do planeador deixaram de aparecer numa única página interminável. Passam a formar um percurso navegável — objetivo, posto, pacote, custos, capacidade e revisão — em que se pode avançar, voltar ou saltar diretamente sem perder nenhum campo do cenário.",
+      "Um cockpit acompanha a decisão: mostra o valor de partida, o enquadramento do posto, o estado dos custos e, depois do cálculo, o custo anual, o vencimento base e o líquido de referência. Estes números são lidos do resultado tipado do motor; a interface não ganhou uma segunda fórmula nem uma taxa copiada.",
+      "A experiência adotou a linguagem visual dos simuladores mais completos do site: abertura em verde profundo, hierarquia editorial, cartões com estados claros, resumo fixo no ecrã largo e resumo compacto no telemóvel. A ação principal fica sempre no fim da etapa atual e cabe inteira a 320 pixéis.",
+      "A navegação por etapas funciona com toque, rato e teclado. As setas percorrem os separadores, Home e End chegam às extremidades, o foco acompanha os botões Anterior e Continuar e o progresso é anunciado a leitores de ecrã.",
+      "O portão ponta a ponta passou a percorrer a nova navegação antes de tocar nos campos e continua a provar os quatro objetivos, os estados incompleto e conclusivo, privacidade, gravação, contraste e ausência de transbordo entre 320 e 1 440 pixéis.",
+    ],
+  },
+  {
     version: "2.139.0",
     data: "2026-08-31",
     titulo: "O planeador de contratação deixou de dizer «verificado» sobre regras que ninguém tinha aprovado",

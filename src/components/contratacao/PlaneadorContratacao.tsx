@@ -16,10 +16,8 @@ import { contextoContratacao } from "@/lib/analytics/contratacao";
 // ação explícita de guardar.
 import { consumirReabertura } from "@/lib/store/reabertura";
 import {
-  ArrowRight,
   Briefcase,
   Building,
-  Calculator,
   Check,
   Clock,
   Download,
@@ -58,6 +56,14 @@ import {
   type PlannerState,
 } from "./estado";
 import CoberturaDoRelease from "./CoberturaDoRelease";
+import {
+  CabecalhoStudio,
+  ETAPAS_CONTRATACAO,
+  NavegacaoEtapas,
+  NavegacaoRodape,
+  PainelEtapa,
+  ResumoPlaneador,
+} from "./StudioContratacao";
 
 const GuardarCenario = dynamic(() => import("./GuardarCenarioContratacao"), {
   ssr: false,
@@ -101,7 +107,7 @@ const CHIP =
 
 function Bloco({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-3xl border border-stone-200 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6 lg:p-7">
+    <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-7 lg:p-8">
       {children}
     </section>
   );
@@ -171,8 +177,13 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
   const [tab, setTab] = useState<ResultTab>("package");
   const [saveOpen, setSaveOpen] = useState(false);
   const [pacotes, setPacotes] = useState<PacoteGuardado[]>([]);
+  const [etapa, setEtapa] = useState(0);
+  const [etapasVisitadas, setEtapasVisitadas] = useState<ReadonlySet<number>>(
+    () => new Set([0]),
+  );
   const resultRef = useRef<HTMLDivElement>(null);
   const reidratado = useRef(false);
+  const focarPainelAoMudar = useRef(false);
 
   const input = useMemo(() => inputFromState(state, hoje), [state, hoje]);
 
@@ -227,6 +238,19 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
     registar("hiring_planner_started", contextoContratacao("ferramenta"));
   }, []);
 
+  // Trocar de etapa substitui o conteúdo principal. O foco acompanha a
+  // mudança quando ela nasce dos botões Anterior/Continuar. Ao escolher um
+  // separador, o foco fica no próprio separador para as setas continuarem a
+  // funcionar segundo o padrão ARIA.
+  useEffect(() => {
+    if (!focarPainelAoMudar.current) return;
+    focarPainelAoMudar.current = false;
+    requestAnimationFrame(() => {
+      const id = ETAPAS_CONTRATACAO[etapa]?.id;
+      if (id) document.getElementById(`etapa-contratacao-${id}`)?.focus();
+    });
+  }, [etapa]);
+
   // Reabertura de um cenário guardado: acontece uma única vez, mesmo que a
   // página volte a montar (relatório, CON-P0-22).
   useEffect(() => {
@@ -279,10 +303,35 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
     });
   };
 
-  const rotuloBotao = state.calculated ? "Voltar a calcular" : "Calcular a contratação";
+  const irParaEtapa = (index: number, focarPainel = false) => {
+    const destino = Math.max(0, Math.min(ETAPAS_CONTRATACAO.length - 1, index));
+    focarPainelAoMudar.current = focarPainel;
+    setEtapa(destino);
+    setEtapasVisitadas((anteriores) => new Set(anteriores).add(destino));
+  };
+
+  const resultadoPronto = preparation?.kind === "ready" ? preparation.result : undefined;
+  const releaseStatus = selecao?.kind === "ready"
+    ? selecao.bundle.release.status
+    : arranque.kind === "ready"
+      ? arranque.bundle.release.status
+      : "draft";
 
   return (
-    <div className="space-y-5 print:space-y-3">
+    <div className="space-y-6 print:space-y-3">
+      <CabecalhoStudio releaseStatus={releaseStatus} />
+      <NavegacaoEtapas ativa={etapa} visitadas={etapasVisitadas} onSelect={irParaEtapa} />
+      <ResumoPlaneador
+        compacto
+        state={state}
+        result={resultadoPronto}
+        releaseStatus={releaseStatus}
+        onShowResult={() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      />
+
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
+        <div className="min-w-0">
+      <PainelEtapa index={0} ativa={etapa}>
       <Bloco>
         <SectionTitle
           step="01"
@@ -305,11 +354,13 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
                     goal: value,
                   });
                 }}
-                className={`min-h-[132px] rounded-2xl border p-4 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${ativo ? "border-brand bg-brand-light shadow-sm dark:bg-brand/15" : "border-stone-200 bg-stone-50 hover:border-brand/40 dark:border-stone-700 dark:bg-stone-800/60"}`}
+                className={`group min-h-[148px] rounded-3xl border p-4 text-left transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${ativo ? "border-brand-deep bg-brand-deep text-white shadow-lift" : "border-stone-200 bg-stone-50 text-stone-900 hover:-translate-y-0.5 hover:border-brand/40 hover:bg-white hover:shadow-card dark:border-stone-700 dark:bg-stone-800/60 dark:text-white dark:hover:bg-stone-800"}`}
               >
-                <Icon size={19} className={ativo ? "text-brand" : "text-stone-500"} />
-                <span className="mt-3 block text-sm font-bold text-stone-900 dark:text-white">{title}</span>
-                <span className="mt-1.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">{description}</span>
+                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${ativo ? "bg-white/15 text-brand-mint" : "bg-brand-light text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white dark:bg-brand/15 dark:text-brand-mint"}`}>
+                  <Icon size={18} />
+                </span>
+                <span className={`mt-3 block text-sm font-bold ${ativo ? "text-white" : "text-stone-900 dark:text-white"}`}>{title}</span>
+                <span className={`mt-1.5 block text-xs leading-relaxed ${ativo ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>{description}</span>
               </button>
             );
           })}
@@ -365,6 +416,9 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           />
         </div>
       </Bloco>
+
+      </PainelEtapa>
+      <PainelEtapa index={1} ativa={etapa}>
 
       <Bloco>
         <SectionTitle
@@ -510,6 +564,9 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
         </div>
       </Bloco>
 
+      </PainelEtapa>
+      <PainelEtapa index={2} ativa={etapa}>
+
       <Bloco>
         <SectionTitle
           step="03"
@@ -597,6 +654,9 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
         </div>
       </Bloco>
 
+      </PainelEtapa>
+      <PainelEtapa index={3} ativa={etapa}>
+
       <Bloco>
         <SectionTitle
           step="04"
@@ -615,6 +675,9 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           ))}
         </div>
       </Bloco>
+
+      </PainelEtapa>
+      <PainelEtapa index={4} ativa={etapa}>
 
       <Bloco>
         <SectionTitle
@@ -685,6 +748,9 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           </div>
         ) : null}
       </Bloco>
+
+      </PainelEtapa>
+      <PainelEtapa index={5} ativa={etapa}>
 
       <Bloco>
         <SectionTitle
@@ -881,23 +947,40 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           </div>
         </details>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-stone-100 pt-5 dark:border-stone-800 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <p className="flex items-center gap-2 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-              <Calculator size={15} className="flex-none text-brand" />
-              Cálculo local. Nada é guardado ao simular.
-            </p>
-            <div className="mt-2"><ResumoCustos state={state} /></div>
-          </div>
-          <button
-            type="button"
-            onClick={calcular}
-            className="btn-shine inline-flex min-h-[50px] items-center justify-center gap-2 rounded-2xl bg-brand px-6 py-3.5 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
-          >
-            {rotuloBotao} <ArrowRight size={15} />
-          </button>
+        <div className="mt-6 rounded-2xl border border-brand/20 bg-brand-light/45 p-4 dark:bg-brand/10">
+          <p className="flex items-start gap-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
+            <Lock size={15} className="mt-0.5 flex-none text-brand" />
+            <span>
+              <strong className="text-stone-800 dark:text-stone-100">Pronto para pedir a conta.</strong>{" "}
+              O cálculo corre neste dispositivo e nada é guardado sem uma ação separada.
+            </span>
+          </p>
+          <div className="mt-3 border-t border-brand/15 pt-3"><ResumoCustos state={state} /></div>
         </div>
       </Bloco>
+
+      </PainelEtapa>
+
+          <NavegacaoRodape
+            ativa={etapa}
+            calculated={state.calculated}
+            onBack={() => irParaEtapa(etapa - 1, true)}
+            onNext={() => irParaEtapa(etapa + 1, true)}
+            onCalculate={calcular}
+          />
+        </div>
+
+        <aside className="hidden lg:block">
+          <div className="sticky top-28">
+            <ResumoPlaneador
+              state={state}
+              result={resultadoPronto}
+              releaseStatus={releaseStatus}
+              onShowResult={() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            />
+          </div>
+        </aside>
+      </div>
 
       {state.calculated && selecao && selecao.kind !== "ready" ? (
         <section
@@ -1052,6 +1135,8 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
                       setTab("package");
                       setSaveOpen(false);
                       setPacotes([]);
+                      setEtapa(0);
+                      setEtapasVisitadas(new Set([0]));
                     }}
                     className="inline-flex min-h-[42px] items-center gap-2 rounded-xl px-3 text-sm font-semibold text-stone-500 hover:text-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
                   >

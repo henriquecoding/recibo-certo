@@ -56,8 +56,16 @@ const semOverflow = (page) =>
 
 const blocoDoSeguro = (page) => page.locator('[data-custo="accidentInsurance"]');
 
+async function irParaEtapa(page, nome) {
+  await page
+    .getByRole("tablist", { name: "Etapas do planeador" })
+    .getByRole("tab", { name: nome, exact: true })
+    .click();
+}
+
 /** Põe o custo obrigatório num estado que desbloqueia a decisão. */
 async function preencherSeguro(page, valor = "480") {
+  await irParaEtapa(page, "Custos");
   const bloco = blocoDoSeguro(page);
   await bloco.locator("select").selectOption("confirmado");
   const campo = bloco.getByLabel("Seguro de acidentes de trabalho — valor anual");
@@ -72,10 +80,12 @@ async function preencherSeguro(page, valor = "480") {
  * uma resposta legítima — «não sei» não é.
  */
 async function declararSemIrct(page) {
+  await irParaEtapa(page, "Posto");
   await page.getByLabel("IRCT aplicável").selectOption("none");
 }
 
 async function calcular(page) {
+  await irParaEtapa(page, "Revisão");
   await page.getByRole("button", { name: /Calcular a contratação|Voltar a calcular/ }).click();
   await page.getByRole("tablist", { name: "Detalhes do resultado" }).waitFor({ timeout: 20_000 });
 }
@@ -141,7 +151,7 @@ async function calcular(page) {
     verificar(await semOverflow(page), "a ferramenta não cria overflow horizontal");
 
     // Nenhuma parcela pode nascer com valor escondido.
-    const resumo = page.getByText("por confirmar").first();
+    const resumo = page.getByText(/bloqueio por resolver/).first();
     await resumo.waitFor();
     verificar(
       await page.getByText("Seguro de acidentes de trabalho").count() >= 1,
@@ -174,7 +184,10 @@ async function calcular(page) {
     const agora = await page.locator("h2").filter({ hasText: /Cabe na estimativa|Cabe nesta projeção/ }).count();
     verificar(agora === 1, "resolvidos os dois bloqueios, o veredicto passa a ser possível");
 
-    verificar(await page.getByRole("tab").count() === 7, "o resultado expõe os sete separadores previstos");
+    verificar(
+      await page.getByRole("tablist", { name: "Detalhes do resultado" }).getByRole("tab").count() === 7,
+      "o resultado expõe os sete separadores previstos",
+    );
     verificar(await semOverflow(page), "o resultado não cria overflow horizontal a 360 px");
     verificar(erros.length === 0, "sem exceções de runtime no percurso de confiança", erros.join(" | "));
   } finally {
@@ -253,6 +266,7 @@ async function calcular(page) {
       /Já tenho uma proposta/,
       /O posto tem de se pagar/,
     ]) {
+      await irParaEtapa(page, "Objetivo");
       await page.getByRole("radio", { name: objetivo }).click();
       await calcular(page);
       const conclusivo = await page
@@ -278,6 +292,7 @@ async function calcular(page) {
     await preencherSeguro(page);
     await declararSemIrct(page);
 
+    await irParaEtapa(page, "Revisão");
     await page.getByRole("radio", { name: /Tenho autorização/ }).click();
     verificar(
       await page.getByText(/Confirmo que o candidato autorizou/).count() === 1,

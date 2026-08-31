@@ -78,6 +78,20 @@ describe("Salário com dois caminhos", () => {
     // de uma secção fechada.
     expect(estado).toContain("equipmentFirstYear: custoVazio()");
   });
+
+  it("apresenta o planeador como um percurso guiado sem duplicar o motor no cliente", () => {
+    const planner = read("src/components/contratacao/PlaneadorContratacao.tsx");
+    const studio = read("src/components/contratacao/StudioContratacao.tsx");
+    expect(planner).toContain("<NavegacaoEtapas");
+    expect(planner).toContain("<ResumoPlaneador");
+    expect(planner).toContain("<PainelEtapa index={5}");
+    expect(studio).toContain('role="tablist"');
+    expect(studio).toContain('role="tabpanel"');
+    expect(studio).toContain('role="progressbar"');
+    expect(studio).toContain('tabIndex={active ? 0 : -1}');
+    expect(studio).not.toContain("planEmploymentOffer(");
+    expect(studio).not.toContain("employerSocialSecurity");
+  });
 });
 
 describe("contrato mobile da homepage", () => {
