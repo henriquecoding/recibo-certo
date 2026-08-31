@@ -13,7 +13,7 @@
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260830120000_cenario_planeador_contratacao.sql).
+--  à última  (20260830071059_cenario_planeador_contratacao.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -13836,8 +13836,17 @@ $endurecer$;
 COMMIT;
 
 -- ╔═════════════════════════════════════════════════════════════════════╗
--- ║  20260830120000_cenario_planeador_contratacao.sql                  ║
+-- ║  20260830071059_cenario_planeador_contratacao.sql                  ║
 -- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- Identidade reconciliada com produção (relatório, MOT-P0-016).
+--
+-- O repositório trazia esta mesma migração como `20260830120000` enquanto
+-- produção a tinha registada como `20260830071059`: dois nomes para a
+-- mesma alteração, o que faz `supabase migration list` divergir e convida
+-- a uma segunda aplicação. O ficheiro passa a ter a versão que produção
+-- realmente registou, e o corpo é idempotente — se correr outra vez, o
+-- CHECK é substituído por um igual.
 
 -- O planeador só toca na lista fechada de tipos de cenário. As políticas
 -- RLS existentes continuam intactas: cada utilizador lê, altera e apaga

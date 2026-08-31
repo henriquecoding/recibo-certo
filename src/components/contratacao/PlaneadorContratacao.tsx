@@ -3,12 +3,11 @@
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import {
-  PORTUGAL_PAYROLL_POLICY_2026,
   planEmploymentOffer,
   type EmploymentOfferResult,
   type PlannerGoal,
 } from "../../../ReciboCerto-Fiscal-Engine/src";
-import { legacy2026WithholdingResolver } from "@/lib/payroll-engine-adapter";
+import { explicarRecusa, resolverReleasePatronal } from "@/lib/motor/release";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
 import { registar } from "@/lib/analytics/cliente";
 import { contextoContratacao } from "@/lib/analytics/contratacao";
@@ -45,17 +44,20 @@ import EstadoDecisao from "./EstadoDecisao";
 import ResultadoContratacao, { TABS, type ResultTab } from "./ResultadoContratacao";
 import {
   DIAS_SEMANA,
-  INITIAL,
   META_CUSTOS,
   MESES,
+  criarReducer,
+  dataDePagamento,
   estadoDeCenario,
+  estadoInicial,
   eur,
   inputFromState,
   montarSnapshot,
-  reducer,
+  periodoDeTrabalho,
   type CustoId,
   type PlannerState,
 } from "./estado";
+import CoberturaDoRelease from "./CoberturaDoRelease";
 
 const GuardarCenario = dynamic(() => import("./GuardarCenarioContratacao"), {
   ssr: false,
@@ -140,22 +142,65 @@ function ResumoCustos({ state }: { state: PlannerState }) {
   );
 }
 
-export default function PlaneadorContratacao() {
-  const [state, dispatch] = useReducer(reducer, INITIAL);
+export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
+  // Release de arranque: resolvido com a data de hoje e a jurisdição por
+  // omissão, só para obter o cenário de demonstração e os valores iniciais.
+  // Nenhum número de negócio nasce no componente (MOT-P0-015).
+  const arranque = useMemo(
+    () =>
+      resolverReleasePatronal({
+        simulationAsOf: hoje as never,
+        workPeriod: hoje.slice(0, 7) as never,
+        payDate: hoje as never,
+        jurisdiction: "PT-CONTINENTE",
+      }),
+    [hoje],
+  );
+  const demo = arranque.kind === "ready"
+    ? arranque.bundle.release.demoScenarios[0]
+    : undefined;
+  const inicial = useMemo(
+    () => (demo ? estadoInicial(demo) : undefined),
+    [demo],
+  );
+  const reducer = useMemo(
+    () => criarReducer(inicial ?? ({} as PlannerState)),
+    [inicial],
+  );
+  const [state, dispatch] = useReducer(reducer, inicial ?? ({} as PlannerState));
   const [tab, setTab] = useState<ResultTab>("package");
   const [saveOpen, setSaveOpen] = useState(false);
   const [pacotes, setPacotes] = useState<PacoteGuardado[]>([]);
   const resultRef = useRef<HTMLDivElement>(null);
   const reidratado = useRef(false);
 
-  const input = useMemo(() => inputFromState(state), [state]);
+  const input = useMemo(() => inputFromState(state, hoje), [state, hoje]);
+
+  /**
+   * O release do CENÁRIO — resolvido com as datas e a jurisdição que a
+   * pessoa indicou, não com as do arranque. É este que autoriza o cálculo:
+   * sem bundle não há `planEmploymentOffer` que se chame, porque a
+   * assinatura não aceita outra coisa (MOT-P0-001).
+   */
+  const selecao = useMemo(() => {
+    const periodo = periodoDeTrabalho(state.startDate);
+    const pagamento = dataDePagamento(state.startDate);
+    if (!periodo || !pagamento) return null;
+    return resolverReleasePatronal({
+      simulationAsOf: hoje as never,
+      workPeriod: periodo as never,
+      payDate: pagamento as never,
+      jurisdiction: state.jurisdiction,
+    });
+  }, [state.startDate, state.jurisdiction, hoje]);
+
   // O cálculo só corre depois de a pessoa o pedir: até lá, a etapa de revisão
   // é a que interessa e a thread principal fica livre (CON-P0-26).
   const preparation = useMemo(
-    () => (state.calculated
-      ? planEmploymentOffer(input, PORTUGAL_PAYROLL_POLICY_2026, legacy2026WithholdingResolver)
+    () => (state.calculated && selecao?.kind === "ready"
+      ? planEmploymentOffer(input, selecao.bundle)
       : null),
-    [input, state.calculated],
+    [input, state.calculated, selecao],
   );
 
   const set = <K extends keyof PlannerState>(key: K, value: PlannerState[K]) =>
@@ -187,19 +232,17 @@ export default function PlaneadorContratacao() {
   useEffect(() => {
     if (reidratado.current) return;
     reidratado.current = true;
-    const guardado = estadoDeCenario(consumirReabertura("contratacao"));
+    if (!inicial) return;
+    const guardado = estadoDeCenario(consumirReabertura("contratacao"), inicial);
     if (!guardado) return;
     dispatch({ type: "hydrate", state: guardado });
     registar("hiring_scenario_reopened", contextoContratacao("ferramenta"));
-  }, []);
+  }, [inicial]);
 
   const calcular = () => {
     dispatch({ type: "calculate" });
-    const resultado = planEmploymentOffer(
-      input,
-      PORTUGAL_PAYROLL_POLICY_2026,
-      legacy2026WithholdingResolver,
-    );
+    if (selecao?.kind !== "ready") return;
+    const resultado = planEmploymentOffer(input, selecao.bundle);
     registar("hiring_calculation_started", {
       ...contextoContratacao("ferramenta"),
       goal: state.goal,
@@ -369,23 +412,68 @@ export default function PlaneadorContratacao() {
           />
           <NumberField
             id="weekly-hours"
-            label="Horas por semana"
-            value={state.weeklyHours}
-            onChange={(value) => set("weeklyHours", value)}
+            label="Período normal por semana"
+            value={state.normalWeeklyHours}
+            onChange={(value) => set("normalWeeklyHours", value)}
             suffix="h"
-            max={60}
+            max={40}
             decimals={1}
-            info="No regime normal, o Código do Trabalho limita a 8 horas por dia e 40 por semana (artigo 203.º). Acima disso é preciso declarar um regime de adaptabilidade."
+            info="O período normal de trabalho não passa de 8 horas por dia nem de 40 por semana (Código do Trabalho, artigo 203.º). Uma semana de 50 ou 60 horas existe como acréscimo pontual num regime de adaptabilidade, compensado dentro do período de referência — não como horário permanente."
           />
           <SelectField
             label="Regime de tempo de trabalho"
             value={state.workingTimeRegime}
             onChange={(value) => set("workingTimeRegime", value)}
             options={[
-              { value: "standard", label: "Normal — até 8 h/dia e 40 h/semana" },
-              { value: "adaptability_individual", label: "Adaptabilidade individual — até 10 h e 50 h" },
-              { value: "adaptability_collective", label: "Adaptabilidade por IRCT — até 12 h e 60 h" },
+              { value: "standard", label: "Normal — 40 h por semana, sem acréscimos" },
+              { value: "adaptability_individual", label: "Adaptabilidade individual (artigo 205.º)" },
+              { value: "adaptability_collective", label: "Adaptabilidade por IRCT (artigo 204.º)" },
             ]}
+            hint="A adaptabilidade não muda o período normal: autoriza semanas mais longas, repostas por semanas mais curtas."
+          />
+          {state.workingTimeRegime !== "standard" ? (
+            <>
+              <SelectField
+                label="Fundamento da adaptabilidade"
+                value={state.workingTimeBasis}
+                onChange={(value) => set("workingTimeBasis", value)}
+                options={[
+                  { value: "none", label: "Ainda não há" },
+                  { value: "written_individual_agreement", label: "Acordo escrito com o trabalhador" },
+                  { value: "collective_agreement", label: "Instrumento de regulamentação coletiva" },
+                ]}
+                hint="Sem fundamento admissível o regime não pode ser declarado."
+              />
+              <NumberField
+                id="peak-weekly-hours"
+                label="Semana de acréscimo"
+                value={state.peakWeeklyHours}
+                onChange={(value) => set("peakWeeklyHours", value)}
+                suffix="h"
+                max={60}
+                decimals={1}
+                info="Limite das semanas mais longas: 50 h na adaptabilidade individual (artigo 205.º) e 60 h na coletiva (artigo 204.º)."
+              />
+              <NumberField
+                id="reference-period"
+                label="Período de referência"
+                value={state.referencePeriodMonths}
+                onChange={(value) => set("referencePeriodMonths", value)}
+                suffix="meses"
+                max={12}
+                info="Prazo dentro do qual a média volta ao período normal (artigo 207.º)."
+              />
+            </>
+          ) : null}
+          <NumberField
+            id="overtime-weekly"
+            label="Trabalho suplementar previsto"
+            value={state.expectedOvertimeWeeklyHours}
+            onChange={(value) => set("expectedOvertimeWeeklyHours", value)}
+            suffix="h/semana"
+            max={20}
+            decimals={1}
+            info="Conta para o limite de 48 horas de média semanal do artigo 211.º, n.º 1."
           />
           <SelectField
             label="Mês do gozo principal de férias"
@@ -405,6 +493,15 @@ export default function PlaneadorContratacao() {
             ]}
             hint="Desconhecido aparece como risco no resultado — não como inexistente."
           />
+          {state.irctStatus === "declared" ? (
+            <MoneyField
+              id="irct-minimum"
+              label="Mínimo da categoria no IRCT"
+              value={state.irctMinimumMonthly}
+              onChange={(value) => set("irctMinimumMonthly", value)}
+              hint="Deixa em branco se ainda não confirmaste a tabela: o piso convencional fica por confirmar em vez de ser dado por cumprido."
+            />
+          ) : null}
           <DiasSemanaField
             dias={state.workingWeekdays}
             onChange={(dias) => set("workingWeekdays", dias)}
@@ -715,9 +812,52 @@ export default function PlaneadorContratacao() {
               ]}
             />
             <SelectField
-              label="Candidatura antes do contrato"
-              value={state.applicationBeforeContract}
-              onChange={(value) => set("applicationBeforeContract", value)}
+              label="Oferta registada antes do contrato"
+              value={state.jobOfferRegisteredBeforeContract}
+              onChange={(value) => set("jobOfferRegisteredBeforeContract", value)}
+              options={[
+                { value: "unknown", label: "Ainda não sei" },
+                { value: "yes", label: "Sim" },
+                { value: "no", label: "Não" },
+              ]}
+              hint="O contrato pode ser assinado antes da candidatura, mas nunca antes do registo da oferta no iefponline."
+            />
+            <SelectField
+              label="Candidatura dentro dos 30 dias da oferta"
+              value={state.applicationWithinWindowOfOffer}
+              onChange={(value) => set("applicationWithinWindowOfOffer", value)}
+              options={[
+                { value: "unknown", label: "Ainda não sei" },
+                { value: "yes", label: "Sim" },
+                { value: "no", label: "Não" },
+              ]}
+            />
+            <SelectField
+              label="Criação líquida de emprego"
+              value={state.netJobCreation}
+              onChange={(value) => set("netJobCreation", value)}
+              options={[
+                { value: "unknown", label: "Ainda não sei" },
+                { value: "yes", label: "Sim" },
+                { value: "no", label: "Não" },
+              ]}
+              hint="A admissão tem de aumentar o número de pessoas ao serviço, e o nível mantém-se pelo menos 24 meses."
+            />
+            <SelectField
+              label="Situação regularizada"
+              value={state.regularisedStanding}
+              onChange={(value) => set("regularisedStanding", value)}
+              options={[
+                { value: "unknown", label: "Ainda não sei" },
+                { value: "yes", label: "Sim" },
+                { value: "no", label: "Não" },
+              ]}
+              hint="Perante as Finanças e a Segurança Social."
+            />
+            <SelectField
+              label="Despedimentos recentes no posto equivalente"
+              value={state.recentDismissals}
+              onChange={(value) => set("recentDismissals", value)}
               options={[
                 { value: "unknown", label: "Ainda não sei" },
                 { value: "yes", label: "Sim" },
@@ -758,6 +898,31 @@ export default function PlaneadorContratacao() {
           </button>
         </div>
       </Bloco>
+
+      {state.calculated && selecao && selecao.kind !== "ready" ? (
+        <section
+          ref={resultRef}
+          className="scroll-mt-24 rounded-3xl border border-alert-border bg-alert-bg p-5 sm:p-6"
+          aria-live="polite"
+        >
+          <div className="flex items-start gap-3">
+            <Warning size={19} className="mt-0.5 flex-none text-alert-text" />
+            <div className="min-w-0">
+              <h2 className="font-display text-xl font-semibold text-alert-text">
+                {explicarRecusa(selecao).titulo}
+              </h2>
+              <ul className="mt-3 space-y-2 text-sm leading-relaxed text-alert-text">
+                {explicarRecusa(selecao).motivos.map((motivo) => (
+                  <li key={motivo}>{motivo}</li>
+                ))}
+              </ul>
+              <p className="mt-3 text-sm leading-relaxed text-alert-text/85">
+                {explicarRecusa(selecao).detalhe}
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {state.calculated && preparation ? (
         <div ref={resultRef} className="scroll-mt-24" aria-live="polite">
@@ -821,6 +986,7 @@ export default function PlaneadorContratacao() {
               </div>
 
               <div className="p-4 sm:p-6 lg:p-7">
+                <CoberturaDoRelease provenance={preparation.result.provenance} />
                 <ResultadoContratacao result={preparation.result} tab={tab} />
 
                 {pacotes.length > 0 ? (
@@ -869,10 +1035,11 @@ export default function PlaneadorContratacao() {
                     />
                     <span className="min-w-0 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
                       <strong className="block text-stone-800 dark:text-stone-100">
-                        Revi os pressupostos e assumo este cenário.
+                        Revi os dados que introduzi e assumo este cenário.
                       </strong>
-                      Marca o resultado como validado, com data e versão do motor. Mexer em qualquer
-                      campo volta a tirar a marca.
+                      Regista que os <em>teus</em> dados foram revistos, com data e versão do motor.
+                      Não valida as regras fiscais nem substitui a aprovação da política. Mexer em
+                      qualquer campo volta a tirar a marca.
                     </span>
                   </label>
                 ) : null}
@@ -891,7 +1058,8 @@ export default function PlaneadorContratacao() {
                     <RotateCcw size={15} /> Começar de novo
                   </button>
                   <span className="text-xs text-stone-500">
-                    Motor {preparation.result.engineVersion} · política verificada em {preparation.result.policyDate}
+                    Motor {preparation.result.engineVersion} · release{" "}
+                    {preparation.result.provenance.releaseId}
                   </span>
                 </div>
 
@@ -900,7 +1068,8 @@ export default function PlaneadorContratacao() {
                     snapshot={montarSnapshot(
                       state,
                       preparation.result.engineVersion,
-                      preparation.result.policyDate,
+                      preparation.result.provenance.releaseId,
+                      hoje,
                     )}
                     result={preparation.result}
                     onClose={() => setSaveOpen(false)}

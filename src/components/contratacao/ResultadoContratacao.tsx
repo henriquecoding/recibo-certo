@@ -4,6 +4,7 @@ import type { EmploymentOfferResult } from "../../../ReciboCerto-Fiscal-Engine/s
 import {
   ArrowRight,
   Building,
+  Check,
   Clock,
   ExternalLink,
   ShieldCheck,
@@ -417,12 +418,75 @@ function Apoios({ result }: { result: EmploymentOfferResult }) {
             </span>
           </div>
           <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{support.explanation}</p>
+          <dl className="mt-3 grid gap-x-4 gap-y-1 text-xs text-stone-600 dark:text-stone-300 sm:grid-cols-2">
+            <div className="flex gap-1.5">
+              <dt className="font-semibold">Montante base</dt>
+              <dd>
+                {eur(support.baseAmount.cents)} <span className="text-stone-500">({support.baseAmountBasis})</span>
+              </dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-semibold">Com majorações</dt>
+              <dd>até {eur(support.maxAmountWithMajorations.cents)}</dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-semibold">Candidaturas</dt>
+              <dd>
+                {support.applicationWindow.from} a {support.applicationWindow.to}
+              </dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-semibold">Dotação</dt>
+              <dd>
+                {support.budgetStatus === "unknown"
+                  ? "não publicada — pode esgotar antes do fim"
+                  : support.budgetStatus === "exhausted"
+                    ? "esgotada"
+                    : "aberta"}
+              </dd>
+            </div>
+            <div className="flex gap-1.5">
+              <dt className="font-semibold">Manutenção</dt>
+              <dd>{support.maintenanceMonths} meses</dd>
+            </div>
+          </dl>
+          <p className="mt-2 text-xs leading-relaxed text-clay-text">{support.clawback}</p>
+
+          {/* Cada requisito diz o que aconteceu: era a triagem binária que
+              produzia falsos positivos e negativos (MOT-P0-010). */}
+          <details className="mt-3 rounded-xl border border-stone-200 dark:border-stone-700">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200">
+              Requisitos, um a um ({support.requirements.length})
+            </summary>
+            <ul className="space-y-2 border-t border-stone-100 p-3 text-xs leading-relaxed dark:border-stone-800">
+              {support.requirements.map((requisito) => (
+                <li key={requisito.key} className="flex gap-2">
+                  {requisito.outcome === "met" ? (
+                    <Check size={13} className="mt-0.5 flex-none text-brand" />
+                  ) : (
+                    <Warning
+                      size={13}
+                      className={`mt-0.5 flex-none ${requisito.outcome === "unmet" ? "text-clay-text" : "text-alert-text"}`}
+                    />
+                  )}
+                  <span className="min-w-0">
+                    <strong className="text-stone-800 dark:text-stone-100">{requisito.label}.</strong>{" "}
+                    {requisito.message ?? requisito.detail}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </details>
+
           {support.missingFacts.length > 0 ? (
             <p className="mt-2 text-xs leading-relaxed text-stone-500">
-              Falta confirmar: {support.missingFacts.join(", ")}.
+              Falta confirmar: {support.missingFacts.length}{" "}
+              {support.missingFacts.length === 1 ? "facto" : "factos"} — vê a lista acima.
             </p>
           ) : null}
-          <p className="mt-2 text-xs text-stone-500">Verificado em {support.verifiedAt}.</p>
+          <p className="mt-2 text-xs text-stone-500">
+            {support.authority} · {support.programVersion} · verificado em {support.verifiedAt}.
+          </p>
           <a
             href={support.sourceUrl}
             target="_blank"
@@ -571,7 +635,8 @@ function Memoria({ result }: { result: EmploymentOfferResult }) {
           ))}
         </ul>
         <p className="mt-3 border-t border-stone-100 pt-3 text-xs text-stone-500 dark:border-stone-800">
-          Motor {result.engineVersion} · política verificada em {result.policyDate}
+          Motor {result.engineVersion} · release {result.provenance.releaseId}, conhecimento
+          regulamentar até {result.provenance.knowledgeAsOf}
         </p>
       </Painel>
     </div>

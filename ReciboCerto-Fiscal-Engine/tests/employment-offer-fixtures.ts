@@ -7,12 +7,15 @@ import {
   type CostKnowledge,
   type EmployerFacts,
   type EmploymentOfferInput,
-  type HiringSupportFacts,
+  type EmploymentPolicyBundle,
+  type EmploymentSimulationContext,
   type PlannerGoal,
   type PostCosts,
   type RoleFacts,
+  type SupportFactSheet,
   type WithholdingResolver,
 } from "../src";
+import { selectEmploymentPolicy } from "../src/releases/select";
 
 /**
  * Fixtures determinísticas da baseline (relatório, CON-P0-00). Qualquer
@@ -73,9 +76,31 @@ export const fullyKnownPostCosts = (): PostCosts => ({
   other: confirmed(0),
 });
 
+/**
+ * Bundle de teste. Passa pelo MESMO seletor que a rota pública — o que muda
+ * é apenas a autorização explícita de usar um release não publicado, que
+ * nenhuma superfície pode passar (relatório, MOT-P0-001).
+ */
+export function testBundle(
+  withholding: WithholdingResolver = withholding10,
+  overrides: Partial<Parameters<typeof selectEmploymentPolicy>[0]> = {},
+): EmploymentPolicyBundle {
+  const selection = selectEmploymentPolicy({
+    simulationAsOf: "2026-08-31",
+    workPeriod: "2026-08",
+    payDate: "2026-08-31",
+    jurisdiction: "PT-CONTINENTE",
+    withholding,
+    ...overrides,
+  });
+  if (selection.kind !== "ready") {
+    throw new Error(`O seletor recusou o release de teste: ${JSON.stringify(selection)}`);
+  }
+  return selection.bundle;
+}
+
 export interface OfferChanges {
-  period?: EmploymentOfferInput["period"];
-  policyDate?: EmploymentOfferInput["policyDate"];
+  context?: Partial<EmploymentSimulationContext>;
   goal?: PlannerGoal;
   employer?: Partial<EmployerFacts>;
   role?: Partial<RoleFacts>;
@@ -84,25 +109,31 @@ export interface OfferChanges {
   targetNetMonthly?: EmploymentOfferInput["targetNetMonthly"];
   candidate?: CandidateTaxFacts;
   capacity?: CapacityFacts;
-  supportFacts?: HiringSupportFacts;
+  supportFacts?: SupportFactSheet;
   review?: EmploymentOfferInput["review"];
 }
 
 export function offerInput(changes: OfferChanges = {}): EmploymentOfferInput {
   const base: EmploymentOfferInput = {
-    period: "2026-08",
-    policyDate: "2026-08-30",
+    context: {
+      simulationAsOf: "2026-08-31",
+      workPeriod: "2026-01",
+      payDate: "2026-01-31",
+      contractStart: "2026-01-01",
+      jurisdiction: "PT-CONTINENTE",
+    },
     goal: "known_offer",
     employer: { contributionRegime: "regime_geral" },
     role: {
       title: "Operador",
-      startDate: "2026-01-01",
       contractKind: "permanent",
-      workingWeekdays: [1, 2, 3, 4, 5],
-      weeklyHoursHundredths: 4_000,
-      workingTimeRegime: "standard",
+      workingTime: {
+        normalWeeklyHoursHundredths: 4_000,
+        workingWeekdays: [1, 2, 3, 4, 5],
+        regime: "standard",
+        basis: "none",
+      },
       collectiveAgreement: { status: "none" },
-      jurisdiction: "PT-CONTINENTE",
       mainVacationMonth: 8,
       productive: true,
       productiveShare: ratePpm(750_000),
@@ -131,11 +162,14 @@ export function offerInput(changes: OfferChanges = {}): EmploymentOfferInput {
   };
   return {
     ...base,
-    period: changes.period ?? base.period,
-    policyDate: changes.policyDate ?? base.policyDate,
+    context: { ...base.context, ...changes.context },
     goal: changes.goal ?? base.goal,
     employer: { ...base.employer, ...changes.employer },
-    role: { ...base.role, ...changes.role },
+    role: {
+      ...base.role,
+      ...changes.role,
+      workingTime: { ...base.role.workingTime, ...changes.role?.workingTime },
+    },
     package: { ...base.package, ...changes.package },
     postCosts: { ...base.postCosts, ...changes.postCosts },
     targetNetMonthly: "targetNetMonthly" in changes

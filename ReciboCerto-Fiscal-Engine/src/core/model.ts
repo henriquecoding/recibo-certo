@@ -84,7 +84,7 @@ export type FiscalDecision<T> =
 
 export interface LegalSource {
   id: string;
-  authority: "AT" | "DR" | "SEGURANCA_SOCIAL" | "JORAM" | "JO_ACORES";
+  authority: "AT" | "DR" | "SEGURANCA_SOCIAL" | "JORAM" | "JO_ACORES" | "IEFP";
   title: string;
   url: string;
   effective: EffectivePeriod;
@@ -92,6 +92,19 @@ export interface LegalSource {
   forbiddenAnchors?: readonly string[];
   lastHumanReview: ISODate;
   status: "active" | "superseded" | "pending" | "conflict" | "withdrawn";
+}
+
+/**
+ * Localizador dentro de uma fonte. Um diploma consolidado sustenta dezenas de
+ * asserções distintas; citar «o Código do Trabalho» não diz qual. O relatório
+ * exige artigo, número ou tabela em cada citação (MOT-P0-012).
+ */
+export interface LegalLocator {
+  id: string;
+  sourceId: string;
+  /** Artigo, número, tabela ou página dentro do documento. */
+  article: string;
+  label: string;
 }
 
 export interface DatasetManifest {

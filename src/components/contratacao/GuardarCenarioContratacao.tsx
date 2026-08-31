@@ -6,14 +6,14 @@ import { useCenarios } from "@/lib/store/cenarios";
 import { Check, Close, Lock, Warning } from "@/components/ui/Icons";
 import { registar } from "@/lib/analytics/cliente";
 import { contextoContratacao } from "@/lib/analytics/contratacao";
-import type { CenarioContratacaoV2 } from "./estado";
+import type { CenarioContratacaoV3 } from "./estado";
 
 export default function GuardarCenarioContratacao({
   snapshot,
   result,
   onClose,
 }: {
-  snapshot: CenarioContratacaoV2;
+  snapshot: CenarioContratacaoV3;
   result: EmploymentOfferResult;
   onClose: () => void;
 }) {

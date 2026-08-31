@@ -404,6 +404,28 @@ html {
      │ os que não passam por este caminho.                             │
      └────────────────────────────────────────────────────────────────┘ */
   scroll-padding-top: calc(var(--rc-header-atual) + 12px);
+
+  /* ┌────────────────────────────────────────────────────────────────┐
+     │ E QUE TAMBÉM NÃO ATERRAM DEBAIXO DA BARRA DE BAIXO             │
+     │                                                                │
+     │ O topo estava reservado; o fundo não. No telemóvel há duas      │
+     │ camadas fixas coladas ao fim do ecrã — a navegação e o dock de  │
+     │ busca — e um campo alcançado por teclado, por âncora ou por     │
+     │ `scrollIntoView` podia aterrar por baixo delas. O espaçador do  │
+     │ fim do documento salvava o ÚLTIMO elemento e mais nenhum.        │
+     │                                                                │
+     │ `scroll-padding-bottom` diz ao browser qual é a região de       │
+     │ leitura útil, e é ela que ele respeita ao levar o foco a um     │
+     │ campo (relatório de 31-08-2026, MOT-P0-020 e §9.5).             │
+     └────────────────────────────────────────────────────────────────┘ */
+  scroll-padding-bottom: calc(var(--rc-chrome-movel) + 12px);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    /* A partir de `lg` as barras móveis desaparecem (`lg:hidden`). */
+    scroll-padding-bottom: 12px;
+  }
 }
 
 [id],

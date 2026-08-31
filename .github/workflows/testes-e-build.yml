@@ -48,6 +48,9 @@ jobs:
       - name: Conjunto de testes
         run: npm test
 
+      - name: Motor patronal — casos dourados, paridade entre superfícies e sem hardcodes
+        run: npm run motor:check
+
       - name: Coerência dos dados fiscais nas skills
         run: npm run skills:check
 
@@ -185,7 +188,7 @@ jobs:
       - name: Telemóvel — 360 e 320 px, dois temas, quatro perfis
         run: npm run movel:e2e
 
-      - name: Planeador patronal — fluxo completo a 360 px
+      - name: Planeador patronal — fluxo completo e teste de oclusão nos seis viewports
         run: BASE_URL=http://localhost:3000 npm run contratacao:e2e
 
       # O runner não traz o ImageMagick, e a comparação é feita com `compare

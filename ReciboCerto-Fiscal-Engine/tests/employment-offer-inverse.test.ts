@@ -1,15 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
-  PORTUGAL_PAYROLL_POLICY_2026,
   eurCents,
   planEmploymentOffer,
   ratePpm,
   solveBaseSalaryForEmployerBudget,
 } from "../src";
-import { offerInput, withholding8 } from "./employment-offer-fixtures";
+import { offerInput, testBundle, withholding8 } from "./employment-offer-fixtures";
 
 const plan = (input: Parameters<typeof planEmploymentOffer>[0]) =>
-  planEmploymentOffer(input, PORTUGAL_PAYROLL_POLICY_2026, withholding8);
+  planEmploymentOffer(input, testBundle(withholding8));
 
 const naoProdutivo = { productive: false, productiveShare: undefined } as const;
 

@@ -46,7 +46,7 @@ export default function PlaneadorContratacaoPage() {
         </section>
       }
     >
-      <PlaneadorContratacaoLazy />
+      <PlaneadorContratacaoLazy hoje={new Date().toISOString().slice(0, 10)} />
     </ToolShell>
   );
 }

@@ -38,31 +38,36 @@ import {
 } from "./completeness";
 import { employmentOfferAssumptions } from "./explanation";
 import { solveBaseSalaryForEmployerBudget } from "./inverse";
-import {
-  assessHiringSupports,
-  EMPLOYMENT_OFFER_ENGINE_VERSION,
-} from "./policy-2026";
+import { assessMinimumWage } from "./minimum-wage";
+import { EMPLOYMENT_OFFER_ENGINE_VERSION } from "./version";
 import { workerRangeProfiles, workerRangeProfileLabels } from "./range";
+import { assessHiringSupports } from "./supports";
+import { assessVacation, earliestLeaveMonth, VACATION_CITATIONS } from "./vacation";
+import { reviewWorkingTime } from "./working-time";
 import {
-  admissionYearVacationWorkdays,
   buildWorkCalendar,
   parseISODate,
   toISODate,
-  ANNUAL_VACATION_WORKDAYS,
   WORK_CALENDAR_CITATIONS,
   type WorkCalendarResult,
 } from "./work-calendar";
+import type {
+  EmploymentPolicyBundle,
+  SubsidyBaseComponent,
+} from "../../releases/types";
 import type {
   EmployerCostResult,
   EmploymentOfferInput,
   EmploymentOfferPreparation,
   EmploymentOfferResult,
+  MinimumWageVerdict,
   PersonalizedWorkerOutcome,
   PublicChargesResult,
   ReferenceScenarioOutcome,
+  ResultProvenance,
+  VacationEntitlement,
   WorkerOutcome,
-  WorkingTimeLimits,
-  WorkingTimeRegime,
+  WorkingTimeAssessment,
 } from "./types";
 
 const ZERO = eurCents(0);
@@ -81,29 +86,6 @@ const min = (values: readonly Money[]): Money =>
   eurCents(Math.min(...values.map((value) => value.cents)));
 const max = (values: readonly Money[]): Money =>
   eurCents(Math.max(...values.map((value) => value.cents)));
-
-/**
- * Limites do período normal de trabalho. Deixar passar 80 h/semana como
- * «situação normal» era aceitar em silêncio um cenário que a lei não permite
- * (relatório, CON-P0-09).
- */
-export const WORKING_TIME_LIMITS: Readonly<Record<WorkingTimeRegime, WorkingTimeLimits>> = {
-  standard: {
-    dailyHoursHundredths: 800,
-    weeklyHoursHundredths: 4_000,
-    citation: "pt.dr.codigo-trabalho.artigo-203",
-  },
-  adaptability_individual: {
-    dailyHoursHundredths: 1_000,
-    weeklyHoursHundredths: 5_000,
-    citation: "pt.dr.codigo-trabalho.artigo-205",
-  },
-  adaptability_collective: {
-    dailyHoursHundredths: 1_200,
-    weeklyHoursHundredths: 6_000,
-    citation: "pt.dr.codigo-trabalho.artigo-204",
-  },
-};
 
 interface MonthSlot {
   year: number;
@@ -150,6 +132,8 @@ function monthlyInput(
   baseSalaryMonthly: Money,
   employee: PayrollEmployee,
   mealDays: number,
+  holidaySubsidyBase: Money = baseSalaryMonthly,
+  christmasSubsidyBase: Money = baseSalaryMonthly,
 ): PayrollInput {
   const meal = input.package.mealAllowance;
   const lines: PayrollInput["lines"] = [
@@ -177,21 +161,21 @@ function monthlyInput(
           method: meal.method,
         }]
       : []),
-    ...(input.package.subsidyPayment === "duodecimos" && baseSalaryMonthly.cents > 0
+    ...(input.package.subsidyPayment === "duodecimos" && holidaySubsidyBase.cents > 0
       ? [
           {
             id: "holiday-duodecimo",
             label: "Duodécimo de férias",
             kind: "holiday_subsidy" as const,
-            amountPaid: scale(baseSalaryMonthly, 1, 12),
-            fullEntitlement: baseSalaryMonthly,
+            amountPaid: scale(holidaySubsidyBase, 1, 12),
+            fullEntitlement: holidaySubsidyBase,
           },
           {
             id: "christmas-duodecimo",
             label: "Duodécimo de Natal",
             kind: "christmas_subsidy" as const,
-            amountPaid: scale(baseSalaryMonthly, 1, 12),
-            fullEntitlement: baseSalaryMonthly,
+            amountPaid: scale(christmasSubsidyBase, 1, 12),
+            fullEntitlement: christmasSubsidyBase,
           },
         ]
       : []),
@@ -205,8 +189,8 @@ function monthlyInput(
     })),
   ];
   return {
-    period: input.period,
-    weeklyHoursHundredths: input.role.weeklyHoursHundredths,
+    period: input.context.workPeriod,
+    weeklyHoursHundredths: input.role.workingTime.normalWeeklyHoursHundredths,
     employee,
     lines,
   };
@@ -220,8 +204,8 @@ function subsidyInput(
   fullEntitlement: Money,
 ): PayrollInput {
   return {
-    period: input.period,
-    weeklyHoursHundredths: input.role.weeklyHoursHundredths,
+    period: input.context.workPeriod,
+    weeklyHoursHundredths: input.role.workingTime.normalWeeklyHoursHundredths,
     employee,
     lines: [{
       id: kind,
@@ -239,8 +223,8 @@ function annualBonusInput(
   amount: Money,
 ): PayrollInput {
   return {
-    period: input.period,
-    weeklyHoursHundredths: input.role.weeklyHoursHundredths,
+    period: input.context.workPeriod,
+    weeklyHoursHundredths: input.role.workingTime.normalWeeklyHoursHundredths,
     employee,
     lines: [{
       id: "annual-bonus",
@@ -251,6 +235,27 @@ function annualBonusInput(
         input.package.variableBonusSocialSecurityRegularity ?? "unknown",
     }],
   };
+}
+
+/**
+ * Base dos subsídios de férias e de Natal.
+ *
+ * O artigo 264.º, n.º 2 manda incluir a retribuição base E as demais
+ * prestações retributivas ligadas ao modo específico da execução do
+ * trabalho. Projetar só o salário base subestimava os dois subsídios sempre
+ * que houvesse um complemento mensal fixo (MOT-P0-009).
+ */
+function subsidyBaseAmount(
+  input: EmploymentOfferInput,
+  baseSalaryMonthly: Money,
+  components: readonly SubsidyBaseComponent[],
+): Money {
+  let total = ZERO;
+  if (components.includes("base_salary")) total = add(total, baseSalaryMonthly);
+  if (components.includes("fixed_monthly_bonus")) {
+    total = add(total, input.package.fixedMonthlyBonus ?? ZERO);
+  }
+  return total;
 }
 
 interface ProjectionContext {
@@ -269,8 +274,7 @@ function projectEmployee(
   input: EmploymentOfferInput,
   baseSalaryMonthly: Money,
   employee: PayrollEmployee,
-  policy: PayrollPolicy,
-  resolver: WithholdingResolver,
+  bundle: EmploymentPolicyBundle,
   context: ProjectionContext,
   /**
    * A resolução inversa do orçamento só precisa do ano estabilizado e corre
@@ -279,6 +283,18 @@ function projectEmployee(
    */
   stabilizedOnly = false,
 ): ProjectionPreparation {
+  const policy = bundle.release.payroll;
+  const resolver = bundle.withholding;
+  const holidayBase = subsidyBaseAmount(
+    input,
+    baseSalaryMonthly,
+    bundle.release.subsidyBase.holidaySubsidyIncludes,
+  );
+  const christmasBase = subsidyBaseAmount(
+    input,
+    baseSalaryMonthly,
+    bundle.release.subsidyBase.christmasSubsidyIncludes,
+  );
   const cache = new Map<number, PayrollResult>();
   let failure: Exclude<PayrollPreparation, { kind: "ready" }> | undefined;
 
@@ -286,7 +302,7 @@ function projectEmployee(
     const cached = cache.get(mealDays);
     if (cached) return cached;
     const prepared = asPreparation(calculatePayroll(
-      monthlyInput(input, baseSalaryMonthly, employee, mealDays),
+      monthlyInput(input, baseSalaryMonthly, employee, mealDays, holidayBase, christmasBase),
       policy,
       resolver,
     ));
@@ -327,16 +343,16 @@ function projectEmployee(
   let christmasFull: PayrollResult | undefined;
   let admissionHoliday: PayrollResult | undefined;
   let admissionChristmas: PayrollResult | undefined;
-  if (input.package.subsidyPayment === "normal" && baseSalaryMonthly.cents > 0) {
+  if (input.package.subsidyPayment === "normal" && holidayBase.cents > 0) {
     const h = asPreparation(calculatePayroll(
-      subsidyInput(input, employee, "holiday_subsidy", baseSalaryMonthly, baseSalaryMonthly),
+      subsidyInput(input, employee, "holiday_subsidy", holidayBase, holidayBase),
       policy,
       resolver,
     ));
     if (h.kind !== "ready") return h;
     holidayFull = h.value;
     const c = asPreparation(calculatePayroll(
-      subsidyInput(input, employee, "christmas_subsidy", baseSalaryMonthly, baseSalaryMonthly),
+      subsidyInput(input, employee, "christmas_subsidy", christmasBase, christmasBase),
       policy,
       resolver,
     ));
@@ -344,16 +360,17 @@ function projectEmployee(
     christmasFull = c.value;
 
     if (context.admissionMonths > 0 && context.admissionMonths < 12) {
-      const prorated = scale(baseSalaryMonthly, context.admissionMonths, 12);
+      const proratedHoliday = scale(holidayBase, context.admissionMonths, 12);
+      const proratedChristmas = scale(christmasBase, context.admissionMonths, 12);
       const ph = asPreparation(calculatePayroll(
-        subsidyInput(input, employee, "holiday_subsidy", prorated, baseSalaryMonthly),
+        subsidyInput(input, employee, "holiday_subsidy", proratedHoliday, holidayBase),
         policy,
         resolver,
       ));
       if (ph.kind !== "ready") return ph;
       admissionHoliday = ph.value;
       const pc = asPreparation(calculatePayroll(
-        subsidyInput(input, employee, "christmas_subsidy", prorated, baseSalaryMonthly),
+        subsidyInput(input, employee, "christmas_subsidy", proratedChristmas, christmasBase),
         policy,
         resolver,
       ));
@@ -507,24 +524,56 @@ function startupLowerBound(components: readonly CostComponent[]): Money {
 
 // ─── Validação ─────────────────────────────────────────────────────────────
 
+/**
+ * O 31 de fevereiro passava. A comparação era um ida-e-volta de formatação,
+ * que reescreve o dia tal e qual em vez de o validar contra o calendário —
+ * e uma data impossível seguia para o motor como se fosse real
+ * (relatório, MOT-P0-003).
+ */
 function isISODate(value: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const { year, month, day } = parseISODate(value as ISODate);
   if (month < 1 || month > 12 || day < 1) return false;
-  return toISODate({ year, month, day }) === value;
+  const stamp = new Date(Date.UTC(year, month - 1, day));
+  return (
+    stamp.getUTCFullYear() === year
+    && stamp.getUTCMonth() + 1 === month
+    && stamp.getUTCDate() === day
+  );
 }
 
-function validate(input: EmploymentOfferInput): EmploymentOfferPreparation | undefined {
+interface Validation {
+  failure?: EmploymentOfferPreparation;
+  workingTime?: WorkingTimeAssessment;
+}
+
+/**
+ * Validação do input contra o release.
+ *
+ * Duas mudanças estruturais em relação ao que existia (MOT-P0-003):
+ * o período deixou de ser comparado com a string «2026-» — é o release que
+ * resolve vigência — e uma data inválida deixou de ser convertida em
+ * silêncio numa data válida. Um campo mal preenchido produz `needs_input`.
+ */
+function validate(
+  input: EmploymentOfferInput,
+  bundle: EmploymentPolicyBundle,
+): Validation {
   const missing: MissingInput[] = [];
   const unsupported: string[] = [];
+  const conflicts: string[] = [];
+  const { context } = input;
 
-  if (!input.period.startsWith("2026-")) {
+  if (bundle.usage === "public" && bundle.release.status === "draft") {
     return {
-      kind: "unsupported",
-      reasons: ["O Planeador está versionado para payroll de 2026."],
-      trace: [],
+      failure: {
+        kind: "unsupported",
+        reasons: ["O release patronal ativo está em rascunho e não pode produzir um resultado público."],
+        trace: [],
+      },
     };
   }
+
   if (input.employer.contributionRegime === "outro") {
     unsupported.push(
       "O motor só sabe calcular o regime geral da Segurança Social. Para outro enquadramento, confirma a taxa com o teu contabilista antes de decidir.",
@@ -537,44 +586,49 @@ function validate(input: EmploymentOfferInput): EmploymentOfferPreparation | und
     });
   }
 
-  if (!isISODate(input.role.startDate)) {
-    missing.push({ path: "role.startDate", reason: "Indica a data de entrada, no formato AAAA-MM-DD." });
+  if (!isISODate(context.contractStart)) {
+    missing.push({
+      path: "context.contractStart",
+      reason: "Indica a data de entrada, no formato AAAA-MM-DD.",
+    });
   }
-  if (input.role.contractEndDate !== undefined) {
-    if (!isISODate(input.role.contractEndDate)) {
-      missing.push({ path: "role.contractEndDate", reason: "A data de fim do contrato não é uma data válida." });
-    } else if (input.role.contractEndDate < input.role.startDate) {
-      return {
-        kind: "conflict",
-        reasons: ["O fim do contrato é anterior à data de entrada."],
-        trace: [],
-      };
+  if (!isISODate(context.payDate)) {
+    missing.push({
+      path: "context.payDate",
+      reason: "Indica a data de pagamento: é ela que determina a tabela de retenção aplicável.",
+    });
+  }
+  if (!isISODate(context.simulationAsOf)) {
+    missing.push({
+      path: "context.simulationAsOf",
+      reason: "Indica a data de referência da simulação.",
+    });
+  }
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(context.workPeriod)) {
+    missing.push({
+      path: "context.workPeriod",
+      reason: "Indica o mês a que a remuneração respeita, no formato AAAA-MM.",
+    });
+  }
+  if (context.contractEnd !== undefined) {
+    if (!isISODate(context.contractEnd)) {
+      missing.push({
+        path: "context.contractEnd",
+        reason: "A data de fim do contrato não é uma data válida.",
+      });
+    } else if (isISODate(context.contractStart) && context.contractEnd < context.contractStart) {
+      conflicts.push("O fim do contrato é anterior à data de entrada.");
     }
   }
-  if (input.role.workingWeekdays.length === 0) {
-    missing.push({ path: "role.workingWeekdays", reason: "Indica pelo menos um dia da semana contratado." });
-  }
-  if (input.role.workingWeekdays.some((day) => !Number.isInteger(day) || day < 1 || day > 7)) {
-    missing.push({ path: "role.workingWeekdays", reason: "Os dias da semana vão de 1 (segunda) a 7 (domingo)." });
+  if (!bundle.release.jurisdictions.includes(context.jurisdiction)) {
+    unsupported.push(
+      `O release ativo não cobre a jurisdição ${context.jurisdiction}.`,
+    );
   }
 
-  const weekly = input.role.weeklyHoursHundredths;
-  if (!Number.isSafeInteger(weekly) || weekly <= 0) {
-    missing.push({ path: "role.weeklyHoursHundredths", reason: "Indica as horas semanais do posto." });
-  } else {
-    const limits = WORKING_TIME_LIMITS[input.role.workingTimeRegime];
-    const days = Math.max(1, input.role.workingWeekdays.length);
-    const daily = weekly / days;
-    if (weekly > limits.weeklyHoursHundredths) {
-      unsupported.push(
-        `${(weekly / 100).toLocaleString("pt-PT")} horas por semana excedem o limite de ${limits.weeklyHoursHundredths / 100} horas do regime escolhido. Escolhe um regime de adaptabilidade suportado ou corrige o horário.`,
-      );
-    } else if (daily > limits.dailyHoursHundredths) {
-      unsupported.push(
-        `O horário dá ${(daily / 100).toFixed(1)} horas por dia e o regime escolhido admite no máximo ${limits.dailyHoursHundredths / 100}. Acrescenta dias de trabalho ou muda de regime.`,
-      );
-    }
-  }
+  const workingTime = reviewWorkingTime(input.role.workingTime, bundle.release.workingTime);
+  missing.push(...workingTime.missing);
+  conflicts.push(...workingTime.conflicts);
 
   if (!Number.isInteger(input.role.mainVacationMonth)
     || input.role.mainVacationMonth < 1
@@ -600,8 +654,16 @@ function validate(input: EmploymentOfferInput): EmploymentOfferPreparation | und
     missing.push({ path: "package.baseSalaryMonthly", reason: "Indica o vencimento base da proposta." });
   }
 
-  if (unsupported.length > 0) return { kind: "unsupported", reasons: unsupported, trace: [] };
-  return missing.length > 0 ? { kind: "needs_input", missing, trace: [] } : undefined;
+  if (conflicts.length > 0) {
+    return { failure: { kind: "conflict", reasons: conflicts, trace: [] } };
+  }
+  if (unsupported.length > 0) {
+    return { failure: { kind: "unsupported", reasons: unsupported, trace: [] } };
+  }
+  if (missing.length > 0) {
+    return { failure: { kind: "needs_input", missing, trace: [] } };
+  }
+  return { workingTime: workingTime.assessment };
 }
 
 function effectiveBudget(input: EmploymentOfferInput): Money | undefined {
@@ -620,58 +682,92 @@ interface Calendars {
   startYear: number;
   startMonth: number;
   admissionMonths: number;
+  vacation: VacationEntitlement;
 }
 
-function buildCalendars(input: EmploymentOfferInput): Calendars {
-  const start = parseISODate(input.role.startDate);
+/**
+ * Constrói os três calendários do horizonte.
+ *
+ * A correção que este bloco carrega (MOT-P0-008): as férias do ano da
+ * admissão deixaram de ser retiradas à capacidade desse ano só porque foram
+ * adquiridas nele. O que se retira é o que a lei permite GOZAR — e o que
+ * sobra transita, com prazo, para o ano seguinte.
+ */
+function buildCalendars(
+  input: EmploymentOfferInput,
+  bundle: EmploymentPolicyBundle,
+): Calendars {
+  const { context } = input;
+  const start = parseISODate(context.contractStart);
   const startYear = start.year;
-  const weekdays = input.role.workingWeekdays;
+  const weekdays = input.role.workingTime.workingWeekdays;
+  const vacationPolicy = bundle.release.vacation;
 
   const admissionSkeleton = buildWorkCalendar({
     year: startYear,
-    jurisdiction: input.role.jurisdiction,
-    startDate: input.role.startDate,
-    endDate: input.role.contractEndDate,
+    jurisdiction: context.jurisdiction,
+    startDate: context.contractStart,
+    endDate: context.contractEnd,
     workingWeekdays: weekdays,
     municipalHoliday: input.role.municipalHoliday,
     vacationWorkdays: 0,
     mainVacationMonth: input.role.mainVacationMonth,
   });
+
+  const vacation = assessVacation({
+    policy: vacationPolicy,
+    contractStart: context.contractStart,
+    contractEnd: context.contractEnd,
+    completeContractMonthsInAdmissionYear: admissionSkeleton.completeContractMonths,
+  });
+
+  const earliestMonth = earliestLeaveMonth(vacation, startYear);
   const admission = buildWorkCalendar({
     year: startYear,
-    jurisdiction: input.role.jurisdiction,
-    startDate: input.role.startDate,
-    endDate: input.role.contractEndDate,
+    jurisdiction: context.jurisdiction,
+    startDate: context.contractStart,
+    endDate: context.contractEnd,
     workingWeekdays: weekdays,
     municipalHoliday: input.role.municipalHoliday,
-    // CT, artigo 239.º, n.º 1: dois dias úteis por mês de contrato, até 20.
-    vacationWorkdays: admissionYearVacationWorkdays(admissionSkeleton.completeContractMonths),
+    vacationWorkdays: vacation.admissionYearUsableWorkdays,
     mainVacationMonth: input.role.mainVacationMonth,
+    // Nenhum dia de férias pode cair antes de o direito ser gozável.
+    earliestVacationMonth: earliestMonth,
   });
 
   const nextYear = startYear + 1;
   const fullYearStart = toISODate({ year: nextYear, month: 1, day: 1 });
   const secondYear = buildWorkCalendar({
     year: nextYear,
-    jurisdiction: input.role.jurisdiction,
+    jurisdiction: context.jurisdiction,
     startDate: fullYearStart,
-    endDate: input.role.contractEndDate,
+    endDate: context.contractEnd,
     workingWeekdays: weekdays,
     municipalHoliday: input.role.municipalHoliday,
-    vacationWorkdays: ANNUAL_VACATION_WORKDAYS,
+    vacationWorkdays: vacation.secondYearWorkdays,
     mainVacationMonth: input.role.mainVacationMonth,
   });
-  const stabilized = input.role.contractEndDate
+  const stabilized = context.contractEnd
     ? buildWorkCalendar({
         year: nextYear,
-        jurisdiction: input.role.jurisdiction,
+        jurisdiction: context.jurisdiction,
         startDate: fullYearStart,
         workingWeekdays: weekdays,
         municipalHoliday: input.role.municipalHoliday,
-        vacationWorkdays: ANNUAL_VACATION_WORKDAYS,
+        vacationWorkdays: vacationPolicy.annualWorkdays,
         mainVacationMonth: input.role.mainVacationMonth,
       })
-    : secondYear;
+    : buildWorkCalendar({
+        year: nextYear,
+        jurisdiction: context.jurisdiction,
+        startDate: fullYearStart,
+        workingWeekdays: weekdays,
+        municipalHoliday: input.role.municipalHoliday,
+        // O ano ESTABILIZADO é o ano recorrente: 22 dias, sem o saldo de
+        // admissão, que só existe uma vez.
+        vacationWorkdays: vacationPolicy.annualWorkdays,
+        mainVacationMonth: input.role.mainVacationMonth,
+      });
 
   return {
     admission,
@@ -680,6 +776,7 @@ function buildCalendars(input: EmploymentOfferInput): Calendars {
     startYear,
     startMonth: admission.firstActiveMonth,
     admissionMonths: admission.activeMonths,
+    vacation,
   };
 }
 
@@ -711,8 +808,7 @@ function slotsFrom(
 
 function resolveBaseSalary(
   input: EmploymentOfferInput,
-  policy: PayrollPolicy,
-  resolver: WithholdingResolver,
+  bundle: EmploymentPolicyBundle,
   context: ProjectionContext,
   recurring: Money,
 ): Money | EmploymentOfferPreparation {
@@ -724,7 +820,7 @@ function resolveBaseSalary(
     const budget = effectiveBudget(input)!;
     const referenceEmployee: PayrollEmployee = {
       ...DEFAULT_EMPLOYEE,
-      jurisdiction: input.role.jurisdiction,
+      jurisdiction: input.context.jurisdiction,
     };
     let projectionError: Exclude<ProjectionPreparation, { kind: "ready" }> | undefined;
     const solved = solveBaseSalaryForEmployerBudget(budget, (candidate) => {
@@ -732,8 +828,7 @@ function resolveBaseSalary(
         input,
         candidate,
         referenceEmployee,
-        policy,
-        resolver,
+        bundle,
         context,
         true,
       );
@@ -753,7 +848,7 @@ function resolveBaseSalary(
   const target = input.targetNetMonthly!;
   const profiles = input.candidate
     ? [input.candidate]
-    : workerRangeProfiles(input.role.jurisdiction);
+    : workerRangeProfiles(input.context.jurisdiction);
   const referenceMealDays = context.stabilizedSlots[0]?.mealDays ?? 0;
   const solvedBases: Money[] = [];
   for (const profile of profiles) {
@@ -763,7 +858,7 @@ function resolveBaseSalary(
       targetNetPayable: target,
       maximumGross: eurCents(Math.max(5_000_000, target.cents * 5)),
       tolerance: eurCents(1),
-    }, policy, resolver);
+    }, bundle.release.payroll, bundle.withholding);
     if (solved.kind === "needs_input") return solved;
     if (solved.kind === "conflict") return solved;
     if (solved.kind === "unsupported") return solved;
@@ -880,8 +975,11 @@ function buildCapacity(
   const calendar = calendars.stabilized;
   return calculateCapacity(
     {
-      weeklyHoursHundredths: input.role.weeklyHoursHundredths,
-      workingWeekdaysPerWeek: input.role.workingWeekdays.length,
+      // Horas PAGAS: o período normal. Um pico de adaptabilidade é
+      // compensado dentro do período de referência e não acrescenta horas
+      // contratadas ao ano (MOT-P0-007).
+      weeklyHoursHundredths: input.role.workingTime.normalWeeklyHoursHundredths,
+      workingWeekdaysPerWeek: input.role.workingTime.workingWeekdays.length,
       scheduledDays: calendar.scheduledDays,
       holidayDaysOnScheduledDays: calendar.holidaysOnScheduledDays,
       vacationWorkdays: calendar.vacationWorkdays,
@@ -905,13 +1003,14 @@ function buildCapacity(
  */
 export function planEmploymentOffer(
   input: EmploymentOfferInput,
-  payrollPolicy: PayrollPolicy,
-  withholdingResolver: WithholdingResolver,
+  bundle: EmploymentPolicyBundle,
 ): EmploymentOfferPreparation {
-  const invalid = validate(input);
-  if (invalid) return invalid;
+  const payrollPolicy = bundle.release.payroll;
+  const validation = validate(input, bundle);
+  if (validation.failure) return validation.failure;
+  const workingTime = validation.workingTime!;
 
-  const calendars = buildCalendars(input);
+  const calendars = buildCalendars(input, bundle);
   if (calendars.admissionMonths === 0) {
     return {
       kind: "conflict",
@@ -932,36 +1031,44 @@ export function planEmploymentOffer(
   const recurring = recurringLowerBound(components, input);
   const startup = startupLowerBound(components);
 
-  const resolvedBase = resolveBaseSalary(
-    input,
-    payrollPolicy,
-    withholdingResolver,
-    context,
-    recurring,
-  );
+  const resolvedBase = resolveBaseSalary(input, bundle, context, recurring);
   if (typeof resolvedBase !== "object" || !("currency" in resolvedBase)) {
     return resolvedBase as EmploymentOfferPreparation;
   }
 
+  // Gate do piso legal. Corre ANTES do payroll: uma proposta abaixo do
+  // mínimo aplicável não é um aviso, é um conflito — e sem IRCT identificado
+  // o motor não afirma conformidade salarial (MOT-P0-006, MOT-P0-011).
+  const minimumWage: MinimumWageVerdict = assessMinimumWage({
+    policy: bundle.release.minimumWage,
+    jurisdiction: input.context.jurisdiction,
+    onDate: input.context.contractStart,
+    offered: resolvedBase,
+    workingTime,
+    collectiveAgreement: input.role.collectiveAgreement,
+  });
+  if (minimumWage.kind === "below_floor") {
+    return {
+      kind: "conflict",
+      reasons: [
+        `A retribuição base proposta fica abaixo do piso aplicável a este posto. Piso: ${(minimumWage.floor.cents / 100).toLocaleString("pt-PT", { style: "currency", currency: "EUR" })} (${minimumWage.basis}).`,
+      ],
+      trace: [],
+    };
+  }
+
   const employees: readonly PayrollEmployee[] = input.candidate
     ? [input.candidate]
-    : workerRangeProfiles(input.role.jurisdiction);
+    : workerRangeProfiles(input.context.jurisdiction);
   const projections: EmployeeProjection[] = [];
   for (const employee of employees) {
-    const projected = projectEmployee(
-      input,
-      resolvedBase,
-      employee,
-      payrollPolicy,
-      withholdingResolver,
-      context,
-    );
+    const projected = projectEmployee(input, resolvedBase, employee, bundle, context);
     if (projected.kind !== "ready") return errorFromProjection(projected);
     projections.push(projected.value);
   }
 
   const reference = projections[0]!;
-  const worker = workerOutcome(projections, input.role.jurisdiction);
+  const worker = workerOutcome(projections, input.context.jurisdiction);
 
   // Rateio dos recorrentes: o ano da admissão só suporta a parte dos meses
   // ativos; os anos seguintes suportam o ano inteiro. O resto de divisão fica
@@ -1005,10 +1112,10 @@ export function planEmploymentOffer(
     christmasSubsidyMonth: 12,
     bonusMonth: input.package.bonusMonth ?? 12,
     startupCosts: startup,
-    lastActiveMonth: input.role.contractEndDate
+    lastActiveMonth: input.context.contractEnd
       ? {
-          year: parseISODate(input.role.contractEndDate).year,
-          month: parseISODate(input.role.contractEndDate).month,
+          year: parseISODate(input.context.contractEnd).year,
+          month: parseISODate(input.context.contractEnd).month,
         }
       : undefined,
   });
@@ -1074,7 +1181,17 @@ export function planEmploymentOffer(
   };
 
   const capacity = buildCapacity(input, calendars, annualStabilized);
-  const supports = assessHiringSupports(input.policyDate, input.supportFacts);
+  const supports = assessHiringSupports({
+    catalogue: bundle.release.supports,
+    asOf: input.context.simulationAsOf,
+    facts: {
+      ...input.supportFacts,
+      // O piso do +Talento afere-se à proposta resolvida, não a um número
+      // que a pessoa tenha de reescrever noutro campo.
+      monthlyBaseSalary: input.supportFacts?.monthlyBaseSalary ?? resolvedBase,
+      fullTime: input.supportFacts?.fullTime ?? (workingTime.partTime ? false : undefined),
+    },
+  });
   const usedReferenceScenarios = worker.kind === "reference_scenarios";
 
   const assumptions = employmentOfferAssumptions(input, {
@@ -1092,8 +1209,17 @@ export function planEmploymentOffer(
       : undefined,
   });
 
+  const legalFloorGaps: MissingInput[] = minimumWage.kind === "legal_floor_unconfirmed"
+    ? [{
+        path: "role.collectiveAgreement",
+        reason: minimumWage.reason,
+        expected: "IRCT aplicável e tabela da categoria, ou confirmação de que não existe instrumento",
+      }]
+    : [];
+
   const blocking: MissingInput[] = [
     ...costs.blocking,
+    ...legalFloorGaps,
     ...assumptions
       .filter((assumption) => assumption.severity === "blocking")
       .map((assumption) => ({ path: assumption.id, reason: assumption.detail })),
@@ -1155,14 +1281,17 @@ export function planEmploymentOffer(
   if (calendars.admissionMonths < 12) {
     trace.push({
       id: "employment-offer.admission-vacation",
-      label: "Férias no ano da admissão",
-      formula: "min(20; 2 × meses completos de contrato)",
+      label: "Férias do ano da admissão: adquiridas, gozáveis e transportadas",
+      formula: "adquirido = min(20; 2 × meses completos); gozável só após seis meses completos",
       operands: [
         { name: "meses_completos", value: calendars.admission.completeContractMonths, unit: "COUNT" },
+        { name: "dias_adquiridos", value: calendars.vacation.admissionYearAccruedWorkdays, unit: "COUNT" },
+        { name: "gozavel_a_partir_de", value: calendars.vacation.earliestLeaveDate, unit: "DATE" },
+        { name: "dias_transportados", value: calendars.vacation.carriedOverWorkdays, unit: "COUNT" },
       ],
-      result: calendars.admission.vacationWorkdays,
+      result: calendars.vacation.admissionYearUsableWorkdays,
       rounding: "towards_zero",
-      citations: ["pt.dr.codigo-trabalho.artigo-239"],
+      citations: [...VACATION_CITATIONS],
     });
   }
   if (capacity?.contributionPerBillableHour && capacity.billableHoursRequired !== null) {
@@ -1194,6 +1323,26 @@ export function planEmploymentOffer(
     });
   }
 
+  const provenance: ResultProvenance = {
+    releaseId: bundle.release.releaseId,
+    releaseStatus: bundle.release.status,
+    knowledgeAsOf: bundle.release.knowledgeAsOf,
+    effective: bundle.release.effective,
+    jurisdiction: input.context.jurisdiction,
+    coverage: bundle.release.domains,
+    approvals: bundle.release.approvals.map((approval) => ({
+      role: approval.role,
+      by: approval.by,
+      at: approval.at,
+    })),
+    // Três estados distintos que a copy tinha fundido num só (MOT-P0-002).
+    policyApproved: bundle.release.approvals.some(
+      (approval) => approval.role === "professional_review",
+    ) && bundle.release.status === "approved",
+    userReviewedInputs: input.review?.reviewedAt !== undefined,
+    calculationReproducible: true,
+  };
+
   return {
     kind: "ready",
     result: {
@@ -1215,11 +1364,16 @@ export function planEmploymentOffer(
         ...payrollPolicy.citations,
         ...WORK_CALENDAR_CITATIONS,
         ...CAPACITY_CITATIONS,
-        WORKING_TIME_LIMITS[input.role.workingTimeRegime].citation,
-        ...supports.map((support) => support.sourceUrl),
+        ...VACATION_CITATIONS,
+        ...workingTime.citations,
+        ...minimumWage.sourceIds,
+        ...supports.flatMap((support) => support.sourceIds),
       ]),
       engineVersion: EMPLOYMENT_OFFER_ENGINE_VERSION,
-      policyDate: input.policyDate,
+      provenance,
+      minimumWage,
+      workingTime,
+      vacation: calendars.vacation,
       referencePayroll: reference.reference,
     },
   };

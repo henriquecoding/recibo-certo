@@ -26,14 +26,12 @@ import type { DadosSalario } from "@/components/foco/salario/PalcoSalario";
 import type { DadosContratacao } from "@/components/foco/salario/PalcoContratacao";
 import type { DadosEmpresa, PontoComparacao } from "@/components/foco/empresa/PalcoEmpresa";
 import {
-  EMPLOYMENT_OFFER_POLICY_DATE,
-  PORTUGAL_PAYROLL_POLICY_2026,
   eurFromDecimal,
   planEmploymentOffer,
   productiveShareRate,
   ratePpm,
 } from "../../../ReciboCerto-Fiscal-Engine/src";
-import { legacy2026WithholdingResolver } from "@/lib/payroll-engine-adapter";
+import { resolverReleasePatronal } from "@/lib/motor/release";
 
 const RECIBO_EXEMPLO = 2_000;
 const SALARIO_EXEMPLO = 1_500;
@@ -126,42 +124,75 @@ export function dadosSalario(): DadosSalario {
 
 // ── Planeamento da contratação ────────────────────────────────────────
 
+/** O cenário de demonstração vive no release; aqui fica só o ID. */
+const DEMO_SCENARIO_ID = "pt-employer-2026.demo.primeira-contratacao";
+const DEMO_AS_OF = "2026-08-31" as const;
+const DEMO_WORK_PERIOD = "2026-09" as const;
+const DEMO_PAY_DATE = "2026-09-30" as const;
+
 /**
  * A demonstração patronal usa exatamente o mesmo motor da ferramenta.
  * Para o browser seguem apenas números serializáveis; regras, tabelas e
  * resolução inversa ficam no servidor e fora do chunk da homepage.
  */
 export function dadosContratacao(): DadosContratacao {
-  const orcamentoAnual = 42_000;
+  // O cenário da homepage é o cenário do RELEASE, resolvido por ID. Antes,
+  // este ficheiro repetia 42 000 €, 1 500 €, 10,20 € e 65% à mão, e a
+  // ferramenta repetia-os outra vez: o comentário «usa exatamente o mesmo
+  // motor» era verdade quanto ao algoritmo e mentira quanto aos
+  // pressupostos (relatório, MOT-P0-015, P0-12).
+  const selecao = resolverReleasePatronal({
+    simulationAsOf: DEMO_AS_OF,
+    workPeriod: DEMO_WORK_PERIOD,
+    payDate: DEMO_PAY_DATE,
+    jurisdiction: "PT-CONTINENTE",
+  });
+  if (selecao.kind !== "ready") {
+    throw new Error("Não há release patronal publicado para a demonstração da homepage.");
+  }
+  const demo = selecao.bundle.release.demoScenarios.find(
+    (cenario) => cenario.id === DEMO_SCENARIO_ID,
+  );
+  if (!demo) {
+    throw new Error(`O release ativo não traz o cenário de demonstração ${DEMO_SCENARIO_ID}.`);
+  }
+
+  const orcamentoAnual = demo.annualBudget.cents / 100;
   const margemSegurancaPercentagem = 5;
   const seguroAnual = 480;
   const sstAnual = 220;
   const preparacao = planEmploymentOffer({
-    period: "2026-08",
-    policyDate: EMPLOYMENT_OFFER_POLICY_DATE,
+    context: {
+      simulationAsOf: DEMO_AS_OF,
+      workPeriod: DEMO_WORK_PERIOD,
+      payDate: DEMO_PAY_DATE,
+      contractStart: demo.startDate,
+      jurisdiction: demo.jurisdiction,
+    },
     goal: "employer_budget",
     employer: {
       contributionRegime: "regime_geral",
-      annualBudget: eurFromDecimal(orcamentoAnual),
+      annualBudget: demo.annualBudget,
       safetyMargin: ratePpm(margemSegurancaPercentagem * 10_000),
     },
     role: {
-      startDate: "2026-01-01",
       contractKind: "permanent",
-      workingWeekdays: [1, 2, 3, 4, 5],
-      weeklyHoursHundredths: 4_000,
-      workingTimeRegime: "standard",
+      workingTime: {
+        normalWeeklyHoursHundredths: demo.weeklyHoursHundredths,
+        workingWeekdays: [1, 2, 3, 4, 5],
+        regime: "standard",
+        basis: "none",
+      },
       collectiveAgreement: { status: "none" },
-      jurisdiction: "PT-CONTINENTE",
       mainVacationMonth: 8,
       productive: true,
-      productiveShare: productiveShareRate(65),
+      productiveShare: demo.productiveShare,
     },
     package: {
       baseSalaryMonthly: eurFromDecimal(0),
       subsidyPayment: "normal",
       mealAllowance: {
-        dailyAmount: eurFromDecimal(10.2),
+        dailyAmount: demo.mealDaily,
         method: "card_or_voucher",
       },
     },
@@ -179,10 +210,10 @@ export function dadosContratacao(): DadosContratacao {
       other: { kind: "confirmed", amount: eurFromDecimal(0) },
     },
     capacity: {
-      contributionMargin: productiveShareRate(65),
+      contributionMargin: demo.productiveShare,
       expectedBillableHoursMonthly: 100,
     },
-  }, PORTUGAL_PAYROLL_POLICY_2026, legacy2026WithholdingResolver);
+  }, selecao.bundle);
 
   if (preparacao.kind !== "ready") {
     throw new Error("A demonstração patronal deixou de produzir um resultado suportado.");
@@ -197,7 +228,7 @@ export function dadosContratacao(): DadosContratacao {
     margemSegurancaPercentagem,
     orcamentoUtilizavel: orcamentoAnual * (1 - margemSegurancaPercentagem / 100),
     vencimentoBaseMensal: resultado.resolvedBaseSalaryMonthly.cents / 100,
-    refeicaoDia: 10.2,
+    refeicaoDia: demo.mealDaily.cents / 100,
     refeicaoDiasElegiveis: resultado.workCalendar.mealEligibleDays,
     seguroAnual,
     sstAnual,

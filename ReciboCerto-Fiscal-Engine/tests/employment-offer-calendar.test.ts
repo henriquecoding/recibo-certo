@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  admissionYearVacationWorkdays,
+  assessVacation,
   buildEmploymentCalendar,
   buildWorkCalendar,
   easterSunday,
   eurCents,
   publicHolidays,
   summariseCalendar,
+  PT_EMPLOYER_2026,
 } from "../src";
 
 const period = (value: number) => ({
@@ -162,8 +163,15 @@ describe("calendário laboral português", () => {
   });
 
   it("aplica dois dias úteis por mês até ao teto de vinte", () => {
-    expect(admissionYearVacationWorkdays(3)).toBe(6);
-    expect(admissionYearVacationWorkdays(11)).toBe(20);
-    expect(admissionYearVacationWorkdays(0)).toBe(0);
+    const policy = PT_EMPLOYER_2026.vacation;
+    const dias = (meses: number) =>
+      assessVacation({
+        policy,
+        contractStart: "2026-01-01",
+        completeContractMonthsInAdmissionYear: meses,
+      }).admissionYearAccruedWorkdays;
+    expect(dias(3)).toBe(6);
+    expect(dias(11)).toBe(20);
+    expect(dias(0)).toBe(0);
   });
 });

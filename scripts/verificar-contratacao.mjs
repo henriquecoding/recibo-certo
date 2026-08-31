@@ -65,6 +65,16 @@ async function preencherSeguro(page, valor = "480") {
   await campo.blur();
 }
 
+/**
+ * Resolve o segundo bloqueio: sem IRCT identificado o motor não afirma
+ * conformidade salarial, porque a tabela da categoria pode exigir mais do
+ * que a RMMG (relatório, MOT-P0-006). Declarar que não existe instrumento é
+ * uma resposta legítima — «não sei» não é.
+ */
+async function declararSemIrct(page) {
+  await page.getByLabel("IRCT aplicável").selectOption("none");
+}
+
 async function calcular(page) {
   await page.getByRole("button", { name: /Calcular a contratação|Voltar a calcular/ }).click();
   await page.getByRole("tablist", { name: "Detalhes do resultado" }).waitFor({ timeout: 20_000 });
@@ -146,10 +156,23 @@ async function calcular(page) {
       "o cabeçalho diz exatamente o que falta",
     );
 
+    // Com o seguro resolvido mas o IRCT por identificar, o veredicto
+    // continua barrado — e o motivo tem de ser o piso convencional.
     await preencherSeguro(page);
     await calcular(page);
+    verificar(
+      await page.locator("h2").filter({ hasText: /Ainda não é possível confirmar se cabe/ }).count() === 1,
+      "com o IRCT por identificar, o veredicto continua barrado",
+    );
+    verificar(
+      await page.getByText(/IRCT|instrumento de regulamentação|tabela da categoria/i).count() >= 1,
+      "o bloqueio nomeia o piso convencional por confirmar",
+    );
+
+    await declararSemIrct(page);
+    await calcular(page);
     const agora = await page.locator("h2").filter({ hasText: /Cabe na estimativa|Cabe nesta projeção/ }).count();
-    verificar(agora === 1, "resolvido o bloqueio, o veredicto passa a ser possível");
+    verificar(agora === 1, "resolvidos os dois bloqueios, o veredicto passa a ser possível");
 
     verificar(await page.getByRole("tab").count() === 7, "o resultado expõe os sete separadores previstos");
     verificar(await semOverflow(page), "o resultado não cria overflow horizontal a 360 px");
@@ -167,6 +190,7 @@ async function calcular(page) {
     await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
     await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
     await preencherSeguro(page);
+    await declararSemIrct(page);
     await calcular(page);
 
     await page.getByRole("tab", { name: "Calendário e caixa" }).click();
@@ -222,6 +246,7 @@ async function calcular(page) {
     await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
     await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
     await preencherSeguro(page);
+    await declararSemIrct(page);
     for (const objetivo of [
       /Tenho um orçamento/,
       /Quero garantir um líquido/,
@@ -251,6 +276,7 @@ async function calcular(page) {
     await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
     await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
     await preencherSeguro(page);
+    await declararSemIrct(page);
 
     await page.getByRole("radio", { name: /Tenho autorização/ }).click();
     verificar(
@@ -315,7 +341,10 @@ async function calcular(page) {
       try {
         await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
         await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
-        if (cenario === "estimado") await preencherSeguro(page);
+        if (cenario === "estimado") {
+          await preencherSeguro(page);
+          await declararSemIrct(page);
+        }
         await calcular(page);
 
         // Contraste mede-se em REPOUSO. Os separadores transitam de
@@ -437,6 +466,7 @@ async function calcular(page) {
     await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
     await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
     await preencherSeguro(page, "512");
+    await declararSemIrct(page);
     await calcular(page);
     await page.getByRole("button", { name: /Guardar cenário/ }).click();
     await page.getByRole("button", { name: "Confirmar gravação" }).click();
@@ -459,7 +489,7 @@ async function calcular(page) {
       );
       return cenario.dados?.schemaVersion ?? null;
     });
-    verificar(guardado === 2, "o instantâneo guardado tem versão de schema", String(guardado));
+    verificar(guardado === 3, "o instantâneo guardado tem versão de schema", String(guardado));
 
     await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
     await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
@@ -473,6 +503,125 @@ async function calcular(page) {
     verificar(erros.length === 0, "sem exceções de runtime ao reabrir", erros.join(" | "));
   } finally {
     await context.close();
+  }
+}
+
+// ─── 8. Oclusão: nada fixo pode tapar foco, campo ou botão ────────────────
+//
+// O E2E media overflow, separadores e axe — e nada disto apanha uma barra
+// `fixed` pousada em cima do campo que a pessoa está a preencher. O
+// relatório é explícito: «nenhum elemento fixo pode cobrir foco, botão ou
+// conteúdo» (MOT-P0-020, §9.5).
+{
+  const VIEWPORTS = [
+    { width: 320, height: 640, nome: "320 px" },
+    { width: 360, height: 800, nome: "360 px" },
+    { width: 390, height: 844, nome: "390 px" },
+    { width: 768, height: 1024, nome: "768 px" },
+    { width: 1024, height: 768, nome: "1024 px" },
+    { width: 1440, height: 900, nome: "1440 px" },
+  ];
+
+  for (const viewport of VIEWPORTS) {
+    console.log(`\n▸ Planeador · oclusão · ${viewport.nome}`);
+    const { context, page, erros } = await novaPagina(viewport);
+    try {
+      await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+      await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+
+      /**
+       * Oclusão: existe alguma posição de scroll em que este campo se vê
+       * inteiro?
+       *
+       * Três formulações anteriores mediram a coisa errada, e vale a pena
+       * dizer porquê. A primeira assinalava irmãos de fluxo normal a
+       * partilharem um pixel — layout, não oclusão. A segunda e a terceira
+       * perguntavam «este elemento está tapado AGORA»: numa página com uma
+       * barra colada ao fundo, há sempre, em cada instante, alguma coisa
+       * atrás dela, e a resposta passava a depender da posição em que o
+       * teste anterior tivesse deixado a página. Um portão assim reprova ao
+       * acaso, e um portão que reprova ao acaso ensina a ignorá-lo.
+       *
+       * A pergunta bem posta é outra, e é a que o relatório faz (§9.5): a
+       * pessoa CONSEGUE ver este campo inteiro? Um campo que fica sempre
+       * debaixo da barra, faça-se o scroll que se fizer, é inalcançável —
+       * e é isso que o espaçador do fim do documento existe para impedir.
+       * Um campo que basta rolar para ver não é um defeito.
+       *
+       * Mede-se o planeador, dentro de `main`: o cabeçalho e o rodapé do
+       * site são de outro dono e respondem noutro portão.
+       *
+       * O QUE ISTO NÃO PROVA, e convém não fingir que prova: que nada está,
+       * neste instante, por trás da barra. Numa página com uma camada fixa
+       * colada ao fundo isso é sempre falso para alguma coisa, e depende de
+       * onde a página está. O que fica por fechar é o caso do foco que
+       * ATERRA debaixo da barra sem o browser rolar — ele só rola o que
+       * considera fora da janela, e um campo tapado está, para ele, dentro.
+       * Fechá-lo obriga a mexer no chrome global, que é de outro âmbito.
+       */
+      const inalcancaveis = await page.evaluate(() => {
+        const raiz = document.querySelector("main") ?? document.body;
+        const janela = window.innerHeight;
+        const maximo = Math.max(
+          0,
+          document.documentElement.scrollHeight - janela,
+        );
+
+        // A faixa segura: o que sobra da janela depois do cabeçalho fixo e
+        // das camadas fixas coladas ao fundo.
+        let topoSeguro = 0;
+        let fundoSeguro = janela;
+        for (const elemento of document.querySelectorAll("body *")) {
+          const estilo = getComputedStyle(elemento);
+          if (estilo.position !== "fixed" && estilo.position !== "sticky") continue;
+          if (estilo.pointerEvents === "none" || estilo.visibility === "hidden") continue;
+          const caixa = elemento.getBoundingClientRect();
+          if (caixa.width < 40 || caixa.height < 8) continue;
+          if (raiz.contains(elemento)) continue;
+          if (caixa.top <= 2) topoSeguro = Math.max(topoSeguro, caixa.bottom);
+          if (caixa.bottom >= janela - 4) fundoSeguro = Math.min(fundoSeguro, caixa.top);
+        }
+        const faixa = fundoSeguro - topoSeguro;
+
+        const problemas = [];
+        const deslocamento = window.scrollY;
+        for (const alvo of raiz.querySelectorAll(
+          "input, select, textarea, button, a[href], [role=tab]",
+        )) {
+          const caixa = alvo.getBoundingClientRect();
+          if (caixa.width === 0 || caixa.height === 0) continue;
+          const etiqueta = alvo.getAttribute("aria-label")
+            ?? alvo.textContent?.trim().slice(0, 40)
+            ?? alvo.id
+            ?? alvo.tagName;
+
+          if (caixa.height > faixa) {
+            problemas.push(`${etiqueta} é mais alto (${Math.round(caixa.height)}px) do que a faixa livre (${Math.round(faixa)}px)`);
+            continue;
+          }
+          // Posição do elemento no documento e o scroll que o encostaria ao
+          // topo da faixa segura.
+          const topoNoDocumento = caixa.top + deslocamento;
+          const desejado = topoNoDocumento - topoSeguro;
+          const possivel = Math.min(Math.max(desejado, 0), maximo);
+          const topoFinal = topoNoDocumento - possivel;
+          if (topoFinal < topoSeguro - 1 || topoFinal + caixa.height > fundoSeguro + 1) {
+            problemas.push(`${etiqueta} não chega à faixa livre em nenhuma posição de scroll`);
+          }
+        }
+        return problemas;
+      });
+      verificar(
+        inalcancaveis.length === 0,
+        "todos os campos, botões e separadores chegam a ver-se inteiros",
+        inalcancaveis.slice(0, 3).join(" | "),
+      );
+
+      verificar(await semOverflow(page), "sem overflow horizontal");
+      verificar(erros.length === 0, "sem exceções de runtime", erros.join(" | "));
+    } finally {
+      await context.close();
+    }
   }
 }
 

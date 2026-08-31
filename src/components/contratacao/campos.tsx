@@ -3,6 +3,7 @@
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import InfoTip from "@/components/ui/InfoTip";
 import { Check, ExternalLink, Warning } from "@/components/ui/Icons";
+import { resolveCitation } from "../../../ReciboCerto-Fiscal-Engine/src";
 import {
   ROTULOS_ESTADO_CUSTO,
   type CampoCusto,
@@ -298,6 +299,10 @@ export function CampoCustoConhecido({
   campo: CampoCusto;
   onChange: (patch: Partial<CampoCusto>) => void;
 }) {
+  // A fonte legal deixou de ser um par label/URL escrito à mão no estado do
+  // formulário: é uma citação resolvida no catálogo do motor, com artigo
+  // (relatório, MOT-P0-012).
+  const fonte = meta.citacao ? resolveCitation(meta.citacao) : undefined;
   const bloqueado = meta.obrigatorio === true
     && (campo.estado === "nao_sei"
       || campo.estado === "nao_aplicavel"
@@ -402,14 +407,15 @@ export function CampoCustoConhecido({
           nenhuma conclusão pode dizer que a proposta cabe.
         </p>
       ) : null}
-      {meta.fonte ? (
+      {fonte ? (
         <a
-          href={meta.fonte.url}
+          href={fonte.source.url}
           target="_blank"
           rel="noreferrer"
           className="mt-2.5 inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
         >
-          {meta.fonte.label} <ExternalLink size={12} />
+          {fonte.locator ? `${fonte.source.title}, ${fonte.locator.article}` : fonte.source.title}{" "}
+          <ExternalLink size={12} />
         </a>
       ) : null}
     </div>

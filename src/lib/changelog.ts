@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.139.0",
+    data: "2026-08-31",
+    titulo: "O planeador de contratação deixou de dizer «verificado» sobre regras que ninguém tinha aprovado",
+    itens: [
+      "O planeador escrevia «política verificada» no fundo do resultado enquanto o próprio motor se declarava, por dentro, um rascunho por aprovar. Passa a dizer a verdade: que release usou, até que data as regras foram levantadas, e o que esse release não cobre. Cessação e obrigações patronais aparecem agora como não cobertas — porque não há número por trás delas.",
+      "O salário mínimo passa a depender de onde é o posto de trabalho. São 920 € no Continente, 966 € nos Açores e 980 € na Madeira, e uma proposta abaixo do mínimo aplicável deixa de produzir um resultado com aparência de válido: para o cálculo e diz porquê. Se o contrato coletivo não estiver identificado, o planeador não afirma que a proposta cumpre — a tabela da categoria pode exigir mais.",
+      "A adaptabilidade deixou de significar «esta pessoa trabalha 50 ou 60 horas por semana todo o ano». O horário normal continua a ser de 40 horas; a adaptabilidade autoriza semanas mais longas compensadas por semanas mais curtas, com fundamento escrito ou contrato coletivo, período de referência e o limite de 48 horas de média. As horas pagas e a capacidade deixaram de subir com um número que a lei não permite manter.",
+      "As férias do ano de entrada estavam a ser gozadas antes de existirem. Quem entra em setembro só completa os seis meses em março do ano seguinte — e o planeador retirava-lhe dias a setembro, outubro, novembro e dezembro. Agora separa o que se ganha, quando se pode gozar, o que transita e até quando (30 de junho do ano seguinte).",
+      "A triagem dos apoios do IEFP foi refeita com as regras publicadas. As duas medidas exigem tempo completo — só uma era verificada. E a pergunta certa não é «candidataste-te antes de assinar»: é se a oferta foi registada no iefponline antes do contrato, com a candidatura nos 30 dias seguintes. Cada requisito passa a dizer o que falta, e aparecem montante, majorações, dever de manter o posto 24 meses e o risco de devolução.",
+      "Uma data de entrada impossível — 31 de fevereiro — era convertida em silêncio para 1 de janeiro, e mudava calendário, férias, refeição e custo sem ninguém saber. Agora pede a data outra vez. E se não houver regras publicadas para o ano que se está a simular, o planeador diz que não sabe em vez de reutilizar as do ano anterior.",
+      "Os números da demonstração da homepage e os do planeador passaram a ser o mesmo objeto, com o mesmo nome, em vez de duas cópias que podiam divergir sem ninguém reparar.",
+    ],
+  },
+  {
     version: "2.138.3",
     data: "2026-08-31",
     titulo: "A verificação de contraste estava a medir os separadores a meio da animação",

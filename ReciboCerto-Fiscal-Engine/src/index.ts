@@ -21,8 +21,15 @@ export * from "./domains/employment-offer/calendar";
 export * from "./domains/employment-offer/work-calendar";
 export * from "./domains/employment-offer/capacity";
 export * from "./domains/employment-offer/completeness";
+export * from "./domains/employment-offer/minimum-wage";
+export * from "./domains/employment-offer/working-time";
+export * from "./domains/employment-offer/vacation";
+export * from "./domains/employment-offer/supports";
+export * from "./domains/employment-offer/version";
+export * from "./releases/types";
+export * from "./releases/pt-employer-2026";
+export * from "./releases/select";
 export * from "./domains/employment-offer/explanation";
-export * from "./domains/employment-offer/policy-2026";
 export * from "./legal/catalogue";
 export * from "./legal/semantic-check";
 

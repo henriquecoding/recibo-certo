@@ -14,10 +14,10 @@ const Planeador = dynamic(() => import("@/components/contratacao/PlaneadorContra
   ),
 });
 
-export default function PlaneadorContratacaoLazy() {
+export default function PlaneadorContratacaoLazy({ hoje }: { hoje: string }) {
   return (
     <ErrorBoundary etiqueta="o planeador de contratação">
-      <Planeador />
+      <Planeador hoje={hoje} />
     </ErrorBoundary>
   );
 }

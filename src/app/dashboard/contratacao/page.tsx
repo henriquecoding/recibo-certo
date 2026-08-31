@@ -14,7 +14,7 @@ export default function Page() {
       titulo="Planeador de contratação"
       descricao="Do orçamento ao pacote, ao líquido provável e à capacidade que o posto precisa de gerar — com o que está confirmado separado do que ainda falta."
     >
-      <PlaneadorContratacaoLazy />
+      <PlaneadorContratacaoLazy hoje={new Date().toISOString().slice(0, 10)} />
     </PaginaFerramenta>
   );
 }

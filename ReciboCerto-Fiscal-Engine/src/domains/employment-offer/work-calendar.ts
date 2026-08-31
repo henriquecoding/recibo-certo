@@ -5,12 +5,12 @@ import type { ISODate, PortugueseJurisdiction } from "../../core/model";
  * feriados que caem em dia de trabalho, férias e dias elegíveis a subsídio de
  * refeição.
  *
- * Base legal:
- * - Feriados obrigatórios: Código do Trabalho, artigo 234.º.
- * - Férias no ano da admissão: Código do Trabalho, artigo 239.º, n.º 1
- *   (dois dias úteis por mês de duração do contrato, até 20 dias).
- * - Duração anual das férias: Código do Trabalho, artigo 238.º, n.º 1
- *   (22 dias úteis por ano civil).
+ * Base legal dos feriados obrigatórios: Código do Trabalho, artigo 234.º.
+ *
+ * As DURAÇÕES de férias deixaram de viver aqui: 22, 20 e 2 são valores
+ * mutáveis e pertencem ao release (`VacationPolicy`), tal como a regra dos
+ * seis meses e o prazo de transporte, que `vacation.ts` resolve. Este
+ * módulo ficou com o que é aritmética de calendário e não envelhece.
  *
  * Puro: não lê rede, não guarda estado e não conhece a interface. Substitui a
  * aproximação «22 dias × 12 meses» que anualizava a refeição sem olhar ao
@@ -22,15 +22,6 @@ export const WORK_CALENDAR_CITATIONS = [
   "pt.dr.codigo-trabalho.artigo-238",
   "pt.dr.codigo-trabalho.artigo-239",
 ] as const;
-
-/** Dias úteis de férias por ano civil completo (CT, artigo 238.º, n.º 1). */
-export const ANNUAL_VACATION_WORKDAYS = 22;
-
-/** Teto de férias no ano da admissão (CT, artigo 239.º, n.º 1). */
-export const ADMISSION_YEAR_VACATION_CAP = 20;
-
-/** Dias úteis de férias ganhos por mês de contrato no ano da admissão. */
-export const ADMISSION_YEAR_VACATION_PER_MONTH = 2;
 
 export type HolidayScope = "national" | "regional" | "municipal";
 
@@ -202,18 +193,6 @@ export function publicHolidays(
   ].filter((holiday) => parseISODate(holiday.date).year === year);
 }
 
-/**
- * Férias a que o trabalhador tem direito no ano da admissão: dois dias úteis
- * por mês de duração do contrato, até 20 dias (CT, artigo 239.º, n.º 1).
- */
-export function admissionYearVacationWorkdays(contractMonths: number): number {
-  const months = Math.max(0, Math.floor(contractMonths));
-  return Math.min(
-    ADMISSION_YEAR_VACATION_CAP,
-    months * ADMISSION_YEAR_VACATION_PER_MONTH,
-  );
-}
-
 export interface WorkCalendarInput {
   year: number;
   jurisdiction: PortugueseJurisdiction;
@@ -228,6 +207,12 @@ export interface WorkCalendarInput {
   vacationWorkdays: number;
   /** Mês do gozo principal de férias, declarado pela empresa. */
   mainVacationMonth?: number;
+  /**
+   * Primeiro mês em que o gozo é legalmente possível. Sem ele, o calendário
+   * marcava férias em meses onde o direito ainda não podia ser exercido
+   * (relatório, MOT-P0-008).
+   */
+  earliestVacationMonth?: number;
 }
 
 export interface WorkCalendarMonth {
@@ -274,11 +259,14 @@ function spreadVacation(
   scheduledByMonth: readonly number[],
   total: number,
   mainVacationMonth: number | undefined,
+  earliestVacationMonth: number | undefined,
 ): readonly number[] {
   const allocated = scheduledByMonth.map(() => 0);
   let left = Math.max(0, Math.round(total));
+  const floor = earliestVacationMonth === undefined ? 1 : clampMonth(earliestVacationMonth);
+  const eligible = (month: number) => month + 1 >= floor;
   const capacity = (month: number) =>
-    Math.max(0, (scheduledByMonth[month] ?? 0) - (allocated[month] ?? 0));
+    eligible(month) ? Math.max(0, (scheduledByMonth[month] ?? 0) - (allocated[month] ?? 0)) : 0;
 
   if (mainVacationMonth !== undefined) {
     const index = clampMonth(mainVacationMonth) - 1;
@@ -354,6 +342,7 @@ export function buildWorkCalendar(input: WorkCalendarInput): WorkCalendarResult 
     scheduledDays,
     input.vacationWorkdays,
     input.mainVacationMonth,
+    input.earliestVacationMonth,
   );
   const months = scheduledDays.map((scheduled, index) => ({
     month: index + 1,

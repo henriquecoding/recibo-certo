@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  PORTUGAL_PAYROLL_POLICY_2026,
+
   eurCents,
   planEmploymentOffer,
   ratePpm,
@@ -11,11 +11,12 @@ import {
   notApplicable,
   offerInput,
   unknownCostFact,
+  testBundle,
   withholding10,
 } from "./employment-offer-fixtures";
 
 const plan = (input: Parameters<typeof planEmploymentOffer>[0]) =>
-  planEmploymentOffer(input, PORTUGAL_PAYROLL_POLICY_2026, withholding10);
+  planEmploymentOffer(input, testBundle(withholding10));
 
 describe("Employment Offer Planner", () => {
   it("compõe payroll, custos do posto, calendário e capacidade sem fórmulas no consumidor", () => {
@@ -52,7 +53,11 @@ describe("Employment Offer Planner", () => {
         registeredUnemployed: true,
         permanentContract: true,
         fullTime: true,
-        applicationBeforeContract: true,
+        jobOfferRegisteredBeforeContract: true,
+        applicationWithinWindowOfOffer: true,
+        netJobCreation: true,
+        regularisedStanding: true,
+        recentDismissals: false,
         candidateAge: 29,
         qualificationLevel: 7,
       },
@@ -173,32 +178,89 @@ describe("perfil patronal e tempo de trabalho (CON-P0-08, CON-P0-09)", () => {
     expect(prepared.missing.some((item) => item.path === "employer.contributionRegime")).toBe(true);
   });
 
-  it("não aceita 80 horas por semana como situação normal", () => {
-    const prepared = plan(offerInput({ role: { weeklyHoursHundredths: 8_000 } }));
-    expect(prepared.kind).toBe("unsupported");
+  it("um período normal de 80 horas por semana é conflito, não um horário", () => {
+    const prepared = plan(offerInput({
+      role: { workingTime: { normalWeeklyHoursHundredths: 8_000 } as never },
+    }));
+    expect(prepared.kind).toBe("conflict");
+    if (prepared.kind !== "conflict") return;
+    expect(prepared.reasons.join(" ")).toContain("artigo 203.º");
   });
 
-  it("aceita 48 horas quando o regime de adaptabilidade coletiva é declarado", () => {
+  it("48 horas deixam de poder ser o período normal, mesmo com IRCT", () => {
+    // A regressão que o relatório apanhou (MOT-P0-007): declarar
+    // adaptabilidade fazia o motor aceitar 48, 50 ou 60 horas como período
+    // normal PERMANENTE e pagá-las todas as semanas do ano.
     const prepared = plan(offerInput({
       role: {
-        weeklyHoursHundredths: 4_800,
-        workingTimeRegime: "adaptability_collective",
+        workingTime: {
+          normalWeeklyHoursHundredths: 4_800,
+          regime: "adaptability_collective",
+          basis: "collective_agreement",
+          peakWeeklyHoursHundredths: 6_000,
+          referencePeriodMonths: 12,
+        } as never,
+      },
+    }));
+    expect(prepared.kind).toBe("conflict");
+  });
+
+  it("a adaptabilidade admite a semana de acréscimo sem inflacionar as horas pagas", () => {
+    const prepared = plan(offerInput({
+      role: {
+        workingTime: {
+          normalWeeklyHoursHundredths: 4_000,
+          regime: "adaptability_collective",
+          basis: "collective_agreement",
+          peakWeeklyHoursHundredths: 6_000,
+          referencePeriodMonths: 12,
+        } as never,
       },
     }));
     expect(prepared.kind).toBe("ready");
+    if (prepared.kind !== "ready") return;
+    expect(prepared.result.workingTime.paidWeeklyHoursHundredths).toBe(4_000);
+    expect(prepared.result.workingTime.partTime).toBe(false);
   });
 
-  it("recusa um horário diário acima do limite do regime", () => {
+  it("a adaptabilidade sem fundamento nem período de referência não passa", () => {
     const prepared = plan(offerInput({
-      role: { weeklyHoursHundredths: 4_000, workingWeekdays: [1, 2, 3] },
+      role: {
+        workingTime: {
+          regime: "adaptability_individual",
+          basis: "none",
+          peakWeeklyHoursHundredths: 5_000,
+        } as never,
+      },
     }));
-    expect(prepared.kind).toBe("unsupported");
+    expect(prepared.kind).toBe("conflict");
+  });
+
+  it("a média semanal com suplementar não passa das 48 horas", () => {
+    const prepared = plan(offerInput({
+      role: {
+        workingTime: {
+          normalWeeklyHoursHundredths: 4_000,
+          expectedOvertimeWeeklyHoursHundredths: 1_000,
+        } as never,
+      },
+    }));
+    expect(prepared.kind).toBe("conflict");
+    if (prepared.kind !== "conflict") return;
+    expect(prepared.reasons.join(" ")).toContain("artigo 211.º");
+  });
+
+  it("recusa um horário diário acima do limite do período normal", () => {
+    const prepared = plan(offerInput({
+      role: { workingTime: { normalWeeklyHoursHundredths: 4_000, workingWeekdays: [1, 2, 3] } as never },
+    }));
+    expect(prepared.kind).toBe("conflict");
   });
 });
 
 describe("calendário e primeiro ano (CON-P0-10 a CON-P0-13)", () => {
   it("separa ano civil, doze meses do vínculo e ano estabilizado", () => {
-    const prepared = plan(offerInput({ role: { startDate: "2026-09-01" } }));
+    const prepared = plan(offerInput({ context: { contractStart: "2026-09-01", workPeriod: "2026-09", payDate: "2026-09-30" } }));
     expect(prepared.kind).toBe("ready");
     if (prepared.kind !== "ready") return;
     const cost = prepared.result.employerCost;
@@ -241,7 +303,7 @@ describe("calendário e primeiro ano (CON-P0-10 a CON-P0-13)", () => {
   });
 
   it("aplica férias proporcionais no ano da admissão", () => {
-    const prepared = plan(offerInput({ role: { startDate: "2026-09-01" } }));
+    const prepared = plan(offerInput({ context: { contractStart: "2026-09-01", workPeriod: "2026-09", payDate: "2026-09-30" } }));
     if (prepared.kind !== "ready") throw new Error("esperava resultado");
     expect(prepared.result.trace.some((step) => step.id === "employment-offer.admission-vacation")).toBe(true);
     expect(prepared.result.assumptions.some((item) => item.id === "admission-year-vacation")).toBe(true);
@@ -249,7 +311,7 @@ describe("calendário e primeiro ano (CON-P0-10 a CON-P0-13)", () => {
 
   it("um contrato que termina não gera caixa depois do termo", () => {
     const prepared = plan(offerInput({
-      role: { startDate: "2026-01-01", contractEndDate: "2026-06-30", contractKind: "fixed_term" },
+      context: { contractStart: "2026-01-01", contractEnd: "2026-06-30" }, role: { contractKind: "fixed_term" },
     }));
     if (prepared.kind !== "ready") throw new Error("esperava resultado");
     const julho = prepared.result.calendar.find(
