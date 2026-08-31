@@ -134,18 +134,26 @@ export function dadosSalario(): DadosSalario {
 export function dadosContratacao(): DadosContratacao {
   const orcamentoAnual = 42_000;
   const margemSegurancaPercentagem = 5;
+  const seguroAnual = 480;
+  const sstAnual = 220;
   const preparacao = planEmploymentOffer({
     period: "2026-08",
     policyDate: EMPLOYMENT_OFFER_POLICY_DATE,
     goal: "employer_budget",
     employer: {
+      contributionRegime: "regime_geral",
       annualBudget: eurFromDecimal(orcamentoAnual),
       safetyMargin: ratePpm(margemSegurancaPercentagem * 10_000),
     },
     role: {
-      startMonth: 1,
+      startDate: "2026-01-01",
+      contractKind: "permanent",
+      workingWeekdays: [1, 2, 3, 4, 5],
       weeklyHoursHundredths: 4_000,
+      workingTimeRegime: "standard",
+      collectiveAgreement: { status: "none" },
       jurisdiction: "PT-CONTINENTE",
+      mainVacationMonth: 8,
       productive: true,
       productiveShare: productiveShareRate(65),
     },
@@ -154,12 +162,21 @@ export function dadosContratacao(): DadosContratacao {
       subsidyPayment: "normal",
       mealAllowance: {
         dailyAmount: eurFromDecimal(10.2),
-        daysPerMonth: 22,
         method: "card_or_voucher",
       },
     },
+    // A demonstração mostra um posto INTEIRO. Enquanto o seguro obrigatório
+    // ficava de fora, o palco anunciava «a proposta cabe» com uma lacuna
+    // dentro (relatório, CON-P0-00B).
     postCosts: {
-      equipmentFirstYear: eurFromDecimal(1_200),
+      accidentInsurance: { kind: "estimated", amount: eurFromDecimal(seguroAnual), basis: "prémio médio de referência; depende da atividade e da seguradora" },
+      healthAndSafety: { kind: "estimated", amount: eurFromDecimal(sstAnual), basis: "avença de serviço externo de SST" },
+      training: { kind: "confirmed", amount: eurFromDecimal(0) },
+      equipmentFirstYear: { kind: "confirmed", amount: eurFromDecimal(1_200) },
+      recruitmentFirstYear: { kind: "confirmed", amount: eurFromDecimal(0) },
+      software: { kind: "confirmed", amount: eurFromDecimal(0) },
+      remoteWork: { kind: "confirmed", amount: eurFromDecimal(0) },
+      other: { kind: "confirmed", amount: eurFromDecimal(0) },
     },
     capacity: {
       contributionMargin: productiveShareRate(65),
@@ -181,9 +198,19 @@ export function dadosContratacao(): DadosContratacao {
     orcamentoUtilizavel: orcamentoAnual * (1 - margemSegurancaPercentagem / 100),
     vencimentoBaseMensal: resultado.resolvedBaseSalaryMonthly.cents / 100,
     refeicaoDia: 10.2,
-    refeicaoDiasMes: 22,
+    refeicaoDiasElegiveis: resultado.workCalendar.mealEligibleDays,
+    seguroAnual,
+    sstAnual,
+    prontidao: resultado.status.readiness,
+    veredicto: resultado.status.headline,
     custoAnual: resultado.employerCost.annualStabilized.cents / 100,
-    custoPrimeiroAno: resultado.employerCost.firstYear.cents / 100,
+    custoPrimeiroAno: resultado.employerCost.firstCalendarYear.cents / 100,
+    picoTesouraria: resultado.employerCost.peakMonth
+      ? {
+          mes: resultado.employerCost.peakMonth.month,
+          valor: resultado.employerCost.peakMonth.amount.cents / 100,
+        }
+      : null,
     liquidoMensalMinimo: ("min" in liquido ? liquido.min : liquido).cents / 100,
     liquidoMensalMaximo: ("max" in liquido ? liquido.max : liquido).cents / 100,
     encargosPublicosMinimos: ("min" in encargos ? encargos.min : encargos).cents / 100,

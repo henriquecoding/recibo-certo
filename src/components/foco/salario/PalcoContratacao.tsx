@@ -12,15 +12,22 @@ import {
   User,
 } from "@/components/ui/Icons";
 
+export type ProntidaoContratacao = "incomplete" | "estimated" | "personalized" | "validated";
+
 export interface DadosContratacao {
   orcamentoAnual: number;
   margemSegurancaPercentagem: number;
   orcamentoUtilizavel: number;
   vencimentoBaseMensal: number;
   refeicaoDia: number;
-  refeicaoDiasMes: number;
+  refeicaoDiasElegiveis: number;
+  seguroAnual: number;
+  sstAnual: number;
+  prontidao: ProntidaoContratacao;
+  veredicto: string;
   custoAnual: number;
   custoPrimeiroAno: number;
+  picoTesouraria: { mes: number; valor: number } | null;
   liquidoMensalMinimo: number;
   liquidoMensalMaximo: number;
   encargosPublicosMinimos: number;
@@ -29,6 +36,22 @@ export interface DadosContratacao {
   receitaAnualNecessaria: number | null;
   horasProdutivasAno: number | null;
 }
+
+const MESES_CURTOS = [
+  "jan", "fev", "mar", "abr", "mai", "jun",
+  "jul", "ago", "set", "out", "nov", "dez",
+];
+
+/**
+ * O rótulo da decisão vem do motor. Enquanto era texto fixo, o palco anunciava
+ * um veredicto positivo mesmo com o seguro obrigatório fora da conta.
+ */
+const ROTULO_DECISAO: Record<ProntidaoContratacao, string> = {
+  incomplete: "Custo ainda incompleto",
+  estimated: "Cabe na estimativa",
+  personalized: "Cabe nesta projeção",
+  validated: "Cenário validado",
+};
 
 const ATOS_CONTRATACAO: Ato[] = [
   { id: "budget", rotulo: "Orçamento", legenda: "Reservar o custo anual máximo", duracao: 2100, beats: [] },
@@ -54,7 +77,7 @@ export default function PalcoContratacao({ dados }: { dados: DadosContratacao })
       narracao={[
         `A empresa começa com ${eur(dados.orcamentoAnual)} por ano e preserva ${dados.margemSegurancaPercentagem} por cento como margem de segurança.`,
         `O motor compõe um vencimento base mensal de ${eur(dados.vencimentoBaseMensal)} com refeição e custos do posto.`,
-        `O custo anual estabilizado é ${eur(dados.custoAnual)}; o líquido mensal provável fica entre ${eur(dados.liquidoMensalMinimo)} e ${eur(dados.liquidoMensalMaximo)} sem dados pessoais.`,
+        `O custo anual estabilizado é ${eur(dados.custoAnual)}, já com seguro de acidentes e saúde e segurança contados; o líquido mensal provável fica entre ${eur(dados.liquidoMensalMinimo)} e ${eur(dados.liquidoMensalMaximo)} sem dados pessoais.`,
         dados.custoHoraProdutiva && dados.receitaAnualNecessaria
           ? `Cada hora produtiva custa ${eur(dados.custoHoraProdutiva, 2)} e o posto precisa de suportar ${eur(dados.receitaAnualNecessaria)} de receita anual à margem indicada.`
           : "A proposta só avança depois de a empresa confirmar a capacidade necessária para pagar o posto.",
@@ -102,8 +125,8 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
           <div className="flex items-center justify-between gap-3"><p className="flex items-center gap-2 text-sm font-bold text-white"><Target size={15} className="text-brand-mint" /> Pacote composto</p>{reached(1) ? <Check size={15} className="text-brand-mint" /> : null}</div>
           <div className="mt-4 grid gap-2 sm:grid-cols-3">
             <Metric label="Base mensal" value={eur(dados.vencimentoBaseMensal)} />
-            <Metric label="Refeição" value={`${eur(dados.refeicaoDia, 2)} × ${dados.refeicaoDiasMes}`} />
-            <Metric label="Primeiro ano" value={eur(dados.custoPrimeiroAno)} />
+            <Metric label="Refeição" value={`${eur(dados.refeicaoDia, 2)} × ${dados.refeicaoDiasElegiveis} dias`} />
+            <Metric label="Seguro + SST" value={eur(dados.seguroAnual + dados.sstAnual)} />
           </div>
           <div className="mt-4 flex h-5 overflow-hidden rounded-lg bg-white/10">
             <span className="flex items-center bg-brand-mint/80 px-2 texto-micro font-bold text-brand-deep transition-[width] duration-700" style={{ width: reached(1) ? `${companyPercent}%` : "0%" }}>Empresa</span>
@@ -126,8 +149,11 @@ function HiringScene({ scene, dados }: { scene: CenaDoPalco; dados: DadosContrat
           <p className="texto-micro font-bold uppercase tracking-[.14em] text-brand-mint">Linha de equilíbrio</p>
           <p className="mt-1 font-display text-xl font-semibold text-white">{dados.receitaAnualNecessaria ? `${eur(dados.receitaAnualNecessaria)} de receita/ano` : "Capacidade por validar"}</p>
           <p className="mt-1 text-xs leading-relaxed text-white/55">{dados.custoHoraProdutiva ? `${eur(dados.custoHoraProdutiva, 2)} por hora produtiva · ${Math.round(dados.horasProdutivasAno ?? 0).toLocaleString("pt-PT")} h/ano` : "Indica margem e produtividade na ferramenta completa."}</p>
+          {dados.picoTesouraria ? (
+            <p className="mt-1 texto-micro text-white/40">Mês mais pesado: {MESES_CURTOS[dados.picoTesouraria.mes - 1]}, {eur(dados.picoTesouraria.valor)}</p>
+          ) : null}
         </div>
-        <div className={`inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl bg-brand-mint px-4 text-xs font-bold text-brand-deep transition-opacity duration-500 ${reached(3) ? "opacity-100" : "opacity-35"}`}>A proposta cabe <ArrowRight size={13} /></div>
+        <div className={`inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-xl px-4 text-xs font-bold transition-opacity duration-500 ${dados.prontidao === "incomplete" ? "bg-alert text-alert-text" : "bg-brand-mint text-brand-deep"} ${reached(3) ? "opacity-100" : "opacity-35"}`}>{ROTULO_DECISAO[dados.prontidao]} <ArrowRight size={13} /></div>
       </section>
     </div>
   );

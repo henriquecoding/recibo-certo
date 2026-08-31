@@ -188,7 +188,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     reviewedAt: "2026-08-30",
     highlight: "Para quem contrata",
     status: "novo",
-    dashboardHref: "/dashboard/cenarios",
+    dashboardHref: "/dashboard/contratacao",
     cta: "Planear a contratação",
     relatedToolIds: ["recibo-vencimento", "simulador-empresa", "calcular-preco"],
     relatedGuideSlugs: ["recibo-vencimento", "subsidios-ferias-natal"],

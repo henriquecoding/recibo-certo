@@ -1,9 +1,9 @@
 {
   "_meta": {
     "schema": 1,
-    "appVersion": "2.137.0",
+    "appVersion": "2.138.0",
     "fiscalYear": 2026,
-    "engineHash": "sha256:56c7e3b4be081b06a57a1586a2bf47c5ab8ca87b1d1f838e4765313c5bf5eee5"
+    "engineHash": "sha256:3f7df3e63b411925c7138c361c8be1f8be82c268d4f976da76bb02edf73d4fa8"
   },
   "dados": {
     "bruto": 1500,
@@ -19,18 +19,26 @@
       "orcamentoAnual": 42000,
       "margemSegurancaPercentagem": 5,
       "orcamentoUtilizavel": 39900,
-      "vencimentoBaseMensal": 2147.59,
+      "vencimentoBaseMensal": 2126.63,
       "refeicaoDia": 10.2,
-      "refeicaoDiasMes": 22,
-      "custoAnual": 39899.76,
-      "custoPrimeiroAno": 41099.76,
-      "liquidoMensalMinimo": 1787.44,
-      "liquidoMensalMaximo": 1975.95,
-      "encargosPublicosMinimos": 12685.26,
-      "encargosPublicosMaximos": 15324.4,
-      "custoHoraProdutiva": 32.93,
-      "receitaAnualNecessaria": 61384.25,
-      "horasProdutivasAno": 1211.6
+      "refeicaoDiasElegiveis": 231,
+      "seguroAnual": 480,
+      "sstAnual": 220,
+      "prontidao": "estimated",
+      "veredicto": "Cabe na estimativa, com valores por confirmar.",
+      "custoAnual": 39900,
+      "custoPrimeiroAno": 41110.2,
+      "picoTesouraria": {
+        "mes": 12,
+        "valor": 5525.74
+      },
+      "liquidoMensalMinimo": 1755.7,
+      "liquidoMensalMaximo": 1940.95,
+      "encargosPublicosMinimos": 12526.5,
+      "encargosPublicosMaximos": 15120,
+      "custoHoraProdutiva": 33.95,
+      "receitaAnualNecessaria": 61384.62,
+      "horasProdutivasAno": 1175.2
     }
   }
 }
