@@ -20,7 +20,7 @@ import { usePerfil, type Perfil } from "@/lib/perfil";
 import { usePerto } from "@/lib/use-perto";
 import { ferramentasPorPerfil, TOTAL_FERRAMENTAS, ROTULO_KIND, type ToolDefinition } from "@/lib/ferramentas";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { guiasPorPerfil } from "@/lib/guias-config";
+import type { AtalhoGuia } from "@/lib/guias/atalhos.servidor";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 import Reveal from "@/components/ui/Reveal";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
@@ -31,7 +31,7 @@ import { EASE } from "@/lib/motion";
 function DemoSkeleton() {
   return (
     <div
-      className="w-full min-w-0 max-w-md animate-pulse rounded-4xl border border-stone-100 bg-white p-4 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+      className="w-full max-w-md animate-pulse rounded-4xl border border-stone-100 bg-white p-6 shadow-card dark:border-stone-800 dark:bg-stone-900"
       // Altura medida da DemoIRS já montada (473px a 1280, 484px a 360). O
       // esqueleto tem de a igualar, senão a página salta quando o chunk chega.
       style={{ minHeight: 478 }}
@@ -96,6 +96,7 @@ function CartaoCompacto({
   return (
     <m.div variants={entrada} className="h-full">
       <Link
+        prefetch={false}
         href={href}
         className="group flex h-full items-start gap-3 rounded-2xl border border-stone-200/80 bg-white p-4 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lift focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-800 dark:bg-stone-900"
       >
@@ -103,47 +104,38 @@ function CartaoCompacto({
           <Icon size={17} />
         </span>
         <span className="min-w-0 flex-1">
-          {/* ┌─────────────────────────────────────────────────────────────┐
-              │ O TÍTULO DEIXA DE COMPETIR COM O BADGE PELA MESMA LINHA      │
-              │                                                             │
-              │ Estavam os dois numa linha de flex com o badge em           │
-              │ `flex-shrink-0` — quem cede é sempre o título. Como o badge  │
-              │ é `f.highlight`, uma frase de marketing («O núcleo do        │
-              │ ReciboCerto», 22 caracteres), a 360px sobravam SETE PIXÉIS   │
-              │ para o título: o cartão anunciava-se com um travessão de     │
-              │ reticências. Não era um caso raro — era o caso comum de      │
-              │ metade da fila.                                             │
-              │                                                             │
-              │ Agora o badge quebra para a linha de baixo quando não cabe   │
-              │ (`flex-wrap`, e o título com `basis-full` até `sm:`), que é  │
-              │ o comportamento certo para uma etiqueta: é contexto, não é   │
-              │ o nome da coisa. E o título passa a poder ocupar duas linhas │
-              │ em vez de ser cortado — num ecrã estreito, ler o nome        │
-              │ inteiro vale mais do que manter a fila com linhas iguais.    │
-              └─────────────────────────────────────────────────────────────┘ */}
+          {/* `flex-wrap` e o título SEM `min-w-0`: com `min-w-0` o nome
+              encolhia abaixo da sua palavra mais larga («Simulador»
+              pede 68 px e recebia 49), e uma palavra não parte. Agora o
+              distintivo passa para a linha de baixo quando não cabe, que
+              é o que tem de ceder — o nome da ferramenta não. */}
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="line-clamp-2 min-w-0 basis-full text-sm font-semibold leading-snug text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand sm:basis-auto sm:truncate">
+            {/* `truncate` cortava «Calculadora de Segurança Social …» a
+                320 px, e o nome de uma ferramenta com reticências deixa de
+                ser um nome — a auditoria conta texto cortado como texto
+                que não cabe, e tem razão.
+
+                Também não é `line-clamp-2`: o `display:-webkit-box` que ele
+                usa continua a declarar a largura do texto por quebrar, e a
+                auditoria continuava a apanhá-lo. Aqui o nome quebra e
+                pronto — o cartão tem `h-full` e aguenta duas linhas. */}
+            <span className="text-balance text-sm font-semibold leading-snug text-stone-800 transition-colors group-hover:text-brand-dark dark:text-stone-100 dark:group-hover:text-brand">
               {titulo}
             </span>
             {badge && (
-              // `max-w-full` e sem `flex-shrink-0`: o badge é copy livre
-              // (`f.highlight`) e há-os mais compridos do que a coluna a
-              // 320px. Um badge que não encolhe nem quebra sai por fora do
-              // cartão — o mesmo defeito que ele já tinha causado ao título,
-              // só que agora no sentido contrário.
-              <span className="texto-micro max-w-full break-words rounded-full bg-stone-100 px-1.5 py-0.5 font-bold uppercase tracking-wide text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+              <span className="flex-shrink-0 rounded-full bg-stone-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-stone-500 dark:bg-stone-800 dark:text-stone-400">
                 {badge}
               </span>
             )}
           </span>
           {descricao && (
-            <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-stone-500 dark:text-stone-400 sm:line-clamp-1">
+            <span className="mt-0.5 line-clamp-1 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
               {descricao}
             </span>
           )}
           {meta && (
-            <span className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-stone-400">
-              <Clock size={12} /> {meta}
+            <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-medium text-stone-400">
+              <Clock size={11} /> {meta}
             </span>
           )}
         </span>
@@ -161,6 +153,7 @@ function DestaqueCartao({ f, chip }: { f: ToolDefinition; chip: string }) {
   const Icon = iconeDe(f.icon);
   return (
     <Link
+      prefetch={false}
       href={f.canonicalHref}
       className="group relative grid gap-5 rounded-4xl border border-brand/25 bg-white p-6 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-brand/50 hover:shadow-float focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:bg-stone-900 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center"
     >
@@ -169,7 +162,7 @@ function DestaqueCartao({ f, chip }: { f: ToolDefinition; chip: string }) {
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand text-white shadow-glow">
             <Icon size={19} />
           </span>
-          <span className="rounded-full bg-brand-light px-2.5 py-1 texto-mini font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/10 dark:text-brand">
+          <span className="rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/10 dark:text-brand">
             Começa por aqui
           </span>
         </div>
@@ -189,26 +182,9 @@ function DestaqueCartao({ f, chip }: { f: ToolDefinition; chip: string }) {
 // ── Destaque com a DemoIRS em direto (independente/comparar) ───────────────────
 function DestaqueDemo({ perfil, perto }: { perfil: Perfil; perto: boolean }) {
   return (
-    // ┌───────────────────────────────────────────────────────────────────┐
-    // │ `min-w-0` NAS DUAS COLUNAS — É O QUE IMPEDIA A DEMO DE SER CORTADA │
-    // │                                                                   │
-    // │ Abaixo de `lg` isto é uma grelha de UMA coluna, e uma pista        │
-    // │ `auto` nunca fica mais estreita do que o min-content do MAIOR dos  │
-    // │ seus itens. A DemoIRS tem lá dentro texto `truncate` — que é       │
-    // │ `whitespace-nowrap`, e portanto contribui com a frase INTEIRA para │
-    // │ esse min-content: 287px. A 360px sobravam 264 (24 da secção + 24   │
-    // │ do cartão, de cada lado), a pista crescia para 287 e a demo saía   │
-    // │ pela direita do cartão branco, com os valores cortados a meio.     │
-    // │                                                                   │
-    // │ `min-w-0` desliga o mínimo automático da pista: a coluna passa a   │
-    // │ caber nos 264 e o `truncate` volta a fazer o que promete — cortar  │
-    // │ o texto DENTRO da caixa, com reticências, em vez de empurrar a     │
-    // │ caixa para fora do ecrã. O `overflow-hidden` é o cinto: nenhuma    │
-    // │ regra futura lá dentro volta a transbordar em silêncio.            │
-    // └───────────────────────────────────────────────────────────────────┘
-    <div className="grid items-center gap-8 overflow-hidden rounded-4xl border border-brand/20 bg-white p-4 shadow-card dark:border-brand/15 dark:bg-stone-900 sm:p-7 lg:grid-cols-2">
-      <div className="min-w-0">
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-light px-2.5 py-1 texto-mini font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/10 dark:text-brand">
+    <div className="grid items-center gap-8 rounded-4xl border border-brand/20 bg-white p-6 shadow-card dark:border-brand/15 dark:bg-stone-900 sm:p-7 lg:grid-cols-2">
+      <div>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-light px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-brand-dark dark:bg-brand/10 dark:text-brand">
           Simulador de IRS 2026
         </span>
         <h3 className="mt-3 font-display text-2xl font-semibold leading-tight text-ink sm:text-3xl">
@@ -226,13 +202,14 @@ function DestaqueDemo({ perfil, perto }: { perfil: Perfil; perto: boolean }) {
           ))}
         </ul>
         <Link
+          prefetch={false}
           href="/ferramentas/simulador-irs"
           className="btn-shine mt-6 inline-flex items-center gap-2 rounded-2xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:-translate-y-0.5 hover:bg-brand-dark"
         >
           Abrir o simulador completo <ArrowRight size={14} />
         </Link>
       </div>
-      <div className="flex min-w-0 justify-center lg:justify-end">
+      <div className="flex justify-center lg:justify-end">
         <ErrorBoundary etiqueta="demonstração do IRS">
           {perto ? <DemoIRS /> : <DemoSkeleton />}
         </ErrorBoundary>
@@ -243,13 +220,19 @@ function DestaqueDemo({ perfil, perto }: { perfil: Perfil; perto: boolean }) {
 
 function MiniRotulo({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mb-3 mt-8 texto-mini font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+    <div className="mb-3 mt-8 text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
       {children}
     </div>
   );
 }
 
-export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) {
+export default function ExplorarSecao({
+  nAtividades,
+  atalhosGuias,
+}: {
+  nAtividades: number;
+  atalhosGuias: Record<Perfil, AtalhoGuia[]>;
+}) {
   const { perfil } = usePerfil();
   const copy = COPY[perfil] ?? COPY.independente;
   const { destaque, restantes } = ferramentasPorPerfil(perfil);
@@ -272,7 +255,12 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
     .filter((f) => !comDemo || f.id !== "simulador-irs")
     .slice(0, 6);
 
-  const guias = guiasPorPerfil(perfil).slice(0, 3);
+  // ── Os guias VÊM de fora ────────────────────────────────────────
+  //  Chamava-se aqui `guiasPorPerfil(perfil)`, e essa chamada trazia o
+  //  catálogo da expansão inteiro para o primeiro ecrã da homepage —
+  //  550 KB para desenhar três ligações. Ver o cabeçalho de
+  //  `lib/guias/atalhos.servidor.ts`.
+  const guias = atalhosGuias[perfil] ?? [];
 
   const chipDestaque =
     destaque.slug === "recibo-vencimento"
@@ -303,8 +291,9 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             </AnimatePresence>
           </div>
           <Link
+            prefetch={false}
             href="/ferramentas"
-            className="inline-flex min-h-[36px] items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
           >
             Ver as {TOTAL_FERRAMENTAS} ferramentas <ArrowRight size={14} />
           </Link>
@@ -354,7 +343,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
               <CartaoCompacto
                 key={g.href}
                 href={g.href}
-                Icon={g.icon}
+                Icon={iconeDe(g.icone)}
                 titulo={g.titulo}
                 meta={`${g.tempo} min de leitura`}
               />
@@ -362,6 +351,7 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
             {/* Quiz — cartão-linha de marca */}
             <m.div variants={entrada} className="h-full">
               <Link
+                prefetch={false}
                 href="/quiz-fiscal"
                 className="group flex h-full items-center gap-3 rounded-2xl bg-brand p-4 text-white shadow-glow transition-all duration-300 hover:-translate-y-0.5 hover:shadow-float focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
               >
@@ -383,8 +373,12 @@ export default function ExplorarSecao({ nAtividades }: { nAtividades: number }) 
 
           <div className="mt-6">
             <Link
+              prefetch={false}
               href="/guias"
-              className="inline-flex min-h-[36px] items-center gap-1.5 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
+              // `min-h-[24px]` e `py-1`: a caixa media 121×16 e o alvo
+              // ficava abaixo do mínimo de 24 px do WCAG 2.5.8. O texto
+              // não muda de tamanho — muda a área tocável à volta dele.
+              className="focus-marca inline-flex min-h-[24px] items-center gap-1.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand"
             >
               Ver os guias todos <ArrowRight size={11} />
             </Link>

@@ -24,6 +24,7 @@ import {
 import { CAMPOS_PARTILHA, ROTULO_PARTILHA, sanitizarConteudoPartilha } from "@/lib/contabilistas/vinculo";
 import { DOMINIOS } from "@/lib/store/cofre";
 import { META_TIPO_CENARIO, TIPOS_CENARIO } from "@/lib/store/cenarios";
+import { FERRAMENTA_DO_FOCO } from "@/components/foco/focos";
 
 const raiz = (p: string) => join(process.cwd(), p);
 const ler = (p: string) => readFileSync(raiz(p), "utf8");
@@ -261,9 +262,14 @@ describe("negocio:regressao", () => {
   it("o simulador de empresa continua acessível a partir do modo empresa", () => {
     // Critério de aceitação n.º 20. Quem já sabe a faturação não tem de
     // construir um modelo comercial para lá chegar.
-    const hero = ler("src/components/Hero.tsx");
+    // O href estava escrito à mão em `src/components/Hero.tsx`. Esse hero deu
+    // lugar à bússola, e o destino passou a sair da tabela dos focos — que é
+    // a fonte de verdade e alimenta o painel da resposta.
     const seccao = ler("src/components/CalculadoraSecao.tsx");
-    expect(hero).toContain("/ferramentas/simulador-empresa");
+    expect(FERRAMENTA_DO_FOCO.empresa).toBe("/ferramentas/simulador-empresa");
+    expect(ler("src/components/foco/HeroBussola.tsx")).toContain(
+      "ferramenta={focoAberto.ferramenta}",
+    );
     expect(seccao).toContain("/ferramentas/simulador-empresa");
   });
 

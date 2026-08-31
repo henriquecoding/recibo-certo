@@ -18,7 +18,8 @@
  * │ só se verifica olhando para o ecrã errado não é uma regra — é uma    │
  * │ intenção.                                                           │
  * │                                                                     │
- * │ Isto mede a homepage nas larguras onde ela vive de verdade.          │
+ * │ Isto mede as cinco rotas da homepage nas larguras onde ela vive de   │
+ * │ verdade.                                                            │
  * └─────────────────────────────────────────────────────────────────────┘
  *
  * O QUE MEDE, e porque é que cada um destes falha em silêncio
@@ -52,8 +53,12 @@
  *     indicadores, onde 1px de arredondamento vira um falso positivo.
  *
  * Uso:
- *   npm run dev            (ou npm run build && npm run start)
+ *   npm run build && npm run start      (o portão mede o ARTEFACTO)
  *   npm run movel:e2e
+ *
+ * O que percorre: as CINCO rotas de foco — `/`, `/inicio/preco`,
+ * `/inicio/recibos`, `/inicio/empresa` e `/inicio/salario` — a 360 e a
+ * 320px, no claro e no escuro.
  *
  * Variáveis:
  *   RC_BASE_URL          por omissão http://localhost:3000
@@ -74,6 +79,15 @@ const APP_VERSION =
   readFileSync(join(RAIZ, "src", "lib", "version.ts"), "utf8").match(
     /APP_VERSION\s*=\s*"([^"]+)"/,
   )?.[1] ?? "0.0.0";
+/* O aviso de cookies é rejeitado quando a versão guardada não é a corrente
+   (`lerConsentimento`), e um consentimento «respondido» com a versão errada
+   punha o painel por cima da página que se queria medir. A versão vem da
+   fonte, como a da aplicação — uma constante à mão volta a envelhecer. */
+const CONSENT_VERSION = Number(
+  readFileSync(join(RAIZ, "src", "lib", "cookie-consent.ts"), "utf8").match(
+    /CONSENT_VERSION\s*=\s*(\d+)/,
+  )?.[1] ?? 1,
+);
 
 const BASE = process.env.RC_BASE_URL ?? "http://localhost:3000";
 const RELATORIO = process.env.RC_MOVEL_JSON ?? null;
@@ -95,11 +109,31 @@ const VIEWPORTS = [
   { nome: "320", width: 320, height: 720 },
 ];
 
-/* A homepage ramifica TODA por perfil — hero, calculadora e o launchpad
-   mudam de conteúdo. Medir só um perfil é medir um quarto da página. */
-const PERFIS = ["independente", "dependente", "empresa", "comparar"];
-
-const PAGINAS = [{ nome: "landing", url: "/" }];
+/* ┌────────────────────────────────────────────────────────────────────┐
+   │ A HOMEPAGE DEIXOU DE RAMIFICAR POR PERFIL — RAMIFICA POR ROTA       │
+   │                                                                    │
+   │ Enquanto `/` era uma página só, o que mudava dentro dela era o     │
+   │ perfil guardado: hero, calculadora e launchpad tinham quatro       │
+   │ versões, e medir uma era medir um quarto da página. Daí os quatro  │
+   │ perfis.                                                            │
+   │                                                                    │
+   │ A homepage de cinco focos inverte isso. `usePerfil` já não é lido  │
+   │ por nada que ela renderize — a bússola ESCREVE o perfil ao         │
+   │ encaminhar, e a ramificação passou a ser o URL: cinco rotas        │
+   │ estáticas, cada uma com o seu palco. Repetir a mesma rota quatro   │
+   │ vezes media quatro vezes o mesmo DOM; o que ficava por medir eram  │
+   │ as OUTRAS QUATRO ROTAS, que nunca passaram por aqui.               │
+   │                                                                    │
+   │ A matriz troca perfis por rotas, ao mesmo custo: 5 × 2 larguras ×  │
+   │ 2 temas.                                                           │
+   └────────────────────────────────────────────────────────────────────┘ */
+const PAGINAS = [
+  { nome: "descobrir", url: "/", foco: "descobrir" },
+  { nome: "preco", url: "/inicio/preco", foco: "preco" },
+  { nome: "recibos", url: "/inicio/recibos", foco: "recibos" },
+  { nome: "empresa", url: "/inicio/empresa", foco: "empresa" },
+  { nome: "salario", url: "/inicio/salario", foco: "salario" },
+];
 
 /* ══════════════════════════════════════════════════════════════════════
    A SONDA, tal como corre DENTRO da página.
@@ -183,6 +217,34 @@ const SONDA = ({ piso, alvoMin, ruido }) => {
         // do ECRÃ — que é a fronteira onde deixa de haver por onde cair.
         if (fcs.position === "absolute" || fcs.position === "fixed") {
           return fr.left < -1 || fr.right > document.documentElement.clientWidth + 1;
+        }
+        // ┌───────────────────────────────────────────────────────────┐
+        // │ O QUE ROLA NÃO SE PERDE                                    │
+        // │                                                           │
+        // │ A régua de perguntas sangra até à berma DE PROPÓSITO       │
+        // │ (`-mx-4`) e o que sai da coluna é a CALHA — um             │
+        // │ `overflow-x:auto` que continua com o dedo, dentro de uma   │
+        // │ secção `overflow-hidden` que a recorta. Nada disto é       │
+        // │ texto cortado: é a decisão de deixar a régua ir ao         │
+        // │ limite do ecrã.                                           │
+        // │                                                           │
+        // │ O portão já não acusava a calha (uma caixa que assume a    │
+        // │ rolagem está isenta) mas acusava os PAIS dela, com a       │
+        // │ calha como culpada — e a mesma decisão passava a valer     │
+        // │ quatro defeitos por rota. Continua a contar tudo o resto:  │
+        // │ um transbordo só é perdoado quando o culpado é uma calha   │
+        // │ ou vive dentro de uma.                                    │
+        // └───────────────────────────────────────────────────────────┘
+        const rola = (n) => {
+          const c = getComputedStyle(n);
+          return c.overflowX === "auto" || c.overflowX === "scroll";
+        };
+        if (rola(f)) return false;
+        for (let a = f.parentElement; a && a !== el; a = a.parentElement) {
+          if (rola(a)) return false;
+        }
+        if ([...f.querySelectorAll("*")].some((n) => rola(n) && n.getBoundingClientRect().right > limite)) {
+          return false;
         }
         return true;
       });
@@ -274,142 +336,160 @@ async function correr() {
   try {
     for (const vp of VIEWPORTS) {
       for (const tema of ["claro", "escuro"]) {
-        for (const perfil of PERFIS) {
-          const ctx = await browser.newContext({
-            viewport: { width: vp.width, height: vp.height },
-            deviceScaleFactor: 1,
-            isMobile: true,
-            hasTouch: true,
-            colorScheme: tema === "escuro" ? "dark" : "light",
+        const ctx = await browser.newContext({
+          viewport: { width: vp.width, height: vp.height },
+          deviceScaleFactor: 1,
+          isMobile: true,
+          hasTouch: true,
+          colorScheme: tema === "escuro" ? "dark" : "light",
+        });
+        // Tema, consentimento e «Novidades» entram já respondidos: são
+        // modais por cima da página, e o que se quer medir é a página.
+        await ctx.addInitScript(({ t, versao, consentimento }) => {
+          try {
+            localStorage.setItem("recibocerto:theme", t);
+            localStorage.setItem(
+              "recibocerto:cookie-consent",
+              JSON.stringify({
+                necessarios: true,
+                estatistica: false,
+                marketing: false,
+                data: new Date().toISOString(),
+                versao: consentimento,
+              }),
+            );
+            localStorage.setItem("recibocerto:changelog_visto", versao);
+          } catch {
+            /* modo privado */
+          }
+        }, {
+          t: tema === "escuro" ? "dark" : "light",
+          versao: APP_VERSION,
+          consentimento: CONSENT_VERSION,
+        });
+
+        const page = await ctx.newPage();
+        for (const pg of PAGINAS) {
+          const etiqueta = `${pg.nome} @${vp.nome}/${tema}`;
+          try {
+            await page.goto(BASE + pg.url, { waitUntil: "domcontentloaded", timeout: 60000 });
+          } catch {
+            mal(`${etiqueta}: página não carregou`);
+            continue;
+          }
+          await page.evaluate((t) => {
+            document.documentElement.classList.toggle("dark", t === "escuro");
+          }, tema);
+          // ┌───────────────────────────────────────────────────────────┐
+          // │ PERCORRER A PÁGINA NÃO É UM DETALHE — É O QUE A TORNA      │
+          // │ MEDÍVEL                                                    │
+          // │                                                           │
+          // │ O simulador, o comparador e a demo do IRS entram por       │
+          // │ `IntersectionObserver` + `next/dynamic`, e enquanto não    │
+          // │ chegam o que está no DOM é um esqueleto — que passa em     │
+          // │ tudo, porque um esqueleto não tem texto nem alvos. Uma     │
+          // │ passagem só, ou uma espera curta, dá um verde que só quer  │
+          // │ dizer «não cheguei a ver a página».                        │
+          // │                                                           │
+          // │ Daí duas passagens e uma sentinela: se no fim não houver   │
+          // │ um campo de formulário dentro do `#calculadora`, a medição │
+          // │ é declarada inválida em vez de ser dada por boa.           │
+          // └───────────────────────────────────────────────────────────┘
+          for (let passagem = 0; passagem < 2; passagem++) {
+            await page.evaluate(async () => {
+              const passo = window.innerHeight * 0.7;
+              for (let y = 0; y < document.body.scrollHeight; y += passo) {
+                window.scrollTo(0, y);
+                await new Promise((r) => setTimeout(r, 150));
+              }
+            });
+            await page.waitForTimeout(1500);
+          }
+          await page.evaluate(() => window.scrollTo(0, 0));
+          await page.waitForTimeout(1200);
+
+          // A sentinela é o ESQUELETO, não um campo: cada rota de foco
+          // abre num palco diferente e as secções abaixo dele entram por
+          // `content-visibility` + `next/dynamic`. O que TODAS têm em
+          // comum é (a) declararem o foco que renderizaram, (b) terem um
+          // palco com altura de palco e (c) deixarem de anunciar «A
+          // carregar» quando o chunk chega. Uma rota que responda 200 e
+          // renderize o foco errado — ou o esqueleto — é uma medição
+          // inválida, não um verde.
+          const porMontar = await page.evaluate((focoEsperado) => {
+            const falta = [];
+            const principal = document.querySelector("main[data-homepage-foco]");
+            if (!principal) return ["main[data-homepage-foco] (ausente)"];
+            const foco = principal.getAttribute("data-homepage-foco");
+            if (foco !== focoEsperado) {
+              falta.push(`renderizou «${foco}» onde se esperava «${focoEsperado}»`);
+            }
+            const palco = document.querySelector("[data-palco]");
+            if (!palco) falta.push("palco (ausente)");
+            else {
+              const altura = Math.round(palco.getBoundingClientRect().height);
+              if (altura < 300) falta.push(`palco (altura ${altura}px)`);
+            }
+            const diferidas = [...document.querySelectorAll(".rc-home-deferred")];
+            if (diferidas.length === 0) falta.push("secções diferidas (ausentes)");
+            diferidas.forEach((seccao, indice) => {
+              const altura = Math.round(seccao.getBoundingClientRect().height);
+              if (/A carregar/i.test(seccao.textContent || "")) {
+                falta.push(`secção diferida ${indice + 1} (ainda no esqueleto)`);
+              } else if (altura < 120) {
+                falta.push(`secção diferida ${indice + 1} (altura ${altura}px)`);
+              }
+            });
+            return falta;
+          }, pg.foco);
+          if (porMontar.length) {
+            mal(`${etiqueta}: a página não chegou a montar — ${porMontar.join(", ")}. Medição inválida (não é um verde, é uma página por carregar)`);
+            continue;
+          }
+
+          const r = await page.evaluate(SONDA, {
+            piso: PISO_PX,
+            alvoMin: ALVO_MIN,
+            ruido: RUIDO_PX,
           });
-          // Tema, consentimento e «Novidades» entram já respondidos: são
-          // modais por cima da página, e o que se quer medir é a página.
-          // O perfil entra pela mesma porta que o seletor usa.
-          await ctx.addInitScript(({ t, versao, p }) => {
-            try {
-              localStorage.setItem("recibocerto:theme", t);
-              localStorage.setItem(
-                "recibocerto:cookie-consent",
-                JSON.stringify({
-                  necessarios: true,
-                  estatistica: false,
-                  marketing: false,
-                  data: new Date().toISOString(),
-                  versao: 1,
-                }),
-              );
-              localStorage.setItem("recibocerto:changelog_visto", versao);
-              localStorage.setItem("recibocerto:perfil", p);
-              localStorage.setItem("recibocerto:modo", p);
-            } catch {
-              /* modo privado */
+          resultado.corridas.push({ ...pg, viewport: vp.nome, tema, ...r });
+
+          const problemas =
+            (r.scrollW > r.vw + 1 ? 1 : 0) +
+            r.transbordos.length +
+            r.pequenos.length +
+            r.alvos.length +
+            r.esmagados.length;
+
+          if (problemas === 0) {
+            console.log(`  ✓ ${etiqueta}`);
+          } else {
+            console.log(`\n  ▌ ${etiqueta}`);
+            if (r.scrollW > r.vw + 1) {
+              mal(`${etiqueta}: a página rola de lado — ${r.scrollW}px numa janela de ${r.vw}`);
             }
-          }, { t: tema === "escuro" ? "dark" : "light", versao: APP_VERSION, p: perfil });
-
-          const page = await ctx.newPage();
-          for (const pg of PAGINAS) {
-            const etiqueta = `${pg.nome} @${vp.nome}/${tema}/${perfil}`;
-            try {
-              await page.goto(BASE + pg.url, { waitUntil: "domcontentloaded", timeout: 60000 });
-            } catch {
-              mal(`${etiqueta}: página não carregou`);
-              continue;
+            for (const t of r.transbordos) {
+              mal(`${etiqueta}: transborda ${t.excesso}px (caixa ${t.caixa}, conteúdo ${t.conteudo}) — ${t.sel}\n      por causa de: ${t.culpado}\n      «${t.texto}»`);
             }
-            await page.evaluate((t) => {
-              document.documentElement.classList.toggle("dark", t === "escuro");
-            }, tema);
-            // ┌───────────────────────────────────────────────────────────┐
-            // │ PERCORRER A PÁGINA NÃO É UM DETALHE — É O QUE A TORNA      │
-            // │ MEDÍVEL                                                    │
-            // │                                                           │
-            // │ O simulador, o comparador e a demo do IRS entram por       │
-            // │ `IntersectionObserver` + `next/dynamic`, e enquanto não    │
-            // │ chegam o que está no DOM é um esqueleto — que passa em     │
-            // │ tudo, porque um esqueleto não tem texto nem alvos. Uma     │
-            // │ passagem só, ou uma espera curta, dá um verde que só quer  │
-            // │ dizer «não cheguei a ver a página».                        │
-            // │                                                           │
-            // │ Daí duas passagens e uma sentinela: se no fim não houver   │
-            // │ um campo de formulário dentro do `#calculadora`, a medição │
-            // │ é declarada inválida em vez de ser dada por boa.           │
-            // └───────────────────────────────────────────────────────────┘
-            for (let passagem = 0; passagem < 2; passagem++) {
-              await page.evaluate(async () => {
-                const passo = window.innerHeight * 0.7;
-                for (let y = 0; y < document.body.scrollHeight; y += passo) {
-                  window.scrollTo(0, y);
-                  await new Promise((r) => setTimeout(r, 150));
-                }
-              });
-              await page.waitForTimeout(1500);
+            for (const e of r.esmagados) {
+              mal(`${etiqueta}: texto esmagado a ${e.caixa}px (precisa de ${e.conteudo}) — ${e.sel}\n      «${e.texto}»`);
             }
-            await page.evaluate(() => window.scrollTo(0, 0));
-            await page.waitForTimeout(1200);
-
-            // A sentinela é o ESQUELETO, não o formulário: consoante o
-            // perfil, o simulador abre num gate de duas escolhas, num
-            // comparador ou no estúdio de negócio, e nem todos têm `input`.
-            // O que TODOS têm em comum é deixarem de anunciar «A carregar»
-            // quando o chunk chega — e é isso que se verifica.
-            const porMontar = await page.evaluate(() => {
-              const falta = [];
-              for (const id of ["calculadora", "explorar"]) {
-                const sec = document.getElementById(id);
-                if (!sec) { falta.push(`${id} (secção ausente)`); continue; }
-                if (/A carregar/i.test(sec.textContent || "")) falta.push(`${id} (ainda no esqueleto)`);
-                if (sec.getBoundingClientRect().height < 300) falta.push(`${id} (altura ${Math.round(sec.getBoundingClientRect().height)}px)`);
-              }
-              return falta;
-            });
-            if (porMontar.length) {
-              mal(`${etiqueta}: a página não chegou a montar — ${porMontar.join(", ")}. Medição inválida (não é um verde, é uma página por carregar)`);
-              continue;
+            for (const p of r.pequenos) {
+              mal(`${etiqueta}: ${p.px}px < ${PISO_PX}px — ${p.sel}\n      «${p.texto}»`);
             }
-
-            const r = await page.evaluate(SONDA, {
-              piso: PISO_PX,
-              alvoMin: ALVO_MIN,
-              ruido: RUIDO_PX,
-            });
-            resultado.corridas.push({ ...pg, viewport: vp.nome, tema, perfil, ...r });
-
-            const problemas =
-              (r.scrollW > r.vw + 1 ? 1 : 0) +
-              r.transbordos.length +
-              r.pequenos.length +
-              r.alvos.length +
-              r.esmagados.length;
-
-            if (problemas === 0) {
-              console.log(`  ✓ ${etiqueta}`);
-            } else {
-              console.log(`\n  ▌ ${etiqueta}`);
-              if (r.scrollW > r.vw + 1) {
-                mal(`${etiqueta}: a página rola de lado — ${r.scrollW}px numa janela de ${r.vw}`);
-              }
-              for (const t of r.transbordos) {
-                mal(`${etiqueta}: transborda ${t.excesso}px (caixa ${t.caixa}, conteúdo ${t.conteudo}) — ${t.sel}\n      por causa de: ${t.culpado}\n      «${t.texto}»`);
-              }
-              for (const e of r.esmagados) {
-                mal(`${etiqueta}: texto esmagado a ${e.caixa}px (precisa de ${e.conteudo}) — ${e.sel}\n      «${e.texto}»`);
-              }
-              for (const p of r.pequenos) {
-                mal(`${etiqueta}: ${p.px}px < ${PISO_PX}px — ${p.sel}\n      «${p.texto}»`);
-              }
-              for (const a of r.alvos) {
-                mal(`${etiqueta}: alvo ${a.w}×${a.h} < ${ALVO_MIN}px — ${a.sel}\n      «${a.texto}»`);
-              }
-            }
-
-            if (CAPTURAS) {
-              await page.screenshot({
-                path: join(CAPTURAS, `${pg.nome}-${vp.nome}-${tema}-${perfil}.png`),
-                fullPage: true,
-              });
+            for (const a of r.alvos) {
+              mal(`${etiqueta}: alvo ${a.w}×${a.h} < ${ALVO_MIN}px — ${a.sel}\n      «${a.texto}»`);
             }
           }
-          await ctx.close();
+
+          if (CAPTURAS) {
+            await page.screenshot({
+              path: join(CAPTURAS, `${pg.nome}-${vp.nome}-${tema}.png`),
+              fullPage: true,
+            });
+          }
         }
+        await ctx.close();
       }
     }
   } finally {

@@ -30,6 +30,7 @@ import Link from "next/link";
 import { ArrowRight } from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES } from "@/lib/navegacao";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 
 export default function FilaPilares() {
   return (
@@ -42,6 +43,7 @@ export default function FilaPilares() {
           </h2>
         </div>
         <Link
+          prefetch={false}
           href="/ferramentas"
           className="inline-flex min-h-[36px] items-center gap-1.5 text-sm font-semibold text-brand no-underline transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
         >
@@ -57,8 +59,8 @@ export default function FilaPilares() {
           const Icon = iconeDe(pilar.icone);
           return (
             <li key={pilar.id}>
-              <Link
-                href={pilar.href}
+              <LinkFocoIntencao
+                foco={pilar.id}
                 className="focus-marca group flex h-full items-start gap-3 rounded-4xl border border-stone-100 bg-white p-4 no-underline shadow-card transition-shadow hover:shadow-lift dark:border-stone-800 dark:bg-stone-900 lg:flex-col lg:gap-2.5"
               >
                 <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-brand-light text-brand transition-colors group-hover:bg-brand group-hover:text-white">
@@ -91,7 +93,7 @@ export default function FilaPilares() {
                     {pilar.resultado}
                   </span>
                 </span>
-              </Link>
+              </LinkFocoIntencao>
             </li>
           );
         })}

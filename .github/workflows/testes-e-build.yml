@@ -77,6 +77,57 @@ jobs:
       - name: Auditoria de dependências (0 vulnerabilidades altas)
         run: npm audit --audit-level=high
 
+  homepage-performance:
+    name: Homepage · ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chromium
+            cenarios: mobile-fast4g,mobile-slow4g,desktop-normal,desktop-cpu4,desktop-wide,mobile-reduced,desktop-reduced
+          - browser: webkit
+            cenarios: mobile-fast4g,mobile-reduced
+          - browser: firefox
+            cenarios: desktop-normal,desktop-reduced
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+
+      - name: Arrancar o artefacto de produção
+        run: |
+          npm start -- --hostname 127.0.0.1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3000/ >/dev/null && exit 0
+            sleep 2
+          done
+          echo "o servidor não respondeu em 120 s" && exit 1
+
+      - name: Medir carga, trocas, FPS e política de prefetch
+        env:
+          BASE_URL: http://127.0.0.1:3000
+          RC_BROWSERS: ${{ matrix.browser }}
+          RC_CENARIOS: ${{ matrix.cenarios }}
+          RC_REPETICOES: 10
+          RC_PERF_OUTPUT: artifacts/desempenho-${{ matrix.browser }}.json
+        run: npm run desempenho:ci
+
+      - name: Guardar medições e dispersão
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: homepage-performance-${{ matrix.browser }}
+          path: artifacts/desempenho-${{ matrix.browser }}.json
+          if-no-files-found: warn
+          retention-days: 30
+
   # ── O que build, testes e type-check não apanham ────────────────────
   #  `verificar-descobrir-negocio.mjs` foi escrito precisamente para os
   #  defeitos que vivem no ecrã: a leitura NACIONAL filtrada contra `null`
@@ -113,23 +164,97 @@ jobs:
           done
           echo "o servidor não respondeu em 120 s" && exit 1
 
+      # A pergunta mais barata primeiro: as cinco rotas de foco estão VIVAS?
+      # `/inicio/preco` foi a deploy morta — HTTP 200, hidratação a rebentar,
+      # rota inteira no `global-error` — e passou por três gates. O smoke de
+      # produção lê o status HTTP; a matriz visual corre com movimento
+      # REDUZIDO, e o adaptador de movimento sai antes de tocar no WAAPI, pelo
+      # que as 20 screenshots nunca correram o caminho partido. Esta etapa
+      # corre com movimento LIGADO e é a única que faz essa pergunta.
+      - name: Homepage — as cinco rotas hidratam com movimento ligado
+        run: BASE_URL=http://localhost:3000 npm run homepage:hidratacao
+
       - name: Descoberta — 360 px e desktop, claro e escuro, com axe
         run: npm run descobrir:e2e
 
       - name: Estúdio de empresa — fim a fim
         run: npm run negocio:e2e
 
-      # A regra 5b do CLAUDE.md («mobile-first, sempre — inegociável») não
-      # tinha portão nenhum, e por isso a homepage chegou a produção com a
-      # demonstração do IRS cortada pela berma do ecrã, títulos espremidos a
-      # sete pixéis e texto a 9px. Nada disso reprovava aqui, porque nada
-      # disso é um erro — é um layout medido no ecrã errado.
-      #
-      # Contra o artefacto de PRODUÇÃO, que é o que a pessoa recebe: no
-      # `dev` o indicador do Next tapa o rodapé e os chunks chegam noutro
-      # tempo.
+      # Mantém o contrato mobile-first da main também sobre a arquitetura
+      # otimizada: mede 360 e 320 px, nos dois temas e quatro percursos.
       - name: Telemóvel — 360 e 320 px, dois temas, quatro perfis
         run: npm run movel:e2e
+
+      - name: Planeador patronal — fluxo completo a 360 px
+        run: BASE_URL=http://localhost:3000 npm run contratacao:e2e
+
+      # O runner não traz o ImageMagick, e a comparação é feita com `compare
+      # -metric AE` — píxeis diferentes, não hashes. Sem ele o passo seguinte
+      # morre antes de comparar seja o que for, e foi exatamente isso que
+      # aconteceu na primeira corrida em que ele chegou a ser executado: as 20
+      # referências foram capturadas e a comparação não chegou a existir.
+      - name: ImageMagick para a comparação por píxel
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends imagemagick
+          # A política que a distribuição instala limita o cache de píxeis a
+          # 256 MiB. Estas capturas de página inteira chegam a 390×17 500, e
+          # com esse limite o `compare` passa a trabalhar em disco: minutos
+          # por imagem em vez de segundos. Os limites sobem para o que a
+          # máquina tem — e o passo tem `timeout-minutes` para nunca mais
+          # poder ficar uma hora sem dizer nada.
+          POLITICA=$(ls /etc/ImageMagick-*/policy.xml 2>/dev/null | head -1)
+          if [ -n "$POLITICA" ]; then
+            sudo sed -i \
+              -e 's/name="memory" value="[^"]*"/name="memory" value="4GiB"/' \
+              -e 's/name="map" value="[^"]*"/name="map" value="8GiB"/' \
+              -e 's/name="area" value="[^"]*"/name="area" value="4GP"/' \
+              -e 's/name="disk" value="[^"]*"/name="disk" value="16GiB"/' \
+              -e 's/name="height" value="[^"]*"/name="height" value="64KP"/' \
+              -e 's/name="width" value="[^"]*"/name="width" value="64KP"/' \
+              "$POLITICA"
+          fi
+          identify -list resource
+
+      # As 20 referências são REGENERADAS a cada corrida, a partir de um commit
+      # fixo — não são versionadas. Vinte capturas de página inteira pesam
+      # ~20 MB; guardá-las no repositório duplicava-o, e cada re-baseline
+      # duplicava-o outra vez. O custo é construir a app duas vezes neste job;
+      # o proveito é o mesmo: um diff de píxeis contra um estado conhecido.
+      #
+      # O commit fixo é o que a alteração de tipografia móvel deixou correto
+      # (8d81e55). Antes era 233b0a5, de antes dessa alteração: a
+      # comparação passou a acusar como regressão a correção do piso de 12px
+      # — que é o que acontece a um baseline quando o desenho muda de
+      # propósito. Quando voltar a mudar, é este SHA que se atualiza.
+      - name: Homepage — referência visual do commit fixado
+        timeout-minutes: 25
+        run: |
+          git fetch --depth=1 origin 8d81e553e03391c50474c7f8af6dbcea7138daa9
+          git worktree add --detach /tmp/recibo-homepage-baseline 8d81e553e03391c50474c7f8af6dbcea7138daa9
+          cp -al node_modules /tmp/recibo-homepage-baseline/node_modules
+          cd /tmp/recibo-homepage-baseline
+          npm run build
+          npm start -- --hostname 127.0.0.1 --port 3001 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:3001/ >/dev/null && break
+            sleep 2
+          done
+          curl -sf http://127.0.0.1:3001/ >/dev/null
+          cd "$GITHUB_WORKSPACE"
+          BASE_URL=http://127.0.0.1:3001 npm run homepage:visual:update
+          BASE_URL=http://127.0.0.1:3000 npm run homepage:visual
+
+      - name: Guardar matriz visual e diferenças
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: homepage-visual-bootstrap
+          path: |
+            tests/visual/homepage
+            artifacts/visual-homepage
+          if-no-files-found: warn
+          retention-days: 14
 
   documentos:
     name: Documentos — normas e tipografia

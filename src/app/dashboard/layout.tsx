@@ -41,6 +41,8 @@ import { obterPerfil } from "@/lib/supabase/profile";
 import AccountBox from "@/components/dashboard/AccountBox";
 import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
 import type { ComponentType, ReactNode } from "react";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
+import { PerfilProvider } from "@/lib/perfil";
 
 interface NavItem {
   href: string;
@@ -348,7 +350,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* ─── Conteúdo ─────────────────────────────────────────── */}
         <main className="min-h-screen p-5 pb-24 sm:p-6 lg:p-10 lg:pb-10">
-          {children}
+          <PerfilProvider><MotionProvider>{children}</MotionProvider></PerfilProvider>
         </main>
 
         {/* ─── Bottom nav (mobile): 4 primários + Menu ───────────── */}

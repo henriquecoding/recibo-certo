@@ -342,7 +342,7 @@ describe("as quatro ferramentas que faltavam", () => {
     // motor de descoberta (`descobrir-negocio`). Este número sobe DE PROPÓSITO e uma ferramenta de
     // cada vez: o teste existe para que ninguém acrescente uma entrada ao
     // catálogo sem reparar que está a mudar o inventário do produto.
-    expect(TOTAL_FERRAMENTAS).toBe(16);
+    expect(TOTAL_FERRAMENTAS).toBe(17);
   });
 });
 

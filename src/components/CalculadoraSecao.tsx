@@ -16,9 +16,29 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePerfil } from "@/lib/perfil";
+import { FOCO_DO_PERFIL_ANTIGO, FOCO_POR_ID } from "@/components/foco/focos";
+import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
 import { usePerto } from "@/lib/use-perto";
 import Reveal from "@/components/ui/Reveal";
 import SeletorModo from "@/components/SeletorModo";
+
+/**
+ * Quanto antes do ecrã se começa a descarregar o simulador.
+ *
+ * Lido uma vez, no cliente. `connection` não existe em todos os
+ * browsers — sem ela, assume-se ligação normal, que é o caso da maioria.
+ */
+function margemDeAntecipacao(): string {
+  if (typeof navigator === "undefined") return "320px 0px";
+  const c = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } })
+    .connection;
+  if (!c) return "320px 0px";
+  if (c.saveData) return "0px";
+  if (c.effectiveType === "slow-2g" || c.effectiveType === "2g" || c.effectiveType === "3g") {
+    return "0px";
+  }
+  return "320px 0px";
+}
 
 function SimuladorSkeleton() {
   return (
@@ -106,24 +126,63 @@ export default function CalculadoraSecao() {
   const { perfil } = usePerfil();
   const copy = COPY[perfil] ?? COPY.independente;
 
-  // Carrega o simulador só quando a secção se aproxima do ecrã. A margem
-  // generosa garante que já está pronto quando o utilizador chega (incl. ao
-  // clicar no CTA "Calcular" do hero, que rola até aqui).
-  const { ref, perto } = usePerto<HTMLDivElement>("800px 0px");
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ 800 px DE MARGEM ERA TODA A GENTE                                 │
+  // │                                                                   │
+  // │ A margem existia para o simulador estar pronto quando alguém      │
+  // │ clicasse no CTA do hero. O efeito medido é outro: numa janela de  │
+  // │ 900 px de altura, 800 px de margem significa que a secção «está a │
+  // │ aproximar-se» no instante em que a página abre. Resultado — 547 KB│
+  // │ de simulador, mais os seus 200 KB de dados fiscais, descarregados │
+  // │ por TODA a gente que abre `/`, incluindo quem nunca desce.        │
+  // │                                                                   │
+  // │ 320 px é aproximar-se a sério: dá cerca de meio segundo de aviso  │
+  // │ a quem rola a um ritmo normal, e o esqueleto cobre o resto.       │
+  // └───────────────────────────────────────────────────────────────────┘
+  //
+  //  E com `Save-Data` ou ligação lenta declarada, não se antecipa nada:
+  //  quem pediu para poupar dados não quer um megabyte especulativo, e
+  //  numa ligação fraca antecipar rouba largura de banda ao que está a
+  //  ser lido agora.
+  const { ref, perto } = usePerto<HTMLDivElement>(margemDeAntecipacao());
 
   // Os OUTROS modos são pré-carregados por intenção (hover/foco/toque no seletor,
   // ver SeletorModo) em vez de todos no arranque — assim modos pesados (ex.: por
   // conta de outrem, ~1 MB) não gastam dados a quem nunca os usa, mantendo a
   // troca de modo praticamente instantânea para quem mostra intenção.
 
+  // ── A PERGUNTA QUE ESTA SECÇÃO RESPONDE ──────────────────────────
+  //  A homepage tem duas metades que falavam línguas diferentes: o hero
+  //  fala `foco` (a pergunta, no URL) e isto fala `Perfil` (em
+  //  `localStorage`). Vinham do mesmo gesto e nada o dizia — descias a
+  //  página e o simulador aparecia sem explicação de porquê aquele.
+  //
+  //  Esta linha é a metade que faltava do laço: a bússola escreve o
+  //  perfil quando alguém carrega em «Experimentar já, aqui», e daqui
+  //  vê-se de que pergunta é que este simulador é a resposta — com o
+  //  caminho de volta à leitura completa dela.
+  const foco = FOCO_DO_PERFIL_ANTIGO[perfil];
+  const definicao = foco ? FOCO_POR_ID.get(foco) : undefined;
+
   return (
     <div className="mx-auto max-w-5xl">
-      {/* Seletor de modo — espelha o do hero, para trocar aqui mesmo */}
+      {/* Seletor de modo — espelha o da bússola, para trocar aqui mesmo */}
       <div className="mb-8 flex justify-center">
         <SeletorModo center />
       </div>
 
       <Reveal className="mb-10 text-center">
+        {definicao ? (
+          <p className="mb-3 text-sm text-stone-500 dark:text-stone-400">
+            A responder a{" "}
+            <LinkFocoIntencao
+              foco={definicao.id}
+              className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+            >
+              «{definicao.pergunta}»
+            </LinkFocoIntencao>
+          </p>
+        ) : null}
         <div className="eyebrow mb-3 text-brand">{copy.eyebrow}</div>
         <h2 className="font-display display-2 font-semibold text-ink">{copy.h2}</h2>
         <p className="mx-auto mt-3 max-w-lg text-stone-500 dark:text-stone-400">{copy.sub}</p>
@@ -153,6 +212,7 @@ export default function CalculadoraSecao() {
         <p className="mt-6 text-center text-sm text-stone-500 dark:text-stone-400">
           Já sabes quanto vais faturar?{" "}
           <Link
+            prefetch={false}
             href="/ferramentas/simulador-empresa"
             className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
           >

@@ -53,6 +53,7 @@ import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import Button from "@/components/ui/Button";
 import { useAvisos } from "@/components/ui/Avisos";
 import styles from "./painel.module.css";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 
 const MENSAGEM_TEXTO_SEGURO = "Por segurança, não incluas código, HTML ou scripts neste campo.";
 const SELETOR_TEXTO = [
@@ -275,7 +276,7 @@ export default function ContabilistaLayout({ children }: { children: ReactNode }
           pathname={pathname}
           contagens={contagens}
         />
-        <ProtecaoTextoPainel>{children}</ProtecaoTextoPainel>
+        <ProtecaoTextoPainel><MotionProvider>{children}</MotionProvider></ProtecaoTextoPainel>
       </main>
       </div>
 

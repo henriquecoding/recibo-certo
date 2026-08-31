@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { m } from "motion/react";
 import { PILARES } from "@/lib/navegacao";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { fadeUp, staggerContainer, staggerItem, inViewOnce } from "@/lib/motion";
 import {
   Logo, ShieldCheck, Lock, Clock, CheckTrend, ArrowRight,
   Calendar, Calculator, Scale, Mail,
@@ -82,23 +80,16 @@ export default function Footer() {
           style={{ background: "linear-gradient(90deg, transparent, rgba(29,158,117,0.5) 30%, rgba(159,225,203,0.6) 50%, rgba(29,158,117,0.5) 70%, transparent)" }}
         />
         <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <m.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            // Duas colunas só a partir de 360px. Abaixo disso cada célula
-            // tem 74px úteis e «Monitorização» sozinha pede 80 — não há
-            // quebra de linha que salve, a palavra é indivisível. Numa
-            // coluna a prova cabe inteira e continua a ler-se.
-            className="grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4"
-          >
+          {/* Duas colunas só a partir de 360px. Abaixo disso cada célula
+              tem 74px úteis e «Monitorização» sozinha pede 80 — não há
+              quebra de linha que salve, a palavra é indivisível. Numa
+              coluna a prova cabe inteira e continua a ler-se. */}
+          <div className="rc-view-reveal grid grid-cols-1 min-[360px]:grid-cols-2 sm:grid-cols-4">
             {TRUST.map((p) => {
               const Icon = p.icon;
               return (
-                <m.div
+                <div
                   key={p.label}
-                  variants={staggerItem}
                   className="flex items-center gap-2.5 px-3 py-4 sm:px-4 sm:py-5"
                 >
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 ring-1 ring-brand/20">
@@ -132,10 +123,10 @@ export default function Footer() {
                         └────────────────────────────────────────────────┘ */}
                     <p className="texto-micro font-medium leading-snug text-white/70">{p.sub}</p>
                   </div>
-                </m.div>
+                </div>
               );
             })}
-          </m.div>
+          </div>
         </div>
       </div>
 
@@ -166,13 +157,7 @@ export default function Footer() {
               ser pública e a comunicação estar revista. */}
 
           {/* ── Topo: logo + CTA ── */}
-          <m.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between"
-          >
+          <div className="rc-view-reveal mb-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="mb-3"><Logo /></div>
               <p className="max-w-md text-[13px] leading-relaxed text-stone-500 dark:text-stone-400">
@@ -181,6 +166,7 @@ export default function Footer() {
               </p>
             </div>
             <Link
+              prefetch={false}
               href="/dashboard"
               className="group inline-flex items-center gap-2 self-start rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark hover:shadow-float sm:self-auto"
             >
@@ -188,18 +174,12 @@ export default function Footer() {
               Abrir o dashboard
               <ArrowRight size={12} className="transition-transform group-hover:translate-x-0.5" />
             </Link>
-          </m.div>
+          </div>
 
           {/* ── Grelha de navegação ── */}
-          <m.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4"
-          >
+          <div className="rc-view-reveal grid grid-cols-2 gap-8 border-t border-stone-200/60 pt-10 dark:border-stone-800 sm:grid-cols-3 lg:grid-cols-4">
             {/* Ferramentas — com ícones */}
-            <m.div variants={staggerItem} className="col-span-2 sm:col-span-1">
+            <div className="col-span-2 sm:col-span-1">
               <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Ferramentas
               </h3>
@@ -207,6 +187,7 @@ export default function Footer() {
                 {NAV_FERRAMENTAS.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="group flex min-h-[36px] items-center gap-2 text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
@@ -216,10 +197,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Aprender */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Aprender
               </h3>
@@ -227,6 +208,7 @@ export default function Footer() {
                 {NAV_APRENDER.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="flex min-h-[36px] items-center text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
@@ -235,10 +217,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Empresa */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 ReciboCerto
               </h3>
@@ -246,6 +228,7 @@ export default function Footer() {
                 {NAV_EMPRESA.map((l) => (
                   <li key={l.label}>
                     <Link
+                      prefetch={false}
                       href={l.href}
                       className="flex min-h-[36px] items-center text-[12.5px] font-medium text-stone-500 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 sm:min-h-0"
                     >
@@ -254,10 +237,10 @@ export default function Footer() {
                   </li>
                 ))}
               </ul>
-            </m.div>
+            </div>
 
             {/* Contacto + newsletter */}
-            <m.div variants={staggerItem}>
+            <div>
               <h3 className="mb-4 texto-mini font-bold uppercase tracking-[0.15em] text-brand-dark dark:text-brand-mint">
                 Contacto
               </h3>
@@ -284,30 +267,25 @@ export default function Footer() {
                   Tabelas AT, taxas SS e limites do Orçamento de Estado — monitorizados automaticamente e revistos por humanos.
                 </p>
                 <Link
+                  prefetch={false}
                   href="/#fontes"
                   className="mt-2 inline-flex min-h-[36px] items-center gap-1 texto-mini font-semibold text-brand transition-colors hover:text-brand-dark"
                 >
                   Ver fontes <ArrowRight size={10} />
                 </Link>
               </div>
-            </m.div>
-          </m.div>
+            </div>
+          </div>
 
           {/* ── Aviso legal ── */}
-          <m.div
-            variants={fadeUp}
-            initial="hidden"
-            whileInView="visible"
-            viewport={inViewOnce}
-            className="mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40"
-          >
+          <div className="rc-view-reveal mt-10 flex items-start gap-3 rounded-xl border border-alert-border/60 bg-alert-bg/60 px-4 py-3.5 dark:border-stone-700 dark:bg-stone-800/40">
             <Warning size={12} className="mt-0.5 shrink-0 text-alert-text dark:text-yellow-500" />
             <p className="texto-mini leading-relaxed text-alert-text/90 dark:text-stone-400">
               <strong className="font-semibold">Não vinculativo.</strong>{" "}
               Calculadora informativa baseada nas taxas fiscais de {FISCAL_YEAR}. Não substitui
               aconselhamento de um contabilista certificado. Confirma sempre com a AT.
             </p>
-          </m.div>
+          </div>
 
           {/* ── Barra inferior ── */}
           <div className="mt-8 border-t border-stone-200/50 dark:border-stone-800 pb-8 pt-6">
@@ -329,6 +307,7 @@ export default function Footer() {
                   { label: "Fontes", href: "/#fontes" },
                 ].map((l) => (
                   <Link
+                    prefetch={false}
                     key={l.label}
                     href={l.href}
                     className="inline-flex min-h-[36px] items-center texto-mini font-medium text-stone-400 transition-colors hover:text-stone-700 dark:text-stone-500 dark:hover:text-stone-300"

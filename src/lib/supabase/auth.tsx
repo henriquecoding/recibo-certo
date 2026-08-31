@@ -5,7 +5,17 @@
 // dos recibos é tratada no repositório, no passo seguinte). Sem login, a app
 // funciona toda em localStorage — mantém a promessa "Sem registo".
 
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useMemo,
+  type ReactNode,
+} from "react";
+import { usePathname } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabaseConfigurado } from "./config";
 import { definirCofre } from "@/lib/store/cofre";
@@ -16,6 +26,45 @@ import { definirCofre } from "@/lib/store/cofre";
 async function sb() {
   const { getSupabase } = await import("./client");
   return getSupabase();
+}
+
+type ClienteSupabase = Awaited<ReturnType<typeof sb>>;
+
+/** Áreas que não podem tomar “anónimo” como resposta antes de validar sessão. */
+function rotaExigeAuth(pathname: string) {
+  return (
+    pathname === "/dashboard" ||
+    pathname.startsWith("/dashboard/") ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/contabilista" ||
+    pathname.startsWith("/contabilista/")
+  );
+}
+
+/**
+ * Deteta apenas a EXISTÊNCIA da sessão persistida, sem ler token ou perfil.
+ * O SDK só é necessário quando há algo para restaurar, um callback OAuth,
+ * uma rota privada ou uma ação explícita de conta.
+ */
+function haEvidenciaDeSessao() {
+  try {
+    const url = new URL(window.location.href);
+    if (
+      url.searchParams.has("code") ||
+      url.searchParams.has("error_description") ||
+      /(?:^|[#&])access_token=/.test(url.hash)
+    ) {
+      return true;
+    }
+    for (let indice = 0; indice < localStorage.length; indice += 1) {
+      const chave = localStorage.key(indice) ?? "";
+      if (/^sb-.+-auth-token$/.test(chave)) return true;
+    }
+  } catch {
+    // Storage bloqueado significa que não há sessão restaurável por esta via.
+  }
+  return false;
 }
 
 type ModoModal = "entrar" | "criar";
@@ -54,11 +103,16 @@ function traduzErro(msg: string): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [carregado, setCarregado] = useState(false);
+  const [sessaoResolvida, setSessaoResolvida] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [modoModal, setModoModal] = useState<ModoModal>("entrar");
   const disponivel = supabaseConfigurado();
+  const montado = useRef(false);
+  const clientePromise = useRef<Promise<ClienteSupabase> | null>(null);
+  const cancelarSubscricao = useRef<(() => void) | null>(null);
 
   // O cofre local segue quem está com sessão, e é aqui — num sítio só —
   // que essa ligação se faz. Enquanto as chaves eram globais, sair da
@@ -68,68 +122,110 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     definirCofre(user?.id ?? null);
   }, [user]);
 
+  const ativarAuth = useCallback(async (): Promise<ClienteSupabase | null> => {
+    if (!disponivel) {
+      definirCofre(null);
+      setSessaoResolvida(true);
+      setCarregado(true);
+      return null;
+    }
+
+    clientePromise.current ??= sb();
+    try {
+      const cliente = await clientePromise.current;
+      if (!montado.current) return cliente;
+
+      if (!cancelarSubscricao.current) {
+        const { data: sub } = cliente.auth.onAuthStateChange((_evento, session) => {
+          if (!montado.current) return;
+          setUser(session?.user ?? null);
+          setSessaoResolvida(true);
+          setCarregado(true);
+          if (session?.user) setModalAberto(false);
+        });
+        cancelarSubscricao.current = () => sub.subscription.unsubscribe();
+      }
+
+      const { data } = await cliente.auth.getSession();
+      if (montado.current) {
+        setUser(data.session?.user ?? null);
+        setSessaoResolvida(true);
+        setCarregado(true);
+      }
+      return cliente;
+    } catch (erro) {
+      clientePromise.current = null;
+      if (montado.current) {
+        setUser(null);
+        setSessaoResolvida(true);
+        setCarregado(true);
+      }
+      throw erro;
+    }
+  }, [disponivel]);
+
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+      cancelarSubscricao.current?.();
+      cancelarSubscricao.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     if (!disponivel) {
-      // Sem Supabase, a aplicação é local — e o cofre é o anónimo, que é
-      // o que já era. Sem esta chamada, a migração das chaves antigas
-      // nunca corria para quem usa a aplicação sem conta.
       definirCofre(null);
+      setSessaoResolvida(true);
       setCarregado(true);
       return;
     }
-    let ativo = true;
-    let unsub: (() => void) | undefined;
 
-    sb().then((cliente) => {
-      if (!ativo) return;
+    if (rotaExigeAuth(pathname) || haEvidenciaDeSessao()) {
+      void ativarAuth().catch((erro) => console.error("[auth]", erro));
+      return;
+    }
 
-      cliente.auth.getSession().then(({ data }) => {
-        if (!ativo) return;
-        setUser(data.session?.user ?? null);
-        setCarregado(true);
-      });
+    // Visitante público sem vestígio de sessão: a resposta é conhecida sem
+    // descarregar 200+ KB, abrir ligação ou executar `getSession()`.
+    definirCofre(null);
+    setCarregado(true);
+  }, [ativarAuth, disponivel, pathname]);
 
-      const { data: sub } = cliente.auth.onAuthStateChange((_evento, session) => {
-        setUser(session?.user ?? null);
-        // Fecha o modal ao autenticar com sucesso
-        if (session?.user) setModalAberto(false);
-      });
-      unsub = () => sub.subscription.unsubscribe();
-    });
-
-    return () => {
-      ativo = false;
-      unsub?.();
-    };
-  }, [disponivel]);
-
-  const entrar = async (email: string, password: string) => {
+  const entrar = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await (await sb()).auth.signInWithPassword({ email: email.trim(), password });
+      const cliente = await ativarAuth();
+      if (!cliente) return { erro: "Autenticação indisponível." };
+      const { error } = await cliente.auth.signInWithPassword({ email: email.trim(), password });
       return error ? { erro: traduzErro(error.message) } : {};
     } catch (e) {
       return { erro: (e as Error).message };
     }
-  };
+  }, [ativarAuth]);
 
-  const registar = async (email: string, password: string) => {
+  const registar = useCallback(async (email: string, password: string) => {
     try {
-      const { data, error } = await (await sb()).auth.signUp({ email: email.trim(), password });
+      const cliente = await ativarAuth();
+      if (!cliente) return { erro: "Autenticação indisponível." };
+      const { data, error } = await cliente.auth.signUp({ email: email.trim(), password });
       if (error) return { erro: traduzErro(error.message) };
       return { confirmarEmail: !data.session };
     } catch (e) {
       return { erro: (e as Error).message };
     }
-  };
+  }, [ativarAuth]);
 
-  const sair = async () => {
+  const sair = useCallback(async () => {
     if (!disponivel) return;
-    await (await sb()).auth.signOut();
-  };
+    const cliente = await ativarAuth();
+    await cliente?.auth.signOut();
+  }, [ativarAuth, disponivel]);
 
-  const entrarComGoogle = async () => {
+  const entrarComGoogle = useCallback(async () => {
     try {
-      const { error } = await (await sb()).auth.signInWithOAuth({
+      const cliente = await ativarAuth();
+      if (!cliente) return { erro: "Autenticação indisponível." };
+      const { error } = await cliente.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
@@ -137,11 +233,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       return { erro: (e as Error).message };
     }
-  };
+  }, [ativarAuth]);
 
-  const entrarComLinkedin = async () => {
+  const entrarComLinkedin = useCallback(async () => {
     try {
-      const { error } = await (await sb()).auth.signInWithOAuth({
+      const cliente = await ativarAuth();
+      if (!cliente) return { erro: "Autenticação indisponível." };
+      const { error } = await cliente.auth.signInWithOAuth({
         // Provedor "LinkedIn (OIDC)" do Supabase — chave `linkedin_oidc`
         // (o antigo `linkedin` está descontinuado).
         provider: "linkedin_oidc",
@@ -151,24 +249,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       return { erro: (e as Error).message };
     }
-  };
+  }, [ativarAuth]);
 
   const abrirModal = useCallback((modo: ModoModal = "entrar") => {
+    void ativarAuth().catch((erro) => console.error("[auth]", erro));
     setModoModal(modo);
     setModalAberto(true);
-  }, []);
+  }, [ativarAuth]);
 
   const fecharModal = useCallback(() => {
     setModalAberto(false);
   }, []);
 
+  const carregadoNoContexto =
+    disponivel && rotaExigeAuth(pathname) ? carregado && sessaoResolvida : carregado;
+  const valor = useMemo<AuthContexto>(
+    () => ({
+      user,
+      carregado: carregadoNoContexto,
+      disponivel,
+      entrar,
+      registar,
+      sair,
+      entrarComGoogle,
+      entrarComLinkedin,
+      modalAberto,
+      modoModal,
+      abrirModal,
+      fecharModal,
+    }),
+    [
+      abrirModal,
+      carregadoNoContexto,
+      disponivel,
+      entrar,
+      entrarComGoogle,
+      entrarComLinkedin,
+      fecharModal,
+      modalAberto,
+      modoModal,
+      registar,
+      sair,
+      user,
+    ],
+  );
+
   return (
-    <Ctx.Provider value={{
-      user, carregado, disponivel,
-      entrar, registar, sair,
-      entrarComGoogle, entrarComLinkedin,
-      modalAberto, modoModal, abrirModal, fecharModal,
-    }}>
+    <Ctx.Provider value={valor}>
       {children}
     </Ctx.Provider>
   );

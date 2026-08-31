@@ -90,8 +90,9 @@ temas, alvos ≥ 36px, navegação por teclado (combobox, tooltips, toggles),
 `prefers-reduced-motion` respeitado.
 
 ## Telemóvel — medir, não sentir (`npm run movel:e2e`)
-Mexeste na homepage? Corre isto. Percorre-a a **360 e a 320px**, nos dois temas
-e nos quatro perfis, e reprova quatro coisas que nunca dão erro:
+Mexeste na homepage? Corre isto. Percorre as **cinco rotas de foco** (`/`,
+`/inicio/preco`, `/inicio/recibos`, `/inicio/empresa`, `/inicio/salario`) a
+**360 e a 320px**, nos dois temas, e reprova quatro coisas que nunca dão erro:
 
 · a página a rolar de lado · uma caixa cujo conteúdo lhe sai por fora (com o
 recorte da janela a cortá-lo) · texto abaixo de **12px** · alvos abaixo de

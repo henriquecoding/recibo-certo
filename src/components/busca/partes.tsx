@@ -332,6 +332,7 @@ export function LinkResultado({
 
   return (
     <Link
+      prefetch={false}
       href={doc.href}
       data-resultado
       onClick={(e) => {
@@ -433,6 +434,7 @@ function EstadoInicial({ controlador, aoFechar }: { controlador: ControladorBusc
         <div className="space-y-1">
           {controlador.sugestoes.map((s) => (
             <Link
+              prefetch={false}
               key={s.id}
               href={s.href}
               onClick={(e) => {
@@ -478,6 +480,7 @@ function EstadoErro({ controlador, aoFechar }: { controlador: ControladorBusca; 
           Tentar outra vez
         </button>
         <Link
+          prefetch={false}
           href="/ferramentas"
           onClick={(e) => !isCliqueModificado(e) && aoFechar()}
           className="focus-marca min-h-9 rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white no-underline"
@@ -485,6 +488,7 @@ function EstadoErro({ controlador, aoFechar }: { controlador: ControladorBusca; 
           Abrir todas as ferramentas
         </Link>
         <Link
+          prefetch={false}
           href="/guias"
           onClick={(e) => !isCliqueModificado(e) && aoFechar()}
           className="focus-marca min-h-9 rounded-lg border border-stone-200 px-3 py-2 text-xs font-semibold text-stone-700 no-underline transition-colors hover:border-brand/40 dark:border-stone-700 dark:text-stone-300"
@@ -536,7 +540,7 @@ export function CorpoResultados({
         <p className="text-sm text-stone-600 dark:text-stone-400">Sem resultados para «{consulta.trim()}».</p>
         <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
           Experimenta menos palavras, ou abre{" "}
-          <Link href="/guias" onClick={(e) => !isCliqueModificado(e) && aoFechar()} className="font-semibold text-brand-dark underline dark:text-brand">
+          <Link prefetch={false} href="/guias" onClick={(e) => !isCliqueModificado(e) && aoFechar()} className="font-semibold text-brand-dark underline dark:text-brand">
             todos os guias
           </Link>
           .
@@ -583,6 +587,7 @@ export function CorpoResultados({
 
       {totalSemTeto > total && (
         <Link
+          prefetch={false}
           href={controlador.hrefTodos}
           onClick={(e) => !isCliqueModificado(e) && aoFechar()}
           className="focus-marca mt-1 flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-stone-200 text-sm font-semibold text-brand-dark no-underline transition-colors hover:border-brand/40 hover:bg-brand-light/40 dark:border-stone-700 dark:text-brand"

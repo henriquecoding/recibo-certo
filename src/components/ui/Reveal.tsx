@@ -1,11 +1,8 @@
-"use client";
+import type { CSSProperties, ReactNode } from "react";
 
-import { m } from "motion/react";
-import type { ReactNode } from "react";
-import { fadeUp, inViewOnce } from "@/lib/motion";
-
-// Revela conteúdo com fade/slide ao entrar no viewport.
-// O MotionConfig global trata de prefers-reduced-motion.
+// Revela conteúdo com fade/slide ao entrar no viewport sem criar uma ilha
+// React por bloco. O CSS deixa tudo visível onde view timelines não existem
+// e a media query global trata de prefers-reduced-motion.
 export default function Reveal({
   children,
   className = "",
@@ -16,15 +13,15 @@ export default function Reveal({
   delay?: number;
 }) {
   return (
-    <m.div
-      className={className}
-      initial="hidden"
-      whileInView="visible"
-      viewport={inViewOnce}
-      variants={fadeUp}
-      transition={{ delay }}
+    <div
+      className={`rc-view-reveal ${className}`}
+      style={
+        delay > 0
+          ? ({ "--rc-reveal-delay": `${delay}s` } as CSSProperties)
+          : undefined
+      }
     >
       {children}
-    </m.div>
+    </div>
   );
 }
