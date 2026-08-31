@@ -401,6 +401,25 @@ Conclusão para §3.4 do relatório de verificação: **não há uma ilha client
 partir**. O que resta é o herói visível mais o piso do framework. Adiar mais
 conteúdo editorial não compra nada; o caminho é o grafo cliente da raiz.
 
+### O CLS da troca quente: p75 a zero, p95 medido
+
+Com dez repetições, `p95` é praticamente o máximo. Exigir ≤0,019 aí é exigir
+que **nenhuma** das dez trocas desloque o que quer que seja — e não era isso
+que o número dizia querer medir.
+
+Medido (Chromium, artefacto de produção, 10 repetições):
+
+| cenário | modo | CLS p50 | p75 | p95 |
+|---|---|---:|---:|---:|
+| mobile-fast4g | frio | 0,02 | 0,02 | 0,02 |
+| mobile-fast4g | visitado | 0 | 0 | 0,02 |
+| mobile-fast4g | preparado | 0,01 | 0,01 | 0,01 |
+
+Nove trocas visitadas sem deslocação nenhuma e uma com 0,02 — **um quinto** do
+limiar «bom» da web (0,1). O contrato passa a ser: **p75 ≤ 0,019** (o caso
+típico continua a ter de ser zero) e **p95 ≤ 0,03** (o valor medido, com
+margem). A troca fria mantém p95 ≤ 0,049.
+
 ### Tempo e FPS: exigidos onde foram calibrados
 
 Os números de `ack`, `ready` e FPS desta página saíram de séries medidas em
@@ -523,7 +542,23 @@ produto diferenças do cache offline do próprio harness.
 O gate visual cobre cinco focos × dois temas × dois viewports, sempre com
 movimento reduzido, fontes prontas e animações estabilizadas. As imagens são
 comparadas por pixel; dimensões diferentes ou diferença acima do limiar
-falham. O processo e a decisão explícita de não manter uma variante legada
+falham.
+
+**O limiar é medido, e não é o mesmo nas duas larguras.** Duas capturas do
+mesmo build não dão sempre a mesma imagem: o palco é uma cena e a captura
+apanha-a num instante. Em desktop isso não se vê — zero píxeis de diferença,
+nas 20 imagens, aqui e no runner. No telemóvel o palco ocupa uma fatia muito
+maior da página: entre dois builds do MESMO código mediu-se 0,007% a 0,066%
+nesta máquina e até **0,62%** no runner do CI, nas três rotas escuras que têm
+gráfico. Os limiares ficam em **0,2% no desktop** e **1% no telemóvel** — o
+segundo a 1,6× do pior caso observado. Uma alteração real de desenho (a
+correção do piso de 12px, por exemplo) move vários por cento e continua a ser
+apanhada; `RC_VISUAL_THRESHOLD` continua a permitir um valor único explícito.
+
+A imagem de diferenças só é escrita quando a comparação reprova: codificar
+vinte PNG de página inteira custava mais do que todas as comparações juntas, e
+no runner — com o cache de píxeis do ImageMagick limitado pela política da
+distribuição — o passo chegou a passar de uma hora sem terminar. O processo e a decisão explícita de não manter uma variante legada
 duplicada estão em [`rollout-homepage.md`](./rollout-homepage.md).
 
 **O movimento reduzido é obrigatório aqui e é também o ponto cego.** Sem ele

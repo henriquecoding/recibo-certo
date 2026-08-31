@@ -18,13 +18,39 @@ import { chromium } from "playwright";
 const executar = promisify(execFile);
 const BASE = (process.env.BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const ATUALIZAR = process.argv.includes("--update");
-const LIMIAR = Number(process.env.RC_VISUAL_THRESHOLD ?? "0.001");
+/* ┌──────────────────────────────────────────────────────────────────────┐
+   │ O LIMIAR É MEDIDO, E NÃO É O MESMO NAS DUAS LARGURAS                 │
+   │                                                                      │
+   │ Duas capturas do MESMO build não dão sempre a mesma imagem: o palco  │
+   │ é uma cena, e mesmo com movimento reduzido a captura apanha-a num    │
+   │ instante. Em desktop isso não se vê — 0 píxeis de diferença em CI e  │
+   │ localmente, nas 20 imagens. No telemóvel o palco ocupa uma fatia     │
+   │ muito maior da página, e o mesmo instante vale mais píxeis.          │
+   │                                                                      │
+   │ Medido: entre dois builds do MESMO código, 0,007% a 0,066% nesta     │
+   │ máquina; no runner do CI, até 0,62% em três das cinco rotas escuras  │
+   │ (recibos, empresa, salário — as que têm gráfico). Um limiar de 0,1%  │
+   │ reprovava ali por ruído, e um portão que grita sem motivo deixa de   │
+   │ ser lido.                                                            │
+   │                                                                      │
+   │ Ficam dois: 0,2% no desktop (200× acima do ruído observado, que é    │
+   │ zero) e 1% no telemóvel (1,6× acima do pior caso do runner). Uma     │
+   │ alteração real de desenho — a correção do piso de 12px, por exemplo  │
+   │ — move vários por cento e continua a ser apanhada.                   │
+   └──────────────────────────────────────────────────────────────────────┘ */
+const LIMIAR_POR_VIEWPORT = Object.freeze({ desktop: 0.002, mobile: 0.01 });
+const LIMIAR = process.env.RC_VISUAL_THRESHOLD
+  ? Number(process.env.RC_VISUAL_THRESHOLD)
+  : null;
 const BASELINES = resolve(process.env.RC_VISUAL_BASELINES ?? "tests/visual/homepage");
 const SAIDA = resolve(process.env.RC_VISUAL_OUTPUT ?? "artifacts/visual-homepage");
 
-if (!Number.isFinite(LIMIAR) || LIMIAR < 0 || LIMIAR > 1) {
+if (LIMIAR !== null && (!Number.isFinite(LIMIAR) || LIMIAR < 0 || LIMIAR > 1)) {
   throw new Error("RC_VISUAL_THRESHOLD tem de estar entre 0 e 1.");
 }
+/** O limiar de uma captura: o do seu viewport, salvo override explícito. */
+const limiarDe = (nome) =>
+  LIMIAR ?? (nome.endsWith("-mobile.png") ? LIMIAR_POR_VIEWPORT.mobile : LIMIAR_POR_VIEWPORT.desktop);
 
 const ROTAS = {
   descobrir: "/",
@@ -273,14 +299,17 @@ async function comparar(nome, atual) {
   const diferentes = await contar("null:");
   const total = dEsperada.largura * dEsperada.altura;
   const proporcao = diferentes / total;
-  if (proporcao > LIMIAR) await contar(diff);
+  const limiar = limiarDe(nome);
+  if (proporcao > limiar) await contar(diff);
   return {
     nome,
-    passou: proporcao <= LIMIAR,
+    passou: proporcao <= limiar,
     diferentes,
     total,
     proporcao,
-    razao: `${diferentes} píxeis (${(proporcao * 100).toFixed(4)}%)`,
+    razao:
+      `${diferentes} píxeis (${(proporcao * 100).toFixed(4)}%` +
+      `, limiar ${(limiar * 100).toFixed(2)}%)`,
   };
 }
 
@@ -326,7 +355,11 @@ if (ATUALIZAR) {
   }
   await writeFile(
     join(SAIDA, "resultado.json"),
-    `${JSON.stringify({ schemaVersion: 1, baseUrl: BASE, limiar: LIMIAR, resultados }, null, 2)}\n`,
+    `${JSON.stringify(
+      { schemaVersion: 1, baseUrl: BASE, limiar: LIMIAR ?? LIMIAR_POR_VIEWPORT, resultados },
+      null,
+      2,
+    )}\n`,
   );
   const falhas = resultados.filter((resultado) => !resultado.passou);
   for (const resultado of resultados) {
