@@ -16,6 +16,16 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.138.1",
+    data: "2026-08-31",
+    titulo: "Nove textos do planeador estavam demasiado claros para se lerem",
+    itens: [
+      "O cartão do estado incompleto e os meses inativos do calendário usavam transparência para parecerem secundários. Transparência num texto mistura a tinta com o fundo: nove textos do cabeçalho e três por cada mês fora do contrato ficavam entre 2,45 e 4,49 de contraste, abaixo do mínimo de 4,5 que a acessibilidade exige. Passam a distinguir-se pela cor e pela borda, com a tinta inteira.",
+      "A verificação do planeador passou a medir contraste nos dois temas e nos dois estados que mudam de paleta — a regra estava desligada e foi por isso que isto passou.",
+      "A comparação visual da página inicial acusava diferenças de 5 a 10 por cento em todas as cinco leituras, incluindo as que ninguém tinha tocado. Não eram diferenças de desenho: o popup de Novidades era silenciado com a versão da cópia de trabalho, e não com a do servidor que estava a ser fotografado — a referência ficava com o modal por cima e a versão atual sem ele. Cada passagem passa a perguntar a versão ao próprio servidor.",
+    ],
+  },
+  {
     version: "2.138.0",
     data: "2026-08-31",
     titulo: "O planeador de contratação deixou de dizer que a proposta cabe quando ainda lhe faltam custos",

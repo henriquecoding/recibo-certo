@@ -7,40 +7,58 @@ import type {
 import { Check, Sparkle, Warning } from "@/components/ui/Icons";
 import { eur } from "./estado";
 
-const TOM: Record<EmploymentDecisionReadiness, {
+interface Tom {
   eyebrow: string;
   fundo: string;
   texto: string;
   cartao: string;
   detalhe: string;
-}> = {
+  /** Rótulo e legenda do cartão. Cores explícitas, nunca opacidade. */
+  cartaoRotulo: string;
+  cartaoLegenda: string;
+}
+
+// Uma nota que custou uma medição: `opacity-*` num texto dilui a tinta contra
+// o fundo e leva o contraste com ela. Sobre o verde escuro isso é indiferente
+// (branco a 75% ainda está muito acima de 4,5:1); sobre o amarelo do estado
+// incompleto punha nove textos entre 3,5 e 4,3. As cores destes cartões são
+// tokens explícitos, e é por isso que são quatro campos em vez de dois.
+const TOM: Record<EmploymentDecisionReadiness, Tom> = {
   incomplete: {
     eyebrow: "Decisão incompleta",
     fundo: "bg-alert-bg",
     texto: "text-alert-text",
-    cartao: "border-alert-border bg-white/70 dark:bg-stone-900/60",
-    detalhe: "text-alert-text/85",
+    cartao: "border-alert-border bg-white/70 text-alert-text dark:bg-stone-900/60",
+    detalhe: "text-alert-text",
+    cartaoRotulo: "text-alert-text",
+    cartaoLegenda: "text-alert-text",
   },
   estimated: {
     eyebrow: "Estimativa · regras 2026",
     fundo: "bg-brand-deep",
     texto: "text-white",
-    cartao: "border-white/15 bg-white/10",
+    cartao: "border-white/15 bg-white/10 text-white",
     detalhe: "text-brand-light",
+    cartaoRotulo: "text-brand-mint",
+    cartaoLegenda: "text-brand-light",
   },
   personalized: {
     eyebrow: "Projeção personalizada · regras 2026",
     fundo: "bg-brand-dark",
     texto: "text-white",
-    cartao: "border-white/15 bg-white/10",
+    cartao: "border-white/15 bg-white/10 text-white",
     detalhe: "text-brand-light",
+    cartaoRotulo: "text-brand-mint",
+    cartaoLegenda: "text-brand-light",
   },
   validated: {
     eyebrow: "Cenário validado · regras 2026",
     fundo: "bg-brand-dark",
     texto: "text-white",
-    cartao: "border-white/15 bg-white/10",
+    cartao: "border-white/15 bg-white/10 text-white",
     detalhe: "text-brand-light",
+    cartaoRotulo: "text-brand-mint",
+    cartaoLegenda: "text-brand-light",
   },
 };
 
@@ -65,17 +83,17 @@ function Cartao({
   label: string;
   value: string;
   detail: string;
-  tom: string;
+  tom: Tom;
   incompleto?: boolean;
 }) {
   return (
-    <div className={`min-w-0 rounded-2xl border p-4 ${tom}`}>
-      <p className="texto-micro font-bold uppercase tracking-[.12em] opacity-75">{label}</p>
+    <div className={`min-w-0 rounded-2xl border p-4 ${tom.cartao}`}>
+      <p className={`texto-micro font-bold uppercase tracking-[.12em] ${tom.cartaoRotulo}`}>{label}</p>
       <p className="mt-2 break-words font-display text-xl font-semibold tabular-nums sm:text-2xl">
         {value}
         {incompleto ? <span aria-hidden className="align-super text-sm"> +</span> : null}
       </p>
-      <p className="mt-1.5 text-xs leading-relaxed opacity-80">{detail}</p>
+      <p className={`mt-1.5 text-xs leading-relaxed ${tom.cartaoLegenda}`}>{detail}</p>
     </div>
   );
 }
@@ -150,14 +168,14 @@ export default function EstadoDecisao({
                 ? "só com as parcelas já conhecidas"
                 : "ano estabilizado, sem custos de arranque"
           }
-          tom={tom.cartao}
+          tom={tom}
           incompleto={incompleto || temIntervalo}
         />
         <Cartao
           label="Vencimento base"
           value={eur(result.resolvedBaseSalaryMonthly.cents)}
           detail="mensal, em catorze pagamentos por ano"
-          tom={tom.cartao}
+          tom={tom}
         />
         <Cartao
           label="Líquido do trabalhador"
@@ -167,13 +185,13 @@ export default function EstadoDecisao({
               ? "projeção com factos autorizados"
               : "quatro cenários de referência, sem dados pessoais"
           }
-          tom={tom.cartao}
+          tom={tom}
         />
         <Cartao
           label="Primeiros 12 meses"
           value={eur(cost.firstTwelveMonths.cents)}
           detail={`ano civil de entrada: ${eur(cost.firstCalendarYear.cents)} em ${cost.monthsWorkedFirstYear} meses`}
-          tom={tom.cartao}
+          tom={tom}
         />
       </div>
     </div>

@@ -268,6 +268,10 @@ function Calendario({ result }: { result: EmploymentOfferResult }) {
           <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {result.calendar.filter((month) => month.year === ano).map((month) => {
               const destaque = pico && pico.year === month.year && pico.month === month.month;
+              // Um mês inativo distingue-se pelo fundo e pela borda, não por
+              // `opacity`: baixar a opacidade do cartão inteiro dilui a tinta
+              // contra o papel e leva o contraste do texto com ela — três
+              // textos por cartão caíam abaixo de 4,5:1.
               return (
                 <div
                   key={`${month.year}-${month.month}`}
@@ -276,19 +280,21 @@ function Calendario({ result }: { result: EmploymentOfferResult }) {
                       ? "border-alert-border bg-alert-bg"
                       : month.active
                         ? "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
-                        : "border-stone-100 bg-stone-50 opacity-60 dark:border-stone-800 dark:bg-stone-900/40"
+                        : "border-dashed border-stone-300 bg-stone-100 dark:border-stone-700 dark:bg-stone-900/60"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-bold text-stone-700 dark:text-stone-200">{MESES_CURTOS[month.month - 1]}</span>
+                    <span className={`text-sm font-bold ${month.active ? "text-stone-700 dark:text-stone-200" : "text-stone-600 dark:text-stone-400"}`}>
+                      {MESES_CURTOS[month.month - 1]}
+                    </span>
                     {month.active && month.labels.length > 1 ? (
                       <span className="h-2 w-2 flex-none rounded-full bg-brand" aria-hidden />
                     ) : null}
                   </div>
-                  <p className="mt-3 text-sm font-semibold tabular-nums text-stone-900 dark:text-white">
+                  <p className={`mt-3 text-sm font-semibold tabular-nums ${month.active ? "text-stone-900 dark:text-white" : "text-stone-600 dark:text-stone-400"}`}>
                     {eurRedondo(month.employerCost.cents)}
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-stone-500">
+                  <p className="mt-1 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
                     {month.active
                       ? month.labels.filter((label) => label !== "Vencimento e pacote mensal").join(" · ").toLowerCase() || "mês normal"
                       : month.labels[0]?.toLowerCase()}
