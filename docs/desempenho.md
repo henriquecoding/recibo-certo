@@ -269,18 +269,38 @@ construir a árvore do destino com a CPU travada, sem rede pelo meio
 (`bytesDoDestino` é zero em todas estas trocas) — exatamente a causa que o
 budget táctil já nomeia.
 
-Primeira série, 10 repetições no runner:
+Calibrou-se pela primeira série, e a segunda mostrou que a série não se
+repete. Dez repetições, mesmo código, duas corridas do CI a 45 minutos de
+distância:
 
-| modo | entrada | ready p75/p95 | budget |
-|---|---|---:|---:|
-| visitado | ponteiro | 215/225 ms | 420/480 ms |
-| preparado | ponteiro | 304/322 ms | 420/480 ms |
-| preparado | teclado | 355/371 ms | 460/520 ms |
+| modo | entrada | 1.ª série | 2.ª série | razão |
+|---|---|---:|---:|---:|
+| visitado | ponteiro | 215/225 ms | 369,5 ms (p75) | 1,72× |
+| preparado | ponteiro | 304/322 ms | 439,7/473,8 ms | 1,45× |
+| preparado | teclado | 355/371 ms | 502,1/521,2 ms | 1,41× |
+| frio | ponteiro | — | 636 ms (p95) | — |
 
-`ack` p95 (até 34 ms) e FPS p50 (59–60) ficam dentro do budget base e não
-foram relaxados. A meta absoluta de 100/200 ms continua impressa como aviso
-em cada corrida — e é ela, não o budget, que diz onde a aplicação ainda tem
-de chegar.
+**Isto não é regressão nem ruído de medição — é o que um runner partilhado faz
+a um cenário que já lhe trava a CPU 4×.** E é a razão pela qual o tempo aqui
+deixa de reprovar. Um limiar em milissegundos apertado o suficiente para
+apanhar uma regressão real reprova também nesta dispersão; um que a acomode
+(700 ms, digamos) já não apanha nada. Entre um gate que acusa ao acaso e um
+gate que não acusa, nenhum dos dois mede.
+
+A decisão é a mesma, e pela mesma razão, que se tomou para o Firefox e o
+WebKit: **reprova-se onde a medição é estável.** Em `desktop-cpu4` o tempo
+(`ack`, `ready`, FPS) mede-se, vai para o log e para o artefacto, e avisa
+quando sai do envelope observado — mas não faz a corrida falhar. Continua duro
+tudo o que nesse cenário é determinístico: bytes, RSC, CLS, política de
+prefetch e as invariantes estruturais. E os cenários sem travão
+(`desktop-normal`, `desktop-wide`, `mobile-fast4g`, `mobile-slow4g`) mantêm os
+budgets de tempo duros — são esses que correspondem a gente real.
+
+O envelope publicado — `ack` 70 ms, `ready` 550/600 (600/650 no teclado), frio
+750 — cobre as duas séries com margem. Não é um budget: é o contorno do que já
+se observou, e passar dele é sinal de que vale a pena olhar. A meta absoluta
+de 100/200 ms continua impressa como aviso em cada corrida — e é ela, não o
+envelope, que diz onde a aplicação ainda tem de chegar.
 
 ### Long task e TBT medem-se contra o piso, não contra um absoluto
 
@@ -419,6 +439,20 @@ Nove trocas visitadas sem deslocação nenhuma e uma com 0,02 — **um quinto** 
 limiar «bom» da web (0,1). O contrato passa a ser: **p75 ≤ 0,019** (o caso
 típico continua a ter de ser zero) e **p95 ≤ 0,03** (o valor medido, com
 margem). A troca fria mantém p95 ≤ 0,049.
+
+**O p75 estava em cima do quantum, e caiu dos dois lados.** Esta deslocação
+vale ~0,02, pelo que o p75 de dez repetições só pode dar 0 **ou** 0,02 — nunca
+um valor entre os dois. Um limiar a 0,019 não media «quase nada»: media se três
+das dez repetições caíam de um lado ou do outro, e em corridas consecutivas do
+mesmo código caíram dos dois (p75 = 0 aqui, p75 = 0,02 em `mobile-slow4g` no
+runner).
+
+O limiar passa a 0,025 e diz o que se quer mesmo dizer: **uma** deslocação
+pequena no caso típico passa, **duas** (0,04) reprovam. Para não se perder a
+aspiração, qualquer p75 acima de zero passa a sair como AVISO — «a troca quente
+típica deixou de deslocar zero» — o que mantém visível exatamente o que o 0,019
+queria proteger, sem pôr o gate a decidir à sorte. Nota de contexto: 0,02 é um
+quinto do limiar «bom» da web (0,1).
 
 ### Tempo e FPS: exigidos onde foram calibrados
 

@@ -557,6 +557,23 @@ describe("homepage: animação, dados de campo e budgets", () => {
     // motor escolhido para «passar» é o que isto substitui.
     expect(benchmark).toContain('browserNome === "chromium" ? 0 : 48_000');
     expect(benchmark).not.toContain('browserNome === "firefox" ? 16_000');
+    // Reprova-se onde a medição é estável. `desktop-cpu4` mede e avisa: duas
+    // corridas consecutivas do mesmo código deram 304/322 e 439,7/473,8 ms na
+    // mesma troca — 1,45× de diferença. Um limiar em milissegundos apertado o
+    // suficiente para apanhar uma regressão reprova também nessa dispersão.
+    // O que é determinístico nesse cenário (bytes, RSC, CLS, prefetch)
+    // continua duro: `exigir`, não `exigirTempo`.
+    expect(benchmark).toContain(
+      'grupo.browser === "chromium" && grupo.cenario !== "desktop-cpu4"',
+    );
+    expect(benchmark).toContain("CPU 4× — envelope observado, não budget");
+    // O CLS quente é quantizado: esta deslocação vale ~0,02, pelo que o p75 de
+    // dez repetições só dá 0 ou 0,02. Um limiar a 0,019 fica EM CIMA do
+    // quantum e decide-se ao acaso; a 0,025 diz o que se quer dizer — uma
+    // deslocação pequena passa, duas reprovam.
+    expect(benchmark).toContain("dentro(m.cls.p75, 0.025)");
+    expect(benchmark).not.toContain("dentro(m.cls.p75, 0.019)");
+    expect(benchmark).toContain("a troca quente típica deixou de deslocar zero");
     expect(controlador).toContain("const carregarCliente");
     expect(benchmark).toContain("metricas.apiNaTroca.length > 0");
     expect(benchmark).toContain("bytesAlheios");
