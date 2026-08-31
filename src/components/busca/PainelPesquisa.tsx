@@ -35,7 +35,7 @@ import { useEffect, useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { TETO_DIALOGO, TETO_POPOVER } from "@/lib/busca/pontuar";
-import { focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
+import { CHROME_MOVEL, CHROME_SECRETARIA, focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
 import { useFecharAoSair } from "./ancoragem";
 import { ChipsIntencao, CorpoResultados, EstadoAcessivel, FormularioBusca, RodapeBusca } from "./partes";
 import { useControladorBusca } from "./useControladorBusca";
@@ -116,7 +116,7 @@ export default function PainelPesquisa({
    * consentimento é uma superfície que a pessoa vê e não consegue usar.
    * Pedir vaga é a forma de ele simplesmente não aparecer nesse caso.
    */
-  const permitido = useOverlay("busca", true, { modal: false, iniciadoPeloUtilizador: true });
+  const permitido = useOverlay("busca", true, { modal: false, iniciadoPeloUtilizador: true }, aoFechar);
 
   useEffect(() => {
     if (permitido) input.current?.focus();
@@ -158,15 +158,20 @@ export default function PainelPesquisa({
    * Escape) e a excepção do chrome estão explicados lá.
    *
    * `CHROME` é o que muda entre as duas variantes: o cabeçalho de
-   * secretária, ou a barra de navegação do telemóvel. É o que não pode ser
+   * secretária, ou o chrome inferior do telemóvel. É o que não pode ser
    * destruído pelo próprio gesto que o toca — com o painel aberto e a
    * página rolada, fechar no `pointerdown` tirava o alvo ao `click` que
    * vinha a seguir, e carregar em «Guias» fechava a pesquisa sem navegar.
+   *
+   * Os dois selectores vivem em `motor.ts` e são MARCADORES que o chrome
+   * declara, não descrições dele: escritos à mão aqui, ficaram para trás na
+   * reescrita do cabeçalho e a excepção deixou de casar com nada, em
+   * silêncio. Ver o quadro em `motor.ts`.
    */
   useFecharAoSair({
     ativo: permitido,
     caixa,
-    chrome: movel ? 'nav[aria-label="Navegação"]' : "nav[data-compacto]",
+    chrome: movel ? CHROME_MOVEL : CHROME_SECRETARIA,
     aoFechar,
     aoFecharComFoco,
   });

@@ -301,6 +301,13 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
         //   `data-reserva`    quanto espaço a página deixa. Só muda a clique.
         data-expandido={corpoVisivel}
         data-reserva={abertoManual ? "alta" : "baixa"}
+        // O marcador que o painel de pesquisa procura para saber que isto é
+        // chrome — e não «fora». Sem ele, um clique num destino do cabeçalho
+        // com a pesquisa aberta fecha-a no `pointerdown` e pode levar o
+        // próprio alvo do clique com ele. Escrito à letra (e não por
+        // interpolação) porque é assim que o teste de fronteira o consegue
+        // exigir. Ver o quadro em `busca/motor.ts`.
+        data-rc-chrome="secretaria"
         className="fixed inset-x-0 top-0 z-50 hidden px-6 pt-[var(--rc-header-margem)] lg:block"
       >
         <div

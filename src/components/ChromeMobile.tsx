@@ -171,7 +171,17 @@ export default function ChromeMobile() {
       {/* `md:pb-[max(1rem,…)]` e não `md:pb-4`: é este afastamento que o token
           `--rc-barra-h` descreve a partir de `md`, e um 16 px fixo aqui
           tornava o token uma aproximação num tablet com indicador no fundo. */}
-      <div className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-[max(1rem,env(safe-area-inset-bottom))]">
+      {/* `data-rc-chrome="movel"` é o marcador que o painel de pesquisa
+          procura para saber que isto é chrome e não «fora» — a barra INTEIRA,
+          e não só a fila dos cinco pilares. O selector anterior apontava a
+          `nav[aria-label="Navegação"]`, o que deixava a linha da marca, o
+          menu e a acção de fora: tocar-lhes com a pesquisa aberta fechava-a
+          no `pointerdown` e podia levar o alvo do próprio toque. Ver o quadro
+          em `busca/motor.ts`. */}
+      <div
+        data-rc-chrome="movel"
+        className="fixed inset-x-0 bottom-0 z-50 lg:hidden md:px-6 md:pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
         {/* Uma superfície, DUAS linhas: os cinco pilares e, colada ao fundo,
             a marca com o menu e a acção. Uma só caixa e não duas fixas — o
             fundo, o contorno, o desfoque e a área segura são tratados uma

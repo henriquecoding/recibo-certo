@@ -49,14 +49,16 @@ export default function BuscaOverlay({
   const pathname = usePathname();
   const [querAbrir, setQuerAbrir] = useState(abrirInicialmente);
 
-  // A vaga do coordenador: nunca há dois `aria-modal` ao mesmo tempo.
-  const aberto = useOverlay("busca", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
-
   const inputRef = useRef<HTMLInputElement>(null);
   const lista = useRef<HTMLDivElement>(null);
 
   const fechar = useCallback(() => setQuerAbrir(false), []);
   const abrir = useCallback(() => setQuerAbrir(true), []);
+
+  // A vaga do coordenador: nunca há dois `aria-modal` ao mesmo tempo. Perder
+  // a vaga fecha — um diálogo que continua a querer abrir sem estar no ecrã
+  // reaparece sozinho quando ela libertar, e ninguém pediu isso.
+  const aberto = useOverlay("busca", querAbrir, { modal: true, iniciadoPeloUtilizador: true }, fechar);
 
   // Avisa a barra fixa para se tornar inerte enquanto o diálogo está por cima
   // dela. (O `inert` por irmãos de `SuperficieModal` já a cobre; este evento
@@ -89,7 +91,30 @@ export default function BuscaOverlay({
     fechar,
   });
 
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ «MUDAR DE PÁGINA FECHA» — E MONTAR NÃO É MUDAR DE PÁGINA (P0)        │
+   * │                                                                     │
+   * │ Isto era `useEffect(() => setQuerAbrir(false), [pathname])`, e um    │
+   * │ efeito com dependências corre TAMBÉM na montagem. Enquanto este      │
+   * │ diálogo nascia sempre fechado, a diferença não se via.               │
+   * │                                                                     │
+   * │ Deixou de nascer fechado: o `SearchIntentLoader` só o monta QUANDO   │
+   * │ alguém pede a pesquisa, e passa-lhe `abrirInicialmente` — é esse o   │
+   * │ pedido. O efeito corria a seguir e deitava-o fora. Resultado, nas    │
+   * │ superfícies sem barra ancorada (/dashboard, /admin): o primeiro      │
+   * │ `⌘K` e o primeiro clique no botão de pesquisa não faziam NADA. Sem   │
+   * │ erro, sem sinal — o segundo gesto é que abria, porque aí o diálogo   │
+   * │ já estava montado e o atalho já tinha ouvinte.                       │
+   * │                                                                     │
+   * │ Passa a fechar só quando a rota MUDA mesmo. A montagem não é uma     │
+   * │ navegação, e o pedido que a causou não pode ser desfeito por ela.    │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const rotaMontada = useRef(pathname);
   useEffect(() => {
+    if (rotaMontada.current === pathname) return;
+    rotaMontada.current = pathname;
     setQuerAbrir(false);
   }, [pathname]);
 

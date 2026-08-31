@@ -36,8 +36,15 @@ export default function FeedbackModal({
   const { user } = useAuth();
   const pathname = usePathname();
   const [querAbrir, setAberto] = useState(false);
-  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo.
-  const aberto = useOverlay("feedback", querAbrir, { modal: true, iniciadoPeloUtilizador: true });
+  // A vaga do coordenador: nunca dois `aria-modal` ao mesmo tempo. Perder a
+  // vaga fecha, senão o modal ficava a querer abrir sem estar no ecrã e
+  // reaparecia sozinho quando ela libertasse.
+  const aberto = useOverlay(
+    "feedback",
+    querAbrir,
+    { modal: true, iniciadoPeloUtilizador: true },
+    useCallback(() => setAberto(false), []),
+  );
   const [tipo, setTipo] = useState<TipoFeedback>("sugestao");
   const [mensagem, setMensagem] = useState("");
   const [email, setEmail] = useState("");
