@@ -762,7 +762,10 @@ export default function PlaneadorContratacao() {
       {state.calculated && preparation ? (
         <div ref={resultRef} className="scroll-mt-24" aria-live="polite">
           {preparation.kind === "ready" ? (
-            <section className="overflow-hidden rounded-3xl border border-brand/25 bg-stone-50 shadow-lift dark:bg-stone-950 print:border-stone-300 print:shadow-none">
+            <section
+              id="resultado-contratacao"
+              className="overflow-hidden rounded-3xl border border-brand/25 bg-stone-50 shadow-lift dark:bg-stone-950 print:border-stone-300 print:shadow-none"
+            >
               <EstadoDecisao
                 result={preparation.result}
                 acoes={

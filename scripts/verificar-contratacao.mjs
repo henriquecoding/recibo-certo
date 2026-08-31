@@ -301,6 +301,12 @@ async function calcular(page) {
 // passaram despercebidos: estavam entre 2,45 e 4,49 porque o cartão levava
 // `opacity`, que dilui a tinta contra o papel. Aqui a regra é ligada de
 // propósito, nos dois temas e nos dois estados que mudam de paleta.
+//
+// A medição é ANCORADA ao resultado (`#resultado-contratacao`). Sem âncora,
+// o axe varre a página inteira — cabeçalho, formulário, rodapé, diretório de
+// contabilistas — e o portão passa a reprovar por coisas que não são deste
+// percurso. E quando reprova, diz QUAIS: um portão que só diz «4 nós» custa
+// uma corrida de CI a cada vez que dispara.
 {
   console.log("\n▸ Planeador · contraste do resultado · 390 px");
   for (const tema of ["light", "dark"]) {
@@ -311,7 +317,7 @@ async function calcular(page) {
         await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
         if (cenario === "estimado") await preencherSeguro(page);
         await calcular(page);
-        let violacoes = 0;
+        const detalhes = [];
         for (const aba of [
           "Os três dinheiros",
           "Composição do custo",
@@ -320,10 +326,39 @@ async function calcular(page) {
           "Memória de cálculo",
         ]) {
           await page.getByRole("tab", { name: aba }).click();
-          const relatorio = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
-          violacoes += relatorio.violations.reduce((total, item) => total + item.nodes.length, 0);
+          const relatorio = await new AxeBuilder({ page })
+            .include("#resultado-contratacao")
+            .withRules(["color-contrast"])
+            .analyze();
+          for (const violacao of relatorio.violations) {
+            for (const no of violacao.nodes) {
+              const razao = no.any?.[0]?.data?.contrastRatio;
+              detalhes.push(
+                `${aba} · ${no.target.join(" ")}${razao ? ` (${razao}:1)` : ""}`,
+              );
+            }
+          }
         }
-        verificar(violacoes === 0, `contraste em ${tema}/${cenario}`, `${violacoes} nós abaixo de 4,5:1`);
+        verificar(
+          detalhes.length === 0,
+          `contraste em ${tema}/${cenario}`,
+          detalhes.length === 0 ? "" : `${detalhes.length} nós — ${detalhes.slice(0, 6).join(" | ")}`,
+        );
+
+        // O que fica FORA do resultado não é deste percurso e não reprova
+        // aqui — mas também não se perde: fica escrito, com nome, para quem
+        // for dono dessa parte da página.
+        const pagina = await new AxeBuilder({ page }).withRules(["color-contrast"]).analyze();
+        const foraDoResultado = pagina.violations
+          .flatMap((violacao) => violacao.nodes)
+          .map((no) => no.target.join(" "))
+          .filter((alvo) => !alvo.includes("resultado-contratacao"));
+        if (foraDoResultado.length > 0) {
+          console.log(
+            `    · fora do resultado, ${foraDoResultado.length} nó(s) abaixo de 4,5:1: ` +
+              foraDoResultado.slice(0, 4).join(" | "),
+          );
+        }
       } finally {
         await context.close();
       }

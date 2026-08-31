@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.138.2",
+    data: "2026-08-31",
+    titulo: "A verificação de contraste do planeador passou a medir o resultado — e a dizer o que encontrou",
+    itens: [
+      "A verificação nova estava a varrer a página inteira em vez do resultado: reprovava por causa de textos do cabeçalho, do formulário e do rodapé, que não são deste percurso. Passa a medir o resultado, que é o que promete medir, e o que fica de fora fica escrito no registo com nome, para quem for dono dessa parte da página.",
+      "E quando reprova, diz quais são os textos e com que contraste. Um portão que só diz «quatro» obriga a gastar uma corrida inteira a descobrir quais.",
+    ],
+  },
+  {
     version: "2.138.1",
     data: "2026-08-31",
     titulo: "Nove textos do planeador estavam demasiado claros para se lerem",
