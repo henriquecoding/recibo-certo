@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.140.0",
+    data: "2026-08-31",
+    titulo: "A pesquisa deixa de ficar muda — e o que a calava passa a ser medido",
+    itens: [
+      "Onde não há barra de pesquisa no cabeçalho — no painel de gestão e na administração —, o primeiro Ctrl+K e o primeiro clique no botão de pesquisa não faziam nada. A pesquisa só era montada quando alguém a pedia, e fechava-se a si própria no instante em que nascia: o pedido era deitado fora pelo próprio ato de o servir. Só o segundo gesto abria. Agora abre à primeira.",
+      "Com a folha do «Menu» aberta, o Ctrl+K e a barra de pesquisa deixavam de responder. As duas superfícies valem o mesmo por dentro, e «nenhuma manda na outra» estava a funcionar como «a primeira manda para sempre» — sem erro e sem nada no ecrã que o explicasse. Passa a decidir o gesto mais recente: pedir a pesquisa com o menu aberto abre a pesquisa.",
+      "A folha do «Menu» atravessava a navegação: carregar em «voltar» no browser deixava-a aberta por cima da página nova, a bloquear a pesquisa. Passa a fechar quando a rota muda.",
+      "Uma superfície que perde a vez deixa de ficar à espera invisível para reaparecer sozinha mais tarde. Quem perde, arruma-se.",
+      "Com a pesquisa aberta, o cabeçalho tinha deixado de ser reconhecido como cabeçalho: a proteção que impede um clique num destino de ser engolido pelo fecho do painel apontava a um atributo que a reescrita do cabeçalho tinha removido, e casava com zero elementos. No telemóvel apontava só à fila dos cinco lugares e deixava de fora a marca, o menu e a ação. Ficou a valer para a barra inteira nos dois sítios.",
+      "O portão de verificação passa a medir estas quatro coisas num browser a sério, incluindo as superfícies sem barra ancorada, que nunca tinham sido medidas — que é por onde isto passou.",
+    ],
+  },
+  {
     version: "2.139.0",
     data: "2026-08-31",
     titulo: "O planeador de contratação deixou de dizer «verificado» sobre regras que ninguém tinha aprovado",

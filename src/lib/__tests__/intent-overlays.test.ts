@@ -37,3 +37,81 @@ describe("overlays por intenção", () => {
     expect(LOADERS).toContain("<FeedbackModal pedidoInicial={pedidoInicial} />");
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A REGRA DE CEDÊNCIA — a que deixava a pesquisa muda
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ `menu` E `busca` VALEM O MESMO — DE PROPÓSITO                        │
+//  │                                                                     │
+//  │ Nenhum manda no outro: são as duas coisas que a pessoa pede com um   │
+//  │ gesto, e não há razão para uma ser mais importante. Só que a regra   │
+//  │ era «ganha quem valer MAIS», e com prioridades iguais isso quer      │
+//  │ dizer «ganha quem chegou primeiro, para sempre»: com a folha do      │
+//  │ menu na vaga, o `⌘K` e a barra de pesquisa não faziam nada. Sem      │
+//  │ erro. Sem nada no ecrã que o explicasse.                             │
+//  │                                                                     │
+//  │ Entre iguais decide o gesto mais RECENTE — e só o pedido novo, não   │
+//  │ a reinscrição de quem já estava à espera; senão os dois roubavam-se  │
+//  │ a vaga em ciclo, que é pior do que o defeito que isto corrige.       │
+//  └─────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════
+
+import { PRIORIDADE, decidirVaga } from "@/components/overlays/CoordenadorOverlays";
+
+const gesto = { modal: true, iniciadoPeloUtilizador: true, novoPedido: true };
+const reinscricao = { ...gesto, novoPedido: false };
+const automatico = { modal: true, iniciadoPeloUtilizador: false, novoPedido: true };
+
+describe("coordenador:cedencia", () => {
+  it("a vaga livre é de quem a pedir", () => {
+    expect(decidirVaga(null, "busca", gesto)).toBe("busca");
+    expect(decidirVaga(null, "novidades", automatico)).toBe("novidades");
+  });
+
+  it("um gesto ganha a quem vale o MESMO — é o defeito que calava a pesquisa", () => {
+    expect(PRIORIDADE.menu).toBe(PRIORIDADE.busca);
+    expect(decidirVaga("menu", "busca", gesto)).toBe("busca");
+    expect(decidirVaga("busca", "menu", gesto)).toBe("menu");
+  });
+
+  it("mas só o pedido NOVO desempata — a reinscrição espera", () => {
+    // Sem isto, cada roubo mudava o dono, cada mudança fazia o outro
+    // reinscrever-se, e os dois trocavam a vaga sem fim.
+    expect(decidirVaga("menu", "busca", reinscricao)).toBe("menu");
+    expect(decidirVaga("busca", "menu", reinscricao)).toBe("busca");
+  });
+
+  it("um gesto ganha a um automático", () => {
+    expect(decidirVaga("novidades", "busca", gesto)).toBe("busca");
+  });
+
+  it("um automático nunca empurra ninguém, valha o que valer", () => {
+    expect(decidirVaga("busca", "novidades", automatico)).toBe("busca");
+    expect(decidirVaga("novidades", "novidades", automatico)).toBe("novidades");
+  });
+
+  it("o consentimento e a confirmação continuam intocáveis", () => {
+    expect(decidirVaga("cookies", "busca", gesto)).toBe("cookies");
+    expect(decidirVaga("cookies", "menu", gesto)).toBe("cookies");
+    expect(decidirVaga("confirmacao", "busca", gesto)).toBe("confirmacao");
+    // E o consentimento continua a poder empurrar o resto.
+    expect(decidirVaga("busca", "cookies", gesto)).toBe("cookies");
+  });
+});
+
+describe("coordenador:quem-perde-arruma-se", () => {
+  const COORD = ler("components", "overlays", "CoordenadorOverlays.tsx");
+
+  it("o `useOverlay` avisa quem perde a vaga sem deixar de a querer", () => {
+    expect(COORD).toContain("aoPerderVaga");
+  });
+
+  it("e as superfícies que um gesto pode empurrar usam esse aviso", () => {
+    // Sem isto ficavam invisíveis a querer abrir — e reapareciam sozinhas
+    // quando a vaga libertasse, sem ninguém as ter pedido.
+    expect(ler("components", "navegacao", "MenuCompleto.tsx")).toMatch(/useOverlay\("menu"[\s\S]*?aoFechar\)/);
+    expect(ler("components", "busca", "BuscaGlobal.tsx")).toMatch(/useOverlay\("busca"[\s\S]*?fechar\)/);
+    expect(ler("components", "busca", "PainelPesquisa.tsx")).toMatch(/useOverlay\("busca"[\s\S]*?aoFechar\)/);
+  });
+});

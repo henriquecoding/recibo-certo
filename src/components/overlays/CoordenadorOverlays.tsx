@@ -65,16 +65,67 @@ export interface PedidoOverlay {
   iniciadoPeloUtilizador: boolean;
 }
 
+interface PedidoInterno extends PedidoOverlay {
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ «QUERO ABRIR AGORA» E «CONTINUO À ESPERA» SÃO PEDIDOS DIFERENTES   │
+   * │                                                                   │
+   * │ Quem quer abrir volta a pedir sempre que a vaga muda de dono — é   │
+   * │ assim que um pedido recusado consegue uma segunda oportunidade sem │
+   * │ fila nem temporizador. Mas então a maioria dos pedidos que chegam  │
+   * │ aqui não são gestos novos: são a mesma intenção a reinscrever-se.  │
+   * │                                                                   │
+   * │ A distinção existe por causa do desempate. Sem ela, dois overlays  │
+   * │ de IGUAL prioridade (menu e busca valem os dois 80) roubavam-se a  │
+   * │ vaga um ao outro em cadeia: cada roubo muda o dono, cada mudança   │
+   * │ faz o outro reinscrever-se, e o produto entra em ciclo. Só o       │
+   * │ PRIMEIRO pedido de cada episódio desempata; as reinscrições        │
+   * │ esperam pela sua vez, como sempre esperaram.                       │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  novoPedido: boolean;
+}
+
 interface Coordenador {
   ativo: NomeOverlay | null;
-  pedir: (nome: NomeOverlay, pedido: PedidoOverlay) => void;
+  pedir: (nome: NomeOverlay, pedido: PedidoInterno) => void;
   libertar: (nome: NomeOverlay) => void;
 }
 
 const ContextoOverlays = createContext<Coordenador | null>(null);
 
+/**
+ * A regra de cedência, isolada e PURA — devolve quem fica com a vaga.
+ *
+ * Estava dentro do `setAtivo`, misturada com o `registar` da colisão. Um
+ * `updater` pode ser chamado mais do que uma vez (StrictMode, um render
+ * começado e deitado fora), e a mesma colisão era contada duas vezes — num
+ * número cujo SLO é zero, isso é a diferença entre um alarme e ruído.
+ */
+export function decidirVaga(
+  atual: NomeOverlay | null,
+  nome: NomeOverlay,
+  pedido: PedidoInterno,
+): NomeOverlay {
+  if (atual === null || atual === nome) return nome;
+  if (!pedido.iniciadoPeloUtilizador) return atual;
+  if (PRIORIDADE[atual] < PRIORIDADE[nome]) return nome;
+  if (PRIORIDADE[atual] === PRIORIDADE[nome] && pedido.novoPedido) return nome;
+  return atual;
+}
+
 export function CoordenadorOverlays({ children }: { children: React.ReactNode }) {
   const [ativo, setAtivo] = useState<NomeOverlay | null>(null);
+
+  /**
+   * A vaga também vive numa ref, e a ref é que manda DENTRO de um lote.
+   *
+   * `pedir` e `libertar` são chamados de efeitos, e num único lote de React
+   * podem chegar vários — o painel a pedir e a folha a libertar no mesmo
+   * commit. Ler `ativo` (o valor do render) daria a cada um a fotografia
+   * anterior. A ref é a verdade corrente; o estado é o que se desenha.
+   */
+  const vaga = useRef<NomeOverlay | null>(null);
 
   /**
    * Os automáticos esperam pelo consentimento resolvido.
@@ -120,28 +171,57 @@ export function CoordenadorOverlays({ children }: { children: React.ReactNode })
   }, []);
 
   const pedir = useCallback(
-    (nome: NomeOverlay, pedido: PedidoOverlay) => {
+    (nome: NomeOverlay, pedido: PedidoInterno) => {
       if (!pedido.iniciadoPeloUtilizador && !livreParaAutomaticos) return;
 
-      setAtivo((atual) => {
-        if (atual === null || atual === nome) return nome;
-
-        // Um gesto do utilizador ganha a um automático: quem carregou em
-        // «Pesquisar» quer a pesquisa, não o que apareceu sozinho. O
-        // automático volta a pedir quando esta vaga libertar.
-        if (pedido.iniciadoPeloUtilizador && PRIORIDADE[atual] < PRIORIDADE[nome]) return nome;
-
+      /**
+       * ┌───────────────────────────────────────────────────────────────┐
+       * │ UM GESTO GANHA A QUEM VALE O MESMO — E O `<` DEIXAVA-O PERDER  │
+       * │                                                               │
+       * │ Um gesto do utilizador ganha a um automático: quem carregou em │
+       * │ «Pesquisar» quer a pesquisa, não o que apareceu sozinho. O     │
+       * │ automático volta a pedir quando esta vaga libertar.            │
+       * │                                                               │
+       * │ A comparação era estritamente MENOR, e `menu` e `busca` valem  │
+       * │ os dois 80 — de propósito, porque nenhum manda no outro. Com   │
+       * │ `<`, «nenhum manda no outro» virava «o primeiro manda para     │
+       * │ sempre»: com a folha do menu na vaga, o `⌘K` e a barra de      │
+       * │ pesquisa não faziam NADA, sem erro e sem nada no ecrã que o    │
+       * │ explicasse. E ao contrário também.                             │
+       * │                                                               │
+       * │ Entre dois pedidos de IGUAL prioridade feitos por gesto decide │
+       * │ o mais RECENTE — mas só se for mesmo um pedido novo, e não uma │
+       * │ reinscrição (ver `PedidoInterno.novoPedido`, que é o que       │
+       * │ impede os dois de se roubarem a vaga em ciclo). A ordem entre  │
+       * │ níveis diferentes não muda: o consentimento (100) e a          │
+       * │ confirmação (95) continuam a não poder ser empurrados pela     │
+       * │ pesquisa (80).                                                 │
+       * └───────────────────────────────────────────────────────────────┘
+       *
+       * A decisão é calculada FORA do `setAtivo`. Um `updater` pode ser
+       * chamado mais do que uma vez (StrictMode, render descartado), e com
+       * o `registar` lá dentro a mesma colisão era contada duas vezes — num
+       * número cujo SLO é zero, isso é a diferença entre um alarme e um
+       * ruído.
+       */
+      const atual = vaga.current;
+      const proximo = decidirVaga(atual, nome, pedido);
+      if (proximo !== nome && atual !== null) {
         // Recusa. Fica registada porque o SLO desta invariante é ZERO
         // colisões: um número que nunca se mede é um número que sobe.
         registar("header_overlay_conflict", { requested: nome, active: atual });
-        return atual;
-      });
+      }
+      if (proximo === atual) return;
+      vaga.current = proximo;
+      setAtivo(proximo);
     },
     [livreParaAutomaticos],
   );
 
   const libertar = useCallback((nome: NomeOverlay) => {
-    setAtivo((atual) => (atual === nome ? null : atual));
+    if (vaga.current !== nome) return;
+    vaga.current = null;
+    setAtivo(null);
   }, []);
 
   const valor = useMemo<Coordenador>(() => ({ ativo, pedir, libertar }), [ativo, pedir, libertar]);
@@ -160,10 +240,26 @@ export function CoordenadorOverlays({ children }: { children: React.ReactNode })
  * componente e as páginas isoladas não têm de montar a árvore toda para
  * conseguirem ver um diálogo.
  */
-export function useOverlay(nome: NomeOverlay, queroAbrir: boolean, pedido: PedidoOverlay): boolean {
+export function useOverlay(
+  nome: NomeOverlay,
+  queroAbrir: boolean,
+  pedido: PedidoOverlay,
+  /**
+   * Chamado quando a vaga é PERDIDA sem se ter deixado de a querer.
+   *
+   * Sem isto, quem perdia a vaga desaparecia do ecrã e continuava a querer
+   * abrir — e voltava a aparecer sozinho no instante em que ela libertasse.
+   * Uma folha de menu que a pessoa julgava fechada a reaparecer depois de
+   * fechar a pesquisa não é uma animação: é o produto a fazer uma coisa que
+   * ninguém pediu. Quem perde, arruma-se.
+   */
+  aoPerderVaga?: () => void,
+): boolean {
   const ctx = useContext(ContextoOverlays);
   const pedidoRef = useRef(pedido);
   pedidoRef.current = pedido;
+  const aoPerderRef = useRef(aoPerderVaga);
+  aoPerderRef.current = aoPerderVaga;
 
   const libertar = ctx?.libertar;
 
@@ -202,22 +298,48 @@ export function useOverlay(nome: NomeOverlay, queroAbrir: boolean, pedido: Pedid
   const teve = useRef(false);
   if (permitido) teve.current = true;
 
+  /**
+   * O primeiro pedido de cada episódio é um GESTO; os seguintes são a mesma
+   * intenção a reinscrever-se enquanto espera. Só o primeiro desempata entre
+   * prioridades iguais — ver `PedidoInterno.novoPedido`.
+   */
+  const jaPediu = useRef(false);
+
   // Enquanto quiser abrir, pede. O `ctx` muda de identidade sempre que a
   // vaga muda de dono — e é isso que faz um pedido recusado voltar a
   // tentar, sem fila e sem temporizador.
   useEffect(() => {
     if (!ctx || !queroAbrir) return;
-    ctx.pedir(nome, pedidoRef.current);
+    const novoPedido = !jaPediu.current;
+    jaPediu.current = true;
+    ctx.pedir(nome, { ...pedidoRef.current, novoPedido });
   }, [ctx, nome, queroAbrir]);
 
   // Deixar de querer liberta a vaga — se a tivermos. Separado do efeito
   // anterior porque aquele corre também quando o `ctx` muda, e libertar aí
   // tirava o lugar a quem o tinha ganho no mesmo instante.
   useEffect(() => {
-    if (queroAbrir || !libertar || !teve.current) return;
+    if (queroAbrir) return;
+    // O episódio acabou: o próximo pedido volta a ser um gesto novo.
+    jaPediu.current = false;
+    if (!libertar || !teve.current) return;
     teve.current = false;
     libertar(nome);
   }, [queroAbrir, libertar, nome]);
+
+  /**
+   * Perder a vaga sem deixar de a querer é um sinal, não um silêncio.
+   *
+   * Quem a tinha e a perdeu (alguém com mais prioridade, ou um gesto mais
+   * recente de igual prioridade) fica com `queroAbrir` a verdade e sem nada
+   * no ecrã — um estado invisível que reaparece sozinho mais tarde. Aqui
+   * avisa-se, e cada superfície arruma-se como lhe compete.
+   */
+  useEffect(() => {
+    if (permitido || !queroAbrir || !teve.current) return;
+    teve.current = false;
+    aoPerderRef.current?.();
+  }, [permitido, queroAbrir]);
 
   useEffect(() => {
     if (!libertar) return;
