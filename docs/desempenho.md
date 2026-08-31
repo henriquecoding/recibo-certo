@@ -558,7 +558,35 @@ apanhada; `RC_VISUAL_THRESHOLD` continua a permitir um valor único explícito.
 A imagem de diferenças só é escrita quando a comparação reprova: codificar
 vinte PNG de página inteira custava mais do que todas as comparações juntas, e
 no runner — com o cache de píxeis do ImageMagick limitado pela política da
-distribuição — o passo chegou a passar de uma hora sem terminar. O processo e a decisão explícita de não manter uma variante legada
+distribuição — o passo chegou a passar de uma hora sem terminar.
+
+**Nenhuma espera dentro do browser pode ser eterna.** `page.evaluate` não tem
+timeout — não é uma opção que esteja mal afinada, é uma opção que não existe.
+Enquanto a estabilização (fontes prontas, percorrer a página, voltar ao topo)
+correu dentro de um `evaluate` sem tecto, o gate tinha um estado a mais do que
+«passa» e «reprova»: **pendurado**. Foi lá que ficou, no CI, 24 minutos na 16.ª
+das 20 capturas — sem erro, sem linha nenhuma no registo — até o passo expirar
+aos 25 minutos.
+
+Três esperas podiam não resolver, e todas são plausíveis num runner carregado:
+`document.fonts.ready` fica pendente enquanto um pedido de fonte não terminar
+(e como cada `newContext` começa com a cache vazia, as 20 capturas repetem os
+pedidos todos — basta um ficar preso); `requestAnimationFrame` não dispara numa
+página que o motor deixe de pintar; e o laço relê `scrollHeight` a cada volta,
+valor que muda à medida que o `content-visibility` revela as secções diferidas.
+
+Passaram todas a ter tecto — as fontes a 10s, o laço a 10s ou 400 voltas, e a
+captura inteira a 120s com uma segunda tentativa antes de reprovar. Medido nas
+20 capturas desta máquina, o pior caso real é **21 voltas e 500 ms**, pelo que
+os tectos dão cerca de 20× de folga e só se fazem sentir quando algo está mesmo
+preso. A troca é deliberada: estabilizar de menos é um risco pequeno e visível
+— a comparação por píxel acusa-o na imagem seguinte, e a estabilização diz no
+registo o que teve de truncar; pendurar é um risco grande e cego.
+
+O progresso passou de um `\r` que só terminava em `\n` no fim (inútil quando o
+fim não chega) para uma linha por captura com o tempo que levou. O gate
+completo — capturar a referência do commit fixado e comparar com o build atual
+— demora **62s** nesta máquina: 27s a capturar, 34s a comparar. O processo e a decisão explícita de não manter uma variante legada
 duplicada estão em [`rollout-homepage.md`](./rollout-homepage.md).
 
 **O movimento reduzido é obrigatório aqui e é também o ponto cego.** Sem ele

@@ -18,26 +18,33 @@ import { chromium } from "playwright";
 const executar = promisify(execFile);
 const BASE = (process.env.BASE_URL ?? "http://127.0.0.1:3000").replace(/\/$/, "");
 const ATUALIZAR = process.argv.includes("--update");
-/* ┌──────────────────────────────────────────────────────────────────────┐
-   │ O LIMIAR É MEDIDO, E NÃO É O MESMO NAS DUAS LARGURAS                 │
-   │                                                                      │
-   │ Duas capturas do MESMO build não dão sempre a mesma imagem: o palco  │
-   │ é uma cena, e mesmo com movimento reduzido a captura apanha-a num    │
-   │ instante. Em desktop isso não se vê — 0 píxeis de diferença em CI e  │
-   │ localmente, nas 20 imagens. No telemóvel o palco ocupa uma fatia     │
-   │ muito maior da página, e o mesmo instante vale mais píxeis.          │
-   │                                                                      │
-   │ Medido: entre dois builds do MESMO código, 0,007% a 0,066% nesta     │
-   │ máquina; no runner do CI, até 0,62% em três das cinco rotas escuras  │
-   │ (recibos, empresa, salário — as que têm gráfico). Um limiar de 0,1%  │
-   │ reprovava ali por ruído, e um portão que grita sem motivo deixa de   │
-   │ ser lido.                                                            │
-   │                                                                      │
-   │ Ficam dois: 0,2% no desktop (200× acima do ruído observado, que é    │
-   │ zero) e 1% no telemóvel (1,6× acima do pior caso do runner). Uma     │
-   │ alteração real de desenho — a correção do piso de 12px, por exemplo  │
-   │ — move vários por cento e continua a ser apanhada.                   │
-   └──────────────────────────────────────────────────────────────────────┘ */
+/* ┌────────────────────────────────────────────────────────────────────────┐
+   │ NENHUMA ESPERA AQUI DENTRO PODE SER ETERNA                             │
+   │                                                                        │
+   │ `page.evaluate` não tem timeout — não é uma opção mal afinada, é uma   │
+   │ opção que não existe. Se a promessa lá dentro nunca resolver, o portão │
+   │ fica pendurado até alguém o matar: no CI ficou 24 minutos parado na    │
+   │ 16.ª das 20 capturas, sem erro e sem uma linha no registo, até o passo │
+   │ expirar aos 25. Um portão pendurado não reprova nem aprova — só gasta  │
+   │ o tempo de quem espera por ele.                                        │
+   │                                                                        │
+   │ Três esperas aqui podiam não resolver:                                 │
+   │                                                                        │
+   │ · `document.fonts.ready` fica pendente enquanto um pedido de fonte não │
+   │   terminar — e cada `newContext` começa com a cache vazia, pelo que as │
+   │   20 capturas repetem os pedidos todos: basta um ficar preso;          │
+   │ · `requestAnimationFrame` não dispara numa página que o motor deixe de │
+   │   pintar;                                                              │
+   │ · o laço relê `scrollHeight` a cada volta, e esse valor muda à medida  │
+   │   que o `content-visibility` revela as secções diferidas.              │
+   │                                                                        │
+   │ Passam todas a ter tecto. Medido nesta máquina, nas 20 capturas: no    │
+   │ máximo 21 voltas e 500 ms — os tectos dão cerca de 20× de folga e só   │
+   │ se fazem sentir quando alguma coisa está mesmo presa. A troca é        │
+   │ deliberada: estabilizar de menos é um risco pequeno e VISÍVEL — a      │
+   │ comparação por píxel acusa-o na imagem seguinte, e a estabilização diz │
+   │ no registo o que teve de truncar. Pendurar é um risco grande e cego.   │
+   └────────────────────────────────────────────────────────────────────────┘ */
 const LIMIAR_POR_VIEWPORT = Object.freeze({ desktop: 0.002, mobile: 0.01 });
 const LIMIAR = process.env.RC_VISUAL_THRESHOLD
   ? Number(process.env.RC_VISUAL_THRESHOLD)
@@ -101,19 +108,82 @@ function dimensoesPNG(corpo) {
   };
 }
 
+/* ┌───────────────────────────────────────────────────────────────────┐
+   │ NENHUMA ESPERA AQUI DENTRO PODE SER ETERNA                           │
+   │                                                                      │
+   │ `page.evaluate` não tem timeout — nenhum. Se a promessa lá dentro      │
+   │ nunca resolver, o portão fica pendurado até alguém o matar. Foi o que  │
+   │ aconteceu: no CI ficou 24 minutos parado na 16.ª das 20 capturas, sem │
+   │ erro nenhum, até o passo expirar aos 25. Um portao que pendura não     │
+   │ reprova nem aprova — só gasta o tempo de quem espera por ele.         │
+   │                                                                      │
+   │ Três esperas aqui podiam não resolver:                                │
+   │                                                                      │
+   │ · `document.fonts.ready` fica pendente enquanto um pedido de fonte    │
+   │   não terminar — e cada `newContext` começa com a cache vazia, pelo   │
+   │   que as 20 capturas repetem os pedidos todos: um só que fique preso  │
+   │   basta;                                                             │
+   │ · `requestAnimationFrame` não dispara numa página que o motor deixe    │
+   │   de pintar;                                                         │
+   │ · o próprio laço relê `scrollHeight` a cada volta, e esse valor muda  │
+   │   à medida que o `content-visibility` revela as secções diferidas.     │
+   │                                                                      │
+   │ Passam todas a ter tecto. Medido nesta máquina, nas 20 capturas: no   │
+   │ máximo 21 iterações e 500 ms — os tectos abaixo dão 20× de folga, e    │
+   │ por isso só se fazem sentir quando alguma coisa está mesmo presa.     │
+   │ Estabilizar de menos é um risco pequeno e VISÍVEL — a comparação por  │
+   │ píxel acusa-o na imagem seguinte. Pendurar é um risco grande e cego.  │
+   └───────────────────────────────────────────────────────────────────┘ */
+const TECTO_FONTES_MS = 10_000;
+const TECTO_ESTABILIZAR_MS = 10_000;
+const TECTO_CAPTURA_MS = 120_000;
+
 async function estabilizar(pagina) {
-  await pagina.evaluate(async () => {
-    await document.fonts.ready;
-    const passo = Math.max(320, Math.floor(window.innerHeight * 0.8));
-    for (let y = 0; y < document.documentElement.scrollHeight; y += passo) {
-      window.scrollTo(0, y);
-      await new Promise((resolver) => requestAnimationFrame(() => resolver()));
-    }
-    window.scrollTo(0, 0);
-    await new Promise((resolver) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolver())),
-    );
-  });
+  return pagina.evaluate(
+    async ({ tectoFontes, tectoLaco }) => {
+      const inicio = performance.now();
+      /** Um frame — ou o relógio, se o motor tiver deixado de pintar. */
+      const frame = () =>
+        new Promise((resolver) => {
+          let resolvido = false;
+          const uma = () => {
+            if (resolvido) return;
+            resolvido = true;
+            resolver();
+          };
+          requestAnimationFrame(uma);
+          setTimeout(uma, 250);
+        });
+
+      const fontesProntas = await Promise.race([
+        document.fonts.ready.then(() => true),
+        new Promise((resolver) => setTimeout(() => resolver(false), tectoFontes)),
+      ]);
+
+      const passo = Math.max(320, Math.floor(window.innerHeight * 0.8));
+      let voltas = 0;
+      let truncado = false;
+      for (let y = 0; y < document.documentElement.scrollHeight; y += passo) {
+        if (performance.now() - inicio > tectoLaco || voltas >= 400) {
+          truncado = true;
+          break;
+        }
+        voltas += 1;
+        window.scrollTo(0, y);
+        await frame();
+      }
+      window.scrollTo(0, 0);
+      await frame();
+      await frame();
+      return {
+        voltas,
+        truncado,
+        fontesProntas,
+        ms: Math.round(performance.now() - inicio),
+      };
+    },
+    { tectoFontes: TECTO_FONTES_MS, tectoLaco: TECTO_ESTABILIZAR_MS },
+  );
 }
 
 async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
@@ -127,6 +197,7 @@ async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
     locale: "pt-PT",
     timezoneId: "Europe/Lisbon",
   });
+  contexto.setDefaultTimeout(45_000);
   await contexto.addInitScript(
     ({ appVersion, consentVersion, escuro }) => {
       try {
@@ -210,7 +281,7 @@ async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
         [data-vercel-toolbar], vercel-live-feedback { display: none !important; }
       `,
     });
-    await estabilizar(pagina);
+    const estabilidade = await estabilizar(pagina);
 
     const overflow = await pagina.evaluate(
       () => document.documentElement.scrollWidth - window.innerWidth,
@@ -232,10 +303,47 @@ async function capturar(navegador, foco, rota, tema, nomeViewport, viewport) {
       caret: "hide",
       scale: "css",
     });
-    return { nome, destino };
+    return { nome, destino, estabilidade };
   } finally {
     await contexto.close();
   }
+}
+
+/**
+ * A captura com prazo: uma segunda tentativa, e depois erro — nunca espera.
+ *
+ * O tecto de dentro (`estabilizar`) cobre as promessas da página; este cobre
+ * o resto — um motor que deixe de responder não devolve nem erro nem imagem,
+ * e sem prazo aqui fora o portão voltava a pendurar-se.
+ */
+async function capturarComPrazo(...argumentos) {
+  let ultimoErro;
+  for (const tentativa of [1, 2]) {
+    let expirar;
+    try {
+      return await Promise.race([
+        capturar(...argumentos),
+        new Promise((_, rejeitar) => {
+          expirar = setTimeout(
+            () =>
+              rejeitar(
+                new Error(
+                  `captura passou de ${TECTO_CAPTURA_MS / 1000}s (tentativa ${tentativa})`,
+                ),
+              ),
+            TECTO_CAPTURA_MS,
+          );
+        }),
+      ]);
+    } catch (erro) {
+      ultimoErro = erro;
+      if (tentativa === 2) break;
+      process.stdout.write(`\n[visual] repetir após: ${erro.message}\n`);
+    } finally {
+      clearTimeout(expirar);
+    }
+  }
+  throw ultimoErro;
 }
 
 async function comparar(nome, atual) {
@@ -323,17 +431,31 @@ try {
   for (const [foco, rota] of Object.entries(ROTAS)) {
     for (const tema of TEMAS) {
       for (const [nomeViewport, viewport] of Object.entries(VIEWPORTS)) {
-        process.stdout.write(`\r${foco} · ${tema} · ${nomeViewport}   `);
-        capturas.push(
-          await capturar(navegador, foco, rota, tema, nomeViewport, viewport),
+        const marca = Date.now();
+        const captura = await capturarComPrazo(
+          navegador,
+          foco,
+          rota,
+          tema,
+          nomeViewport,
+          viewport,
         );
+        const { truncado, fontesProntas, voltas } = captura.estabilidade;
+        const avisos = [
+          truncado ? `laço truncado a ${voltas} voltas` : null,
+          fontesProntas ? null : `fontes ainda a carregar (${TECTO_FONTES_MS / 1000}s)`,
+        ].filter(Boolean);
+        console.log(
+          `[visual] ${foco} · ${tema} · ${nomeViewport} — ${Date.now() - marca}ms` +
+            (avisos.length > 0 ? ` · AVISO: ${avisos.join("; ")}` : ""),
+        );
+        capturas.push(captura);
       }
     }
   }
 } finally {
   await navegador.close();
 }
-process.stdout.write("\n");
 
 if (ATUALIZAR) {
   const metadata = {
