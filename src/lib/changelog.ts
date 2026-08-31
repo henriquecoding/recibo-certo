@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.138.0",
+    data: "2026-08-31",
+    titulo: "O planeador de contratação deixou de dizer que a proposta cabe quando ainda lhe faltam custos",
+    itens: [
+      "Havia um número que parecia uma conclusão e não era. O planeador anunciava «a proposta cabe» com o seguro de acidentes de trabalho — que é obrigatório — completamente fora da conta, porque um campo em branco valia zero. Agora cada custo do posto diz o que se sabe dele: confirmo o valor, é uma estimativa, está entre dois valores, não se aplica, ou ainda não sei. Enquanto faltar um custo obrigatório, o resultado diz «ainda não é possível confirmar se cabe» — e diz exatamente o que falta.",
+      "O equipamento nascia com 1 200 € já preenchidos dentro de uma secção fechada: apareciam no primeiro ano sem ninguém os ter escrito. Nenhuma parcela nasce com valor, e o resumo de custos está sempre à vista, com quantas estão confirmadas, estimadas, por confirmar e fora do cálculo.",
+      "O subsídio de refeição era anualizado a 22 dias × 12 meses. Passa a ser contado pelo calendário real: dias contratados menos feriados que caem em dia de trabalho, menos férias. Os feriados são os treze obrigatórios do Código do Trabalho, com a Páscoa calculada ano a ano, mais os regionais da Madeira e dos Açores.",
+      "O mês de entrada virou data de entrada, e o primeiro ano deixou de ser uma coisa só: agora vês o ano civil da entrada, os primeiros doze meses do vínculo e o ano estabilizado — mais o mês em que a tesouraria dói mais e porquê. As férias do ano de admissão seguem a regra dos dois dias úteis por mês até 20, e o subsídio de férias é pago no mês do gozo que indicares, não fixamente em junho.",
+      "As horas faturáveis necessárias estavam a ser calculadas dividindo o custo pelo preço de venda. É a margem de contribuição que paga o posto, não o preço: a conta passa a ser custo ÷ (preço × margem). E as horas disponíveis deixaram de usar constantes fixas — saem-lhes feriados, férias, formação e integração antes de se aplicar a fração produtiva. Se a expectativa de horas faturáveis for maior do que o calendário permite, o resultado avisa em vez de somar.",
+      "Um horário de 80 horas por semana era aceite como situação normal. Agora o limite é o da lei — 8 horas por dia e 40 por semana — e só passa acima disso quem declarar um regime de adaptabilidade suportado. O enquadramento contributivo da entidade também passou a ser declarado: se não for o regime geral, o motor recusa em vez de aproximar uma taxa.",
+      "Deixou de haver «líquido exato». Com autorização do candidato o resultado é uma projeção personalizada; sem ela, são quatro cenários de referência nomeados — e o texto diz que não cobrem todas as situações. A autorização passou a ser uma confirmação explícita, com finalidade, duração e local do processamento à vista.",
+      "O resultado ganhou memória de cálculo: cada total mostra a fórmula, os operandos, o arredondamento e a fonte oficial. A comparação de pacotes passou a comparar custo, líquido, tesouraria, capacidade, apoios e nível de confiança — e marca o cenário incompleto, para não parecer o mais barato só por lhe faltarem parcelas.",
+      "Abrir um cenário de contratação guardado devolvia a pessoa à lista de onde tinha vindo. Agora reabre no planeador, com todos os campos como estavam — incluindo o que ficou por preencher.",
+    ],
+  },
+  {
     version: "2.137.0",
     data: "2026-08-30",
     titulo: "A nova página inicial passa a ser medida ao telemóvel — e o que estava ilegível deixou de estar",

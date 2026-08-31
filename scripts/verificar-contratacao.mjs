@@ -1,5 +1,15 @@
 #!/usr/bin/env node
 
+/**
+ * Portão ponta a ponta do planeador de contratação.
+ *
+ * Antes verificava sobretudo presença: os separadores existem, não há
+ * overflow, o axe não se queixa. Nada disto apanhava o defeito que importava
+ * — o resultado dizer que a proposta cabe com um custo obrigatório em falta.
+ * Agora o percurso é FINANCEIRO: parte-se de um cenário incompleto, resolve-se
+ * o bloqueio, e verifica-se que o veredicto só aparece depois disso.
+ */
+
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
 import AxeBuilder from "@axe-core/playwright";
@@ -18,71 +28,320 @@ function verificar(condicao, mensagem, detalhe = "") {
 }
 
 const browser = await chromium.launch(EXECUTAVEL ? { executablePath: EXECUTAVEL } : {});
-const context = await browser.newContext({
-  viewport: { width: 360, height: 800 },
-  hasTouch: true,
-  colorScheme: "light",
-});
-await context.addInitScript(([versao]) => {
-  localStorage.setItem("recibocerto:changelog_visto", versao);
-  localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
-    necessarios: true,
-    estatistica: false,
-    marketing: false,
-    data: new Date().toISOString(),
-    versao: 2,
-  }));
-}, [VERSAO]);
 
-const page = await context.newPage();
-const erros = [];
-page.on("pageerror", (erro) => erros.push(String(erro)));
-
-try {
-  console.log("\n▸ Homepage de salário · 360 px");
-  await page.goto(`${BASE}/inicio/salario?percurso=trabalhador`, { waitUntil: "networkidle" });
-  const grupo = page.getByRole("radiogroup", { name: "Escolhe o teu percurso" });
-  await grupo.waitFor({ timeout: 30_000 });
-  verificar(await grupo.getByRole("radio").count() === 2, "os dois percursos estão sempre visíveis");
-  verificar(await grupo.getByRole("radio", { name: /Simular o meu salário/ }).getAttribute("aria-checked") === "true", "o percurso da query fica selecionado");
-  const semOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
-  verificar(semOverflow, "a homepage não cria overflow horizontal");
-
-  await grupo.getByRole("radio", { name: /Planear uma contratação/ }).click();
-  await page.locator("#palco-contratacao").waitFor();
-  verificar(new URL(page.url()).searchParams.get("percurso") === "empregador", "a escolha atualiza a query sem recarregar");
-  verificar(await page.getByRole("link", { name: /Planear uma contratação/ }).getAttribute("href") === "/ferramentas/planeador-contratacao", "o CTA acompanha o percurso");
-  verificar(await page.getByText("Régua do orçamento anual").count() === 1, "o palco patronal mostra orçamento, pacote e capacidade");
-
-  await page.goto(`${BASE}/inicio/salario?percurso=trabalhador`, { waitUntil: "networkidle" });
-  await page.goBack({ waitUntil: "networkidle" });
-  verificar(new URL(page.url()).searchParams.get("percurso") === "empregador", "Back restaura o percurso da história");
-  verificar(await page.locator("#palco-contratacao").count() === 1, "o palco acompanha Back/Forward");
-
-  const a11yHome = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
-  verificar(a11yHome.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")).length === 0, "sem violações sérias ou críticas na bifurcação");
-
-  console.log("\n▸ Planeador de contratação · 360 px");
-  await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
-  await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
-  verificar(await page.getByRole("radio").count() >= 4, "os quatro objetivos respondem por teclado e toque");
-  verificar(await page.getByText("Custos do posto — opcionais").count() === 1, "custos avançados começam recolhidos");
-  const toolOverflow = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
-  verificar(toolOverflow, "a ferramenta não cria overflow horizontal");
-
-  await page.getByRole("button", { name: /Calcular a contratação/ }).click();
-  await page.getByText("Decisão calculada · regras 2026").waitFor();
-  verificar(await page.getByRole("tab").count() === 5, "o resultado expõe os cinco separadores previstos");
-  await page.getByRole("button", { name: "Fixar pacote A" }).click();
-  verificar(await page.getByText("Pacote A e proposta atual").count() === 1, "a comparação de pacotes é criada");
-
-  const a11yTool = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
-  verificar(a11yTool.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")).length === 0, "sem violações sérias ou críticas no resultado");
-  verificar(erros.length === 0, "sem exceções de runtime", erros.join(" | "));
-} finally {
-  await context.close();
-  await browser.close();
+async function novaPagina({ width, height, colorScheme = "light", hasTouch = true }) {
+  const context = await browser.newContext({
+    viewport: { width, height },
+    hasTouch,
+    colorScheme,
+  });
+  await context.addInitScript(([versao]) => {
+    localStorage.setItem("recibocerto:changelog_visto", versao);
+    localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
+      necessarios: true,
+      estatistica: false,
+      marketing: false,
+      data: new Date().toISOString(),
+      versao: 2,
+    }));
+  }, [VERSAO]);
+  const page = await context.newPage();
+  const erros = [];
+  page.on("pageerror", (erro) => erros.push(String(erro)));
+  return { context, page, erros };
 }
+
+const semOverflow = (page) =>
+  page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+
+const blocoDoSeguro = (page) => page.locator('[data-custo="accidentInsurance"]');
+
+/** Põe o custo obrigatório num estado que desbloqueia a decisão. */
+async function preencherSeguro(page, valor = "480") {
+  const bloco = blocoDoSeguro(page);
+  await bloco.locator("select").selectOption("confirmado");
+  const campo = bloco.getByLabel("Seguro de acidentes de trabalho — valor anual");
+  await campo.fill(valor);
+  await campo.blur();
+}
+
+async function calcular(page) {
+  await page.getByRole("button", { name: /Calcular a contratação|Voltar a calcular/ }).click();
+  await page.getByRole("tablist", { name: "Detalhes do resultado" }).waitFor({ timeout: 20_000 });
+}
+
+// ─── 1. Homepage de salário e bifurcação ──────────────────────────────────
+{
+  console.log("\n▸ Homepage de salário · 360 px");
+  const { context, page, erros } = await novaPagina({ width: 360, height: 800 });
+  try {
+    await page.goto(`${BASE}/inicio/salario?percurso=trabalhador`, { waitUntil: "networkidle" });
+    const grupo = page.getByRole("radiogroup", { name: "Escolhe o teu percurso" });
+    await grupo.waitFor({ timeout: 30_000 });
+    verificar(await grupo.getByRole("radio").count() === 2, "os dois percursos estão sempre visíveis");
+    verificar(
+      await grupo.getByRole("radio", { name: /Simular o meu salário/ }).getAttribute("aria-checked") === "true",
+      "o percurso da query fica selecionado",
+    );
+    verificar(await semOverflow(page), "a homepage não cria overflow horizontal");
+
+    await grupo.getByRole("radio", { name: /Planear uma contratação/ }).click();
+    await page.locator("#palco-contratacao").waitFor();
+    verificar(
+      new URL(page.url()).searchParams.get("percurso") === "empregador",
+      "a escolha atualiza a query sem recarregar",
+    );
+    verificar(
+      await page.getByRole("link", { name: /Planear uma contratação/ }).getAttribute("href") === "/ferramentas/planeador-contratacao",
+      "o CTA acompanha o percurso",
+    );
+    verificar(await page.getByText("Régua do orçamento anual").count() === 1, "o palco patronal mostra orçamento, pacote e capacidade");
+    // O palco anunciava um veredicto fixo mesmo com custos por contar.
+    const rotulo = await page.locator("#palco-contratacao").getByText(/Cabe na estimativa|Cabe nesta projeção|Custo ainda incompleto|Cenário validado/).count();
+    verificar(rotulo >= 1, "o rótulo da decisão do palco vem do motor, não de texto fixo");
+    verificar(
+      await page.locator("#palco-contratacao").getByText("Seguro + SST").count() === 1,
+      "o palco conta o seguro obrigatório em vez de o esconder",
+    );
+
+    await page.goto(`${BASE}/inicio/salario?percurso=trabalhador`, { waitUntil: "networkidle" });
+    await page.goBack({ waitUntil: "networkidle" });
+    verificar(new URL(page.url()).searchParams.get("percurso") === "empregador", "Back restaura o percurso da história");
+    verificar(await page.locator("#palco-contratacao").count() === 1, "o palco acompanha Back/Forward");
+
+    const a11y = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+    verificar(
+      a11y.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")).length === 0,
+      "sem violações sérias ou críticas na bifurcação",
+    );
+    verificar(erros.length === 0, "sem exceções de runtime na homepage", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+// ─── 2. Contrato de confiança: incompleto → estimado ──────────────────────
+{
+  console.log("\n▸ Planeador · contrato de confiança · 360 px");
+  const { context, page, erros } = await novaPagina({ width: 360, height: 800 });
+  try {
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    verificar(await page.getByRole("radio", { name: /Tenho um orçamento/ }).count() === 1, "os quatro objetivos respondem por teclado e toque");
+    verificar(await semOverflow(page), "a ferramenta não cria overflow horizontal");
+
+    // Nenhuma parcela pode nascer com valor escondido.
+    const resumo = page.getByText("por confirmar").first();
+    await resumo.waitFor();
+    verificar(
+      await page.getByText("Seguro de acidentes de trabalho").count() >= 1,
+      "o seguro obrigatório é um campo visível, não uma secção fechada",
+    );
+
+    await calcular(page);
+    const cabecalho = await page.locator("h2").filter({ hasText: /Ainda não é possível confirmar se cabe/ }).count();
+    verificar(cabecalho === 1, "com o seguro por preencher, o resultado recusa o veredicto");
+    verificar(
+      await page.getByText(/Falta resolver isto|Faltam resolver/).count() >= 1,
+      "o cabeçalho diz exatamente o que falta",
+    );
+
+    await preencherSeguro(page);
+    await calcular(page);
+    const agora = await page.locator("h2").filter({ hasText: /Cabe na estimativa|Cabe nesta projeção/ }).count();
+    verificar(agora === 1, "resolvido o bloqueio, o veredicto passa a ser possível");
+
+    verificar(await page.getByRole("tab").count() === 7, "o resultado expõe os sete separadores previstos");
+    verificar(await semOverflow(page), "o resultado não cria overflow horizontal a 360 px");
+    verificar(erros.length === 0, "sem exceções de runtime no percurso de confiança", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+// ─── 3. Separadores, calendário, capacidade, apoios e memória ─────────────
+{
+  console.log("\n▸ Planeador · resultado completo · 1440 px");
+  const { context, page, erros } = await novaPagina({ width: 1440, height: 900, hasTouch: false });
+  try {
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    await preencherSeguro(page);
+    await calcular(page);
+
+    await page.getByRole("tab", { name: "Calendário e caixa" }).click();
+    verificar(
+      await page.getByText("Ano civil de entrada", { exact: true }).count() === 1,
+      "o calendário separa ano civil, doze meses e estabilizado",
+    );
+    verificar(await page.getByText("Primeiros 12 meses").count() >= 1, "os primeiros doze meses do vínculo têm conta própria");
+    verificar(await page.getByText(/O mês mais pesado é/).count() === 1, "o pico de tesouraria é nomeado, com causa");
+
+    await page.getByRole("tab", { name: "Viabilidade" }).click();
+    verificar(await page.getByText("menos feriados em dia de trabalho").count() === 1, "os feriados saem das horas disponíveis");
+    verificar(await page.getByText("menos formação contínua").count() === 1, "a formação sai das horas disponíveis");
+
+    await page.getByRole("tab", { name: "Composição do custo" }).click();
+    verificar(await page.getByText("Totais por nível de conhecimento").count() === 1, "o total é apresentado por nível de conhecimento");
+
+    await page.getByRole("tab", { name: "Apoios" }).click();
+    verificar(await page.getByText(/Nenhum apoio é abatido ao custo/).count() === 1, "os apoios continuam fora do custo");
+
+    await page.getByRole("tab", { name: "Memória de cálculo" }).click();
+    verificar(
+      await page.getByText("Custo anual estabilizado do posto").count() >= 1,
+      "a memória de cálculo mostra a fórmula de cada total",
+    );
+    verificar(await page.getByText("Fontes e versão").count() === 1, "a memória de cálculo publica fontes e versão do motor");
+    const centimosCrus = await page.getByText(/\d+ cêntimos/).count();
+    verificar(centimosCrus === 0, "nenhuma unidade interna aparece como texto humano");
+
+    // Comparação com um segundo pacote.
+    await page.getByRole("button", { name: /Fixar para comparar/ }).click();
+    await page.getByRole("tab", { name: "Os três dinheiros" }).click();
+    verificar(await page.getByText(/cenários lado a lado/).count() === 1, "a comparação abre com os dois pacotes");
+    verificar(await page.getByText("Nível de confiança").count() === 1, "a comparação inclui o nível de confiança");
+
+    const a11y = await new AxeBuilder({ page }).disableRules(["color-contrast"]).analyze();
+    verificar(
+      a11y.violations.filter((item) => ["serious", "critical"].includes(item.impact ?? "")).length === 0,
+      "sem violações sérias ou críticas no resultado",
+      a11y.violations.map((v) => v.id).join(", "),
+    );
+    verificar(erros.length === 0, "sem exceções de runtime no resultado", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+// ─── 4. Os quatro objetivos ───────────────────────────────────────────────
+{
+  console.log("\n▸ Planeador · os quatro objetivos · 390 px");
+  const { context, page, erros } = await novaPagina({ width: 390, height: 844 });
+  try {
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    await preencherSeguro(page);
+    for (const objetivo of [
+      /Tenho um orçamento/,
+      /Quero garantir um líquido/,
+      /Já tenho uma proposta/,
+      /O posto tem de se pagar/,
+    ]) {
+      await page.getByRole("radio", { name: objetivo }).click();
+      await calcular(page);
+      const conclusivo = await page
+        .locator("h2")
+        .filter({ hasText: /Cabe na estimativa|Cabe nesta projeção|Cenário revisto|Ainda não é possível/ })
+        .count();
+      verificar(conclusivo === 1, `o objetivo ${objetivo.source} produz um resultado com estado`);
+      verificar(await semOverflow(page), `sem overflow horizontal em ${objetivo.source}`);
+    }
+    verificar(erros.length === 0, "sem exceções de runtime nos quatro objetivos", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+// ─── 5. Privacidade, reposição e 320 px em modo escuro ────────────────────
+{
+  console.log("\n▸ Planeador · privacidade e reposição · 320 px escuro");
+  const { context, page, erros } = await novaPagina({ width: 320, height: 700, colorScheme: "dark" });
+  try {
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    await preencherSeguro(page);
+
+    await page.getByRole("radio", { name: /Tenho autorização/ }).click();
+    verificar(
+      await page.getByText(/Confirmo que o candidato autorizou/).count() === 1,
+      "a autorização é uma confirmação explícita, com finalidade e duração",
+    );
+    verificar(
+      await page.getByLabel("Dependentes").count() === 0,
+      "os factos pessoais só aparecem depois da confirmação",
+    );
+    await page.getByRole("checkbox", { name: /Confirmo que o candidato autorizou/ }).check();
+    verificar(await page.getByLabel("Dependentes").count() === 1, "confirmada a autorização, os campos abrem");
+
+    await calcular(page);
+    verificar(
+      await page.getByText("projeção com factos autorizados").count() >= 1,
+      "com factos autorizados o resultado é uma projeção personalizada",
+    );
+    // A promessa mede-se dentro do resultado: a copy editorial da página pode
+    // usar a palavra para dizer justamente que ela não se aplica.
+    const resultado = page.locator("section", { has: page.getByRole("tablist", { name: "Detalhes do resultado" }) });
+    const exato = await resultado.getByText(/\bexat[oa]s?\b/i).count();
+    verificar(exato === 0, "a palavra «exato» não volta a qualificar a projeção");
+    verificar(await semOverflow(page), "sem overflow horizontal a 320 px no escuro");
+
+    // Nenhum facto pessoal pode chegar ao endereço.
+    verificar(
+      !/dependant|dependente|marital|deficien/i.test(page.url()),
+      "nenhum facto pessoal entra no URL",
+      page.url(),
+    );
+
+    await page.getByRole("button", { name: /Começar de novo/ }).click();
+    verificar(
+      await page.getByRole("tablist", { name: "Detalhes do resultado" }).count() === 0,
+      "a reposição fecha o resultado",
+    );
+    verificar(erros.length === 0, "sem exceções de runtime no percurso privado", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+// ─── 6. Guardar e reabrir ─────────────────────────────────────────────────
+{
+  console.log("\n▸ Planeador · guardar e reabrir · 360 px");
+  const { context, page, erros } = await novaPagina({ width: 360, height: 800 });
+  try {
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    await preencherSeguro(page, "512");
+    await calcular(page);
+    await page.getByRole("button", { name: /Guardar cenário/ }).click();
+    await page.getByRole("button", { name: "Confirmar gravação" }).click();
+    await page.getByText(/guardado neste dispositivo|sincronizado na tua conta/).waitFor({ timeout: 15_000 });
+    verificar(true, "o cenário é guardado só depois da confirmação explícita");
+
+    // Simula o handoff da página de gestão e confirma a reidratação.
+    const guardado = await page.evaluate(() => {
+      const bruto = Object.keys(localStorage)
+        .filter((chave) => chave.includes("cenarios"))
+        .map((chave) => localStorage.getItem(chave))
+        .find((valor) => valor && valor.includes("contratacao"));
+      if (!bruto) return null;
+      const lista = JSON.parse(bruto);
+      const cenario = lista.find((item) => item.tipo === "contratacao");
+      if (!cenario) return null;
+      localStorage.setItem(
+        "recibocerto:cenario-pendente:contratacao",
+        JSON.stringify({ ...cenario.dados, __versao: cenario.versao }),
+      );
+      return cenario.dados?.schemaVersion ?? null;
+    });
+    verificar(guardado === 2, "o instantâneo guardado tem versão de schema", String(guardado));
+
+    await page.goto(`${BASE}/ferramentas/planeador-contratacao`, { waitUntil: "networkidle" });
+    await page.getByRole("radiogroup", { name: "Objetivo da contratação" }).waitFor({ timeout: 30_000 });
+    const valor = await blocoDoSeguro(page)
+      .getByLabel("Seguro de acidentes de trabalho — valor anual")
+      .inputValue();
+    verificar(valor.replace(/\s/g, "").startsWith("512"), "reabrir devolve os valores preenchidos", valor);
+    const pendente = await page.evaluate(() =>
+      localStorage.getItem("recibocerto:cenario-pendente:contratacao"));
+    verificar(pendente === null, "a chave de reabertura é consumida uma única vez");
+    verificar(erros.length === 0, "sem exceções de runtime ao reabrir", erros.join(" | "));
+  } finally {
+    await context.close();
+  }
+}
+
+await browser.close();
 
 if (falhas.length > 0) {
   console.error(`\n${falhas.length} falha(s) no planeador de contratação.`);
