@@ -25,7 +25,6 @@ import {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
   type ReactNode,
 } from "react";
-import { AnimatePresence, m } from "motion/react";
 import { Check, Close, Info, Warning } from "@/components/ui/Icons";
 
 export type TomAviso = "sucesso" | "erro" | "info";
@@ -49,6 +48,7 @@ interface Aviso {
   tom: TomAviso;
   acao?: { texto: string; onClick: () => void };
   duracaoMs: number;
+  aSair?: boolean;
 }
 
 /**
@@ -72,10 +72,27 @@ const ContextoAvisos = createContext<Contexto | null>(null);
 export function AvisosProvider({ children }: { children: ReactNode }) {
   const [avisos, setAvisos] = useState<Aviso[]>([]);
   const sequencia = useRef(0);
+  const fechos = useRef(new Map<string, ReturnType<typeof setTimeout>>());
 
   const fechar = useCallback((id: string) => {
-    setAvisos((atuais) => atuais.filter((a) => a.id !== id));
+    if (fechos.current.has(id)) return;
+    setAvisos((atuais) =>
+      atuais.map((aviso) => (aviso.id === id ? { ...aviso, aSair: true } : aviso)),
+    );
+    const temporizador = setTimeout(() => {
+      fechos.current.delete(id);
+      setAvisos((atuais) => atuais.filter((aviso) => aviso.id !== id));
+    }, 180);
+    fechos.current.set(id, temporizador);
   }, []);
+
+  useEffect(
+    () => () => {
+      for (const temporizador of fechos.current.values()) clearTimeout(temporizador);
+      fechos.current.clear();
+    },
+    [],
+  );
 
   const avisar = useCallback((pedido: PedidoAviso) => {
     const tom = pedido.tom ?? "info";
@@ -150,11 +167,9 @@ function Pilha({ avisos, onFechar }: { avisos: Aviso[]; onFechar: (id: string) =
       // um aviso que não existe.
       className="pointer-events-none fixed inset-x-0 bottom-0 z-[9600] flex flex-col items-center gap-2 px-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:items-end sm:px-5 sm:pb-5"
     >
-      <AnimatePresence initial={false}>
-        {avisos.map((aviso) => (
-          <Cartao key={aviso.id} aviso={aviso} onFechar={onFechar} />
-        ))}
-      </AnimatePresence>
+      {avisos.map((aviso) => (
+        <Cartao key={aviso.id} aviso={aviso} onFechar={onFechar} />
+      ))}
     </div>
   );
 }
@@ -166,18 +181,13 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
   // O relógio para enquanto o rato ou o teclado estiverem em cima: ninguém
   // deve perder uma mensagem por estar a lê-la.
   useEffect(() => {
-    if (aviso.duracaoMs <= 0 || pausado) return;
+    if (aviso.duracaoMs <= 0 || pausado || aviso.aSair) return;
     const t = setTimeout(() => onFechar(aviso.id), aviso.duracaoMs);
     return () => clearTimeout(t);
-  }, [aviso.id, aviso.duracaoMs, pausado, onFechar]);
+  }, [aviso.id, aviso.duracaoMs, aviso.aSair, pausado, onFechar]);
 
   return (
-    <m.div
-      layout
-      initial={{ opacity: 0, y: 14, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 8, scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+    <div
       // `alert` interrompe o leitor de ecrã; `status` espera pela pausa.
       // Um erro depois de uma ação destrutiva não pode esperar.
       role={aviso.tom === "erro" ? "alert" : "status"}
@@ -185,7 +195,7 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
       onMouseLeave={() => setPausado(false)}
       onFocus={() => setPausado(true)}
       onBlur={() => setPausado(false)}
-      className={`pointer-events-auto flex w-full max-w-[26rem] items-start gap-3 rounded-2xl border bg-white px-4 py-3 shadow-float ${borda}`}
+      className={`${aviso.aSair ? "rc-aviso-saida" : "rc-aviso-entrada"} pointer-events-auto flex w-full max-w-[26rem] items-start gap-3 rounded-2xl border bg-white px-4 py-3 shadow-float ${borda}`}
     >
       <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${chip}`}>
         <Icon size={15} aria-hidden />
@@ -215,6 +225,6 @@ function Cartao({ aviso, onFechar }: { aviso: Aviso; onFechar: (id: string) => v
       >
         <Close size={15} aria-hidden />
       </button>
-    </m.div>
+    </div>
   );
 }

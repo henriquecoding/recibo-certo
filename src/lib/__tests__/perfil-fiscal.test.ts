@@ -142,7 +142,7 @@ describe("perfil fiscal: exige sessão iniciada", () => {
 });
 
 describe("sincronização: Plus, nuvem e dispositivo", () => {
-  const SUB = "src/lib/stripe/subscription.tsx";
+  const SUB = "src/lib/stripe/subscription-runtime.tsx";
   const PREFS = "src/lib/store/preferencias-fiscais.ts";
 
   it("o Plus exige estado aceite E preço autorizado", () => {

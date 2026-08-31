@@ -118,7 +118,7 @@ export default async function FizFaixaDemo({
           a raspar ao lado dos 4,5:1 exigidos, e o axe apanha-o na homepage.
           Um degrau mais escuro dá 6,61:1 na mesma superfície e continua a
           ser secundário face ao título por cima. */}
-      <p className="mt-0.5 text-[11px] leading-relaxed text-stone-600 dark:text-stone-300">{sub}</p>
+      <p className="mt-0.5 texto-mini leading-relaxed text-stone-600 dark:text-stone-300">{sub}</p>
 
       <FizCriativoImagem href={href} className="mt-2.5" />
 

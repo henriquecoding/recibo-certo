@@ -59,7 +59,15 @@ const VIEWPORTS = [
   { nome: "1440", width: 1440, height: 900 },
 ];
 
-const ROTAS = ["/", "/ferramentas/calcular-preco", "/ferramentas/descobrir-negocio", "/guias", "/ferramentas"];
+const ROTAS = [
+  "/",
+  "/inicio/preco",
+  "/inicio/recibos",
+  "/ferramentas/calcular-preco",
+  "/ferramentas/descobrir-negocio",
+  "/guias",
+  "/ferramentas",
+];
 
 const browser = await chromium.launch(EXECUTAVEL ? { executablePath: EXECUTAVEL } : {});
 
@@ -72,7 +80,7 @@ for (const vp of VIEWPORTS) {
     try {
       localStorage.setItem("recibocerto:cookie-consent", JSON.stringify({
         necessarios: true, estatistica: false, marketing: false,
-        data: new Date().toISOString(), versao: 1,
+        data: new Date().toISOString(), versao: 2,
       }));
       localStorage.setItem("recibocerto:changelog_visto", versao);
     } catch { /* ignora */ }
@@ -458,16 +466,35 @@ for (const vp of VIEWPORTS) {
       if (OUT) await page.screenshot({ path: `${OUT}/home-${vp.nome}.png` });
 
   // A fila dos pilares na homepage — cinco ligações REAIS, servidas.
+  //
+  // O seletor contava só `/ferramentas/…`, o que era o mesmo que dizer «um
+  // pilar é uma ferramenta». Deixou de ser: quando a homepage sabe contar a
+  // etapa por inteiro, o pilar abre `/inicio/…` e o CTA dessa página é que
+  // entra no motor completo. Contar só uma das duas portas dava 3 de 5 e
+  // dizia que faltavam pilares que estavam todos lá.
+  //
+  // O que continua a valer — e é o que esta verificação existe para
+  // proteger — é que são CINCO, que cada um é uma ligação servida e que
+  // nenhum aponta para `?modo=`, que escolhe perfil e não etapa.
   await page.evaluate(() => document.querySelector("#pilares")?.scrollIntoView({ block: "center" }));
   await page.waitForTimeout(700);
   const fila = await page.evaluate(() => {
-    const sec = document.querySelector("#pilares");
-    if (!sec) return null;
-    return [...sec.querySelectorAll("a[href^='/ferramentas/']")].map((a) => a.getAttribute("href"));
+    // A lista, e não a secção: a secção também tem o «Ver tudo». E as
+    // ligações da lista contam-se TODAS, sem lista de prefixos — foi um
+    // prefixo que partiu isto. Quando o pilar de Descobrir passou a abrir
+    // `/`, deixou de casar com `/ferramentas/` e com `/inicio/`, e o gate
+    // dizia «fila com 4 pilares» sobre cinco ligações servidas, todas
+    // presentes no HTML. Um destino novo não pode partir a contagem.
+    const lista = document.querySelector("#pilares ul");
+    if (!lista) return null;
+    return [...lista.querySelectorAll("a[href]")].map((a) => a.getAttribute("href"));
   });
   if (!fila) mal(`${vp.nome}px: fila de pilares ausente na homepage`);
   else if (fila.length !== 5) mal(`${vp.nome}px: fila com ${fila.length} pilares`);
-  else ok(`${vp.nome}px: fila da homepage com os 5 pilares`);
+  else if (new Set(fila).size !== 5) mal(`${vp.nome}px: fila com destinos repetidos — ${fila.join(", ")}`);
+  else if (fila.some((h) => h.includes("modo=")))
+    mal(`${vp.nome}px: um pilar aponta para um perfil, não para uma etapa — ${fila.join(", ")}`);
+  else ok(`${vp.nome}px: fila da homepage com os 5 pilares (${fila.join(" · ")})`);
       if (OUT) await page.screenshot({ path: `${OUT}/pilares-${vp.nome}.png` });
 
   // Uma rota de pilar, com o destino aceso e a página rolada (o vidro só é

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { m } from "motion/react";
 import { LancadorBusca } from "@/components/busca/LancadorBusca";
 import { MenuConta } from "@/components/header/MenuConta";
 import { useBuscaAberta } from "@/components/busca/motor";
@@ -10,7 +10,15 @@ import { Logo, ArrowRight, ChevronDown, Menu as MenuIcon } from "@/components/ui
 import { useAuth } from "@/lib/supabase/auth";
 import BarraSecoes from "@/components/navegacao/BarraSecoes";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
-import MenuCompleto from "@/components/navegacao/MenuCompleto";
+import type { FocoHomepage } from "@/lib/foco-homepage";
+
+const MenuCompleto = dynamic(
+  () => import("@/components/navegacao/MenuCompletoIntencao"),
+  { ssr: false },
+);
+
+const prepararMenuCompleto = () =>
+  import("@/components/navegacao/MenuCompletoIntencao");
 
 /**
  * O cabeçalho de secretária — três linhas, sempre as mesmas.
@@ -44,10 +52,15 @@ import MenuCompleto from "@/components/navegacao/MenuCompleto";
 const ACAO =
   "btn-shine focus-marca inline-flex h-11 items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-5 text-sm font-semibold text-white no-underline shadow-glow transition-shadow hover:shadow-float";
 
-export default function Nav() {
+export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
   const { disponivel, user } = useAuth();
   const [rolado, setRolado] = useState(false);
   const [menuAberto, setMenuAberto] = useState(false);
+  const [menuMontado, setMenuMontado] = useState(false);
+  const abrirMenu = useCallback(() => {
+    setMenuMontado(true);
+    setMenuAberto(true);
+  }, []);
   /**
    * ┌───────────────────────────────────────────────────────────────────┐
    * │ DOIS ESTADOS, PORQUE SÃO DUAS PERGUNTAS — E JUNTÁ-LOS DAVA UM SALTO│
@@ -301,7 +314,7 @@ export default function Nav() {
           {/* ── Linha 1 — marca · secções | conta · começar · menu ─────── */}
           <div className="flex h-[var(--rc-header-linha)] min-w-0 items-center justify-between gap-4 px-2">
             <div className="flex min-w-0 items-center gap-4">
-              <Link href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
+              <Link prefetch={false} href="/" aria-label="ReciboCerto — início" className="focus-marca flex-shrink-0 rounded-xl">
                 <Logo />
               </Link>
               <BarraSecoes />
@@ -314,21 +327,21 @@ export default function Nav() {
             <div className="flex flex-shrink-0 items-center gap-2">
               <MenuConta avatarUrl={avatarUrl} />
 
-              <m.div whileHover={{ y: -1 }} whileTap={{ scale: 0.97 }}>
+              <div className="transition-transform hover:-translate-y-px active:scale-[0.97]">
                 {user ? (
-                  <Link href="/dashboard" className={ACAO}>
+                  <Link prefetch={false} href="/dashboard" className={ACAO}>
                     Painel
                     <ArrowRight size={14} aria-hidden />
                   </Link>
                 ) : disponivel ? (
                   <CTAComecar />
                 ) : (
-                  <Link href="/dashboard" className={ACAO}>
+                  <Link prefetch={false} href="/dashboard" className={ACAO}>
                     Começar Grátis
                     <ArrowRight size={14} aria-hidden />
                   </Link>
                 )}
-              </m.div>
+              </div>
 
               {/* «Menu» não é o sexto pilar: vive nesta linha, com a forma de
                   um controlo com contorno, e não dentro da bandeja. Esteve lá
@@ -339,7 +352,10 @@ export default function Nav() {
                 data-menu-gatilho="secretaria"
                 aria-haspopup="dialog"
                 aria-expanded={menuAberto}
-                onClick={() => setMenuAberto(true)}
+                onPointerEnter={prepararMenuCompleto}
+                onPointerDown={prepararMenuCompleto}
+                onFocus={prepararMenuCompleto}
+                onClick={abrirMenu}
                 className="focus-marca inline-flex h-11 flex-shrink-0 items-center gap-2 rounded-full border border-stone-200 bg-white px-4 text-sm font-medium text-stone-600 transition-colors hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300 dark:hover:text-brand"
               >
                 <MenuIcon size={17} className="flex-shrink-0 text-stone-400 dark:text-stone-500" />
@@ -357,7 +373,7 @@ export default function Nav() {
           <div id="rc-cabecalho-corpo" hidden={!corpoVisivel}>
             {/* ── Linha 2 — a bandeja dos cinco pilares ────────────────── */}
             <div className="mt-[var(--rc-cartao-gap)] flex h-[var(--rc-linha-nav)] items-center">
-              <CapsulaNav />
+              <CapsulaNav foco={foco} />
             </div>
 
             {/* ── Linha 3 — a barra de pesquisa ────────────────────────── */}
@@ -378,7 +394,7 @@ export default function Nav() {
               aria-expanded={corpoVisivel}
               aria-controls="rc-cabecalho-corpo"
               onClick={alternar}
-              className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 text-[11px] font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
+              className="focus-marca inline-flex h-[var(--rc-linha-alternar)] items-center gap-1.5 rounded-full px-3 texto-mini font-semibold text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300"
             >
               {corpoVisivel ? "Recolher" : "Navegação e pesquisa"}
               <ChevronDown
@@ -395,7 +411,13 @@ export default function Nav() {
 
       {/* A folha é a MESMA do telemóvel — um componente, duas geometrias.
           Ver o quadro em `MenuCompleto.tsx`. */}
-      <MenuCompleto aberto={menuAberto} aoFechar={() => setMenuAberto(false)} superficie="secretaria" />
+      {menuMontado ? (
+        <MenuCompleto
+          aberto={menuAberto}
+          aoFechar={() => setMenuAberto(false)}
+          superficie="secretaria"
+        />
+      ) : null}
     </>
   );
 }

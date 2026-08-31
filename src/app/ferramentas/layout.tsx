@@ -26,6 +26,7 @@ import { ChevronRight } from "@/components/ui/Icons";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { porHref } from "@/lib/ferramentas";
 import { LARGURA_POR_LAYOUT } from "@/components/ferramentas/ToolShell";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -72,7 +73,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
               chegar à ferramenta, e a única forma de lá chegar era ouvir
               tudo desde o início. Um `<main>` é `display: block`, como o
               `<div>` que envolvia; não muda uma linha de layout. */}
-          <main>{children}</main>
+          <main><MotionProvider>{children}</MotionProvider></main>
         </div>
       </div>
       <Footer />

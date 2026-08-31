@@ -58,7 +58,7 @@ const semear = (consentimento) => `
   localStorage.setItem("recibocerto:onboarded", "1");
   localStorage.setItem("recibocerto:changelog_visto", ${JSON.stringify(VERSAO)});
   ${consentimento === null ? "" : `localStorage.setItem("recibocerto:cookie-consent", ${JSON.stringify(
-    JSON.stringify({ necessarios: true, estatistica: consentimento, marketing: false, data: new Date().toISOString(), versao: 1 }),
+    JSON.stringify({ necessarios: true, estatistica: consentimento, marketing: false, data: new Date().toISOString(), versao: 2 }),
   )});`}
   localStorage.setItem("recibocerto:recibos:v1", JSON.stringify([
     { id: "e2e-atual", data: "${ANO}-03-10", cliente: "Cliente do ano", valor: 1000, tipo: "art151",

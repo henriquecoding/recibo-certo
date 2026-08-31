@@ -6,14 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  Estas 48 migrações dependem umas das outras: a 046 usa tabelas
+--  Estas 49 migrações dependem umas das outras: a 046 usa tabelas
 --  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
 --  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
 --  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260825120000_contadores_publicos_sem_grant_implicito.sql).
+--  à última  (20260830120000_cenario_planeador_contratacao.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -13834,3 +13834,34 @@ END
 $endurecer$;
 
 COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260830120000_cenario_planeador_contratacao.sql                  ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- O planeador só toca na lista fechada de tipos de cenário. As políticas
+-- RLS existentes continuam intactas: cada utilizador lê, altera e apaga
+-- apenas os próprios registos; guardar na nuvem continua reservado ao Plus.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conrelid = 'public.cenarios'::regclass
+      AND conname = 'cenarios_tipo_check'
+  ) THEN
+    ALTER TABLE public.cenarios DROP CONSTRAINT cenarios_tipo_check;
+  END IF;
+END $$;
+
+ALTER TABLE public.cenarios
+  ADD CONSTRAINT cenarios_tipo_check
+  CHECK (tipo IN (
+    'recibos',
+    'vencimento',
+    'contratacao',
+    'empresa',
+    'irs',
+    'herancas',
+    'negocio'
+  ));

@@ -46,7 +46,11 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    (e `max-h-[90dvh]` + safe-area), e respeitar `dvh`/`env(safe-area-inset-*)`.
    Secções pesadas (mapas/gráficos) carregam com `next/dynamic({ ssr:false })` e
    ficam dentro de um `ErrorBoundary` para nunca deixarem a página em branco.
-   Verificar SEMPRE em viewport estreito antes de concluir.
+   Verificar SEMPRE em viewport estreito antes de concluir — e a verificação é
+   `npm run movel:e2e` (contra o BUILD, não contra o `dev`), que mede as CINCO
+   rotas da homepage (`/`, `/inicio/preco`, `/inicio/recibos`, `/inicio/empresa`,
+   `/inicio/salario`) a 360 e a 320px, nos dois temas. O piso tipográfico é uma
+   classe (`.texto-micro` / `.texto-mini` em `globals.css`), não disciplina.
 6. **Verificar antes de concluir** — `npm run build` + `npm audit --audit-level=high`
    (0 high) + smoke em runtime. Ver skill `verificacao-e-qualidade`.
 7. **Planear e validar** mudanças grandes com o utilizador antes de implementar.
@@ -128,6 +132,7 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/app/` — landing (`page.tsx`) + `dashboard/*` (visão geral, recibos, receitas, prazos, simulador, comparador) + `api/fiscal-data`.
 - `src/components/ui/` — primitivas (Button, Badge, InfoTip, ActivityCombobox, Reveal, CountUp, ThemeToggle, Icons…).
 - `scripts/check-fiscal-data.mjs` + `.github/workflows/` — monitor fiscal + auditoria de segurança.
+- `scripts/verificar-movel.mjs` — ★ o portão do telemóvel (`npm run movel:e2e`). Ver a regra 5b.
 - `DESIGN.md` — design system documentado.
 
 ## Próximos passos conhecidos

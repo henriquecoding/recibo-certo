@@ -1,9 +1,8 @@
-// Sem `"use client"`: este layout só compõe o `AuthProvider`, que já é um
-// componente-cliente. Marcá-lo como cliente arrastava a subárvore toda para o
-// bundle sem necessidade e impedia qualquer conteúdo servido no servidor.
+// Sem `"use client"`: este layout só coloca o runtime de movimento à volta
+// do quiz. A autenticação leve já é partilhada pelo layout raiz.
 import type { ReactNode } from "react";
-import { AuthProvider } from "@/lib/supabase/auth";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 
 export default function QuizFiscalLayout({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return <MotionProvider>{children}</MotionProvider>;
 }

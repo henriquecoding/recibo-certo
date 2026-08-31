@@ -1,0 +1,78 @@
+{
+  "_meta": {
+    "schema": 1,
+    "appVersion": "2.138.0",
+    "fiscalYear": 2026,
+    "engineHash": "sha256:3f7df3e63b411925c7138c361c8be1f8be82c268d4f976da76bb02edf73d4fa8"
+  },
+  "dados": {
+    "parametros": {
+      "taxaIVA": 0.23,
+      "fonteIVA": "Art. 18.º CIVA — Portugal continental",
+      "regimes": [
+        {
+          "id": "empresa",
+          "rotulo": "Sociedade",
+          "fracaoFaturacao": 0,
+          "nota": "O IRC incide sobre o lucro do ano, não sobre cada fatura."
+        },
+        {
+          "id": "recibos-verdes",
+          "rotulo": "Recibos verdes",
+          "fracaoFaturacao": 0.06154999999999995,
+          "nota": "Segurança Social e IRS do simplificado saem de cada fatura."
+        }
+      ]
+    },
+    "cenarios": [
+      {
+        "id": "direta",
+        "rotulo": "Venda direta",
+        "pergunta": "E se vender eu, sem intermediário?",
+        "pvp": 49.9,
+        "liquido": 40.57,
+        "lucro": 11.67,
+        "margem": 0.2876478130787862,
+        "variacaoPVP": 0,
+        "explicacao": "A referência: o preço cobre os custos, o markup fica como lucro e o IVA é entregue ao Estado.",
+        "fonte": "Art. 18.º CIVA — Portugal continental"
+      },
+      {
+        "id": "marketplace",
+        "rotulo": "Marketplace",
+        "pergunta": "E se vender num marketplace com 15% de comissão?",
+        "pvp": 61.19,
+        "liquido": 49.75,
+        "lucro": 11.67,
+        "margem": 0.23457679156575012,
+        "variacaoPVP": 11.29,
+        "explicacao": "A comissão incide sobre o total da encomenda, IVA incluído — 15% do bruto são 18,45% do líquido. Por isso o preço sobe mais do que 15%.",
+        "fonte": "Preçários dos canais em pricing/regras.ts, com data de verificação"
+      },
+      {
+        "id": "isento",
+        "rotulo": "Isento do Art. 53.º",
+        "pergunta": "E se estiver isento de IVA?",
+        "pvp": 45.35,
+        "liquido": 45.35,
+        "lucro": 13.04,
+        "margem": 0.2876478130787861,
+        "variacaoPVP": -4.55,
+        "explicacao": "A isenção tem dois efeitos, não um. Não liquidas IVA — o cliente paga menos — mas também não o deduzes nas compras, e os materiais passam a custar o valor com IVA. Isenção não é margem grátis: é outra base de custo.",
+        "fonte": "Art. 53.º CIVA, n.os 1 e 3"
+      },
+      {
+        "id": "recibos-verdes",
+        "rotulo": "Recibos verdes",
+        "pergunta": "E se operar a recibos verdes?",
+        "pvp": 53.17,
+        "liquido": 43.23,
+        "lucro": 11.67,
+        "margem": 0.2699430901837869,
+        "variacaoPVP": 3.27,
+        "explicacao": "A Segurança Social e o IRS do simplificado incidem sobre a faturação, não sobre o lucro. Saem de cada fatura, e o preço tem de os repor.",
+        "fonte": "Art. 168.º do Código Contributivo e Art. 31.º CIRS"
+      }
+    ]
+  }
+}

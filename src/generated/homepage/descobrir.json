@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "schema": 1,
+    "appVersion": "2.138.0",
+    "fiscalYear": 2026,
+    "engineHash": "sha256:3f7df3e63b411925c7138c361c8be1f8be82c268d4f976da76bb02edf73d4fa8"
+  },
+  "dados": {
+    "competencia": "Organizar e executar",
+    "problema": "Microempresas têm pedidos, propostas e cobranças espalhados por WhatsApp, email e folhas de cálculo.",
+    "modelo": "Projeto com preço fechado",
+    "titulo": "Instalação de operações digitais para microempresas",
+    "primeiroTeste": "Mapear o processo de cinco empresas sem propor software nenhum.",
+    "testeDeFalsificacao": "Rejeitar se o processo não consumir tempo mensurável, ou se cinco decisores não pagarem sequer pelo diagnóstico."
+  }
+}

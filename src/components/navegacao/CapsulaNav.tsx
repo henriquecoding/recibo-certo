@@ -38,8 +38,10 @@ import { Fragment } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { iconeDe } from "@/components/ferramentas/icon-map";
-import { PILARES, hrefAtivo } from "@/lib/navegacao";
+import { PILARES, hrefAtivo, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { medirNavegacao } from "@/lib/busca/medicao";
+import type { FocoHomepage } from "@/lib/foco-homepage";
+import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
 
 const ITEM =
   "focus-marca flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-3 text-sm transition-colors";
@@ -48,9 +50,10 @@ const INATIVO = "font-medium text-stone-600 hover:text-stone-900 dark:text-stone
 
 const ATIVO = "font-semibold bg-white text-brand-dark shadow-card dark:bg-stone-950 dark:text-brand";
 
-export default function CapsulaNav() {
+export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null }) {
   const pathname = usePathname();
   const aceso = hrefAtivo(pathname);
+  const { pendente, preparar, iniciar } = useIntencaoFocos();
 
   return (
     <nav
@@ -59,23 +62,62 @@ export default function CapsulaNav() {
     >
       {PILARES.map((pilar, i) => {
         const Icon = iconeDe(pilar.icone);
-        const ativo = aceso === pilar.href;
-        const anteriorAceso = i > 0 && aceso === PILARES[i - 1].href;
+        const naSuperficieCanonica = aceso === pilar.href;
+        // Se a pessoa já está na ferramenta canónica, o destino desenhado
+        // também é essa ferramenta. Assim `aria-current="page"` nunca fica
+        // num link que, ao ser activado, abre a homepage editorial.
+        const destino = naSuperficieCanonica
+          ? pilar.href
+          : hrefDaSuperficiePilar(pilar);
+        const ativo = foco === pilar.id || naSuperficieCanonica;
+        const anterior = i > 0 ? PILARES[i - 1] : null;
+        const destacado = pendente ? pendente === pilar.id : ativo;
+        const anteriorAceso = Boolean(
+          anterior &&
+            (pendente
+              ? pendente === anterior.id
+              : foco === anterior.id || aceso === anterior.href),
+        );
         return (
           <Fragment key={pilar.id}>
-            {i > 0 && !ativo && !anteriorAceso && (
+            {i > 0 && !destacado && !anteriorAceso && (
               <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
             )}
             <Link
-              href={pilar.href}
+              href={destino}
+              // ── PRÉ-CARREGAR POR INTENÇÃO, NUNCA AS CINCO À ENTRADA ───
+              //  `prefetch={false}` desliga TODA a política automática do
+              //  Link, incluindo hover. Por isso os três eventos abaixo
+              //  entregam o alvo ao controlador comum: pointerenter, foco e
+              //  pointerdown. Ele deduplica, respeita Save-Data/2g e mantém
+              //  uma única operação especulativa em curso.
+              prefetch={false}
+              scroll={false}
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
-              onClick={() => medirNavegacao(pilar.id, "secretaria")}
-              className={`${ITEM} ${ativo ? ATIVO : INATIVO}`}
+              aria-busy={pendente === pilar.id || undefined}
+              onPointerEnter={() => preparar(pilar.id)}
+              onFocus={() => preparar(pilar.id)}
+              onPointerDown={(evento) => {
+                if (
+                  evento.button === 0 &&
+                  !evento.metaKey &&
+                  !evento.ctrlKey &&
+                  !evento.shiftKey &&
+                  !evento.altKey
+                ) {
+                  iniciar(pilar.id, "pointer");
+                }
+              }}
+              onClick={(evento) => {
+                if (evento.detail === 0) iniciar(pilar.id, "teclado");
+                medirNavegacao(pilar.id, "secretaria");
+              }}
+              className={`${ITEM} ${destacado ? ATIVO : INATIVO}`}
             >
               <Icon
                 size={17}
-                className={`flex-shrink-0 ${ativo ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
+                className={`flex-shrink-0 ${destacado ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
               />
               <span className="truncate">{pilar.label}</span>
             </Link>

@@ -28,12 +28,20 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useState } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Logo, ArrowRight, Menu as MenuIcon } from "@/components/ui/Icons";
-import MenuCompleto from "@/components/navegacao/MenuCompleto";
 import { useAuth } from "@/lib/supabase/auth";
+
+const MenuCompleto = dynamic(
+  () => import("@/components/navegacao/MenuCompletoIntencao"),
+  { ssr: false },
+);
+
+const prepararMenuCompleto = () =>
+  import("@/components/navegacao/MenuCompletoIntencao");
 
 const ACAO =
   "focus-marca inline-flex min-h-[36px] items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-3.5 text-sm font-semibold text-white no-underline shadow-glow";
@@ -42,6 +50,11 @@ export default function ChromeMobileMarca() {
   const pathname = usePathname();
   const { user, disponivel, abrirModal } = useAuth();
   const [menuAberto, setMenuAberto] = useState(false);
+  const [menuMontado, setMenuMontado] = useState(false);
+  const abrirMenu = useCallback(() => {
+    setMenuMontado(true);
+    setMenuAberto(true);
+  }, []);
 
   return (
     <>
@@ -75,7 +88,10 @@ export default function ChromeMobileMarca() {
             data-menu-gatilho="movel"
             aria-haspopup="dialog"
             aria-expanded={menuAberto}
-            onClick={() => setMenuAberto(true)}
+            onPointerEnter={prepararMenuCompleto}
+            onPointerDown={prepararMenuCompleto}
+            onFocus={prepararMenuCompleto}
+            onClick={abrirMenu}
             className="focus-marca flex h-9 w-9 items-center justify-center rounded-xl border border-stone-200 text-stone-500 transition-colors hover:border-stone-300 hover:text-stone-800 dark:border-stone-700 dark:hover:border-stone-600 dark:hover:text-stone-200"
           >
             <MenuIcon size={18} />
@@ -107,7 +123,13 @@ export default function ChromeMobileMarca() {
 
       {/* A MESMA folha que a cápsula do computador abre — um componente,
           duas geometrias. Ver o quadro em `MenuCompleto.tsx`. */}
-      <MenuCompleto aberto={menuAberto} aoFechar={() => setMenuAberto(false)} superficie="movel" />
+      {menuMontado ? (
+        <MenuCompleto
+          aberto={menuAberto}
+          aoFechar={() => setMenuAberto(false)}
+          superficie="movel"
+        />
+      ) : null}
     </>
   );
 }

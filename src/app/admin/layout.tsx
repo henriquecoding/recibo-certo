@@ -29,7 +29,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { AuthProvider, useAuth } from "@/lib/supabase/auth";
+import { useAuth } from "@/lib/supabase/auth";
 import { verificarAdmin } from "@/lib/supabase/admin";
 import { eDemonstracao } from "@/lib/contabilistas/demonstracao/rotas";
 import {
@@ -315,9 +315,5 @@ function LinhaDaSeccao({
 }
 
 export default function Layout({ children }: { children: ReactNode }) {
-  return (
-    <AuthProvider>
-      <AdminGuard>{children}</AdminGuard>
-    </AuthProvider>
-  );
+  return <AdminGuard>{children}</AdminGuard>;
 }
