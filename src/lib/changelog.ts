@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.148.0",
+    data: "2026-09-01",
+    titulo: "O planeador de contratação passou a dizer o que acontece a quem não cumpre",
+    itens: [
+      "O campo das horas de formação dizia «mínimo legal de 40 horas» e mais nada. Para quem nunca contratou ninguém, isso lê-se como uma recomendação simpática — e há muita empresa que nunca deu formação a ninguém e nunca percebeu que estava a acumular uma dívida. Agora o planeador explica de onde vêm as 40 horas, o que custa não as dar e quem está de fora.",
+      "As explicações têm todas a mesma anatomia, e é o tipo que a impõe: o que a lei exige, o que acontece se não cumprires, e a quem se aplica. A do meio é a que faltava em todo o lado — sem ela, uma regra é decorativa.",
+      "Formação contínua: as horas que não forem dadas até ao fim dos dois anos seguintes convertem-se em crédito de horas do trabalhador, pago e a contar como tempo de serviço; e quando o contrato acaba, as horas por dar são pagas em dinheiro. Não há isenção por dimensão da empresa — o que muda é a contagem nos contratos a termo, e há ainda um dever separado de dar formação a pelo menos 10% dos trabalhadores em cada ano.",
+      "Seguro de acidentes de trabalho: deixou de dizer só «obrigatório». Explica que a cobertura vale pela retribuição declarada e que, se ela for inferior à real, é a empresa que responde pela diferença nas indemnizações, nas pensões e nas despesas de hospitalização.",
+      "Férias: quem impede culposamente o gozo das férias paga uma compensação do triplo da retribuição do período em falta — e as férias continuam a ter de ser gozadas. Fica dito ao lado do campo onde se escolhe o mês, que é onde a decisão se toma.",
+      "Nenhuma destas frases pode ficar sem fonte. Cada explicação aponta para artigos concretos do catálogo legal do motor, a ligação para o Diário da República é montada a partir da citação em vez de ser escrita à mão, e um teste próprio reprova o build se uma citação deixar de resolver, se uma das três respostas ficar vazia, ou se um custo obrigatório passar a não explicar a consequência.",
+    ],
+  },
+  {
     version: "2.147.0",
     data: "2026-09-01",
     titulo: "O estúdio de contratação deixou de parecer montado à pressa",
