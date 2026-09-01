@@ -140,7 +140,9 @@ function AdminLink({ mobile }: { mobile?: boolean }) {
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
-    verificarAdmin(user.id).then(setIsAdmin).catch(() => setIsAdmin(false));
+    verificarAdmin(user.id)
+      .then(setIsAdmin)
+      .catch((erro) => { console.error("[painel] verificarAdmin falhou", erro); setIsAdmin(false); });
   }, [user]);
 
   if (!isAdmin) return null;
@@ -209,7 +211,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     // foto configurada no perfil quando ela existir.
     const meta = (user.user_metadata?.avatar_url || user.user_metadata?.picture || "") as string;
     if (meta) setAvatarUrl(meta);
-    obterPerfil(user.id).then((p) => { if (p.avatarUrl) setAvatarUrl(p.avatarUrl); });
+    obterPerfil(user.id)
+      .then((p) => { if (p.avatarUrl) setAvatarUrl(p.avatarUrl); })
+      .catch((erro) => console.error("[painel] obterPerfil falhou", erro));
   }, [user]);
 
   // Fecha o menu ao mudar de rota.

@@ -177,11 +177,13 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
     let ativo = true;
     // Carrega o leitor de perfil (que importa o SDK do Supabase) só quando há
     // sessão — mantém o SDK fora do bundle inicial das páginas públicas.
-    import("@/lib/supabase/profile").then(({ obterPerfil }) =>
-      obterPerfil(user.id).then((p) => {
-        if (ativo) setAvatarUrl(p.avatarUrl);
-      }),
-    );
+    import("@/lib/supabase/profile")
+      .then(({ obterPerfil }) =>
+        obterPerfil(user.id).then((p) => {
+          if (ativo) setAvatarUrl(p.avatarUrl);
+        }),
+      )
+      .catch((erro) => console.error("[nav] obterPerfil falhou", erro));
     return () => {
       ativo = false;
     };

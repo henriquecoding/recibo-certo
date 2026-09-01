@@ -9,14 +9,36 @@ export interface DadosPerfil {
 
 const PERFIL_VAZIO: DadosPerfil = { nome: "", telefone: "", nif: "", avatarUrl: "" };
 
+/**
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ UMA LEITURA FALHADA NÃO É UM PERFIL VAZIO                             │
+ * │                                                                      │
+ * │ O `error` era deitado fora e a função devolvia `PERFIL_VAZIO`. No     │
+ * │ ecrã, isso é indistinguível de «esta pessoa nunca pôs fotografia»:    │
+ * │ aparece a inicial, aparece o email no lugar do nome, e ninguém tem    │
+ * │ como saber que houve uma falha.                                       │
+ * │                                                                      │
+ * │ Foi assim que a fotografia de perfil desapareceu para toda a gente    │
+ * │ sem uma única queixa de erro — a política de RLS de `profiles`        │
+ * │ recorria a si própria e o Postgres recusava a leitura com 42P17 (ver  │
+ * │ a migração `20260901140000`). Os dados estavam intactos na base o     │
+ * │ tempo todo.                                                           │
+ * │                                                                      │
+ * │ `maybeSingle()` já distingue «não há linha» de «erro». Faltava a      │
+ * │ função respeitar essa distinção em vez de a apagar.                   │
+ * └──────────────────────────────────────────────────────────────────────┘
+ */
 export async function obterPerfil(userId: string): Promise<DadosPerfil> {
   if (!supabaseConfigurado()) return PERFIL_VAZIO;
-  const { data } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("profiles")
     .select("nome, telefone, nif, avatar_url")
     .eq("id", userId)
     .maybeSingle();
 
+  if (error) {
+    throw new Error(`Não foi possível ler o perfil: ${error.message}`);
+  }
   if (!data) return PERFIL_VAZIO;
   return {
     nome: data.nome ?? "",

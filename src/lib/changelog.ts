@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.149.0",
+    data: "2026-09-01",
+    titulo: "A fotografia de perfil e o painel de administração voltaram — nunca tinham saído da base de dados",
+    itens: [
+      "Entrar na conta e não ver a fotografia que tinhas definido, ver o email no lugar do nome, e o painel de administração desaparecido. Os dados estavam todos guardados e intactos o tempo todo: o que falhava era a leitura.",
+      "A regra de segurança que decide quem pode ler os perfis consultava a própria tabela dos perfis para chegar a essa decisão. Para ler, era preciso ler — e a base de dados corta esse ciclo com um erro. O resultado é que NENHUMA conta com sessão iniciada conseguia ler o seu próprio perfil, não apenas as de administração.",
+      "A correção usa uma função que já existia para o efeito e que não volta a passar pela mesma regra. Ficou também um travão na base de dados: uma regra de leitura dos perfis que cite a própria tabela passa a ser recusada no momento em que é criada, com a explicação à frente. Este erro já tinha entrado três vezes.",
+      "O que o escondeu durante tanto tempo foi o silêncio: a aplicação deitava fora o erro e respondia «sem fotografia» e «não é administrador» — exatamente as mesmas respostas que daria se fosse verdade. Uma leitura falhada passa a ser distinguível de uma resposta vazia em todos os sítios que a usam.",
+      "Três consequências do mesmo silêncio ficaram fechadas: o painel de administração deixa de terminar a tua sessão quando não consegue confirmar o acesso (mostra o erro e deixa tentar de novo), a página de perfil deixa de permitir guardar campos vazios por cima do nome e do NIF que estão gravados, e a caixa da conta deixa de trocar a ordem interna do React ao entrar e sair.",
+      "O armazenamento das fotografias passa a impor o que a aplicação já prometia — JPG, PNG ou WebP até 2 MB —, em vez de o verificar só no browser.",
+    ],
+  },
+  {
     version: "2.148.0",
     data: "2026-09-01",
     titulo: "O planeador de contratação passou a dizer o que acontece a quem não cumpre",

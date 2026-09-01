@@ -29,14 +29,32 @@ function PlanoBadge() {
 }
 
 export default function AccountBox() {
-  const { user, carregado, disponivel, sair } = useAuth();
+  // ┌────────────────────────────────────────────────────────────────────┐
+  // │ `abrirModal` VINHA DE UM SEGUNDO `useAuth()` DEPOIS DO RETURN       │
+  // │                                                                    │
+  // │ O ramo «com sessão» saía do componente antes de lá chegar, e o      │
+  // │ ramo «sem sessão» chamava o hook. Ou seja: o número de hooks        │
+  // │ mudava com o estado de autenticação — quatro com sessão, cinco      │
+  // │ sem. Entrar ou sair da conta trocava a ordem dos hooks a meio da    │
+  // │ vida do componente, que é precisamente o que as regras dos hooks    │
+  // │ proíbem («Rendered fewer hooks than expected»).                      │
+  // │                                                                    │
+  // │ Um só `useAuth()`, no topo, sem condição.                           │
+  // └────────────────────────────────────────────────────────────────────┘
+  const { user, carregado, disponivel, sair, abrirModal } = useAuth();
   const [isAdmin, setIsAdmin] = useState(false);
   const [perfil, setPerfil] = useState<DadosPerfil | null>(null);
 
   useEffect(() => {
     if (!user) { setIsAdmin(false); setPerfil(null); return; }
-    verificarAdmin(user.id).then(setIsAdmin).catch(() => setIsAdmin(false));
-    obterPerfil(user.id).then(setPerfil);
+    // Uma falha de leitura não pode passar por «não é admin» nem por «não
+    // tem fotografia» em silêncio: fica no registo, para ser diagnosticável.
+    verificarAdmin(user.id)
+      .then(setIsAdmin)
+      .catch((erro) => { console.error("[conta] verificarAdmin falhou", erro); setIsAdmin(false); });
+    obterPerfil(user.id)
+      .then(setPerfil)
+      .catch((erro) => { console.error("[conta] obterPerfil falhou", erro); setPerfil(null); });
   }, [user]);
 
   if (disponivel && carregado && user) {
@@ -114,8 +132,6 @@ export default function AccountBox() {
       </div>
     );
   }
-
-  const { abrirModal } = useAuth();
 
   return (
     <div className="space-y-2">
