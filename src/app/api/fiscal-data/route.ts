@@ -9,6 +9,8 @@ import {
   IVA_ISENCAO_LIMITE,
   IVA_ISENCAO_EXCESSO,
   IVA_TAXAS,
+  IVA_CONSTRUCAO_HABITACAO,
+  AUTOLIQUIDACAO_CONSTRUCAO,
   SS_TAXA,
   SS_COEFICIENTE,
   SS_BASE_MAX_MENSAL,
@@ -101,6 +103,46 @@ export function GET() {
           continente: expose(IVA_TAXAS.continente),
           madeira: expose(IVA_TAXAS.madeira),
           acores: expose(IVA_TAXAS.acores),
+        },
+        // Verba 2.42 da lista I — taxa reduzida nas empreitadas de construção
+        // ou reabilitação de habitação, em vigor desde 1 de julho de 2026.
+        // Os dois limites são derivados (2.º escalão do IMT e 2,5 × RMMG), e é
+        // por isso que interessam aqui: quem lê a API não tem como os derivar.
+        construcaoHabitacao: {
+          taxaPorRegiao: expose(IVA_CONSTRUCAO_HABITACAO.taxaPorRegiao),
+          ambito: expose(IVA_CONSTRUCAO_HABITACAO.ambito),
+          precoModeradoVenda: expose(IVA_CONSTRUCAO_HABITACAO.precoModeradoVenda),
+          rendaModeradaMensal: expose(IVA_CONSTRUCAO_HABITACAO.rendaModeradaMensal),
+          rendaModeradaMultiplicadorRMMG: expose(
+            IVA_CONSTRUCAO_HABITACAO.rendaModeradaMultiplicadorRMMG
+          ),
+          limiteIncluiExtras: expose(IVA_CONSTRUCAO_HABITACAO.limiteIncluiExtras),
+          iniciativaProcedimentalDe: expose(IVA_CONSTRUCAO_HABITACAO.iniciativaProcedimentalDe),
+          iniciativaProcedimentalAte: expose(IVA_CONSTRUCAO_HABITACAO.iniciativaProcedimentalAte),
+          exigibilidadeDesde: expose(IVA_CONSTRUCAO_HABITACAO.exigibilidadeDesde),
+          produzEfeitosEm: expose(IVA_CONSTRUCAO_HABITACAO.produzEfeitosEm),
+          cessaVigenciaEm: expose(IVA_CONSTRUCAO_HABITACAO.cessaVigenciaEm),
+          prazoVendaOuPrimeiroArrendamentoMeses: expose(
+            IVA_CONSTRUCAO_HABITACAO.prazoVendaOuPrimeiroArrendamentoMeses
+          ),
+          arrendamentoMinimoMeses: expose(IVA_CONSTRUCAO_HABITACAO.arrendamentoMinimoMeses),
+          mencaoNoTituloAquisitivo: expose(IVA_CONSTRUCAO_HABITACAO.mencaoNoTituloAquisitivo),
+          regularizacaoAFavorDoEstado: expose(
+            IVA_CONSTRUCAO_HABITACAO.regularizacaoAFavorDoEstado
+          ),
+        },
+        // Inversão do sujeito passivo na construção civil (art. 2.º, n.º 1,
+        // al. j) CIVA). O alargamento de 1 de julho de 2026 muda quem entrega
+        // o imposto, e por isso não é detalhe de copy: é enquadramento.
+        autoliquidacaoConstrucao: {
+          inverteSujeitoPassivo: expose(AUTOLIQUIDACAO_CONSTRUCAO.inverteSujeitoPassivo),
+          mantemDireitoADeducao: expose(AUTOLIQUIDACAO_CONSTRUCAO.mantemDireitoADeducao),
+          mencaoNaFatura: expose(AUTOLIQUIDACAO_CONSTRUCAO.mencaoNaFatura),
+          alargamentoVerba242: expose(AUTOLIQUIDACAO_CONSTRUCAO.alargamentoVerba242),
+          alargamentoProduzEfeitosEm: expose(
+            AUTOLIQUIDACAO_CONSTRUCAO.alargamentoProduzEfeitosEm
+          ),
+          opcaoConjuntaDesde: expose(AUTOLIQUIDACAO_CONSTRUCAO.opcaoConjuntaDesde),
         },
       },
       segurancaSocial: {
