@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { m, AnimatePresence } from "motion/react";
 import { EASE } from "@/lib/motion";
@@ -18,6 +18,8 @@ import ComparadorFAQ from "@/components/comparar/ComparadorFAQ";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
 import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
+import { useHandoffDaBusca } from "@/components/busca/useHandoffDaBusca";
+import type { TipoEntidade } from "@/lib/busca/esquema";
 
 const SeccaoCarregar = () => (
   <div className="h-64 w-full animate-pulse rounded-3xl border border-stone-100 bg-stone-50 dark:border-stone-800 dark:bg-stone-900/50" />
@@ -64,9 +66,41 @@ const REGIOES: { valor: Regiao; rotulo: string }[] = [
 
 const fmtK = (n: number) => `${Math.round(n / 1000)}k€`;
 
+/**
+ * O que este comparador aceita da pesquisa global. Espelha o
+ * `aceitaEntidades` da ferramenta em `catalogo.ts` — o teste
+ * `busca:handoff` reprova se os dois divergirem.
+ */
+const DESTINO_BUSCA = "ferramenta:comparar-regimes";
+const ACEITA_BUSCA: TipoEntidade[] = ["valor", "periodicidade"];
+
+/** Tecto de sanidade do slider. Um contexto absurdo não desenha nada. */
+const BRUTO_MAXIMO = 500_000;
+
 export default function ComparadorCenarios() {
   const [bruto, setBruto] = useState(40_000);
   const [brutoStr, setBrutoStr] = useState("40000");
+
+  /**
+   * «Recibos verdes ou empresa com 3 500 € por mês» chega aqui com os
+   * 3 500 € e com a periodicidade que a pessoa confirmou. Sem isto, o
+   * comparador abria nos 40 000 € por omissão e a pergunta tinha de ser
+   * feita outra vez — que é exactamente o que a linha «pedido reconhecido»
+   * promete que não acontece.
+   *
+   * O motor compara rendimentos ANUAIS: uma periodicidade mensal é
+   * multiplicada por doze aqui, à vista, e não algures no handoff.
+   */
+  const contexto = useHandoffDaBusca(DESTINO_BUSCA, ACEITA_BUSCA);
+  useEffect(() => {
+    const valor = typeof contexto?.valor === "number" ? contexto.valor : null;
+    if (!valor || valor <= 0) return;
+    const anual = contexto?.periodicidade === "mes" ? valor * 12 : contexto?.periodicidade === "ano" ? valor : null;
+    if (!anual || anual > BRUTO_MAXIMO) return;
+    setBruto(Math.round(anual));
+    setBrutoStr(String(Math.round(anual)));
+  }, [contexto]);
+
   const [despesasStr, setDespesasStr] = useState("");
   const [dependentes, setDependentes] = useState(0);
   const [dragging, setDragging] = useState(false);

@@ -91,6 +91,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     searchPriority: 97,
     searchGroup: "Simuladores",
     dominio: "recibos",
+    aceitaEntidades: ["valor", "periodicidade"],
   },
   {
     id: "simulador-irs",
@@ -339,6 +340,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     searchPriority: 93,
     searchGroup: "Simuladores",
     dominio: "comparar",
+    aceitaEntidades: ["valor", "periodicidade"],
   },
   {
     id: "simulador-empresa",

@@ -59,8 +59,12 @@ describe("recibos verdes: integração canónica de preço", () => {
   it("transfere a base mensal e a projeção anual, e não o preço unitário", () => {
     const studio = read("src/components/recibos-verdes/RecibosVerdesStudio.tsx");
     const fiscal = read("src/components/SimuladorIntegrado.tsx");
-    expect(studio).toContain("valorInicial={transferido?.mensal}");
-    expect(studio).toContain("faturacaoAnualInicial={transferido?.anual}");
+    // Sem a chaveta final: o estúdio passou a aceitar também o contexto da
+    // pesquisa global (`?ctx=`), e o que este teste fixa é a PRECEDÊNCIA —
+    // o preço vem primeiro porque foi calculado aqui, agora, pelo motor.
+    expect(studio).toContain("valorInicial={transferido?.mensal");
+    expect(studio).toContain("faturacaoAnualInicial={transferido?.anual");
+    expect(studio).toContain("valorInicial={transferido?.mensal ?? daBusca?.mensal}");
     expect(studio).not.toContain("valorInicial={transferido?.unitario}");
     expect(fiscal).toContain("valorInicial?: number");
     expect(fiscal).toContain("faturacaoAnualInicial?: number");
