@@ -3,11 +3,21 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { construirDocumentos } from "@/lib/busca/documentos";
 import { CAMINHO_INDICE, INTENCOES, VERSAO_INDICE, intencaoPorContexto } from "@/lib/busca/esquema";
-import { LIMIAR, MIN_CARACTERES, TETO_DIALOGO, TETO_POPOVER, agruparPorTipo, pesquisar } from "@/lib/busca/pontuar";
+import {
+  LIMIAR,
+  MIN_CARACTERES,
+  TETO_DIALOGO,
+  TETO_POPOVER,
+  agruparPorTipo,
+  pesquisar,
+  pontuarTexto,
+} from "@/lib/busca/pontuar";
 import { distanciaAteUm, normalizar, tokens } from "@/lib/busca/normalizar";
 import { termoGuardavel } from "@/lib/busca/recentes";
 import { sugestoesPorContexto } from "@/lib/busca/sugestoes";
 import { MENU_GRUPOS, PILARES, SECOES, destinoAtivo, hrefAtivo } from "@/lib/navegacao";
+import { gerarPrazos } from "@/lib/prazos";
+import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { GUIAS } from "@/lib/guias-config";
 import { CATALOGO_FERRAMENTAS } from "@/lib/ferramentas";
 import { PRIORIDADE } from "@/components/overlays/CoordenadorOverlays";
@@ -97,6 +107,137 @@ describe("busca:cobertura", () => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════════════════
+//  COBERTURA v3 — o site inteiro, e não só o que é conteúdo
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ O QUE ESTE BLOCO EXISTE PARA TORNAR IMPOSSÍVEL                       │
+//  │                                                                     │
+//  │ A versão anterior do índice cobria ferramentas, guias, atividades,   │
+//  │ o quiz e os planos — e nada mais. Havia perguntas inteiras do site   │
+//  │ sem resposta possível: «quando entrego o IVA?» caía no guia do IVA,  │
+//  │ «como calculam isto?» não devolvia a metodologia, «quero falar com   │
+//  │ alguém» não devolvia o diretório de contabilistas.                   │
+//  │                                                                     │
+//  │ Nenhuma destas falhas dava erro. Davam menos — e «menos» é           │
+//  │ exactamente o que ninguém vê num índice de trezentos documentos.     │
+//  └─────────────────────────────────────────────────────────────────────┘
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("busca:cobertura-v3", () => {
+  it("todo o documento declara família de decisão e renderer", () => {
+    for (const d of DOCS) {
+      expect(d.dominio, `${d.id} sem domínio`).toBeTruthy();
+      expect(d.renderer, `${d.id} sem renderer`).toBeTruthy();
+    }
+  });
+
+  it("as três famílias de obrigações existem e trazem fonte", () => {
+    const obrigacoes = DOCS.filter((d) => d.tipo === "obrigacao");
+    expect(obrigacoes.map((d) => d.id).sort()).toEqual([
+      "obrigacao:irs",
+      "obrigacao:iva",
+      "obrigacao:ss",
+    ]);
+
+    // A regra absoluta do produto: nenhuma afirmação sobre a lei sem
+    // proveniência. Aqui é o tipo que a impõe, e este teste que a prova.
+    for (const o of obrigacoes) {
+      expect(o.fonte?.url, `${o.id} sem URL de fonte`).toMatch(/^https:\/\//);
+      expect(o.fonte?.label, `${o.id} sem rótulo de fonte`).toBeTruthy();
+      expect(o.fonte?.revistoEm, `${o.id} sem data de revisão`).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(o.renderer).toBe("obligation");
+    }
+  });
+
+  it("a contagem de prazos da descrição vem do motor, não de um número escrito", () => {
+    // Se a lei mudar e `gerarPrazos` passar a produzir outras datas, a
+    // descrição muda com ela. Um número à mão ficaria a mentir em silêncio.
+    const prazos = gerarPrazos(FISCAL_YEAR);
+    const iva = DOCS.find((d) => d.id === "obrigacao:iva")!;
+    const declaracoes = prazos.filter((p) => p.categoria === "iva" && p.natureza === "declaracao").length;
+    expect(iva.descricao).toContain(`${declaracoes} entrega`);
+    expect(iva.anoFiscal).toBe(FISCAL_YEAR);
+  });
+
+  it("as páginas institucionais entram, e derivam do menu", () => {
+    const paginas = DOCS.filter((d) => d.tipo === "pagina").map((d) => d.href);
+    for (const esperado of ["/metodologia", "/estado-dos-dados", "/privacidade", "/termos", "/ferramentas", "/guias"]) {
+      expect(paginas, `${esperado} fora do índice`).toContain(esperado);
+    }
+
+    // O menu é a fonte: uma entrada nova em «Confiar» ou «Legal» tem de
+    // aparecer aqui sem ninguém tocar no índice.
+    const doMenu = MENU_GRUPOS.filter((g) => g.titulo === "Confiar" || g.titulo === "Legal")
+      .flatMap((g) => g.entradas.map((e) => e.href))
+      .sort();
+    for (const href of doMenu) expect(paginas).toContain(href);
+  });
+
+  it("o apoio profissional é uma zona própria — e não traz perfis no índice", () => {
+    const apoio = DOCS.filter((d) => d.tipo === "apoio");
+    expect(apoio).toHaveLength(1);
+    expect(apoio[0].href).toBe("/contabilistas");
+    expect(apoio[0].renderer).toBe("professional_support");
+
+    // Um perfil de contabilista no índice estático seria publicar o
+    // diretório inteiro em JSON, congelado no último build.
+    const bruto = readFileSync(join(process.cwd(), "public", CAMINHO_INDICE.replace(/^\//, "")), "utf8");
+    expect(bruto).not.toContain("/contabilistas/");
+  });
+
+  it("as ferramentas de comparação apresentam-se como comparação", () => {
+    const comparar = DOCS.find((d) => d.id === "ferramenta:comparar-regimes");
+    expect(comparar?.renderer).toBe("comparison");
+    expect(comparar?.dominio).toBe("comparar");
+  });
+
+  it("os destinos que exigem conta dizem-no antes do clique", () => {
+    for (const d of DOCS) {
+      if (d.href.startsWith("/dashboard")) {
+        expect(d.requerConta, `${d.id} vai para o painel sem o declarar`).toBe(true);
+      }
+    }
+  });
+});
+
+describe("busca:relevancia-v3", () => {
+  it("«iva» sozinho responde com o guia, não com o calendário que exige conta", () => {
+    // Ver o quadro em `documentos.ts`: um alias exacto vale 120 pontos e
+    // passa à frente de qualquer título. Bastou ter «iva» na lista de
+    // aliases da obrigação para a melhor resposta a uma pergunta comum
+    // deixar de ser a melhor resposta.
+    const primeiro = pesquisar("iva", DOCS, { limite: 8 })[0];
+    expect(primeiro.doc.tipo).toBe("guia");
+  });
+
+  it("«quando entrego o iva» responde com a obrigação", () => {
+    const primeiro = pesquisar("quando entrego o iva", DOCS, { limite: 8 })[0];
+    expect(primeiro.doc.id).toBe("obrigacao:iva");
+  });
+
+  it("a frase completa vale sempre mais do que parte dela", () => {
+    // O defeito que a consulta acima destapou: as regras de frase saíam com
+    // `return` imediato (prefixo = 90) e nunca chegavam a contar palavras.
+    // Numa consulta de quatro palavras o tecto dos tokens é 180 — logo,
+    // quem tinha a frase inteira perdia para quem só tinha três das
+    // palavras. Ver o quadro em `pontuar.ts`.
+    const comFrase = pontuarTexto(normalizar("quando entrego o iva"), "quando entrego o iva");
+    const comParte = pontuarTexto(normalizar("quando entrego o iva"), "quando entrego o irs e mais coisas");
+    expect(comFrase).toBeGreaterThan(comParte);
+  });
+
+  it("«contabilista» leva ao diretório, e não a um guia sobre contabilistas", () => {
+    const primeiro = pesquisar("contabilista", DOCS, { limite: 8 })[0];
+    expect(primeiro.doc.tipo).toBe("apoio");
+  });
+
+  it("«metodologia» e «privacidade» encontram as suas páginas", () => {
+    expect(pesquisar("metodologia", DOCS, { limite: 5 })[0].doc.href).toBe("/metodologia");
+    expect(pesquisar("privacidade", DOCS, { limite: 5 })[0].doc.href).toBe("/privacidade");
+  });
+});
+
 describe("busca:relevancia", () => {
   it("não aceita correspondência por letras dispersas", () => {
     // O caso reproduzido em produção: «doações» devolvia «Retenção na
@@ -132,6 +273,8 @@ describe("busca:relevancia", () => {
         grupo: "IVA",
         intencoes: ["compreender" as const],
         perfis: ["todos" as const],
+        dominio: "obrigacoes" as const,
+        renderer: "guide" as const,
         prioridade: 50,
       },
     ];

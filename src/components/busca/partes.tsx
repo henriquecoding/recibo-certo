@@ -18,11 +18,14 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Briefcase,
   Calculator,
+  Calendar,
   ChevronRight,
   Close,
   Coin,
   History,
+  Info,
   Search,
   Trophy,
   Warning,
@@ -59,6 +62,9 @@ const ICONE_TIPO: Record<TipoDoc, IconT> = {
   atividade: Search,
   quiz: Trophy,
   plano: Coin,
+  obrigacao: Calendar,
+  pagina: Info,
+  apoio: Briefcase,
 };
 
 /**

@@ -111,17 +111,45 @@ export function pontuarTexto(consultaNormalizada: string, valor: string): number
   return pontuarCampo(consultaNormalizada, valor);
 }
 
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ A CORRESPONDÊNCIA DE FRASE JÁ SAÍA CEDO DEMAIS — E PERDIA            │
+ * │                                                                     │
+ * │ As três primeiras regras faziam `return` imediato: frase exacta      │
+ * │ 120, prefixo 90, subcadeia 70. A suposição por trás era que uma      │
+ * │ correspondência de frase vale sempre mais do que uma de palavras —   │
+ * │ e é verdade para uma consulta de uma palavra, onde o tecto dos       │
+ * │ tokens é 45. Deixa de ser verdade a partir de duas: com quatro       │
+ * │ palavras, o tecto dos tokens é 180.                                  │
+ * │                                                                     │
+ * │ Foi assim que «quando entrego o iva» devolveu os prazos do IRS       │
+ * │ antes dos prazos do IVA: o documento do IVA tinha a frase inteira    │
+ * │ como alias (saía com 90, sem chegar a contar palavras) e o do IRS    │
+ * │ acertava em três das quatro palavras (101). O que estava certo era   │
+ * │ apenas o pior dos dois.                                             │
+ * │                                                                     │
+ * │ Passa a valer o MELHOR dos dois sinais. Nenhum documento entra na    │
+ * │ lista por causa disto — só sobe quem já lá estava com a pontuação    │
+ * │ errada: quem tem uma frase completa também tem as palavras todas, e  │
+ * │ portanto ganha sempre a quem só tem parte delas.                     │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
 function pontuarCampo(consultaNormalizada: string, valor: string): number {
   const texto = normalizarCampo(valor);
   if (!consultaNormalizada || !texto) return 0;
 
-  if (texto === consultaNormalizada) return 120;
-  if (texto.startsWith(consultaNormalizada)) return 90;
-  if (contemEmFronteira(texto, consultaNormalizada)) return 70;
+  const porFrase =
+    texto === consultaNormalizada
+      ? 120
+      : texto.startsWith(consultaNormalizada)
+        ? 90
+        : contemEmFronteira(texto, consultaNormalizada)
+          ? 70
+          : 0;
 
   const tokensDoc = tokens(texto);
   const tokensConsulta = tokens(consultaNormalizada);
-  if (tokensConsulta.length === 0) return 0;
+  if (tokensConsulta.length === 0) return porFrase;
 
   let soma = 0;
   let cobertos = 0;
@@ -136,14 +164,14 @@ function pontuarCampo(consultaNormalizada: string, valor: string): number {
     if (pontos > 0) cobertos++;
     soma += pontos;
   }
-  if (cobertos === 0) return 0;
+  if (cobertos === 0) return porFrase;
 
   /**
    * Proporção de cobertura — o que impedia «abrir empresa» de devolver
    * tudo o que fala de «empresa» ao mesmo nível de quem responde às duas
    * palavras. Quem cobre metade da pergunta vale metade.
    */
-  return soma * (cobertos / tokensConsulta.length);
+  return Math.max(porFrase, soma * (cobertos / tokensConsulta.length));
 }
 
 export function pontuarDocumento(consulta: string, doc: DocumentoBusca): ResultadoBusca | null {

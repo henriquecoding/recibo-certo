@@ -46,6 +46,29 @@ export default function PrazosPage() {
 
   useEffect(() => setMounted(true), []);
 
+  /**
+   * A pesquisa manda o imposto que a pessoa perguntou.
+   *
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ UM CAMINHO «PREPARADO» QUE NÃO PREPARA NADA É PIOR DO QUE NENHUM   │
+   * │                                                                   │
+   * │ A pesquisa global reconhece «quando entrego o IVA?» e abre esta    │
+   * │ página. Sem isto, abria-a em «Todos» — e a pessoa, depois de a     │
+   * │ interface lhe ter dito que percebeu a pergunta, tinha de a fazer   │
+   * │ outra vez a um filtro. A promessa da linha «pedido reconhecido»    │
+   * │ mede-se aqui, no que o destino faz com o que recebeu.              │
+   * │                                                                   │
+   * │ Do `window` e não de `useSearchParams`, pela mesma razão da página │
+   * │ de upgrade: a rota continua estática. E é uma leitura VALIDADA     │
+   * │ contra a união fechada das categorias — um parâmetro inventado por │
+   * │ alguém a mexer no URL não vira estado.                             │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("categoria");
+    if (FILTROS.some((f) => f.id === q)) setFiltro(q as CategoriaPrazo);
+  }, []);
+
   const anoBase = new Date().getFullYear();
 
   // Cada obrigação traz o veredicto de aplicabilidade ao perfil. Sem perfil,

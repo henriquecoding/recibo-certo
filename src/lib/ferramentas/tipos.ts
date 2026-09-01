@@ -17,6 +17,13 @@
 //  dentro de guias e não constavam de lista nenhuma.
 // ═══════════════════════════════════════════════════════════════════════
 
+// `import type` e não import: o TypeScript apaga-o na compilação, e o
+// catálogo continua a não ter nenhuma dependência de execução. A família de
+// decisão vive no contrato da pesquisa porque é lá que ela é lida — aqui é
+// a ferramenta a declarar a sua, que é a única forma de não haver depois
+// uma segunda lista a dizer o mesmo por outras palavras.
+import type { DominioBusca, TipoEntidade } from "@/lib/busca/esquema";
+
 /** O que a ferramenta É — decide o ícone-tipo e o rótulo, nunca o acesso. */
 export type ToolKind =
   | "simulator"
@@ -114,6 +121,36 @@ export interface ToolDefinition {
   searchPriority: number;
   /** Família apresentada no resultado da pesquisa. */
   searchGroup: string;
+  /**
+   * A FAMÍLIA DE DECISÃO a que a ferramenta pertence — sobre o quê é.
+   *
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ PORQUE NÃO SE DERIVA DE `topics`                                   │
+   * │                                                                   │
+   * │ Foi a primeira tentativa e estava errada de forma silenciosa. Os   │
+   * │ `topics` são etiquetas de assunto e várias ferramentas partilham   │
+   * │ as mesmas: `comparar-regimes` tem `irc` e `empresa`, tal como o    │
+   * │ `simulador-empresa`, e o `planeador-contratacao` tem `salario` e   │
+   * │ `empresa` ao mesmo tempo. Uma regra de prioridade sobre a lista    │
+   * │ punha-as no mesmo sítio — e a única forma de descobrir era ver a   │
+   * │ pesquisa a devolver o simulador de empresa a quem perguntou pelo   │
+   * │ custo de contratar alguém.                                        │
+   * │                                                                   │
+   * │ A ferramenta declara-o. É obrigatório: uma ferramenta nova sem     │
+   * │ família não compila, que é a única forma de isto não passar a ser  │
+   * │ uma lista com buracos daqui a seis meses.                         │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  dominio: DominioBusca;
+  /**
+   * O que esta ferramenta sabe RECEBER da pesquisa, quando alguém escreve
+   * uma frase com contexto («quanto me fica de 1 200 €?»).
+   *
+   * Ausente ou vazio = a pesquisa abre-a limpa. Nunca se declara aqui uma
+   * entidade que a página não consuma: seria prometer um preenchimento
+   * que não acontece.
+   */
+  aceitaEntidades?: TipoEntidade[];
 }
 
 /**
