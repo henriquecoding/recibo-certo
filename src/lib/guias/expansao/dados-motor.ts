@@ -23,6 +23,8 @@
 
 import type { TAViaturasTaxas } from "@/lib/fiscal-data";
 import {
+  AUTOLIQUIDACAO_CONSTRUCAO,
+  IVA_CONSTRUCAO_HABITACAO,
   ASSEDIO_TRABALHO,
   BANCO_DE_HORAS,
   COMPENSACAO_DESPEDIMENTO,
@@ -789,6 +791,11 @@ export const DADOS_MOTOR: Record<string, DadoDoMotor[]> = {
     d("FATURACAO_PRAZOS", "Prazo — prestações intracomunitárias de serviços", `até ao dia ${FATURACAO_PRAZOS.intracomunitariasAteDiaDoMesSeguinte.value} do mês seguinte`, "quando tributáveis no território de outro Estado-Membro · art. 36.º, n.º 1, al. b) CIVA"),
     d("FATURACAO_PRAZOS", "Prazo — regra geral", `${FATURACAO_PRAZOS.regraGeralDiasUteis.value}.º dia útil`, "seguinte ao momento em que o imposto é devido · art. 36.º, n.º 1, al. a) CIVA"),
     d("IVA_TAXAS", "Taxa normal — continente", pctExato(IVA_TAXAS.continente.value.normal), "a que o adquirente liquida, quando é ele o devedor · art. 18.º CIVA"),
+    d("AUTOLIQUIDACAO_CONSTRUCAO", "Inversão alargada às empreitadas de habitação", "1 de julho de 2026", "passa a abranger adquirentes SEM direito à dedução, nas empreitadas da verba 2.42 · art. 2.º, n.º 1, al. j) CIVA, redação do DL 97/2026"),
+    d("AUTOLIQUIDACAO_CONSTRUCAO", "Aplicação retroativa", "desde 1 de janeiro de 2026", "só havendo opção CONJUNTA do prestador e do adquirente · art. 18.º, n.º 7 do DL 97/2026"),
+    d("IVA_CONSTRUCAO_HABITACAO", "Empreitadas de habitação — taxa no continente", pctExato(IVA_CONSTRUCAO_HABITACAO.taxaPorRegiao.value.continente), `em vez de ${pctExato(IVA_TAXAS.continente.value.normal)} · verba 2.42 da lista I anexa ao CIVA`),
+    d("IVA_CONSTRUCAO_HABITACAO", "Limite do preço moderado de venda", fmt(IVA_CONSTRUCAO_HABITACAO.precoModeradoVenda.value), "o 2.º escalão da al. b) do n.º 1 do art. 17.º CIMT · art. 2.º, n.º 2 do DL 97/2026"),
+    d("IVA_CONSTRUCAO_HABITACAO", "Limite da renda mensal moderada", fmt(IVA_CONSTRUCAO_HABITACAO.rendaModeradaMensal.value), "2,5 × a retribuição mínima mensal garantida · art. 2.º, n.º 2, al. a) do DL 97/2026"),
   ],
 
   "vies": [
