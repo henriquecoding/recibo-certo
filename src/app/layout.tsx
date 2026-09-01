@@ -41,12 +41,30 @@ const dmSans = DM_Sans({
 const SITE_URL = "https://www.recibocerto.pt";
 
 // Códigos de verificação de propriedade dos motores de busca.
-// O token do Google é PÚBLICO (aparece no <head> para o Search Console
-// validar) — fica embebido como omissão para a verificação não depender da
-// configuração de ambientes na Vercel. A env var, se definida, tem precedência.
-const GOOGLE_SITE_VERIFICATION =
+// Os tokens do Google são PÚBLICOS (saem no <head> para o Search Console
+// validar) — ficam embebidos como omissão para a verificação não depender da
+// configuração de ambientes na Vercel. A env var, se definida, tem precedência
+// e substitui a lista inteira (tokens separados por vírgula).
+//
+// A lista é PLURAL de propósito: o site está reclamado por mais do que uma
+// conta Google, e cada conta valida contra o SEU token. O Search Console
+// revalida periodicamente, por isso tirar um token daqui é retirar a
+// propriedade a essa conta — não basta ter validado uma vez.
+const GOOGLE_SITE_VERIFICATION = (
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ||
-  "i_bvY0e1N1qrkR7hX_XYz-KiWQMr1oHbM3J3GfaT_r0";
+  [
+    // Conta principal.
+    "i_bvY0e1N1qrkR7hX_XYz-KiWQMr1oHbM3J3GfaT_r0",
+    // Segunda conta. Tem também o ficheiro
+    // `public/google3874ac9e9ed1ae13.html` como prova independente: se um dia
+    // esta env var for definida com um único token, a propriedade dessa conta
+    // não cai com ele.
+    "O5XHXItHcVsTvYhVVH9W8YSg6zQpx7ioJQ3s5k_8OTg",
+  ].join(",")
+)
+  .split(",")
+  .map((token) => token.trim())
+  .filter(Boolean);
 const BING_SITE_VERIFICATION = process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION;
 
 export const metadata: Metadata = {
@@ -126,7 +144,10 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    ...(GOOGLE_SITE_VERIFICATION ? { google: GOOGLE_SITE_VERIFICATION } : {}),
+    // Um `<meta name="google-site-verification">` por token.
+    ...(GOOGLE_SITE_VERIFICATION.length > 0
+      ? { google: GOOGLE_SITE_VERIFICATION }
+      : {}),
     ...(BING_SITE_VERIFICATION
       ? { other: { "msvalidate.01": BING_SITE_VERIFICATION } }
       : {}),

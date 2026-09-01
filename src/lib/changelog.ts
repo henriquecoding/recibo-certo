@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.142.0",
+    version: "2.143.0",
     data: "2026-08-31",
     titulo: "A marca deixou de acabar onde o site acaba",
     itens: [
@@ -29,6 +29,17 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Passou a existir recuperação de palavra-passe. Havia como mudá-la com sessão iniciada, o que não serve a quem não consegue entrar: quem a esquecesse ficava sem caminho de volta para a sua conta e o seu histórico.",
       "O ícone do site no ecrã principal do telemóvel passou a ser a marca. Estava em SVG, formato que o iPhone ignora, e o resultado era um quadrado genérico. O site ganhou também nome, cor e ícone próprios quando é instalado.",
       "O pagamento passa a ter as cores e a lista de benefícios do Recibo Certo, em vez do azul de origem da Stripe, e os dois preços antigos que ainda estavam ativos foram arquivados.",
+    ],
+  },
+  {
+    version: "2.142.0",
+    data: "2026-08-31",
+    titulo: "A propriedade do site no Google deixa de caber numa conta só",
+    itens: [
+      "A prova de propriedade que o Google Search Console lê nas páginas do site estava escrita como se nunca pudesse haver mais do que uma. Uma segunda conta Google não conseguia reclamar o site sem ocupar o lugar da primeira — e ocupar o lugar é perder: o Google revalida a prova de tempos a tempos, e a conta cuja prova desapareceu perde a propriedade sem aviso e sem erro nenhum pelo caminho.",
+      "Passa a ser uma lista. Cada conta traz o seu código, sai uma etiqueta por código em todas as páginas, e acrescentar uma conta deixou de implicar tirar outra.",
+      "A segunda conta fica com duas provas independentes: a etiqueta nas páginas e um ficheiro próprio servido pelo site. A lista pode ser reescrita pela configuração do alojamento — e essa substitui-a por inteiro, não acrescenta —, e é precisamente aí que a etiqueta sozinha se perderia; o ficheiro sustenta a propriedade sem depender dela. Fica fora do índice de pesquisa: é uma linha de texto, não uma página, e não tem nada que aparecer nos resultados.",
+      "Fica escrito em docs/SEO.md quem está reclamado, com que prova e onde ela vive — incluindo o caminho que não passa por aqui: o registo DNS, que verifica o domínio inteiro e sobrevive a qualquer alteração no código.",
     ],
   },
   {
