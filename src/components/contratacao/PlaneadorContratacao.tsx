@@ -33,6 +33,7 @@ import {
   DateField,
   DiasSemanaField,
   Divulgacao,
+  NotaLegal,
   MoneyField,
   NumberField,
   SectionTitle,
@@ -58,6 +59,7 @@ import {
   type PlannerState,
 } from "./estado";
 import CoberturaDoRelease from "./CoberturaDoRelease";
+import { EXPLICACAO_POR_CUSTO, explicacaoPorId } from "./explicacoes";
 import {
   ETAPAS_CONTRATACAO,
   NavegacaoEtapas,
@@ -118,6 +120,19 @@ const ACAO_SOBRE_VERDE =
   `${ACAO_BASE} border-white/25 bg-white/10 text-white hover:bg-white/20 focus-visible:ring-white focus-visible:ring-offset-brand-deep`;
 const ACAO_SOBRE_ALERTA =
   `${ACAO_BASE} border-alert-border bg-white/80 text-alert-text hover:bg-white focus-visible:ring-alert-text focus-visible:ring-offset-alert-bg dark:bg-stone-900/70 dark:hover:bg-stone-900`;
+
+/**
+ * A nota legal de uma regra, à largura do painel.
+ *
+ * Resolve o id no catálogo em vez de receber o objeto: um id errado desaparece
+ * do ecrã em silêncio em vez de rebentar a etapa toda, e o teste
+ * `contratacao-explicacoes.test.ts` é que garante que os ids existem.
+ */
+function NotaLegalDoPlaneador({ id }: { id: string }) {
+  const explicacao = explicacaoPorId(id);
+  if (!explicacao) return null;
+  return <NotaLegal explicacao={explicacao} className="mt-5" />;
+}
 
 function Bloco({ children }: { children: React.ReactNode }) {
   return (
@@ -581,6 +596,7 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
             opcoes={DIAS_SEMANA}
           />
         </div>
+        <NotaLegalDoPlaneador id="ferias" />
       </Bloco>
 
       </PainelEtapa>
@@ -694,6 +710,7 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
               meta={meta}
               campo={state.custos[meta.id]}
               onChange={(patch) => setCusto(meta.id, patch)}
+              explicacao={EXPLICACAO_POR_CUSTO[meta.id]}
             />
           ))}
         </div>
@@ -758,7 +775,7 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
               onChange={(value) => set("trainingHours", value)}
               suffix="h"
               max={400}
-              hint="Mínimo legal de 40 horas. Reduzem capacidade mesmo sem custo externo."
+              hint="Contam como tempo de trabalho pago, por isso reduzem a capacidade do posto mesmo sem fatura de fornecedor."
             />
             <NumberField
               id="onboarding-hours"
@@ -770,6 +787,10 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
             />
           </div>
         ) : null}
+        {/* À largura toda, e não dentro da célula do campo: três parágrafos
+            espremidos numa coluna de 200px quebravam o título em oito linhas
+            e davam uma coluna de texto ilegível. */}
+        <NotaLegalDoPlaneador id="formacao-continua" />
       </Bloco>
 
       </PainelEtapa>

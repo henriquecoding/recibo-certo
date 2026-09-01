@@ -397,6 +397,9 @@ export const LEGAL_LOCATORS: readonly LegalLocator[] = Object.freeze([
   ct("263", "Subsídio de Natal"),
   ct("264", "Retribuição do período de férias e subsídio de férias"),
   ct("131", "Formação contínua: 40 horas anuais"),
+  ct("132", "Crédito de horas: a formação não dada em dois anos converte-se"),
+  ct("134", "Cessação do contrato: a formação por dar é paga em dinheiro"),
+  ct("246", "Violação do direito a férias: compensação do triplo da retribuição"),
   {
     id: "pt.dr.lei-98-2009.artigo-79",
     sourceId: LEGAL_SOURCES.workAccidentInsurance.id,

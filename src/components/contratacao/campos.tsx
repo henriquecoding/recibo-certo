@@ -2,7 +2,15 @@
 
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import InfoTip from "@/components/ui/InfoTip";
-import { Check, ChevronDown, ExternalLink, Warning } from "@/components/ui/Icons";
+import {
+  BookOpen,
+  Building,
+  Check,
+  ChevronDown,
+  ExternalLink,
+  Scale,
+  Warning,
+} from "@/components/ui/Icons";
 import { resolveCitation } from "../../../ReciboCerto-Fiscal-Engine/src";
 import {
   ROTULOS_ESTADO_CUSTO,
@@ -10,6 +18,7 @@ import {
   type EstadoCusto,
   type MetaCusto,
 } from "./estado";
+import type { ExplicacaoLaboral } from "./explicacoes";
 
 export const fieldClass =
   "mt-2 min-h-[46px] w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-base font-medium tabular-nums text-stone-800 outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-100";
@@ -37,26 +46,6 @@ export function SectionTitle({
   );
 }
 
-/**
- * Um campo do formulário.
- *
- * ┌──────────────────────────────────────────────────────────────────────┐
- * │ DUAS COISAS QUE SÓ SE VÊEM QUANDO OS CAMPOS ESTÃO LADO A LADO         │
- * │                                                                      │
- * │ 1. O rótulo era `inline-flex items-center`. Com uma linha corria bem; │
- * │    com duas («Enquadramento contributivo da entidade»), o texto       │
- * │    tornava-se um item de flex e o InfoTip outro — e o InfoTip ia      │
- * │    centrar-se verticalmente ao lado do bloco todo, a flutuar longe da │
- * │    última palavra. Agora o rótulo é texto corrido e o InfoTip flui    │
- * │    logo a seguir, como uma nota de rodapé faria.                      │
- * │                                                                      │
- * │ 2. Numa grelha de três colunas, um rótulo de duas linhas empurrava o  │
- * │    seu `<input>` 19px abaixo dos vizinhos: a linha de campos ficava   │
- * │    em degraus. Reservar sempre duas linhas a partir de `sm:` (onde a  │
- * │    grelha deixa de ser uma coluna só) alinha a linha inteira sem      │
- * │    depender de ninguém escolher rótulos curtos.                       │
- * └──────────────────────────────────────────────────────────────────────┘
- */
 /**
  * Secção que se abre.
  *
@@ -102,6 +91,108 @@ export function Divulgacao({
   );
 }
 
+/** Ligação para a fonte legal, montada a partir da citação — nunca à mão. */
+function LinkDaFonte({ citacao }: { citacao: string }) {
+  const fonte = resolveCitation(citacao);
+  if (!fonte) return null;
+  return (
+    <a
+      href={fonte.source.url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex min-h-[36px] items-center text-xs font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+    >
+      <span className="min-w-0">
+        {fonte.locator ? `${fonte.source.title}, ${fonte.locator.article}` : fonte.source.title}
+        <ExternalLink size={12} className="ml-1 inline-block align-[-1px]" />
+      </span>
+    </a>
+  );
+}
+
+/**
+ * A explicação de uma regra laboral, sempre com a mesma anatomia.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ TRÊS PERGUNTAS, SEMPRE PELA MESMA ORDEM                               │
+ * │                                                                      │
+ * │ Uma dica de uma linha («mínimo legal de 40 horas») diz o QUE e nunca  │
+ * │ diz o PORQUÊ nem o E-SE. Quem nunca contratou lê aquilo como uma      │
+ * │ recomendação e segue em frente — e é exatamente aí que a decisão      │
+ * │ fica mal informada.                                                   │
+ * │                                                                      │
+ * │ Este componente não aceita uma explicação incompleta: o tipo          │
+ * │ `ExplicacaoLaboral` obriga às três partes, e a do meio — «se não      │
+ * │ cumprires» — é a que faltava em todo o planeador. A fonte legal vem   │
+ * │ do catálogo do motor, pelo que uma citação errada não chega ao ecrã   │
+ * │ como um link partido: não chega de todo.                              │
+ * │                                                                      │
+ * │ Entra fechada de propósito. Quem já sabe não é obrigado a ler três    │
+ * │ parágrafos por campo; quem não sabe tem-nos a um toque.                │
+ * └──────────────────────────────────────────────────────────────────────┘
+ */
+export function NotaLegal({
+  explicacao,
+  className = "",
+}: {
+  explicacao: ExplicacaoLaboral;
+  className?: string;
+}) {
+  const partes = [
+    { Icon: BookOpen, rotulo: "A regra", texto: explicacao.regra, tom: "text-brand-dark dark:text-brand-mint" },
+    { Icon: Warning, rotulo: "Se não cumprires", texto: explicacao.seNaoCumprires, tom: "text-alert-text" },
+    { Icon: Building, rotulo: "A quem se aplica", texto: explicacao.aQuemSeAplica, tom: "text-stone-500 dark:text-stone-400" },
+  ];
+
+  return (
+    <Divulgacao titulo={explicacao.titulo} nota="a lei" className={className}>
+      <dl className="space-y-4">
+        {partes.map(({ Icon, rotulo, texto, tom }) => (
+          <div key={rotulo}>
+            <dt className={`flex items-center gap-1.5 text-xs font-bold uppercase tracking-[.1em] ${tom}`}>
+              <Icon size={13} className="flex-none" />
+              {rotulo}
+            </dt>
+            <dd className="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">{texto}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="mt-4 border-t border-stone-200 pt-2.5 dark:border-stone-700">
+        <p className="texto-mini flex items-center gap-1.5 font-bold uppercase tracking-[.1em] text-stone-400 dark:text-stone-500">
+          <Scale size={12} className="flex-none" /> Fontes
+        </p>
+        <ul className="mt-0.5 flex flex-wrap gap-x-5 gap-y-0">
+          {explicacao.citacoes.map((citacao) => (
+            <li key={citacao} className="min-w-0">
+              <LinkDaFonte citacao={citacao} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Divulgacao>
+  );
+}
+
+/**
+ * Um campo do formulário.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ DUAS COISAS QUE SÓ SE VÊEM QUANDO OS CAMPOS ESTÃO LADO A LADO         │
+ * │                                                                      │
+ * │ 1. O rótulo era `inline-flex items-center`. Com uma linha corria bem; │
+ * │    com duas («Enquadramento contributivo da entidade»), o texto       │
+ * │    tornava-se um item de flex e o InfoTip outro — e o InfoTip ia      │
+ * │    centrar-se verticalmente ao lado do bloco todo, a flutuar longe da │
+ * │    última palavra. Agora o rótulo é texto corrido e o InfoTip flui    │
+ * │    logo a seguir, como uma nota de rodapé faria.                      │
+ * │                                                                      │
+ * │ 2. Numa grelha de três colunas, um rótulo de duas linhas empurrava o  │
+ * │    seu `<input>` 19px abaixo dos vizinhos: a linha de campos ficava   │
+ * │    em degraus. Reservar sempre duas linhas a partir de `sm:` (onde a  │
+ * │    grelha deixa de ser uma coluna só) alinha a linha inteira sem      │
+ * │    depender de ninguém escolher rótulos curtos.                       │
+ * └──────────────────────────────────────────────────────────────────────┘
+ */
 export function Field({
   label,
   hint,
@@ -114,22 +205,24 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex h-full min-w-0 flex-col text-sm font-semibold text-stone-700 dark:text-stone-300">
-      <span className="block leading-snug sm:min-h-[2.6em]">
-        {label}
-        {info ? (
-          <span className="ml-1.5 inline-block align-middle">
-            <InfoTip label={`Sobre ${label}`}>{info}</InfoTip>
+    <div className="flex h-full min-w-0 flex-col">
+      <label className="flex min-w-0 flex-1 flex-col text-sm font-semibold text-stone-700 dark:text-stone-300">
+        <span className="block leading-snug sm:min-h-[2.6em]">
+          {label}
+          {info ? (
+            <span className="ml-1.5 inline-block align-middle">
+              <InfoTip label={`Sobre ${label}`}>{info}</InfoTip>
+            </span>
+          ) : null}
+        </span>
+        {children}
+        {hint ? (
+          <span className="mt-1.5 block text-xs font-normal leading-relaxed text-stone-500 dark:text-stone-400">
+            {hint}
           </span>
         ) : null}
-      </span>
-      {children}
-      {hint ? (
-        <span className="mt-1.5 block text-xs font-normal leading-relaxed text-stone-500 dark:text-stone-400">
-          {hint}
-        </span>
-      ) : null}
-    </label>
+      </label>
+    </div>
   );
 }
 
@@ -359,7 +452,9 @@ export function CampoCustoConhecido({
   meta,
   campo,
   onChange,
+  explicacao,
 }: {
+  explicacao?: ExplicacaoLaboral;
   meta: MetaCusto;
   campo: CampoCusto;
   onChange: (patch: Partial<CampoCusto>) => void;
@@ -388,7 +483,7 @@ export function CampoCustoConhecido({
     <div
       data-custo={meta.id}
       data-estado={campo.estado}
-      className={`flex flex-col rounded-2xl border p-3.5 transition ${bloqueado ? "border-alert-border bg-alert-bg" : TOM_ESTADO[campo.estado]}`}
+      className={`flex flex-col rounded-2xl border p-3.5 transition ${explicacao ? "lg:col-span-2" : ""} ${bloqueado ? "border-alert-border bg-alert-bg" : TOM_ESTADO[campo.estado]}`}
     >
       <div className="flex items-start gap-2">
         <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-stone-800 dark:text-stone-100">
@@ -489,10 +584,15 @@ export function CampoCustoConhecido({
         </p>
       ) : null}
 
+      {/* Quando o custo é obrigatório, «obrigatório» sozinho não explica nada:
+          a explicação diz porquê, o que acontece a quem não cumpre e a quem se
+          aplica. Substitui o link solto da fonte, que já vai lá dentro. */}
+      {explicacao ? <NotaLegal explicacao={explicacao} className="mt-3" /> : null}
+
       {/* O rodapé com a fonte legal é empurrado para baixo (`mt-auto`): numa
           linha de dois cartões, o que tem citação deixa de esticar o vizinho e
           de lhe abrir um vazio de 200px. */}
-      {fonte ? (
+      {fonte && !explicacao ? (
         <a
           href={fonte.source.url}
           target="_blank"
