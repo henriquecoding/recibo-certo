@@ -31,7 +31,7 @@
 
 import { getSupabase } from "@/lib/supabase/client";
 import { avatarLinkedInExpirou } from "./linkedin";
-import { DISTRITOS, ESPECIALIDADES } from "./catalogo";
+import { DISTRITOS, ESPECIALIDADES, PARAMS } from "./catalogo";
 import { copyResposta, IDIOMAS } from "./perfil";
 import type { Modalidade } from "./tipos";
 
@@ -255,23 +255,11 @@ export async function lerDiretorio(
 // ─── Estado na barra de endereço ───────────────────────────────────────
 
 /**
- * Os nomes dos parâmetros, num sítio só.
- *
- * Mudar um destes muda links que já foram partilhados — por isso estão
- * aqui, à vista, e não espalhados por seis componentes.
+ * Os nomes dos parâmetros vivem em `catalogo.ts` — o ficheiro sem
+ * importações — para a pesquisa global os poder ler sem arrastar o SDK do
+ * Supabase que este módulo importa. Ver o quadro lá.
  */
-export const PARAMS = {
-  procura: "q",
-  distrito: "distrito",
-  especialidade: "especialidade",
-  modalidade: "modalidade",
-  idioma: "idioma",
-  vagas: "vagas",
-  occ: "occ",
-  linkedin: "linkedin",
-  ordem: "ordem",
-  pagina: "pagina",
-} as const;
+export { PARAMS } from "./catalogo";
 
 function valorDoCatalogo(valor: string | null, catalogo: readonly string[]): string {
   if (!valor) return "";

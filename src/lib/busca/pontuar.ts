@@ -24,9 +24,9 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
-import type { DocumentoBusca, FiltroIntencao, TipoDoc } from "./esquema";
+import type { DocumentoBusca, DominioBusca, FiltroIntencao, Intencao, TipoDoc } from "./esquema";
 import { ORDEM_TIPOS } from "./esquema";
-import { distanciaAteUm, normalizar, tokens } from "./normalizar";
+import { distanciaAteUm, normalizar, tokens, tokensDeConsulta } from "./normalizar";
 
 /** Abaixo disto não se escreve uma pesquisa: escreve-se o caminho até uma. */
 export const MIN_CARACTERES = 2;
@@ -148,7 +148,7 @@ function pontuarCampo(consultaNormalizada: string, valor: string): number {
           : 0;
 
   const tokensDoc = tokens(texto);
-  const tokensConsulta = tokens(consultaNormalizada);
+  const tokensConsulta = tokensDeConsulta(consultaNormalizada);
   if (tokensConsulta.length === 0) return porFrase;
 
   let soma = 0;
@@ -206,6 +206,49 @@ export interface OpcoesPesquisa {
   intencao?: FiltroIntencao;
   /** Filtro por tipo, para o «ver só guias» da página completa. */
   tipo?: TipoDoc | "todos";
+  /**
+   * Sinais de tarefa lidos da frase (ver `reconhecer.ts`).
+   *
+   * Ausentes, a pesquisa comporta-se exactamente como sempre se comportou
+   * — é o que mantém `/pesquisar` e os testes de relevância textual
+   * válidos sem os reescrever.
+   */
+  sinais?: SinaisDeTarefa;
+}
+
+export interface SinaisDeTarefa {
+  dominio: DominioBusca | null;
+  intencao: Intencao | null;
+}
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ OS SINAIS DE TAREFA SÓ DESEMPATAM — NÃO DECIDEM                      │
+ * │                                                                     │
+ * │ A pontuação textual continua a mandar, e estes números são pequenos  │
+ * │ de propósito: entre 8 e 12 pontos numa escala em que uma frase       │
+ * │ exacta vale 120. Servem para o caso em que dois documentos           │
+ * │ respondem igualmente bem às PALAVRAS e um deles responde à           │
+ * │ PERGUNTA — «quanto pago a um trabalhador» encontra o simulador de    │
+ * │ empresa e o planeador de contratação com pontuação parecida, e é a   │
+ * │ família de decisão que os separa.                                    │
+ * │                                                                     │
+ * │ E aplicam-se DEPOIS do limiar: nenhum documento entra na lista por   │
+ * │ causa de um bónus de domínio. Se o texto não chegou para o mostrar,  │
+ * │ pertencer à família certa não é razão para o mostrar — seria a       │
+ * │ pesquisa a responder ao que julga que a pessoa quis dizer.           │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const BONUS_DOMINIO = 12;
+export const BONUS_INTENCAO = 8;
+export const PENALIZACAO_DOMINIO = 10;
+
+function ajusteDeTarefa(doc: DocumentoBusca, sinais: SinaisDeTarefa | undefined): number {
+  if (!sinais) return 0;
+  let ajuste = 0;
+  if (sinais.dominio) ajuste += doc.dominio === sinais.dominio ? BONUS_DOMINIO : -PENALIZACAO_DOMINIO;
+  if (sinais.intencao && doc.intencoes.includes(sinais.intencao)) ajuste += BONUS_INTENCAO;
+  return ajuste;
 }
 
 export function pesquisar(
@@ -213,7 +256,7 @@ export function pesquisar(
   documentos: DocumentoBusca[],
   opcoes: OpcoesPesquisa = {},
 ): ResultadoBusca[] {
-  const { limite = 0, intencao = "tudo", tipo = "todos" } = opcoes;
+  const { limite = 0, intencao = "tudo", tipo = "todos", sinais } = opcoes;
   if (normalizar(consulta).length < MIN_CARACTERES) return [];
 
   const resultados: ResultadoBusca[] = [];
@@ -221,7 +264,9 @@ export function pesquisar(
     if (intencao !== "tudo" && !doc.intencoes.includes(intencao)) continue;
     if (tipo !== "todos" && doc.tipo !== tipo) continue;
     const r = pontuarDocumento(consulta, doc);
-    if (r && r.pontos >= LIMIAR) resultados.push(r);
+    // O limiar julga o TEXTO. Só depois é que a tarefa reordena o que ele
+    // deixou passar — ver o quadro em `ajusteDeTarefa`.
+    if (r && r.pontos >= LIMIAR) resultados.push({ ...r, pontos: r.pontos + ajusteDeTarefa(doc, sinais) });
   }
 
   resultados.sort(
