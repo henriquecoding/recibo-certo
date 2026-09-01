@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import EntradaPlaneador from "@/components/contratacao/EntradaPlaneador";
 import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import PlaneadorContratacaoLazy from "./lazy";
@@ -30,7 +31,7 @@ export default function PlaneadorContratacaoPage() {
   return (
     <ToolShell
       tool={TOOL}
-      subtitulo="Parte do orçamento, do líquido pretendido ou de uma proposta já conhecida. Vê custo patronal, pacote, encargos públicos, calendário e capacidade — sem pedir conta nem guardar nada ao simular."
+      inicio={<EntradaPlaneador tool={TOOL} />}
       contexto={
         <section className="grid gap-4 sm:grid-cols-3">
           {[

@@ -2,7 +2,7 @@
 
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import InfoTip from "@/components/ui/InfoTip";
-import { Check, ExternalLink, Warning } from "@/components/ui/Icons";
+import { Check, ChevronDown, ExternalLink, Warning } from "@/components/ui/Icons";
 import { resolveCitation } from "../../../ReciboCerto-Fiscal-Engine/src";
 import {
   ROTULOS_ESTADO_CUSTO,
@@ -26,18 +26,79 @@ export function SectionTitle({
   acao?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-light text-sm font-bold text-brand-dark dark:bg-brand/15 dark:text-brand-mint">
-          {step}
-        </span>
-        <div className="min-w-0">
-          <h2 className="font-display text-xl font-semibold text-ink">{title}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{description}</p>
-        </div>
+    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+      <div className="min-w-0 max-w-2xl">
+        <p className="eyebrow text-brand-dark dark:text-brand-mint">Etapa {step}</p>
+        <h2 className="mt-1.5 font-display text-2xl font-semibold leading-tight text-ink sm:text-3xl">{title}</h2>
+        <p className="mt-2 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{description}</p>
       </div>
       {acao}
     </div>
+  );
+}
+
+/**
+ * Um campo do formulário.
+ *
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ DUAS COISAS QUE SÓ SE VÊEM QUANDO OS CAMPOS ESTÃO LADO A LADO         │
+ * │                                                                      │
+ * │ 1. O rótulo era `inline-flex items-center`. Com uma linha corria bem; │
+ * │    com duas («Enquadramento contributivo da entidade»), o texto       │
+ * │    tornava-se um item de flex e o InfoTip outro — e o InfoTip ia      │
+ * │    centrar-se verticalmente ao lado do bloco todo, a flutuar longe da │
+ * │    última palavra. Agora o rótulo é texto corrido e o InfoTip flui    │
+ * │    logo a seguir, como uma nota de rodapé faria.                      │
+ * │                                                                      │
+ * │ 2. Numa grelha de três colunas, um rótulo de duas linhas empurrava o  │
+ * │    seu `<input>` 19px abaixo dos vizinhos: a linha de campos ficava   │
+ * │    em degraus. Reservar sempre duas linhas a partir de `sm:` (onde a  │
+ * │    grelha deixa de ser uma coluna só) alinha a linha inteira sem      │
+ * │    depender de ninguém escolher rótulos curtos.                       │
+ * └──────────────────────────────────────────────────────────────────────┘
+ */
+/**
+ * Secção que se abre.
+ *
+ * O `<details>` cru mostrava o triângulo preto do navegador — a única peça
+ * da página desenhada pelo user-agent, encostada a um design system inteiro.
+ * Aqui o afordance é uma pastilha com chevron que roda ao abrir, o alvo tem
+ * 48px de altura e o foco de teclado tem anel próprio.
+ */
+export function Divulgacao({
+  titulo,
+  nota,
+  aberto,
+  className = "",
+  children,
+}: {
+  titulo: string;
+  nota?: string;
+  aberto?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details
+      open={aberto}
+      className={`group overflow-hidden rounded-2xl border border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50 ${className}`}
+    >
+      <summary className="flex min-h-[48px] cursor-pointer list-none items-center gap-3 px-3.5 py-2.5 text-sm font-semibold text-stone-800 transition-colors hover:bg-stone-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand dark:text-stone-100 dark:hover:bg-stone-800 [&::-webkit-details-marker]:hidden">
+        <span
+          aria-hidden
+          className="flex h-6 w-6 flex-none items-center justify-center rounded-lg bg-white text-stone-500 shadow-[inset_0_0_0_1px_rgb(0_0_0/0.07)] transition-transform duration-200 group-open:rotate-180 dark:bg-stone-900 dark:text-stone-400 dark:shadow-none"
+        >
+          <ChevronDown size={14} />
+        </span>
+        <span className="min-w-0 flex-1 leading-snug">{titulo}</span>
+        {nota ? (
+          <span className="texto-mini flex-none font-semibold text-stone-500 dark:text-stone-400">{nota}</span>
+        ) : null}
+      </summary>
+      <div className="border-t border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+        {children}
+      </div>
+    </details>
   );
 }
 
@@ -53,10 +114,14 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block min-w-0 text-sm font-semibold text-stone-700 dark:text-stone-300">
-      <span className="inline-flex items-center gap-1.5">
+    <label className="flex h-full min-w-0 flex-col text-sm font-semibold text-stone-700 dark:text-stone-300">
+      <span className="block leading-snug sm:min-h-[2.6em]">
         {label}
-        {info ? <InfoTip label={`Sobre ${label}`}>{info}</InfoTip> : null}
+        {info ? (
+          <span className="ml-1.5 inline-block align-middle">
+            <InfoTip label={`Sobre ${label}`}>{info}</InfoTip>
+          </span>
+        ) : null}
       </span>
       {children}
       {hint ? (
@@ -220,7 +285,7 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`flex min-h-[48px] w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${checked ? "border-brand bg-brand-light/70 dark:bg-brand/15" : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800"}`}
+      className={`flex h-full min-h-[48px] w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand ${checked ? "border-brand bg-brand-light/70 dark:bg-brand/15" : "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-800"}`}
     >
       <span className={`relative h-6 w-11 flex-none rounded-full transition ${checked ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}>
         <span className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${checked ? "left-6" : "left-1"}`} />
@@ -245,7 +310,7 @@ export function DiasSemanaField({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="text-sm font-semibold text-stone-700 dark:text-stone-300">
+      <legend className="block text-sm font-semibold leading-snug text-stone-700 dark:text-stone-300 sm:min-h-[2.6em]">
         Dias da semana contratados
       </legend>
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -311,25 +376,23 @@ export function CampoCustoConhecido({
     ? ["confirmado", "estimado", "intervalo", "nao_sei"]
     : ["confirmado", "estimado", "intervalo", "nao_aplicavel", "nao_sei"];
 
+  // Quantos controlos é que este estado abre. É isto que decide a grelha:
+  // com um controlo só, uma grelha de duas colunas deixava metade do cartão
+  // vazia ao lado de um `<select>` encolhido — o defeito mais visível da
+  // etapa dos custos, repetido oito vezes na mesma página.
+  const temValor = campo.estado === "confirmado" || campo.estado === "estimado";
+  const temIntervalo = campo.estado === "intervalo";
+  const doisControlos = temValor || temIntervalo;
+
   return (
     <div
       data-custo={meta.id}
       data-estado={campo.estado}
-      className={`rounded-2xl border p-3.5 transition ${bloqueado ? "border-alert-border bg-alert-bg" : TOM_ESTADO[campo.estado]}`}
+      className={`flex flex-col rounded-2xl border p-3.5 transition ${bloqueado ? "border-alert-border bg-alert-bg" : TOM_ESTADO[campo.estado]}`}
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-stone-800 dark:text-stone-100">
+      <div className="flex items-start gap-2">
+        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-stone-800 dark:text-stone-100">
           {meta.label}
-          {meta.obrigatorio ? (
-            <span className="rounded-full bg-alert px-2 py-0.5 text-[0.6875rem] font-bold uppercase tracking-wide text-alert-text">
-              obrigatório
-            </span>
-          ) : null}
-          {meta.unico ? (
-            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-[0.6875rem] font-semibold text-stone-600 dark:bg-stone-700 dark:text-stone-300">
-              só no arranque
-            </span>
-          ) : null}
         </p>
         {campo.estado === "confirmado" && !bloqueado ? (
           <Check size={15} className="mt-0.5 flex-none text-brand" aria-hidden />
@@ -337,9 +400,27 @@ export function CampoCustoConhecido({
         {bloqueado ? <Warning size={15} className="mt-0.5 flex-none text-alert-text" aria-hidden /> : null}
       </div>
 
-      <p className="mt-1 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{meta.hint}</p>
+      {meta.obrigatorio || meta.unico ? (
+        <p className="mt-1.5 flex flex-wrap gap-1.5">
+          {meta.obrigatorio ? (
+            // A borda não é decoração: no modo escuro `bg-alert` e `bg-alert-bg`
+            // caem no mesmo #302b12, e sem ela o distintivo desaparecia dentro
+            // do cartão bloqueado — ficava texto dourado solto.
+            <span className="texto-mini inline-flex items-center rounded-full border border-alert-border bg-alert px-2 py-0.5 font-bold uppercase tracking-[.08em] text-alert-text">
+              Obrigatório
+            </span>
+          ) : null}
+          {meta.unico ? (
+            <span className="texto-mini inline-flex items-center rounded-full border border-stone-200 bg-stone-100 px-2 py-0.5 font-bold uppercase tracking-[.08em] text-stone-600 dark:border-stone-600 dark:bg-stone-700 dark:text-stone-300">
+              Só no arranque
+            </span>
+          ) : null}
+        </p>
+      ) : null}
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <p className="mt-1.5 text-xs leading-relaxed text-stone-500 dark:text-stone-400">{meta.hint}</p>
+
+      <div className={`mt-3 grid gap-3 ${doisControlos ? "sm:grid-cols-2" : "grid-cols-1"}`}>
         <label className="block min-w-0 text-xs font-semibold text-stone-600 dark:text-stone-400">
           O que sabes sobre este custo
           <select
@@ -353,7 +434,7 @@ export function CampoCustoConhecido({
           </select>
         </label>
 
-        {campo.estado === "confirmado" || campo.estado === "estimado" ? (
+        {temValor ? (
           <label className="block min-w-0 text-xs font-semibold text-stone-600 dark:text-stone-400">
             Valor anual
             <span className="relative mt-1.5 block">
@@ -371,7 +452,7 @@ export function CampoCustoConhecido({
           </label>
         ) : null}
 
-        {campo.estado === "intervalo" ? (
+        {temIntervalo ? (
           <div className="grid grid-cols-2 gap-2">
             <label className="block min-w-0 text-xs font-semibold text-stone-600 dark:text-stone-400">
               Mínimo
@@ -407,15 +488,24 @@ export function CampoCustoConhecido({
           nenhuma conclusão pode dizer que a proposta cabe.
         </p>
       ) : null}
+
+      {/* O rodapé com a fonte legal é empurrado para baixo (`mt-auto`): numa
+          linha de dois cartões, o que tem citação deixa de esticar o vizinho e
+          de lhe abrir um vazio de 200px. */}
       {fonte ? (
         <a
           href={fonte.source.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-2.5 inline-flex min-h-[36px] items-center gap-1 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
+          className="mt-auto inline-flex min-h-[36px] items-center pt-2.5 text-xs font-semibold leading-relaxed text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint"
         >
-          {fonte.locator ? `${fonte.source.title}, ${fonte.locator.article}` : fonte.source.title}{" "}
-          <ExternalLink size={12} />
+          {/* O ícone vive DENTRO do texto: como item de flex, num título de
+              duas linhas ia centrar-se verticalmente lá ao fundo à direita,
+              longe da última palavra a que pertence. */}
+          <span className="min-w-0">
+            {fonte.locator ? `${fonte.source.title}, ${fonte.locator.article}` : fonte.source.title}
+            <ExternalLink size={12} className="ml-1 inline-block align-[-1px]" />
+          </span>
         </a>
       ) : null}
     </div>

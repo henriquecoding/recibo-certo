@@ -42,13 +42,13 @@ SELECT t.conta($$SELECT count(*) FROM public.contabilista_vinculos$$, 0,
 SELECT t.entrar('22222222-2222-2222-2222-222222222222');
 SELECT t.rpc_ok($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-01T09:00:00+01','2026-09-01T10:00:00+01','online')$$,
+    t.instante_agenda('09:00'),t.instante_agenda('10:00'),'online')$$,
   'cliente marca consulta num horário publicado');
 
 -- ⚠️ As regras que a política nunca conseguiu ver, e a RPC vê.
 SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-01T03:00:00+01','2026-09-01T04:00:00+01','online')$$,
+    t.instante_agenda('03:00'),t.instante_agenda('04:00'),'online')$$,
   'horario_nao_publicado', 'marcar às 3 da manhã, fora da agenda publicada');
 
 SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
@@ -63,13 +63,14 @@ SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
 
 SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-01T09:00:00+01','2026-09-01T09:20:00+01','online')$$,
+    t.instante_agenda('09:00'),t.instante_agenda('09:20'),'online')$$,
   'horario_nao_publicado', 'marcar 20 minutos num período de uma hora');
 
 -- E a escrita direta deixou de existir.
 SELECT t.recusa($$INSERT INTO public.agendamentos (contabilista_id, cliente_id, inicio, fim)
   VALUES ('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222',
-          '2026-09-02T09:00:00+01','2026-09-02T10:00:00+01')$$,
+          t.instante_agenda('09:00') + interval '1 day',
+          t.instante_agenda('10:00') + interval '1 day')$$,
   'marcar por escrita direta, contornando a RPC');
 
 -- A garantia estrutural: outra pessoa não ocupa o mesmo horário.
@@ -84,11 +85,11 @@ SELECT t.permite($$SELECT public.decidir_vinculo(
 SELECT t.entrar('33333333-3333-3333-3333-333333333333');
 SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-01T09:00:00+01','2026-09-01T10:00:00+01','online')$$,
+    t.instante_agenda('09:00'),t.instante_agenda('10:00'),'online')$$,
   'horario_ocupado', 'segunda pessoa marca por cima do mesmo horário');
 SELECT t.rpc_ok($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-01T11:00:00+01','2026-09-01T12:00:00+01','online')$$,
+    t.instante_agenda('11:00'),t.instante_agenda('12:00'),'online')$$,
   'horário livre a seguir');
 
 -- O cliente não conclui a consulta — carimbava o cartão sozinho.
@@ -106,7 +107,8 @@ SELECT t.rpc_ok($$SELECT public.cancelar_consulta(
 SELECT t.entrar('55555555-5555-5555-5555-555555555555');
 SELECT t.rpc_recusa($$SELECT public.marcar_consulta(
     '11111111-1111-1111-1111-111111111111',
-    '2026-09-02T09:00:00+01','2026-09-02T10:00:00+01','online')$$,
+    t.instante_agenda('09:00') + interval '1 day',
+    t.instante_agenda('10:00') + interval '1 day','online')$$,
   'sem_vinculo_ativo', 'marcar sem vínculo ativo');
 
 \echo ''

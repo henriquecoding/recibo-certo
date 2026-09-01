@@ -187,7 +187,10 @@ export default function ComparadorPacotes({
               ) : null}
             </tr>
           </thead>
-          <tbody className="divide-y divide-brand/10">
+          {/* `divide-brand/10` sobre `bg-brand-light/55` dava 1,01:1 — a linha
+              existia no DOM e não existia no ecrã, que é o defeito que a régua
+              da hierarquia mede. */}
+          <tbody className="divide-y divide-brand/25">
             {LINHAS.map((linha) => {
               const ultima = colunas[colunas.length - 1]!;
               const delta = linha.numero && colunas.length > 1

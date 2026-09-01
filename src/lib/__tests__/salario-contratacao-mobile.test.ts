@@ -78,6 +78,30 @@ describe("Salário com dois caminhos", () => {
     // de uma secção fechada.
     expect(estado).toContain("equipmentFirstYear: custoVazio()");
   });
+
+  it("apresenta o planeador como um percurso guiado sem duplicar o motor no cliente", () => {
+    const page = read("src/app/ferramentas/planeador-contratacao/page.tsx");
+    const planner = read("src/components/contratacao/PlaneadorContratacao.tsx");
+    const studio = read("src/components/contratacao/StudioContratacao.tsx");
+    const entrance = read("src/components/contratacao/EntradaPlaneador.tsx");
+    const shell = read("src/components/ferramentas/ToolShell.tsx");
+    expect(page).toContain("<EntradaPlaneador");
+    expect(page).toContain("inicio={<EntradaPlaneador");
+    expect(shell).toContain("{inicio ?? (");
+    expect(entrance).toContain("Estúdio de contratação");
+    expect(entrance).toContain('href="#ferramenta"');
+    expect(entrance).toContain("A decisão em três respostas");
+    expect(planner).not.toContain("<CabecalhoStudio");
+    expect(planner).toContain("<NavegacaoEtapas");
+    expect(planner).toContain("<ResumoPlaneador");
+    expect(planner).toContain("<PainelEtapa index={5}");
+    expect(studio).toContain('role="tablist"');
+    expect(studio).toContain('role="tabpanel"');
+    expect(studio).toContain('role="progressbar"');
+    expect(studio).toContain('tabIndex={active ? 0 : -1}');
+    expect(studio).not.toContain("planEmploymentOffer(");
+    expect(studio).not.toContain("employerSocialSecurity");
+  });
 });
 
 describe("contrato mobile da homepage", () => {

@@ -185,7 +185,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     access: ACESSO_TUDO_GRATIS,
     privacy: "local-only",
     fiscalYear: 2026,
-    reviewedAt: "2026-08-30",
+    reviewedAt: "2026-08-31",
     highlight: "Para quem contrata",
     status: "novo",
     dashboardHref: "/dashboard/contratacao",

@@ -87,7 +87,7 @@ export default function ToolStart({ tool }: { tool: ToolDefinition }) {
       </ul>
 
       <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-400">
-        Regras verificadas para {tool.fiscalYear} · última revisão a {dataPT(tool.reviewedAt)}.{" "}
+        Referência fiscal de {tool.fiscalYear} · revista a {dataPT(tool.reviewedAt)}.{" "}
         <a href="/metodologia" className="font-semibold text-brand-dark underline-offset-2 hover:underline dark:text-brand-mint">
           Como verificamos
         </a>
