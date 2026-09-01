@@ -13,6 +13,7 @@
 import { registar } from "@/lib/analytics/cliente";
 import { baldeDeComprimento, baldeDeContagem, baldeDeTempo, type ClasseViewport } from "@/lib/analytics/eventos";
 import { VERSAO_INDICE, type FiltroIntencao } from "./esquema";
+import type { PlanoBusca } from "./plano";
 import { tokens } from "./normalizar";
 
 export interface ContextoMedicao {
@@ -90,4 +91,72 @@ export function medirAbandono(
 
 export function medirNavegacao(itemId: string, viewport: ClasseViewport) {
   registar("header_nav_click", { item_id: itemId, viewport_class: viewport });
+}
+
+/* ─── A moldura ───────────────────────────────────────────────────── */
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ MEDE-SE A DECISÃO, NUNCA A LEITURA                                   │
+ * │                                                                     │
+ * │ Estas funções recebem o `PlanoBusca` — que não transporta valores,   │
+ * │ só tipos de entidade — e dele tiram forma: que família, que          │
+ * │ confiança, quantas entidades, que pergunta se fez. A frase da pessoa │
+ * │ não passa por aqui nem podia: não há nenhum parâmetro onde ela       │
+ * │ caiba, e a barreira de `pii.ts` recusaria uma chave com «valor» no   │
+ * │ nome mesmo que houvesse.                                            │
+ * │                                                                     │
+ * │ `nenhum` em vez de omitir: um campo ausente e um campo a dizer «não  │
+ * │ reconheci nada» são a mesma linha no painel e duas perguntas         │
+ * │ diferentes — «quantas consultas não têm família?» só se responde se  │
+ * │ a ausência for um valor.                                            │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export function medirPlano(ctx: ContextoMedicao, plano: PlanoBusca) {
+  registar("header_search_intent_recognized", {
+    ...contexto(ctx),
+    domain: plano.dominio ?? "nenhum",
+    intent: plano.intencao ?? "nenhuma",
+    plan_state: plano.estado,
+    confidence: plano.confianca,
+    renderer: plano.principal?.renderer ?? "nenhum",
+    entity_count: plano.entidades.length,
+  });
+
+  if (plano.clarificacao) {
+    registar("header_search_clarification_shown", {
+      ...contexto(ctx),
+      kind: plano.clarificacao.tipo,
+      domain: plano.dominio ?? "nenhum",
+    });
+  }
+}
+
+export function medirResposta(ctx: ContextoMedicao, tipo: string, opcao: string) {
+  registar("header_search_clarification_answered", { ...contexto(ctx), kind: tipo, answer: opcao });
+}
+
+export function medirAcaoPreparada(
+  ctx: ContextoMedicao,
+  { id, renderer, confianca, campos }: { id: string; renderer: string; confianca: string; campos: number },
+) {
+  registar("header_search_prepared_action_open", {
+    ...contexto(ctx),
+    document_id: id,
+    renderer,
+    confidence: confianca,
+    handoff_field_count: campos,
+  });
+}
+
+export function medirAlternativa(ctx: ContextoMedicao, id: string, posicao: number) {
+  registar("header_search_alternate_path_click", { ...contexto(ctx), document_id: id, rank: posicao });
+}
+
+export function medirApoio(ctx: ContextoMedicao, principal: boolean, filtros: number) {
+  registar("header_search_professional_support_open", {
+    ...contexto(ctx),
+    as_primary: principal,
+    filter_count: filtros,
+  });
 }

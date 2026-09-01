@@ -317,7 +317,7 @@ export function CaminhoPreparado({
         data-resultado
         data-caminho-principal
         onClick={(e) => {
-          controlador.aoEscolherAcao(acao, 1);
+          controlador.aoEscolherAcao(acao, 1, "principal");
           if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
         }}
         className="focus-marca mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-semibold text-white no-underline transition-colors hover:bg-brand-dark"
@@ -486,7 +486,7 @@ export function OutrosCaminhos({
               href={a.href}
               data-resultado
               onClick={(e) => {
-                controlador.aoEscolherAcao(a, i + 2);
+                controlador.aoEscolherAcao(a, i + 2, "alternativa");
                 if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
               }}
               className="focus-marca flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm text-stone-700 no-underline transition-colors hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
@@ -554,6 +554,7 @@ export function FaixaApoio({
         href={apoio.href}
         data-resultado
         onClick={(e) => {
+          controlador.aoEscolherAcao({ id: "apoio:contabilistas", tipo: "apoio" }, 1, "apoio");
           if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
         }}
         className={`focus-marca flex min-h-9 flex-none items-center gap-1.5 rounded-lg px-3 text-xs font-semibold no-underline transition-colors ${

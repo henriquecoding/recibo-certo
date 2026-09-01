@@ -5,6 +5,8 @@ import { construirDocumentos } from "@/lib/busca/documentos";
 import { TETO_POPOVER, pesquisar } from "@/lib/busca/pontuar";
 import { consultaParaRanking, reconhecer } from "@/lib/busca/reconhecer";
 import { aplicarResposta, compilarPlano, camposDoHandoff, type PlanoBusca } from "@/lib/busca/plano";
+import { CATALOGO } from "@/lib/analytics/eventos";
+import { verificarSemPII } from "@/lib/analytics/pii";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  A MOLDURA APROVADA É UM CONTRATO, NÃO UMA REFERÊNCIA VAGA
@@ -120,6 +122,116 @@ describe("busca:moldura-alvos", () => {
     // O piso tipográfico é uma classe, não um valor à mão.
     expect(MOLDURA).not.toMatch(/text-\[1[01]px\]/);
     expect(MOLDURA).toContain("texto-mini");
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  A MEDIÇÃO DA MOLDURA — a decisão sai, a leitura não
+// ═══════════════════════════════════════════════════════════════════════
+
+describe("busca:moldura-medicao", () => {
+  const CONSULTAS = [
+    "quanto me fica de 1 200 € por mês",
+    "recibos verdes ou empresa com 3 500 € por mês",
+    "contabilista no Porto para o iva de um cliente que não me pagou",
+    "quando entrego o iva",
+    "1200 €",
+    "xpto qwerty zzz",
+  ];
+
+  it("nenhum evento da moldura passa a barreira de PII com o que quer que seja", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ NÃO SE TESTA UMA CHAMADA — TESTAM-SE OS PAYLOADS POSSÍVEIS     │
+    // │                                                               │
+    // │ Um teste que verificasse «a função X não envia a consulta»     │
+    // │ ficaria verde no dia em que alguém acrescentasse um campo      │
+    // │ novo. Este constrói o payload de cada evento a partir de       │
+    // │ planos REAIS de consultas com valor, distrito e caso descrito  │
+    // │ por extenso — e passa-o pela mesma barreira que corre em       │
+    // │ produção.                                                     │
+    // └───────────────────────────────────────────────────────────────┘
+    for (const consulta of CONSULTAS) {
+      const plano = planoDe(consulta);
+      const payloads: Record<string, unknown>[] = [
+        {
+          viewport_class: "secretaria",
+          route_group: "/",
+          domain: plano.dominio ?? "nenhum",
+          intent: plano.intencao ?? "nenhuma",
+          plan_state: plano.estado,
+          confidence: plano.confianca,
+          renderer: plano.principal?.renderer ?? "nenhum",
+          entity_count: plano.entidades.length,
+        },
+        ...(plano.clarificacao
+          ? [
+              {
+                viewport_class: "secretaria",
+                route_group: "/",
+                kind: plano.clarificacao.tipo,
+                domain: plano.dominio ?? "nenhum",
+              },
+              ...plano.clarificacao.opcoes.map((o) => ({
+                viewport_class: "secretaria",
+                route_group: "/",
+                kind: plano.clarificacao!.tipo,
+                answer: o.id,
+              })),
+            ]
+          : []),
+        ...(plano.principal
+          ? [
+              {
+                viewport_class: "secretaria",
+                route_group: "/",
+                document_id: plano.principal.id,
+                renderer: plano.principal.renderer,
+                confidence: plano.confianca,
+                handoff_field_count: plano.principal.campos.length,
+              },
+            ]
+          : []),
+        ...plano.alternativas.map((a, i) => ({
+          viewport_class: "secretaria",
+          route_group: "/",
+          document_id: a.id,
+          rank: i + 2,
+        })),
+        {
+          viewport_class: "secretaria",
+          route_group: "/",
+          as_primary: plano.apoio?.principal ?? false,
+          filter_count: plano.apoio?.filtros.length ?? 0,
+        },
+      ];
+
+      for (const payload of payloads) {
+        const r = verificarSemPII(payload);
+        expect(r.ok, `${consulta} → ${r.motivo ?? ""} em ${JSON.stringify(payload)}`).toBe(true);
+      }
+    }
+  });
+
+  it("os seis eventos novos estão no catálogo — sem entrada não saem", () => {
+    for (const nome of [
+      "header_search_intent_recognized",
+      "header_search_clarification_shown",
+      "header_search_clarification_answered",
+      "header_search_prepared_action_open",
+      "header_search_alternate_path_click",
+      "header_search_professional_support_open",
+    ] as const) {
+      expect(CATALOGO[nome], nome).toBeTruthy();
+      expect(CATALOGO[nome].origem).toBe("cliente");
+    }
+  });
+
+  it("a medição não conhece a consulta — não há por onde ela entrar", () => {
+    const MEDICAO = semComentarios(ler("lib", "busca", "medicao.ts"));
+    // As funções da moldura recebem o plano e o contexto. Se alguma
+    // passasse a receber a frase, era aqui que se via.
+    expect(MEDICAO).toContain("medirPlano(ctx: ContextoMedicao, plano: PlanoBusca)");
+    expect(MEDICAO).not.toMatch(/registar\([^)]*consulta[^)]*\)/);
   });
 });
 

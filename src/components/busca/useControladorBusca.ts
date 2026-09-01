@@ -40,8 +40,13 @@ import {
   classeDeViewport,
   medirAbandono,
   medirAbertura,
+  medirAcaoPreparada,
+  medirAlternativa,
+  medirApoio,
   medirClique,
   medirConsulta,
+  medirPlano,
+  medirResposta,
   type ContextoMedicao,
 } from "@/lib/busca/medicao";
 
@@ -72,8 +77,19 @@ export interface ControladorBusca {
   mensagemEstado: string;
   hrefTodos: string;
   aoEscolher: (doc: DocumentoBusca, posicao: number) => void;
-  /** O mesmo, para uma ação da moldura (que não é um documento). */
-  aoEscolherAcao: (acao: { id: string; tipo: string }, posicao: number) => void;
+  /**
+   * O mesmo, para uma ação da moldura (que não é um documento).
+   *
+   * `origem` não é decoração: «abriu o caminho preparado» e «preferiu uma
+   * alternativa» são a métrica central e o seu contraditório. Contá-las no
+   * mesmo evento seria perder exactamente a pergunta que interessa —
+   * «a recomendação está certa?».
+   */
+  aoEscolherAcao: (
+    acao: { id: string; tipo: string; renderer?: string; campos?: unknown[] },
+    posicao: number,
+    origem: "principal" | "alternativa" | "apoio",
+  ) => void;
 
   /* ── A moldura canónica ───────────────────────────────────────── */
 
@@ -262,11 +278,32 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
    * o plano produz. Ter dois caminhos de medição seria ter duas contagens
    * a divergir: o que se mede é sempre um id do índice e uma posição.
    */
+  const planoRef = useRef<PlanoBusca | null>(null);
+
   const aoEscolherAcao = useCallback(
-    (acao: { id: string; tipo: string }, posicao: number) => {
+    (
+      acao: { id: string; tipo: string; renderer?: string; campos?: unknown[] },
+      posicao: number,
+      origem: "principal" | "alternativa" | "apoio",
+    ) => {
       houveClique.current = true;
       guardarRecente(consultaRef.current);
       medirClique(medicao.current, { id: acao.id, tipo: acao.tipo, posicao, intencao });
+
+      const ctx = medicao.current;
+      if (origem === "principal") {
+        medirAcaoPreparada(ctx, {
+          id: acao.id,
+          renderer: acao.renderer ?? "nenhum",
+          confianca: planoRef.current?.confianca ?? "baixa",
+          campos: acao.campos?.length ?? 0,
+        });
+      } else if (origem === "alternativa") {
+        medirAlternativa(ctx, acao.id, posicao);
+      } else {
+        const apoio = planoRef.current?.apoio;
+        medirApoio(ctx, apoio?.principal ?? false, apoio?.filtros.length ?? 0);
+      }
     },
     [intencao],
   );
@@ -320,11 +357,30 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
     return hrefComHandoff(acao.href, handoffId);
   }, [plano, handoffId]);
 
+  /**
+   * Um evento por PLANO, e não por render.
+   *
+   * A chave inclui a resposta porque responder à pergunta produz um plano
+   * diferente — e é isso que se quer contar: quantas perguntas levam a um
+   * caminho. Sem a resposta na chave, a segunda metade da história ficava
+   * por medir.
+   */
+  planoRef.current = plano;
+  const planosMedidos = useRef(new Set<string>());
+  useEffect(() => {
+    if (!plano || estado !== "pronto") return;
+    const chave = `${adiada.trim().toLowerCase()}|${intencao}|${resposta?.opcao ?? ""}`;
+    if (planosMedidos.current.has(chave)) return;
+    planosMedidos.current.add(chave);
+    medirPlano(medicao.current, plano);
+  }, [plano, estado, adiada, intencao, resposta]);
+
   const responder = useCallback(
     (opcao: string) => {
       const tipo = plano?.clarificacao?.tipo;
       if (!tipo) return;
       setResposta({ tipo, opcao });
+      medirResposta(medicao.current, tipo, opcao);
     },
     [plano],
   );

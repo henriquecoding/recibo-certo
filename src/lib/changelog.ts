@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.151.0",
+    data: "2026-09-01",
+    titulo: "A pesquisa passa a dizer o que percebeu — e a preparar um caminho, em vez de devolver uma lista",
+    itens: [
+      "Escreve uma pergunta como a farias a uma pessoa — «quanto me fica de 1 200 € por mês?», «recibos verdes ou empresa com 3 500 € por mês?», «quando entrego o IVA?» — e a barra deixa de responder com uma lista de resultados: mostra o que percebeu, prepara UM caminho e abre a ferramenta certa já com o contexto.",
+      "Por cima do caminho lês o que foi reconhecido: a família de decisão, o valor, a periodicidade, o distrito. Se percebemos alguma coisa a mais, «Ver ou corrigir» devolve-te a frase ao campo sem esse pedaço. E há um «Porque recomendamos isto?» que responde com as regras que decidiram — não com uma explicação inventada.",
+      "«Pedido claro» só aparece quando o resultado se destaca mesmo dos seguintes. Em tudo o resto lê-se «pedido reconhecido», que é a verdade: percebemos o assunto e não temos a certeza do caminho. Numa decisão sobre dinheiro, dizer «claro» sobre um palpite é o pior que a interface pode fazer.",
+      "Quando falta um dado que muda o resultado — «isso é por mês ou por ano?» — a pesquisa faz UMA pergunta, com uma saída para quem não sabe. E só faz perguntas cuja resposta chega mesmo ao destino: a que perguntava pelo IVA foi retirada porque a resposta morria a meio do caminho.",
+      "O valor que escreves NUNCA entra no endereço. Viaja num contexto que fica no separador, com dez minutos de validade e uma única leitura; no URL vai só um identificador sem significado. Um rendimento no histórico do browser, nos registos de acesso ou em analytics não se corrige depois de acontecer.",
+      "A pesquisa passa a conhecer o site inteiro. Além das ferramentas, guias e atividades, entram os prazos de IVA, Segurança Social e IRS (com a base legal, a fonte oficial e a data em que foi conferida), as páginas de metodologia, estado dos dados, privacidade e termos, e o diretório de contabilistas — que aparece com filtros já preenchidos e sem nunca partilhar a tua pergunta.",
+      "Quando não há uma resposta segura, é isso que se lê. Nada de mandar-te para a página mais parecida: dizemos que não encontrámos, mantemos o que escreveste e oferecemos três caminhos e a pesquisa completa.",
+      "Três coisas que estavam erradas há muito e ninguém via: uma pergunta de várias palavras podia devolver o documento que acertava em menos delas; as preposições («em», «para», «no») contavam como se fossem assunto, e por isso a pesquisa respondia PIOR quanto mais natural fosse a frase; e escrever «contabilista em Lisboa para IVA» não devolvia nada.",
+      "Tudo isto continua a acontecer no teu dispositivo. O reconhecimento, a ordenação e a decisão correm no browser, sem servidor nenhum pelo meio — e a medição regista a forma da decisão (que família, que confiança, que pergunta) sem nunca registar o que escreveste.",
+    ],
+  },
+  {
     version: "2.150.0",
     data: "2026-09-01",
     titulo: "A fotografia de perfil e o painel de administração voltaram — nunca tinham saído da base de dados",

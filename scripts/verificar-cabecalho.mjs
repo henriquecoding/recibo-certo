@@ -468,18 +468,43 @@ for (const tema of [null, "dark"]) await bloco(`Tema ${tema ?? "claro"}`, async 
 
   const cores = await page.evaluate(() => {
     const painel = document.querySelector('[data-busca-painel="aberto"]');
-    const titulo = painel?.querySelector("[data-resultado] span span");
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ O TÍTULO MUDOU DE SÍTIO, E O SELECTOR FICOU A APONTAR PARA NADA  │
+    // │                                                                 │
+    // │ Era `[data-resultado] span span` — a estrutura de uma LINHA de   │
+    // │ resultado. Com a moldura canónica, uma consulta reconhecida      │
+    // │ mostra um caminho preparado com um `h3`, e a linha pode nem      │
+    // │ existir: `querySelector` devolvia `null`, a cor vinha vazia e a  │
+    // │ secção inteira rebentava com «Cannot read properties of null».   │
+    // │                                                                 │
+    // │ Passa a aceitar as duas composições, pela ordem em que aparecem. │
+    // │ Um portão que rebenta quando o desenho muda não mede nada.       │
+    // └─────────────────────────────────────────────────────────────────┘
+    // O `h3` do caminho preparado, ou o título de uma linha da lista. NUNCA
+    // o botão principal: esse tem preenchimento próprio (`bg-brand`) e o
+    // seu texto branco não se mede contra a superfície do painel — mediria
+    // branco contra branco e reprovaria uma composição correcta.
+    const titulo = painel?.querySelector("h3") ?? painel?.querySelector("[data-resultado] span span");
     return {
       fundo: painel ? getComputedStyle(painel).backgroundColor : "",
       texto: titulo ? getComputedStyle(titulo).color : "",
     };
   });
+  /** Luminância aproximada. `null` quando não há cor para medir. */
   const lum = (rgb) => {
-    const [r, g, b] = rgb.match(/\d+/g).map(Number);
+    const partes = (rgb ?? "").match(/\d+/g);
+    if (!partes || partes.length < 3) return null;
+    const [r, g, b] = partes.map(Number);
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   };
-  reg("o painel usa a superfície do tema", lum(cores.fundo) > 128 === (tema !== "dark"), cores.fundo);
-  reg("o texto contrasta com a superfície", Math.abs(lum(cores.fundo) - lum(cores.texto)) > 90);
+  const lumFundo = lum(cores.fundo);
+  const lumTexto = lum(cores.texto);
+  reg("o painel usa a superfície do tema", lumFundo !== null && lumFundo > 128 === (tema !== "dark"), cores.fundo);
+  reg(
+    "o texto contrasta com a superfície",
+    lumFundo !== null && lumTexto !== null && Math.abs(lumFundo - lumTexto) > 90,
+    `fundo ${cores.fundo || "?"} · texto ${cores.texto || "?"}`,
+  );
 
   await page.locator("#rc-header-busca").focus();
   await page.keyboard.press("ArrowDown");
