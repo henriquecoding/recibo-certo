@@ -44,11 +44,29 @@ export interface EntidadeReconhecida {
    */
   valor: string | number;
   /**
-   * O que a pessoa escreveu, tal e qual. É o que a linha «pedido
-   * reconhecido» mostra: devolver a nossa palavra em vez da dela seria
-   * pedir-lhe que confirmasse uma tradução que não pediu.
+   * O que a pessoa escreveu, tal e qual. É por ele que a correcção tira o
+   * pedaço da frase, e é ele que a linha «pedido reconhecido» mostra:
+   * devolver a nossa palavra em vez da dela seria pedir-lhe que
+   * confirmasse uma tradução que não pediu.
    */
   texto: string;
+  /**
+   * Uma forma legível, quando a que casou não o é.
+   *
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ «POR MES» NÃO É PORTUGUÊS, E ESTAVA A APARECER NO ECRÃ             │
+   * │                                                                   │
+   * │ Os padrões são comparados contra o texto NORMALIZADO (sem acentos, │
+   * │ minúsculas) — é assim que «Por Mês», «por mes» e «POR MÊS» casam   │
+   * │ todos. Mostrar o padrão que casou punha «por mes» numa etiqueta a  │
+   * │ dizer «foi isto que percebemos», com um erro ortográfico nosso.    │
+   * │                                                                   │
+   * │ Quando o padrão é uma família de formas (a periodicidade é a       │
+   * │ única, para já), o que se mostra é o rótulo canónico em português  │
+   * │ e o que se remove continua a ser o que casou.                      │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  rotulo?: string;
 }
 
 export interface Reconhecimento {
@@ -77,7 +95,9 @@ export type SinalReconhecimento =
   | "ENTITY_LOCATION"
   | "ENTITY_PROFILE"
   | "COMPARISON_DETECTED"
-  | "PROFESSIONAL_HELP_REQUESTED";
+  | "PROFESSIONAL_HELP_REQUESTED"
+  /** A pessoa respondeu à pergunta de clarificação. Ver `plano.ts`. */
+  | "CLARIFICATION_ANSWERED";
 
 /* ─── Valor monetário ─────────────────────────────────────────────── */
 
@@ -177,11 +197,20 @@ const PERIODICIDADES: { valor: Periodicidade; padroes: string[] }[] = [
   { valor: "ano", padroes: ["por ano", "ao ano", "anual", "anuais", "ano", "anualmente"] },
 ];
 
+/** Como se escreve cada periodicidade, em português e por extenso. */
+const ROTULO_PERIODICIDADE: Record<Periodicidade, string> = {
+  hora: "à hora",
+  dia: "por dia",
+  mes: "por mês",
+  trimestre: "por trimestre",
+  ano: "por ano",
+};
+
 function extrairPeriodicidade(normalizada: string, palavras: string[]): EntidadeReconhecida | null {
   for (const { valor, padroes } of PERIODICIDADES) {
     for (const p of padroes) {
       const achou = p.includes(" ") ? normalizada.includes(p) : palavras.includes(p);
-      if (achou) return { tipo: "periodicidade", valor, texto: p };
+      if (achou) return { tipo: "periodicidade", valor, texto: p, rotulo: ROTULO_PERIODICIDADE[valor] };
     }
   }
   return null;

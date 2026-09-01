@@ -111,6 +111,7 @@ const documentosFerramentas = (): DocumentoBusca[] =>
     renderer: rendererDaFerramenta(f),
     ...(f.aceitaEntidades?.length ? { aceita: f.aceitaEntidades } : {}),
     anoFiscal: f.fiscalYear,
+    minutos: f.estimatedMinutes,
     prioridade: f.searchPriority,
   }));
 
@@ -258,23 +259,30 @@ const documentosObrigacoes = (): DocumentoBusca[] => {
   const categorias: CategoriaPrazo[] = ["iva", "ss", "irs"];
 
   return categorias.map((categoria) => {
-    const daCategoria = prazos.filter((p) => p.categoria === categoria);
-    const declaracoes = daCategoria.filter((p) => p.natureza === "declaracao").length;
-    const pagamentos = daCategoria.filter((p) => p.natureza === "pagamento").length;
+    const datas = prazos.filter((p) => p.categoria === categoria).length;
     const fonte = FONTES_PRAZOS[FONTE_POR_CATEGORIA[categoria]];
-
-    const contagem = [
-      declaracoes > 0 ? `${declaracoes} entrega${declaracoes === 1 ? "" : "s"}` : "",
-      pagamentos > 0 ? `${pagamentos} pagamento${pagamentos === 1 ? "" : "s"}` : "",
-    ]
-      .filter(Boolean)
-      .join(" e ");
 
     return {
       id: `obrigacao:${categoria}`,
       tipo: "obrigacao" as const,
       titulo: `${TITULO_POR_CATEGORIA[categoria]} em ${FISCAL_YEAR}`,
-      descricao: `${VERBO_POR_CATEGORIA[categoria]}. ${contagem} em ${FISCAL_YEAR}, com as datas já ajustadas a fins de semana e feriados.`,
+      /**
+       * ┌───────────────────────────────────────────────────────────────┐
+       * │ «16 ENTREGAS E 16 PAGAMENTOS» ERA VERDADE E ENGANAVA           │
+       * │                                                               │
+       * │ O motor gera as datas dos DOIS regimes de IVA — trimestral e   │
+       * │ mensal — porque o calendário tem de as conhecer a todas. Somar │
+       * │ as duas e dizer «16 entregas» a uma pessoa que faz quatro por  │
+       * │ ano é dar-lhe um número correcto sobre o calendário e errado   │
+       * │ sobre ela. Num produto fiscal, é a pior categoria de engano:   │
+       * │ o que se pode defender à letra.                                │
+       * │                                                               │
+       * │ Passa a dizer quantas datas o CALENDÁRIO tem e a dizer, na     │
+       * │ mesma frase, que as que se aplicam dependem do regime — que é  │
+       * │ exactamente o que a página de prazos faz quando lá se chega.   │
+       * └───────────────────────────────────────────────────────────────┘
+       */
+      descricao: `${VERBO_POR_CATEGORIA[categoria]}. São ${datas} datas no calendário de ${FISCAL_YEAR}, já ajustadas a fins de semana e feriados; as que se aplicam a ti dependem do teu regime.`,
       // A categoria viaja na query porque o calendário filtra por ela: o
       // destino abre já no imposto que a pessoa perguntou. Não é contexto
       // sensível — é o nome de um imposto, e é o mesmo que ela escreveu.

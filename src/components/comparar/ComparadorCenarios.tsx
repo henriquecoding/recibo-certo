@@ -72,7 +72,7 @@ const fmtK = (n: number) => `${Math.round(n / 1000)}k€`;
  * `busca:handoff` reprova se os dois divergirem.
  */
 const DESTINO_BUSCA = "ferramenta:comparar-regimes";
-const ACEITA_BUSCA: TipoEntidade[] = ["valor", "periodicidade"];
+const ACEITA_BUSCA: TipoEntidade[] = ["valor", "periodicidade", "base"];
 
 /** Tecto de sanidade do slider. Um contexto absurdo não desenha nada. */
 const BRUTO_MAXIMO = 500_000;
@@ -129,6 +129,19 @@ export default function ComparadorCenarios() {
   // custam ao cliente 40 000 €. São grandezas diferentes e a escolha entre
   // elas muda a resposta — por isso é explícita, não silenciosa.
   const [modo, setModo] = useState<"iliquido" | "custoEmpregador">("iliquido");
+
+  /**
+   * A base de comparação, quando a pesquisa já a perguntou.
+   *
+   * É a MESMA escolha que este comparador pede em «Comparar por» — e é por
+   * isso que a pergunta na barra é legítima: não inventa um conceito novo,
+   * antecipa uma que já existe aqui. Sem esta linha, a resposta morria a
+   * meio do caminho e a pergunta passava a ser um obstáculo.
+   */
+  useEffect(() => {
+    const base = contexto?.base;
+    if (base === "custoEmpregador" || base === "iliquido") setModo(base);
+  }, [contexto]);
 
   const despesas = num(despesasStr);
   const custosEmpresa = num(contabilistaStr);

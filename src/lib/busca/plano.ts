@@ -71,9 +71,14 @@ export interface AcaoPreparada {
   /** O destino final, já com os filtros estruturados que existirem. */
   href: string;
   requerConta: boolean;
+  /** Estimativa da própria ferramenta, quando existe. Aparece com «≈». */
+  minutos?: number;
   fonte?: FonteDoc;
+  /** O que o destino SABE receber. Vem do catálogo, não da consulta. */
+  aceita: TipoEntidade[];
   /**
-   * Os TIPOS de entidade que este destino vai receber — nunca os valores.
+   * Os TIPOS de entidade que este destino vai receber DESTA consulta —
+   * nunca os valores.
    *
    * A distinção é toda: um plano é serializável, é medível e é lido por
    * quem depura. Se transportasse «1 200 €», bastava alguém registá-lo
@@ -82,7 +87,7 @@ export interface AcaoPreparada {
   campos: TipoEntidade[];
 }
 
-export type TipoClarificacao = "valor_sem_destino" | "periodicidade" | "bruto_ou_faturado" | "iva_incluido";
+export type TipoClarificacao = "valor_sem_destino" | "periodicidade" | "base_de_comparacao";
 
 export interface OpcaoClarificacao {
   id: string;
@@ -120,7 +125,7 @@ export type CodigoExplicacao =
   | "LEADING_MARGIN"
   | "TIED_RESULTS"
   | "MISSING_PERIOD"
-  | "MISSING_VAT_CONTEXT"
+  | "MISSING_BASIS"
   | "MISSING_TARGET"
   | "NO_MATCH";
 
@@ -159,7 +164,9 @@ function acaoDe(doc: DocumentoBusca, reconhecimento: Reconhecimento): AcaoPrepar
     descricao: doc.descricao,
     href: doc.href,
     requerConta: doc.requerConta ?? false,
+    ...(doc.minutos ? { minutos: doc.minutos } : {}),
     ...(doc.fonte ? { fonte: doc.fonte } : {}),
+    aceita: doc.aceita ?? [],
     campos: camposDe(doc, reconhecimento),
   };
 }
@@ -207,22 +214,32 @@ const OPCAO_NAO_SEI: OpcaoClarificacao = { id: "nao-sei", label: "Não sei" };
 
 /**
  * ┌─────────────────────────────────────────────────────────────────────┐
- * │ O TESTE QUE UMA PERGUNTA TEM DE PASSAR PARA EXISTIR                  │
+ * │ OS DOIS TESTES QUE UMA PERGUNTA TEM DE PASSAR PARA EXISTIR           │
  * │                                                                     │
- * │ «Responder a isto muda MATERIALMENTE o resultado?» Se a resposta é   │
- * │ não, a pergunta é um obstáculo com ar de cuidado — e o custo é real: │
- * │ cada pergunta é uma paragem entre a pessoa e o que ela veio fazer.   │
+ * │ 1. «Responder a isto muda MATERIALMENTE o resultado?»                │
+ * │ 2. «A resposta CHEGA ao destino?»                                    │
  * │                                                                     │
- * │ As quatro que existem passam o teste:                                │
+ * │ O segundo teste apagou uma pergunta que parecia boa. «1 200 € inclui │
+ * │ IVA?» passa o primeiro com distinção — o IVA não é rendimento, é     │
+ * │ dinheiro que passa pela pessoa — e reprova no segundo: a calculadora │
+ * │ de recibos verdes não recebe esse campo, e a resposta morria aqui.   │
+ * │ Uma pergunta cuja resposta não vai a lado nenhum é um obstáculo com  │
+ * │ ar de cuidado, e o custo é real: é mais uma paragem entre a pessoa e │
+ * │ aquilo que ela veio fazer.                                          │
  * │                                                                     │
- * │  · um valor sem destino («1200») pode ser cinco contas diferentes;   │
- * │  · «por mês» ou «por ano» muda o escalão de IRS e o resultado todo;  │
- * │  · numa comparação, «bruto» e «faturado» não são o mesmo dinheiro —  │
- * │    comparar um com o outro dá uma conclusão errada e convincente;    │
- * │  · com ou sem IVA muda o que a pessoa recebe de facto.               │
+ * │ Ficam três, e todas viajam:                                          │
+ * │                                                                     │
+ * │  · um valor sem destino («1200») pode ser cinco contas diferentes —  │
+ * │    a resposta escolhe a página;                                      │
+ * │  · «por mês» ou «por ano» muda o escalão de IRS e o resultado todo — │
+ * │    a resposta viaja no contexto;                                     │
+ * │  · numa comparação, «proposta de salário» e «orçamento do cliente»   │
+ * │    não são o mesmo dinheiro. Não é uma pergunta inventada aqui: é a  │
+ * │    MESMA que o comparador já faz («Comparar por: rendimento          │
+ * │    ilíquido / custo do empregador»), feita antes em vez de depois.   │
  * │                                                                     │
  * │ E há sempre «Não sei». Obrigar a escolher entre duas opções que a    │
- * │ pessoa não distingue é pedir-lhe que invente um dado — que é          │
+ * │ pessoa não distingue é pedir-lhe que invente um dado — que é         │
  * │ exactamente o que este produto não pode fazer.                       │
  * └─────────────────────────────────────────────────────────────────────┘
  */
@@ -233,7 +250,7 @@ function perguntaDe(
 ): PerguntaClarificacao | undefined {
   const valor = entidade(reconhecimento, "valor");
   const periodicidade = entidade(reconhecimento, "periodicidade");
-  const comparacao = entidade(reconhecimento, "comparacao");
+  const base = entidade(reconhecimento, "base");
 
   // 1. Um valor e mais nada. Não há caminho a preparar — há uma escolha.
   if (valor && !principal && !reconhecimento.dominio) {
@@ -251,24 +268,11 @@ function perguntaDe(
     }
   }
 
-  if (!principal) return undefined;
+  if (!principal || !valor || !principal.aceita.includes("valor")) return undefined;
 
-  // 2. Numa comparação, bruto e faturado não são o mesmo dinheiro.
-  if (comparacao && valor && principal.renderer === "comparison") {
-    return {
-      tipo: "bruto_ou_faturado",
-      pergunta: `${valor.texto} € é o valor bruto ou o valor faturado em cada cenário?`,
-      porque: "A resposta é o que torna a comparação equivalente.",
-      opcoes: [
-        { id: "faturado", label: "Valor faturado" },
-        { id: "bruto", label: "Valor bruto" },
-        OPCAO_NAO_SEI,
-      ],
-    };
-  }
-
-  // 3. Um valor sem periodicidade, num destino que a sabe receber.
-  if (valor && !periodicidade && principal.campos.includes("valor") && (principal.tipo === "ferramenta")) {
+  // 2. Sem periodicidade, o número não quer dizer nada. Vem primeiro
+  //    porque é o que torna o valor utilizável de todo.
+  if (!periodicidade) {
     return {
       tipo: "periodicidade",
       pergunta: `${valor.texto} € é por mês ou por ano?`,
@@ -281,24 +285,84 @@ function perguntaDe(
     };
   }
 
-  // 4. Com ou sem IVA, no cálculo de um recibo.
-  if (valor && principal.dominio === "recibos" && principal.renderer === "prepared_tool") {
-    const jaDisse = reconhecimento.entidades.some((e) => e.tipo === "regime" && e.valor === "iva");
-    if (!jaDisse) {
-      return {
-        tipo: "iva_incluido",
-        pergunta: `${valor.texto} € inclui IVA?`,
-        porque: "O IVA não é rendimento — é dinheiro que passa por ti.",
-        opcoes: [
-          { id: "sem-iva", label: "Não inclui" },
-          { id: "com-iva", label: "Inclui" },
-          { id: "isento", label: "Estou isento" },
-        ],
-      };
-    }
+  // 3. Numa comparação, a base tem de ser a mesma nos três cenários.
+  if (!base && principal.renderer === "comparison" && principal.aceita.includes("base")) {
+    return {
+      tipo: "base_de_comparacao",
+      pergunta: `${valor.texto} € é uma proposta de salário ou o orçamento do cliente?`,
+      porque: "A resposta é o que torna a comparação equivalente nos três cenários.",
+      opcoes: [
+        { id: "iliquido", label: "Proposta de salário" },
+        { id: "custoEmpregador", label: "Orçamento do cliente" },
+        OPCAO_NAO_SEI,
+      ],
+    };
   }
 
   return undefined;
+}
+
+/* ─── A resposta ──────────────────────────────────────────────────── */
+
+export interface RespostaClarificacao {
+  tipo: TipoClarificacao;
+  /** O `id` da opção escolhida. `nao-sei` é uma resposta como as outras. */
+  opcao: string;
+}
+
+/**
+ * A resposta entra no reconhecimento como se tivesse sido escrita.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE NÃO HÁ UM SEGUNDO ESTADO PARA AS RESPOSTAS                    │
+ * │                                                                     │
+ * │ A alternativa era o plano guardar «o que foi reconhecido» de um lado │
+ * │ e «o que foi respondido» do outro, e todos os consumidores           │
+ * │ passarem a ter de somar os dois — o handoff, a linha de              │
+ * │ interpretação, os campos da ação, a medição. Quatro sítios a fazer   │
+ * │ a mesma soma é a garantia de que um deles se esquece.                │
+ * │                                                                     │
+ * │ Uma resposta é informação da pessoa sobre o pedido dela, tal como as │
+ * │ palavras que escreveu. Entra no mesmo sítio. O que a distingue —     │
+ * │ para a linha de interpretação e para a medição — é o sinal           │
+ * │ `ANSWERED`, e não uma segunda lista de entidades.                    │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export function aplicarResposta(r: Reconhecimento, resposta: RespostaClarificacao | null): Reconhecimento {
+  if (!resposta) return r;
+
+  const comSinal: Reconhecimento = { ...r, sinais: [...r.sinais, "CLARIFICATION_ANSWERED"] };
+  // «Não sei» é uma resposta legítima: encerra a pergunta e não acrescenta
+  // dado nenhum. Preencher à mesma seria pedir à pessoa que inventasse.
+  if (resposta.opcao === "nao-sei") return comSinal;
+
+  if (resposta.tipo === "periodicidade") {
+    return {
+      ...comSinal,
+      entidades: [
+        ...comSinal.entidades,
+        { tipo: "periodicidade", valor: resposta.opcao, texto: resposta.opcao === "mes" ? "por mês" : "por ano" },
+      ],
+    };
+  }
+
+  if (resposta.tipo === "base_de_comparacao") {
+    return {
+      ...comSinal,
+      entidades: [
+        ...comSinal.entidades,
+        {
+          tipo: "base",
+          valor: resposta.opcao,
+          texto: resposta.opcao === "custoEmpregador" ? "orçamento do cliente" : "proposta de salário",
+        },
+      ],
+    };
+  }
+
+  // `valor_sem_destino` não acrescenta entidade nenhuma: a resposta é uma
+  // navegação, e quem a trata é quem desenha as opções.
+  return comSinal;
 }
 
 /* ─── O compilador ────────────────────────────────────────────────── */
@@ -400,9 +464,7 @@ export function compilarPlano({
 
   const clarificacao = perguntaDe(principal, reconhecimento, documentos);
   if (clarificacao?.tipo === "periodicidade") explicacoes.push("MISSING_PERIOD");
-  if (clarificacao?.tipo === "iva_incluido" || clarificacao?.tipo === "bruto_ou_faturado") {
-    explicacoes.push("MISSING_VAT_CONTEXT");
-  }
+  if (clarificacao?.tipo === "base_de_comparacao") explicacoes.push("MISSING_BASIS");
   if (clarificacao?.tipo === "valor_sem_destino") explicacoes.push("MISSING_TARGET");
 
   const alternativas = resultados
@@ -428,6 +490,26 @@ export function compilarPlano({
     alternativas,
     apoio: apoioDe(consulta, reconhecimento, apoioPrincipal),
   };
+}
+
+/**
+ * O que vai viajar no contexto — os VALORES, e só os que o destino aceita.
+ *
+ * É a única função de todo o módulo que devolve valores em vez de tipos, e
+ * é de propósito: o que sai daqui vai direto para `guardarHandoff`, que
+ * escreve em `sessionStorage` e mais lado nenhum. Se um dia alguém quiser
+ * medir um plano, mede o plano — que não tem valores.
+ */
+export function camposDoHandoff(plano: PlanoBusca): Partial<Record<TipoEntidade, string | number>> {
+  const acao = plano.principal;
+  if (!acao) return {};
+
+  const campos: Partial<Record<TipoEntidade, string | number>> = {};
+  for (const tipo of acao.aceita) {
+    const e = plano.entidades.find((x) => x.tipo === tipo);
+    if (e) campos[tipo] = e.valor;
+  }
+  return campos;
 }
 
 /**

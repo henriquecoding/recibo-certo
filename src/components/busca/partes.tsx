@@ -39,6 +39,15 @@ import {
   type TipoDoc,
 } from "@/lib/busca/esquema";
 import { MIN_CARACTERES, type ResultadoBusca } from "@/lib/busca/pontuar";
+import { MAX_ALTERNATIVAS } from "@/lib/busca/plano";
+import {
+  CaminhoPreparado,
+  ContextoDoPlano,
+  FaixaApoio,
+  LinhaInterpretacao,
+  NotaPrivacidade,
+  OutrosCaminhos,
+} from "./moldura";
 import { useAtalhoDoSistema } from "./motor";
 import type { ControladorBusca } from "./useControladorBusca";
 
@@ -393,6 +402,7 @@ function TituloGrupo({ children }: { children: ReactNode }) {
 function EstadoInicial({ controlador, aoFechar }: { controlador: ControladorBusca; aoFechar: () => void }) {
   return (
     <div className="space-y-4 p-4">
+      <NotaPrivacidade />
       {controlador.recentes.length > 0 && (
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -506,6 +516,79 @@ function EstadoErro({ controlador, aoFechar }: { controlador: ControladorBusca; 
   );
 }
 
+/* ─── Sem caminho ──────────────────────────────────────────────────── */
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ «SEM RESULTADOS» É UM ESTADO ÚTIL — SE FOR NAVEGÁVEL                 │
+ * │                                                                     │
+ * │ A versão anterior dizia «sem resultados» e oferecia uma ligação para │
+ * │ os guias. Ficava-se por aí: quem escreveu uma pergunta que o         │
+ * │ catálogo não conhece recebia uma frase e um beco.                    │
+ * │                                                                     │
+ * │ Passa a dizer o que é verdade (não encontrámos um caminho SEGURO —   │
+ * │ e não «não existe»), a manter a consulta no campo, a oferecer três   │
+ * │ famílias e a pesquisa completa. O apoio profissional aparece como    │
+ * │ alternativa, nunca como fuga automática: quem não encontrou o que    │
+ * │ procurava não pediu, por isso, para falar com um contabilista.       │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+function SemCaminho({
+  controlador,
+  aoFechar,
+  listaRef,
+}: {
+  controlador: ControladorBusca;
+  aoFechar: () => void;
+  listaRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const FAMILIAS = [
+    { href: "/ferramentas", label: "Simular um valor" },
+    { href: "/guias", label: "Perceber uma regra" },
+    { href: "/dashboard/prazos", label: "Ver prazos e obrigações" },
+  ];
+
+  return (
+    <div ref={listaRef} className="space-y-3 p-4">
+      <div className="text-center">
+        <Search size={24} className="mx-auto mb-2 text-stone-300" aria-hidden />
+        <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+          Não encontrámos um caminho seguro para «{controlador.consulta.trim()}».
+        </p>
+        <p className="texto-mini mt-1 text-stone-600 dark:text-stone-400">
+          Preferimos dizer isto a mandar-te para a página mais parecida.
+        </p>
+      </div>
+
+      <div className="grid gap-1.5 sm:grid-cols-3">
+        {FAMILIAS.map((f) => (
+          <Link
+            prefetch={false}
+            key={f.href}
+            href={f.href}
+            data-resultado
+            onClick={(e) => !isCliqueModificado(e) && aoFechar()}
+            className="focus-marca flex min-h-[44px] items-center justify-center rounded-xl border border-stone-200 px-3 text-center text-xs font-semibold text-stone-700 no-underline transition-colors hover:border-brand/40 dark:border-stone-700 dark:text-stone-300"
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+
+      <Link
+        prefetch={false}
+        href={controlador.hrefTodos}
+        onClick={(e) => !isCliqueModificado(e) && aoFechar()}
+        className="focus-marca flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-brand-dark no-underline dark:text-brand"
+      >
+        Procurar em todo o site <ArrowRight size={13} aria-hidden />
+      </Link>
+
+      <FaixaApoio controlador={controlador} aoFechar={aoFechar} />
+    </div>
+  );
+}
+
 /* ─── Corpo ────────────────────────────────────────────────────────── */
 
 export function CorpoResultados({
@@ -539,20 +622,63 @@ export function CorpoResultados({
     );
   }
 
-  if (total === 0) {
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ A MOLDURA SÓ APARECE QUANDO HÁ UM CAMINHO PARA MOSTRAR               │
+   * │                                                                     │
+   * │ Com um caminho principal — porque o primeiro resultado se destacou,  │
+   * │ ou porque pertence à família que a frase nomeou — a superfície       │
+   * │ mostra UMA acção, no máximo uma pergunta e as alternativas em        │
+   * │ segundo plano.                                                       │
+   * │                                                                     │
+   * │ Sem caminho, volta a ser a lista agrupada de sempre. Não é um estado │
+   * │ degradado: é a resposta honesta a uma pergunta ambígua. Coroar o     │
+   * │ primeiro de uma lista empatada seria dizer a alguém que vai decidir  │
+   * │ dinheiro que existe uma certeza que não existe — e a diferença entre │
+   * │ as duas superfícies é exactamente essa.                              │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const plano = controlador.plano;
+  if (plano && (plano.principal || plano.clarificacao)) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-        <Search size={26} className="mb-2 text-stone-300" aria-hidden />
-        <p className="text-sm text-stone-600 dark:text-stone-400">Sem resultados para «{consulta.trim()}».</p>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
-          Experimenta menos palavras, ou abre{" "}
-          <Link prefetch={false} href="/guias" onClick={(e) => !isCliqueModificado(e) && aoFechar()} className="font-semibold text-brand-dark underline dark:text-brand">
-            todos os guias
+      <div ref={listaRef} className="space-y-3 p-3">
+        <NotaPrivacidade />
+        <LinhaInterpretacao controlador={controlador} />
+
+        {/* Uma coluna no telemóvel; a confirmação ao lado só a partir de
+            `lg`, que é onde há largura para as duas sem espremer nenhuma. */}
+        <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <CaminhoPreparado controlador={controlador} aoFechar={aoFechar} />
+          <ContextoDoPlano controlador={controlador} />
+        </div>
+
+        <OutrosCaminhos controlador={controlador} aoFechar={aoFechar} />
+
+        {totalSemTeto > MAX_ALTERNATIVAS + 1 && (
+          <Link
+            prefetch={false}
+            href={controlador.hrefTodos}
+            onClick={(e) => !isCliqueModificado(e) && aoFechar()}
+            className="focus-marca flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-stone-200 text-sm font-semibold text-brand-dark no-underline transition-colors hover:border-brand/40 hover:bg-brand-light/40 dark:border-stone-700 dark:text-brand"
+          >
+            Explorar {totalSemTeto} resultados <ArrowRight size={13} aria-hidden />
           </Link>
-          .
-        </p>
+        )}
+
+        <FaixaApoio controlador={controlador} aoFechar={aoFechar} />
       </div>
     );
+  }
+
+  /**
+   * Sem caminho E sem pergunta. Vem DEPOIS da moldura de propósito: uma
+   * consulta como «1200 €» não devolve documento nenhum — nenhum título
+   * fala de mil e duzentos — e mesmo assim tem uma pergunta a fazer. Se
+   * este ramo viesse primeiro, respondia «sem resultados» a quem escreveu
+   * a única coisa que a pesquisa reconheceu.
+   */
+  if (total === 0) {
+    return <SemCaminho controlador={controlador} aoFechar={aoFechar} listaRef={listaRef} />;
   }
 
   // A posição é global na lista visível — é o `rank` que a medição regista,

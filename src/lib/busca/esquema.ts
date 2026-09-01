@@ -118,7 +118,17 @@ export type TipoEntidade =
   | "regime"
   | "localidade"
   | "perfil"
-  | "comparacao";
+  | "comparacao"
+  /**
+   * A base de comparação: `iliquido` ou `custoEmpregador`.
+   *
+   * Não vem da frase — vem de uma resposta. É a mesma escolha que o
+   * comparador já pede explicitamente («tenho esta proposta de salário» vs
+   * «o meu cliente tem este orçamento»), e é uma entidade porque tem de
+   * ATRAVESSAR a navegação como as outras. Uma pergunta cuja resposta não
+   * chega ao destino é um obstáculo com ar de cuidado.
+   */
+  | "base";
 
 /** A proveniência de uma regra que a pesquisa apresenta como facto. */
 export interface FonteDoc {
@@ -160,6 +170,14 @@ export interface DocumentoBusca {
   renderer: RendererBusca;
   /** Ano a que a matéria se aplica, quando é canónico. */
   anoFiscal?: number;
+  /**
+   * Minutos estimados, quando o catálogo os declara.
+   *
+   * É uma estimativa da ferramenta sobre si própria, não uma medição — e
+   * por isso aparece com «≈». Serve para a pessoa decidir se abre agora ou
+   * se volta mais tarde, que é uma pergunta legítima antes de um clique.
+   */
+  minutos?: number;
   /**
    * As entidades que ESTE destino sabe receber.
    *

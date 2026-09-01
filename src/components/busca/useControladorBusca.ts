@@ -26,6 +26,15 @@ import { carregarIndice } from "@/lib/busca/indice";
 import { agruparPorTipo, melhorResposta, pesquisar, type ResultadoBusca } from "@/lib/busca/pontuar";
 import { MIN_CARACTERES } from "@/lib/busca/pontuar";
 import { guardarRecente, limparRecentes, lerRecentes, type Recente } from "@/lib/busca/recentes";
+import { consultaParaRanking, reconhecer } from "@/lib/busca/reconhecer";
+import {
+  aplicarResposta,
+  camposDoHandoff,
+  compilarPlano,
+  type PlanoBusca,
+  type RespostaClarificacao,
+} from "@/lib/busca/plano";
+import { guardarHandoff, hrefComHandoff } from "@/lib/busca/handoff";
 import { sugestoesPorContexto, type Sugestao } from "@/lib/busca/sugestoes";
 import {
   classeDeViewport,
@@ -63,6 +72,33 @@ export interface ControladorBusca {
   mensagemEstado: string;
   hrefTodos: string;
   aoEscolher: (doc: DocumentoBusca, posicao: number) => void;
+  /** O mesmo, para uma ação da moldura (que não é um documento). */
+  aoEscolherAcao: (acao: { id: string; tipo: string }, posicao: number) => void;
+
+  /* ── A moldura canónica ───────────────────────────────────────── */
+
+  /** O plano da consulta actual, ou `null` enquanto não há consulta. */
+  plano: PlanoBusca | null;
+  /** A resposta dada à pergunta de clarificação, se houve uma. */
+  resposta: RespostaClarificacao | null;
+  responder: (opcao: string) => void;
+  /** A linha de interpretação está aberta em modo «ver ou corrigir». */
+  aCorrigir: boolean;
+  alternarCorrecao: () => void;
+  /**
+   * Tira da consulta o que foi reconhecido como uma entidade.
+   *
+   * É esta a correcção que a linha de interpretação oferece: o texto da
+   * pessoa menos o pedaço que percebemos mal, de volta ao campo, para ela
+   * ver e continuar a escrever. Corrigir não pode ser preencher um
+   * formulário sobre a nossa leitura da frase dela.
+   */
+  corrigir: (texto: string) => void;
+  /**
+   * O endereço da ação principal — já com o identificador opaco do
+   * contexto, quando há contexto para transportar. Nunca com valores.
+   */
+  hrefPrincipal: string | null;
 }
 
 /**
@@ -145,11 +181,42 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── Reconhecimento ─────────────────────────────────────────────── */
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────┐
+   * │ O RECONHECIMENTO CORRE SOBRE A CONSULTA ADIADA, COMO O RANKING   │
+   * │                                                                 │
+   * │ Não é uma optimização: é a mesma consulta. Se o reconhecimento   │
+   * │ corresse a cada tecla e o ranking só a cada 140 ms, a linha      │
+   * │ «pedido reconhecido» descrevia uma frase e a lista respondia a   │
+   * │ outra — durante frações de segundo, repetidamente, e sem nunca   │
+   * │ dar erro.                                                        │
+   * └─────────────────────────────────────────────────────────────────┘
+   */
+  const reconhecimento = useMemo(() => reconhecer(adiada), [adiada]);
+
+  /** A resposta à pergunta — uma por consulta, e some quando ela muda. */
+  const [resposta, setResposta] = useState<RespostaClarificacao | null>(null);
+  const [aCorrigir, setACorrigir] = useState(false);
+  useEffect(() => {
+    setResposta(null);
+    setACorrigir(false);
+  }, [adiada]);
+
+  const reconhecido = useMemo(() => aplicarResposta(reconhecimento, resposta), [reconhecimento, resposta]);
+
   /* ── Resultados ─────────────────────────────────────────────────── */
 
   const todos = useMemo(
-    () => (documentos ? pesquisar(adiada, documentos, { intencao }) : []),
-    [adiada, documentos, intencao],
+    () =>
+      documentos
+        ? pesquisar(consultaParaRanking(adiada, reconhecido), documentos, {
+            intencao,
+            sinais: { dominio: reconhecido.dominio, intencao: reconhecido.intencao },
+          })
+        : [],
+    [adiada, documentos, intencao, reconhecido],
   );
 
   const resultados = useMemo(() => todos.slice(0, teto), [todos, teto]);
@@ -188,6 +255,22 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
     [intencao],
   );
 
+  /**
+   * O mesmo registo, para uma ação da moldura.
+   *
+   * A moldura não tem `DocumentoBusca` — tem `AcaoPreparada`, que é o que
+   * o plano produz. Ter dois caminhos de medição seria ter duas contagens
+   * a divergir: o que se mede é sempre um id do índice e uma posição.
+   */
+  const aoEscolherAcao = useCallback(
+    (acao: { id: string; tipo: string }, posicao: number) => {
+      houveClique.current = true;
+      guardarRecente(consultaRef.current);
+      medirClique(medicao.current, { id: acao.id, tipo: acao.tipo, posicao, intencao });
+    },
+    [intencao],
+  );
+
   const apagarRecentes = useCallback(() => {
     limparRecentes();
     setRecentes([]);
@@ -195,16 +278,96 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
 
   /* ── Estado acessível ───────────────────────────────────────────── */
 
+  /* ── O plano e o contexto que ele prepara ───────────────────────── */
+
+  const plano = useMemo(
+    () =>
+      documentos && temConsulta
+        ? compilarPlano({ consulta: adiada, reconhecimento: reconhecido, resultados, documentos })
+        : null,
+    [documentos, temConsulta, adiada, reconhecido, resultados],
+  );
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────┐
+   * │ O CONTEXTO ESCREVE-SE ANTES DO CLIQUE — E SÓ QUANDO HÁ CONTEXTO  │
+   * │                                                                 │
+   * │ Um `<Link>` precisa do endereço no render, e escrever no         │
+   * │ armazenamento durante o render é o que a documentação do React   │
+   * │ desaconselha (um render pode ser deitado fora). Por isso a       │
+   * │ escrita vive num efeito, e o endereço só ganha o `?ctx=` no      │
+   * │ render seguinte — que acontece muito antes de alguém conseguir   │
+   * │ clicar.                                                          │
+   * │                                                                 │
+   * │ E só se escreve quando o plano está PRONTO e há campos que o     │
+   * │ destino aceita. Nas consultas sem valor — a esmagadora maioria — │
+   * │ não se escreve nada, e o endereço fica limpo e partilhável.      │
+   * └─────────────────────────────────────────────────────────────────┘
+   */
+  const [handoffId, setHandoffId] = useState<string | null>(null);
+  useEffect(() => {
+    const acao = plano?.principal;
+    if (!plano || plano.estado !== "pronto" || !acao || acao.campos.length === 0) {
+      setHandoffId(null);
+      return;
+    }
+    setHandoffId(guardarHandoff(acao.id, camposDoHandoff(plano)));
+  }, [plano]);
+
+  const hrefPrincipal = useMemo(() => {
+    const acao = plano?.principal;
+    if (!acao) return null;
+    return hrefComHandoff(acao.href, handoffId);
+  }, [plano, handoffId]);
+
+  const responder = useCallback(
+    (opcao: string) => {
+      const tipo = plano?.clarificacao?.tipo;
+      if (!tipo) return;
+      setResposta({ tipo, opcao });
+    },
+    [plano],
+  );
+
+  const corrigir = useCallback((texto: string) => {
+    setConsulta((atual) => {
+      const i = atual.toLocaleLowerCase("pt-PT").indexOf(texto.toLocaleLowerCase("pt-PT"));
+      if (i === -1) return atual;
+      return `${atual.slice(0, i)}${atual.slice(i + texto.length)}`.replace(/\s+/g, " ").trim();
+    });
+  }, []);
+
+  /**
+   * ┌─────────────────────────────────────────────────────────────────┐
+   * │ O QUE UM LEITOR DE ECRÃ OUVE TEM DE SER O QUE ESTÁ NO ECRÃ       │
+   * │                                                                 │
+   * │ A superfície deixou de ser uma lista: quando há caminho          │
+   * │ preparado, o que está em cima é uma acção — e anunciar «8        │
+   * │ resultados» a quem não vê o painel descrevia a versão antiga da  │
+   * │ interface. Pior: quando há uma pergunta por responder, a lista   │
+   * │ nem sequer é o assunto.                                          │
+   * │                                                                 │
+   * │ Curto, e uma frase por estado. Um `role="status"` que diz três   │
+   * │ linhas a cada 140 ms é ruído, e ruído em `aria-live` é a forma   │
+   * │ mais rápida de alguém desligar o leitor de ecrã.                 │
+   * └─────────────────────────────────────────────────────────────────┘
+   */
   const mensagemEstado = useMemo(() => {
     if (estado === "erro") return "Não foi possível carregar a pesquisa. Usa as ligações em baixo.";
     if (estado === "a-carregar" && temConsulta) return "A carregar a pesquisa…";
     if (!temConsulta) return "";
-    if (todos.length === 0) return "Sem resultados.";
+    if (todos.length === 0) return "Sem um caminho seguro. Há categorias e a pesquisa completa em baixo.";
+
     const mostrados = resultados.length;
-    return todos.length > mostrados
-      ? `${mostrados} de ${todos.length} resultados.`
-      : `${mostrados} resultado${mostrados === 1 ? "" : "s"}.`;
-  }, [estado, temConsulta, todos.length, resultados.length]);
+    const contagem =
+      todos.length > mostrados
+        ? `${mostrados} de ${todos.length} resultados.`
+        : `${mostrados} resultado${mostrados === 1 ? "" : "s"}.`;
+
+    if (plano?.clarificacao) return `Falta uma confirmação: ${plano.clarificacao.pergunta}`;
+    if (plano?.principal) return `Caminho preparado: ${plano.principal.titulo}. ${contagem}`;
+    return contagem;
+  }, [estado, temConsulta, todos.length, resultados.length, plano]);
 
   const hrefTodos = useMemo(() => {
     const params = new URLSearchParams();
@@ -234,5 +397,13 @@ export function useControladorBusca({ teto }: { teto: number }): ControladorBusc
     mensagemEstado,
     hrefTodos,
     aoEscolher,
+    aoEscolherAcao,
+    plano,
+    resposta,
+    responder,
+    aCorrigir,
+    alternarCorrecao: useCallback(() => setACorrigir((v) => !v), []),
+    corrigir,
+    hrefPrincipal,
   };
 }

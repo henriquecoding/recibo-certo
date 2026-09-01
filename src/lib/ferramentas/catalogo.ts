@@ -340,7 +340,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     searchPriority: 93,
     searchGroup: "Simuladores",
     dominio: "comparar",
-    aceitaEntidades: ["valor", "periodicidade"],
+    aceitaEntidades: ["valor", "periodicidade", "base"],
   },
   {
     id: "simulador-empresa",

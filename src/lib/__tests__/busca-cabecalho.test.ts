@@ -151,13 +151,17 @@ describe("busca:cobertura-v3", () => {
   });
 
   it("a contagem de prazos da descrição vem do motor, não de um número escrito", () => {
+    // E é a contagem do CALENDÁRIO, não a de uma pessoa: o motor gera as
+    // datas dos dois regimes de IVA, e somá-las como se fossem as de
+    // alguém dá um número correcto à letra e errado na prática.
     // Se a lei mudar e `gerarPrazos` passar a produzir outras datas, a
     // descrição muda com ela. Um número à mão ficaria a mentir em silêncio.
     const prazos = gerarPrazos(FISCAL_YEAR);
     const iva = DOCS.find((d) => d.id === "obrigacao:iva")!;
-    const declaracoes = prazos.filter((p) => p.categoria === "iva" && p.natureza === "declaracao").length;
-    expect(iva.descricao).toContain(`${declaracoes} entrega`);
+    const datas = prazos.filter((p) => p.categoria === "iva").length;
+    expect(iva.descricao).toContain(`${datas} datas no calendário`);
     expect(iva.anoFiscal).toBe(FISCAL_YEAR);
+    expect(iva.descricao, "não diz que o regime manda").toContain("dependem do teu regime");
   });
 
   it("as páginas institucionais entram, e derivam do menu", () => {
