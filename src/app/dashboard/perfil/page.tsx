@@ -492,6 +492,8 @@ export default function PerfilPage() {
   // ── Supabase profile state ──
   const [perfil, setPerfil] = useState<DadosPerfil>({ nome: "", telefone: "", nif: "", avatarUrl: "" });
   const [perfilCarregado, setPerfilCarregado] = useState(false);
+  /** Mensagem quando a LEITURA do perfil falhou — diferente de «perfil vazio». */
+  const [falhaPerfil, setFalhaPerfil] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
   const [rascunho, setRascunho] = useState<DadosPerfil>({ nome: "", telefone: "", nif: "", avatarUrl: "" });
   const [guardando, setGuardando] = useState(false);
@@ -515,11 +517,21 @@ export default function PerfilPage() {
       setPerfilCarregado(true);
       return;
     }
-    obterPerfil(user.id).then((dados) => {
-      setPerfil(dados);
-      setRascunho(dados);
-      setPerfilCarregado(true);
-    });
+    obterPerfil(user.id)
+      .then((dados) => {
+        setPerfil(dados);
+        setRascunho(dados);
+        setFalhaPerfil(null);
+        setPerfilCarregado(true);
+      })
+      .catch((erro: unknown) => {
+        // Com a leitura falhada, os campos ficariam VAZIOS — e guardar
+        // escreveria esses vazios por cima do nome e do NIF que estão na
+        // base. O formulário fica fechado até a leitura correr bem.
+        console.error("[perfil] obterPerfil falhou", erro);
+        setFalhaPerfil((erro as Error)?.message ?? "Erro desconhecido.");
+        setPerfilCarregado(true);
+      });
   }, [user]);
 
   // ── Load coupons ──
@@ -537,12 +549,24 @@ export default function PerfilPage() {
   // ── Admin check ──
   useEffect(() => {
     if (!user) { setIsAdmin(false); return; }
-    verificarAdmin(user.id).then(setIsAdmin).catch(() => setIsAdmin(false));
+    verificarAdmin(user.id)
+      .then(setIsAdmin)
+      .catch((erro) => { console.error("[perfil] verificarAdmin falhou", erro); setIsAdmin(false); });
   }, [user]);
 
   // ── Save profile ──
   const salvarPerfil = useCallback(async () => {
     if (!user) return;
+    // Guardar um rascunho que nunca chegou a ser carregado apagaria os dados
+    // reais: `guardarPerfil` escreve `nome: '' || null`. Enquanto a leitura
+    // não correr, não há nada de fiável para escrever.
+    if (falhaPerfil) {
+      setMsgGuardar({
+        tipo: "erro",
+        texto: "O perfil não chegou a ser lido, por isso não há nada para guardar sem risco de apagar o que está gravado. Recarrega a página.",
+      });
+      return;
+    }
     setGuardando(true);
     setMsgGuardar(null);
     const { erro } = await guardarPerfil(user.id, rascunho);
@@ -555,7 +579,7 @@ export default function PerfilPage() {
       setMsgGuardar({ tipo: "ok", texto: "Perfil guardado com sucesso." });
       setTimeout(() => setMsgGuardar(null), 3000);
     }
-  }, [user, rascunho]);
+  }, [user, rascunho, falhaPerfil]);
 
   // ── Activate coupon ──
   const handleAtivarCupao = useCallback(async (cupaoId: string) => {
@@ -898,7 +922,7 @@ export default function PerfilPage() {
                 <p className="text-[11px] text-stone-400">Informações guardadas na tua conta</p>
               </div>
             </div>
-            {user && !editando && (
+            {user && !editando && !falhaPerfil && (
               <button
                 type="button"
                 onClick={() => { setRascunho(perfil); setEditando(true); setMsgGuardar(null); }}
@@ -909,6 +933,22 @@ export default function PerfilPage() {
               </button>
             )}
           </div>
+
+          {/* Campos vazios por falha de leitura são indistinguíveis de campos
+              vazios por escolha — e guardá-los apagaria o que está na base.
+              Enquanto a leitura não correr, dizemo-lo e fechamos a edição. */}
+          {falhaPerfil && (
+            <div className="mb-5 rounded-2xl border border-alert-border bg-alert-bg p-4 text-alert-text">
+              <p className="text-sm font-semibold">Não foi possível ler o teu perfil</p>
+              <p className="mt-1 text-xs leading-relaxed">
+                Os teus dados continuam guardados — o que falhou foi a leitura. A edição fica
+                fechada para não gravares campos vazios por cima deles.
+              </p>
+              <p className="mt-2 break-words rounded-xl bg-white/70 p-2.5 text-[11px] dark:bg-stone-900/60">
+                {falhaPerfil}
+              </p>
+            </div>
+          )}
 
           {!user ? (
             <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-stone-50 py-8 text-center dark:border-stone-700 dark:bg-stone-800/40">

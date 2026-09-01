@@ -48,6 +48,7 @@ function AdminGuard({ children }: { children: ReactNode }) {
 
   const [adminVerificado, setAdminVerificado] = useState(false);
   const [verificando, setVerificando] = useState(true);
+  const [falhaVerificacao, setFalhaVerificacao] = useState<string | null>(null);
 
   useEffect(() => {
     if (isLoginPage) { setVerificando(false); return; }
@@ -58,18 +59,59 @@ function AdminGuard({ children }: { children: ReactNode }) {
       return;
     }
 
-    verificarAdmin(user.id).then((ok) => {
-      if (!ok) {
-        sair();
-        router.replace("/admin/login");
-      } else {
-        setAdminVerificado(true);
-      }
-      setVerificando(false);
-    });
+    // Uma leitura que FALHA não pode custar a sessão. Enquanto «não sei» e
+    // «não és» eram a mesma coisa, um erro de RLS terminava a sessão do
+    // administrador e mandava-o para o login — onde voltaria a acontecer o
+    // mesmo. A falha passa a ter um ecrã próprio, com retentativa.
+    verificarAdmin(user.id)
+      .then((ok) => {
+        if (!ok) {
+          sair();
+          router.replace("/admin/login");
+        } else {
+          setAdminVerificado(true);
+        }
+      })
+      .catch((erro: unknown) => {
+        console.error("[admin] verificação de acesso falhou", erro);
+        setFalhaVerificacao((erro as Error)?.message ?? "Erro desconhecido.");
+      })
+      .finally(() => setVerificando(false));
   }, [carregado, user, isLoginPage, router, sair]);
 
   if (isLoginPage) return <>{children}</>;
+
+  // A verificação não conseguiu correr. Dizer «não és administrador» seria
+  // mentira; ficar eternamente no pulsar de carregamento seria pior.
+  if (falhaVerificacao) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-cream p-6 dark:bg-stone-950">
+        <div className="w-full max-w-md rounded-3xl border border-alert-border bg-alert-bg p-6 text-alert-text">
+          <h1 className="font-display text-xl font-semibold">
+            Não foi possível confirmar o teu acesso
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed">
+            A sessão continua aberta — o que falhou foi a leitura do perfil, não a
+            autenticação. Isto costuma ser temporário.
+          </p>
+          <p className="mt-3 break-words rounded-xl bg-white/70 p-3 text-xs dark:bg-stone-900/60">
+            {falhaVerificacao}
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setFalhaVerificacao(null);
+              setVerificando(true);
+              router.refresh();
+            }}
+            className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center rounded-2xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
+          >
+            Tentar de novo
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (verificando || !adminVerificado) {
     return (

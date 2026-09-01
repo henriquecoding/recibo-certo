@@ -366,14 +366,40 @@ export async function eliminarParceiro(id: string): Promise<{ erro?: string }> {
 
 // ── Perfis / utilizadores ────────────────────────────────────
 
+/**
+ * ┌──────────────────────────────────────────────────────────────────────┐
+ * │ «NÃO CONSEGUI SABER» NÃO É «NÃO É ADMINISTRADOR»                      │
+ * │                                                                      │
+ * │ Isto era `const { data } = await …` com `.single()`. Duas coisas      │
+ * │ diferentes acabavam no mesmo sítio:                                   │
+ * │                                                                      │
+ * │   · a pessoa não tem role 'admin'  → resposta legítima, false         │
+ * │   · a leitura FALHOU               → também false, sem um sinal       │
+ * │                                                                      │
+ * │ Em produção a leitura falhava mesmo: a política de RLS de `profiles`  │
+ * │ consultava `profiles` e o Postgres recusava tudo com 42P17 (ver a     │
+ * │ migração `20260901140000`). O painel de administração desaparecia e   │
+ * │ o `/admin` chegava a EXPULSAR a sessão — porque «não sei» tinha sido  │
+ * │ escrito como «não és».                                                │
+ * │                                                                      │
+ * │ Agora: `maybeSingle()` (linha ausente é um dado, não um erro) e a     │
+ * │ falha real é atirada. Quem chama tem de decidir o que fazer com ela — │
+ * │ e nenhum caminho pode transformá-la em «não é administrador».         │
+ * └──────────────────────────────────────────────────────────────────────┘
+ *
+ * Fonte de verdade é o role em profiles (o mesmo que a RLS aplica). Não há
+ * fallback por email: um email conhecido sem role 'admin' na BD NÃO é admin.
+ */
 export async function verificarAdmin(userId: string): Promise<boolean> {
-  // Fonte de verdade é o role em profiles (o mesmo que a RLS aplica). Não há
-  // fallback por email: um email conhecido sem role 'admin' na BD NÃO é admin.
-  const { data } = await getSupabase()
+  const { data, error } = await getSupabase()
     .from("profiles")
     .select("role")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Não foi possível verificar o acesso de administração: ${error.message}`);
+  }
 
   return data?.role === "admin";
 }
