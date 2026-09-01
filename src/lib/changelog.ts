@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.145.0",
+    data: "2026-09-01",
+    titulo: "A atualização semanal dos dados de mercado desistia à primeira falha de rede",
+    itens: [
+      "Os dados de mercado do motor de descoberta são relidos uma vez por semana a partir do ficheiro de contratos públicos do dados.gov — 52 MB que abrem para 273 MB. Falhou duas semanas seguidas: uma por exceder o limite de tempo, outra por a ligação cair a meio. Em ambos os casos a semana inteira era perdida, porque não havia nenhuma retentativa.",
+      "Passa a haver três tentativas com recuo crescente, e o limite de tempo de cada uma duplicou. Um erro permanente (um ficheiro que mudou de nome, uma resposta 404) continua a falhar à primeira, como deve: repetir quatro vezes o mesmo erro só atrasa o diagnóstico.",
+      "O tempo que o processo tem para correr subiu de 20 para 45 minutos. Sem isso a retentativa seria decorativa — era interrompido a meio da segunda tentativa e o resultado dava no mesmo.",
+      "As dependências subiram, incluindo oito atualizações de segurança. A biblioteca de pagamentos trouxe uma versão de API nova, e a aplicação passou a apontar para ela — o SDK e a versão da API têm de andar a par, senão os tipos descrevem uma coisa e o servidor responde outra.",
+      "As três ações de automação do repositório (Node, Python e artefactos) subiram para as versões correntes, todas fixadas por identificador exato em vez de etiqueta móvel.",
+    ],
+  },
+  {
     version: "2.144.0",
     data: "2026-09-01",
     titulo: "O IVA da construção mudou a 1 de julho — e o site já sabia metade",
