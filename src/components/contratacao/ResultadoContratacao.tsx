@@ -88,11 +88,15 @@ function TresDinheiros({ result }: { result: EmploymentOfferResult }) {
 
   return (
     <div className="grid gap-4 lg:grid-cols-3">
-      <section className="rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
+      {/* Os três cartões esticam à altura do mais alto. Sem `mt-auto` na lista,
+          o primeiro — que é o mais curto — ficava com 120px de branco por
+          baixo do total; agora o total assenta no fundo, como o total de uma
+          fatura assenta no fim da coluna. */}
+      <section className="flex flex-col rounded-2xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900">
         <div className="flex items-center gap-2 text-sm font-bold text-stone-800 dark:text-stone-100">
-          <Building size={17} className="text-brand" /> Sai da empresa
+          <Building size={17} className="flex-none text-brand" /> Sai da empresa
         </div>
-        <div className="mt-3 divide-y divide-stone-100 dark:divide-stone-800">
+        <div className="mt-3 flex flex-1 flex-col divide-y divide-stone-200 dark:divide-stone-800 [&>*:last-child]:mt-auto">
           <AmountLine label="Remuneração em dinheiro" value={eur(breakdown.cashCompensation.cents)} />
           <AmountLine label="Subsídio de refeição" value={eur(breakdown.mealAllowance.cents)} />
           <AmountLine
@@ -185,7 +189,7 @@ function ComposicaoCusto({ result }: { result: EmploymentOfferResult }) {
           O que já está confirmado, o que ainda é estimativa e o que continua por preencher — para o
           total não parecer mais firme do que é.
         </p>
-        <div className="mt-3 divide-y divide-stone-100 dark:divide-stone-800">
+        <div className="mt-3 divide-y divide-stone-200 dark:divide-stone-800">
           <AmountLine label="Total confirmado" value={eur(cost.annualConfirmed.cents)} strong />
           <AmountLine
             label="Total com estimativas"
@@ -207,7 +211,7 @@ function ComposicaoCusto({ result }: { result: EmploymentOfferResult }) {
       </Painel>
 
       <Painel titulo="Parcela a parcela, no ano recorrente">
-        <div className="mt-3 divide-y divide-stone-100 dark:divide-stone-800">
+        <div className="mt-3 divide-y divide-stone-200 dark:divide-stone-800">
           <AmountLine label="Seguro de acidentes" value={eur(cost.breakdown.accidentInsurance.cents)} />
           <AmountLine label="Saúde e segurança" value={eur(cost.breakdown.healthAndSafety.cents)} />
           <AmountLine label="Formação externa" value={eur(cost.breakdown.training.cents)} />
@@ -276,7 +280,7 @@ function Calendario({ result }: { result: EmploymentOfferResult }) {
               return (
                 <div
                   key={`${month.year}-${month.month}`}
-                  className={`rounded-xl border p-3 ${
+                  className={`flex flex-col rounded-xl border p-3 ${
                     destaque
                       ? "border-alert-border bg-alert-bg"
                       : month.active
@@ -295,7 +299,10 @@ function Calendario({ result }: { result: EmploymentOfferResult }) {
                   <p className={`mt-3 text-sm font-semibold tabular-nums ${month.active ? "text-stone-900 dark:text-white" : "text-stone-600 dark:text-stone-400"}`}>
                     {eurRedondo(month.employerCost.cents)}
                   </p>
-                  <p className="mt-1 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
+                  {/* A legenda assenta no fundo: os meses com nota de duas
+                      linhas esticam a linha toda, e sem isto os meses «antes da
+                      entrada» ficavam com a legenda a meio de um vazio. */}
+                  <p className="mt-auto pt-1 text-xs leading-relaxed text-stone-600 dark:text-stone-400">
                     {month.active
                       ? month.labels.filter((label) => label !== "Vencimento e pacote mensal").join(" · ").toLowerCase() || "mês normal"
                       : month.labels[0]?.toLowerCase()}
@@ -331,7 +338,7 @@ function Viabilidade({ result }: { result: EmploymentOfferResult }) {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <Painel titulo="De horas pagas a horas produtivas">
-        <div className="mt-3 divide-y divide-stone-100 dark:divide-stone-800">
+        <div className="mt-3 divide-y divide-stone-200 dark:divide-stone-800">
           <AmountLine label="Horas pagas no ano" value={horas(capacity.paidHoursHundredths)} />
           <AmountLine label="menos feriados em dia de trabalho" value={`− ${horas(capacity.holidayHoursHundredths)}`} />
           <AmountLine label="menos férias" value={`− ${horas(capacity.vacationHoursHundredths)}`} />
@@ -354,11 +361,18 @@ function Viabilidade({ result }: { result: EmploymentOfferResult }) {
           <h3 className="flex items-center gap-2 font-display text-lg font-semibold text-ink">
             <Clock size={17} className="text-brand" /> O que o posto tem de gerar
           </h3>
-          <p className="mt-3 break-words font-display text-2xl font-semibold tabular-nums text-ink sm:text-3xl">
-            {capacity.billableHoursRequired !== null
-              ? `${capacity.billableHoursRequired.toLocaleString("pt-PT")} h`
-              : "—"}
-          </p>
+          {/* Um travessão de 30px no lugar do número lia-se como avaria, não
+              como «ainda não dá para saber». Quando falta o dado, o cartão
+              di-lo por palavras — que é a mesma regra do resto do planeador. */}
+          {capacity.billableHoursRequired !== null ? (
+            <p className="mt-3 break-words font-display text-2xl font-semibold tabular-nums text-ink sm:text-3xl">
+              {capacity.billableHoursRequired.toLocaleString("pt-PT")} h
+            </p>
+          ) : (
+            <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/70 px-2.5 py-1.5 text-sm font-semibold text-stone-600 dark:bg-stone-900/60 dark:text-stone-300">
+              <Warning size={14} className="flex-none text-clay-text" /> Horas ainda por apurar
+            </p>
+          )}
           <p className="mt-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
             {capacity.contributionPerBillableHour
               ? `Cada hora vendida deixa ${eur(capacity.contributionPerBillableHour.cents)} de contribuição — é essa margem que paga o posto, não o preço.`
@@ -458,7 +472,7 @@ function Apoios({ result }: { result: EmploymentOfferResult }) {
             <summary className="cursor-pointer px-3 py-2 text-xs font-semibold text-stone-700 dark:text-stone-200">
               Requisitos, um a um ({support.requirements.length})
             </summary>
-            <ul className="space-y-2 border-t border-stone-100 p-3 text-xs leading-relaxed dark:border-stone-800">
+            <ul className="space-y-2 border-t border-stone-200 p-3 text-xs leading-relaxed dark:border-stone-800">
               {support.requirements.map((requisito) => (
                 <li key={requisito.key} className="flex gap-2">
                   {requisito.outcome === "met" ? (
@@ -600,7 +614,7 @@ function Memoria({ result }: { result: EmploymentOfferResult }) {
                 ))}
               </dl>
             ) : null}
-            <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-100 pt-2.5 text-xs text-stone-500 dark:border-stone-800">
+            <p className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-stone-200 pt-2.5 text-xs text-stone-500 dark:border-stone-800">
               {step.result !== undefined ? (
                 <span>
                   Resultado:{" "}
@@ -634,7 +648,7 @@ function Memoria({ result }: { result: EmploymentOfferResult }) {
             </li>
           ))}
         </ul>
-        <p className="mt-3 border-t border-stone-100 pt-3 text-xs text-stone-500 dark:border-stone-800">
+        <p className="mt-3 border-t border-stone-200 pt-3 text-xs text-stone-500 dark:border-stone-800">
           Motor {result.engineVersion} · release {result.provenance.releaseId}, conhecimento
           regulamentar até {result.provenance.knowledgeAsOf}
         </p>

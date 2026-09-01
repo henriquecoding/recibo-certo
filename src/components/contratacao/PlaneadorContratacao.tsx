@@ -18,6 +18,7 @@ import { consumirReabertura } from "@/lib/store/reabertura";
 import {
   Briefcase,
   Building,
+  ArrowRight,
   Check,
   Clock,
   Download,
@@ -31,6 +32,7 @@ import {
   CampoCustoConhecido,
   DateField,
   DiasSemanaField,
+  Divulgacao,
   MoneyField,
   NumberField,
   SectionTitle,
@@ -101,12 +103,25 @@ const GOALS: Array<{
   },
 ];
 
-const CHIP =
-  "inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 text-sm font-semibold hover:bg-white/15 focus:outline-none focus-visible:ring-2 focus-visible:ring-white";
+/**
+ * As três ações do resultado.
+ *
+ * Eram três estilos diferentes na mesma linha — duas pastilhas translúcidas e
+ * uma branca —, e a 360px empilhavam-se com larguras diferentes cada uma.
+ * Passam a ser a mesma peça: mesma altura, mesma forma, largura inteira no
+ * telemóvel. O tom muda com o fundo do cabeçalho (verde ou amarelo), nunca a
+ * forma.
+ */
+const ACAO_BASE =
+  "inline-flex min-h-[42px] w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 sm:w-auto";
+const ACAO_SOBRE_VERDE =
+  `${ACAO_BASE} border-white/25 bg-white/10 text-white hover:bg-white/20 focus-visible:ring-white focus-visible:ring-offset-brand-deep`;
+const ACAO_SOBRE_ALERTA =
+  `${ACAO_BASE} border-alert-border bg-white/80 text-alert-text hover:bg-white focus-visible:ring-alert-text focus-visible:ring-offset-alert-bg dark:bg-stone-900/70 dark:hover:bg-stone-900`;
 
 function Bloco({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-4xl border border-stone-100 bg-white p-5 shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-7 lg:p-8">
+    <section className="rounded-4xl border border-stone-200 bg-white p-5 shadow-lift dark:border-stone-800 dark:bg-stone-900 sm:p-7 lg:p-8">
       {children}
     </section>
   );
@@ -352,13 +367,19 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
                     goal: value,
                   });
                 }}
-                className={`group min-h-[148px] rounded-3xl border p-4 text-left transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${ativo ? "border-brand-deep bg-brand-deep text-white shadow-lift" : "border-stone-200 bg-stone-50 text-stone-900 hover:-translate-y-0.5 hover:border-brand/40 hover:bg-white hover:shadow-card dark:border-stone-700 dark:bg-stone-800/60 dark:text-white dark:hover:bg-stone-800"}`}
+                className={`group flex h-full min-h-[148px] flex-col rounded-3xl border p-4 text-left transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 ${ativo ? "border-brand-deep bg-brand-deep text-white shadow-lift" : "border-stone-200 bg-stone-50 text-stone-900 hover:-translate-y-0.5 hover:border-brand/40 hover:bg-white hover:shadow-card dark:border-stone-700 dark:bg-stone-800/60 dark:text-white dark:hover:bg-stone-800"}`}
               >
-                <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${ativo ? "bg-white/15 text-brand-mint" : "bg-brand-light text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white dark:bg-brand/15 dark:text-brand-mint"}`}>
+                <span className={`flex h-10 w-10 flex-none items-center justify-center rounded-2xl ${ativo ? "bg-white/15 text-brand-mint" : "bg-brand-light text-brand-dark transition-colors group-hover:bg-brand group-hover:text-white dark:bg-brand/15 dark:text-brand-mint"}`}>
                   <Icon size={18} />
                 </span>
-                <span className={`mt-3 block text-sm font-bold ${ativo ? "text-white" : "text-stone-900 dark:text-white"}`}>{title}</span>
+                <span className={`mt-3 block text-sm font-bold leading-snug ${ativo ? "text-white" : "text-stone-900 dark:text-white"}`}>{title}</span>
                 <span className={`mt-1.5 block text-xs leading-relaxed ${ativo ? "text-brand-light" : "text-stone-500 dark:text-stone-400"}`}>{description}</span>
+                <span
+                  aria-hidden
+                  className={`texto-mini mt-auto flex items-center gap-1.5 whitespace-nowrap pt-3 font-bold uppercase tracking-[.1em] transition-opacity ${ativo ? "text-brand-mint" : "text-stone-400 opacity-0 group-hover:opacity-100 dark:text-stone-500"}`}
+                >
+                  {ativo ? <><Check size={12} className="flex-none" /> Selecionado</> : <>Escolher <ArrowRight size={12} className="flex-none" /></>}
+                </span>
               </button>
             );
           })}
@@ -662,7 +683,11 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           description="Um custo desconhecido não é zero. Cada parcela declara o que se sabe dela — e o que ainda falta impede uma conclusão."
           acao={<div className="rounded-xl bg-stone-50 px-3 py-2 dark:bg-stone-800/60"><ResumoCustos state={state} /></div>}
         />
-        <div className="grid gap-3 lg:grid-cols-2">
+        {/* `items-start` porque estes oito cartões têm conteúdos de tamanhos
+            muito diferentes — uns têm citação legal, outros um aviso de
+            bloqueio. Esticados à altura da linha, o mais curto ficava com um
+            vazio de 200px dentro da própria borda. */}
+        <div className="grid items-start gap-3 lg:grid-cols-2">
           {META_CUSTOS.map((meta) => (
             <CampoCustoConhecido
               key={meta.id}
@@ -840,11 +865,12 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
           </div>
         ) : null}
 
-        <details className="mt-5 rounded-2xl border border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
-          <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-stone-800 dark:text-stone-100">
-            Triar apoios à contratação — opcional
-          </summary>
-          <div className="grid gap-4 border-t border-stone-200 p-4 dark:border-stone-700 sm:grid-cols-2 lg:grid-cols-3">
+        <Divulgacao
+          titulo="Triar apoios à contratação"
+          nota="opcional"
+          className="mt-5"
+        >
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <SelectField
               label="Inscrito no IEFP"
               value={state.registeredUnemployed}
@@ -943,7 +969,7 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
               max={8}
             />
           </div>
-        </details>
+        </Divulgacao>
 
         <div className="mt-6 rounded-2xl border border-brand/20 bg-brand-light/45 p-4 dark:bg-brand/10">
           <p className="flex items-start gap-2 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
@@ -1014,39 +1040,41 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
             >
               <EstadoDecisao
                 result={preparation.result}
-                acoes={
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => fixarPacote(preparation.result)}
-                      disabled={pacotes.length >= 2}
-                      className={`${CHIP} disabled:cursor-not-allowed disabled:opacity-50 ${preparation.result.status.readiness === "incomplete" ? "border-alert-border bg-white/70 text-alert-text hover:bg-white" : ""}`}
-                    >
-                      <Briefcase size={15} /> {pacotes.length >= 2 ? "Comparação cheia" : "Fixar para comparar"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSaveOpen(true)}
-                      className={`${CHIP} ${preparation.result.status.readiness === "incomplete" ? "border-alert-border bg-white/70 text-alert-text hover:bg-white" : ""}`}
-                    >
-                      <Download size={15} /> Guardar cenário
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        registar("hiring_export_generated", {
-                          ...contextoContratacao("ferramenta"),
-                          export_format: "pdf",
-                          readiness: preparation.result.status.readiness,
-                        });
-                        window.print();
-                      }}
-                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl bg-white px-4 text-sm font-semibold text-brand-dark hover:bg-brand-light focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
-                    >
-                      <FileSign size={15} /> Guardar em PDF
-                    </button>
-                  </>
-                }
+                acoes={(() => {
+                  const acao = preparation.result.status.readiness === "incomplete"
+                    ? ACAO_SOBRE_ALERTA
+                    : ACAO_SOBRE_VERDE;
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fixarPacote(preparation.result)}
+                        disabled={pacotes.length >= 2}
+                        className={`${acao} disabled:cursor-not-allowed disabled:opacity-50`}
+                      >
+                        <Briefcase size={15} className="flex-none" />
+                        {pacotes.length >= 2 ? "Comparação cheia" : "Fixar para comparar"}
+                      </button>
+                      <button type="button" onClick={() => setSaveOpen(true)} className={acao}>
+                        <Download size={15} className="flex-none" /> Guardar cenário
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          registar("hiring_export_generated", {
+                            ...contextoContratacao("ferramenta"),
+                            export_format: "pdf",
+                            readiness: preparation.result.status.readiness,
+                          });
+                          window.print();
+                        }}
+                        className={acao}
+                      >
+                        <FileSign size={15} className="flex-none" /> Guardar em PDF
+                      </button>
+                    </>
+                  );
+                })()}
               />
 
               <div className="border-b border-stone-200 bg-white px-3 py-3 dark:border-stone-800 dark:bg-stone-900 print:hidden">
@@ -1079,14 +1107,13 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
                 ) : null}
 
                 {preparation.result.assumptions.length > 0 ? (
-                  <details
-                    className="mt-6 rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
-                    open={preparation.result.status.readiness === "incomplete" || undefined}
+                  <Divulgacao
+                    className="mt-6"
+                    titulo="Pressupostos e lacunas"
+                    nota={`${preparation.result.assumptions.length} ${preparation.result.assumptions.length === 1 ? "nota" : "notas"}`}
+                    aberto={preparation.result.status.readiness === "incomplete" || undefined}
                   >
-                    <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-stone-800 dark:text-stone-100">
-                      Pressupostos e lacunas ({preparation.result.assumptions.length})
-                    </summary>
-                    <ul className="space-y-3 border-t border-stone-100 p-4 dark:border-stone-800">
+                    <ul className="space-y-3">
                       {preparation.result.assumptions.map((assumption) => (
                         <li key={assumption.id} className="flex gap-2.5 text-sm leading-relaxed text-stone-600 dark:text-stone-300">
                           {assumption.severity === "blocking" ? (
@@ -1103,7 +1130,7 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
                         </li>
                       ))}
                     </ul>
-                  </details>
+                  </Divulgacao>
                 ) : null}
 
                 {preparation.result.status.readiness !== "incomplete" ? (

@@ -104,7 +104,7 @@ export default function GuardarCenarioContratacao({
             type="button"
             disabled={!carregado || status === "saving"}
             onClick={save}
-            className="mt-auto min-h-[46px] rounded-xl bg-brand px-5 text-sm font-semibold text-white disabled:cursor-wait disabled:opacity-60"
+            className="mt-auto min-h-[46px] rounded-xl bg-brand px-5 text-sm font-semibold text-white transition hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 disabled:cursor-wait disabled:opacity-60"
           >
             {status === "saving" ? "A guardar…" : "Confirmar gravação"}
           </button>

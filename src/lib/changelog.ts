@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.147.0",
+    data: "2026-09-01",
+    titulo: "O estúdio de contratação deixou de parecer montado à pressa",
+    itens: [
+      "A régua das seis etapas partia linhas: no ecrã largo, «capacidade» e «privacidade e cálculo» quebravam em duas e três linhas e as bases do texto deixavam de assentar na mesma altura; a 360 pixéis, «a proposta» chegava a partir-se em quatro linhas dentro de um botão. Cada etapa passa a ser uma pastilha de uma linha só — número e nome curto — e o título da etapa mudou-se para a linha do progresso, onde tem espaço: «Etapa 4 de 6 · O posto inteiro».",
+      "O resumo do telemóvel cortava o único número que interessa: o valor de partida saía «42 000,0…». Passa a ocupar a linha inteira, com o rótulo por cima e o enquadramento do posto em pastilhas por baixo.",
+      "Numa linha de campos, um rótulo de duas linhas empurrava o seu campo 19 pixéis abaixo dos vizinhos e o ícone de ajuda ia flutuar ao lado do bloco todo, longe da última palavra. Os campos passam a alinhar por construção e a ajuda flui a seguir ao texto.",
+      "Na etapa dos custos, o cartão de um custo sem valor deixava metade de si vazio e os cartões mais curtos ficavam com 200 pixéis de branco dentro da própria borda, ao lado dos que trazem citação legal. O seletor ocupa agora a largura toda quando está sozinho, cada cartão tem a altura do seu conteúdo e a fonte legal assenta no fundo. Os distintivos «obrigatório» e «só no arranque» ficaram com a mesma forma — e com borda, porque no modo escuro o amarelo do distintivo e o amarelo do cartão são a mesma cor e um deles desaparecia.",
+      "As três ações do resultado eram três estilos diferentes lado a lado e, no telemóvel, três larguras diferentes empilhadas. Passam a ser a mesma peça, de largura inteira no telemóvel. Os quatro cartões do topo do resultado deixaram de ter a legenda a meio de um vazio, e um intervalo de líquido deixa de quebrar em duas linhas e de empurrar os outros três.",
+      "As secções que se abrem mostravam o triângulo preto do navegador. Passam a ter pastilha com seta que roda, alvo de 48 pixéis e anel de foco próprio.",
+      "No modo escuro, o botão principal do herói ficava cinzento-escuro com texto verde por cima de um herói verde: passava as réguas de contraste e mesmo assim deixava de se ler como botão. O herói é verde-profundo nos dois temas, por isso o que vive lá dentro também deixa de mudar com o tema.",
+      "O painel de proveniência do release repetia-se por cima dos sete separadores do resultado com o dobro da altura necessária. Ficou compacto sem perder nada — release, vigência, conhecimento, jurisdição, cobertura por domínio e as três garantias continuam todos visíveis.",
+      "No separador da viabilidade, um travessão de trinta pixéis ocupava o lugar do número quando faltava o preço por hora. Lia-se como avaria; agora diz por palavras que as horas ainda estão por apurar.",
+    ],
+  },
+  {
     version: "2.146.0",
     data: "2026-09-01",
     titulo: "O planeador de contratação passou de formulário comprido a estúdio de decisão",

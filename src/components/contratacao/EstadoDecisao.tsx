@@ -86,14 +86,26 @@ function Cartao({
   tom: Tom;
   incompleto?: boolean;
 }) {
+  // Duas correções que só se veem com os quatro cartões lado a lado:
+  //
+  // · `flex-col` + `mt-auto` na legenda — os cartões esticam à altura do mais
+  //   alto, e sem isto as legendas ficavam a meio, cada uma a uma altura.
+  // · O tamanho do valor desce quando ele é um INTERVALO («1777,56 € –
+  //   1969,08 €»). A 24px isso quebrava em duas linhas e empurrava os outros
+  //   três cartões 40px para baixo por causa de um só.
+  const valorLongo = value.length > 15;
   return (
-    <div className={`min-w-0 rounded-2xl border p-4 ${tom.cartao}`}>
+    <div className={`flex min-w-0 flex-col rounded-2xl border p-4 ${tom.cartao}`}>
       <p className={`texto-micro font-bold uppercase tracking-[.12em] ${tom.cartaoRotulo}`}>{label}</p>
-      <p className="mt-2 break-words font-display text-xl font-semibold tabular-nums sm:text-2xl">
+      <p
+        className={`mt-2 break-words font-display font-semibold leading-tight tabular-nums ${
+          valorLongo ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"
+        }`}
+      >
         {value}
         {incompleto ? <span aria-hidden className="align-super text-sm"> +</span> : null}
       </p>
-      <p className={`mt-1.5 text-xs leading-relaxed ${tom.cartaoLegenda}`}>{detail}</p>
+      <p className={`mt-auto pt-2 text-xs leading-relaxed ${tom.cartaoLegenda}`}>{detail}</p>
     </div>
   );
 }
@@ -129,14 +141,20 @@ export default function EstadoDecisao({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <p className={`flex items-center gap-2 text-xs font-bold uppercase tracking-[.14em] ${incompleto ? "text-alert-text" : "text-brand-mint"}`}>
-            <Icone size={14} /> {tom.eyebrow}
+            <Icone size={14} className="flex-none" /> {tom.eyebrow}
           </p>
-          <h2 className="mt-2 font-display text-2xl font-semibold sm:text-3xl">{status.headline}</h2>
+          <h2 className="mt-2 text-balance font-display text-2xl font-semibold leading-tight sm:text-3xl">
+            {status.headline}
+          </h2>
           <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${tom.detalhe}`}>
             {SUBTITULO[status.readiness]}
           </p>
         </div>
-        {acoes ? <div className="flex flex-wrap gap-2 print:hidden">{acoes}</div> : null}
+        {acoes ? (
+          <div className="flex w-full flex-col gap-2 print:hidden sm:flex-row sm:flex-wrap lg:w-auto lg:flex-none lg:justify-end">
+            {acoes}
+          </div>
+        ) : null}
       </div>
 
       {status.blockingFacts.length > 0 ? (

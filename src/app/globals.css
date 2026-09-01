@@ -1476,6 +1476,39 @@ html.dark .dark\:text-brand-mint {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
+   ②b SUPERFÍCIES QUE NÃO MUDAM COM O TEMA — E O QUE VIVE DENTRO DELAS
+   ---------------------------------------------------------------------
+   `bg-brand-deep` não tem override no escuro, de propósito: o herói de uma
+   ferramenta é verde-profundo nos DOIS temas. Mas tudo o que lá vive dentro
+   continua a passar pela camada `.dark` — e aí a camada acerta na coisa
+   errada.
+
+   O caso medido: o CTA principal do planeador de contratação é
+   `bg-white text-brand-deep`. No escuro, `bg-white` virou #1e221b (a
+   superfície de cartão do tema) e `text-brand-deep` virou #37a07c (o verde
+   dos gráficos). Resultado: um botão CINZENTO-ESCURO com texto verde por
+   cima de um herói verde — 4,99:1, portanto passava o axe e passava a régua
+   do contraste, e mesmo assim o botão primário da página deixava de se ver
+   como botão. Nenhuma medição automática apanha isto: o defeito não é de
+   contraste, é de HIERARQUIA.
+
+   `.superficie-fixa` marca um recipiente cujo fundo é o mesmo nos dois
+   temas. Lá dentro, os neutros e o verde de texto ficam com o valor do
+   modo claro — que é o valor certo, porque o fundo também é o do modo
+   claro. Especificidade (0,3,0), portanto ganha à camada sem `!important`.
+   O modo claro não é tocado: tudo isto é `.dark`-scoped.
+   ═══════════════════════════════════════════════════════════════════════ */
+.dark .superficie-fixa .bg-white {
+  background-color: #ffffff;
+}
+.dark .superficie-fixa .text-brand-deep {
+  color: #0a4a39;
+}
+.dark .superficie-fixa .text-brand-dark {
+  color: #0f6e56;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
    ③ O DEGRAU BAIXO DO `stone`, FIXADO PARA O ESCURO
    ---------------------------------------------------------------------
    Mesmo ponto cego do ②, com uma consequência diferente e mais insidiosa.

@@ -40,7 +40,10 @@ const SAIDAS = [
 
 export default function EntradaPlaneador({ tool }: { tool: ToolDefinition }) {
   return (
-    <header className="relative mb-6 overflow-hidden rounded-[2rem] border border-brand-deep bg-brand-deep text-white shadow-lift sm:rounded-[2.25rem]">
+    // `superficie-fixa`: este herói é verde-profundo nos dois temas, por isso
+    // os neutros lá de dentro (o CTA branco) não podem ser remapeados pela
+    // camada `.dark`. Ver a nota ②b em `globals.css`.
+    <header className="superficie-fixa relative mb-6 overflow-hidden rounded-[2rem] border border-brand-deep bg-brand-deep text-white shadow-lift sm:rounded-[2.25rem]">
       <span
         aria-hidden="true"
         className="pointer-events-none absolute -right-20 -top-28 h-80 w-80 rounded-full bg-brand/30 blur-3xl"
@@ -69,22 +72,30 @@ export default function EntradaPlaneador({ tool }: { tool: ToolDefinition }) {
             encargos, custos do posto e capacidade até a decisão ficar pronta para comparar.
           </p>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col gap-x-4 gap-y-3 sm:flex-row sm:items-center">
             <a
               href="#ferramenta"
               className="btn-shine inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-bold text-brand-deep shadow-card transition hover:-translate-y-0.5 hover:shadow-lift focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-mint focus-visible:ring-offset-2 focus-visible:ring-offset-brand-deep"
             >
               Começar pelo objetivo <ArrowRight size={15} />
             </a>
-            <span className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 text-sm font-semibold text-white/80 sm:justify-start">
-              <Gauge size={15} className="text-brand-mint" /> 6 decisões guiadas
-            </span>
+            {/* Metadado, não botão. Era uma pastilha com borda e altura de
+                alvo ao lado do CTA — lia-se como uma segunda ação e não
+                clicava em lado nenhum. */}
+            <p className="flex items-center justify-center gap-2 text-sm font-semibold text-white/75 sm:justify-start">
+              <Gauge size={15} className="flex-none text-brand-mint" /> 6 decisões guiadas
+            </p>
           </div>
         </div>
 
+        {/* A coluna da direita separava-se por `border-l border-white/10` sobre
+            um fundo a 5,5% de branco: no ecrã lia-se como um artefacto de
+            renderização e não como uma divisão. O degrau é agora explícito
+            (fundo mais fundo, borda mais firme) e a coluna encosta-se ao topo
+            e ao fundo do cartão. */}
         <aside
           aria-labelledby="saida-planeador"
-          className="relative border-t border-white/10 bg-white/[.055] px-5 py-6 backdrop-blur-sm sm:px-8 lg:border-l lg:border-t-0 lg:px-7 lg:py-8"
+          className="relative border-t border-white/15 bg-black/15 px-5 py-6 sm:px-8 lg:border-l lg:border-t-0 lg:px-7 lg:py-8"
         >
           <p className="texto-micro font-bold uppercase tracking-[.15em] text-brand-mint">Quando terminares</p>
           <h2 id="saida-planeador" className="mt-2 font-display text-2xl font-semibold leading-tight text-white">
@@ -92,7 +103,7 @@ export default function EntradaPlaneador({ tool }: { tool: ToolDefinition }) {
           </h2>
           <ol className="mt-5 space-y-3">
             {SAIDAS.map(({ label, detail, Icon }, index) => (
-              <li key={label} className="flex gap-3 rounded-2xl border border-white/10 bg-black/10 p-3">
+              <li key={label} className="flex gap-3 rounded-2xl border border-white/10 bg-white/[.07] p-3">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-brand-mint/10 text-brand-mint">
                   <Icon size={16} />
                 </span>
