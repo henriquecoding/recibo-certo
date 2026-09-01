@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Storage bucket para avatares de perfil
+-- Recibo Certo — Storage bucket para avatares de perfil
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================
 -- Bucket público para avatares dos utilizadores.

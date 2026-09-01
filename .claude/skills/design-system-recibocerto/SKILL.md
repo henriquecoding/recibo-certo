@@ -1,9 +1,9 @@
 ---
 name: design-system-recibocerto
-description: Design system, dark mode, motion e acessibilidade do ReciboCerto. Usar SEMPRE que criares ou alterares UI (componentes, páginas, estilos, animações). Garante nível premium, coerência e que o modo claro nunca parte.
+description: Design system, dark mode, motion e acessibilidade do Recibo Certo. Usar SEMPRE que criares ou alterares UI (componentes, páginas, estilos, animações). Garante nível premium, coerência e que o modo claro nunca parte.
 ---
 
-# Design system — ReciboCerto
+# Design system — Recibo Certo
 
 Estética: premium, calma, editorial, alta confiança (referências: Stripe, Linear,
 Notion). Anti-"SaaS de IA". Ver também `DESIGN.md`.

@@ -20,10 +20,10 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Simulador de recibo de vencimento 2026 | ReciboCerto",
+    title: "Simulador de recibo de vencimento 2026 | Recibo Certo",
     description: "Do salário bruto ao líquido, rubrica a rubrica: IRS, Segurança Social, subsídios, horas extra e custo da empresa.",
     url: "https://www.recibocerto.pt/ferramentas/recibo-vencimento",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

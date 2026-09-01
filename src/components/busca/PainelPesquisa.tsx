@@ -33,6 +33,7 @@
 
 import { useEffect, useRef } from "react";
 import { m, AnimatePresence } from "motion/react";
+import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { TETO_DIALOGO, TETO_POPOVER } from "@/lib/busca/pontuar";
 import { CHROME_MOVEL, CHROME_SECRETARIA, focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
@@ -66,13 +67,7 @@ import { useControladorBusca } from "./useControladorBusca";
  */
 export type VariantePainel = "secretaria" | "movel";
 
-export default function PainelPesquisa({
-  id,
-  idCampo,
-  aoFechar,
-  aoFecharComFoco,
-  variante = "secretaria",
-}: {
+interface PropsPainel {
   id: string;
   idCampo: string;
   /** Fecha sem mexer no foco: clique fora, saída por Tab, navegação. */
@@ -80,7 +75,61 @@ export default function PainelPesquisa({
   /** Fecha e devolve o foco à barra: Escape e o botão ✕. */
   aoFecharComFoco: () => void;
   variante?: VariantePainel;
-}) {
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════
+ *  O PAINEL TRAZ O SEU PRÓPRIO MOTOR DE ANIMAÇÃO — E ISTO NÃO É ZELO
+ *  ---------------------------------------------------------------------
+ *  ┌─────────────────────────────────────────────────────────────────────┐
+ *  │ O DEFEITO: A PESQUISA ABRIA A `opacity: 0`                           │
+ *  │                                                                     │
+ *  │ Este painel entra com `m.div initial={{opacity:0}} animate={{        │
+ *  │ opacity:1}}`. Um `m.*` só anima se tiver um `LazyMotion` por cima:   │
+ *  │ sem ele o elemento RENDERIZA e o `animate` nunca chega a ser         │
+ *  │ aplicado — fica parado no `initial`. Ou seja, transparente.          │
+ *  │                                                                     │
+ *  │ O `MotionProvider` vivia no layout de raiz e saiu de lá quando os    │
+ *  │ overlays passaram a carregar por intenção. Cada superfície de        │
+ *  │ `IntentOverlays` recebeu o seu; as rotas com layout próprio          │
+ *  │ (guias, ferramentas, painel, quiz…) também. Este painel não é nem    │
+ *  │ uma coisa nem outra: vive no CHROME, montado pelo `LancadorBusca` e  │
+ *  │ pelo `DockMovel`, e ficou sem nenhum.                                │
+ *  │                                                                     │
+ *  │ O resultado é o pior tipo de avaria: o painel abria, ocupava         │
+ *  │ 1370×330 px, tinha o campo com foco, tinha os resultados certos, e   │
+ *  │ NINGUÉM O VIA. Quem carregava na barra concluía, com razão, que a    │
+ *  │ pesquisa não fazia nada.                                            │
+ *  │                                                                     │
+ *  │ E não foi apanhado por nenhum portão porque `isVisible()` do         │
+ *  │ Playwright e o axe dão `opacity: 0` como VISÍVEL — tem caixa, não    │
+ *  │ tem `visibility:hidden`. Um ficheiro inteiro de verificações passou  │
+ *  │ verde por cima de uma superfície invisível. O `visivel:e2e` passa a  │
+ *  │ medir a opacidade computada, que é o que o olho mede.                │
+ *  │                                                                     │
+ *  │ Por isso o provider vive AQUI dentro e não em quem monta o painel:   │
+ *  │ uma superfície nova que o monte não tem de se lembrar de nada, e     │
+ *  │ não há forma de o painel existir sem o motor que o torna visível.    │
+ *  │ (`LazyMotion` aninhado é suportado — nas rotas que já têm provider   │
+ *  │ isto não duplica trabalho nem features.)                             │
+ *  └─────────────────────────────────────────────────────────────────────┘
+ * ═══════════════════════════════════════════════════════════════════════
+ */
+export default function PainelPesquisa(props: PropsPainel) {
+  return (
+    <MotionProvider>
+      <PainelPesquisaInterno {...props} />
+    </MotionProvider>
+  );
+}
+
+function PainelPesquisaInterno({
+  id,
+  idCampo,
+  aoFechar,
+  aoFecharComFoco,
+  variante = "secretaria",
+}: PropsPainel) {
   const movel = variante === "movel";
   const caixa = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
@@ -205,7 +254,7 @@ export default function PainelPesquisa({
         data-busca-painel="aberto"
         data-variante={variante}
         role="search"
-        aria-label="Pesquisa no ReciboCerto"
+        aria-label="Pesquisa no Recibo Certo"
         className={`flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5 ${
           movel ? "rc-dock-painel-movel" : "rc-dock-painel"
         }`}

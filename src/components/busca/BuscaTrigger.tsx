@@ -13,7 +13,7 @@ export function BuscaTrigger({ compacto = false }: { compacto?: boolean }) {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event(EVENTO_BUSCA_ABRIR))}
-      aria-label="Pesquisar no ReciboCerto"
+      aria-label="Pesquisar no Recibo Certo"
       aria-keyshortcuts="Control+K Meta+K"
       className={
         compacto

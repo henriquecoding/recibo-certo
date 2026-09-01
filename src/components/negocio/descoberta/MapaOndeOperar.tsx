@@ -26,7 +26,7 @@
 //  — o pedido ao Nominatim, que é o serviço de pesquisa. O ponto do GPS
 //  é convertido em concelho AQUI, no browser, contra as sedes
 //  commitadas; nenhuma coordenada é guardada nem enviada para o servidor
-//  do ReciboCerto.
+//  do Recibo Certo.
 //
 //  ── MOBILE-FIRST, COMO O RESTO ──────────────────────────────────────
 //  Arrasto e roda começam BLOQUEADOS no telemóvel — um mapa que captura

@@ -425,7 +425,7 @@ export async function eliminarWaitlistEntry(id: string): Promise<{ erro?: string
  *
  * Os cinco primeiros descrevem onde a CONVERSA está. Os antigos ("aprovado",
  * "rejeitado") descreviam mal um primeiro contacto — davam a entender que o
- * ReciboCerto aprova unilateralmente uma proposta antes de haver relação ou
+ * Recibo Certo aprova unilateralmente uma proposta antes de haver relação ou
  * diligência — mas continuam aqui porque há linhas em produção com esses
  * valores, e apagá-los do tipo partia o painel que as mostra.
  */

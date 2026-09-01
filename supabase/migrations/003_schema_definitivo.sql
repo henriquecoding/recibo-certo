@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Schema definitivo (v3)
+-- Recibo Certo — Schema definitivo (v3)
 -- Cola TUDO no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================

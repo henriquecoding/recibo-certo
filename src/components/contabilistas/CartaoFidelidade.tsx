@@ -89,11 +89,11 @@ export default function CartaoFidelidade({
             .
           </p>
         )}
-        {/* Dizer o que isto NÃO é. O ReciboCerto não cobra a consulta nem
+        {/* Dizer o que isto NÃO é. O Recibo Certo não cobra a consulta nem
             garante o desconto — afirmá-lo seria uma promessa sobre dinheiro
             de terceiros. */}
         <p className="mt-2 text-xs leading-relaxed text-stone-400">
-          O desconto é acordado com o contabilista e aplicado por ele. O ReciboCerto
+          O desconto é acordado com o contabilista e aplicado por ele. O Recibo Certo
           regista o cartão; não cobra a consulta nem processa pagamentos.
         </p>
       </div>

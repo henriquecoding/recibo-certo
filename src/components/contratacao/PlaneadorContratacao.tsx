@@ -57,7 +57,6 @@ import {
 } from "./estado";
 import CoberturaDoRelease from "./CoberturaDoRelease";
 import {
-  CabecalhoStudio,
   ETAPAS_CONTRATACAO,
   NavegacaoEtapas,
   NavegacaoRodape,
@@ -319,7 +318,6 @@ export default function PlaneadorContratacao({ hoje }: { hoje: string }) {
 
   return (
     <div className="space-y-6 print:space-y-3">
-      <CabecalhoStudio releaseStatus={releaseStatus} />
       <NavegacaoEtapas ativa={etapa} visitadas={etapasVisitadas} onSelect={irParaEtapa} />
       <ResumoPlaneador
         compacto

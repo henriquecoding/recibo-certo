@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Monitor de dados fiscais — ReciboCerto
+ * Monitor de dados fiscais — Recibo Certo
  * ----------------------------------------------------------------------
  * Deteta quando os dados fiscais estão desatualizados ou por reverificar
  * e produz um relatório. NÃO altera dados — o objetivo é ABRIR A PORTA DE
@@ -119,7 +119,7 @@ async function main() {
   // Relatório
   const ok = errors.length === 0;
   const linhas = [];
-  linhas.push(`# Verificação de dados fiscais — ReciboCerto`);
+  linhas.push(`# Verificação de dados fiscais — Recibo Certo`);
   linhas.push("");
   linhas.push(`- Data da verificação: ${isoLocal(now)}`);
   linhas.push(`- Ano fiscal dos dados: ${fiscalYear || "?"}`);

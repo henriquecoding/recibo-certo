@@ -1,4 +1,4 @@
-# Auditoria técnica e fiscal do ReciboCerto — Portugal 2026
+# Auditoria técnica e fiscal do Recibo Certo — Portugal 2026
 
 **Versão auditada:** `704503a331952c0a1e74c411ded5e121fdf2d7c9` (`main`)
 **Remediação revista:** ramo de conclusão de 22 de julho de 2026, posterior à versão auditada
@@ -31,7 +31,7 @@ O novo `ReciboCerto-Fiscal-Engine` mantém o dataset 2026 em `draft`. Payroll é
 
 ## 1. Decisão executiva
 
-O ReciboCerto evoluiu de forma significativa desde a auditoria de 18 de julho de 2026. A versão atual compila, gera 98 páginas estáticas, passa 125 testes, não apresenta vulnerabilidades conhecidas de nível elevado e contém uma base fiscal centralizada com origem e data de verificação. Foram acrescentados, entre outros, tabelas regionais de retenção, módulos de trabalho dependente, declaração guiada, heranças e uma API de dados fiscais.
+O Recibo Certo evoluiu de forma significativa desde a auditoria de 18 de julho de 2026. A versão atual compila, gera 98 páginas estáticas, passa 125 testes, não apresenta vulnerabilidades conhecidas de nível elevado e contém uma base fiscal centralizada com origem e data de verificação. Foram acrescentados, entre outros, tabelas regionais de retenção, módulos de trabalho dependente, declaração guiada, heranças e uma API de dados fiscais.
 
 Ainda assim, **os resultados dos simuladores não devem ser apresentados como um apuramento fiscal completo ou juridicamente determinado**. O problema principal deixou de ser a falta de números e passou a ser a ausência de um sistema formal de regras: elegibilidade, vigência, jurisdição, conflitos entre regimes, dados obrigatórios, proveniência legal verificável, memória de cálculo e estados seguros quando a resposta não pode ser determinada.
 
@@ -641,7 +641,7 @@ Alterações durante o ano são reais; a atualidade não pode ser inferida só p
 ## 13. Brief de implementação para Claude Code/Codex
 
 ```text
-Objetivo: migrar o ReciboCerto para um motor fiscal português versionado,
+Objetivo: migrar o Recibo Certo para um motor fiscal português versionado,
 explicável e seguro, sem alterar o stack Next.js/TypeScript e sem publicar.
 
 Ordem obrigatória:
@@ -679,7 +679,7 @@ Definição de concluído por regra:
 
 ## 14. Conclusão
 
-O ReciboCerto já tem uma boa fundação de produto e engenharia, mas o próximo salto não virá de acrescentar mais taxas e toggles. Virá de converter legislação portuguesa em regras temporais, jurisdicionais, explicáveis e testáveis, com a capacidade explícita de dizer "faltam dados".
+O Recibo Certo já tem uma boa fundação de produto e engenharia, mas o próximo salto não virá de acrescentar mais taxas e toggles. Virá de converter legislação portuguesa em regras temporais, jurisdicionais, explicáveis e testáveis, com a capacidade explícita de dizer "faltam dados".
 
 O `ReciboCerto-Fiscal-Engine` que acompanha este relatório estabelece esse contrato e impede, por defeito, que um dataset não aprovado produza uma resposta fiscal definitiva. A prioridade seguinte é corrigir os P0 no motor atual e migrar verticalmente, começando por recibos/IVA/SS e só depois IRS e empresa.
 

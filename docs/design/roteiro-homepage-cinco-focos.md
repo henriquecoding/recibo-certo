@@ -85,7 +85,7 @@ conta de outrem»). A NN/g tem cinco razões documentadas contra isto, e três
 aplicam-se com força a este produto:
 
 1. **As pessoas não cabem numa categoria.** Metade do público-alvo do
-   ReciboCerto tem salário *e* recibos verdes. O seletor obriga-as a escolher
+   Recibo Certo tem salário *e* recibos verdes. O seletor obriga-as a escolher
    uma identidade que não têm.
 2. **Carga cognitiva fora da tarefa.** «Forçar a auto-identificação cria um
    passo adicional e tira as pessoas do modo-tarefa.» Quem chega quer saber

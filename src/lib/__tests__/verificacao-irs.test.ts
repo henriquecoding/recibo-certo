@@ -453,8 +453,22 @@ describe("F-21/F-22 · higiene dos dados fiscais", () => {
     const fonte = readFileSync(join(RAIZ, "lib", "fiscal-data.ts"), "utf8");
     const revisao = fonte.match(/DATA_LAST_REVIEW = "(\d{4}-\d{2}-\d{2})"/);
     expect(revisao).not.toBeNull();
-    // Nenhum `lastVerified` pode ser posterior à revisão declarada.
-    const datas = [...fonte.matchAll(/"(\d{4}-\d{2}-\d{2})"/g)].map((m) => m[1]);
+    // Nenhuma DATA DE VERIFICAÇÃO pode ser posterior à revisão declarada.
+    //
+    // O padrão é o MESMO que `scripts/check-fiscal-data.mjs` usa, e é
+    // deliberadamente estreito: só as constantes de topo (`const REV_… = "…"`,
+    // `const TODAY = "…"`), que é onde as datas de verificação vivem.
+    //
+    // Apanhar TODAS as datas entre aspas do ficheiro seria mais simples e
+    // estaria errado: desde a verba 2.42 da lista I que `fiscal-data.ts`
+    // também guarda datas que são VALOR e não verificação — a janela de
+    // licenciamento até 2029 e o fim de vigência a 31/12/2032. Essas são
+    // futuras por definição legal, e uma delas a falhar este teste não
+    // significaria dados por rever: significaria o teste a medir outra coisa.
+    const datas = [...fonte.matchAll(/^const [A-Z_]+ = "(\d{4}-\d{2}-\d{2})";/gm)].map(
+      (m) => m[1]
+    );
+    expect(datas.length).toBeGreaterThan(0);
     const maisRecente = datas.sort().at(-1)!;
     expect(maisRecente <= revisao![1]).toBe(true);
   });

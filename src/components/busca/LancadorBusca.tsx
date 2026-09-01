@@ -115,7 +115,7 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
         <Link
           href="/pesquisar"
           id={idCampo}
-          aria-label="Pesquisar no ReciboCerto"
+          aria-label="Pesquisar no Recibo Certo"
           aria-expanded={false}
           aria-controls={ID_PAINEL}
           aria-keyshortcuts="Control+K Meta+K"

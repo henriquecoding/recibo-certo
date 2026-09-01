@@ -3,7 +3,7 @@
 //  ---------------------------------------------------------------------
 //  A tese do §10 vale a pena repetir porque contraria o instinto: «A
 //  estratégia correta para ChatGPT, Gemini, Perplexity e outras respostas
-//  sintetizadas não é produzir texto "para a IA". É tornar o ReciboCerto
+//  sintetizadas não é produzir texto "para a IA". É tornar o Recibo Certo
 //  rastreável, citável, atual, semanticamente claro e mais útil do que uma
 //  parafrase genérica.» Não existe um atalho técnico chamado GEO.
 //
@@ -115,7 +115,7 @@ export interface PromptBenchmark {
   id: string;
   icp: IcpId;
   pergunta: string;
-  /** A superfície do ReciboCerto que deveria ser citada nesta resposta. */
+  /** A superfície do Recibo Certo que deveria ser citada nesta resposta. */
   paginaAlvo: string;
 }
 
@@ -164,10 +164,10 @@ export interface MetricaBenchmark {
 }
 
 export const METRICAS_BENCHMARK: readonly MetricaBenchmark[] = [
-  { nome: "Taxa de citação", definicao: "Prompts em que o ReciboCerto é citado / total do conjunto." },
+  { nome: "Taxa de citação", definicao: "Prompts em que o Recibo Certo é citado / total do conjunto." },
   { nome: "Quota de citações", definicao: "Citações nossas / total de citações dadas nas respostas." },
   { nome: "Frescura", definicao: "A resposta reflete o ano fiscal e as regras em vigor?" },
-  { nome: "Factualidade", definicao: "O que é atribuído ao ReciboCerto está correto?" },
+  { nome: "Factualidade", definicao: "O que é atribuído ao Recibo Certo está correto?" },
   { nome: "Posição", definicao: "A citação aparece na resposta principal ou apenas nas fontes?" },
 ];
 

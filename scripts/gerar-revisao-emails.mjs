@@ -62,7 +62,7 @@ const dados = JSON.stringify(
   }])),
 );
 
-const pagina = `<title>Emails do ReciboCerto</title>
+const pagina = `<title>Emails do Recibo Certo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
@@ -71,7 +71,7 @@ const pagina = `<title>Emails do ReciboCerto</title>
     --ground: #FBFAF8; --surface: #FFFFFF; --surface-2: #F5F4F1;
     --linha: #E7E5E4; --linha-forte: #D6D3D1;
     --ink: #1C1917; --texto: #44403C; --fraco: #78716C; --tenue: #A8A29E;
-    --marca: #1D9E75; --marca-escura: #0F6E56; --marca-tenue: #E1F5EE;
+    --marca: #177E5E; --marca-escura: #0F6E56; --marca-tenue: #E1F5EE;
     --ambar: #B45309; --ambar-tenue: #FEF6E7;
     --raio: 12px;
   }
@@ -228,7 +228,7 @@ const pagina = `<title>Emails do ReciboCerto</title>
 
 <div class="env">
   <header class="topo">
-    <p class="sobrescrito">ReciboCerto · revisão de correio</p>
+    <p class="sobrescrito">Recibo Certo · revisão de correio</p>
     <h1>Os 24 emails que o produto sabe enviar</h1>
     <p class="intro">
       Todos os moldes, em todas as variantes, preenchidos com dados de exemplo realistas

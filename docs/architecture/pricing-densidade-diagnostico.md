@@ -250,7 +250,7 @@ difícil de ler do que um waterfall, e mais caro de tornar acessível.
 
 ---
 
-## H. Que padrões existentes do ReciboCerto serão reutilizados
+## H. Que padrões existentes do Recibo Certo serão reutilizados
 
 Levantados no repositório. **Não se cria uma segunda linguagem visual.**
 

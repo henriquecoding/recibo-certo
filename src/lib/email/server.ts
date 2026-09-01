@@ -1,5 +1,6 @@
 import "server-only";
 import { Resend } from "resend";
+import { EMAIL_REMETENTE } from "@/lib/contacto";
 
 let instancia: Resend | null = null;
 
@@ -15,4 +16,5 @@ export function getResend(): Resend {
   return instancia;
 }
 
-export const EMAIL_FROM = "ReciboCerto <noreply@recibocerto.pt>";
+/** O remetente. Vive em `@/lib/contacto`, com os outros endereços da marca. */
+export const EMAIL_FROM = EMAIL_REMETENTE;

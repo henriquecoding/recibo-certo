@@ -6,6 +6,7 @@ import {
   ArrowLeft, Calendar, Mail, ChevronRight, Check,
   Warning, ShieldCheck, Lock,
 } from "@/components/ui/Icons";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -209,7 +210,7 @@ export default function LegalPage({
             className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 transition-colors hover:text-brand-mint"
           >
             <ArrowLeft size={12} />
-            ReciboCerto
+            Recibo Certo
           </Link>
 
           <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-mint/60">
@@ -285,11 +286,11 @@ export default function LegalPage({
                     Responderemos no prazo máximo de 30 dias úteis.
                   </p>
                   <a
-                    href="mailto:recibocerto.pt@gmail.com"
+                    href={mailtoApoio()}
                     className="flex items-center gap-1.5 text-[11px] font-semibold text-brand transition-colors hover:text-brand-dark dark:hover:text-brand-mint"
                   >
                     <Mail size={12} />
-                    recibocerto.pt@gmail.com
+                    {EMAIL_APOIO}
                   </a>
                 </div>
               </div>
@@ -314,11 +315,11 @@ export default function LegalPage({
               </p>
             </div>
             <a
-              href="mailto:recibocerto.pt@gmail.com"
+              href={mailtoApoio()}
               className="flex items-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-brand-dark"
             >
               <Mail size={14} />
-              recibocerto.pt@gmail.com
+              {EMAIL_APOIO}
             </a>
           </div>
         </div>

@@ -1,9 +1,9 @@
 ---
 name: fiscalidade-pt-2026
-description: Disciplina de exatidão fiscal do ReciboCerto. Usar SEMPRE antes de tocar em taxas, coeficientes, deduções, atividades, na calculadora, no simulador de IRS ou no comparador. Garante que nenhum dado fiscal é inventado ou desatualizado.
+description: Disciplina de exatidão fiscal do Recibo Certo. Usar SEMPRE antes de tocar em taxas, coeficientes, deduções, atividades, na calculadora, no simulador de IRS ou no comparador. Garante que nenhum dado fiscal é inventado ou desatualizado.
 ---
 
-# Exatidão fiscal — ReciboCerto (Portugal)
+# Exatidão fiscal — Recibo Certo (Portugal)
 
 ## Regra absoluta
 **Nunca inventar nem usar de memória um número fiscal.** Taxas mudam todos os anos
@@ -79,12 +79,13 @@ cat. B. Dados em `CATEGORIA_F` (`fiscal-data.ts`); motor próprio
 > `npm run skills:sync`. Não editar à mão — alterar os dados na fonte de verdade.
 
 <!-- AUTO-GERADO:valores-fiscais — não editar à mão. Atualizado por `npm run skills:sync`. -->
-<!-- Ano fiscal 2026 · última revisão 2026-08-25 · gerado de src/lib/fiscal-data.ts -->
+<!-- Ano fiscal 2026 · última revisão 2026-09-01 · gerado de src/lib/fiscal-data.ts -->
 
 - **IAS** 537,13 €.
 - **Retenção na fonte** (cat. B): Art. 151.º 23% · outros serviços 11,5% · direitos de autor 16,5% · vendas sem retenção. Dispensa abaixo de 15 000 €/ano.
 - **Coeficientes do regime simplificado**: serviços 151.º 0,75 · outros 0,35 · vendas/hotelaria 0,15 · propriedade intelectual 0,95 · AL moradia 0,35 (contenção 0,50) · transparência 1,0 · **subsídios não destinados à exploração 0,30** · **subsídios à exploração 0,10**.
 - **IVA**: isenção até 15 000 € (excesso 18 750 €). Continente 6/13/23, Madeira 4/12/22, Açores 4/9/16.
+- **IVA na construção de habitação (verba 2.42 da lista I)**: empreitadas de construção/reabilitação de imóveis para venda em HPP ou para arrendamento habitacional passam à **taxa reduzida** (6% no continente) se o preço não exceder 660 982 € ou a renda 2300 €. Em vigor desde **2026-07-01**, cessa a **2032-12-31** (DL 97/2026). Na mesma data alargou-se a **inversão do sujeito passivo** (art. 2.º, n.º 1, al. j) CIVA): nestas empreitadas aplica-se MESMO a adquirentes sem direito à dedução. Dados em `IVA_CONSTRUCAO_HABITACAO` e `AUTOLIQUIDACAO_CONSTRUCAO`.
 - **Segurança Social**: taxa 21,4% sobre 70% (serviços) ou 20% (bens/hotelaria).
 - **Categoria F (rendas puras)**: taxa autónoma habitação 25% · não habitacional 28%; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio `calcularCategoriaF`.
 - **IRS**: escalões de 12,5% a 48%; mínimo de existência 12 880 €.

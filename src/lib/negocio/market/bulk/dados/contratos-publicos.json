@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "contratos-publicos",
-  "geradoEm": "2026-08-21T02:29:32.832Z",
+  "geradoEm": "2026-09-01T05:49:00.496Z",
   "transformVersion": "base-contratos-por-nuts2@1",
   "proveniencia": {
     "dataset": "contratos-publicos-portal-base-impic-contratos-de-2012-a-2026",
@@ -11,17 +11,17 @@
     "recurso": {
       "id": "7d0a3719-a477-4b91-ba0a-3033b13d790d",
       "ficheiro": "Contratos2025.json",
-      "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20260816-091135-e2c09fd9/contratos2025.zip",
-      "atualizadoEm": "2026-08-16T09:11:35.437000+00:00",
-      "bytes": 54461325
+      "url": "https://dados.gov.pt/s/resources/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/20260830-092726-45eb6e88/contratos2025.zip",
+      "atualizadoEm": "2026-08-30T09:27:26.550000+00:00",
+      "bytes": 55170168
     },
-    "checksumOrigem": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79",
-    "registosLidos": 246978,
-    "contratosLocalizados": 196562,
+    "checksumOrigem": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b",
+    "registosLidos": 247183,
+    "contratosLocalizados": 196732,
     "descartes": {
       "anoDiferente": 0,
-      "tipoNaoRelevante": 16269,
-      "semConcelho": 34025,
+      "tipoNaoRelevante": 16293,
+      "semConcelho": 34036,
       "concelhoDesconhecido": 122,
       "concelhoAmbiguo": 0
     }
@@ -31,7 +31,7 @@
       "id": "dados-gov:procurement.contracts.services:2025:11",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 68418,
+      "value": 68456,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -52,8 +52,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -70,19 +70,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:15",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 8486,
+      "value": 8487,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -103,8 +103,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -121,19 +121,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:19",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 30447,
+      "value": 30479,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -154,8 +154,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -172,19 +172,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:1A",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 49832,
+      "value": 49860,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -205,8 +205,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -223,19 +223,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:1B",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 11156,
+      "value": 11167,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -256,8 +256,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -274,19 +274,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:1C",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 11916,
+      "value": 11959,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -307,8 +307,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -325,19 +325,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:1D",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 10688,
+      "value": 10705,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -358,8 +358,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -376,13 +376,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:20",
@@ -409,8 +409,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -427,13 +427,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:30",
@@ -460,8 +460,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -478,19 +478,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.contracts.services:2025:PT",
       "sourceId": "dados-gov",
       "metricId": "procurement.contracts.services",
-      "value": 230709,
+      "value": 230890,
       "unit": "contratos",
       "geography": {
         "country": "PT",
@@ -510,8 +510,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -532,13 +532,13 @@
         "semanticMapping": "approved",
         "flags": []
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:11",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 7021,
+      "value": 7023,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -559,8 +559,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -577,13 +577,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:15",
@@ -610,8 +610,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -628,19 +628,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:19",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 3594,
+      "value": 3610,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -661,8 +661,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -679,19 +679,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:1A",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 9568,
+      "value": 9573,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -712,8 +712,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -730,19 +730,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:1B",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 1439,
+      "value": 1440,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -763,8 +763,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -781,19 +781,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:1C",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 1390,
+      "value": 1407,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -814,8 +814,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -832,13 +832,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:1D",
@@ -865,8 +865,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -883,13 +883,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:20",
@@ -916,8 +916,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -934,13 +934,13 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:30",
@@ -967,8 +967,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -985,19 +985,19 @@
       },
       "quality": {
         "status": "observed",
-        "completeness": 0.851991036327148,
+        "completeness": 0.8520594222356966,
         "semanticMapping": "approved",
         "flags": [
           "cobertura-regional-parcial"
         ]
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     },
     {
       "id": "dados-gov:procurement.open_procedures:2025:PT",
       "sourceId": "dados-gov",
       "metricId": "procurement.open_procedures",
-      "value": 33825,
+      "value": 33868,
       "unit": "procedimentos",
       "geography": {
         "country": "PT",
@@ -1017,8 +1017,8 @@
         "end": "2025-12-31",
         "label": "2025"
       },
-      "publishedAt": "2026-08-16",
-      "retrievedAt": "2026-08-21T02:29:32.831Z",
+      "publishedAt": "2026-08-30",
+      "retrievedAt": "2026-09-01T05:49:00.494Z",
       "validUntil": "2027-12-31",
       "methodologyRef": "https://dados.gov.pt/pt/datasets/contratos-publicos-portal-base-impic-contratos-de-2012-a-2026/",
       "transform": {
@@ -1039,8 +1039,8 @@
         "semanticMapping": "approved",
         "flags": []
       },
-      "checksum": "sha256:5af5938c45e917892982e2d0443cac027119150fee6cbf7842af85e652e1ad79"
+      "checksum": "sha256:f5ae9dea5bf05f030a99a00e40af8acc2d4ba7bba82d07ff6b25471cffd9bb7b"
     }
   ],
-  "contentHash": "sha256:ad9097de4c91ab44ef8fe974801465e6ad990c02610f38b26ed2a7351bd2749c"
+  "contentHash": "sha256:c22b5f2438110c29ea4e5e407c152856f6e37b128dc42277ab35ba9dfe1f0efe"
 }

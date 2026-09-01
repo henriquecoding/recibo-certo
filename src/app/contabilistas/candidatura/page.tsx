@@ -42,7 +42,7 @@ import {
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "Ser contabilista no Recibo Certo | ReciboCerto",
+  title: "Ser contabilista no Recibo Certo | Recibo Certo",
   description:
     "Recebe casos de trabalhadores independentes, responde com propostas, marca consultas e sincroniza a agenda. Comissão que desce com o trabalho feito, e 5% permanentes para os primeiros dez.",
   alternates: { canonical: "/contabilistas/candidatura" },

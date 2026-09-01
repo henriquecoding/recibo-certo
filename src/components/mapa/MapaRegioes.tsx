@@ -1,6 +1,6 @@
 "use client";
 
-// ★ MAPA UNIFICADO do ReciboCerto — substitui os antigos MapaPrecosRegioes e
+// ★ MAPA UNIFICADO do Recibo Certo — substitui os antigos MapaPrecosRegioes e
 // MapaBeneficiosRegioes por UM único mapa com sistema de filtros (camadas):
 //
 //   · Contabilistas — avença mensal média por região (estimativas de mercado)

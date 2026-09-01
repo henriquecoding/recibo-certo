@@ -2,7 +2,7 @@ import GuiaPayout from "@/components/dashboard/GuiaPayout";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Guia do Payout MoR — ReciboCerto",
+  title: "Guia do Payout MoR — Recibo Certo",
   description:
     "Como configurar a faturação do payout Lemon Squeezy no Portal das Finanças: autoliquidação de IVA e sem retenção na fonte.",
 };

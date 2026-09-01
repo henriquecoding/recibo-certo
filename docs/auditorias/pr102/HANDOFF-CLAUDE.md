@@ -76,7 +76,7 @@ Não inferir “cloud” a partir do plano como se fosse consentimento. Destino 
 
 ## Design / UX
 
-Preservar a identidade calma do ReciboCerto, mas evoluir as áreas operacionais para a direção **“Mesa Fiscal”** definida na auditoria. Não resolver a simplicidade com decoração. Priorizar hierarquia, densidade útil, contexto, pessoas, estados semânticos e navegação persistente.
+Preservar a identidade calma do Recibo Certo, mas evoluir as áreas operacionais para a direção **“Mesa Fiscal”** definida na auditoria. Não resolver a simplicidade com decoração. Priorizar hierarquia, densidade útil, contexto, pessoas, estados semânticos e navegação persistente.
 
 Ordem visual recomendada após segurança funcional:
 

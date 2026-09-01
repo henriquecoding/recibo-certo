@@ -7,7 +7,7 @@ import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResu
 const TOOL = porId("mapa-contabilistas")!;
 
 export const metadata: Metadata = {
-  title: "Mapa de preços por região 2026: contabilistas, notários e advogados | ReciboCerto",
+  title: "Mapa de preços por região 2026: contabilistas, notários e advogados | Recibo Certo",
   description:
     "Quanto custa um contabilista, um notário ou um advogado em Portugal? Um único mapa interativo com filtros: avenças de contabilistas, atos notariais com preços, consultas de advogados e benefícios fiscais por região.",
   keywords: [
@@ -22,11 +22,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Mapa de preços por região 2026: contabilistas, notários e advogados | ReciboCerto",
+    title: "Mapa de preços por região 2026: contabilistas, notários e advogados | Recibo Certo",
     description:
       "Um único mapa interativo de Portugal com filtros: avenças de contabilistas, atos notariais com preços, consultas de advogados e benefícios fiscais por região.",
     url: "https://www.recibocerto.pt/ferramentas/mapa-contabilistas",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

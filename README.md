@@ -1,4 +1,4 @@
-# ReciboCerto
+# Recibo Certo
 
 > [!IMPORTANT]
 > Software proprietário e confidencial. Este repositório não concede licença

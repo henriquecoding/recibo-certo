@@ -269,7 +269,7 @@ export const CRITERIOS_PRIORIZACAO: readonly Criterio[] = [
   },
   {
     pergunta: "Diferenciação",
-    pontuacaoAlta: "O ReciboCerto combina cálculo, explicação e comparação",
+    pontuacaoAlta: "O Recibo Certo combina cálculo, explicação e comparação",
     decisao: "Evita conteúdo comoditizado",
   },
   {

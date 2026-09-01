@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   description:
     "Calculadora de recibos verdes grátis para sempre. O plano Plus traz conta na nuvem, cenários guardados e exportação para o contabilista. Começa grátis, sem cartão.",
   keywords: [
-    "ReciboCerto preços",
+    "Recibo Certo preços",
     "calculadora recibos verdes grátis",
     "plano pro trabalhador independente",
     "gestão recibos verdes Portugal",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: "/precos" },
   openGraph: {
-    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
+    title: "Planos Recibo Certo — Calculadora Grátis + Plus",
     description:
       "Calculadora grátis para sempre. Plus com conta na nuvem, cenários guardados e exportação. Começa grátis.",
     url: "https://www.recibocerto.pt/precos",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Planos ReciboCerto — Calculadora Grátis + Plus",
+    title: "Planos Recibo Certo — Calculadora Grátis + Plus",
     description:
       "Calculadora de recibos verdes grátis. Plus com alertas e nuvem.",
   },
@@ -46,7 +46,7 @@ const jsonLd = {
       "@type": "WebPage",
       "@id": "https://www.recibocerto.pt/precos#webpage",
       url: "https://www.recibocerto.pt/precos",
-      name: "Planos e Preços — ReciboCerto",
+      name: "Planos e Preços — Recibo Certo",
       description:
         "Calculadora de recibos verdes grátis para sempre. Plano Plus com alertas, conta na nuvem e exportação para o contabilista.",
       inLanguage: "pt-PT",

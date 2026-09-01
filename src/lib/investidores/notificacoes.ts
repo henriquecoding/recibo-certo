@@ -38,7 +38,7 @@ export interface DadosNotificacao {
 function moldura(titulo: string, corpo: string): string {
   return `<!doctype html><html lang="pt-PT"><body style="margin:0;padding:24px;background:#edeae0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a17">
   <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:16px;padding:28px">
-    <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0f6e56">ReciboCerto</p>
+    <p style="margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#0f6e56">Recibo Certo</p>
     <h1 style="margin:0 0 16px;font-size:20px;line-height:1.3">${titulo}</h1>
     ${corpo}
   </div>
@@ -79,14 +79,14 @@ export async function confirmarAoInvestidor(dados: DadosNotificacao): Promise<vo
        Entretanto, o produto está aberto e sem registo — é a forma mais rápida
        de perceber o que fazemos.
      </p>
-     <a href="${SITE}" style="display:inline-block;background:#0f6e56;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600">Ver o ReciboCerto</a>
+     <a href="${SITE}" style="display:inline-block;background:#0f6e56;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600">Ver o Recibo Certo</a>
      <p style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#78716c">
        Se não foi você que preencheu o formulário, responda a este email e
        eliminamos o registo.
      </p>`,
   );
 
-  await enviarEmail({ to: dados.email, subject: "Recebemos o seu contacto — ReciboCerto", html });
+  await enviarEmail({ to: dados.email, subject: "Recebemos o seu contacto — Recibo Certo", html });
 }
 
 /**

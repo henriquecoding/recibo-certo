@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Monitor de fontes dos Guias — ReciboCerto
+ * Monitor de fontes dos Guias — Recibo Certo
  * ----------------------------------------------------------------------
  * Cobre as duas verificações do ponto 7.3 da auditoria que dependem da
  * rede: `guias:links` e `guias:semantics`. As restantes sete são estáticas

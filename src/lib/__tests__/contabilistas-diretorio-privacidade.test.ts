@@ -105,7 +105,7 @@ describe("a fotografia continua a passar pelo proxy", () => {
     expect(cartao).not.toContain("licdn.com");
   });
 
-  it("o avatar continua a ser servido pelo endpoint do ReciboCerto", () => {
+  it("o avatar continua a ser servido pelo endpoint do Recibo Certo", () => {
     const avatar = ler("src/components/contabilistas/AvatarContabilista.tsx");
     expect(avatar).toContain("/api/contabilistas/linkedin-avatar/");
     expect(avatar).toContain("setFalhou(true)");

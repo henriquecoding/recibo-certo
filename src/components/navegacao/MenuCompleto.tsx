@@ -122,12 +122,12 @@ export default function MenuCompleto({
               prefetch={false}
               href="/"
               onClick={aoFechar}
-              aria-label="ReciboCerto — início"
+              aria-label="Recibo Certo — início"
               className="focus-marca flex items-center gap-2 text-brand no-underline"
             >
               <LogoMark size={26} />
               <span className="font-display text-sm font-semibold text-stone-800 dark:text-stone-100">
-                Recibo<span className="text-brand">Certo</span>
+                Recibo <span className="text-brand">Certo</span>
               </span>
             </Link>
             {/* O tema vive AQUI, no cabeçalho da folha, e não no fim dela.

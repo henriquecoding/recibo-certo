@@ -7,7 +7,7 @@ import { generateFAQSchema } from "@/lib/seo";
 const TOOL = porId("simulador-herancas")!;
 
 export const metadata: Metadata = {
-  title: "Simulador de Heranças e Sucessões 2026 — partilha e Imposto do Selo | ReciboCerto",
+  title: "Simulador de Heranças e Sucessões 2026 — partilha e Imposto do Selo | Recibo Certo",
   description:
     "Descobre quem herda o quê e quanto se paga de Imposto do Selo em Portugal (2026). A família direta é isenta. Meação, legítima e quota disponível, partilha e comparação herança vs doação. Guiado e gratuito.",
   keywords: [
@@ -21,11 +21,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Simulador de Heranças e Sucessões 2026 | ReciboCerto",
+    title: "Simulador de Heranças e Sucessões 2026 | Recibo Certo",
     description:
       "Quem herda o quê e quanto se paga de Imposto do Selo. Partilha, meação, legítima e comparação herança vs doação — com a legislação de 2026.",
     url: "https://www.recibocerto.pt/ferramentas/simulador-herancas",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

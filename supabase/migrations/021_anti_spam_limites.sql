@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migration 021: Limites anti-spam em inserts anónimos
+-- Recibo Certo — Migration 021: Limites anti-spam em inserts anónimos
 -- Cola no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================

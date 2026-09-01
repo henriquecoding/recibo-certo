@@ -1044,7 +1044,7 @@ export function Logo({ small = false }: { small?: boolean }): ReactNode {
     <div className="flex items-center gap-2">
       <LogoMark size={sz} />
       <span className={`font-display font-semibold text-stone-800 dark:text-stone-100 ${text}`}>
-        Recibo<span className="text-brand">Certo</span>
+        Recibo <span className="text-brand">Certo</span>
       </span>
     </div>
   );

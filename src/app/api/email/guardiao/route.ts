@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { enviarEmail } from "@/lib/email/send";
-import { emailGuardiaoFiscal, type NivelGuardiao } from "@/lib/email/templates";
+import { emailGuardiaoFiscal, URL_GERIR_AVISOS, type NivelGuardiao } from "@/lib/email/templates";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { supabaseAdmin } from "@/lib/supabase/server-admin";
@@ -160,6 +160,9 @@ export async function POST(req: NextRequest) {
         to: item.email,
         ...template,
         idempotencyKey: `guardiao-${year}-${item.userId}-${item.nivel}`,
+        // É um aviso que se subscreve: leva `List-Unsubscribe`, como o
+        // Gmail e o Yahoo exigem a quem envia em volume.
+        desinscrever: URL_GERIR_AVISOS,
       });
       return sent.erro ? null : {
         user_id: item.userId, nivel: item.nivel, ano: year, faturado: item.total,

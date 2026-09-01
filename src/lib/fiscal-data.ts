@@ -26,7 +26,7 @@ export { FISCAL_YEAR } from "./fiscal-year";
  * descreve mal o que aconteceu. `assertFiscalDataIntegrity()` faz o build falhar
  * se algum parâmetro for mais recente do que esta data.
  */
-export const DATA_LAST_REVIEW = "2026-08-25" as const;
+export const DATA_LAST_REVIEW = "2026-09-01" as const;
 
 // ─── Registo de fontes (evita repetir URLs longos) ─────────────────────
 export interface Source {
@@ -152,6 +152,16 @@ export const SOURCES = {
     label:
       "Art. 2.º, n.º 1, al. j) CIVA — Inversão do sujeito passivo nos serviços de construção civil: é o ADQUIRENTE que liquida o imposto · Portal das Finanças (AT)",
     url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/civa_rep/Pages/iva2.aspx",
+  },
+  civaListaI: {
+    label:
+      "Lista I anexa ao CIVA — bens e serviços sujeitos à taxa reduzida, incluindo a verba 2.42 (empreitadas de construção ou reabilitação de habitação) · Articulado consolidado do CIVA, Portal das Finanças (AT)",
+    url: "https://info.portaldasfinancas.gov.pt/pt/informacao_fiscal/codigos_tributarios/Cod_download/Documents/CIVA.pdf",
+  },
+  dl97_2026: {
+    label:
+      "Decreto-Lei n.º 97/2026, de 20 de maio — medidas para o fomento da oferta de habitação: adita a verba 2.42 à lista I do CIVA, altera o art. 2.º do CIVA e fixa os limites de preço e de renda moderados · Diário da República, 1.ª série, n.º 97",
+    url: "https://files.diariodarepublica.pt/1s/2026/05/09700/0001400040.pdf",
   },
   civa53: {
     label: "Art. 53.º CIVA — Âmbito de aplicação no território nacional: limiar de 15 000 €, e o regime transfronteiriço com o limiar de 100 000 € na União e o número EX · Portal das Finanças (AT)",
@@ -817,6 +827,12 @@ const REV_SMN = "2026-07-14";
 // fiscal da PwC — boa leitura, mas leitura de terceiros. Onde a lei fixa o
 // número, passa a ser a lei a sustentá-lo.
 const REV_PATRIMONIO = "2026-08-06";
+// Data de verificação do bloco da taxa reduzida na construção de habitação
+// (verba 2.42 da lista I) e do novo âmbito da inversão do sujeito passivo:
+// articulado CONSOLIDADO do CIVA publicado pela AT (já com a redação do
+// Decreto-Lei n.º 97/2026, de 20 de maio, e a Declaração de Retificação
+// n.º 26/2026/1, de 13 de julho) e o diploma lido no Diário da República.
+const REV_IVA_CONSTRUCAO = "2026-09-01";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  INDEXANTE DOS APOIOS SOCIAIS (IAS) — base de vários limites
@@ -999,6 +1015,11 @@ export const IVA_TAXAS: Record<Regiao, Sourced<Record<EscalaoIVA, number>>> = {
     TODAY
   ),
 };
+
+// A taxa reduzida das empreitadas de construção de habitação (verba 2.42 da
+// lista I, em vigor desde 1 de julho de 2026) está em `IVA_CONSTRUCAO_HABITACAO`,
+// mais abaixo: os limites dela derivam do IMT e da RMMG, que só estão
+// definidos depois deste ponto do ficheiro.
 
 export const META_REGIAO: Record<Regiao, string> = {
   continente: "Continente",
@@ -1349,9 +1370,45 @@ export const AUTOLIQUIDACAO_CONSTRUCAO = {
   /** O prestador não liquida; liquida o adquirente. */
   inverteSujeitoPassivo: sv(
     true,
-    "Art. 2.º, n.º 1, al. j) CIVA — são sujeitos passivos as pessoas singulares ou coletivas com sede, estabelecimento estável ou domicílio em território nacional que pratiquem operações com direito à dedução total ou parcial, quando adquirentes de serviços de construção civil, incluindo remodelação, reparação, manutenção, conservação e demolição de bens imóveis, em regime de empreitada ou subempreitada",
+    "Art. 2.º, n.º 1, al. j) CIVA (redação do Decreto-Lei n.º 97/2026, de 20/05) — são sujeitos passivos as pessoas singulares ou coletivas com sede, estabelecimento estável ou domicílio em território nacional que pratiquem operações com direito à dedução total ou parcial, quando adquirentes de serviços de construção civil, incluindo remodelação, reparação, manutenção, conservação e demolição de bens imóveis, em regime de empreitada ou subempreitada, «bem como aquelas que apenas pratiquem operações que não confiram direito à dedução do imposto quando sejam adquirentes de empreitadas de construção ou reabilitação previstas na verba 2.42 da lista I anexa ao presente Código»",
     "civa2",
-    "2026-08-25"
+    REV_IVA_CONSTRUCAO
+  ),
+  /**
+   * O ALARGAMENTO de 1 de julho de 2026 — e é isto que muda a fatura de
+   * quem trabalha na construção.
+   *
+   * Até aqui a inversão dependia de o ADQUIRENTE ter direito à dedução.
+   * Um promotor que só pratica operações isentas sem direito à dedução
+   * (a venda de habitação é isenta pelo Art. 9.º, n.º 30) ficava de fora:
+   * recebia fatura COM imposto. Desde 1 de julho de 2026, quando o que
+   * ele adquire é uma empreitada da verba 2.42, a inversão aplica-se na
+   * mesma — o prestador emite sem imposto e é o adquirente que liquida.
+   */
+  alargamentoVerba242: sv(
+    true,
+    "Art. 2.º, n.º 1, al. j) CIVA (redação do Decreto-Lei n.º 97/2026) — a inversão passa a abranger os adquirentes que APENAS pratiquem operações que não confiram direito à dedução, quando adquirentes de empreitadas de construção ou reabilitação previstas na verba 2.42 da lista I",
+    "civa2",
+    REV_IVA_CONSTRUCAO,
+    "É o adquirente sem direito à dedução que passa a autoliquidar. Como não deduz, o imposto que liquida é custo efetivo dele — não é uma operação neutra."
+  ),
+  /** A data em que o alargamento começou a produzir efeitos. */
+  alargamentoProduzEfeitosEm: sv(
+    "2026-07-01",
+    "Art. 18.º, n.º 4 do Decreto-Lei n.º 97/2026, de 20 de maio — as alterações ao Código do IVA introduzidas pelo artigo 4.º produzem efeitos a partir do trimestre seguinte à entrada em vigor do diploma; a nota do articulado consolidado da AT fixa-o em 1 de julho de 2026",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+  /**
+   * A retroatividade OPCIONAL: não é automática e não é de um lado só.
+   * Exige acordo do prestador E do adquirente.
+   */
+  opcaoConjuntaDesde: sv(
+    "2026-01-01",
+    "Art. 18.º, n.º 7 do Decreto-Lei n.º 97/2026, de 20 de maio — a alteração à al. j) do n.º 1 do art. 2.º do CIVA aplica-se desde 1 de janeiro de 2026 «havendo opção conjunta do prestador e do adquirente»",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO,
+    "Opção CONJUNTA: não basta o prestador querer. Sem acordo das duas partes, vale a data de 1 de julho de 2026."
   ),
   /** O prestador MANTÉM o direito à dedução — ao contrário do Art. 53.º. */
   mantemDireitoADeducao: sv(
@@ -4828,6 +4885,175 @@ export const SMN = sv(
   REV_SMN
 );
 
+// ═══════════════════════════════════════════════════════════════════════
+//  IVA À TAXA REDUZIDA NA CONSTRUÇÃO DE HABITAÇÃO — verba 2.42 da lista I
+//  ---------------------------------------------------------------------
+//  A alteração de IVA que entrou em vigor a 1 de julho de 2026. Vive aqui,
+//  e não junto do resto do IVA, por uma razão de ordem de avaliação: os
+//  dois limites NÃO são números próprios — a lei remete para outros dois
+//  parâmetros que este ficheiro já tem, e que só estão definidos acima.
+//
+//    · preço moderado  → o 2.º escalão da tabela do IMT (IMT_ESCALOES)
+//    · renda moderada  → 2,5 × a RMMG do ano (SMN)
+//
+//  Escrever «660 982 €» e «2 300 €» à mão seria copiar hoje um valor que
+//  a lei manda ler noutro sítio: no ano em que o Orçamento mexer na tabela
+//  do IMT ou no salário mínimo, o número aqui ficava calado e errado. Ao
+//  derivá-los, a atualização anual acontece sozinha e no sítio certo.
+//
+//  ⚠️ A taxa reduzida NÃO é automática. Depende de condições que só se
+//  confirmam DEPOIS da obra (a venda em 24 meses, a menção no título, os
+//  36 meses de arrendamento) — e quando falham, o Art. 11.º manda
+//  regularizar o imposto a favor do Estado, com juros. É por isso que
+//  aqui se guardam também os prazos, e não só a taxa.
+// ═══════════════════════════════════════════════════════════════════════
+export const IVA_CONSTRUCAO_HABITACAO = {
+  /**
+   * A taxa aplicável é a REDUZIDA da região da operação — 6% no
+   * continente, 4% nas regiões autónomas. A verba não fixa taxa própria:
+   * põe a operação na lista I, e a lista I é a taxa reduzida do Art. 18.º.
+   */
+  taxaPorRegiao: sv(
+    {
+      continente: IVA_TAXAS.continente.value.reduzida,
+      madeira: IVA_TAXAS.madeira.value.reduzida,
+      acores: IVA_TAXAS.acores.value.reduzida,
+    } as Record<Regiao, number>,
+    "Verba 2.42 da lista I anexa ao CIVA, conjugada com o Art. 18.º, n.º 1, al. a) CIVA — os bens e serviços da lista I são tributados à taxa reduzida da respetiva região",
+    "civaListaI",
+    REV_IVA_CONSTRUCAO,
+    "Sem a verba, a mesma empreitada é tributada à taxa normal: no continente, 23% em vez de 6%."
+  ),
+
+  /** A que operações se aplica. */
+  ambito: sv(
+    "empreitadas de construção ou reabilitação de imóveis destinados à venda para habitação própria e permanente do adquirente, ou destinados exclusivamente ao arrendamento habitacional",
+    "Verba 2.42.1 da lista I anexa ao CIVA (aditada pelo Art. 8.º do Decreto-Lei n.º 97/2026, de 20 de maio)",
+    "civaListaI",
+    REV_IVA_CONSTRUCAO,
+    "É a EMPREITADA que é tributada à taxa reduzida, não a venda do imóvel — a venda de habitação continua isenta pelo Art. 9.º, n.º 30 CIVA."
+  ),
+
+  /**
+   * O limite do preço moderado de venda.
+   *
+   * A lei não escreve um montante: manda ler «o limite superior do 2.º
+   * escalão a que se refere a alínea b) do n.º 1 do artigo 17.º do Código
+   * do IMT». No catálogo deste ficheiro, essa alínea é a tabela `jovem`
+   * (primeira aquisição de HPP por quem tenha 35 anos ou menos), e o
+   * 2.º escalão dela é o índice 1.
+   */
+  precoModeradoVenda: sv(
+    IMT_ESCALOES.value.jovem[1].ate as number,
+    "Art. 2.º, n.º 2, al. b) do Decreto-Lei n.º 97/2026, de 20 de maio — o limite superior do 2.º escalão a que se refere a al. b) do n.º 1 do Art. 17.º do Código do IMT, na redação da Lei n.º 73-A/2025, de 30 de dezembro (OE2026)",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO,
+    "Acompanha a tabela do IMT: quando o Orçamento atualizar os escalões, este limite sobe com eles, sem intervenção."
+  ),
+
+  /** O multiplicador da RMMG que define a renda moderada. */
+  rendaModeradaMultiplicadorRMMG: sv(
+    2.5,
+    "Art. 2.º, n.º 2, al. a) do Decreto-Lei n.º 97/2026, de 20 de maio — no caso da renda mensal moderada, 2,5 vezes o valor da retribuição mínima mensal prevista para 2026",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** O limite da renda mensal moderada, já em euros. */
+  rendaModeradaMensal: sv(
+    2.5 * SMN.value,
+    "Art. 2.º, n.º 2, al. a) do Decreto-Lei n.º 97/2026, de 20 de maio — 2,5 × RMMG",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO,
+    "Deriva da RMMG do ano: sobe sozinho com o salário mínimo."
+  ),
+
+  /**
+   * O que conta para o limite — e é mais do que o preço do contrato.
+   * Móveis, equipamento e serviços de valorização entram, «ainda que
+   * sejam objeto de negócios jurídicos distintos». Separar a cozinha num
+   * contrato à parte não baixa o valor a aferir.
+   */
+  limiteIncluiExtras: sv(
+    true,
+    "Art. 3.º, n.º 1 do Decreto-Lei n.º 97/2026, de 20 de maio — acresce o valor dos bens móveis, equipamentos ou partes acessórias que fiquem ligados materialmente ao imóvel com carácter de permanência, bem como dos serviços que contribuam para a sua valorização, ainda que sejam objeto de negócios jurídicos distintos",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** A janela da iniciativa procedimental (licenciamento / comunicação prévia). */
+  iniciativaProcedimentalDe: sv(
+    "2025-09-25",
+    "Art. 18.º, n.º 5 do Decreto-Lei n.º 97/2026, de 20 de maio — operações urbanísticas cuja iniciativa procedimental se inicie entre 25 de setembro de 2025 e 31 de dezembro de 2029",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO,
+    "Iniciativa procedimental é o pedido de licenciamento, a comunicação prévia ou, nas obras isentas de controlo prévio, o parecer prévio ou a informação de início dos trabalhos (Art. 18.º, n.º 6)."
+  ),
+  iniciativaProcedimentalAte: sv(
+    "2029-12-31",
+    "Art. 18.º, n.º 5 do Decreto-Lei n.º 97/2026, de 20 de maio",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** A partir de quando o imposto tem de ser exigível. */
+  exigibilidadeDesde: sv(
+    "2026-01-01",
+    "Art. 18.º, n.º 5 do Decreto-Lei n.º 97/2026, de 20 de maio — e cuja exigibilidade do imposto ocorra a partir de 1 de janeiro de 2026",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** A data em que a verba passou a produzir efeitos. */
+  produzEfeitosEm: sv(
+    "2026-07-01",
+    "Art. 18.º, n.º 4 do Decreto-Lei n.º 97/2026, de 20 de maio — produz efeitos a partir do trimestre seguinte à entrada em vigor do diploma (publicado a 20 de maio de 2026)",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** E a data em que deixa de existir. A verba nasce com prazo. */
+  cessaVigenciaEm: sv(
+    "2032-12-31",
+    "Art. 10.º, n.º 7 do Decreto-Lei n.º 97/2026, de 20 de maio — a verba 2.42.1 cessa a sua vigência a 31 de dezembro de 2032",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** Prazo para vender (ou para o 1.º arrendamento entrar em vigor). */
+  prazoVendaOuPrimeiroArrendamentoMeses: sv(
+    24,
+    "Art. 10.º, n.º 1, al. a), subal. ii) e al. b), subal. iii) do Decreto-Lei n.º 97/2026 — a venda ocorra, ou o primeiro contrato de arrendamento habitacional entre em vigor, no prazo máximo de 24 meses a contar da emissão da documentação relativa ao início de utilização (RJUE)",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** No arrendamento, o imóvel tem de estar arrendado este tempo. */
+  arrendamentoMinimoMeses: sv(
+    36,
+    "Art. 10.º, n.º 1, al. b), subal. iv) do Decreto-Lei n.º 97/2026 — contratos de arrendamento habitacional em vigor em pelo menos 36 meses, seguidos ou interpolados, durante os primeiros cinco anos após a emissão da documentação de início de utilização",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** A menção que tem de constar do título aquisitivo. Sem ela, cai. */
+  mencaoNoTituloAquisitivo: sv(
+    true,
+    "Art. 10.º, n.º 1, al. a), subal. iii) do Decreto-Lei n.º 97/2026 — seja feita menção expressa, no título aquisitivo, à aplicação da taxa prevista na verba 2.42.1 da lista I anexa ao CIVA",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO
+  ),
+
+  /** Quando as condições falham, o imposto é regularizado a favor do Estado. */
+  regularizacaoAFavorDoEstado: sv(
+    true,
+    "Art. 11.º, n.º 1 do Decreto-Lei n.º 97/2026 — sempre que não se verifique, ou deixe de se verificar, qualquer das condições, o sujeito passivo deve regularizar o imposto em falta",
+    "dl97_2026",
+    REV_IVA_CONSTRUCAO,
+    "No prazo do Art. 11.º, n.º 2, al. a) só há juros compensatórios; fora dele, acrescem as demais penalidades."
+  ),
+} as const;
+
 /**
  * Dependentes e agregado familiar — Art. 13.º do CIRS, lido a 07/08/2026.
  *
@@ -6908,6 +7134,8 @@ export const PARAMETROS_AUDITADOS: readonly Sourced<unknown>[] = [
     IVA_ISENCAO_LIMITE,
     IVA_ISENCAO_EXCESSO,
     ...Object.values(IVA_TAXAS),
+    ...Object.values(IVA_CONSTRUCAO_HABITACAO),
+    ...Object.values(AUTOLIQUIDACAO_CONSTRUCAO),
     SS_TAXA,
     ...Object.values(SS_COEFICIENTE),
     SS_BASE_MAX_MENSAL,
@@ -7113,6 +7341,63 @@ export function assertFiscalDataIntegrity(): void {
   // 2) Excesso de IVA = 125% do limite de isenção.
   if (Math.abs(IVA_ISENCAO_EXCESSO.value - IVA_ISENCAO_LIMITE.value * 1.25) > EPS) {
     erros.push("Limiar de excesso de IVA não corresponde a 125% do limite de isenção.");
+  }
+
+  // 2c) Verba 2.42 (taxa reduzida na construção de habitação). Os dois
+  // limites são DERIVADOS — do 2.º escalão do IMT e da RMMG. Se a derivação
+  // se partir (a tabela do IMT muda de forma, alguém troca o índice), o
+  // build tem de cair aqui e não em silêncio no ecrã de um utilizador.
+  const vc = IVA_CONSTRUCAO_HABITACAO;
+  REGIOES.forEach((r) => {
+    if (Math.abs(vc.taxaPorRegiao.value[r] - IVA_TAXAS[r].value.reduzida) > EPS) {
+      erros.push(`Verba 2.42: a taxa de ${r} tem de ser a taxa reduzida dessa região.`);
+    }
+  });
+  if (vc.precoModeradoVenda.value !== IMT_ESCALOES.value.jovem[1].ate) {
+    erros.push(
+      "Verba 2.42: o preço moderado tem de ser o limite superior do 2.º escalão da al. b) do n.º 1 do Art. 17.º CIMT."
+    );
+  }
+  if (!(vc.precoModeradoVenda.value > 0)) {
+    erros.push("Verba 2.42: preço moderado inválido (o escalão do IMT não tem limite superior).");
+  }
+  if (
+    Math.abs(vc.rendaModeradaMensal.value - vc.rendaModeradaMultiplicadorRMMG.value * SMN.value) >
+    EPS
+  ) {
+    erros.push("Verba 2.42: a renda moderada tem de ser 2,5 × RMMG.");
+  }
+  // A janela e o fim de vigência só fazem sentido por esta ordem.
+  const ordemVerba242: [string, string][] = [
+    [vc.iniciativaProcedimentalDe.value, vc.exigibilidadeDesde.value],
+    [vc.exigibilidadeDesde.value, vc.produzEfeitosEm.value],
+    [vc.produzEfeitosEm.value, vc.iniciativaProcedimentalAte.value],
+    [vc.iniciativaProcedimentalAte.value, vc.cessaVigenciaEm.value],
+  ];
+  ordemVerba242.forEach(([antes, depois]) => {
+    if (!(antes <= depois)) {
+      erros.push(`Verba 2.42: datas fora de ordem (${antes} deveria ser anterior a ${depois}).`);
+    }
+  });
+  // A opção conjunta é RETROATIVA: tem mesmo de ser anterior à data em que a
+  // inversão passou a produzir efeitos, senão não é opção nenhuma.
+  if (
+    !(
+      AUTOLIQUIDACAO_CONSTRUCAO.opcaoConjuntaDesde.value <
+      AUTOLIQUIDACAO_CONSTRUCAO.alargamentoProduzEfeitosEm.value
+    )
+  ) {
+    erros.push(
+      "Inversão do sujeito passivo: a opção conjunta tem de ser anterior à data de produção de efeitos."
+    );
+  }
+  // O alargamento da inversão e a verba que o desencadeia entram no mesmo dia.
+  if (
+    AUTOLIQUIDACAO_CONSTRUCAO.alargamentoProduzEfeitosEm.value !== vc.produzEfeitosEm.value
+  ) {
+    erros.push(
+      "Inversão do sujeito passivo e verba 2.42 têm de produzir efeitos na mesma data (1 de julho de 2026)."
+    );
   }
 
   // 2b) Os conjuntos fechados usados na validação têm de cobrir exatamente as

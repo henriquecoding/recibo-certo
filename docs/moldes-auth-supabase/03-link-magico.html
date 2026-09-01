@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark">
+<style>
+    :root { color-scheme: light dark; supported-color-schemes: light dark; }
+    @media (prefers-color-scheme: dark) {
+      .rc-fundo  { background: #141413 !important; }
+      .rc-cartao { background: #1D1D1A !important; border-color: #33322D !important; }
+      .rc-titulo, .rc-forte { color: #EDEAE0 !important; }
+      .rc-texto  { color: #B5AE9F !important; }
+      .rc-rodape { color: #8B8577 !important; }
+      .rc-linha  { border-color: #33322D !important; }
+      .rc-marca  { color: #9FE1CB !important; }
+      .rc-caixa  { background: #232320 !important; }
+    }</style>
+</head>
+<body class="rc-fundo" style="margin:0;padding:0;background:#FAFAF9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-fundo" style="background:#FAFAF9;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="rc-cartao" style="max-width:520px;background:#FFFFFF;border-radius:16px;border:1px solid #E7E5E4;overflow:hidden;">
+
+<!-- Cabeçalho: a marca a sério.
+     A marca é uma imagem (PNG, porque metade dos clientes de email
+     bloqueia SVG) e o nome é TEXTO — assim segue o modo escuro sozinho,
+     e continua a ler-se quando as imagens vêm bloqueadas, que é o estado
+     em que muita gente lê o primeiro email de um remetente novo. -->
+<tr><td class="rc-linha" style="padding:32px 32px 24px;text-align:center;border-bottom:1px solid #F5F5F4;">
+  <table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
+    <td style="vertical-align:middle;">
+      <img src="https://www.recibocerto.pt/marca/icone-256.png" width="32" height="32" alt=""
+           style="display:block;width:32px;height:32px;border:0;">
+    </td>
+    <td class="rc-titulo" style="padding-left:10px;font-size:18px;font-weight:700;color:#1C1917;vertical-align:middle;">Recibo <span class="rc-marca" style="color:#177E5E;">Certo</span></td>
+  </tr></table>
+</td></tr>
+
+<!-- Conteúdo -->
+<tr><td style="padding:32px;">
+
+      <h2 class="rc-titulo" style="margin:0 0 16px;font-size:20px;font-weight:700;color:#1C1917;">Entrar sem palavra-passe</h2>
+      <p class="rc-texto" style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#78716C;">Carrega no botão para entrares na tua conta. Não precisas de escrever nada.</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px auto 0;">
+<tr><td style="background:#177E5E;border-radius:12px;">
+  <a href="{{ .ConfirmationURL }}" target="_blank" style="display:inline-block;padding:12px 28px;color:#FFFFFF;font-size:14px;font-weight:600;text-decoration:none;">
+    Entrar no Recibo Certo
+  </a>
+</td></tr>
+</table>
+      <p class="rc-rodape" style="margin:16px 0 0;font-size:12px;color:#A8A29E;">
+    O link é de utilização única e expira dentro de pouco tempo. Se falhar, pede outro.
+  </p>
+      <p class="rc-rodape" style="margin:20px 0 0;font-size:12px;line-height:1.6;color:#A8A29E;">
+    Se não foste tu a pedir para entrar, ignora este email — não acontece nada. Em caso de dúvida, escreve para
+    <a href="mailto:apoio@recibocerto.pt" style="color:#A8A29E;">apoio@recibocerto.pt</a>.
+  </p>
+    
+</td></tr>
+
+<!-- Rodapé -->
+<tr><td class="rc-linha" style="padding:24px 32px;border-top:1px solid #F5F5F4;text-align:center;">
+  <p class="rc-rodape" style="margin:0;font-size:12px;color:#A8A29E;">Recibo Certo — Copiloto financeiro para trabalhadores independentes</p>
+  <p class="rc-rodape" style="margin:8px 0 0;font-size:11px;color:#D6D3D1;">
+    <a href="https://www.recibocerto.pt" style="color:#A8A29E;text-decoration:none;">recibocerto.pt</a>
+    &nbsp;·&nbsp;
+    <a href="mailto:apoio@recibocerto.pt" style="color:#A8A29E;text-decoration:none;">apoio@recibocerto.pt</a>
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>

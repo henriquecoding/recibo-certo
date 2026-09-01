@@ -61,7 +61,7 @@ const RAIZ = join(AQUI, "..");
 const DESTINO = join(RAIZ, "src", "lib", "negocio", "market", "bulk", "dados", "concelhos-geo.json");
 const CONCELHOS_TS = join(RAIZ, "src", "lib", "negocio", "market", "concelhos.ts");
 
-const AGENTE = "ReciboCerto/1.0 (https://www.recibocerto.pt)";
+const AGENTE = "Recibo Certo/1.0 (https://www.recibocerto.pt)";
 /**
  * O Overpass público serve por slots e devolve 429/503 quando não há
  * nenhum livre. Não é falha da consulta — é fila. Tentam-se os espelhos

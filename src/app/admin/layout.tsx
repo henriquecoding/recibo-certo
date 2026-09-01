@@ -107,7 +107,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
             <LogoMark size={32} />
             <span>
               <span className="block font-display text-sm font-semibold text-stone-800">
-                Recibo<span className="text-brand">Certo</span>
+                Recibo <span className="text-brand">Certo</span>
               </span>
               <span className="block text-[10px] font-semibold uppercase tracking-widest text-stone-400">
                 Admin
@@ -179,7 +179,7 @@ function AdminLayout({ children }: { children: ReactNode }) {
           <Link href="/admin" className="flex min-w-0 flex-1 items-center gap-2 lg:hidden" aria-label="Administração — visão geral">
             <LogoMark size={26} />
             <span className="truncate font-display text-sm font-semibold text-stone-800">
-              Recibo<span className="text-brand">Certo</span> <span className="text-stone-400">Admin</span>
+              Recibo <span className="text-brand">Certo</span> <span className="text-stone-400">Admin</span>
             </span>
           </Link>
           {/* No desktop o topo é do ECRÃ: a barra lateral já diz a secção,

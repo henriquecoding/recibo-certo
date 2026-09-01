@@ -37,6 +37,11 @@ interface ToolShellProps {
   tool: ToolDefinition;
   /** A ferramenta em si — as zonas Input, Progress, Result e Actions. */
   children: ReactNode;
+  /**
+   * Entrada editorial própria quando a tarefa pede uma composição distinta.
+   * A moldura comum continua a controlar medição, contexto e próximos passos.
+   */
+  inicio?: ReactNode;
   /** Conteúdo editorial abaixo da ferramenta (como funciona, FAQ, fontes). */
   contexto?: ReactNode;
   /** Substitui o subtítulo por omissão (`shortOutcome`) quando é preciso mais. */
@@ -53,7 +58,7 @@ interface ToolShellProps {
 }
 
 export default function ToolShell({
-  tool, children, contexto, subtitulo, medir = true,
+  tool, children, inicio, contexto, subtitulo, medir = true,
 }: ToolShellProps) {
   const Icone = iconeDe(tool.icon);
   const relacionadasResolvidas = relacionadas(tool);
@@ -61,31 +66,35 @@ export default function ToolShell({
 
   return (
     <>
-      {/* ── Cabeçalho: que problema resolve e o que a pessoa recebe ──── */}
-      <header className="mb-6">
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
-            <Icone size={18} />
-          </span>
-          <span className="eyebrow text-brand">
-            {tool.intents.includes("calcular") ? "Calcular" : null}
-            {!tool.intents.includes("calcular") && tool.intents.includes("comparar") ? "Comparar e decidir" : null}
-            {!tool.intents.includes("calcular") && !tool.intents.includes("comparar") && tool.intents.includes("verificar") ? "Verificar" : null}
-            {tool.intents.length === 1 && tool.intents[0] === "cumprir" ? "Preparar uma obrigação" : null}
-          </span>
-        </div>
-        <h1 className="font-display display-2 mb-3 font-semibold text-ink text-balance">
-          {tool.h1 ?? tool.title}
-        </h1>
-        <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
-          {subtitulo ?? tool.shortOutcome}
-        </p>
-      </header>
+      {inicio ?? (
+        <>
+          {/* ── Cabeçalho: que problema resolve e o que a pessoa recebe ──── */}
+          <header className="mb-6">
+            <div className="mb-3 flex items-center gap-2.5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-white">
+                <Icone size={18} />
+              </span>
+              <span className="eyebrow text-brand">
+                {tool.intents.includes("calcular") ? "Calcular" : null}
+                {!tool.intents.includes("calcular") && tool.intents.includes("comparar") ? "Comparar e decidir" : null}
+                {!tool.intents.includes("calcular") && !tool.intents.includes("comparar") && tool.intents.includes("verificar") ? "Verificar" : null}
+                {tool.intents.length === 1 && tool.intents[0] === "cumprir" ? "Preparar uma obrigação" : null}
+              </span>
+            </div>
+            <h1 className="font-display display-2 mb-3 font-semibold text-ink text-balance">
+              {tool.h1 ?? tool.title}
+            </h1>
+            <p className="max-w-2xl text-lg leading-relaxed text-stone-500 dark:text-stone-400">
+              {subtitulo ?? tool.shortOutcome}
+            </p>
+          </header>
 
-      {/* ── Zona 1: Start ─────────────────────────────────────────────── */}
-      <div className="mb-8">
-        <ToolStart tool={tool} />
-      </div>
+          {/* ── Zona 1: Start ─────────────────────────────────────────── */}
+          <div className="mb-8">
+            <ToolStart tool={tool} />
+          </div>
+        </>
+      )}
 
       {/* ── Zonas 2–5: a ferramenta ─────────────────────────────────────
           O medidor envolve exatamente esta zona, e é onde `simulator_start`,

@@ -55,7 +55,7 @@ export async function criarCheckoutLS(params: CriarCheckoutParams): Promise<stri
       attributes: {
         checkout_options: {
           dark: false,
-          button_color: params.buttonColor ?? "#1D9E75",
+          button_color: params.buttonColor ?? "#177E5E",
           // Não mostrar logo próprio — usar o checkout limpo da LS
           logo: false,
           // Obrigar recolha de billing address (exigido para IVA correto)

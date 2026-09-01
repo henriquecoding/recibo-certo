@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Stripe Subscriptions (v5)
+-- Recibo Certo — Stripe Subscriptions (v5)
 -- Tabela para guardar o estado das subscrições Stripe.
 -- Atualizada via webhook (/api/stripe/webhook).
 -- Idempotente: seguro para correr múltiplas vezes.

@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Guardião Fiscal: tabela de alertas enviados (v7)
+-- Recibo Certo — Guardião Fiscal: tabela de alertas enviados (v7)
 --
 -- Evita que o mesmo alerta de limiar de IVA seja enviado mais de
 -- uma vez por utilizador/nível/ano.

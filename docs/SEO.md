@@ -1,4 +1,4 @@
-# SEO — ReciboCerto
+# SEO — Recibo Certo
 
 Guia operacional de visibilidade orgânica. Lê isto antes de mexer em metadados,
 sitemap ou esquemas. Para o design/voz, ver `DESIGN.md` e as skills.
@@ -48,15 +48,38 @@ com uma ação no Search Console (abaixo) + tempo + alguns links de entrada.
 2. Adiciona a propriedade. Recomendado: **prefixo de URL** `https://recibocerto.pt`.
 3. Escolhe o método **"Tag HTML"**. O Google dá-te uma meta tag como:
    `<meta name="google-site-verification" content="ABC123..." />`.
-4. Copia **só** o valor `content` e define-o no ambiente de produção (Vercel →
-   Project → Settings → Environment Variables):
-   ```
-   NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=ABC123...
-   ```
-   Faz um novo deploy. A meta tag passa a sair em todas as páginas (via
-   `src/app/layout.tsx`).
+4. Copia **só** o valor `content` e acrescenta-o à lista embebida em
+   `src/app/layout.tsx` (`GOOGLE_SITE_VERIFICATION`). Faz um novo deploy: sai
+   um `<meta name="google-site-verification">` por token, em todas as páginas.
 5. Volta ao Search Console e carrega em **Verificar**.
    - Alternativa sem deploy: método **DNS** (registo TXT no domínio). Igualmente válido.
+
+#### Mais do que uma conta Google
+
+Cada conta que reclama o site tem o **seu** token e valida contra a **sua** meta
+tag. Os tokens convivem: acrescenta-se um à lista, não se troca o que lá está.
+**Nunca retirar um token de uma conta que ainda deve manter a propriedade** — o
+Google revalida periodicamente, e a propriedade cai quando a prova desaparece.
+
+Contas atualmente com o site reclamado:
+
+| Conta | Prova | Onde vive |
+| --- | --- | --- |
+| Principal | Meta tag `i_bvY0e1…` | `src/app/layout.tsx` |
+| Segunda | Meta tag `O5XHXItH…` | `src/app/layout.tsx` |
+| Segunda | Ficheiro HTML | `public/google3874ac9e9ed1ae13.html` → `/google3874ac9e9ed1ae13.html` |
+
+A segunda conta tem duas provas independentes de propósito: se um dia
+`NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` for definida com um único token (a env
+var **substitui a lista inteira** — aceita vários separados por vírgula), o
+ficheiro HTML sustenta a propriedade sozinho. O ficheiro sai com
+`X-Robots-Tag: noindex` (`next.config.mjs`) para não ser indexado como página;
+isso não afeta a validação, que lê o ficheiro diretamente.
+
+Um terceiro caminho, que não passa por este repositório: o registo **DNS TXT**
+`google-site-verification=…` na zona de `recibocerto.pt`, configurado no
+fornecedor do domínio. Verifica o domínio inteiro (todos os subdomínios e
+protocolos) e sobrevive a qualquer alteração no código.
 
 ### 2. Submeter o sitemap
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * ReciboCerto — Auditoria de SEO (só leitura)
+ * Recibo Certo — Auditoria de SEO (só leitura)
  *
  * Análise estática, sem rede e sem segredos. Deteta as falhas estruturais que
  * tornam um site invisível ou que partem as pré-visualizações sociais:
@@ -203,7 +203,7 @@ if (semMeta.length) {
 // ── Relatório ────────────────────────────────────────────────────────────────
 
 const line = "─".repeat(64);
-console.log(`\n  Auditoria de SEO — ReciboCerto\n${line}`);
+console.log(`\n  Auditoria de SEO — Recibo Certo\n${line}`);
 for (const o of oks) console.log(`  ✓  ${o}`);
 for (const w of warns) console.log(`  !  ${w}`);
 for (const f of fails) console.log(`  ✗  ${f}`);

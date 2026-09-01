@@ -52,6 +52,7 @@ import { escolherRota, type SinaisDoUtilizador } from "@/lib/routing";
 import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import type { TipoPartilha } from "@/lib/contabilistas/tipos";
 import type { EstadoConfianca } from "@/lib/analytics/eventos";
+import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export interface Premissa {
   rotulo: string;
@@ -416,7 +417,7 @@ export default function ResultadoExplicado({
         <p className="mt-2.5 text-[11px] text-stone-400">
           Achas que está errado?{" "}
           <a
-            href="mailto:recibocerto.pt@gmail.com"
+            href={mailtoApoio()}
             className="font-medium text-brand hover:underline"
           >
             Diz-nos

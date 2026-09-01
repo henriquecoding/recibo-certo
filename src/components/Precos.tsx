@@ -303,7 +303,7 @@ export default function Precos() {
         {/* ── Parceria FIZ ─────────────────────────────────────────────
             Fora da grelha e depois da comparação de planos, com um
             separador explícito. A ordem é a mensagem: primeiro decides o
-            que pagas ao ReciboCerto (0 € ou 1,99 €); só depois se explica
+            que pagas ao Recibo Certo (0 € ou 1,99 €); só depois se explica
             quem executa o que nós não executamos. Sem preço e sem botão de
             subscrição — nada aqui compete com o "Subscrever o Plus". */}
         {mostrarFiz && (

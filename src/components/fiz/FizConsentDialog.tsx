@@ -247,7 +247,7 @@ export default function FizConsentDialog({
         <div className="flex flex-shrink-0 items-start justify-between gap-3 border-b border-fiz-200 bg-fiz-50 px-5 py-4">
           <div className="min-w-0">
             <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-fiz-700">
-              <span>ReciboCerto</span>
+              <span>Recibo Certo</span>
               <span aria-hidden>→</span>
               <FizMarca size={14} />
             </div>

@@ -7,7 +7,7 @@ export function metadataDoFoco(foco: FocoHomepage): Metadata {
   const definicao = FOCO_POR_ID.get(foco);
   if (!definicao) throw new Error(`Foco editorial sem definição: ${foco}`);
 
-  const tituloSocial = `${definicao.titulo} | ReciboCerto`;
+  const tituloSocial = `${definicao.titulo} | Recibo Certo`;
   return {
     title: { absolute: tituloSocial },
     description: definicao.descricao,
@@ -19,7 +19,7 @@ export function metadataDoFoco(foco: FocoHomepage): Metadata {
       title: tituloSocial,
       description: definicao.descricao,
       url: ROTA_POR_FOCO[foco],
-      siteName: "ReciboCerto",
+      siteName: "Recibo Certo",
       locale: "pt_PT",
       type: "website",
     },

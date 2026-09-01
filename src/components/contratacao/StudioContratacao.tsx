@@ -159,46 +159,6 @@ function liquidoDoResultado(result: EmploymentOfferResult): string {
     : `${eur(worker.monthlyReference.min.cents)} – ${eur(worker.monthlyReference.max.cents)}`;
 }
 
-export function CabecalhoStudio({ releaseStatus }: { releaseStatus: ReleaseStatus }) {
-  const release = RELEASE[releaseStatus];
-  const ReleaseIcon = release.Icon;
-
-  return (
-    <section className="relative overflow-hidden rounded-4xl border border-brand-deep bg-brand-deep px-5 py-6 text-white shadow-lift sm:px-7 sm:py-7">
-      <span aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-64 w-64 rounded-full bg-brand/30 blur-3xl" />
-      <span aria-hidden className="pointer-events-none absolute -bottom-20 left-1/3 h-48 w-48 rounded-full bg-brand-mint/10 blur-3xl" />
-
-      <div className="relative grid items-end gap-6 lg:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="max-w-2xl">
-          <p className="eyebrow text-brand-mint">Estúdio de contratação</p>
-          <h2 className="mt-2 font-display text-2xl font-semibold leading-tight text-white sm:text-3xl">
-            Uma contratação inteira, vista uma decisão de cada vez.
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-brand-light">
-            {ETAPAS_CONTRATACAO.length} etapas livres, um resumo que acompanha o cenário e nenhum número escondido. Podes avançar,
-            voltar e comparar sem perder o cenário.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:w-[420px]">
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur">
-            <Gauge size={15} className="text-brand-mint" />
-            <p className="mt-2 text-xs font-semibold text-white">{ETAPAS_CONTRATACAO.length} etapas livres</p>
-          </div>
-          <div className="rounded-2xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur">
-            <Lock size={15} className="text-brand-mint" />
-            <p className="mt-2 text-xs font-semibold text-white">Cálculo local</p>
-          </div>
-          <div className="col-span-2 rounded-2xl border border-white/15 bg-white/10 px-3 py-3 backdrop-blur sm:col-span-1">
-            <ReleaseIcon size={15} className="text-brand-mint" />
-            <p className="mt-2 text-xs font-semibold text-white">{release.label}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function NavegacaoEtapas({
   ativa,
   visitadas,

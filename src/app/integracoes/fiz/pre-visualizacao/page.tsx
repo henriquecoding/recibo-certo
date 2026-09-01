@@ -23,7 +23,7 @@ import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 
 export const metadata: Metadata = {
   title: "Pré-visualização da integração FIZ",
-  description: "Mapa da integração planeada entre o ReciboCerto e a FIZ. Página interna de revisão.",
+  description: "Mapa da integração planeada entre o Recibo Certo e a FIZ. Página interna de revisão.",
   robots: { index: false, follow: false },
 };
 
@@ -60,7 +60,7 @@ export default function PreVisualizacaoFizPage() {
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
               Chegaste aqui porque a integração com a FIZ está em modo de revisão. Em produção,
               este passo abriria a FIZ com o contexto que tivesses autorizado. Enquanto a parceria
-              não estiver fechada e validada pelas duas equipas, nenhum dado sai do ReciboCerto e
+              não estiver fechada e validada pelas duas equipas, nenhum dado sai do Recibo Certo e
               nenhuma ação é executada.
             </p>
             <p className="mt-3 flex items-start gap-1.5 rounded-2xl bg-white px-3 py-2 text-xs leading-relaxed text-stone-600 dark:bg-stone-900 dark:text-stone-400">
@@ -248,7 +248,7 @@ export default function PreVisualizacaoFizPage() {
             href="/"
             className="inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-stone-200 px-4 py-2.5 text-sm font-semibold text-stone-700 transition-colors hover:border-stone-300 dark:border-stone-700 dark:text-stone-200"
           >
-            <ArrowLeft size={15} /> Voltar ao ReciboCerto
+            <ArrowLeft size={15} /> Voltar ao Recibo Certo
           </Link>
         </div>
       </div>

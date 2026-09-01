@@ -31,7 +31,7 @@ Três superfícies novas, por cima da app que já existe:
 | Diretório público | Toda a gente | `/contabilistas`, `/contabilistas/[slug]` |
 | Fila de aprovação | Só administração | `/admin/contabilistas` |
 
-O cliente continua a usar o ReciboCerto exatamente como hoje. O que muda é que
+O cliente continua a usar o Recibo Certo exatamente como hoje. O que muda é que
 passa a poder **ligar-se a um contabilista**, enviar-lhe uma simulação, marcar
 uma consulta e acumular carimbos num cartão de fidelidade.
 
@@ -141,7 +141,7 @@ carimbos e cupões **nunca** são escritos pelo cliente.
 
 ### O que o cupão é, e o que não é
 
-O cupão é um **acordo entre o cliente e o contabilista**. O ReciboCerto regista-o
+O cupão é um **acordo entre o cliente e o contabilista**. O Recibo Certo regista-o
 e mostra-o; não cobra a consulta, não processa o pagamento e não garante o
 desconto. A interface tem de dizer isto — dizer o contrário seria uma afirmação
 falsa sobre dinheiro de terceiros.
@@ -215,7 +215,7 @@ As invariantes estão fixadas em `src/lib/__tests__/contabilistas-experiencia.te
 
 ## 10. O que fica de fora (decisões explícitas)
 
-- ~~**Pagamentos da consulta.** O ReciboCerto não é intermediário financeiro
+- ~~**Pagamentos da consulta.** O Recibo Certo não é intermediário financeiro
   entre cliente e contabilista.~~ **Revisto em 2026-08-16 — ver §12.**
 - **Notas clínicas / dossiê interno do contabilista.** Fora de âmbito por agora:
   guardar conteúdo profissional sobre terceiros levanta obrigações que não estão
@@ -229,7 +229,7 @@ As invariantes estão fixadas em `src/lib/__tests__/contabilistas-experiencia.te
 
 ## 12. Pagamentos (2026-08-16) — a §10 revista
 
-A §10 dizia que o ReciboCerto não processa o pagamento da consulta. O
+A §10 dizia que o Recibo Certo não processa o pagamento da consulta. O
 raciocínio por trás continua escrito em `progressao/fronteiras.ts` e continua
 certo:
 
@@ -237,7 +237,7 @@ certo:
 > outro é outra atividade.
 
 A decisão de produto mudou: o cliente passa a pagar o contabilista **através**
-do ReciboCerto. A forma escolhida é a única que não atravessa aquela linha.
+do Recibo Certo. A forma escolhida é a única que não atravessa aquela linha.
 
 ### Cobranças diretas, não de destino
 
@@ -301,6 +301,6 @@ checkout no meio.
 
 - **Reembolsos automáticos.** `needs_refund` fica registado para a
   administração tratar; não há devolução automática.
-- **Faturação.** O recibo é do contabilista e sai da Stripe. O ReciboCerto não
+- **Faturação.** O recibo é do contabilista e sai da Stripe. O Recibo Certo não
   emite fatura em nome dele.
 - **Pagamentos recorrentes de avença.** Só consultas, uma a uma.

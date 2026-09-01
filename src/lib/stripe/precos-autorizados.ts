@@ -118,7 +118,7 @@ export function descreverEstado(
 ): DescricaoEstado {
   if (!temSessao) return {
     estado: "sem-conta", etiqueta: "Sem conta",
-    mensagem: "Estás a usar o ReciboCerto sem conta. Os dados ficam guardados neste dispositivo.",
+    mensagem: "Estás a usar o Recibo Certo sem conta. Os dados ficam guardados neste dispositivo.",
     temAcesso: false, requerAcao: false, tom: "neutro",
   };
 

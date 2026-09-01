@@ -21,7 +21,7 @@ import ComparadorLazy from "./lazy";
 const TOOL = porId("comparar-regimes")!;
 
 export const metadata: Metadata = {
-  title: "Recibos verdes, contrato ou empresa? Comparador 2026 | ReciboCerto",
+  title: "Recibos verdes, contrato ou empresa? Comparador 2026 | Recibo Certo",
   description:
     "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa. Ponto de viragem, obrigações, proteção social e custo de contabilista — com as regras de 2026.",
   keywords: [
@@ -34,11 +34,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Recibos verdes, contrato ou empresa? O comparador 2026 | ReciboCerto",
+    title: "Recibos verdes, contrato ou empresa? O comparador 2026 | Recibo Certo",
     description:
       "Os três cenários lado a lado, com as mesmas premissas — líquido, obrigações, proteção social e a partir de que rendimento compensa mudar.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

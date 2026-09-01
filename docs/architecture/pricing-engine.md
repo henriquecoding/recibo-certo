@@ -2,7 +2,7 @@
 
 ## Decisão estruturante: não se cria uma segunda fonte de verdade fiscal
 
-O briefing pedia `tax-rules/` com versionamento. O ReciboCerto **já tem isso**:
+O briefing pedia `tax-rules/` com versionamento. O Recibo Certo **já tem isso**:
 `src/lib/fiscal-data.ts`, com `Sourced<T>` (valor + base legal + fonte + data de
 verificação) e `assertFiscalDataIntegrity()` a falhar o build.
 

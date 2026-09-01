@@ -19,7 +19,7 @@ export default function EmailCapture({ fonte = "landing" }: { fonte?: string }) 
       className="grain relative scroll-mt-24 overflow-hidden px-6 py-28"
       style={{
         background:
-          "linear-gradient(135deg, #0A4A39 0%, #0F6E56 45%, #1D9E75 100%)",
+          "linear-gradient(135deg, #0A4A39 0%, #0F6E56 45%, #177E5E 100%)",
       }}
     >
       {/* Decorative glow */}

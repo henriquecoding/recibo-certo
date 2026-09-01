@@ -1,4 +1,4 @@
-# ReciboCerto — Plano operativo de crescimento
+# Recibo Certo — Plano operativo de crescimento
 
 > Aplicação do **Relatório estratégico de crescimento, produto e monetização**
 > (versão 1.0, 8 de agosto de 2026; investigação fechada nessa data).
@@ -18,7 +18,7 @@
 
 ## 1. A tese, em uma frase
 
-O ReciboCerto não compete por ser mais uma calculadora nem por executar
+O Recibo Certo não compete por ser mais uma calculadora nem por executar
 faturação. É **o lugar onde se compreende, simula, compara e prepara a
 decisão**; a FIZ e os contabilistas parceiros executam quando a complexidade o
 exige.
@@ -32,7 +32,7 @@ distribuição por parceiros e um ciclo editorial sazonal.
 
 1. **Medir antes de escalar.** Sem product analytics não se sabe o que ativa, o
    que converte, porque regressam nem onde o dinheiro se perde.
-2. **Fixar a categoria.** ReciboCerto = compreender, simular, comparar,
+2. **Fixar a categoria.** Recibo Certo = compreender, simular, comparar,
    preparar e acompanhar. FIZ = emitir, declarar e executar. Contabilista =
    resolver exceções de elevada complexidade ou obrigação profissional.
 3. **Monetizar primeiro a intenção qualificada.** A FIZ é a primeira aposta
@@ -165,7 +165,7 @@ motor mais curto para escala.**
 | Execução (FIZ, faturação) | Emitir, declarar, operar | Não é o lugar para explorar alternativas antes de decidir | Preparar e encaminhar; não duplicar execução |
 | Contabilistas | Julgamento e responsabilidade | Custo de triagem e capacidade limitada | Qualificar, organizar o dossiê e encaminhar exceções |
 
-**Proposta de categoria.** ReciboCerto é o copiloto fiscal de decisão para quem
+**Proposta de categoria.** Recibo Certo é o copiloto fiscal de decisão para quem
 trabalha em Portugal: transforma regras oficiais em cenários comparáveis, explica
 o porquê do resultado, ajuda a guardar e planear, e entrega o caso certo à FIZ ou
 a um profissional quando chega a hora de executar.
@@ -623,7 +623,7 @@ escalar.**
 
 ## 13. Memorando de decisão
 
-O ReciboCerto tem um ativo raro para a fase: motor fiscal, catálogo de decisões,
+O Recibo Certo tem um ativo raro para a fase: motor fiscal, catálogo de decisões,
 conteúdo, infraestrutura de conta e pagamento, e um parceiro de execução. O
 investimento adicional justifica-se se a equipa provar **três loops em doze
 meses**: intenção → decisão verificada; decisão → retorno; decisão → outcome
@@ -654,7 +654,7 @@ ausência de evidência comportamental.
 **Decisão final.** A melhor aposta não é «mais 100 artigos» nem «mais uma
 calculadora». É fechar a cadeia de valor que já existe: pergunta → simulação →
 explicação → memória → execução. Se essa cadeia produzir DVM, retorno e outcome
-remunerado com qualidade, o ReciboCerto pode crescer como marca de confiança e
+remunerado com qualidade, o Recibo Certo pode crescer como marca de confiança e
 infraestrutura; se não produzir, os dados dirão cedo onde reduzir o escopo.
 
 ---

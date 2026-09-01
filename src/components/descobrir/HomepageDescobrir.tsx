@@ -86,7 +86,7 @@ const FAQS = [
   {
     pergunta: "O que acontece quando uma fonte falha?",
     resposta:
-      "A dimensão fica marcada como indisponível ou por apurar. O ReciboCerto não inventa um valor de fallback para manter o cartão bonito.",
+      "A dimensão fica marcada como indisponível ou por apurar. O Recibo Certo não inventa um valor de fallback para manter o cartão bonito.",
   },
 ] as const;
 
@@ -261,7 +261,7 @@ function FontesDescobrir() {
             A fonte entra com o número. A limitação entra ao lado.
           </h2>
           <p className="mt-4 max-w-lg text-sm leading-relaxed text-stone-600">
-            Se a série não mede intenção de compra, o ReciboCerto não diz que mede. Se uma fonte falha,
+            Se a série não mede intenção de compra, o Recibo Certo não diz que mede. Se uma fonte falha,
             o valor desaparece e a incerteza sobe — não há um fallback “plausível”.
           </p>
           <div className="mt-5 flex flex-wrap gap-2 texto-mini font-semibold text-stone-600">

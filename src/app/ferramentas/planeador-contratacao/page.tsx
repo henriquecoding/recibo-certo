@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import EntradaPlaneador from "@/components/contratacao/EntradaPlaneador";
 import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import PlaneadorContratacaoLazy from "./lazy";
@@ -17,10 +18,10 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Planeador de contratação 2026 | ReciboCerto",
+    title: "Planeador de contratação 2026 | Recibo Certo",
     description: "Custo, pacote, líquido e capacidade do posto — separados e explicados antes de fazer a proposta.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "website",
   },
@@ -30,7 +31,7 @@ export default function PlaneadorContratacaoPage() {
   return (
     <ToolShell
       tool={TOOL}
-      subtitulo="Parte do orçamento, do líquido pretendido ou de uma proposta já conhecida. Vê custo patronal, pacote, encargos públicos, calendário e capacidade — sem pedir conta nem guardar nada ao simular."
+      inicio={<EntradaPlaneador tool={TOOL} />}
       contexto={
         <section className="grid gap-4 sm:grid-cols-3">
           {[

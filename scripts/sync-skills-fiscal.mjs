@@ -89,6 +89,44 @@ async function main() {
     return m.slice(1, 4).map((v) => Math.round(Number(v) * 100)).join("/");
   };
 
+  // Verba 2.42 da lista I — taxa reduzida nas empreitadas de habitação.
+  // Os dois limites são DERIVADOS na fonte de verdade (não são literais), por
+  // isso reproduzem-se aqui pela mesma via: a RMMG e o 2.º escalão do IMT.
+  const verbaEfeitos = grab(
+    src,
+    /produzEfeitosEm: sv\(\s*"(\d{4}-\d{2}-\d{2})"/,
+    "IVA_CONSTRUCAO_HABITACAO.produzEfeitosEm"
+  );
+  const verbaCessa = grab(
+    src,
+    /cessaVigenciaEm: sv\(\s*"(\d{4}-\d{2}-\d{2})"/,
+    "IVA_CONSTRUCAO_HABITACAO.cessaVigenciaEm"
+  );
+  const rmmg = Number(grab(src, /export const SMN = sv\(\s*([\d.]+)/, "SMN"));
+  const rendaMult = Number(
+    grab(
+      src,
+      /rendaModeradaMultiplicadorRMMG: sv\(\s*([\d.]+)/,
+      "IVA_CONSTRUCAO_HABITACAO.rendaModeradaMultiplicadorRMMG"
+    )
+  );
+  // O preço moderado é o limite superior do 2.º escalão da tabela `jovem`
+  // (al. b) do n.º 1 do Art. 17.º CIMT).
+  const jovemBloco = src.match(/jovem: \[([\s\S]*?)\]/);
+  if (!jovemBloco) {
+    console.error("[sync-skills] Não foi possível ler IMT_ESCALOES.jovem.");
+    process.exit(2);
+  }
+  const escaloesJovem = [...jovemBloco[1].matchAll(/\{ ate: ([\d_]+)/g)].map((m) =>
+    Number(m[1].replace(/_/g, ""))
+  );
+  if (escaloesJovem.length < 2) {
+    console.error("[sync-skills] IMT_ESCALOES.jovem não tem 2.º escalão legível.");
+    process.exit(2);
+  }
+  const precoModerado = escaloesJovem[1];
+  const rendaModerada = rendaMult * rmmg;
+
   // Coeficientes de subsídios e categoria F (novos regimes).
   const coefSubNao = grab(src, /coefSubsidiosNaoExploracao: sv\(\s*([\d.]+)/, "coefSubsidiosNaoExploracao");
   const coefSubExpl = grab(src, /coefSubsidiosExploracao: sv\(\s*([\d.]+)/, "coefSubsidiosExploracao");
@@ -145,6 +183,7 @@ async function main() {
     `- **Retenção na fonte** (cat. B): Art. 151.º ${pct(ret151)} · outros serviços ${pct(retOutros)} · direitos de autor ${pct(retAutor)} · vendas sem retenção. Dispensa abaixo de ${eur(dispensa)}/ano.`,
     `- **Coeficientes do regime simplificado**: serviços 151.º 0,75 · outros 0,35 · vendas/hotelaria 0,15 · propriedade intelectual 0,95 · AL moradia 0,35 (contenção 0,50) · transparência 1,0 · **subsídios não destinados à exploração ${coef(coefSubNao)}** · **subsídios à exploração ${coef(coefSubExpl)}**.`,
     `- **IVA**: isenção até ${eur(ivaLimite)} (excesso ${eur(ivaExcesso)}). Continente ${ivaTrio("continente")}, Madeira ${ivaTrio("madeira")}, Açores ${ivaTrio("acores")}.`,
+    `- **IVA na construção de habitação (verba 2.42 da lista I)**: empreitadas de construção/reabilitação de imóveis para venda em HPP ou para arrendamento habitacional passam à **taxa reduzida** (${ivaTrio("continente").split("/")[0]}% no continente) se o preço não exceder ${eur(precoModerado)} ou a renda ${eur(rendaModerada)}. Em vigor desde **${verbaEfeitos}**, cessa a **${verbaCessa}** (DL 97/2026). Na mesma data alargou-se a **inversão do sujeito passivo** (art. 2.º, n.º 1, al. j) CIVA): nestas empreitadas aplica-se MESMO a adquirentes sem direito à dedução. Dados em \`IVA_CONSTRUCAO_HABITACAO\` e \`AUTOLIQUIDACAO_CONSTRUCAO\`.`,
     `- **Segurança Social**: taxa ${pct(ssTaxa)} sobre 70% (serviços) ou 20% (bens/hotelaria).`,
     `- **Categoria F (rendas puras)**: taxa autónoma habitação ${pct(catFHab)} · não habitacional ${pct(catFNaoHab)}; reduções por duração do contrato habitacional (5–10 anos −10 p.p.; 10–20 −15 p.p.; ≥20 −20 p.p.). Sem SS, sem IVA. Motor próprio \`calcularCategoriaF\`.`,
     `- **IRS**: escalões de ${escaloesMin} a ${escaloesMax}; mínimo de existência ${eur(minExist)}.`,

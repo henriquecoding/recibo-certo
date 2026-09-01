@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/estado-dos-dados" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Estado dos dados — ReciboCerto",
+    title: "Estado dos dados — Recibo Certo",
     description:
       "Cobertura, frescura e limitações do motor fiscal, contadas a partir do código. Incluindo o que ainda falta.",
     url: "https://www.recibocerto.pt/estado-dos-dados",

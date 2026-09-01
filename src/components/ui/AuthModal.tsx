@@ -11,7 +11,7 @@ import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 export default function AuthModal() {
   const {
     modalAberto: querAbrir, modoModal, fecharModal,
-    entrar, registar, entrarComGoogle, entrarComLinkedin,
+    entrar, registar, recuperarPassword, entrarComGoogle, entrarComLinkedin,
     disponivel,
   } = useAuth();
 
@@ -25,7 +25,7 @@ export default function AuthModal() {
     fecharModal,
   );
 
-  const [modo, setModo] = useState<"entrar" | "criar">(modoModal);
+  const [modo, setModo] = useState<"entrar" | "criar" | "recuperar">(modoModal);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [erro, setErro] = useState("");
@@ -63,6 +63,17 @@ export default function AuthModal() {
     }
 
     setAEnviar(true);
+
+    // Recuperar não pede palavra-passe: pede o email de volta.
+    if (modo === "recuperar") {
+      const res = await recuperarPassword(email.trim());
+      setAEnviar(false);
+      if (res.erro) { setErro(res.erro); return; }
+      // A mesma mensagem exista ou não a conta. Dizer «esse email não
+      // existe» é entregar a quem pergunta a lista de quem tem conta.
+      setInfo("Se existir conta com esse email, enviámos um link para definires uma palavra-passe nova. Vê também o spam.");
+      return;
+    }
 
     if (modo === "criar") {
       const res = await registar(email.trim(), password);
@@ -134,12 +145,14 @@ export default function AuthModal() {
                 <User size={20} className="text-white" />
               </div>
               <h2 id="auth-modal-titulo" className="font-display text-[18px] font-semibold text-stone-800 dark:text-stone-100">
-                {modo === "entrar" ? "Bem-vindo de volta" : "Criar conta grátis"}
+                {modo === "entrar" ? "Bem-vindo de volta"
+                  : modo === "criar" ? "Criar conta grátis"
+                  : "Recuperar o acesso"}
               </h2>
               <p className="mt-1 text-[12px] text-stone-400 dark:text-stone-500 text-center">
-                {modo === "entrar"
-                  ? "Entra para sincronizar os teus dados na nuvem."
-                  : "Cria conta para guardar e aceder em qualquer dispositivo."}
+                {modo === "entrar" ? "Entra para sincronizar os teus dados na nuvem."
+                  : modo === "criar" ? "Cria conta para guardar e aceder em qualquer dispositivo."
+                  : "Escreve o teu email e enviamos um link para definires uma palavra-passe nova."}
               </p>
               <button
                 type="button"
@@ -201,6 +214,7 @@ export default function AuthModal() {
                     placeholder="o-teu@email.pt"
                   />
                 </div>
+                {modo !== "recuperar" && (
                 <div>
                   <label htmlFor="auth-password" className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Password
@@ -224,6 +238,19 @@ export default function AuthModal() {
                     </div>
                   )}
                 </div>
+                )}
+
+                {modo === "entrar" && (
+                  <div className="text-right">
+                    <button
+                      type="button"
+                      onClick={() => { setModo("recuperar"); setErro(""); setInfo(""); }}
+                      className="text-[12px] text-stone-400 underline-offset-2 transition-colors hover:text-brand hover:underline dark:text-stone-500 dark:hover:text-brand-mint"
+                    >
+                      Esqueceste-te da palavra-passe?
+                    </button>
+                  </div>
+                )}
 
                 {erro && (
                   <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-700 dark:bg-red-900/20 dark:text-red-400">
@@ -241,7 +268,10 @@ export default function AuthModal() {
                   disabled={aEnviar || !!oauthEmCurso}
                   className="btn-shine flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
                 >
-                  {aEnviar ? "A processar…" : modo === "entrar" ? "Entrar" : "Criar conta"}
+                  {aEnviar ? "A processar…"
+                    : modo === "entrar" ? "Entrar"
+                    : modo === "criar" ? "Criar conta"
+                    : "Enviar link de recuperação"}
                   {!aEnviar && <ArrowRight size={14} />}
                 </button>
               </form>
@@ -254,9 +284,9 @@ export default function AuthModal() {
                 onClick={() => { setModo(prev => prev === "entrar" ? "criar" : "entrar"); setErro(""); setInfo(""); }}
                 className="text-[12px] text-stone-400 transition-colors hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300"
               >
-                {modo === "entrar"
-                  ? "Não tens conta? Cria uma grátis"
-                  : "Já tens conta? Entra aqui"}
+                {modo === "entrar" ? "Não tens conta? Cria uma grátis"
+                  : modo === "criar" ? "Já tens conta? Entra aqui"
+                  : "Voltar a entrar"}
               </button>
             </div>
             </div>

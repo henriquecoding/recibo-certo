@@ -101,14 +101,14 @@ export async function construirXLSX(livro: LivroXLSX): Promise<ArrayBuffer> {
 
   // Um livro sem título chama-se «Livro1» para sempre, em todas as listas de
   // ficheiros por onde passar.
-  wb.creator = "ReciboCerto";
-  wb.lastModifiedBy = "ReciboCerto";
+  wb.creator = "Recibo Certo";
+  wb.lastModifiedBy = "Recibo Certo";
   wb.created = new Date(livro.proveniencia.emitidoEm);
   wb.modified = new Date(livro.proveniencia.emitidoEm);
   wb.title = livro.titulo;
   wb.subject = livro.assunto;
-  wb.keywords = livro.palavrasChave ?? "ReciboCerto, IRS, Segurança Social, Portugal";
-  wb.company = "ReciboCerto";
+  wb.keywords = livro.palavrasChave ?? "Recibo Certo, IRS, Segurança Social, Portugal";
+  wb.company = "Recibo Certo";
   wb.description = `Referência ${livro.proveniencia.referencia}. Estimativa — não substitui o recibo oficial.`;
 
   for (const folha of livro.folhas) {

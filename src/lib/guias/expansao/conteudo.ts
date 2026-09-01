@@ -2088,6 +2088,7 @@ export const CONTEUDO_EXPANSAO: Record<string, ConteudoExpansao> = {
       "Prestas serviços a empresas noutro Estado-membro.",
       "Compras serviços a fornecedores estrangeiros.",
       "Trabalhas em setores com autoliquidação interna.",
+      "Fazes empreitadas de construção ou reabilitação de habitação.",
     ],
     naoAplicaSe: [
       "Todas as tuas operações são internas e sem regime especial.",
@@ -2098,6 +2099,8 @@ export const CONTEUDO_EXPANSAO: Record<string, ConteudoExpansao> = {
       "A menção obrigatória na fatura",
       "Como declaras quando és o adquirente",
       "Autoliquidação interna (construção civil, sucatas)",
+      "O que mudou a 1 de julho de 2026",
+      "A empreitada de habitação à taxa reduzida (verba 2.42)",
       "Erros que geram liquidação adicional",
     ],
     oQuePreparar: [
@@ -2110,6 +2113,8 @@ export const CONTEUDO_EXPANSAO: Record<string, ConteudoExpansao> = {
     ],
     avisos: [
       "A menção deve reproduzir a fórmula legal — indicar a redação exata exigida pelo CIVA e não uma tradução livre.",
+      "Desde 1 de julho de 2026, a inversão do sujeito passivo na construção civil já não depende só de o adquirente ter direito à dedução: nas empreitadas da verba 2.42 aplica-se mesmo a quem não deduz.",
+      "A taxa reduzida da verba 2.42 confirma-se depois da obra. Se as condições falharem, o imposto é regularizado a favor do Estado, com juros compensatórios.",
     ],
   },
   "renunciar-isencao-iva": {

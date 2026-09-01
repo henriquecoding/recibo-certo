@@ -1,9 +1,9 @@
 ---
 name: crescimento-recibocerto
-description: Estratégia de crescimento, medição, clusters de decisão, routing comercial e programa de autoridade do ReciboCerto. Usar SEMPRE que criares uma página nova, uma ferramenta, um guia, um CTA comercial, um evento de medição — ou quando alguém pedir "mais uma calculadora" ou "mais artigos".
+description: Estratégia de crescimento, medição, clusters de decisão, routing comercial e programa de autoridade do Recibo Certo. Usar SEMPRE que criares uma página nova, uma ferramenta, um guia, um CTA comercial, um evento de medição — ou quando alguém pedir "mais uma calculadora" ou "mais artigos".
 ---
 
-# Crescimento — ReciboCerto
+# Crescimento — Recibo Certo
 
 Aplica o relatório estratégico 2026-2027. O plano completo está em
 `docs/ESTRATEGIA.md`; esta skill é o que precisas de saber **antes de escrever
@@ -11,7 +11,7 @@ código**.
 
 ## A tese (não a contrariar sem autorização)
 
-ReciboCerto = compreender, simular, comparar, preparar e acompanhar.
+Recibo Certo = compreender, simular, comparar, preparar e acompanhar.
 FIZ = emitir, declarar e executar. Contabilista = exceções complexas.
 
 Nos próximos 90 dias a instrução é **parar de alargar a superfície por defeito**.

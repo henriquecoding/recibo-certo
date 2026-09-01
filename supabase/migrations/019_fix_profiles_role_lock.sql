@@ -1,5 +1,5 @@
 -- ================================================================
--- ReciboCerto — Migration 019: Fecho da escalada de privilégios (role)
+-- Recibo Certo — Migration 019: Fecho da escalada de privilégios (role)
 -- Cola no Supabase → SQL Editor e clica RUN.
 -- Idempotente: seguro para correr múltiplas vezes.
 -- ================================================================

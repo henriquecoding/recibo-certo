@@ -7,7 +7,7 @@ import Wizard from "./Wizard";
 const TOOL = porId("payout-mor")!;
 
 export const metadata: Metadata = {
-  title: "Recibo verde ao Merchant of Record (Paddle, Lemon Squeezy) | ReciboCerto",
+  title: "Recibo verde ao Merchant of Record (Paddle, Lemon Squeezy) | Recibo Certo",
   description:
     "Guia passo-a-passo para emitir o recibo mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação e 100 % do payout líquido. Dados do adquirente e fundamento legal incluídos.",
   keywords: [
@@ -16,11 +16,11 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Recibo verde ao Merchant of Record | ReciboCerto",
+    title: "Recibo verde ao Merchant of Record | Recibo Certo",
     description:
       "Cinco passos para emitir o recibo do teu payout com o adquirente, o IVA e a retenção corretos.",
     url: `https://www.recibocerto.pt${TOOL.canonicalHref}`,
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

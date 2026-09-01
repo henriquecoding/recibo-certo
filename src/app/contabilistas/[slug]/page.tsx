@@ -8,7 +8,7 @@ import PerfilPublico from "./PerfilPublico";
 // metadata e para o `<h1>` chegar no HTML — o essencial da página é legível
 // antes de qualquer JavaScript correr.
 
-const TITULO_NEUTRO = "Contabilista | ReciboCerto";
+const TITULO_NEUTRO = "Contabilista | Recibo Certo";
 
 /**
  * O título diz o estado REAL da verificação.
@@ -56,7 +56,7 @@ export async function generateMetadata({
         : l.titulo_profissional?.trim() || "Contabilista";
 
     return {
-      title: `${l.nome} — ${qualificacao} | ReciboCerto`,
+      title: `${l.nome} — ${qualificacao} | Recibo Certo`,
       description: "Perfil, áreas de trabalho e marcação de consulta.",
     };
   } catch {

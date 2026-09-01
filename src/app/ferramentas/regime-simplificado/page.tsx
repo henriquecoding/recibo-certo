@@ -10,15 +10,15 @@ import { fmt } from "@/lib/format";
 const TOOL = porId("regime-simplificado")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora regime simplificado IRS 2026 | ReciboCerto",
+  title: "Calculadora regime simplificado IRS 2026 | Recibo Certo",
   description: "Calcula o teu IRS como trabalhador independente em regime simplificado: coeficiente, rendimento tributável, imposto estimado e taxa efetiva. Atualizado para 2026.",
   keywords: ["regime simplificado IRS", "coeficiente IRS", "recibos verdes imposto", "calculadora IRS 2026"],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Calculadora regime simplificado IRS 2026 | ReciboCerto",
+    title: "Calculadora regime simplificado IRS 2026 | Recibo Certo",
     description: "Insere a tua faturação e atividade. Calcula coeficiente, IRS e taxa efetiva para 2026.",
     url: "https://www.recibocerto.pt/ferramentas/regime-simplificado",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

@@ -1,4 +1,4 @@
-# Auditoria profunda — ReciboCerto PR #102
+# Auditoria profunda — Recibo Certo PR #102
 
 **Data da análise:** 13 de agosto de 2026  
 **Pull request:** [#102 — Plataforma de contabilistas: agenda, clientes, partilhas e fidelidade](https://github.com/henriquecoding/recibo-certo/pull/102)  
@@ -16,7 +16,7 @@ O primeiro bloqueio já é visível no próprio preview: a página pública de c
 
 Além disso, a inspeção das migrações e do código encontrou caminhos de escrita direta que permitem alterar campos que deveriam ser imutáveis. O caso mais grave é o vínculo: pelas políticas atuais, um contabilista pode, via REST, mudar o `cliente_id` de um vínculo já existente. Como mensagens e outros dados são associados ao vínculo, isso cria um caminho plausível de perda de acesso para um cliente e exposição do histórico a outro. Esse caminho foi identificado por leitura de SQL e fluxo de autorização; não foi explorado no ambiente público.
 
-No design, a sensação de simplicidade do produto é real, mas a causa está bem localizada: **o ReciboCerto ainda usa a gramática visual de uma landing page em áreas que já são um software operacional**. Há muitos cartões brancos equivalentes, baixa densidade informacional, pouca identidade humana e pouca variação semântica entre estados. Adicionar mais gradientes, sombras ou ilustrações não resolveria. O salto de qualidade virá de hierarquia, dados, navegação persistente, contexto, estados semânticos e composição de workspace.
+No design, a sensação de simplicidade do produto é real, mas a causa está bem localizada: **o Recibo Certo ainda usa a gramática visual de uma landing page em áreas que já são um software operacional**. Há muitos cartões brancos equivalentes, baixa densidade informacional, pouca identidade humana e pouca variação semântica entre estados. Adicionar mais gradientes, sombras ou ilustrações não resolveria. O salto de qualidade virá de hierarquia, dados, navegação persistente, contexto, estados semânticos e composição de workspace.
 
 ### Recomendação de decisão
 
@@ -111,7 +111,7 @@ A página pública mais importante do novo produto não lista nenhum contabilist
 ### `/contabilistas/candidatura`
 
 - A estrutura pública carrega e os controlos têm nomes acessíveis.
-- O título aparece com marca duplicada: `… | ReciboCerto | ReciboCerto`.
+- O título aparece com marca duplicada: `… | Recibo Certo | Recibo Certo`.
 - O conteúdo é um hero e um cartão de registo isolado, seguido de muito espaço vazio.
 - A página apresenta o pedido de autenticação, mas ainda não mostra suficientemente o valor, o processo, requisitos, prazo de análise, privacidade ou uma prévia do painel.
 

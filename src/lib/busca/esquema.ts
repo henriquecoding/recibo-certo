@@ -104,7 +104,7 @@ export interface IntencaoDef {
 }
 
 export const INTENCOES: IntencaoDef[] = [
-  { id: "tudo", label: "Tudo", sub: "Tudo o que existe no ReciboCerto" },
+  { id: "tudo", label: "Tudo", sub: "Tudo o que existe no Recibo Certo" },
   { id: "simular", label: "Simular", sub: "Calcular um valor na tua situação" },
   { id: "compreender", label: "Compreender", sub: "Perceber uma regra ou um documento" },
   { id: "cumprir", label: "Cumprir", sub: "Fazer o que é preciso, e a tempo" },

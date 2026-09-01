@@ -164,7 +164,7 @@ export function PainelDeFiltros({ filtro, onMudar }: PropsFiltros) {
         />
         <Caixa
           rotulo="LinkedIn ligado"
-          nota="A conta do ReciboCerto está ligada a um perfil profissional do LinkedIn."
+          nota="A conta do Recibo Certo está ligada a um perfil profissional do LinkedIn."
           marcada={filtro.soLinkedIn}
           onMudar={(v) => onMudar({ soLinkedIn: v })}
         />

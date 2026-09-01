@@ -16,7 +16,7 @@ export function getStripe(): Stripe {
   // versão diferente da que ele descreve é o desalinhamento a sério. Ambas são
   // do comboio `dahlia`, que é o sinal da Stripe para compatibilidade.
   // Ao subir o SDK, subir também isto — o compilador avisa se ficar para trás.
-  instancia = new Stripe(chave, { apiVersion: "2026-07-29.dahlia" });
+  instancia = new Stripe(chave, { apiVersion: "2026-08-26.dahlia" });
   return instancia;
 }
 

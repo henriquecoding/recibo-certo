@@ -120,7 +120,7 @@ export default function LinkedInConta({ contabilistaId }: { contabilistaId: stri
         <div className="flex min-w-0 items-center gap-3.5">
           {mostrarAvatar ? (
             // Também na pré-visualização do dono passamos pelo proxy do
-            // ReciboCerto. Evita hotlink direto, URLs externas expiradas a
+            // Recibo Certo. Evita hotlink direto, URLs externas expiradas a
             // aparecer como imagem quebrada e mantém a mesma política do
             // perfil público.
             // eslint-disable-next-line @next/next/no-img-element

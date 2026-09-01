@@ -21,9 +21,9 @@ import { CAMPOS_NUNCA_ENVIADOS } from "@/lib/fiz/handoff-fields";
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "ReciboCerto e FIZ: como funciona a parceria",
+  title: "Recibo Certo e FIZ: como funciona a parceria",
   description:
-    "O ReciboCerto explica, calcula e prepara. A FIZ executa: faturação certificada, declarações e prazos. Onde acaba um e começa o outro, e o que acontece aos teus dados.",
+    "O Recibo Certo explica, calcula e prepara. A FIZ executa: faturação certificada, declarações e prazos. Onde acaba um e começa o outro, e o que acontece aos teus dados.",
   alternates: { canonical: "https://www.recibocerto.pt/integracoes/fiz" },
 };
 
@@ -105,7 +105,7 @@ export default function IntegracaoFizPage() {
           {/* Cabeçalho */}
           <header className="mb-8">
             <div className="mb-4 flex items-center gap-3">
-              <span className="font-display text-lg font-semibold text-brand-dark">ReciboCerto</span>
+              <span className="font-display text-lg font-semibold text-brand-dark">Recibo Certo</span>
               <span aria-hidden className="text-stone-300">×</span>
               <FizLogo size={34} className="rounded-lg shadow-card" />
             </div>
@@ -150,7 +150,7 @@ export default function IntegracaoFizPage() {
           {/* O que nunca fazemos */}
           <section className="mb-8 rounded-4xl border border-stone-200 bg-white p-5 dark:border-stone-700 dark:bg-stone-900 sm:p-6">
             <h2 className="mb-1 font-display text-lg font-semibold text-ink">
-              O que o ReciboCerto nunca faz
+              O que o Recibo Certo nunca faz
             </h2>
             <p className="mb-4 text-xs leading-relaxed text-stone-500 dark:text-stone-400">
               Isto não é uma limitação temporária. É uma decisão de produto, e está garantida no
@@ -174,7 +174,7 @@ export default function IntegracaoFizPage() {
               <Lock size={17} className="text-fiz-700" />O que acontece aos teus dados
             </h2>
             <p className="mb-4 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
-              Nada é partilhado por seres utilizador do ReciboCerto. A partilha só existe se
+              Nada é partilhado por seres utilizador do Recibo Certo. A partilha só existe se
               escolheres continuar na FIZ — e, mesmo aí, escolhes campo a campo o que segue, num
               ecrã onde nada vem pré-selecionado.
             </p>
@@ -208,7 +208,7 @@ export default function IntegracaoFizPage() {
             <div className="space-y-3 text-sm leading-relaxed text-stone-600 dark:text-stone-400">
               <p>
                 <strong className="text-stone-800 dark:text-stone-200">Sim, somos remunerados</strong>{" "}
-                quando alguém contrata a FIZ através do ReciboCerto. Dizemo-lo em todos os sítios
+                quando alguém contrata a FIZ através do Recibo Certo. Dizemo-lo em todos os sítios
                 onde a ação aparece, e não só aqui.
               </p>
               <p>
@@ -220,7 +220,7 @@ export default function IntegracaoFizPage() {
               <p>
                 O <strong className="text-stone-800 dark:text-stone-200">{PLUS.nome}</strong>, a{" "}
                 {PLUS.precoMensal.toLocaleString("pt-PT", { style: "currency", currency: PLUS.moeda })}/mês,
-                paga as ferramentas do ReciboCerto. Não paga nada da FIZ, e não é preciso tê-lo para
+                paga as ferramentas do Recibo Certo. Não paga nada da FIZ, e não é preciso tê-lo para
                 ligar a conta ou enviar uma simulação.
               </p>
             </div>

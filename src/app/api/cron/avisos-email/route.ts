@@ -17,7 +17,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { enviarEmail } from "@/lib/email/send";
-import { emailAvisoPlataforma } from "@/lib/email/templates";
+import { emailAvisoPlataforma, URL_GERIR_AVISOS } from "@/lib/email/templates";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
         aviso.corpo ?? undefined,
         `${site}${aviso.url ?? "/dashboard"}`
       );
-      const r = await enviarEmail({ to: aviso.para, subject, html });
+      const r = await enviarEmail({ to: aviso.para, subject, html, desinscrever: URL_GERIR_AVISOS });
       if (r.erro) falhados.push(aviso.id);
       else enviados.push(aviso.id);
     } catch (e) {

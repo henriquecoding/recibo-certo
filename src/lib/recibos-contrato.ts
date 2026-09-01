@@ -73,7 +73,7 @@ export interface Recibo {
   regimeIVA: RegimeIVA;
   baseSS: BaseSS;
   dispensaRetencao: boolean;
-  /** ISO timestamp do registo no ReciboCerto. Distinto de `data`. */
+  /** ISO timestamp do registo no Recibo Certo. Distinto de `data`. */
   criadoEm?: string;
   /** ISO timestamp da última alteração. */
   atualizadoEm?: string;

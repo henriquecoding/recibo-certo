@@ -39,7 +39,7 @@
 
 1. **Slug com base de 60 caracteres:** o sufixo de unicidade pode ser truncado, causando colisão repetida.
 2. **Website do perfil não é normalizado:** `example.com` vira link relativo e esquemas não HTTP precisam ser rejeitados.
-3. **Títulos duplicados:** diretório/candidatura já incluem “ReciboCerto” e o template raiz acrescenta novamente.
+3. **Títulos duplicados:** diretório/candidatura já incluem “Recibo Certo” e o template raiz acrescenta novamente.
 4. **Metadados privados genéricos:** `/contabilista` e hub usam título da homepage.
 5. **Perfil público dinâmico é client-only:** SSR entrega skeleton sem H1 e metadata específica, apesar da intenção de SEO; faltam canonical e metadados por perfil.
 6. **`noindex` incompleto:** cobre dashboard/admin/api, mas não toda a área privada `/contabilista`.
@@ -121,4 +121,4 @@ A ordem correta agora é:
 
 Visualmente, a marca deve permanecer calma e confiável. O salto de qualidade não está em “enfeitar”: está em mostrar mais contexto útil, dar significado às cores, trazer pessoas e estados para a superfície, criar navegação persistente e permitir que cada tela responda rapidamente à próxima decisão do utilizador.
 
-Com os P0 corrigidos e a direção “Mesa Fiscal” aplicada primeiro a Overview, Agenda e Diretório, o ReciboCerto pode sair de “interface limpa, porém simples” para “produto operacional, reconhecível e confiável” sem perder o que já o diferencia.
+Com os P0 corrigidos e a direção “Mesa Fiscal” aplicada primeiro a Overview, Agenda e Diretório, o Recibo Certo pode sair de “interface limpa, porém simples” para “produto operacional, reconhecível e confiável” sem perder o que já o diferencia.

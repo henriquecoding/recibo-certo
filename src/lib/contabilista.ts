@@ -171,7 +171,7 @@ export function diagnosticoContabilista(input: DiagnosticoInput): DiagnosticoCon
       nivel: "autonomo",
       rotulo: ROTULOS.autonomo,
       titulo: "Gestão autónoma recomendada",
-      mensagem: `Beneficias de isenção de IVA (Art. 53.º — abaixo de ${eur(LIMITE_ISENCAO_IVA)}) e tens uma estrutura de despesas simples. Podes usar o ReciboCerto para emitir faturas e submeter o IRS. Sugerimos apenas uma consulta inicial para validar o enquadramento.`,
+      mensagem: `Beneficias de isenção de IVA (Art. 53.º — abaixo de ${eur(LIMITE_ISENCAO_IVA)}) e tens uma estrutura de despesas simples. Podes usar o Recibo Certo para emitir faturas e submeter o IRS. Sugerimos apenas uma consulta inicial para validar o enquadramento.`,
       avencaMin: 40,
       avencaMax: 80,
       pontual: true,

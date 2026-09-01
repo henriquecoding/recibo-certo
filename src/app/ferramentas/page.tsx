@@ -32,7 +32,7 @@ import AtalhosIntencao from "@/components/ferramentas/AtalhosIntencao";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 
 export const metadata: Metadata = {
-  title: `Ferramentas fiscais 2026 — ${TOTAL_FERRAMENTAS} simuladores e calculadoras | ReciboCerto`,
+  title: `Ferramentas fiscais 2026 — ${TOTAL_FERRAMENTAS} simuladores e calculadoras | Recibo Certo`,
   description:
     "Simula, compara e confirma valores com regras portuguesas verificadas para 2026: recibos verdes, salário líquido, IRS anual, Segurança Social, empresa, heranças e mais. Grátis, sem conta e com os cálculos no teu dispositivo.",
   keywords: [
@@ -47,11 +47,11 @@ export const metadata: Metadata = {
   // canonical é sempre a página sem parâmetros.
   alternates: { canonical: "https://www.recibocerto.pt/ferramentas" },
   openGraph: {
-    title: `Centro Fiscal — ${TOTAL_FERRAMENTAS} ferramentas para resolver a tua situação | ReciboCerto`,
+    title: `Centro Fiscal — ${TOTAL_FERRAMENTAS} ferramentas para resolver a tua situação | Recibo Certo`,
     description:
       "Começa pelo teu problema, não pelo nome do imposto. Simuladores, calculadoras e decisores com regras verificadas de 2026 — grátis e sem conta.",
     url: "https://www.recibocerto.pt/ferramentas",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "website",
   },

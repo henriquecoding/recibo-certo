@@ -7,7 +7,7 @@
 //
 //  A resposta NÃO é assinar digitalmente. Um certificado qualificado obriga a
 //  gerir chaves num ambiente efémero, e a faixa verde do Acrobat diz «este
-//  ficheiro não foi alterado desde que a ReciboCerto o assinou» — não diz «os
+//  ficheiro não foi alterado desde que a Recibo Certo o assinou» — não diz «os
 //  números estão certos». Vender selo por exatidão é prometer o que não se
 //  cumpre.
 //

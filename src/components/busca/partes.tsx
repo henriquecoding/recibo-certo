@@ -157,7 +157,7 @@ export function FormularioBusca({
       <Search size={compacto ? 18 : 20} className="flex-shrink-0 text-brand" aria-hidden />
 
       <label htmlFor={id} className="sr-only">
-        Pesquisar no ReciboCerto
+        Pesquisar no Recibo Certo
       </label>
       <input
         ref={inputRef}

@@ -1,4 +1,4 @@
-// Ano fiscal de referência do ReciboCerto.
+// Ano fiscal de referência do Recibo Certo.
 //
 // Vive num módulo próprio — sem os dados pesados nem as asserções de
 // `fiscal-data.ts` — para poder ser importado por componentes-cliente (ex.: o

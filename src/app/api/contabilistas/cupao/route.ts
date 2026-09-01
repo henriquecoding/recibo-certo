@@ -5,7 +5,7 @@
 //  aplica o desconto e é ele que sabe que o aplicou. Se o cliente o pudesse
 //  fazer, gastava o cupão sem receber nada em troca.
 //
-//  ⚠️ O ReciboCerto NÃO cobra a consulta nem processa o pagamento. Isto
+//  ⚠️ O Recibo Certo NÃO cobra a consulta nem processa o pagamento. Isto
 //  regista que o desconto foi dado; não o executa. O acordo é entre as duas
 //  pessoas, e a interface diz isso.
 // ═══════════════════════════════════════════════════════════════════════

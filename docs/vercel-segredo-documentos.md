@@ -31,7 +31,7 @@ As três rotas usam o **mesmo** segredo e o **mesmo** compositor: só muda o
 tipográfico. Configurar a variável liga as três de uma vez.
 
 A assinatura existe porque, sem ela, **qualquer pessoa** podia mandar compor um
-documento com o cabeçalho da ReciboCerto e o conteúdo que quisesse — bastava
+documento com o cabeçalho da Recibo Certo e o conteúdo que quisesse — bastava
 descobrir o endereço. O segredo é a chave que prova que o pedido veio da nossa
 rota, e não de fora.
 

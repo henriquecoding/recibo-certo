@@ -55,7 +55,7 @@ export default function ContaPage() {
         <div className="flex items-start gap-2.5 rounded-2xl border border-alert-border bg-alert-bg p-4">
           <span className="mt-0.5 flex-shrink-0 text-alert-text"><Warning size={14} /></span>
           <p className="text-sm leading-relaxed text-alert-text">
-            A conta na nuvem ainda não está configurada neste ambiente. Continua a usar o ReciboCerto em modo local — os
+            A conta na nuvem ainda não está configurada neste ambiente. Continua a usar o Recibo Certo em modo local — os
             teus dados ficam guardados neste dispositivo.
           </p>
         </div>
@@ -515,7 +515,7 @@ function SecaoPassword() {
           </span>
           <div>
             <h2 className="text-sm font-semibold text-stone-800 dark:text-stone-100">Segurança da conta</h2>
-            <p className="text-xs text-stone-500 dark:text-stone-400">A tua sessão é gerida fora do ReciboCerto.</p>
+            <p className="text-xs text-stone-500 dark:text-stone-400">A tua sessão é gerida fora do Recibo Certo.</p>
           </div>
         </div>
         <p className="text-sm leading-relaxed text-stone-600 dark:text-stone-300">

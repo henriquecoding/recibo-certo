@@ -25,7 +25,7 @@ export function FormularioPagina({ consulta, intencao }: { consulta: string; int
     >
       <Search size={18} className="flex-shrink-0 text-brand" aria-hidden />
       <label htmlFor="pesquisa-pagina" className="sr-only">
-        Pesquisar no ReciboCerto
+        Pesquisar no Recibo Certo
       </label>
       <input
         id="pesquisa-pagina"

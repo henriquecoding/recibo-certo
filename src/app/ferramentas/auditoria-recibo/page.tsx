@@ -18,10 +18,10 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },
   openGraph: {
-    title: "Auditoria do recibo de vencimento 2026 | ReciboCerto",
+    title: "Auditoria do recibo de vencimento 2026 | Recibo Certo",
     description: "Deteta erros de IRS e Segurança Social no teu recibo de vencimento, face às tabelas oficiais de 2026.",
     url: "https://www.recibocerto.pt/ferramentas/auditoria-recibo",
-    siteName: "ReciboCerto",
+    siteName: "Recibo Certo",
     locale: "pt_PT",
     type: "article",
   },

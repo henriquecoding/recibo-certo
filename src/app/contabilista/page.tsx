@@ -16,7 +16,7 @@
 //  lê as tabelas fiscais do cliente. «Simulações recebidas» vem de
 //  `partilhas` — snapshots que o cliente enviou de propósito, com
 //  consentimento registado. Nenhum módulo é um simulador embutido (§1.2,
-//  §2.2, §7.5). O cliente continua a simular no ReciboCerto; o
+//  §2.2, §7.5). O cliente continua a simular no Recibo Certo; o
 //  contabilista recebe o que ele decidiu partilhar.
 // ═══════════════════════════════════════════════════════════════════════
 

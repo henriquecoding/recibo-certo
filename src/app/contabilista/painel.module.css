@@ -124,7 +124,7 @@
   left: 0.75rem;
   height: 2px;
   border-radius: 99px;
-  background: #1d9e75;
+  background: #177e5e;
   content: "";
 }
 
@@ -414,7 +414,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: #1d9e75;
+  background: #177e5e;
   box-shadow: 0 0 0 2px rgba(255, 255, 252, 0.91);
 }
 
@@ -496,7 +496,7 @@
   left: 0.4rem;
   height: 2px;
   border-radius: 99px;
-  background: #1d9e75;
+  background: #177e5e;
   content: "";
 }
 

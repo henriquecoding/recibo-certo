@@ -75,15 +75,85 @@ async function carregarDominio() {
   return { modulos, fechar: () => servidor.close() };
 }
 
+// ── Descarga do ficheiro em bloco ──────────────────────────────────────
+//
+// Isto falhou duas semanas seguidas (issue #148), e por duas razões
+// diferentes que se pareciam uma só no relatório:
+//
+//   2026-08-24 · «The operation was aborted due to timeout»  → 51.9 MB
+//   2026-08-31 · «fetch failed»                              → 52.6 MB
+//
+// A primeira é o teto de 5 minutos a ser atingido. A segunda não é sequer
+// um teto: é a ligação a cair a meio, que numa descarga única de 52 MB
+// contra um portal público acontece e vai continuar a acontecer.
+//
+// Nenhuma das duas era motivo para desistir da semana inteira — mas era o
+// que acontecia, porque não havia retentativa nenhuma. Uma falha de rede
+// transitória cancelava a ingestão e abria uma issue.
+//
+// O ficheiro cresce todos os anos (o de 2025 já vai em 52 MB comprimidos,
+// 273 MB abertos), por isso o teto passa a ser folgado em vez de justo: um
+// limite apertado que hoje chega é o mesmo incidente daqui a seis meses.
+//
+// O orçamento tem de fechar com o `timeout-minutes` do workflow, senão a
+// retentativa é decorativa: o GitHub mata o job a meio da segunda tentativa
+// e o resultado é o mesmo de não haver nenhuma. 3 × 10 min + 15 s de recuo
+// cabem nos 45 minutos que `mercado-ingestao.yml` passou a dar ao job.
+const DESCARGA_TIMEOUT_MS = 600_000; // 10 min por tentativa (o dobro do teto que falhou).
+const DESCARGA_TENTATIVAS = 3;
+const DESCARGA_RECUO_MS = 5_000; // 5s, depois 10s.
+
+/**
+ * Uma falha vale a pena repetir? Timeouts e quedas de ligação sim — são
+ * estado da rede, não do pedido. Um 404 ou um 403 não: repetir quatro
+ * vezes o mesmo erro permanente só atrasa o relatório da causa real.
+ */
+function vaLaPenaRepetir(erro) {
+  if (erro?.name === "TimeoutError" || erro?.name === "AbortError") return true;
+  // `fetch failed` chega como TypeError, com a causa real no `cause`.
+  if (erro instanceof TypeError) return true;
+  return erro?.repetivel === true;
+}
+
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+
 /** Descarrega para memória, calculando o SHA-256 pelo caminho. */
 async function descarregar(url) {
-  const resposta = await fetch(url, {
-    headers: { Accept: "application/octet-stream" },
-    signal: AbortSignal.timeout(300_000),
-  });
-  if (!resposta.ok) throw new Error(`HTTP ${resposta.status} ao descarregar ${url}`);
-  const bytes = Buffer.from(await resposta.arrayBuffer());
-  return { bytes, checksum: `sha256:${createHash("sha256").update(bytes).digest("hex")}` };
+  let ultimo;
+
+  for (let tentativa = 1; tentativa <= DESCARGA_TENTATIVAS; tentativa++) {
+    try {
+      const resposta = await fetch(url, {
+        headers: { Accept: "application/octet-stream" },
+        signal: AbortSignal.timeout(DESCARGA_TIMEOUT_MS),
+      });
+
+      if (!resposta.ok) {
+        const erro = new Error(`HTTP ${resposta.status} ao descarregar ${url}`);
+        // 5xx é do lado deles e costuma passar; 4xx é nosso e não passa.
+        erro.repetivel = resposta.status >= 500;
+        throw erro;
+      }
+
+      const bytes = Buffer.from(await resposta.arrayBuffer());
+      return { bytes, checksum: `sha256:${createHash("sha256").update(bytes).digest("hex")}` };
+    } catch (erro) {
+      ultimo = erro;
+      const haMais = tentativa < DESCARGA_TENTATIVAS;
+      if (!haMais || !vaLaPenaRepetir(erro)) break;
+
+      const recuo = DESCARGA_RECUO_MS * 2 ** (tentativa - 1);
+      console.log(
+        `    ↻ tentativa ${tentativa}/${DESCARGA_TENTATIVAS} falhou (${erro.message}). Nova tentativa em ${recuo / 1000}s.`,
+      );
+      await esperar(recuo);
+    }
+  }
+
+  throw new Error(
+    `descarga de ${url} falhou após ${DESCARGA_TENTATIVAS} tentativas: ${ultimo?.message ?? ultimo}`,
+    { cause: ultimo },
+  );
 }
 
 /** As 308 unidades concelhias, com a NUTS II no prefixo do código. */

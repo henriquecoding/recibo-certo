@@ -122,7 +122,7 @@ export default function AjusteBaseSS({
           disabled={desativado}
           onChange={(e) => onChange(Number(e.target.value))}
           aria-valuetext={rotulo(valor)}
-          className="h-9 min-w-0 flex-1 accent-[color:var(--brand,#1D9E75)] disabled:opacity-40"
+          className="h-9 min-w-0 flex-1 accent-[color:var(--brand,#177E5E)] disabled:opacity-40"
         />
         <button
           type="button"

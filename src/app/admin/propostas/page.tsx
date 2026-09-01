@@ -443,7 +443,7 @@ export default function AdminPropostas() {
 
                       {/* Link email direto */}
                       <a
-                        href={`mailto:${r.email}?subject=${encodeURIComponent("ReciboCerto — Proposta de investimento")}`}
+                        href={`mailto:${r.email}?subject=${encodeURIComponent("Recibo Certo — Proposta de investimento")}`}
                         className="inline-flex items-center gap-1 rounded-lg border border-stone-200 bg-white px-2.5 py-1 text-xs font-semibold text-stone-600 transition-colors hover:bg-stone-50 dark:border-stone-600 dark:bg-stone-800 dark:text-stone-300"
                       >
                         <Mail size={12} />

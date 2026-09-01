@@ -38,7 +38,7 @@ O hero apresenta uma entidade central e sinais que convergem para ela. O que se
 aproveita não é a aparência azul/roxa: é a causalidade espacial. A pessoa vê o
 sinal, o percurso e a consequência no mesmo enquadramento.
 
-Aplicação no ReciboCerto: competências, restrições e proveniência atravessam a
+Aplicação no Recibo Certo: competências, restrições e proveniência atravessam a
 mesa; só a chegada altera o estado do candidato.
 
 ### Linear
@@ -52,7 +52,7 @@ A Linear põe produto real no palco e deixa a estrutura ser sentida sem cobrir a
 interface de separadores. A animação serve a leitura da ferramenta, não uma
 metáfora abstrata.
 
-Aplicação no ReciboCerto: o palco usa objetos que existem no motor — contexto,
+Aplicação no Recibo Certo: o palco usa objetos que existem no motor — contexto,
 fronteiras, fontes, lacunas, hipótese, primeiro teste e critério de rejeição.
 Não há partículas, órbitas, globos ou uma “IA” luminosa.
 

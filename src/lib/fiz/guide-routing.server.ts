@@ -97,7 +97,7 @@ export interface AcaoFizResolvida {
  * o modo LIGACAO existe `DIVULGACAO_LIGACAO`, que o diz.
  */
 export const DIVULGACAO_PADRAO =
-  "A FIZ é um parceiro de execução fiscal. O ReciboCerto explica e prepara; a FIZ executa. A parceria é remunerada.";
+  "A FIZ é um parceiro de execução fiscal. O Recibo Certo explica e prepara; a FIZ executa. A parceria é remunerada.";
 
 /** Chave da parceria FIZ em `admin_partners.parceiro_key`. */
 const CHAVE_FIZ = "fiz";

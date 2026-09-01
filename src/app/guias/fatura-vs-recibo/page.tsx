@@ -168,7 +168,7 @@ export default function FaturaVsReciboPage() {
           .
         </p>
         <div className="mt-4 rounded-2xl border border-brand/20 bg-brand-light/40 dark:bg-brand/5 p-4 text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-          O <strong>ReciboCerto</strong> não emite documentos legais — a emissão
+          O <strong>Recibo Certo</strong> não emite documentos legais — a emissão
           faz-se no Portal das Finanças. O que fazemos é calcular, ao cêntimo,
           quanto do teu recibo é teu, quanto reservar para impostos e quando pagar,
           para não teres surpresas.

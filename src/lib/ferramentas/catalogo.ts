@@ -81,7 +81,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     fiscalYear: 2026,
     reviewedAt: REVISTO,
     featuredRank: 1,
-    highlight: "O núcleo do ReciboCerto",
+    highlight: "O núcleo do Recibo Certo",
     status: "novo",
     dashboardHref: "/dashboard/recibos-verdes",
     cta: "Calcular líquido",

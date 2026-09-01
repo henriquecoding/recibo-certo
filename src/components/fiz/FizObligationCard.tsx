@@ -7,7 +7,7 @@ import { FizMarca } from "./FizLogo";
 //  Cartão de obrigação/prazo vindo da FIZ.
 //
 //  Ponto 9.2 da arquitetura — a linguagem tem de distinguir:
-//    · estimativa do ReciboCerto;
+//    · estimativa do Recibo Certo;
 //    · estado RECEBIDO da FIZ  ← é este cartão;
 //    · confirmação oficial;
 //    · ação ainda necessária pelo utilizador.

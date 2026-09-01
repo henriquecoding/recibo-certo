@@ -279,7 +279,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
         <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-100 bg-white lg:flex">
           <div className="flex-shrink-0 border-b border-stone-100 px-6 py-5">
-            <Link href="/" aria-label="ReciboCerto — início">
+            <Link href="/" aria-label="Recibo Certo — início">
               <Logo />
             </Link>
           </div>
@@ -327,7 +327,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* ─── Top bar (mobile) ───────────────────────────────────── */}
         <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3.5 backdrop-blur-xl lg:hidden">
-          <Link href="/" aria-label="ReciboCerto — início">
+          <Link href="/" aria-label="Recibo Certo — início">
             <Logo small />
           </Link>
           <div className="flex items-center gap-2">

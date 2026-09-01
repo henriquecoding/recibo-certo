@@ -24,7 +24,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 export const metadata: Metadata = {
   title: "Changelog fiscal — o que mudou e quando",
   description:
-    "Registo público de todas as correções e atualizações fiscais do ReciboCerto: regras que mudaram, fontes corrigidas e conteúdo revisto, com data e razão. Nada é apagado.",
+    "Registo público de todas as correções e atualizações fiscais do Recibo Certo: regras que mudaram, fontes corrigidas e conteúdo revisto, com data e razão. Nada é apagado.",
   keywords: [
     "alterações fiscais 2026 portugal",
     "correções calculadora fiscal",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/changelog-fiscal" },
   robots: { index: true, follow: true },
   openGraph: {
-    title: "Changelog fiscal — ReciboCerto",
+    title: "Changelog fiscal — Recibo Certo",
     description:
       "Todas as correções e atualizações fiscais, com data, razão e fonte. Registo público.",
     url: "https://www.recibocerto.pt/changelog-fiscal",
