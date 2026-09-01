@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.149.0",
+    version: "2.150.0",
     data: "2026-09-01",
     titulo: "A fotografia de perfil e o painel de administração voltaram — nunca tinham saído da base de dados",
     itens: [
@@ -26,6 +26,15 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "O que o escondeu durante tanto tempo foi o silêncio: a aplicação deitava fora o erro e respondia «sem fotografia» e «não é administrador» — exatamente as mesmas respostas que daria se fosse verdade. Uma leitura falhada passa a ser distinguível de uma resposta vazia em todos os sítios que a usam.",
       "Três consequências do mesmo silêncio ficaram fechadas: o painel de administração deixa de terminar a tua sessão quando não consegue confirmar o acesso (mostra o erro e deixa tentar de novo), a página de perfil deixa de permitir guardar campos vazios por cima do nome e do NIF que estão gravados, e a caixa da conta deixa de trocar a ordem interna do React ao entrar e sair.",
       "O armazenamento das fotografias passa a impor o que a aplicação já prometia — JPG, PNG ou WebP até 2 MB —, em vez de o verificar só no browser.",
+    ],
+  },
+  {
+    version: "2.149.0",
+    data: "2026-09-01",
+    titulo: "A nova regra do IVA da construção chegou à API pública",
+    itens: [
+      "A taxa reduzida das empreitadas de habitação (a verba 2.42, em vigor desde 1 de julho) e o alargamento da autoliquidação já estavam nos guias e nos cálculos, mas a API pública de dados fiscais continuava a devolver só as taxas antigas. Quem lê os números por ali — e é para isso que a API existe — não tinha como saber que a regra mudou.",
+      "Passam a estar lá os dois limites com a fonte e a data: 660 982 € de preço de venda e 2300 € de renda mensal, mais os prazos que decidem se a taxa se mantém depois da obra e as datas em que a verba começa e deixa de vigorar.",
     ],
   },
   {
