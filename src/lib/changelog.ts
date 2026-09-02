@@ -16,6 +16,20 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.152.0",
+    data: "2026-09-02",
+    titulo: "O cabeçalho foi reconstruído: menos lugares no topo, e a pesquisa deixou de ser uma caixa flutuante",
+    itens: [
+      "O topo tinha dez lugares de primeiro nível — cinco ligações numa linha e cinco pilares na outra — a disputar a mesma atenção, e nenhum deles ganhava. Ficam os dois índices do produto («Simular» e «Guias»), que é o que responde a «e o que mais existe aqui?».",
+      "«Contabilistas» sobe ao centro do cabeçalho, com forma própria e uma linha a dizer o que se lá vai fazer. É a única entrada do site inteiro que acaba com uma pessoa do outro lado, e estava perdida no meio de uma lista de destinos.",
+      "«Quiz Fiscal» e «Planos» descem para a folha do menu, onde continuam a existir com ícone e descrição. «Sugestões» sai da fila dos destinos porque não é um destino — abre uma caixa de escrita e não muda de página; continua a duas portas, na folha do menu e no menu da conta.",
+      "A fila dos cinco pilares deixou de ser uma bandeja cinzenta com cantos redondos dentro do cartão do cabeçalho — duas superfícies a dizerem as duas «eu é que sou o contentor». Passa a ser uma faixa da largura do cartão, com cada pilar a ocupar a mesma coluna e uma régua fina a separá-las.",
+      "A pesquisa aberta deixa de ser um painel a pairar por cima da página: entra no fluxo do cabeçalho e forma um cartão contínuo com ele. O que escreves é a etapa 01, o que percebemos é a etapa 02, e o caminho preparado liga-se ao pedido por uma linha — dá para ver de relance em que ponto se está.",
+      "Por baixo do campo lê-se sempre como se navega com o teclado e a promessa que já era verdade: a consulta não sai deste dispositivo.",
+      "A lingueta «Recolher» cala-se enquanto a pesquisa está aberta. O painel já tem a sua linha de fecho, e dois controlos empilhados deixavam a pergunta no ar: recolher o quê?",
+    ],
+  },
+  {
     version: "2.151.0",
     data: "2026-09-01",
     titulo: "A pesquisa passa a dizer o que percebeu — e a preparar um caminho, em vez de devolver uma lista",

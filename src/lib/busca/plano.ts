@@ -73,6 +73,16 @@ export interface AcaoPreparada {
   requerConta: boolean;
   /** Estimativa da própria ferramenta, quando existe. Aparece com «≈». */
   minutos?: number;
+  /**
+   * O ano a que a matéria se aplica, quando o índice o declara.
+   *
+   * É o que autoriza a linha de interpretação a escrever «Portugal 2026»:
+   * vem da fonte canónica do documento, e não de um `new Date()` no
+   * cliente. A jurisdição é uma só — todo este produto é português — mas o
+   * ANO não é adivinhável, e escrevê-lo sem proveniência seria afirmar
+   * que o cálculo é do ano corrente quando pode não ser.
+   */
+  anoFiscal?: number;
   fonte?: FonteDoc;
   /** O que o destino SABE receber. Vem do catálogo, não da consulta. */
   aceita: TipoEntidade[];
@@ -165,6 +175,7 @@ function acaoDe(doc: DocumentoBusca, reconhecimento: Reconhecimento): AcaoPrepar
     href: doc.href,
     requerConta: doc.requerConta ?? false,
     ...(doc.minutos ? { minutos: doc.minutos } : {}),
+    ...(doc.anoFiscal ? { anoFiscal: doc.anoFiscal } : {}),
     ...(doc.fonte ? { fonte: doc.fonte } : {}),
     aceita: doc.aceita ?? [],
     campos: camposDe(doc, reconhecimento),
@@ -210,7 +221,16 @@ function apoioDe(consulta: string, reconhecimento: Reconhecimento, principal: bo
 
 /* ─── A pergunta — no máximo uma, e só quando muda a resposta ─────── */
 
-const OPCAO_NAO_SEI: OpcaoClarificacao = { id: "nao-sei", label: "Não sei" };
+/**
+ * O id da saída — exportado porque a moldura precisa de o reconhecer.
+ *
+ * «Saltar por agora» e «Não sei» dão no mesmo estado, e a interface precisa
+ * de saber qual é esse id para oferecer as duas formas de o dizer sem
+ * inventar uma terceira resposta que o plano não conhece.
+ */
+export const OPCAO_NAO_SEI_ID = "nao-sei";
+
+const OPCAO_NAO_SEI: OpcaoClarificacao = { id: OPCAO_NAO_SEI_ID, label: "Não sei" };
 
 /**
  * ┌─────────────────────────────────────────────────────────────────────┐
@@ -334,7 +354,7 @@ export function aplicarResposta(r: Reconhecimento, resposta: RespostaClarificaca
   const comSinal: Reconhecimento = { ...r, sinais: [...r.sinais, "CLARIFICATION_ANSWERED"] };
   // «Não sei» é uma resposta legítima: encerra a pergunta e não acrescenta
   // dado nenhum. Preencher à mesma seria pedir à pessoa que inventasse.
-  if (resposta.opcao === "nao-sei") return comSinal;
+  if (resposta.opcao === OPCAO_NAO_SEI_ID) return comSinal;
 
   if (resposta.tipo === "periodicidade") {
     return {

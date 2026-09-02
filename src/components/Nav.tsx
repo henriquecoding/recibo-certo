@@ -9,6 +9,7 @@ import { useBuscaAberta } from "@/components/busca/motor";
 import { Logo, ArrowRight, ChevronDown, Menu as MenuIcon } from "@/components/ui/Icons";
 import { useAuth } from "@/lib/supabase/auth";
 import BarraSecoes from "@/components/navegacao/BarraSecoes";
+import AtalhoApoio from "@/components/navegacao/AtalhoApoio";
 import CapsulaNav from "@/components/navegacao/CapsulaNav";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 
@@ -320,20 +321,48 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
               : "border-stone-100 shadow-card dark:border-stone-800/80"
           }`}
         >
-          {/* ── Linha 1 — marca · secções | conta · começar · menu ─────── */}
-          <div className="flex h-[var(--rc-header-linha)] min-w-0 items-center justify-between gap-4 px-2">
-            <div className="flex min-w-0 items-center gap-4">
+          {/**
+           * ── Linha 1 — marca · índices | APOIO | conta · acção · menu ───
+           *
+           * ┌───────────────────────────────────────────────────────────────┐
+           * │ TRÊS ZONAS, E A DO MEIO É A QUE MUDOU                          │
+           * │                                                               │
+           * │ Era «marca + cinco ligações» à esquerda e três controlos à     │
+           * │ direita. Cinco destinos aqui, cinco pilares na linha de baixo: │
+           * │ dez lugares de primeiro nível a disputar a mesma atenção, e    │
+           * │ nenhum deles a ganhar.                                         │
+           * │                                                               │
+           * │ Ficam os dois índices («Ferramentas», «Guias» — a resposta a   │
+           * │ «e o que mais existe aqui?») e o apoio humano sobe ao CENTRO,  │
+           * │ com forma própria. Não é hierarquia por capricho: é a única    │
+           * │ entrada do cabeçalho inteiro que acaba com uma pessoa do outro │
+           * │ lado, e um produto que vende tranquilidade não a esconde no    │
+           * │ meio de uma lista de destinos.                                 │
+           * │                                                               │
+           * │ O centro é literal — `justify-center` sobre a coluna toda, e   │
+           * │ não «depois das ligações». Com o `flex-1` nas laterais, o      │
+           * │ bloco fica no eixo do cartão mesmo quando os dois lados têm    │
+           * │ larguras diferentes, que é o que acontece assim que alguém     │
+           * │ inicia sessão e o «Começar Grátis» dá lugar a «Painel».        │
+           * └───────────────────────────────────────────────────────────────┘
+           */}
+          <div className="flex h-[var(--rc-header-linha)] min-w-0 items-center gap-4 px-2">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
               <Link prefetch={false} href="/" aria-label="Recibo Certo — início" className="focus-marca flex-shrink-0 rounded-xl">
                 <Logo />
               </Link>
               <BarraSecoes />
             </div>
 
-            {/* Uma entrada de conta, UMA acção, e o «Menu». O tema vive dentro
-                da folha — ver o quadro em `MenuConta.tsx`. O feedback está na
-                barra de secções, ao lado dos destinos que também são «o resto
-                do produto». */}
-            <div className="flex flex-shrink-0 items-center gap-2">
+            <div className="hidden flex-shrink-0 justify-center xl:flex">
+              <AtalhoApoio />
+            </div>
+
+            {/* Uma entrada de conta, UMA acção, e o «Menu». O tema e as
+                «Sugestões» vivem dentro da folha e do menu da conta — ver o
+                quadro em `MenuConta.tsx`. Nenhuma acção sobre o produto ocupa
+                um lugar na fila dos destinos. */}
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
               <MenuConta avatarUrl={avatarUrl} />
 
               <div className="transition-transform hover:-translate-y-px active:scale-[0.97]">
@@ -396,6 +425,33 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
               não haver um alvo que aparece e desaparece. Diz o que faz por
               palavras: uma seta sozinha seria uma adivinha num sítio onde o
               custo de errar é abrir uma coisa que não se queria. */}
+          {/**
+           * Com a pesquisa aberta, a lingueta cala-se.
+           *
+           * O painel tem a sua própria linha de fecho («Esc fechar»), e um
+           * segundo controlo a dizer «Recolher» por baixo dela é uma
+           * pergunta a mais: recolher O QUÊ — o painel, a navegação, as
+           * duas? Fechar a pesquisa faz a lingueta voltar, no sítio onde
+           * sempre esteve.
+           *
+           * ┌───────────────────────────────────────────────────────────┐
+           * │ E PORQUE NÃO `hidden={buscaAberta}` — QUE FOI O QUE FALHOU │
+           * │                                                           │
+           * │ O atributo `hidden` vale `display:none` vindo do preflight │
+           * │ do Tailwind — um selector de ATRIBUTO, (0,1,0). Uma classe │
+           * │ `flex` no mesmo elemento tem a mesma especificidade e vem  │
+           * │ DEPOIS no ficheiro: ganha. O elemento ficava com           │
+           * │ `hidden === true` no DOM, a lingueta continuava desenhada  │
+           * │ no ecrã, e a única forma de dar por isso era medir os      │
+           * │ rectângulos (`getClientRects()`), não olhar para a         │
+           * │ propriedade.                                              │
+           * │                                                           │
+           * │ Não montar não tem esse estado ambíguo. Ao contrário do    │
+           * │ corpo do cartão, esta linha não guarda foco nem estado que │
+           * │ se perca ao desmontar — é um botão sem memória.            │
+           * └───────────────────────────────────────────────────────────┘
+           */}
+          {!buscaAberta && (
           <div className="mt-1 flex h-[var(--rc-linha-alternar)] items-center justify-center">
             <button
               type="button"
@@ -415,6 +471,7 @@ export default function Nav({ foco = null }: { foco?: FocoHomepage | null }) {
               />
             </button>
           </div>
+          )}
         </div>
       </header>
 

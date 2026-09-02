@@ -19,21 +19,29 @@
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ «SUGESTÕES» É UMA ACÇÃO E FICA NO FIM, DEPOIS DE UMA RÉGUA           │
+//  │ FICAM DOIS, E «SUGESTÕES» SAIU DAQUI                                 │
 //  │                                                                     │
-//  │ Os anteriores levam a uma página; este abre uma caixa de             │
-//  │ escrita e não muda de rota. Pô-lo na fila sem separação ensinava     │
-//  │ que era mais um destino — e a pessoa que lhe toca à espera de uma    │
-//  │ página fica com um formulário. A régua é o sinal de que a natureza   │
-//  │ muda ali.                                                            │
+//  │ A fila tinha cinco destinos e uma acção. Cinco destinos ao lado de   │
+//  │ cinco pilares na linha de baixo são DEZ lugares de primeiro nível a  │
+//  │ disputar a mesma atenção — e nenhum deles ganha.                     │
+//  │                                                                     │
+//  │ Ficam os dois índices do produto (todas as ferramentas, todos os     │
+//  │ guias), que é o que responde a «e o que mais existe aqui?».          │
+//  │ «Contabilistas» sobe e ganha forma própria (`AtalhoApoio`) porque é  │
+//  │ a única entrada que acaba com uma pessoa do outro lado; «Quiz» e     │
+//  │ «Planos» descem para a folha do menu, onde continuam a existir com   │
+//  │ descrição e ícone.                                                   │
+//  │                                                                     │
+//  │ «Sugestões» sai por não ser um destino: abre uma caixa de escrita e  │
+//  │ não muda de rota. Continua a duas portas — na folha do menu e no     │
+//  │ menu da conta —, que é onde se procura uma acção sobre o produto e   │
+//  │ não sobre a tarefa.                                                  │
 //  └─────────────────────────────────────────────────────────────────────┘
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Megaphone } from "@/components/ui/Icons";
 import { SECOES_TOPO, hrefAtivo } from "@/lib/navegacao";
-import { abrirFeedback } from "@/components/feedback/abrir";
 import { medirNavegacao } from "@/lib/busca/medicao";
 
 /*
@@ -63,11 +71,12 @@ export default function BarraSecoes() {
             // `page` e não `true`: o item aceso É a página onde se está.
             aria-current={ativo ? "page" : undefined}
             onClick={() => medirNavegacao(secao.id ?? secao.href, "secretaria")}
+            // Dois sinais e não só a cor: peso e cor. O fundo é da FAIXA de
+            // baixo — é ela que pode dar-se ao luxo da pastilha, e é nisso
+            // que se lê qual das duas filas é a navegação.
             className={`${BASE} ${
               ativo
-                ? // Dois sinais e não só a cor: peso e cor. A cápsula por
-                  // baixo é que pode dar-se ao luxo da pastilha.
-                  "font-semibold text-brand-dark dark:text-brand"
+                ? "font-semibold text-brand-dark dark:text-brand"
                 : "text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
             }`}
           >
@@ -78,17 +87,6 @@ export default function BarraSecoes() {
           </Link>
         );
       })}
-
-      <span aria-hidden className="mx-2 h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
-
-      <button
-        type="button"
-        onClick={() => abrirFeedback({ area: pathname })}
-        className={`${BASE} gap-1.5 text-stone-500 hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200`}
-      >
-        <Megaphone size={15} className="flex-shrink-0 text-stone-400 dark:text-stone-500" />
-        Sugestões
-      </button>
     </nav>
   );
 }

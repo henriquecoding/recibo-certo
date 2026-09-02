@@ -4,21 +4,31 @@
 //  A BANDEJA DOS CINCO PILARES — a segunda linha do cabeçalho
 //  ---------------------------------------------------------------------
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ OCUPA A LINHA TODA, E AS RÉGUAS SÃO O QUE TORNA ISSO LEGÍTIMO         │
+//  │ UMA FAIXA, E NÃO UMA BANDEJA — AS RÉGUAS É QUE FAZEM AS COLUNAS      │
 //  │                                                                     │
-//  │ Uma bandeja esticada sem mais nada foi tentada e ficava mal: seis    │
-//  │ rótulos com ~80 px de ar entre eles perdem o agrupamento que uma     │
-//  │ bandeja existe para comunicar, e lê-se como itens a boiar num tubo.  │
-//  │ A correcção óbvia — encolher a bandeja ao conteúdo — resolvia isso e │
-//  │ deixava a linha com um bloco à esquerda e um vazio à direita.        │
+//  │ Foi uma bandeja cinzenta com cantos redondos, e a bandeja competia   │
+//  │ com o próprio cartão do cabeçalho: duas superfícies com forma        │
+//  │ própria, uma dentro da outra, a dizer as duas «eu é que sou o        │
+//  │ contentor». Passa a ser uma FAIXA delimitada por duas hairlines,     │
+//  │ com a largura do cartão e sem forma própria.                         │
 //  │                                                                     │
-//  │ A resposta certa não era nenhuma das duas: é ocupar a linha inteira  │
-//  │ E dar-lhe estrutura por dentro. Cada pilar tem a mesma fatia         │
-//  │ (`flex-1`), e uma régua fina separa fatias vizinhas. O espaço deixa  │
-//  │ de ser ar e passa a ser coluna.                                      │
+//  │ Cada pilar tem a mesma fatia (`flex-1`) e uma régua de altura        │
+//  │ inteira separa fatias vizinhas — o espaço deixa de ser ar e passa a  │
+//  │ ser coluna. A régua desaparece ao lado do pilar aceso: ali quem      │
+//  │ separa é a própria pastilha, e uma régua colada a ela é um traço a   │
+//  │ mais.                                                                │
+//  └─────────────────────────────────────────────────────────────────────┘
+//
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ O PONTO DE ESTADO É DERIVADO — NUNCA UM ENFEITE                      │
 //  │                                                                     │
-//  │ A régua desaparece ao lado do pilar aceso: ali quem separa é a       │
-//  │ própria pastilha, e uma régua colada a ela seria um traço a mais.    │
+//  │ Um ponto ao lado de um rótulo é uma afirmação: «há aqui alguma       │
+//  │ coisa nova». Se for decoração, ensina-se em duas visitas que não     │
+//  │ significa nada, e o dia em que significar já ninguém olha.           │
+//  │                                                                     │
+//  │ Vem do catálogo: a ferramenta canónica do pilar declara `status:     │
+//  │ "novo"`, e é o catálogo que o retira quando deixa de ser verdade.     │
+//  │ Não há aqui lista nenhuma para manter em dia.                        │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
@@ -39,16 +49,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES, hrefAtivo, hrefDaSuperficiePilar } from "@/lib/navegacao";
+import { porId } from "@/lib/ferramentas";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { useIntencaoFocos } from "@/components/foco/ControladorPrefetchFocos";
 
 const ITEM =
-  "focus-marca flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-full px-3 text-sm transition-colors";
+  "focus-marca flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-2.5 whitespace-nowrap rounded-xl px-3 text-sm transition-colors";
 
-const INATIVO = "font-medium text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200";
+const INATIVO = "font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 dark:text-stone-400 dark:hover:bg-stone-800/60 dark:hover:text-stone-200";
 
-const ATIVO = "font-semibold bg-white text-brand-dark shadow-card dark:bg-stone-950 dark:text-brand";
+const ATIVO = "font-semibold bg-stone-100 text-brand-dark dark:bg-stone-800 dark:text-brand";
+
+/** `true` quando a ferramenta canónica do pilar se declara nova. */
+const temNovidade = (toolId: string) => porId(toolId)?.status === "novo";
 
 export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null }) {
   const pathname = usePathname();
@@ -58,7 +72,7 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
   return (
     <nav
       aria-label="Principal"
-      className="flex w-full items-center gap-1 rounded-full bg-stone-100 p-1.5 dark:bg-stone-800/70"
+      className="flex w-full items-stretch border-y border-stone-100 dark:border-stone-800"
     >
       {PILARES.map((pilar, i) => {
         const Icon = iconeDe(pilar.icone);
@@ -81,7 +95,7 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
         return (
           <Fragment key={pilar.id}>
             {i > 0 && !destacado && !anteriorAceso && (
-              <span aria-hidden className="h-5 w-px flex-shrink-0 bg-stone-200 dark:bg-stone-700" />
+              <span aria-hidden className="my-2 w-px flex-shrink-0 bg-stone-100 dark:bg-stone-800" />
             )}
             <Link
               href={destino}
@@ -120,6 +134,16 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
                 className={`flex-shrink-0 ${destacado ? "text-brand" : "text-stone-400 dark:text-stone-500"}`}
               />
               <span className="truncate">{pilar.label}</span>
+              {/* Um ponto, e não uma pastilha «NOVO»: a fila tem cinco
+                  lugares e uma palavra a mais em qualquer um deles empurra
+                  os outros. O nome acessível diz o que o ponto significa —
+                  um ponto sozinho não é informação para quem não o vê. */}
+              {temNovidade(pilar.toolId) && (
+                <span className="flex flex-shrink-0 items-center">
+                  <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
+                  <span className="sr-only">Novidade</span>
+                </span>
+              )}
             </Link>
           </Fragment>
         );

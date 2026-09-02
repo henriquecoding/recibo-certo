@@ -1,9 +1,9 @@
 {
   "_meta": {
     "schema": 1,
-    "appVersion": "2.151.0",
+    "appVersion": "2.152.0",
     "fiscalYear": 2026,
-    "engineHash": "sha256:a09827b055c84ed2770119ac306003e6b93befca9427ae580d8185bd45982001"
+    "engineHash": "sha256:546fc12d2219c821fd92330e64a7f6d26a1c5602e559d72b9b9f0c28cb68d85c"
   },
   "dados": {
     "competencia": "Organizar e executar",

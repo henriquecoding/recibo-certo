@@ -485,8 +485,30 @@ for (const tema of [null, "dark"]) await bloco(`Tema ${tema ?? "claro"}`, async 
     // seu texto branco não se mede contra a superfície do painel — mediria
     // branco contra branco e reprovaria uma composição correcta.
     const titulo = painel?.querySelector("h3") ?? painel?.querySelector("[data-resultado] span span");
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ A SUPERFÍCIE É A QUE SE VÊ, E NEM SEMPRE É A DO PRÓPRIO ELEMENTO │
+    // │                                                                 │
+    // │ O painel passou a viver DENTRO do cartão do cabeçalho — uma      │
+    // │ superfície contínua, sem fundo próprio. Ler `backgroundColor` do │
+    // │ painel devolvia `rgba(0,0,0,0)`, e transparente lê-se como       │
+    // │ luminância 0: o tema escuro «passava» a medir nada e o claro     │
+    // │ reprovava uma composição correcta.                               │
+    // │                                                                 │
+    // │ Sobe até ao primeiro antepassado que PINTA — que é a superfície  │
+    // │ contra a qual o texto é lido. Assim o portão continua a medir o  │
+    // │ contraste real, quer o painel pinte o seu fundo, quer o herde.    │
+    // └─────────────────────────────────────────────────────────────────┘
+    const fundoEfetivo = (el) => {
+      for (let n = el; n; n = n.parentElement) {
+        const cor = getComputedStyle(n).backgroundColor;
+        const partes = (cor || "").match(/[\d.]+/g);
+        // Alfa ausente = opaco; alfa 0 = não pinta, continua a subir.
+        if (partes && partes.length >= 3 && (partes.length < 4 || Number(partes[3]) > 0)) return cor;
+      }
+      return getComputedStyle(document.body).backgroundColor;
+    };
     return {
-      fundo: painel ? getComputedStyle(painel).backgroundColor : "",
+      fundo: painel ? fundoEfetivo(painel) : "",
       texto: titulo ? getComputedStyle(titulo).color : "",
     };
   });

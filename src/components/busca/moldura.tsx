@@ -35,7 +35,7 @@
 
 import Link from "next/link";
 import { ROTULO_DOMINIO } from "@/lib/busca/esquema";
-import type { AcaoPreparada, CodigoExplicacao, PlanoBusca } from "@/lib/busca/plano";
+import { OPCAO_NAO_SEI_ID, type AcaoPreparada, type CodigoExplicacao, type PlanoBusca } from "@/lib/busca/plano";
 import {
   ArrowRight,
   Briefcase,
@@ -134,14 +134,6 @@ export function NotaPrivacidade() {
 
 /* ─── Linha de interpretação ──────────────────────────────────────── */
 
-function Etiqueta({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="texto-mini rounded-md border border-stone-200 bg-white px-1.5 py-0.5 font-semibold text-stone-600 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300">
-      {children}
-    </span>
-  );
-}
-
 function Rotulo({ children }: { children: React.ReactNode }) {
   return (
     <p className="texto-micro font-bold uppercase tracking-widest text-stone-600 dark:text-stone-400">{children}</p>
@@ -161,6 +153,24 @@ function Rotulo({ children }: { children: React.ReactNode }) {
  * │ exactamente nas alturas em que não devia.                            │
  * └─────────────────────────────────────────────────────────────────────┘
  */
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O VALOR E A PERIODICIDADE SÃO UMA COISA SÓ QUANDO ESTÃO OS DOIS      │
+ * │                                                                     │
+ * │ «3 500 €» e «por mês» em duas etiquetas separadas lêem-se como dois  │
+ * │ dados independentes — e não são: um valor sem periodicidade não quer │
+ * │ dizer nada, e é precisamente por isso que a moldura pergunta quando  │
+ * │ ela falta. Juntos, formam a grandeza: «3 500 €/mês».                 │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+const ABREVIATURA_PERIODO: Record<string, string> = {
+  hora: "/hora",
+  dia: "/dia",
+  mes: "/mês",
+  trimestre: "/trimestre",
+  ano: "/ano",
+};
+
 export function LinhaInterpretacao({ controlador }: { controlador: ControladorBusca }) {
   const { plano, aCorrigir, alternarCorrecao, corrigir } = controlador;
   if (!plano || plano.estado === "sem_caminho") return null;
@@ -187,37 +197,77 @@ export function LinhaInterpretacao({ controlador }: { controlador: ControladorBu
     partes.push({ texto: ROTULO_DOMINIO[plano.dominio], removivel: false });
     vistos.add(ROTULO_DOMINIO[plano.dominio].toLocaleLowerCase("pt-PT"));
   }
+
+  const periodo = plano.entidades.find((e) => e.tipo === "periodicidade");
+  const sufixoPeriodo = periodo ? (ABREVIATURA_PERIODO[String(periodo.valor)] ?? "") : "";
+
   for (const e of plano.entidades) {
     if (e.tipo === "comparacao") continue;
-    const texto = e.tipo === "valor" ? `${e.texto} €` : (e.rotulo ?? e.texto);
+    // A periodicidade não é uma etiqueta própria: viaja colada ao valor.
+    if (e.tipo === "periodicidade" && sufixoPeriodo) continue;
+    const texto = e.tipo === "valor" ? `${e.texto} €${sufixoPeriodo}` : (e.rotulo ?? e.texto);
     const chave = texto.toLocaleLowerCase("pt-PT");
     if (vistos.has(chave)) continue;
     vistos.add(chave);
     partes.push({ texto, removivel: true, cru: e.texto });
   }
+
+  /**
+   * «Portugal {ano}» fecha a linha — e só quando o índice o declara.
+   *
+   * Não é enfeite: é o âmbito da resposta. A jurisdição é uma só neste
+   * produto inteiro, mas o ANO não é adivinhável, e escrevê-lo a partir de
+   * um `new Date()` seria afirmar que a matéria é do ano corrente quando
+   * pode ser de outro. Vem do documento, ou não vem.
+   */
+  const ano = plano.principal?.anoFiscal;
+  if (ano) partes.push({ texto: `Portugal ${ano}`, removivel: false });
+
   if (partes.length === 0) return null;
 
   return (
     <section aria-labelledby="rc-busca-interpretacao" className="px-1">
       <Rotulo>
-        <span id="rc-busca-interpretacao">{claro ? "Pedido claro" : "Pedido reconhecido"}</span>
+        <span id="rc-busca-interpretacao">Pedido reconhecido · 02</span>
       </Rotulo>
 
-      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1.5">
-        <span
-          aria-hidden
-          className={`h-1.5 w-1.5 flex-none rounded-full ${claro ? "bg-brand" : "bg-stone-300 dark:bg-stone-600"}`}
-        />
-        {partes.map((p) => (
-          <Etiqueta key={p.texto}>{p.texto}</Etiqueta>
-        ))}
+      {/**
+       * ┌───────────────────────────────────────────────────────────────┐
+       * │ TEXTO PONTUADO, E JÁ NÃO SEIS PASTILHAS COM CONTORNO           │
+       * │                                                               │
+       * │ Cada etiqueta com caixa própria dava a seis fragmentos da      │
+       * │ MESMA frase a forma de seis objectos independentes — e a linha │
+       * │ que devia ler-se de uma vez («comparar regimes, 3 500 € por    │
+       * │ mês, em Portugal, em 2026») passava a ser um inventário.       │
+       * │                                                               │
+       * │ Uma frase separada por pontos lê-se como uma frase. O que      │
+       * │ ganha caixa é só o que é acção: o «Ver ou corrigir».           │
+       * └───────────────────────────────────────────────────────────────┘
+       */}
+      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+        <p className="min-w-0 flex-1 text-sm text-stone-700 dark:text-stone-300">
+          {partes.map((p, i) => (
+            <span key={p.texto}>
+              {i > 0 && <span aria-hidden className="px-1.5 text-stone-300 dark:text-stone-600">·</span>}
+              <span className={p.removivel ? "font-medium text-stone-800 dark:text-stone-200" : ""}>{p.texto}</span>
+            </span>
+          ))}
+        </p>
+
+        {/* A afirmação de confiança, e só quando é ganha. Ver o quadro. */}
+        {claro && (
+          <span className="flex flex-none items-center gap-1.5 text-sm font-medium text-brand-dark dark:text-brand">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-brand" />
+            Pedido claro
+          </span>
+        )}
 
         <button
           type="button"
           onClick={alternarCorrecao}
           aria-expanded={aCorrigir}
           aria-controls="rc-busca-correcao"
-          className="focus-marca ml-auto flex min-h-9 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-stone-600 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
+          className="focus-marca flex min-h-9 flex-none items-center gap-1 rounded-lg px-2 text-xs font-semibold text-stone-600 transition-colors hover:text-brand-dark dark:text-stone-400 dark:hover:text-brand"
         >
           Ver ou corrigir
           <ChevronDown size={12} className={aCorrigir ? "rotate-180 transition-transform" : "transition-transform"} aria-hidden />
@@ -361,19 +411,112 @@ function PorqueRecomendamos({ plano }: { plano: PlanoBusca }) {
  * O lado direito da moldura: ou uma pergunta, ou o que o renderer tem para
  * dizer sobre o caminho. Nunca as duas coisas — e nunca duas perguntas.
  */
+/** O nome da preparação, por forma de apresentar. Fechado por `Record`. */
+const PREPARACAO: Record<AcaoPreparada["renderer"], string> = {
+  prepared_tool: "Simulação em preparação",
+  comparison: "Comparação em preparação",
+  obligation: "Prazo em preparação",
+  guide: "Leitura em preparação",
+  direct_route: "Destino em preparação",
+  professional_support: "Pedido em preparação",
+};
+
+/**
+ * O indicador de passos — «1 de 2», e não uma barra de progresso.
+ *
+ * São dois: confirmar o dado que falta, e abrir. Uma barra sugeriria um
+ * processo longo com fim incerto; dois pontos dizem exactamente quantos
+ * gestos faltam, que é a informação que faz alguém decidir continuar.
+ */
+function Passos({ atual, total }: { atual: number; total: number }) {
+  return (
+    <span className="flex items-center gap-1" aria-label={`Passo ${atual} de ${total}`}>
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className="flex items-center gap-1">
+          {i > 0 && <span aria-hidden className="h-px w-3 bg-stone-300 dark:bg-stone-600" />}
+          <span
+            aria-hidden
+            className={`h-2 w-2 rounded-full ${
+              i < atual ? "bg-brand" : "border border-stone-300 dark:border-stone-600"
+            }`}
+          />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 export function ContextoDoPlano({ controlador }: { controlador: ControladorBusca }) {
   const { plano } = controlador;
   if (!plano) return null;
 
   if (plano.clarificacao) {
     const q = plano.clarificacao;
+    const acao = plano.principal;
+    const valor = plano.entidades.find((e) => e.tipo === "valor");
+    const periodo = plano.entidades.find((e) => e.tipo === "periodicidade");
+    const cenarios = plano.entidades
+      .filter((e) => e.tipo === "regime")
+      .map((e) => e.texto)
+      .slice(0, 3);
+
     return (
-      <section className="rounded-2xl border border-dashed border-brand/40 bg-brand-light/40 p-4 dark:border-brand/30 dark:bg-brand/10">
-        <Rotulo>Contexto · por confirmar</Rotulo>
-        <fieldset className="mt-1.5">
-          <legend className="text-sm font-semibold leading-snug text-stone-900 dark:text-stone-100">
-            {q.pergunta}
+      <section className="relative rounded-2xl border border-stone-200 bg-white p-4 dark:border-stone-700 dark:bg-stone-900">
+        {/**
+         * A LIGAÇÃO ENTRE OS DOIS CARTÕES, desenhada e não implícita.
+         *
+         * Lado a lado sem nada entre eles, os dois lêem-se como duas
+         * ofertas paralelas — «ou isto, ou aquilo». E não são: o da
+         * direita é uma condição do da esquerda. O traço com seta diz a
+         * direcção da dependência, e só existe onde há duas colunas.
+         */}
+        <span aria-hidden className="absolute -left-3 top-9 hidden items-center lg:flex">
+          <span className="h-px w-3 bg-stone-300 dark:bg-stone-600" />
+          <span className="-ml-px h-1.5 w-1.5 rotate-45 border-r border-t border-stone-300 dark:border-stone-600" />
+        </span>
+
+        <div className="flex items-start justify-between gap-3">
+          <Rotulo>
+            {acao ? PREPARACAO[acao.renderer] : "Em preparação"} · 1 de 2
+          </Rotulo>
+          <Passos atual={1} total={2} />
+        </div>
+
+        {/**
+         * O que está em preparação, dito com o número à frente.
+         *
+         * A pessoa escreveu «3 500 € por mês» e o que a interface lhe
+         * devolve é o mesmo número, em corpo grande, para ela confirmar
+         * de relance que não houve engano na leitura. É o mesmo papel do
+         * «check answers» do GOV.UK: mostrar antes de agir.
+         */}
+        {valor && (
+          <div className="mt-2">
+            <p className="texto-micro font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+              {cenarios.length >= 2 ? `${cenarios.length} cenários` : "Valor reconhecido"}
+            </p>
+            <p className="font-display text-2xl leading-tight text-stone-900 dark:text-stone-100 sm:text-3xl">
+              {valor.texto} €
+              {periodo && (
+                <span className="text-stone-500 dark:text-stone-400">
+                  {ABREVIATURA_PERIODO[String(periodo.valor)] ?? ""}
+                </span>
+              )}
+            </p>
+            {cenarios.length >= 2 && (
+              <p className="texto-mini mt-1 text-stone-600 dark:text-stone-400">{cenarios.join(" · ")}</p>
+            )}
+          </div>
+        )}
+
+        {/* A régua pontilhada separa o que já se sabe do que falta saber. */}
+        <hr className="my-3 border-0 border-t border-dashed border-stone-200 dark:border-stone-700" />
+
+        <fieldset>
+          <legend className="texto-micro mb-1.5 inline-block rounded-md border border-brand/30 px-1.5 py-0.5 font-bold uppercase tracking-widest text-brand-dark dark:text-brand">
+            Contexto · por confirmar
           </legend>
+          <p className="text-sm font-semibold leading-snug text-stone-900 dark:text-stone-100">{q.pergunta}</p>
           <p className="texto-mini mt-1 text-stone-600 dark:text-stone-400">{q.porque}</p>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
@@ -399,6 +542,24 @@ export function ContextoDoPlano({ controlador }: { controlador: ControladorBusca
               ),
             )}
           </div>
+
+          {/**
+           * «Saltar por agora» dá no MESMO estado que «Não sei» — e isso é
+           * deliberado, não um descuido. São duas maneiras de dizer a
+           * mesma decisão («não preenchas isto») e as pessoas dizem-na das
+           * duas: umas não sabem a resposta, outras não querem responder
+           * agora. Fingir que são estados diferentes obrigaria a inventar
+           * uma diferença que não existe do lado de lá.
+           */}
+          {q.opcoes.some((o) => o.id === OPCAO_NAO_SEI_ID) && (
+            <button
+              type="button"
+              onClick={() => controlador.responder(OPCAO_NAO_SEI_ID)}
+              className="focus-marca mt-2 inline-flex min-h-9 items-center rounded-lg text-xs font-medium text-stone-500 underline underline-offset-2 transition-colors hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200"
+            >
+              Saltar por agora
+            </button>
+          )}
         </fieldset>
       </section>
     );
@@ -461,6 +622,19 @@ export function ContextoDoPlano({ controlador }: { controlador: ControladorBusca
 
 /* ─── Alternativas ────────────────────────────────────────────────── */
 
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ AS ALTERNATIVAS SÃO UMA FILA, E NÃO UMA LISTA                        │
+ * │                                                                     │
+ * │ Empilhadas, com um ícone e uma seta cada, tinham a forma de          │
+ * │ RESULTADOS — a mesma da lista que a moldura veio substituir — e a    │
+ * │ superfície ficava outra vez com duas respostas do mesmo tamanho: um  │
+ * │ caminho preparado em cima e uma lista de destinos por baixo.         │
+ * │                                                                     │
+ * │ Numa fila, separadas por réguas e ao lado do rótulo que as nomeia,   │
+ * │ lêem-se pelo que são: as outras portas, para quem não quer aquela.   │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
 export function OutrosCaminhos({
   controlador,
   aoFechar,
@@ -472,33 +646,45 @@ export function OutrosCaminhos({
   if (!plano || plano.alternativas.length === 0) return null;
 
   return (
-    <section aria-labelledby="rc-busca-alternativas" className="px-1">
+    <nav aria-labelledby="rc-busca-alternativas" className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
       <Rotulo>
         <span id="rc-busca-alternativas">Outros caminhos</span>
       </Rotulo>
-      {/* Menos contraste do que o CTA principal, de propósito: são
-          alternativas e não uma segunda recomendação com o mesmo peso. */}
-      <ul className="mt-1 space-y-0.5">
-        {plano.alternativas.map((a, i) => (
-          <li key={a.id}>
-            <Link
-              prefetch={false}
-              href={a.href}
-              data-resultado
-              onClick={(e) => {
-                controlador.aoEscolherAcao(a, i + 2, "alternativa");
-                if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
-              }}
-              className="focus-marca flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm text-stone-700 no-underline transition-colors hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
-            >
-              <Lightbulb size={13} className="flex-none text-stone-400" aria-hidden />
-              <span className="min-w-0 flex-1 truncate">{a.titulo}</span>
-              <ArrowRight size={12} className="flex-none text-stone-300" aria-hidden />
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
+      <span aria-hidden className="hidden h-4 w-px bg-stone-200 sm:block dark:bg-stone-700" />
+
+      {plano.alternativas.map((a, i) => (
+        <span key={a.id} className="flex min-w-0 items-center gap-3">
+          {i > 0 && <span aria-hidden className="hidden h-4 w-px bg-stone-200 sm:block dark:bg-stone-700" />}
+          <Link
+            prefetch={false}
+            href={a.href}
+            data-resultado
+            onClick={(e) => {
+              controlador.aoEscolherAcao(a, i + 2, "alternativa");
+              if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
+            }}
+            className="focus-marca flex min-h-9 min-w-0 items-center gap-1.5 rounded-lg px-1 text-sm text-stone-700 no-underline transition-colors hover:text-brand-dark dark:text-stone-300 dark:hover:text-brand"
+          >
+            <Lightbulb size={13} className="flex-none text-stone-400" aria-hidden />
+            <span className="min-w-0 truncate">{a.titulo}</span>
+          </Link>
+        </span>
+      ))}
+
+      {controlador.totalSemTeto > plano.alternativas.length + 1 && (
+        <Link
+          prefetch={false}
+          href={controlador.hrefTodos}
+          onClick={(e) => {
+            if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
+          }}
+          className="focus-marca ml-auto flex min-h-9 flex-none items-center gap-1.5 rounded-lg px-1 text-sm font-semibold text-brand-dark no-underline dark:text-brand"
+        >
+          Explorar {controlador.totalSemTeto} resultados
+          <ArrowRight size={13} aria-hidden />
+        </Link>
+      )}
+    </nav>
   );
 }
 
@@ -533,39 +719,50 @@ export function FaixaApoio({
   return (
     <section
       aria-label="Apoio profissional"
-      className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border p-3 ${
-        principal
-          ? "border-brand/30 bg-brand-light/50 dark:border-brand/30 dark:bg-brand/10"
-          : "border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/40"
+      className={`flex flex-none flex-wrap items-center gap-x-3 gap-y-1 ${
+        principal ? "rounded-xl bg-brand-light/50 px-3 py-2 dark:bg-brand/10" : ""
       }`}
     >
-      <Briefcase size={16} className="flex-none text-brand" aria-hidden />
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-stone-900 dark:text-stone-100">
+      <span
+        aria-hidden
+        className="flex h-9 w-9 flex-none items-center justify-center rounded-full border border-brand/30 text-brand"
+      >
+        <Briefcase size={15} />
+      </span>
+      <div className="min-w-0">
+        <Rotulo>Apoio profissional</Rotulo>
+        <p className="text-sm font-semibold leading-tight text-stone-900 dark:text-stone-100">
           {principal ? "Falar com um contabilista certificado" : "Precisas de validar esta decisão?"}
         </p>
         <p className="texto-mini text-stone-600 dark:text-stone-400">
-          Inscrição na OCC verificada · Só partilhas o pedido quando confirmares
+          Contabilistas Certificados · Inscrição OCC verificada
           {apoio.filtros.length > 0 && ` · ${apoio.filtros.map((f) => f.valor).join(" · ")}`}
         </p>
       </div>
-      <Link
-        prefetch={false}
-        href={apoio.href}
-        data-resultado
-        onClick={(e) => {
-          controlador.aoEscolherAcao({ id: "apoio:contabilistas", tipo: "apoio" }, 1, "apoio");
-          if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
-        }}
-        className={`focus-marca flex min-h-9 flex-none items-center gap-1.5 rounded-lg px-3 text-xs font-semibold no-underline transition-colors ${
-          principal
-            ? "bg-brand text-white hover:bg-brand-dark"
-            : "border border-stone-200 text-stone-700 hover:border-brand dark:border-stone-700 dark:text-stone-200"
-        }`}
-      >
-        Encontrar contabilista
-        <ArrowRight size={12} aria-hidden />
-      </Link>
+      <div className="ml-auto flex flex-none flex-col items-end">
+        <Link
+          prefetch={false}
+          href={apoio.href}
+          data-resultado
+          onClick={(e) => {
+            controlador.aoEscolherAcao({ id: "apoio:contabilistas", tipo: "apoio" }, 1, "apoio");
+            if (!(e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)) aoFechar();
+          }}
+          className={`focus-marca flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold no-underline transition-colors ${
+            principal
+              ? "bg-brand px-3 text-white hover:bg-brand-dark"
+              : "text-stone-800 hover:text-brand-dark dark:text-stone-100 dark:hover:text-brand"
+          }`}
+        >
+          Encontrar contabilista
+          <ArrowRight size={13} aria-hidden />
+        </Link>
+        {/* A promessa fica COLADA ao botão, e não no parágrafo de cima: é
+            no instante antes do clique que ela tem de ser lida. */}
+        <p className="texto-mini text-stone-500 dark:text-stone-400">
+          Só partilhas o pedido quando confirmares
+        </p>
+      </div>
     </section>
   );
 }
