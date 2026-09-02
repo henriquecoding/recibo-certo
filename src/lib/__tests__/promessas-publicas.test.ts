@@ -100,14 +100,31 @@ describe("RC-LEGAL-002 · a FIZ só é anunciada quando está ligada", () => {
     // `components/Hero.tsx` estava na lista acima e desapareceu: o hero da
     // homepage passou a ser a bússola, que não mostra a FIZ em lado nenhum.
     //
-    // A presença da FIZ na homepage é agora só a `FizFaixaDemo`, que é um
+    // A presença da FIZ na homepage é o bloco «O passo seguinte», que é um
     // componente de SERVIDOR e por isso não consulta `fizAtiva()` (a bandeira
     // do cliente) mas sim o catálogo de parcerias — que falha fechado da
     // mesma maneira. A superfície mudou; a regra não.
-    const faixa = ler("components", "fiz", "FizFaixaDemo.tsx");
-    expect(faixa, "a faixa mostra a FIZ sem consultar o catálogo").toMatch(
+    //
+    // As cinco guardas deixaram de estar dentro do componente e passaram para
+    // `anuncio.server.ts`, porque há duas superfícies a mostrar o mesmo cartaz
+    // e uma guarda duplicada é uma guarda que um dia só se aperta de um lado.
+    // O que se verifica aqui é a cadeia inteira: quem desenha pergunta, e quem
+    // responde consulta o catálogo.
+    const resolvedor = ler("lib", "parcerias", "anuncio.server.ts");
+    expect(resolvedor, "o resolvedor mostra a FIZ sem consultar o catálogo").toMatch(
       /parceriaAtiva|parceriaUtilizavel/,
     );
+    expect(resolvedor, "e sem verificar o interruptor de emergência").toMatch(/parceriasAtivas/);
+
+    for (const superficie of [
+      ["components", "parcerias", "PassoSeguinteHomepage.tsx"],
+      ["components", "fiz", "FizFaixaDemo.tsx"],
+    ]) {
+      const fonte = ler(...superficie);
+      expect(fonte, `${superficie.join("/")} mostra a FIZ sem passar pelo resolvedor`).toMatch(
+        /anuncioDaSuperficie/,
+      );
+    }
 
     // E o hero novo não pode anunciar a FIZ sem passar por nenhuma das duas.
     const hero = ler("components", "foco", "HeroBussola.tsx");

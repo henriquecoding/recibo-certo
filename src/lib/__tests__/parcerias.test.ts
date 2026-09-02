@@ -200,6 +200,35 @@ describe("parcerias:copy — nada promete o que não acontece", () => {
     expect(tudo).not.toMatch(/certifica[çc][ãa]o n\.?[ºo°]?\s*\d/i);
     expect(tudo).not.toMatch(/n\.?[ºo°]\s*\d{3,}/);
   });
+
+  it("nenhuma copy de superfície anuncia o parceiro como contabilista", () => {
+    // Metade destas linhas vendia a FIZ como «contabilistas certificados», e
+    // a faixa da homepage era uma delas. O site TEM contabilistas — diretório
+    // com perfis aprovados, vínculo sem plano pago, e uma ordem que não se
+    // compra (`lib/contabilistas/diretorio.ts`). Anunciar um parceiro pago com
+    // a palavra que descreve o nosso diretório punha os dois a competir pelo
+    // mesmo clique, e contra a própria hierarquia de `escolherRota()`, onde o
+    // contabilista vem ANTES da FIZ.
+    //
+    // A regra não é «a FIZ não tem contabilistas» — não sabemos, e não é isso
+    // que está em causa. É que a NOSSA copy não usa essa palavra para vender
+    // um parceiro: descreve-o pelo que executa. Quem precisa de julgamento
+    // profissional vai para `/contabilistas`, que não é publicidade.
+    for (const [chave, c] of Object.entries(COPY_POR_SUPERFICIE)) {
+      if (!c) continue;
+      expect(`${c.titulo} ${c.sub} ${c.cta}`.toLowerCase(), chave).not.toContain("contabilist");
+    }
+    for (const [chave, c] of Object.entries(COPY_HERO)) {
+      expect(`${c.titulo} ${c.sub} ${c.cta}`.toLowerCase(), `hero.${chave}`).not.toContain(
+        "contabilist",
+      );
+    }
+    // E o recurso genérico, que serve qualquer superfície sem copy própria.
+    for (const s of SUPERFICIES) {
+      const c = copyDaSuperficie(s);
+      expect(`${c.titulo} ${c.sub} ${c.cta}`.toLowerCase(), s).not.toContain("contabilist");
+    }
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -396,12 +425,78 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
     // JavaScript e para quem tem movimento reduzido e nunca vê o ato.
     expect(faixa).not.toMatch(/^"use client"/m);
     expect(faixa).toMatch(/FizDisclosure/);
-    // A landing monta-a na casca estática comum às cinco entradas; a página
-    // de IRS continua a montá-la diretamente.
-    const landing = readFileSync(join(RAIZ, "components", "foco", "HomepageFocoShell.tsx"), "utf8");
+    // A página de IRS continua a montar a faixa diretamente.
     const irs = readFileSync(join(RAIZ, "app", "ferramentas", "simulador-irs", "page.tsx"), "utf8");
-    expect(landing).toMatch(/demo\.hero\.faixa/);
     expect(irs).toMatch(/demo\.irs\.faixa/);
+  });
+
+  it("as cinco leituras da homepage montam «O passo seguinte», e a casca já não o monta", () => {
+    // O bloco viveu na casca comum, depois da bússola — um só ponto de
+    // montagem, e o pior sítio da página: a seguir ao último ato da leitura
+    // ninguém lá chegava. Um anúncio que ninguém vê não é discreto, é
+    // inútil, e a fronteira que o bloco explica também não chegava a
+    // ninguém.
+    //
+    // Passou a ser montado por cada leitura, no fim do arco de próximos
+    // passos. O preço dessa mudança é este: cinco pontos de montagem em vez
+    // de um, e uma leitura nova pode nascer sem ele. É o que este teste
+    // impede — a regra passa a ser estrutural e não disciplina.
+    for (const rel of [
+      join("components", "descobrir", "HomepageDescobrir.tsx"),
+      join("components", "preco", "HomepagePreco.tsx"),
+      join("components", "foco", "recibos", "HomepageRecibos.tsx"),
+      join("components", "foco", "empresa", "HomepageEmpresa.tsx"),
+      join("components", "foco", "salario", "HomepageSalario.tsx"),
+    ]) {
+      const fonte = readFileSync(join(RAIZ, rel), "utf8");
+      expect(fonte, `${rel} não monta «O passo seguinte»`).toMatch(
+        /<PassoSeguinteHomepage\s+superficie="demo\.hero\.faixa"/,
+      );
+      // E monta-o ANTES dos planos: o bloco pertence ao arco de próximos
+      // passos, não ao fim da página. Se um dia descer para depois do FAQ ou
+      // da bússola, volta a não ser visto.
+      const iBloco = fonte.indexOf("<PassoSeguinteHomepage");
+      const iPrecos = fonte.indexOf("<Precos />");
+      expect(iPrecos, `${rel} deixou de montar os planos`).toBeGreaterThan(-1);
+      expect(iBloco, `${rel} monta o bloco depois dos planos`).toBeLessThan(iPrecos);
+    }
+
+    // E a casca deixou de o montar — duas montagens dariam a secção a dobrar.
+    const casca = readFileSync(join(RAIZ, "components", "foco", "HomepageFocoShell.tsx"), "utf8");
+    const codigoDaCasca = casca
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codigoDaCasca).not.toMatch(/<PassoSeguinteHomepage/);
+  });
+
+  it("o bloco da homepage é servidor, rotula antes do clique e não fica com o clique do contabilista", () => {
+    const bloco = readFileSync(
+      join(RAIZ, "components", "parcerias", "PassoSeguinteHomepage.tsx"),
+      "utf8",
+    );
+    // Servidor: o cartaz tem de estar no HTML inicial, e o bloco não pode
+    // arrastar JavaScript para o fim de cinco rotas de homepage.
+    expect(bloco).not.toMatch(/^"use client"/m);
+
+    // §13.3 da política de afiliados: rotular ANTES do clique. A divulgação
+    // por baixo do cartaz não chega — tem de haver rótulo antes dele.
+    expect(bloco).toMatch(/Publicidade/);
+    expect(bloco).toMatch(/FizDisclosure/);
+    const iRotulo = bloco.indexOf("Publicidade · o nosso parceiro");
+    const iCartaz = bloco.indexOf("FizCriativoImagem href");
+    expect(iRotulo, "o rótulo do anúncio desapareceu").toBeGreaterThan(-1);
+    expect(iCartaz, "o cartaz desapareceu").toBeGreaterThan(-1);
+    expect(iRotulo, "o rótulo tem de vir antes do cartaz").toBeLessThan(iCartaz);
+
+    // A razão de existir deste bloco: o parceiro fica com a faixa da
+    // execução e o contabilista continua a ser nosso, com destino nosso.
+    expect(bloco, "a faixa do contabilista tem de levar ao nosso diretório").toMatch(
+      /href="\/contabilistas"/,
+    );
+    // E a fronteira não é reescrita aqui — vem de `routing.ts`, que é a
+    // mesma que `/metodologia#comercial` publica.
+    expect(bloco).toMatch(/FRONTEIRA/);
   });
 
   it("o cursor encenado sai da frente do rato real", () => {
@@ -443,6 +538,7 @@ describe("parcerias:divulgacao — sem exceção e sem toggle", () => {
     for (const rel of [
       join("components", "fiz", "FizFaixaDemo.tsx"),
       join("components", "parcerias", "AnuncioSlot.tsx"),
+      join("components", "parcerias", "PassoSeguinteHomepage.tsx"),
       join("components", "fiz", "FizNextStep.tsx"),
       join("components", "fiz", "FizPlanoAcao.tsx"),
     ]) {
@@ -877,11 +973,21 @@ describe("parcerias:copy-visivel — o que se escreve chega ao ecrã", () => {
     // pixels —, mas o cartaz já é um `<a>` com `aria-label` e a imagem tem
     // `alt`: teclado, leitor de ecrã e imagens desligadas estavam cobertos.
     // Restava um segundo CTA colado ao primeiro.
-    const faixa = readFileSync(join(RAIZ, "components", "fiz", "FizFaixaDemo.tsx"), "utf8");
-    expect(faixa).not.toMatch(/FizActionButton/);
-    expect(faixa).toMatch(/v=banner/);
-    // E o `v` não pode aparecer duas vezes no mesmo URL.
-    expect(faixa).not.toMatch(/&v=[a-z]+`?\}?&v=/);
+    //
+    // Vale para as DUAS superfícies do cartaz: a faixa do simulador de IRS e
+    // o bloco «O passo seguinte» da homepage.
+    for (const rel of [
+      join("components", "fiz", "FizFaixaDemo.tsx"),
+      join("components", "parcerias", "PassoSeguinteHomepage.tsx"),
+    ]) {
+      const fonte = readFileSync(join(RAIZ, rel), "utf8");
+      expect(fonte, rel).not.toMatch(/FizActionButton/);
+    }
+    // O URL do cartaz é montado uma vez só, no resolvedor — e o `v` não pode
+    // aparecer duas vezes no mesmo endereço.
+    const resolvedor = readFileSync(join(RAIZ, "lib", "parcerias", "anuncio.server.ts"), "utf8");
+    expect(resolvedor).toMatch(/v=banner/);
+    expect(resolvedor).not.toMatch(/&v=[a-z]+`?\}?&v=/);
   });
 
   it("o cartaz é um alvo acessível por si só", () => {

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { PerfilProvider } from "@/lib/perfil";
 import {
@@ -38,12 +37,11 @@ export default function HomepageFocoShell({
       <div id="top">
         <Nav foco={foco} />
         <main data-homepage-foco={foco}>
+          {/* O bloco «O passo seguinte» esteve aqui, depois da bússola, e era
+              o pior sítio possível: a seguir ao último ato da leitura, ninguém
+              lá chegava. Passou a ser montado por cada leitura, no fim do arco
+              de próximos passos — ver `PassoSeguinteHomepage`. */}
           <PerfilProvider>{children}</PerfilProvider>
-          <div className="rc-home-deferred rc-home-deferred--compact px-4 pb-14 sm:px-6 sm:pb-20">
-            <div className="mx-auto max-w-6xl">
-              <FizFaixaDemo superficie="demo.hero.faixa" />
-            </div>
-          </div>
         </main>
         <Footer />
       </div>
