@@ -27,7 +27,7 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "«O que fica, e porquê» mostrava a toda a gente coisas que só valem para contabilistas — recebimentos em Stripe, progressão e comissão — mesmo a quem nunca o foi. Passa a mostrar só o que te diz respeito, e diz o prazo legal por extenso.",
       "A ligação à conta Stripe estava marcada como não apagável, com a justificação legal que só cobre o histórico de pagamentos: não havia, em lado nenhum, forma de desligar a conta de recebimentos. Passa a poder desligar-se, e o que a lei protege — os pagamentos e as compras de patamar — fica retido a sério, sem o teu nome ligado, em vez de desaparecer com a conta como acontecia.",
       "Para confirmar, quem escolhia uma coisa tinha de escrever «apagar todos os dados» — uma frase que descrevia mal o que ia acontecer. Passa a ser «apagar o que escolhi», e a caixa mostra a lista do que vai sair antes de pedir a frase.",
-      "Quando não é possível ler o que tens guardado, a página passa a dizê-lo em vez de mostrar uma lista vazia que se lia como «não tens nada».",
+      "Quando não é possível ler o que tens guardado, a página passa a dizê-lo em vez de mostrar uma lista vazia que se lia como «não tens nada». E se houver alguma coisa que o servidor ainda não saiba apagar, a linha aparece como indisponível em vez de aceitar a tua escolha e não fazer nada — preferimos dizê-lo a fingir que apagámos.",
     ],
   },
   {

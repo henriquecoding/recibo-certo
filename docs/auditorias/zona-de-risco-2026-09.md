@@ -66,6 +66,15 @@ interface precisa deles para explicar o que fica.
 **Porque não volta a acontecer.** `RC-DADOS-003` exige uma chave por
 conjunto no texto de `inventario_do_utilizador`.
 
+**E a chave em falta passou a querer dizer o que quer dizer.** A correção
+óbvia — tratar «sem chave» como zero — era o defeito. Uma chave em falta
+não é «tens zero», é **«este servidor ainda não conhece este conjunto»**, e
+isso acontece de verdade na janela entre publicar a aplicação e aplicar a
+migração. A linha aparece nessa janela como *indisponível de momento*, com
+a frase «ainda não dá para apagar isto por aqui — e preferimos dizê-lo a
+fingir que apagámos». Não se deixa escolher o que não vai ser apagado, e
+não se chama zero ao desconhecido.
+
 ---
 
 ## P0-3 · Apagar uma coisa na conta apagava tudo no dispositivo

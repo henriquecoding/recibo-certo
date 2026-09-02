@@ -498,12 +498,21 @@ export default function ZonaDeRisco() {
                 <ul className="mt-3 space-y-1">
                   {g.conjuntos.map((c) => {
                     const quantos = inventario?.[c.id];
+                    // ⚠️ O inventário devolve uma chave por conjunto que a
+                    // base de dados sabe apagar. Uma chave em falta não é
+                    // «tens zero» — é «este servidor ainda não conhece
+                    // isto», e acontece na janela entre publicar a
+                    // aplicação e aplicar a migração. Deixar escolher aqui
+                    // era prometer um apagamento que não ia acontecer, que
+                    // é exatamente o defeito que esta entrega corrige.
+                    const conhecido = inventario === null || quantos !== undefined;
                     return (
                       <Linha
                         key={c.id}
                         titulo={c.titulo}
                         descricao={c.descricao}
                         quantos={quantos}
+                        indisponivel={!conhecido}
                         marcado={escolhidos.has(c.id)}
                         aoAlternar={() => alternar(c.id)}
                       />
@@ -637,11 +646,14 @@ function Linha(p: {
   quantos: number | null | undefined;
   /** Domínios de presença contam-se em «guardado», não em registos. */
   unico?: boolean;
+  /** O servidor não conhece este conjunto — não se promete apagá-lo. */
+  indisponivel?: boolean;
   marcado: boolean;
   aoAlternar: () => void;
 }) {
-  const contagem =
-    p.quantos === undefined ? null
+  const contagem = p.indisponivel
+    ? "indisponível de momento"
+    : p.quantos === undefined ? null
     : p.quantos === null ? "não se consegue ler"
     : p.unico ? "guardado"
     : p.quantos === 1 ? "1 registo"
@@ -649,12 +661,19 @@ function Linha(p: {
 
   return (
     <li>
-      <label className="flex cursor-pointer items-start gap-3 rounded-2xl px-3 py-2.5 transition-colors hover:bg-white/70 dark:hover:bg-stone-900/50">
+      <label
+        className={`flex items-start gap-3 rounded-2xl px-3 py-2.5 transition-colors ${
+          p.indisponivel
+            ? "opacity-50"
+            : "cursor-pointer hover:bg-white/70 dark:hover:bg-stone-900/50"
+        }`}
+      >
         <input
           type="checkbox"
+          disabled={p.indisponivel}
           checked={p.marcado}
           onChange={p.aoAlternar}
-          className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-stone-300 text-clay-text focus:ring-clay-text"
+          className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border-stone-300 text-clay-text focus:ring-clay-text disabled:cursor-not-allowed"
         />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-2">
@@ -669,6 +688,15 @@ function Linha(p: {
           </span>
           <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
             {p.descricao}
+            {p.indisponivel ? (
+              <>
+                {" "}
+                <strong className="font-semibold text-clay-text">
+                  Ainda não dá para apagar isto por aqui — e preferimos dizê-lo a fingir que
+                  apagámos.
+                </strong>
+              </>
+            ) : null}
           </span>
         </span>
       </label>

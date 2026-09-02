@@ -228,6 +228,18 @@ describe("apagar: o que a pessoa vê", () => {
     expect(c).toContain("Neste dispositivo");
   });
 
+  it("um conjunto que o servidor não conhece não se deixa escolher", () => {
+    // ⚠️ O inventário devolve uma chave por conjunto que a base de dados
+    // sabe apagar. Uma chave em falta não é «tens zero» — é «este servidor
+    // ainda não conhece isto», e acontece na janela entre publicar a
+    // aplicação e aplicar a migração. Deixar escolher aí era prometer um
+    // apagamento que não ia acontecer: o defeito que esta entrega corrige.
+    const c = codigo(UI);
+    expect(c).toMatch(/const conhecido = inventario === null \|\| quantos !== undefined/);
+    expect(c).toContain("indisponivel={!conhecido}");
+    expect(c).toContain("disabled={p.indisponivel}");
+  });
+
   it("«o que fica, e porquê» só aparece a quem isso diz respeito", () => {
     // Mostrava «Recebimentos e conta Stripe» a quem nunca tinha sido
     // contabilista, porque `retidos` não olhava para o inventário nem para
