@@ -76,7 +76,10 @@ export async function POST(req: NextRequest) {
 
   // A frase é validada AQUI também, e não só na interface: um pedido feito
   // fora do browser passaria por cima de qualquer confirmação visual.
-  const alvo = alvoPorId(apagarConta ? "conta" : "tudo");
+  //
+  // `selecao` e não `tudo`: pedir «apagar todos os dados» a quem escolheu
+  // uma coisa era uma frase de confirmação que descrevia mal a ação.
+  const alvo = alvoPorId(apagarConta ? "conta" : "selecao");
   if (!alvo || !confirmacaoValida(alvo, String(corpo?.confirmacao ?? ""))) {
     return NextResponse.json(
       { erro: "A confirmação não corresponde ao que foi pedido." },

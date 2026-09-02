@@ -16,6 +16,7 @@ import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
 import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
+import CartaoContratacao from "@/components/foco/CartaoContratacao";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import { FOCO_POR_ID } from "@/components/foco/focos";
 import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
@@ -181,7 +182,7 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
         fundo="branco"
         sobrancelha="Depois do recibo"
         titulo="Saber o que fica muda a pergunta seguinte."
-        intro="Com a repartição à vista, a decisão deixa de ser «quanto recebi» e passa a ser «isto sustenta-se?». Duas perguntas se abrem, e não são a mesma."
+        intro="Com a repartição à vista, a decisão deixa de ser «quanto recebi» e passa a ser «isto sustenta-se?». Duas perguntas se abrem, e não são a mesma — e há uma terceira, mais adiante, para quando o trabalho deixar de caber numa pessoa."
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <LinkFocoIntencao
@@ -254,7 +255,11 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4">
+          <CartaoContratacao origem="recibos" />
+        </div>
+
+        <div className="mt-3 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
               <Lightbulb size={17} />

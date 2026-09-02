@@ -198,20 +198,33 @@ export const CONJUNTOS: Conjunto[] = [
     ],
   },
   {
+    // ⚠️ Isto era UM conjunto com quatro tabelas e um `retido` a cobrir as
+    // quatro. Só uma delas — `progressao_compras` — é um documento de
+    // faturação; as outras três são o percurso da pessoa dentro da
+    // plataforma, e não há lei nenhuma que obrigue a guardá-las. Retê-las
+    // sob a justificação da lei era usar a lei para não apagar o que se
+    // podia apagar. O que a lei protege ficou em `compras-patamar`.
     id: "progressao", grupo: "profissional", soSe: "contabilista",
-    titulo: "Progressão e comissão",
-    descricao: "O patamar que alcançaste, o registo do que contou para lá chegares, os créditos que ganhaste e os desbloqueios que compraste.",
+    titulo: "Progressão e créditos",
+    descricao: "O patamar que alcançaste, o registo do que contou para lá chegares e os créditos de fidelidade que ganhaste. A comissão volta à do patamar de entrada.",
     tabelas: [
       // Os registos primeiro, o agregado depois: é deles que o total sai.
       { nome: "progressao_eventos", posse: { por: "coluna", coluna: "contabilista_id" } },
       { nome: "creditos_fidelidade_ledger", posse: { por: "coluna", coluna: "contabilista_id" } },
-      { nome: "progressao_compras", posse: { por: "coluna", coluna: "contabilista_id" } },
       { nome: "contabilista_progressao", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
+    id: "compras-patamar", grupo: "profissional", soSe: "contabilista",
+    titulo: "Compras de patamar",
+    descricao: "Os desbloqueios de patamar que pagaste, com o valor e a data de cada um.",
+    tabelas: [
+      { nome: "progressao_compras", posse: { por: "coluna", coluna: "contabilista_id" } },
     ],
     // Uma compra é um registo fiscal do lado do Recibo Certo. Apagar a
     // conta não pode apagar a prova de um pagamento recebido — e dizê-lo é
     // parte de ser honesto sobre o que não se apaga a pedido.
-    retido: "As compras de patamar ficam retidas pelo prazo legal de conservação de documentos de faturação. Deixam de estar ligadas ao teu perfil, mas o registo do pagamento não é apagável a pedido.",
+    retido: "Ficam retidas pelo prazo legal de conservação de documentos de faturação — dez anos civis, contados do fim do ano da compra (art. 52.º do Código do IVA). Deixam de estar ligadas ao teu perfil no instante em que sais, mas o registo do pagamento não é apagável a pedido.",
   },
   {
     id: "fundador", grupo: "profissional", soSe: "contabilista",
@@ -232,20 +245,32 @@ export const CONJUNTOS: Conjunto[] = [
     ],
   },
   {
-    id: "recebimentos", grupo: "profissional", soSe: "contabilista",
-    titulo: "Recebimentos e conta Stripe",
+    // ⚠️ Mesma correção que em `progressao`: `contabilista_stripe` é a
+    // LIGAÇÃO à conta da Stripe — um identificador e um estado — e estava
+    // retida sob a justificação legal que só cobre os pagamentos. O efeito
+    // era não haver, em lado nenhum, forma de desligar a conta de
+    // recebimentos. Agora há, e o que a lei protege ficou à parte.
+    id: "stripe-ligacao", grupo: "profissional", soSe: "contabilista",
+    titulo: "Ligação à conta Stripe",
     descricao:
-      "A ligação à tua conta Stripe e o registo das consultas que os teus clientes te pagaram pelo Recibo Certo. Os dados bancários e de identificação vivem na Stripe, não aqui — o que guardamos são valores, datas e estados.",
+      "A ligação entre o teu perfil e a tua conta na Stripe. Desligá-la faz-te deixar de poder receber consultas pagas pelo Recibo Certo. A conta na Stripe é tua e continua a existir — fecha-se lá, e é lá que os dados dela vivem.",
+    tabelas: [
+      { nome: "contabilista_stripe", posse: { por: "coluna", coluna: "contabilista_id" } },
+    ],
+  },
+  {
+    id: "recebimentos", grupo: "profissional", soSe: "contabilista",
+    titulo: "Recebimentos de consultas",
+    descricao:
+      "O registo das consultas que os teus clientes te pagaram pelo Recibo Certo. Os dados bancários e de identificação vivem na Stripe, não aqui — o que guardamos são valores, datas e estados.",
     tabelas: [
       { nome: "pagamentos", posse: { por: "coluna", coluna: "contabilista_id" } },
-      { nome: "contabilista_stripe", posse: { por: "coluna", coluna: "contabilista_id" } },
     ],
     // Um pagamento é um registo de uma transação real entre duas pessoas,
     // e a fatura é do contabilista. Apagar a conta não pode apagar a prova
-    // de que o cliente pagou — nem para nós, nem para ele. Desligar a
-    // conta Stripe faz-se na Stripe, e é lá que os dados dela vivem.
+    // de que o cliente pagou — nem para nós, nem para ele.
     retido:
-      "O histórico de pagamentos fica retido pelo prazo legal de conservação de documentos de faturação. Deixa de estar ligado ao teu perfil, mas o registo de uma transação entre ti e um cliente não é apagável a pedido de um dos dois.",
+      "Fica retido pelo prazo legal de conservação de documentos de faturação — dez anos civis, contados do fim do ano do pagamento (art. 52.º do Código do IVA). Deixa de estar ligado ao teu perfil, mas o registo de uma transação entre ti e um cliente não é apagável a pedido de um dos dois.",
   },
   {
     id: "fidelidade-regras", grupo: "profissional", soSe: "contabilista",
@@ -330,7 +355,10 @@ export const CONJUNTOS: Conjunto[] = [
     titulo: "Subscrição",
     descricao: "O teu plano. Apagar a conta cancela a subscrição — não continuas a ser cobrado.",
     tabelas: [{ nome: "subscriptions", posse: { por: "coluna", coluna: "user_id" } }],
-    retido: "Os registos de faturação ficam o tempo que a lei obriga, sem o teu nome ligado a eles.",
+    // Não se apaga à parte de propósito: sem esta linha o acesso deixa de
+    // ter dono e a cobrança continua na Stripe sem nada aqui a que a ligar.
+    // Sai com a conta, e antes disso a subscrição é cancelada por nós.
+    retido: "Não se apaga sozinha: sai com a conta, e apagar a conta cancela primeiro a subscrição para não continuares a ser cobrado. As faturas emitidas ficam na Stripe o tempo que a lei obriga — isso é faturação, e não é apagável a pedido.",
   },
 
   // ── Registo ───────────────────────────────────────────────────────

@@ -169,8 +169,12 @@ export const FOCOS: readonly DefinicaoFoco[] = Object.freeze([
     ferramenta: "/ferramentas/recibo-vencimento",
     ctaPrimario: "Conferir o meu recibo",
     titulo: "Conferir o recibo de vencimento, linha a linha",
+    // A descrição diz os DOIS lados porque a página tem dois: o palco troca
+    // entre conferir um recibo e planear uma contratação. Enquanto só
+    // falava de quem recebe, quem procurava «quanto custa contratar»
+    // encontrava uma página que, pela descrição, não era para ele.
     descricao:
-      "Recalcula o teu líquido a partir do bruto — Segurança Social, retenção de IRS e subsídios — e põe-no ao lado do recibo que recebeste.",
+      "Recalcula o teu líquido a partir do bruto — Segurança Social, retenção de IRS e subsídios — e põe-no ao lado do recibo que recebeste. Do outro lado da bifurcação, quem contrata planeia o custo real do posto de trabalho.",
   },
 ]);
 

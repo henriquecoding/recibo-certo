@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.156.0",
+  "version": "2.158.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -106,7 +106,8 @@
     "vencimento:e2e": "node scripts/verificar-vencimento.mjs",
     "versao:check": "node scripts/check-versao.mjs",
     "versao:fix": "node scripts/check-versao.mjs --fix",
-    "visivel:e2e": "node scripts/verificar-visivel.mjs"
+    "visivel:e2e": "node scripts/verificar-visivel.mjs",
+    "zona:e2e": "node scripts/verificar-zona-risco.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

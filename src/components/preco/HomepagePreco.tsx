@@ -18,6 +18,7 @@ import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
 import Bussola from "@/components/foco/Bussola";
+import CartaoContratacao from "@/components/foco/CartaoContratacao";
 import HeroPreco from "./HeroPreco";
 import LaboratorioPreco from "./LaboratorioPreco";
 import type { ParametrosDemoPreco } from "@/lib/pricing/demo-homepage";
@@ -183,7 +184,8 @@ function PercursoPreco() {
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-stone-600">
             Com um preço que se sustenta, a decisão deixa de ser «quanto cobro» e passa a ser
             «como opero». Recibos verdes e empresa não são etapas uma da outra: são duas
-            respostas à mesma pergunta, com custos e proteções diferentes.
+            respostas à mesma pergunta, com custos e proteções diferentes. Escolhida a estrutura,
+            o arco continua — e o passo seguinte é o mais caro de todos.
           </p>
         </Reveal>
 
@@ -271,17 +273,31 @@ function PercursoPreco() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4">
+          <CartaoContratacao origem="preco" />
+        </div>
+
+        {/* ┌───────────────────────────────────────────────────────────┐
+            │ A NOTA DO SALÁRIO PASSOU A DIZER DE QUE LADO FALA          │
+            │                                                           │
+            │ Dizia «Salário é um percurso paralelo» quando o foco do    │
+            │ salário só tinha um lado. Agora tem dois, e um deles —     │
+            │ contratar — é a etapa que fica mesmo acima. Sem a          │
+            │ distinção, a mesma página afirmaria que o salário não é a  │
+            │ etapa seguinte e ofereceria a etapa seguinte a dois        │
+            │ centímetros de distância.                                  │
+            └───────────────────────────────────────────────────────────┘ */}
+        <div className="mt-3 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300">
               <Briefcase size={17} />
             </span>
             <div>
               <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">
-                Salário é um percurso paralelo
+                Receber um salário é que é um percurso paralelo
               </div>
               <p className="mt-0.5 text-xs leading-relaxed text-stone-500">
-                Pode coexistir com o negócio; não é a etapa seguinte de lhe pôr preço.
+                Ter contrato pode coexistir com o negócio; não é a etapa seguinte de lhe pôr preço.
               </p>
             </div>
           </div>

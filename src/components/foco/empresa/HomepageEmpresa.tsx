@@ -16,6 +16,7 @@ import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
 import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
+import CartaoContratacao from "@/components/foco/CartaoContratacao";
 import SeccaoFoco, { CartaoMetodo, FaqFoco } from "@/components/foco/SeccaoFoco";
 import { FOCO_POR_ID } from "@/components/foco/focos";
 import LinkFocoIntencao from "@/components/foco/LinkFocoIntencao";
@@ -178,7 +179,7 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
         fundo="branco"
         sobrancelha="Antes de decidir"
         titulo="Uma régua não abre uma empresa."
-        intro="O ponto de viragem diz quando a conversa vale a pena. A conversa em si tem partes que nenhum simulador substitui — e há duas coisas que convém ter feito antes."
+        intro="O ponto de viragem diz quando a conversa vale a pena. A conversa em si tem partes que nenhum simulador substitui — e há duas coisas que convém ter feito antes, e uma que costuma vir logo a seguir."
       >
         <div className="grid gap-4 lg:grid-cols-3">
           <LinkFocoIntencao
@@ -259,6 +260,13 @@ export default function HomepageEmpresa({ dados }: { dados: DadosEmpresa }) {
               Comparar os três regimes <ArrowRight size={13} />
             </Link>
           </div>
+        </div>
+
+        {/* O passo que vem DEPOIS desta decisão, e que era o único do arco
+            sem sítio nenhum na leitura pública. Traz a sua própria
+            sobrancelha porque esta secção fala do que vem antes. */}
+        <div className="mt-4">
+          <CartaoContratacao origem="empresa" />
         </div>
       </SeccaoFoco>
 

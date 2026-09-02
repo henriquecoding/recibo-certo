@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.156.0",
+    version: "2.158.0",
     data: "2026-09-02",
     titulo: "A página inicial volta a dizer quem faz o quê a seguir — e o anúncio do parceiro deixa de disputar o lugar dos contabilistas",
     itens: [
@@ -25,6 +25,34 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "A faixa do contabilista é nossa e diz que não é publicidade, com o caso à letra: Lda, contabilidade organizada, herança ou rendimentos em mais do que um país. Nesses casos é julgamento profissional que faz falta, não mais software — e o destino é o nosso diretório.",
       "O anúncio passa a estar rotulado ANTES do clique e não só por baixo do cartaz, como a política de afiliados exige. Continua a dizer, na mesma linha, que recebemos comissão e que isso não muda o preço de ninguém.",
       "O cartaz deixou de ocupar meio ecrã em computador e ganhou largura máxima. Continua servido tal como o parceiro o entregou, sem recorte nem recolorização, e continua a desaparecer sozinho — sem deixar buraco na página — se a parceria for desligada.",
+    ],
+  },
+  {
+    version: "2.157.0",
+    data: "2026-09-02",
+    titulo: "A zona de risco passou a apagar mesmo tudo o que dizia apagar",
+    itens: [
+      "Cinco coisas apareciam na lista do que se pode apagar e não eram apagadas: os endereços de calendário, as vistas do painel de contabilista, o lugar de fundador, as propostas de valor enviadas e as regras de fidelidade publicadas. O pedido respondia «apagado» e as linhas ficavam na base de dados — no caso dos endereços de calendário, isso queria dizer que o Google ou o Outlook continuavam a ler a agenda de quem os tinha mandado apagar. Corrigido, e agora há um teste que reprova a publicação se voltar a acontecer.",
+      "Apagar UMA coisa na conta apagava TUDO o que estava no dispositivo. Escolher «Comentários que deixaste» levava à frente o estúdio de negócio, os preços guardados, as hipóteses de mercado e o perfil de descoberta — nada disso está na conta, nada disso tinha sido escolhido — e a resposta dizia «1 registo apagado». A partir de agora só sai o que corresponde ao que escolheste.",
+      "A zona de risco só existia para quem tem sessão iniciada. As calculadoras, o estúdio de negócio e o motor de descoberta funcionam sem conta, e é aí que estão os dados mais sensíveis que este produto guarda — que ficavam sem forma nenhuma de serem apagados. Agora há uma secção «Neste dispositivo», com a contagem do que lá está, e funciona sem sessão.",
+      "Novo botão para descarregar os teus dados, em ficheiro, antes de os apagares. A página dizia «exporta antes o que quiseres guardar» desde que existe e não havia para onde. São dois: o que está na tua conta e o que está neste dispositivo.",
+      "«O que fica, e porquê» mostrava a toda a gente coisas que só valem para contabilistas — recebimentos em Stripe, progressão e comissão — mesmo a quem nunca o foi. Passa a mostrar só o que te diz respeito, e diz o prazo legal por extenso.",
+      "A ligação à conta Stripe estava marcada como não apagável, com a justificação legal que só cobre o histórico de pagamentos: não havia, em lado nenhum, forma de desligar a conta de recebimentos. Passa a poder desligar-se, e o que a lei protege — os pagamentos e as compras de patamar — fica retido a sério, sem o teu nome ligado, em vez de desaparecer com a conta como acontecia.",
+      "Para confirmar, quem escolhia uma coisa tinha de escrever «apagar todos os dados» — uma frase que descrevia mal o que ia acontecer. Passa a ser «apagar o que escolhi», e a caixa mostra a lista do que vai sair antes de pedir a frase.",
+      "Quando não é possível ler o que tens guardado, a página passa a dizê-lo em vez de mostrar uma lista vazia que se lia como «não tens nada». E se houver alguma coisa que o servidor ainda não saiba apagar, a linha aparece como indisponível em vez de aceitar a tua escolha e não fazer nada — preferimos dizê-lo a fingir que apagámos.",
+    ],
+  },
+  {
+    version: "2.156.0",
+    data: "2026-09-02",
+    titulo: "Contratar alguém deixou de ser um passo escondido e passou a fazer parte do percurso",
+    itens: [
+      "Planear uma contratação já existia, mas só se alcançava por um botão dentro da página do salário — quem estava a decidir entre recibos verdes e empresa nunca via que havia um passo a seguir. Passa a aparecer como quarta etapa nas três leituras de negócio: depois do preço, depois do recibo e depois da decisão de abrir empresa.",
+      "Cada uma diz a razão que lhe pertence: no preço, que o posto de trabalho tem de caber no que cobras; nos recibos verdes, que contratar não obriga a abrir sociedade; na empresa, que uma sociedade raramente se abre para ficar uma pessoa.",
+      "A página do preço dizia «Salário é um percurso paralelo» e mandava simular o recibo de vencimento — que é o lado de quem recebe. A frase passa a dizer de que lado fala, e o lado de quem contrata ganhou o seu próprio caminho.",
+      "Quem escolhe «para quem contrata» deixa de ficar sem percurso: a página passa a mostrar de onde vem este passo, o que fazer a seguir, e avisa que daí para baixo o ecrã fala do lado de quem recebe o salário — com um caminho de volta.",
+      "O guia «Contratar a primeira pessoa» e o planeador faziam o mesmo trabalho e não se conheciam: o guia mandava simular um recibo de vencimento e o planeador não referia o guia. Passam a apontar um para o outro.",
+      "O planeador não pertencia a percurso nenhum no centro de ferramentas. Ganhou um: confirmar o preço, planear o posto e ver o recibo que a proposta vai gerar.",
     ],
   },
   {
