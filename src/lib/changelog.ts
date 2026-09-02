@@ -16,6 +16,21 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.157.0",
+    data: "2026-09-02",
+    titulo: "A zona de risco passou a apagar mesmo tudo o que dizia apagar",
+    itens: [
+      "Cinco coisas apareciam na lista do que se pode apagar e não eram apagadas: os endereços de calendário, as vistas do painel de contabilista, o lugar de fundador, as propostas de valor enviadas e as regras de fidelidade publicadas. O pedido respondia «apagado» e as linhas ficavam na base de dados — no caso dos endereços de calendário, isso queria dizer que o Google ou o Outlook continuavam a ler a agenda de quem os tinha mandado apagar. Corrigido, e agora há um teste que reprova a publicação se voltar a acontecer.",
+      "Apagar UMA coisa na conta apagava TUDO o que estava no dispositivo. Escolher «Comentários que deixaste» levava à frente o estúdio de negócio, os preços guardados, as hipóteses de mercado e o perfil de descoberta — nada disso está na conta, nada disso tinha sido escolhido — e a resposta dizia «1 registo apagado». A partir de agora só sai o que corresponde ao que escolheste.",
+      "A zona de risco só existia para quem tem sessão iniciada. As calculadoras, o estúdio de negócio e o motor de descoberta funcionam sem conta, e é aí que estão os dados mais sensíveis que este produto guarda — que ficavam sem forma nenhuma de serem apagados. Agora há uma secção «Neste dispositivo», com a contagem do que lá está, e funciona sem sessão.",
+      "Novo botão para descarregar os teus dados, em ficheiro, antes de os apagares. A página dizia «exporta antes o que quiseres guardar» desde que existe e não havia para onde. São dois: o que está na tua conta e o que está neste dispositivo.",
+      "«O que fica, e porquê» mostrava a toda a gente coisas que só valem para contabilistas — recebimentos em Stripe, progressão e comissão — mesmo a quem nunca o foi. Passa a mostrar só o que te diz respeito, e diz o prazo legal por extenso.",
+      "A ligação à conta Stripe estava marcada como não apagável, com a justificação legal que só cobre o histórico de pagamentos: não havia, em lado nenhum, forma de desligar a conta de recebimentos. Passa a poder desligar-se, e o que a lei protege — os pagamentos e as compras de patamar — fica retido a sério, sem o teu nome ligado, em vez de desaparecer com a conta como acontecia.",
+      "Para confirmar, quem escolhia uma coisa tinha de escrever «apagar todos os dados» — uma frase que descrevia mal o que ia acontecer. Passa a ser «apagar o que escolhi», e a caixa mostra a lista do que vai sair antes de pedir a frase.",
+      "Quando não é possível ler o que tens guardado, a página passa a dizê-lo em vez de mostrar uma lista vazia que se lia como «não tens nada».",
+    ],
+  },
+  {
     version: "2.156.0",
     data: "2026-09-02",
     titulo: "Contratar alguém deixou de ser um passo escondido e passou a fazer parte do percurso",

@@ -59,6 +59,10 @@ export default function ContaPage() {
             teus dados ficam guardados neste dispositivo.
           </p>
         </div>
+        {/* Sem nuvem, o aparelho é tudo o que há — e é onde estão os dados.
+            Dizer «ficam guardados neste dispositivo» sem dar por onde os
+            apagar é meia informação. */}
+        <ZonaDeRisco />
       </Wrapper>
     );
   }
@@ -295,6 +299,12 @@ export default function ContaPage() {
           sessão serve para teres um perfil fiscal e um histórico que persistem.
         </p>
       </div>
+
+      {/* ⚠️ Sem sessão, tudo o que a pessoa tem está no aparelho — o estúdio
+          de negócio, os preços, as hipóteses, o perfil de descoberta. A zona
+          de risco só aparecia a quem tinha conta, e portanto exatamente a
+          quem tinha menos coisas por apagar. */}
+      <ZonaDeRisco />
     </Wrapper>
   );
 }

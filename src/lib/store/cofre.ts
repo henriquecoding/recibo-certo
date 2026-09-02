@@ -167,9 +167,24 @@ export function migrarParaCofre(userId: string | null | undefined): void {
   }
 }
 
-/** Esvazia um cofre inteiro. É o que a zona de perigo chama. */
+/**
+ * Esvazia um cofre inteiro.
+ *
+ * ⚠️ Leva TAMBÉM a chave pré-cofre de cada domínio, e isso não é excesso de
+ * zelo: dois domínios ainda escrevem nela — `lib/perfil.tsx` e o snapshot
+ * do simulador de IRS usam a chave global e não `chaveAtiva`. Removendo só
+ * `chave::cofre`, a simulação de IRS sobrevivia ao apagamento, e o
+ * recarregamento que vem logo a seguir corria `migrarParaCofre`, que a
+ * copiava de volta para o cofre acabado de esvaziar. Pedir para apagar e
+ * ver o rascunho de volta ao fim de dois segundos é pior do que não ter
+ * pedido nada.
+ *
+ * A chave antiga não tem dono declarado, e é exatamente por isso que sai:
+ * está neste browser, e quem está a apagar está neste browser.
+ */
 export function esvaziarCofre(userId: string | null | undefined): void {
   for (const chave of chavesDoCofre(userId)) removerChave(chave);
+  for (const chave of Object.values(DOMINIOS)) removerChave(chave);
 }
 
 

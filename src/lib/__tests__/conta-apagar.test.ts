@@ -10,13 +10,26 @@ const ler = (rel: string) => readFileSync(join(RAIZ, rel), "utf8");
 const ROTA = "src/app/api/conta/apagar/route.ts";
 const UI = "src/components/conta/ZonaDeRisco.tsx";
 
+/**
+ * O ficheiro sem os comentários.
+ *
+ * Estes ficheiros explicam por escrito o defeito que corrigiram — «era
+ * `esvaziarCofre`», «começava por `if (!user) return null`». Procurar o
+ * texto no ficheiro inteiro apanha a explicação e dá o defeito como
+ * presente. O que interessa é o código.
+ */
+const codigo = (rel: string) =>
+  ler(rel)
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
 describe("apagar: o campo só aceita a frase pedida", () => {
-  const alvo = alvoPorId("recibos")!;
+  const alvo = alvoPorId("selecao")!;
 
   it("aceita a frase, letra a letra", () => {
     expect(recortarAoPrefixo(alvo, "a")).toBe("a");
     expect(recortarAoPrefixo(alvo, "apagar")).toBe("apagar");
-    expect(recortarAoPrefixo(alvo, "apagar recibos verdes")).toBe("apagar recibos verdes");
+    expect(recortarAoPrefixo(alvo, "apagar o que escolhi")).toBe("apagar o que escolhi");
   });
 
   it("uma tecla errada simplesmente não entra", () => {
@@ -31,12 +44,12 @@ describe("apagar: o campo só aceita a frase pedida", () => {
   });
 
   it("não deixa escrever para além da frase", () => {
-    expect(recortarAoPrefixo(alvo, "apagar recibos verdes e mais")).toBe("apagar recibos verdes");
+    expect(recortarAoPrefixo(alvo, "apagar o que escolhi e mais")).toBe("apagar o que escolhi");
   });
 
   it("corrige acentos e caixa de quem escreve à pressa", () => {
-    const cen = alvoPorId("cenarios")!;
-    expect(recortarAoPrefixo(cen, "APAGAR CENÁRIOS")).toBe("apagar cenarios");
+    const conta = alvoPorId("conta")!;
+    expect(recortarAoPrefixo(conta, "APAGAR A MÍNHA CONTA")).toBe("apagar a minha conta");
   });
 });
 
@@ -46,10 +59,19 @@ describe("apagar: a confirmação", () => {
   });
 
   it("uma frase de outro alvo não passa", () => {
-    const recibos = alvoPorId("recibos")!;
+    const selecao = alvoPorId("selecao")!;
     const conta = alvoPorId("conta")!;
-    expect(confirmacaoValida(conta, recibos.confirmacao)).toBe(false);
-    expect(confirmacaoValida(recibos, conta.confirmacao)).toBe(false);
+    expect(confirmacaoValida(conta, selecao.confirmacao)).toBe(false);
+    expect(confirmacaoValida(selecao, conta.confirmacao)).toBe(false);
+  });
+
+  it("a frase da seleção descreve a seleção, e não «todos os dados»", () => {
+    // ⚠️ Escolher UMA coisa pedia para escrever «apagar todos os dados». A
+    // frase de confirmação descrevia mal a ação que ia acontecer, o que é o
+    // contrário do que uma confirmação serve para fazer.
+    const selecao = alvoPorId("selecao")!;
+    expect(selecao.confirmacao).toBe("apagar o que escolhi");
+    expect(selecao.confirmacao).not.toMatch(/todos os dados/);
   });
 
   it("vazio nunca passa", () => {
@@ -157,31 +179,60 @@ describe("apagar: o que a pessoa vê", () => {
     expect(c).toMatch(/disabled=\{!p\.pronto/);
   });
 
-  it("cobre os alvos que foram pedidos", () => {
-    const ids = ALVOS.map((a) => a.id);
-    expect(ids).toContain("tudo");
-    expect(ids).toContain("conta");
-    // Por simulador, um a um.
-    expect(ids).toContain("recibos");
-    expect(ids).toContain("vencimentos");
-    expect(ids).toContain("cenarios");
-    expect(ids).toContain("perfil-fiscal");
+  it("há dois alvos, e não seis — quatro estavam mortos", () => {
+    // `recibos`, `vencimentos`, `cenarios` e `perfil-fiscal` deixaram de ser
+    // usados quando a zona de risco passou a trabalhar por conjuntos
+    // escolhidos, e ficaram aqui com testes a confirmar as frases deles.
+    expect(ALVOS.map((a) => a.id).sort()).toEqual(["conta", "selecao"]);
   });
 
-  it("apagar a conta avisa que não cancela a subscrição", () => {
+  it("apagar a conta diz que a subscrição é cancelada por nós", () => {
     // É o engano mais caro possível: apagar a conta e continuar a ser
-    // cobrado.
-    expect(alvoPorId("conta")!.descricao).toMatch(/cancela|cobrança/i);
+    // cobrado. A rota cancela desde a migração 049 — e esta descrição
+    // continuava a mandar a pessoa cancelar primeiro.
+    const d = alvoPorId("conta")!.descricao;
+    expect(d).toMatch(/cancelada por nós/i);
+    expect(d, "já não é a pessoa que tem de cancelar antes")
+      .not.toMatch(/cancela-a primeiro/i);
   });
 
-  it("apagar na nuvem também limpa o dispositivo", () => {
+  it("a confirmação mostra o que vai sair antes de pedir a frase", () => {
+    // Escrever uma frase sem ver o que ela abrange não é confirmar.
     const c = ler(UI);
-    expect(c).toContain("limparLocal");
+    expect(c).toMatch(/aSair/);
+    expect(c).toMatch(/Vai sair/);
+  });
+
+  it("apagar na nuvem limpa SÓ o que corresponde no dispositivo", () => {
+    const c = codigo(UI);
+    // ⚠️ Era `esvaziarCofre`, que remove os dezoito domínios: escolher
+    // «Comentários que deixaste» levava à frente o estúdio de negócio, os
+    // preços guardados e o perfil de descoberta, e a resposta dizia
+    // «1 registo apagado».
+    expect(c).toContain("apagarDominiosLocais");
+    expect(c).toContain("dominiosDosConjuntos");
+    expect(c, "o cofre inteiro não pode voltar a sair por um conjunto")
+      .not.toMatch(/esvaziarCofre/);
     // Os nomes das chaves vêm do cofre, e não de uma lista escrita aqui.
-    // Enquanto eram duas listas, três das quatro chaves estavam erradas e
-    // os dados locais sobreviviam ao apagamento sem ninguém dar por isso.
-    expect(c).toContain("esvaziarCofre");
     expect(c, "a lista de chaves não pode voltar a existir aqui")
       .not.toMatch(/"recibocerto:/);
+  });
+
+  it("a zona de risco existe para quem não tem sessão", () => {
+    // ⚠️ Começava por `if (!user) return null`. As calculadoras, o estúdio
+    // de negócio e o motor de descoberta funcionam sem conta, e é aí que
+    // estão os dados mais sensíveis — sem forma nenhuma de os apagar.
+    const c = codigo(UI);
+    expect(c, "não pode voltar a desistir por não haver sessão")
+      .not.toMatch(/if \(!user\) return null/);
+    expect(c).toContain("Neste dispositivo");
+  });
+
+  it("«o que fica, e porquê» só aparece a quem isso diz respeito", () => {
+    // Mostrava «Recebimentos e conta Stripe» a quem nunca tinha sido
+    // contabilista, porque `retidos` não olhava para o inventário nem para
+    // `soSe`.
+    const c = ler(UI);
+    expect(c).toMatch(/CONJUNTOS\.filter\(\(c\) => c\.retido && \(inventario\?\.\[c\.id\] \?\? 0\) > 0\)/);
   });
 });
