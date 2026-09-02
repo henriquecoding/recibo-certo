@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.156.0",
+    data: "2026-09-02",
+    titulo: "A página inicial volta a dizer quem faz o quê a seguir — e o anúncio do parceiro deixa de disputar o lugar dos contabilistas",
+    itens: [
+      "A página inicial terminava num cartaz de publicidade encostado ao fundo, sem uma linha a explicar porque é que ali estava. Passa a fechar com «O passo seguinte»: duas faixas nossas — onde acabamos nós e quando é caso para um contabilista — e só depois o cartaz do parceiro, na faixa que é dele.",
+      "A nossa própria linha vendia a FIZ como «contabilistas certificados». O site tem contabilistas — um diretório com perfis aprovados, vínculo sem plano pago e uma ordem que não se compra —, e usar a mesma palavra punha os dois a competir pelo mesmo clique. O parceiro passa a ser descrito pelo que executa: emitir, faturar, declarar e cumprir prazos.",
+      "A faixa do contabilista é nossa e diz que não é publicidade, com o caso à letra: Lda, contabilidade organizada, herança ou rendimentos em mais do que um país. Nesses casos é julgamento profissional que faz falta, não mais software — e o destino é o nosso diretório.",
+      "O anúncio passa a estar rotulado ANTES do clique e não só por baixo do cartaz, como a política de afiliados exige. Continua a dizer, na mesma linha, que recebemos comissão e que isso não muda o preço de ninguém.",
+      "O cartaz deixou de ocupar meio ecrã em computador e ganhou largura máxima. Continua servido tal como o parceiro o entregou, sem recorte nem recolorização, e continua a desaparecer sozinho — sem deixar buraco na página — se a parceria for desligada.",
+    ],
+  },
+  {
     version: "2.155.1",
     data: "2026-09-02",
     titulo: "O separador do browser volta a dizer a marca em todas as páginas do painel",

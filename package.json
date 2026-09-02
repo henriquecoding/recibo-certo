@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.155.1",
+  "version": "2.156.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",

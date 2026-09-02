@@ -16,6 +16,17 @@
 //  fonte pública o número de certificação da FIZ. É exatamente o tipo de
 //  afirmação que o `guias:claims` existe para impedir, e é pior num bloco
 //  comercial do que no corpo de um Guia.
+//
+//  ⚠️ A PALAVRA «CONTABILISTA» NÃO ANUNCIA UM PARCEIRO. Metade destas linhas
+//  vendia a FIZ como «contabilistas certificados» — e o site TEM
+//  contabilistas: um diretório com perfis aprovados, vínculo sem plano pago e
+//  uma ordem que não se compra (`lib/contabilistas/diretorio.ts`). Anunciar um
+//  parceiro pago com a mesma palavra que descreve o nosso diretório punha os
+//  dois a competir pelo mesmo clique, e o que perdia era o nosso — para mais
+//  contra a hierarquia de `escolherRota()`, onde o contabilista vem ANTES da
+//  FIZ. Aqui a FIZ é descrita pelo que executa: emitir, faturar, declarar,
+//  cumprir prazos. Quem precisa de julgamento profissional vai para
+//  `/contabilistas`, que não é publicidade. Verificado por `parcerias:copy`.
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { Superficie } from "./parcerias-destinos";
@@ -54,20 +65,20 @@ export const COPY_POR_SUPERFICIE: Partial<Record<Superficie, CopyParceria>> = {
     nota: NOTA_LIGACAO,
   },
   "demo.hero.faixa": {
-    titulo: "A simulação é nossa. A execução é da FIZ.",
-    sub: "Contabilistas certificados, para o passo seguinte.",
+    titulo: "A conta é nossa. Emitir e declarar é com a FIZ.",
+    sub: "Faturação, IVA e Segurança Social tratados no serviço deles, com preço e contrato próprios.",
     cta: CTA_GENERICO,
     nota: NOTA_LIGACAO,
   },
   "demo.irs": {
     titulo: "A estimativa é nossa. A entrega é da FIZ.",
-    sub: "Contabilistas certificados, para o passo seguinte.",
+    sub: "Faturação e obrigações executadas por quem as trata todos os meses.",
     cta: CTA_GENERICO,
     nota: NOTA_LIGACAO,
   },
   "demo.irs.faixa": {
     titulo: "A estimativa é nossa. A entrega é da FIZ.",
-    sub: "Contabilistas certificados, para o passo seguinte.",
+    sub: "Faturação e obrigações executadas por quem as trata todos os meses.",
     cta: CTA_GENERICO,
     nota: NOTA_LIGACAO,
   },
@@ -94,9 +105,9 @@ export const COPY_HERO: Record<string, CopyParceria> = {
     nota: NOTA_LIGACAO,
   },
   comparacao: {
-    titulo: "Confirmar a escolha com a FIZ",
-    sub: "Um contabilista certificado valida antes de mudares",
-    cta: "Falar com um contabilista",
+    titulo: "Executar a mudança com a FIZ",
+    sub: "Depois de decidires, é quem emite e declara no regime novo",
+    cta: CTA_GENERICO,
     nota: NOTA_LIGACAO,
   },
 };
@@ -105,7 +116,7 @@ export function copyDaSuperficie(superficie: Superficie): CopyParceria {
   return (
     COPY_POR_SUPERFICIE[superficie] ?? {
       titulo: "Continuar com a FIZ",
-      sub: "Contabilistas certificados, para o passo seguinte.",
+      sub: "Emitir, faturar e declarar, no serviço e no contrato deles.",
       cta: CTA_GENERICO,
       nota: NOTA_LIGACAO,
     }

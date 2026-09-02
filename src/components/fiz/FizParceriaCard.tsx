@@ -44,11 +44,17 @@ const JORNADA = [
   { rotulo: "Executar", desc: "Emitir, declarar e cumprir prazos.", nosso: false },
 ];
 
+// ⚠️ Sem a palavra «contabilista». Esta lista dizia «revisão por
+// contabilistas certificados» — e o site tem um diretório de contabilistas,
+// com vínculo sem plano pago e uma ordem que não se compra. Descrever um
+// parceiro pago com a palavra que descreve o nosso diretório punha os dois a
+// competir pelo mesmo clique, contra a hierarquia de `escolherRota()`, onde o
+// contabilista vem ANTES da FIZ. A FIZ é descrita pelo que executa.
 const O_QUE_A_FIZ_FAZ = [
   "Faturação certificada e comunicação à Autoridade Tributária",
   "IVA, Segurança Social e IRS tratados por quem executa",
   "Lembretes das tuas obrigações reais, não de um calendário genérico",
-  "Revisão por contabilistas certificados",
+  "Um só sítio para emitir, entregar e arquivar",
 ];
 
 export default function FizParceriaCard({ className = "" }: { className?: string }) {
