@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.153.0",
+    data: "2026-09-02",
+    titulo: "No telemóvel: os contabilistas passam a estar à vista, e a pesquisa deixa de esconder o que escreves",
+    itens: [
+      "«Contabilistas» ganhou lugar próprio no cabeçalho do computador e no telemóvel não tinha nenhum — vivia dentro da folha do «Menu», a dois toques e uma lista de distância. Passa a estar ao lado do campo de pesquisa, na zona do polegar, porque é a segunda via para a mesma pergunta: resolver sozinho, ou falar com quem sabe.",
+      "O que escrevias na pesquisa do telemóvel não se via. A linha levava a lupa num quadrado, o campo, «Resolver», «Limpar», uma régua e o ✕ — e num ecrã de 360 px sobravam treze píxeis para o texto. Escrevia-se às cegas numa caixa que só mostrava botões. Fica o essencial: ver o que escreveste, apagá-lo, fechar.",
+      "A pesquisa do telemóvel dizia «↑↓ Navegar · Enter abrir · Esc fechar» — três teclas que um telemóvel não tem — e dizia-o no topo do painel, que é a primeira coisa que se lê ao abrir. Fica a promessa que vale nos dois sítios: a consulta não sai deste dispositivo.",
+      "As etapas estavam numeradas ao contrário. No telemóvel o painel cresce para cima a partir do campo, e a numeração de cima para baixo punha o «02» acima do «01». O número só aparece onde a leitura desce mesmo.",
+      "A frase com o que percebemos espremia-se para caber ao lado do «Ver ou corrigir», partia-se em quatro linhas e deixava o botão a flutuar a meio. Agora ocupa a linha inteira, com a correção por baixo. E a faixa do apoio profissional deixou de se ler em ziguezague.",
+      "Um portão interno de verificação estava a ignorar metade de um ficheiro por um erro na ordem em que limpava comentários — deixava passar exactamente aquilo que existia para impedir, sem nunca dar erro. Corrigido.",
+    ],
+  },
+  {
     version: "2.152.0",
     data: "2026-09-02",
     titulo: "O cabeçalho foi reconstruído: menos lugares no topo, e a pesquisa deixou de ser uma caixa flutuante",

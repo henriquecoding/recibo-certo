@@ -305,10 +305,21 @@ function PainelPesquisaInterno({
            * │ É a mesma gramática que a página de descoberta já usa      │
            * │ («ENTRADA · 01 · MOTOR · 02 · SAÍDA · 03»). Uma segunda    │
            * │ convenção para dizer a mesma coisa seria ensinar duas.     │
+           * │                                                           │
+           * │ NO TELEMÓVEL O NÚMERO CAI, e não por falta de espaço: ali  │
+           * │ o campo vive em BAIXO, encostado ao teclado, e o que foi   │
+           * │ entendido fica por cima dele. Numerar de cima para baixo   │
+           * │ punha «02» acima de «01» — uma ordem a contradizer a       │
+           * │ outra, que é pior do que não numerar. A consequência       │
+           * │ continua a ler-se: está encostada ao campo que a produziu. │
+           * │                                                           │
+           * │ Numa classe de ponto de corte, e não em `movel`: é a mesma │
+           * │ decisão que o «· 02» toma em `moldura.tsx`, e duas         │
+           * │ maneiras de a tomar é como elas passam a discordar.        │
            * └───────────────────────────────────────────────────────────┘
            */}
           <p className="texto-micro px-4 pt-2 font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
-            Entrada · 01
+            Entrada<span className="hidden lg:inline"> · 01</span>
           </p>
           <FormularioBusca
             controlador={controlador}
@@ -317,6 +328,7 @@ function PainelPesquisaInterno({
             aoFechar={aoFecharComFoco}
             aoDescer={() => focarPrimeiroResultado(lista.current)}
             compacto
+            estreito={movel}
           />
           <div className="px-4 pb-2">
             <NotaPrivacidade />
@@ -333,11 +345,12 @@ function PainelPesquisaInterno({
           <CorpoResultados controlador={controlador} aoFechar={aoFechar} listaRef={lista} />
         </div>
 
-        {/* O rodapé com as teclas fica em cima no telemóvel, entre os
-            resultados e o campo: em baixo ficaria entre o campo e o
-            teclado, que é o pior sítio possível para texto pequeno. */}
+        {/* O rodapé fica em cima no telemóvel, entre os resultados e o
+            campo: em baixo ficaria entre o campo e o teclado, que é o pior
+            sítio possível para texto pequeno. E lá em cima já não diz as
+            teclas — ver o quadro em `RodapeBusca`. */}
         <div className={movel ? "order-0" : ""}>
-          <RodapeBusca controlador={controlador} />
+          <RodapeBusca controlador={controlador} estreito={movel} />
         </div>
         <EstadoAcessivel id={`${idCampo}-estado`} mensagem={controlador.mensagemEstado} />
       </m.div>

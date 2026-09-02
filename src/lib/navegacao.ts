@@ -206,9 +206,10 @@ export interface EntradaMenu {
    */
   topo?: true;
   /**
-   * O rótulo da barra do topo, quando é diferente do da folha. Mesmo padrão
-   * que `Pilar.curto`: a folha tem espaço para dizer o nome inteiro e uma
-   * linha de contexto por baixo; a barra tem uma palavra.
+   * O rótulo das superfícies ESTREITAS — a barra do topo de secretária e o
+   * dock do telemóvel —, quando é diferente do da folha. Mesmo padrão que
+   * `Pilar.curto`: a folha tem espaço para dizer o nome inteiro e uma linha
+   * de contexto por baixo; ali há uma palavra.
    *
    * É o nome ACESSÍVEL nessa superfície, e não uma abreviatura por cima de
    * outro nome — nada de `aria-label` com o rótulo longo. Um nome acessível
@@ -289,6 +290,14 @@ export const SECOES: EntradaMenu[] = [
     desc: "O único sítio daqui que acaba com uma pessoa do outro lado.",
     icone: "Briefcase",
     prefixos: ["/contabilistas"],
+    // No dock do telemóvel esta entrada divide a linha com o campo de
+    // pesquisa. Medido a 360 px: com «Contabilistas» sobram 208 px para o
+    // campo e a frase dele (181 px de texto) fica cortada a meio de uma
+    // palavra. Com «Apoio» cabem as duas por inteiro. É a MESMA palavra que
+    // a entrada de secretária já usa na sua segunda linha («Encontrar
+    // apoio →»), por isso não é vocabulário novo — e é o nome ACESSÍVEL
+    // nessa superfície, sem `aria-label` a repor outro por cima.
+    curto: "Apoio",
   },
   {
     id: "planos",
