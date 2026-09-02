@@ -23,6 +23,12 @@ import type { ItemTrabalho, LeituraTrabalho, TipoTrabalho } from "./tipos";
 const TIPO_DE_CENARIO: Partial<Record<Cenario["tipo"], TipoTrabalho>> = {
   negocio: "negocio",
   contratacao: "contratacao",
+  // Estes dois só existem na nuvem depois de alguém carregar num «Guardar
+  // na minha conta» que ainda não foi construído. Quando existir, o cartão
+  // tem de aparecer NA ETAPA e ao lado do rascunho local correspondente —
+  // não numa gaveta de «simulações» com o IRS e as heranças.
+  descoberta: "descoberta",
+  preco: "preco",
 };
 
 export function itensDeCenarios(cenarios: readonly Cenario[], naNuvem: boolean): LeituraTrabalho {

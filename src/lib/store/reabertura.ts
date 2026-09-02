@@ -13,6 +13,15 @@
 
 import { lerChave, gravarChave, removerChave } from "@/lib/store/persistencia";
 
+/**
+ * ⚠️ ESPELHO DELIBERADO de `TipoCenario` (`store/cenarios.ts`).
+ *
+ * A duplicação existe pela razão do quadro acima — importar o tipo de lá
+ * arrastaria Supabase, Stripe e o cofre para dentro de qualquer simulador
+ * que só queira saber se tem um cenário à espera. O preço é este: os dois
+ * têm de crescer juntos, e o compilador diz quando não crescem (é o erro
+ * que apanhou esta linha quando `descoberta` e `preco` entraram).
+ */
 export type TipoCenarioReabertura =
   | "recibos"
   | "vencimento"
@@ -20,7 +29,9 @@ export type TipoCenarioReabertura =
   | "empresa"
   | "irs"
   | "herancas"
-  | "negocio";
+  | "negocio"
+  | "descoberta"
+  | "preco";
 
 const PENDENTE_KEY = (tipo: TipoCenarioReabertura) =>
   `recibocerto:cenario-pendente:${tipo}`;

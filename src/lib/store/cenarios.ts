@@ -45,14 +45,35 @@ import { destinoDosDados, aindaSemDestino } from "./persistencia";
 import { marcarReaberturaDe } from "@/lib/store/reabertura";
 import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
-export type TipoCenario = "recibos" | "vencimento" | "contratacao" | "empresa" | "irs" | "herancas" | "negocio";
+export type TipoCenario =
+  | "recibos"
+  | "vencimento"
+  | "contratacao"
+  | "empresa"
+  | "irs"
+  | "herancas"
+  | "negocio"
+  // ── Os dois que a Entrega D abre ────────────────────────────────────
+  // Chegam com a migração `20260902120000_cenarios_descoberta_e_preco`,
+  // e chegam ao MESMO tempo que ela: o tipo do cliente e o CHECK da base
+  // são comparados por `dashboard-invariantes.test.ts`, e um sem o outro
+  // reprova o build. Foi por isso que os cenários de heranças chegaram a
+  // ser guardados na aparência e recusados na realidade.
+  //
+  // Declará-los NÃO os põe a subir: não há caminho nenhum na aplicação
+  // que crie um cenário destes. O que sobe, quando o «Guardar na minha
+  // conta» existir, é um resumo revisto campo a campo — nunca o perfil
+  // profundo de Descobrir nem o contexto de custos de um preço.
+  | "descoberta"
+  | "preco";
 
 /**
  * Fonte ÚNICA dos tipos de cenário. A página de gestão renderiza a partir
  * daqui — tinha uma lista à parte que esquecia `herancas`, e um cenário
  * guardado ficava invisível apesar de continuar a contar para o limite
- * gratuito (RC-P0-04). A constraint SQL espelha exatamente estas chaves
- * (migração 032).
+ * gratuito (RC-P0-04). A constraint SQL espelha exatamente estas chaves — a última
+ * a redefini-la é `20260902120000_cenarios_descoberta_e_preco`, e é essa
+ * que o teste de paridade lê.
  */
 export const META_TIPO_CENARIO: Record<TipoCenario, { label: string; sub: string; rota: string; icone: string }> = {
   recibos: { label: "Recibos verdes", sub: "Trabalho independente", rota: "/dashboard/recibos-verdes", icone: "Invoice" },
@@ -65,6 +86,8 @@ export const META_TIPO_CENARIO: Record<TipoCenario, { label: string; sub: string
   irs: { label: "Simulador de IRS", sub: "Declaração anual", rota: "/dashboard/simulador", icone: "Calculator" },
   herancas: { label: "Heranças e sucessões", sub: "Partilha e Imposto do Selo", rota: "/dashboard/herancas", icone: "Scale" },
   negocio: { label: "Projeto de negócio", sub: "Ofertas, custos e viabilidade", rota: "/dashboard/negocio", icone: "ChartProjection" },
+  descoberta: { label: "Descobrir", sub: "Hipótese, evidência e plano de teste", rota: "/dashboard/descobrir", icone: "Lightbulb" },
+  preco: { label: "Preço", sub: "Produto, contexto e resultado calculado", rota: "/dashboard/precos", icone: "Coin" },
 };
 
 export const TIPOS_CENARIO = Object.keys(META_TIPO_CENARIO) as TipoCenario[];
