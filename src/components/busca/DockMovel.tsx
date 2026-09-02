@@ -17,10 +17,22 @@
 //  │ das páginas a que ele dá acesso.                                     │
 //  │                                                                     │
 //  │ No computador isto nunca esteve em causa: a barra tem uma LINHA só   │
-//  │ para si, com 44 rem. Aqui passa a ter a mesma dignidade — largura    │
-//  │ inteira, imediatamente acima da navegação — e o lugar que vaga na    │
-//  │ barra vai para «Contabilistas», que é um destino a sério e era a     │
-//  │ única entrada da barra de secretária sem par no telemóvel.           │
+//  │ para si, com 44 rem. Aqui passa a ter a mesma dignidade — a linha    │
+//  │ inteira, imediatamente acima da navegação.                            │
+//  └─────────────────────────────────────────────────────────────────────┘
+//
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ E PARTILHA ESSA LINHA COM UMA COISA SÓ: O APOIO HUMANO               │
+//  │                                                                     │
+//  │ «Contabilistas» ganhou lugar próprio no cabeçalho de secretária e    │
+//  │ aqui não tinha nenhum — vivia dentro da folha do «Menu», a dois      │
+//  │ toques. A mesma pessoa tinha duas respostas diferentes à pergunta    │
+//  │ «e se eu quiser falar com alguém?», conforme o ecrã.                 │
+//  │                                                                     │
+//  │ Fica ao lado do campo porque é a segunda via para a MESMA pergunta:  │
+//  │ resolver sozinho, ou falar com quem sabe. Sai do ecrã com o campo    │
+//  │ quando o painel abre — ali dentro o apoio já tem a sua faixa. Ver    │
+//  │ `navegacao/AtalhoApoio.tsx`.                                          │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
@@ -61,6 +73,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search } from "@/components/ui/Icons";
+import { AtalhoApoioMovel } from "@/components/navegacao/AtalhoApoio";
 import { prepararIndice } from "@/lib/busca/indice";
 import { CONSULTA_MOVEL, anunciarEstadoBusca, useAtalhoBusca, useRegistarLancador } from "./motor";
 import { useTecladoVirtual } from "./ancoragem";
@@ -184,6 +197,7 @@ export function DockMovel() {
               aoFecharComFoco={fecharComFoco}
             />
           ) : (
+            <div className="flex h-full w-full items-stretch gap-2">
             <Link
               href="/pesquisar"
               id={ID_CAMPO}
@@ -210,7 +224,7 @@ export function DockMovel() {
                 e.preventDefault();
                 abrir();
               }}
-              className="focus-marca group flex h-[var(--rc-dock-movel-h)] w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-4 text-left no-underline shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-200 hover:border-brand/40 active:border-brand/60 dark:border-stone-700 dark:bg-stone-900/95 dark:hover:border-brand/40"
+              className="focus-marca group flex h-[var(--rc-dock-movel-h)] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-4 text-left no-underline shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-200 hover:border-brand/40 active:border-brand/60 dark:border-stone-700 dark:bg-stone-900/95 dark:hover:border-brand/40"
             >
               <Search
                 size={17}
@@ -237,6 +251,8 @@ export function DockMovel() {
                * melhor do que um repetido.
                */}
             </Link>
+            <AtalhoApoioMovel />
+            </div>
           )}
         </div>
       </div>

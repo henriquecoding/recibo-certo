@@ -32,13 +32,31 @@ const ler = (...p: string[]) => readFileSync(join(SRC, ...p), "utf8");
  * Os comentários deste projeto EXPLICAM o que não se pode fazer — e por
  * isso contêm, à letra, as palavras que estes testes proíbem. Medir o
  * código e não a prosa é a diferença entre um portão e um jogo de palavras.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ A ORDEM IMPORTA — E ESTAVA TROCADA                                   │
+ * │                                                                     │
+ * │ Filtrava as linhas primeiro e só depois apagava os blocos `{/*…*​/}`. │
+ * │ O problema é que a linha de FECHO de um bloco (`*​/}`) começa por `*` │
+ * │ e era das primeiras a cair. Sobrava um `{/*` órfão, e a substituição │
+ * │ seguinte ia buscar o `*​/}` do PRÓXIMO comentário — apagando tudo o   │
+ * │ que estivesse pelo meio.                                             │
+ * │                                                                     │
+ * │ Medido neste ficheiro: quatro «blocos» apanhados, dois deles com     │
+ * │ 1454 e 6832 caracteres de CÓDIGO A SÉRIO lá dentro. Um portão que    │
+ * │ não vê metade do ficheiro deixa passar exactamente aquilo que existe │
+ * │ para impedir, e nunca dá erro por isso.                              │
+ * │                                                                     │
+ * │ Os blocos saem primeiro, contra o texto intacto: aí o `*​/}` que a    │
+ * │ expressão não-gananciosa encontra é sempre o do próprio bloco.       │
+ * └─────────────────────────────────────────────────────────────────────┘
  */
 const semComentarios = (s: string) =>
   s
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "")
     .split("\n")
     .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*") && !l.trim().startsWith("/*"))
-    .join("\n")
-    .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    .join("\n");
 
 const MOLDURA = semComentarios(ler("components", "busca", "moldura.tsx"));
 const PARTES = semComentarios(ler("components", "busca", "partes.tsx"));
@@ -278,5 +296,52 @@ describe("busca:moldura-plano", () => {
     });
     expect(serializado).not.toContain("1200");
     expect(serializado).not.toContain("1 200");
+  });
+});
+
+describe("busca:moldura-no-telemóvel", () => {
+  it("o que se escreve tem de caber no campo", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ A 360 px SOBRAVAM TREZE PÍXEIS PARA O TEXTO                    │
+    // │                                                               │
+    // │ A linha levava a lupa num quadrado, o campo, «Resolver →»,     │
+    // │ «Limpar», uma régua e o ✕. Num cabeçalho de 1440 px há largura │
+    // │ para as seis; num telemóvel não há, e o que ficava de fora era │
+    // │ precisamente a única que importa — o que a pessoa escreveu.    │
+    // │ Escrevia-se às cegas numa caixa que só mostrava botões.        │
+    // │                                                               │
+    // │ `estreito` tira o que tem outra porta a um dedo: o quadrado da │
+    // │ lupa (a barra fechada do telemóvel nunca teve quadrado) e o    │
+    // │ «Resolver» (a tecla do teclado virtual e o botão de largura    │
+    // │ inteira do caminho preparado fazem o mesmo).                    │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(PARTES).toContain("estreito?: boolean;");
+    // O «Resolver» não é montado na variante estreita.
+    expect(PARTES).toMatch(/controlador\.temConsulta &&\s*!estreito &&/);
+    // O quadrado da lupa é condicional, e o campo continua a ser o que
+    // cresce: se alguém lhe tirar o `flex-1`, volta o defeito.
+    expect(PARTES).toMatch(/estreito \?[\s\S]{0,200}<Search size=\{17\}/);
+    expect(PARTES).toContain("min-w-0 flex-1 bg-transparent");
+    // Quem decide é o painel, e só na variante do telemóvel.
+    expect(PAINEL).toContain("estreito={movel}");
+  });
+
+  it("não promete teclas que aquele ecrã não tem", () => {
+    // No telemóvel o rodapé fica no TOPO do painel (o campo vive em baixo,
+    // encostado ao teclado). «↑↓ Navegar · Enter abrir · Esc fechar» era a
+    // primeira coisa que se lia ao abrir a pesquisa — três teclas que não
+    // existem ali. Fica a promessa, que vale nos dois sítios.
+    expect(PARTES).toMatch(/estreito \? "hidden" : "flex"/);
+    expect(PARTES).toContain("A consulta não sai deste dispositivo");
+    expect(PAINEL).toContain("<RodapeBusca controlador={controlador} estreito={movel} />");
+  });
+
+  it("a numeração das etapas não contradiz a ordem em que se lê", () => {
+    // O painel do telemóvel cresce PARA CIMA a partir do campo: a entrada
+    // fica em baixo e o que foi entendido por cima dela. Numerar de cima
+    // para baixo punha «02» acima de «01» — duas ordens a discordar, que é
+    // pior do que não numerar. O número só aparece onde a leitura desce.
+    expect(PAINEL).toContain('Entrada<span className="hidden lg:inline"> · 01</span>');
+    expect(MOLDURA).toContain('Pedido reconhecido<span className="hidden lg:inline"> · 02</span>');
   });
 });

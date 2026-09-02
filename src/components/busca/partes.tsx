@@ -135,6 +135,7 @@ export function FormularioBusca({
   id,
   aoFechar,
   compacto = false,
+  estreito = false,
   aoDescer,
 }: {
   controlador: ControladorBusca;
@@ -143,6 +144,25 @@ export function FormularioBusca({
   aoFechar: () => void;
   /** No cabeçalho a linha é mais baixa: alinha com o lançador fechado. */
   compacto?: boolean;
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ O QUE SE ESCREVE TEM DE SE VER — E NÃO SE VIA                      │
+   * │                                                                   │
+   * │ Esta linha levava, toda ela: a lupa num quadrado, o campo,         │
+   * │ «Resolver →», «Limpar», uma régua e o ✕. Num cabeçalho de 1440 px  │
+   * │ sobra largura para as seis. A 360 px sobravam TREZE PÍXEIS para o  │
+   * │ campo — o texto escrito ficava fora do ecrã, e a pessoa escrevia   │
+   * │ às cegas numa caixa que só mostrava botões.                        │
+   * │                                                                   │
+   * │ `estreito` tira desta linha tudo o que tem outra porta a um dedo   │
+   * │ de distância: o quadrado da lupa (aqui a barra fechada nunca teve  │
+   * │ quadrado nenhum, portanto não há forma a preservar) e «Resolver»   │
+   * │ (a tecla do teclado virtual diz «procurar», e o caminho preparado  │
+   * │ tem um botão de largura inteira). Fica o essencial: ver o que se   │
+   * │ escreveu, apagá-lo, fechar.                                        │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  estreito?: boolean;
   /** ArrowDown no campo — leva o foco ao primeiro resultado, se existir. */
   aoDescer: () => void;
 }) {
@@ -167,20 +187,28 @@ export function FormularioBusca({
         // `/pesquisar?q=` — uma página vazia como resposta a um Enter.
         if (controlador.consulta.trim().length < MIN_CARACTERES) e.preventDefault();
       }}
-      className={`mx-4 mt-1 flex shrink-0 items-center gap-3 rounded-2xl border border-stone-200 bg-white px-2.5 dark:border-stone-700 dark:bg-stone-900 ${
-        compacto ? "h-[var(--rc-dock-h)]" : "py-2"
-      }`}
+      className={`mx-4 mt-1 flex shrink-0 items-center rounded-2xl border border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900 ${
+        estreito ? "gap-2 px-3" : "gap-3 px-2.5"
+      } ${compacto ? "h-[var(--rc-dock-h)]" : "py-2"}`}
     >
       {/* A lupa num quadrado com contorno — a mesma forma que tem na barra
           fechada. Sem ela, o ícone mudava de sítio e de tamanho no instante
           em que a barra vira campo, que é o único instante em que ninguém
-          devia reparar em nada. */}
-      <span
-        aria-hidden
-        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-brand dark:border-stone-700"
-      >
-        <Search size={16} />
-      </span>
+          devia reparar em nada.
+
+          No telemóvel a barra fechada NÃO tem quadrado — é uma lupa solta —
+          por isso aqui o quadrado não preservava forma nenhuma: só gastava
+          48 px da largura que o texto escrito precisa. */}
+      {estreito ? (
+        <Search size={17} aria-hidden className="flex-shrink-0 text-brand" />
+      ) : (
+        <span
+          aria-hidden
+          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-brand dark:border-stone-700"
+        >
+          <Search size={16} />
+        </span>
+      )}
 
       <label htmlFor={id} className="sr-only">
         Pesquisar no Recibo Certo
@@ -230,6 +258,7 @@ export function FormularioBusca({
        * └───────────────────────────────────────────────────────────────┘
        */}
       {controlador.temConsulta &&
+        !estreito &&
         (controlador.hrefPrincipal && controlador.plano?.estado === "pronto" ? (
           <Link
             prefetch={false}
@@ -820,11 +849,32 @@ export function EstadoAcessivel({ id, mensagem }: { id: string; mensagem: string
  * │ competir com a primeira — e a que interessa está no botão.           │
  * └─────────────────────────────────────────────────────────────────────┘
  */
-export function RodapeBusca({ controlador }: { controlador: ControladorBusca }) {
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ NUM TELEMÓVEL NÃO HÁ «↑↓», NÃO HÁ ENTER E NÃO HÁ ESC                 │
+ * │                                                                     │
+ * │ No telemóvel esta linha fica no TOPO do painel (o campo vive em      │
+ * │ baixo, encostado ao teclado — ver `PainelPesquisa`), e por isso era  │
+ * │ a primeira coisa que se lia ao abrir a pesquisa: três teclas que     │
+ * │ aquele ecrã não tem. Instruções para um teclado que não existe são   │
+ * │ pior do que nenhuma instrução — ocupam o lugar mais valioso da       │
+ * │ superfície a explicar uma coisa impossível.                          │
+ * │                                                                     │
+ * │ Fica a promessa, que vale nos dois sítios e é a única frase daqui    │
+ * │ que alguém precisa de ler.                                           │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export function RodapeBusca({
+  controlador,
+  estreito = false,
+}: {
+  controlador: ControladorBusca;
+  estreito?: boolean;
+}) {
   const atalho = useAtalhoDoSistema();
   return (
     <div className="texto-mini flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-stone-100 px-5 py-2.5 text-stone-600 dark:border-stone-800 dark:text-stone-400">
-      <span className="flex items-center gap-2">
+      <span className={`items-center gap-2 ${estreito ? "hidden" : "flex"}`}>
         <span className="flex items-center gap-1">
           <kbd className="not-italic">↑↓</kbd> Navegar
         </span>

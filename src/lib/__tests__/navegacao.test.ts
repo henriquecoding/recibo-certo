@@ -278,14 +278,49 @@ describe("navegacao:apoio-no-topo", () => {
 
   it("não é uma sexta entrada a competir na linha de baixo", () => {
     // A linha de baixo tem cinco pilares e é a navegação. Este bloco fica na
-    // linha de CIMA, ao centro, e some no espaço estreito em vez de espremer
-    // as duas zonas laterais — em telemóvel o apoio vive na folha do menu.
+    // linha de CIMA, ao centro, e some no espaço estreito — no telemóvel o
+    // apoio tem forma própria, no dock (ver o teste seguinte).
     expect(NAV).toContain("<AtalhoApoio />");
     expect(NAV).toMatch(/hidden[^"]*xl:flex[\s\S]{0,80}<AtalhoApoio \/>/);
     expect(semComentarios(CAPSULA)).not.toContain("AtalhoApoio");
     // Que «contabilistas» não é pilar já não é preciso afirmar aqui: o tipo
     // de `PILARES` não tem esse `id`, e o compilador reprova antes do teste.
     expect(PILARES.map((p) => p.href)).not.toContain("/contabilistas");
+  });
+
+  it("o telemóvel tem a MESMA entrada, e não só a folha do menu", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ DUAS RESPOSTAS À MESMA PERGUNTA, CONFORME O ECRÃ               │
+    // │                                                               │
+    // │ É o defeito que o topo deste ficheiro descreve, aplicado a uma │
+    // │ entrada em vez de a uma lista: no computador o apoio humano    │
+    // │ ficou à vista no cabeçalho, e no telemóvel continuava só       │
+    // │ dentro da folha do «Menu», a dois toques e uma lista de        │
+    // │ distância. A mesma pessoa, o mesmo produto, e «e se eu quiser  │
+    // │ falar com alguém?» respondida de duas maneiras.                │
+    // └───────────────────────────────────────────────────────────────┘
+    const DOCK = ler("components", "busca", "DockMovel.tsx");
+    expect(DOCK).toContain("<AtalhoApoioMovel />");
+    expect(DOCK).toContain('from "@/components/navegacao/AtalhoApoio"');
+    // Deriva da mesma constante que a entrada de secretária — uma só
+    // `SECOES.find` no ficheiro, e nenhum href escrito à mão.
+    expect(semComentarios(APOIO)).not.toContain('"/contabilistas"');
+    expect(semComentarios(APOIO).match(/SECOES\.find/g) ?? []).toHaveLength(1);
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ O RÓTULO CURTO VEM DA FONTE, E EXISTE                          │
+    // │                                                               │
+    // │ No dock esta entrada divide a linha com o campo de pesquisa. O │
+    // │ rótulo longo empurrava a frase do campo para fora do ecrã a    │
+    // │ 360 px — medido. O curto vive em `navegacao.ts` (o mesmo       │
+    // │ mecanismo do «Simular»), e é o nome ACESSÍVEL nessa            │
+    // │ superfície: nada de `aria-label` a repor o longo por cima.     │
+    // └───────────────────────────────────────────────────────────────┘
+    const apoio = SECOES.find((s) => s.id === "contabilistas");
+    expect(apoio?.curto, "«Contabilistas» não declara rótulo curto").toBeTruthy();
+    expect(apoio!.curto!.length).toBeLessThanOrEqual(8);
+    expect(APOIO).toContain("{APOIO.curto ?? APOIO.label}");
+    const movel = semComentarios(APOIO).slice(semComentarios(APOIO).indexOf("AtalhoApoioMovel"));
+    expect(movel).not.toContain("aria-label");
   });
 });
 

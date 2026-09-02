@@ -68,3 +68,54 @@ export default function AtalhoApoio() {
     </Link>
   );
 }
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ A MESMA ENTRADA NO TELEMÓVEL — E PORQUE NÃO ERA SÓ «ESTÁ NO MENU»    │
+ * │                                                                     │
+ * │ No telemóvel o apoio humano vivia só dentro da folha do «Menu»: dois │
+ * │ toques e uma lista para atravessar. No computador passou a estar à   │
+ * │ vista, ao centro do cabeçalho. A mesma pessoa, no mesmo produto, com │
+ * │ duas respostas diferentes à pergunta «e se eu quiser falar com       │
+ * │ alguém?» — que é exactamente o defeito que `navegacao.ts` existe     │
+ * │ para tornar impossível, só que aplicado a uma entrada em vez de a    │
+ * │ uma lista.                                                           │
+ * │                                                                     │
+ * │ Fica ao lado do campo de pesquisa, na zona do polegar, porque é ali  │
+ * │ que se responde à mesma pergunta pelas duas vias: procurar sozinho,  │
+ * │ ou falar com quem sabe.                                              │
+ * └─────────────────────────────────────────────────────────────────────┘
+ *
+ * COM RÓTULO, e não uma mala sozinha. A regra é a mesma que a barra dos
+ * cinco pilares aplica a si própria: um ícone isolado obriga a adivinhar,
+ * e adivinhar o que está do outro lado de um botão é o oposto do que esta
+ * entrada promete. Por isso também não leva `aria-label` a repor um nome
+ * diferente do que se lê — WCAG 2.5.3, o mesmo cuidado de `BarraSecoes`.
+ *
+ * O rótulo é o `curto` da secção («Apoio»), que vem da fonte e não daqui:
+ * escrever a abreviatura neste ficheiro era pô-la a divergir do dia em que
+ * alguém mudasse o nome da secção. Ver a nota em `navegacao.ts`.
+ */
+export function AtalhoApoioMovel() {
+  const pathname = usePathname();
+  if (!APOIO) return null;
+
+  const ativo = hrefAtivo(pathname) === APOIO.href;
+
+  return (
+    <Link
+      prefetch={false}
+      href={APOIO.href}
+      aria-current={ativo ? "page" : undefined}
+      onClick={() => medirNavegacao(APOIO.id ?? APOIO.href, "movel")}
+      className={`focus-marca flex h-[var(--rc-dock-movel-h)] flex-shrink-0 items-center gap-1.5 rounded-2xl border px-2.5 no-underline shadow-lift backdrop-blur-xl transition-colors ${
+        ativo
+          ? "border-brand/40 bg-brand-light text-brand-dark dark:border-brand/40 dark:bg-brand/15 dark:text-brand"
+          : "border-stone-200 bg-white/95 text-stone-700 active:border-brand/60 dark:border-stone-700 dark:bg-stone-900/95 dark:text-stone-300"
+      }`}
+    >
+      <Briefcase size={15} className="flex-shrink-0 text-brand" aria-hidden />
+      <span className="texto-mini font-semibold leading-none">{APOIO.curto ?? APOIO.label}</span>
+    </Link>
+  );
+}

@@ -228,7 +228,24 @@ export function LinhaInterpretacao({ controlador }: { controlador: ControladorBu
   return (
     <section aria-labelledby="rc-busca-interpretacao" className="px-1">
       <Rotulo>
-        <span id="rc-busca-interpretacao">Pedido reconhecido · 02</span>
+        {/**
+         * O «· 02» só existe onde há um «· 01» ACIMA dele.
+         *
+         * No cabeçalho de secretária o campo está em cima e esta secção
+         * em baixo, e a numeração diz que uma é consequência da outra. No
+         * telemóvel o painel cresce para cima a partir do campo, que fica
+         * encostado ao teclado: a mesma numeração punha «02» por cima de
+         * «01» e passava a contradizer a leitura em vez de a guiar.
+         *
+         * É uma decisão de LARGURA e não de estado, por isso vive numa
+         * classe de ponto de corte: as duas superfícies nunca coexistem
+         * (o cabeçalho é `hidden lg:block`, o dock é `lg:hidden`), e um
+         * `hidden lg:inline` diz exactamente isso sem mais um adereço a
+         * atravessar três componentes para chegar aqui.
+         */}
+        <span id="rc-busca-interpretacao">
+          Pedido reconhecido<span className="hidden lg:inline"> · 02</span>
+        </span>
       </Rotulo>
 
       {/**
@@ -244,8 +261,19 @@ export function LinhaInterpretacao({ controlador }: { controlador: ControladorBu
        * │ ganha caixa é só o que é acção: o «Ver ou corrigir».           │
        * └───────────────────────────────────────────────────────────────┘
        */}
+      {/**
+       * `basis-full` até `lg`: a frase fica com a LINHA inteira e a acção
+       * desce para baixo dela.
+       *
+       * Com `flex-1` a 360 px acontecia isto: a frase espremia-se para
+       * caber ao lado do «Ver ou corrigir», partia-se em quatro linhas, e o
+       * botão ficava a meio da altura desse bloco, encostado a nada. A
+       * leitura passava a ser um parágrafo esfarrapado com uma acção a
+       * flutuar no meio — quando o que aquilo é, é uma frase e, por baixo,
+       * a forma de a corrigir.
+       */}
       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <p className="min-w-0 flex-1 text-sm text-stone-700 dark:text-stone-300">
+        <p className="min-w-0 flex-1 basis-full text-sm text-stone-700 lg:basis-0 dark:text-stone-300">
           {partes.map((p, i) => (
             <span key={p.texto}>
               {i > 0 && <span aria-hidden className="px-1.5 text-stone-300 dark:text-stone-600">·</span>}
@@ -739,7 +767,17 @@ export function FaixaApoio({
           {apoio.filtros.length > 0 && ` · ${apoio.filtros.map((f) => f.valor).join(" · ")}`}
         </p>
       </div>
-      <div className="ml-auto flex flex-none flex-col items-end">
+      {/**
+       * Alinha à ESQUERDA enquanto a faixa empilha, e à direita só quando
+       * ela é mesmo uma coluna.
+       *
+       * `ml-auto` e `items-end` são da composição de secretária, onde isto
+       * é a coluna da direita do rodapé. No telemóvel a faixa passa a ser
+       * uma pilha e essas duas classes deixavam a etiqueta e o título
+       * encostados à esquerda com a acção e a promessa encostadas à
+       * direita — o mesmo bloco a ler-se em ziguezague.
+       */}
+      <div className="flex flex-none flex-col items-start lg:ml-auto lg:items-end">
         <Link
           prefetch={false}
           href={apoio.href}
