@@ -8,8 +8,7 @@
 //  proteção a desaparecer sem ninguém dar por isso.
 // ═══════════════════════════════════════════════════════════════════════
 
-export type AlvoApagar =
-  | "recibos" | "vencimentos" | "cenarios" | "perfil-fiscal" | "tudo" | "conta";
+export type AlvoApagar = "selecao" | "conta";
 
 export interface DefinicaoAlvo {
   id: AlvoApagar;
@@ -22,52 +21,30 @@ export interface DefinicaoAlvo {
   irreversivelTotal?: boolean;
 }
 
+// ⚠️ Havia aqui seis alvos, quatro deles mortos desde que a zona de risco
+// passou a trabalhar por conjuntos escolhidos: `recibos`, `vencimentos`,
+// `cenarios` e `perfil-fiscal` já não eram usados por lado nenhum, e os
+// testes continuavam a confirmar as frases deles.
+//
+// O que sobrava tinha um defeito pior: escolher UMA coisa pedia à pessoa
+// que escrevesse «apagar todos os dados». A frase mentia sobre o que ia
+// acontecer — e uma frase de confirmação que descreve mal a ação é o
+// contrário de uma confirmação. `selecao` diz o que é: apagar o que foi
+// escolhido, seja um ou vinte.
 export const ALVOS: DefinicaoAlvo[] = [
   {
-    id: "recibos",
-    titulo: "Apagar os recibos verdes guardados",
+    id: "selecao",
+    titulo: "Apagar o que escolheste",
     descricao:
-      "Remove todos os recibos verdes que registaste. Os simuladores continuam a funcionar; o que desaparece é o histórico.",
-    confirmacao: "apagar recibos verdes",
-    acao: "Apagar recibos",
-  },
-  {
-    id: "vencimentos",
-    titulo: "Apagar os recibos de vencimento guardados",
-    descricao:
-      "Remove os recibos de vencimento que guardaste, incluindo os que serviram de base a auditorias.",
-    confirmacao: "apagar recibos de vencimento",
-    acao: "Apagar vencimentos",
-  },
-  {
-    id: "cenarios",
-    titulo: "Apagar os cenários guardados",
-    descricao:
-      "Remove todos os cenários de simulação — recibos verdes, vencimento, empresa, IRS e heranças.",
-    confirmacao: "apagar cenarios",
-    acao: "Apagar cenários",
-  },
-  {
-    id: "perfil-fiscal",
-    titulo: "Apagar o perfil fiscal",
-    descricao:
-      "Remove as condições que guardaste: início de atividade, regime de IVA, agregado e deduções. O painel volta a dizer que não sabe.",
-    confirmacao: "apagar perfil fiscal",
-    acao: "Apagar perfil",
-  },
-  {
-    id: "tudo",
-    titulo: "Apagar todos os dados",
-    descricao:
-      "Tudo o que está em cima, de uma vez: recibos, vencimentos, cenários e perfil fiscal. A conta continua a existir e podes recomeçar do zero.",
-    confirmacao: "apagar todos os dados",
-    acao: "Apagar tudo",
+      "Apaga exatamente os conjuntos assinalados, e mais nada. A conta continua a existir e o que não escolheste fica onde está.",
+    confirmacao: "apagar o que escolhi",
+    acao: "Apagar o escolhido",
   },
   {
     id: "conta",
     titulo: "Apagar a conta definitivamente",
     descricao:
-      "Apaga os dados todos e a própria conta. Perdes o acesso imediatamente e não há forma de reverter. Se tens uma subscrição ativa, cancela-a primeiro — apagar a conta não cancela a cobrança.",
+      "Apaga os dados todos, os ficheiros que enviaste e a própria conta. A subscrição é cancelada por nós — não continuas a ser cobrado. Perdes o acesso imediatamente e não há forma de reverter.",
     confirmacao: "apagar a minha conta",
     acao: "Apagar conta",
     irreversivelTotal: true,

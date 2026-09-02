@@ -191,6 +191,12 @@ jobs:
       - name: Planeador patronal — fluxo completo e teste de oclusão nos seis viewports
         run: BASE_URL=http://localhost:3000 npm run contratacao:e2e
 
+      # A zona de risco mexe no `localStorage` de quem carrega no botão, e
+      # isso não existe no vitest. O defeito que isto apanha — escolher uma
+      # coisa e o cofre inteiro sair atrás — só aparece num browser a sério.
+      - name: Zona de risco — apaga só o que foi escolhido, com e sem sessão
+        run: RC_BASE_URL=http://localhost:3000 npm run zona:e2e
+
       # O runner não traz o ImageMagick, e a comparação é feita com `compare
       # -metric AE` — píxeis diferentes, não hashes. Sem ele o passo seguinte
       # morre antes de comparar seja o que for, e foi exatamente isso que
