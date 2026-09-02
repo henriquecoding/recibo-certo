@@ -19,6 +19,7 @@ import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
 import Precos from "@/components/Precos";
 import Bussola from "@/components/foco/Bussola";
+import CartaoContratacao from "@/components/foco/CartaoContratacao";
 import HeroDescobrir, { type ExemploDescoberta } from "./HeroDescobrir";
 import LaboratorioDescobrir from "./LaboratorioDescobrir";
 import BifurcacaoDescobrir from "./BifurcacaoDescobrir";
@@ -169,8 +170,9 @@ function PercursoDescobrir() {
             Descobrir é o princípio da decisão, não o fim da página.
           </h2>
           <p className="mt-4 max-w-2xl text-sm leading-relaxed text-stone-600">
-            Primeiro validas o problema. Depois descobres se o preço aguenta. Só então escolhes a forma de operar.
-            Salário permanece um percurso paralelo, porque não é uma etapa de abrir negócio.
+            Primeiro validas o problema. Depois descobres se o preço aguenta. Só então escolhes a forma de operar —
+            e, se a hipótese pegar, chega o passo em que o trabalho deixa de caber numa pessoa. Receber um salário
+            é que permanece um percurso paralelo, porque não é uma etapa de abrir negócio.
           </p>
         </Reveal>
 
@@ -234,12 +236,18 @@ function PercursoDescobrir() {
           </div>
         </div>
 
-        <div className="mt-4 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-4">
+          <CartaoContratacao origem="descobrir" />
+        </div>
+
+        {/* A nota diz de que lado do salário fala: o foco tem dois, e o
+            outro — contratar — é agora o cartão que está mesmo acima. */}
+        <div className="mt-3 flex flex-col gap-4 rounded-4xl border border-dashed border-stone-300 px-5 py-4 dark:border-stone-700 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 dark:bg-stone-800 dark:text-stone-300"><Briefcase size={17} /></span>
             <div>
-              <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">Salário é um percurso paralelo</div>
-              <p className="mt-0.5 text-xs leading-relaxed text-stone-500">Pode coexistir com um negócio; não aparece como a etapa seguinte de o criar.</p>
+              <div className="text-sm font-semibold text-stone-700 dark:text-stone-200">Receber um salário é que é um percurso paralelo</div>
+              <p className="mt-0.5 text-xs leading-relaxed text-stone-500">Ter contrato pode coexistir com um negócio; não aparece como a etapa seguinte de o criar.</p>
             </div>
           </div>
           <Link href="/ferramentas/recibo-vencimento" className="focus-marca inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-2xl border border-stone-200 bg-white px-4 py-2.5 text-xs font-semibold text-stone-700 no-underline hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-900 dark:text-stone-200">

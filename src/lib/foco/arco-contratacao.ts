@@ -40,8 +40,17 @@
 //  foco «Salário» com o percurso patronal declarado, e não uma rota nova.
 // ═══════════════════════════════════════════════════════════════════════
 
-/** De onde se chega ao passo de contratar. É sempre um passo do arco. */
-export const ORIGENS_ARCO = ["preco", "recibos", "empresa"] as const;
+/**
+ * De onde se chega ao passo de contratar. É sempre um passo do arco.
+ *
+ * `descobrir` entrou depois das outras três, e a razão de ter ficado de
+ * fora é a mesma que fez o passo desaparecer da primeira vez: a leitura da
+ * raiz desenha o MESMO percurso (01 descobrir → 02 preço → 03 estrutura)
+ * noutro ficheiro, e quem corrige três esquece o quarto. A lista passa a
+ * ser a fonte — o teste percorre-a e exige um cartão por origem, por isso
+ * uma origem nova sem cartão reprova em vez de passar despercebida.
+ */
+export const ORIGENS_ARCO = ["descobrir", "preco", "recibos", "empresa"] as const;
 
 export type OrigemArcoContratacao = (typeof ORIGENS_ARCO)[number];
 
@@ -85,6 +94,17 @@ export interface EntradaArcoContratacao {
 export const ENTRADA_CONTRATACAO: Readonly<
   Record<OrigemArcoContratacao, EntradaArcoContratacao>
 > = Object.freeze({
+  // Aqui a pessoa está no passo 01, e o cartão tem de o dizer: empurrar
+  // quem ainda está a validar uma hipótese para uma contratação seria o
+  // erro simétrico do que este ficheiro corrige. O que justifica a
+  // presença do cartão é o horizonte — o custo do posto muda o que a
+  // hipótese tem de gerar, e isso decide-se enquanto ela é hipótese.
+  descobrir: {
+    sobrancelha: `${PASSO_CONTRATACAO.etapa} · Ainda longe, mas é para onde isto vai`,
+    titulo: "Uma hipótese que pega acaba por precisar de mais uma pessoa",
+    texto:
+      "Não é para agora: antes disto há o preço e a forma de operar. Fica à vista porque um posto de trabalho custa mais do que o vencimento, e saber quanto muda o que a hipótese tem de gerar para valer a pena — melhor sabê-lo enquanto ela ainda é uma hipótese.",
+  },
   preco: {
     sobrancelha: `${PASSO_CONTRATACAO.etapa} · Quando deixa de caber numa pessoa`,
     titulo: "Contratar é o passo que o preço tem de aguentar",

@@ -1,9 +1,9 @@
 {
   "_meta": {
     "schema": 1,
-    "appVersion": "2.157.0",
+    "appVersion": "2.157.1",
     "fiscalYear": 2026,
-    "engineHash": "sha256:6a2ce5e37bcb2bd2f9ffbc7211e573f6b23649108d2b1e24ccbf2af748353ca8"
+    "engineHash": "sha256:7bfdb794f4f6ae2e47a588aea1dbe87bfe121f99e1f3178b5ba1d37d1e0b92bb"
   },
   "dados": {
     "bruto": 1500,
