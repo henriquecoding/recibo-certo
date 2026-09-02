@@ -365,6 +365,7 @@ export const m = {
   output: criar("output"),
   p: criar("p"),
   path: criar("path"),
+  section: criar("section"),
   span: criar("span"),
   ul: criar("ul"),
 };

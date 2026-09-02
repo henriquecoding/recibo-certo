@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.154.0",
+    data: "2026-09-02",
+    titulo: "A demonstração de quem contrata deixou de ser um painel parado e passou a mostrar a conta a acontecer",
+    itens: [
+      "Em «O salário, dos dois lados», o lado de quem contrata tinha quatro passos anunciados no rodapé e nada a acontecer no ecrã: os painéis estavam todos visíveis desde o primeiro instante e o que mudava era uma borda a acender. A demonstração dizia que estava a demonstrar e não demonstrava.",
+      "Agora mostra a conta inteira, na ordem em que ela é feita. O orçamento anual enche a régua, recua os 5% que ficam protegidos, e do que sobra saem — uma de cada vez, com o valor à vista — a refeição, a contribuição da empresa e o seguro obrigatório. O vencimento base aparece por último, porque é isso que ele é: o que fica depois de o posto estar pago, e não um número que se escolhe.",
+      "Os valores deixaram de ser recompostos à mão: são a repartição que o motor patronal já usava para chegar ao custo anual. As quatro parcelas somam o total ao cêntimo, e o que fica, dividido por catorze pagamentos, dá exatamente o vencimento base mostrado.",
+      "A demonstração passou a acompanhar o tema. Era uma superfície verde-escura fixa nos dois modos — em modo claro ficava uma laje escura dentro de uma página clara, e trocar de percurso trocava um cartão branco por ela. Passa a ser clara no claro e escura no escuro, como a demonstração de quem recebe, que vive no mesmo lugar.",
+      "Os nomes «Trabalhador» e «Estado» saíram de dentro da barra colorida: em branco sobre o tom de argila ficavam abaixo do mínimo de contraste legível, e num ecrã estreito não cabiam. A barra mostra a proporção e a legenda diz o nome.",
+      "Esta demonstração nunca tinha sido medida por nenhuma verificação automática — todas paravam no percurso de quem recebe. Passou a ser percorrida como as outras: desempenho, fim da cena, contraste nos dois temas e leitura a 320 e 360 píxeis.",
+    ],
+  },
+  {
     version: "2.153.0",
     data: "2026-09-02",
     titulo: "No telemóvel: os contabilistas passam a estar à vista, e a pesquisa deixa de esconder o que escreves",

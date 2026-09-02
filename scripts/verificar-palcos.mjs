@@ -37,12 +37,27 @@ const VERSAO = JSON.parse(new TextDecoder().decode(readFileSync(new URL("../pack
 const CENA_EMPRESA = 12_500;
 /** 2500 + 2800 + 2800 + 3300, com folga. */
 const CENA_SALARIO = 12_500;
+/** 2900 + 3500 + 3100 + 3400, com folga. */
+const CENA_CONTRATACAO = 14_000;
 const ROTA_FOCO = {
   descobrir: "/",
   preco: "/inicio/preco",
   recibos: "/inicio/recibos",
   empresa: "/inicio/empresa",
   salario: "/inicio/salario",
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ O PALCO QUE NENHUM PORTÃO RENDERIZAVA                             │
+  // │                                                                   │
+  // │ `/inicio/salario` tem DOIS palcos, trocados por um radiogroup, e  │
+  // │ o de quem contrata só existe com `?percurso=empregador`. Esta     │
+  // │ medição parava no percurso do trabalhador; `verificar-movel.mjs`  │
+  // │ também; e `verificar-contratacao.mjs` pede explicitamente         │
+  // │ `?percurso=trabalhador`. Resultado: o palco patronal nunca foi    │
+  // │ medido — nem frames, nem contraste, nem fim de cena — e ficou com │
+  // │ os quatro atos a `beats: []` sem nada acusar. Uma regra que só se │
+  // │ verifica na metade fácil da rota é uma intenção.                  │
+  // └───────────────────────────────────────────────────────────────────┘
+  contratacao: "/inicio/salario?percurso=empregador",
 };
 
 const falhas = [];
@@ -159,6 +174,173 @@ async function medirCena(navegador, foco, duracao) {
     `[${foco}] a cena chega ao fim`,
     `legenda do cabeçalho: «${legenda}»`,
   );
+  await ctx.close();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  UMA CENA TEM DE MUDAR — o portão que apanha «isto não é uma animação»
+//  ---------------------------------------------------------------------
+//  ┌───────────────────────────────────────────────────────────────────────┐
+//  │ O DEFEITO QUE PASSOU POR TODAS AS OUTRAS MEDIÇÕES                     │
+//  │                                                                       │
+//  │ O palco da contratação tinha quatro atos com `beats: []`. Tudo o que  │
+//  │ os outros portões medem dava VERDE, e com razão: não bloqueava a      │
+//  │ thread (não fazia nada), não perdia frames (não desenhava nada),      │
+//  │ chegava ao fim (o relógio corria), tinha contraste (o texto estava    │
+//  │ lá desde o primeiro frame) e não transbordava. Uma cena morta passa   │
+//  │ em todas as métricas de uma cena viva, porque todas elas medem CUSTO  │
+//  │ e nenhuma media MUDANÇA.                                              │
+//  │                                                                       │
+//  │ Isto mede a mudança, e mede-a onde ela tem significado: uma parcela   │
+//  │ que ainda não recebeu a ficha mostra «—», e a barra do orçamento      │
+//  │ cresce. Se alguém voltar a esvaziar os beats, as duas amostras ficam  │
+//  │ iguais e este portão fica vermelho.                                   │
+//  └───────────────────────────────────────────────────────────────────────┘
+async function verificarQueACenaMuda(navegador) {
+  const ctx = await contexto(navegador, "light");
+  const p = await ctx.newPage();
+  await p.goto(`${ENDERECO}${ROTA_FOCO.contratacao}`, { waitUntil: "load" });
+  await p.locator("#palco-contratacao-titulo").scrollIntoViewIfNeeded().catch(() => {});
+
+  const amostrar = () =>
+    p.evaluate(() => {
+      const sec = document.querySelector("#palco-contratacao-titulo")?.closest("section");
+      if (!sec) return null;
+      const parcelas = [...sec.querySelectorAll('[data-contratacao="parcela"]')].map((el) => ({
+        id: el.getAttribute("data-parcela"),
+        texto: el.textContent.trim(),
+      }));
+      const barra = sec.querySelector('[data-contratacao="barra-orcamento"]');
+      const resto = sec.querySelector('[data-contratacao="resto"]');
+      return {
+        parcelas,
+        barra: barra ? Math.round(barra.getBoundingClientRect().width) : -1,
+        resto: resto ? resto.textContent.trim() : "",
+        legenda: document.querySelector("#palco-contratacao-titulo + p")?.innerText ?? "",
+      };
+    });
+
+  // ── Uma amostra a cada 120 ms durante a cena inteira ─────────────────
+  //  Amostrar em dois instantes fixos seria uma corrida: a cena só arranca
+  //  depois de estar no ecrã E de o browser ter um momento livre, e esse
+  //  instante não é previsível. Recolher a série inteira e olhar para o
+  //  conjunto não tem esse problema.
+  const serie = [];
+  const arranque = Date.now();
+  const fim = arranque + CENA_CONTRATACAO + 2_500;
+  while (Date.now() < fim) {
+    const a = await amostrar();
+    if (a) serie.push({ ...a, em: Date.now() - arranque });
+    await p.waitForTimeout(120);
+  }
+
+  verificar(serie.length > 0, "[contratação] o palco existe e é mensurável");
+  if (serie.length === 0) {
+    await ctx.close();
+    return;
+  }
+
+  const ultimo = serie.at(-1);
+  const traco = (a) => a.parcelas.filter((x) => x.texto === "—").length;
+
+  // 1. Houve um momento em que uma parcela ainda não tinha recebido nada.
+  const comTraco = serie.filter((a) => traco(a) > 0).length;
+  verificar(
+    comTraco > 0,
+    "[contratação] as parcelas nascem por preencher — a ficha é que as preenche",
+    `${comTraco} de ${serie.length} amostras com pelo menos um «—»`,
+  );
+
+  // 2. E, no fim, todas receberam.
+  verificar(
+    traco(ultimo) === 0 && ultimo.parcelas.length === 3,
+    "[contratação] no fim as três parcelas estão preenchidas",
+    ultimo.parcelas.map((x) => `${x.id}=${x.texto}`).join(" · ") || "sem parcelas",
+  );
+
+  // 3. A barra do orçamento CRESCE: parte de zero e assenta na largura útil.
+  const larguras = serie.map((a) => a.barra);
+  const minima = Math.min(...larguras);
+  const maxima = Math.max(...larguras);
+  verificar(
+    maxima - minima > 20,
+    "[contratação] a barra do orçamento enche em vez de nascer cheia",
+    `${minima} px → ${maxima} px`,
+  );
+
+  // 4. O resto muda de valor: é a subtração a acontecer, não a ser afirmada.
+  const restos = new Set(serie.map((a) => a.resto).filter(Boolean));
+  verificar(
+    restos.size > 1,
+    "[contratação] o valor que sobra é contado, não escrito de uma vez",
+    `${restos.size} leituras distintas`,
+  );
+
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ AS DUAS QUE SÓ UMA COREOGRAFIA A SÉRIO CONSEGUE CUMPRIR           │
+  // │                                                                   │
+  // │ As quatro de cima passam com os beats VAZIOS — foi a primeira     │
+  // │ versão deste portão e não servia. Sem beats, `noAto` cai para     │
+  // │ `ato > indice` e tudo continua a mudar, só que de uma vez em cada │
+  // │ fronteira de ato. Um portão que dá verde ao defeito que existe    │
+  // │ para apanhar é pior do que portão nenhum: promete uma rede que    │
+  // │ não está lá.                                                      │
+  // │                                                                   │
+  // │ Estas duas medem o que SÓ acontece por beats, dentro de um ato:   │
+  // │                                                                   │
+  // │  · as três fichas partem a `PASSO.irmao` (160 ms) umas das        │
+  // │    outras, portanto as três parcelas NÃO se preenchem no mesmo    │
+  // │    instante. Com os beats vazios preenchem-se as três no mesmo    │
+  // │    commit, e os três instantes de chegada colapsam num só;        │
+  // │  · a barra enche até 100% e só 1 040 ms depois RECUA os 5% da     │
+  // │    margem. Com os beats vazios `enche` e `protege` ficam          │
+  // │    verdadeiros no mesmo commit e a barra nunca passa dos 95%.     │
+  // └───────────────────────────────────────────────────────────────────┘
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A CHEGADA É A ÚLTIMA TRANSIÇÃO, NÃO A PRIMEIRA AMOSTRA CHEIA      │
+  // │                                                                   │
+  // │ O HTML servido traz a cena RESOLVIDA de propósito — quem chega    │
+  // │ sem JavaScript tem de ver o resultado. Só depois de o cliente     │
+  // │ montar e ler `prefers-reduced-motion` é que a cena rebobina. Há   │
+  // │ portanto uma janela curta, antes da hidratação, em que as três    │
+  // │ parcelas já mostram valores.                                      │
+  // │                                                                   │
+  // │ «A primeira amostra cheia» apanhava essa janela e dava as três    │
+  // │ chegadas no mesmo instante — o mesmo sintoma do defeito que isto  │
+  // │ existe para apanhar, por uma razão completamente diferente. O que │
+  // │ conta é a transição de «—» para número que acontece DEPOIS da     │
+  // │ rebobinagem, ou seja, a última de todas.                          │
+  // └───────────────────────────────────────────────────────────────────┘
+  const chegada = (id) => {
+    const leitura = (a) => a.parcelas.find((x) => x.id === id)?.texto ?? null;
+    let ultima = null;
+    for (let i = 1; i < serie.length; i += 1) {
+      if (leitura(serie[i - 1]) === "—" && leitura(serie[i]) !== "—") ultima = serie[i].em;
+    }
+    return ultima;
+  };
+  const chegadas = ["refeicao", "tsu", "posto"].map((id) => ({ id, em: chegada(id) }));
+  const conhecidas = chegadas.filter((c) => c.em !== null).map((c) => c.em);
+  verificar(
+    conhecidas.length === 3 && Math.max(...conhecidas) - Math.min(...conhecidas) >= 120,
+    "[contratação] as três parcelas chegam desfasadas, não todas no mesmo instante",
+    chegadas.map((c) => `${c.id}@${c.em ?? "nunca"}`).join(" · "),
+  );
+
+  const larguraFinal = ultimo.barra;
+  verificar(
+    maxima - larguraFinal > 8,
+    "[contratação] a barra enche a 100% e só depois recua a margem protegida",
+    `pico ${maxima} px, repouso ${larguraFinal} px`,
+  );
+
+  // 5. E a cena acaba.
+  verificar(
+    /concluída/i.test(ultimo.legenda),
+    "[contratação] a cena chega ao fim",
+    `legenda do cabeçalho: «${ultimo.legenda}»`,
+  );
+
   await ctx.close();
 }
 
@@ -388,6 +570,40 @@ async function verificarTemaEscuro(navegador) {
       fundoCartao,
     );
     await ctx.close();
+
+    // ┌─────────────────────────────────────────────────────────────────┐
+    // │ E O PALCO IRMÃO, QUE VIVE NO MESMO LUGAR                        │
+    // │                                                                 │
+    // │ `PalcoContratacao` declarava `tom="escuro"` — `#0c251e` FIXO    │
+    // │ nos dois temas, com o interior todo em `text-white` e           │
+    // │ `bg-white/[.035]`. Em modo claro era uma laje escura que não    │
+    // │ participava no tema, e o radiogroup trocava um cartão branco    │
+    // │ por ela. `focos.ts` declara `tom: "claro"` para este foco e o   │
+    // │ palco do trabalhador honra-o; este passou a honrá-lo também, e  │
+    // │ isto é o que impede a regressão.                                │
+    // └─────────────────────────────────────────────────────────────────┘
+    const ctxPatronal = await contexto(navegador, tema);
+    const pp = await ctxPatronal.newPage();
+    await pp.goto(`${ENDERECO}${ROTA_FOCO.contratacao}`, { waitUntil: "load" });
+    await pp.waitForTimeout(CENA_CONTRATACAO);
+    const molduraPatronal = await pp.evaluate(() => {
+      const sec = document.querySelector("#palco-contratacao-titulo")?.closest("section");
+      return sec ? getComputedStyle(sec).backgroundColor : null;
+    });
+    verificar(
+      molduraPatronal !== null,
+      `[contratação/${tema}] o palco patronal está no ecrã`,
+      String(molduraPatronal),
+    );
+    if (molduraPatronal !== null) {
+      const molduraClara = luz(molduraPatronal) > 0.5;
+      verificar(
+        tema === "dark" ? !molduraClara : molduraClara,
+        `[contratação/${tema}] a moldura acompanha o tema`,
+        molduraPatronal,
+      );
+    }
+    await ctxPatronal.close();
   }
 }
 
@@ -520,7 +736,7 @@ const SONDA_CONTRASTE = `(() => {
 })()`;
 
 async function verificarContraste(navegador) {
-  for (const foco of ["descobrir", "preco", "recibos", "empresa", "salario"]) {
+  for (const foco of ["descobrir", "preco", "recibos", "empresa", "salario", "contratacao"]) {
     for (const tema of ["light", "dark"]) {
       const ctx = await contexto(navegador, tema);
       const p = await ctx.newPage();
@@ -552,6 +768,8 @@ const navegador = await chromium.launch(EXEC ? { executablePath: EXEC } : {});
 try {
   await medirCena(navegador, "empresa", CENA_EMPRESA);
   await medirCena(navegador, "salario", CENA_SALARIO);
+  await medirCena(navegador, "contratacao", CENA_CONTRATACAO);
+  await verificarQueACenaMuda(navegador);
   await verificarRegua(navegador);
   await verificarTemaEscuro(navegador);
   await verificarArranquePorEtapas(navegador);
