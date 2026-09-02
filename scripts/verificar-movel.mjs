@@ -133,6 +133,23 @@ const PAGINAS = [
   { nome: "recibos", url: "/inicio/recibos", foco: "recibos" },
   { nome: "empresa", url: "/inicio/empresa", foco: "empresa" },
   { nome: "salario", url: "/inicio/salario", foco: "salario" },
+  /* ┌──────────────────────────────────────────────────────────────────┐
+     │ O SEXTO É UMA ROTA QUE NINGUÉM MEDIA                              │
+     │                                                                  │
+     │ `/inicio/salario` bifurca por query: `?percurso=empregador` troca │
+     │ o palco inteiro (`PalcoContratacao` em vez de `PalcoSalario`) e   │
+     │ acrescenta a secção do método patronal. Esta medição parava no    │
+     │ percurso do trabalhador, `verificar-palcos.mjs` também, e         │
+     │ `verificar-contratacao.mjs` pede explicitamente                   │
+     │ `?percurso=trabalhador`. Ou seja: o palco de quem CONTRATA nunca  │
+     │ foi renderizado por portão nenhum, a largura nenhuma, em tema     │
+     │ nenhum. Foi por isso que ficou anos por fazer sem nada acusar.    │
+     └──────────────────────────────────────────────────────────────────┘ */
+  {
+    nome: "salario-empregador",
+    url: "/inicio/salario?percurso=empregador",
+    foco: "salario",
+  },
 ];
 
 /* ══════════════════════════════════════════════════════════════════════
