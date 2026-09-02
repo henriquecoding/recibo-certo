@@ -425,13 +425,49 @@ describe("parcerias:demo — a ligação existe mesmo quando o ato não aparece"
     // JavaScript e para quem tem movimento reduzido e nunca vê o ato.
     expect(faixa).not.toMatch(/^"use client"/m);
     expect(faixa).toMatch(/FizDisclosure/);
-    // A landing monta o bloco «O passo seguinte» na casca estática comum às
-    // cinco entradas — e é ele que declara a superfície; a página de IRS
-    // continua a montar a faixa diretamente.
-    const landing = readFileSync(join(RAIZ, "components", "foco", "HomepageFocoShell.tsx"), "utf8");
+    // A página de IRS continua a montar a faixa diretamente.
     const irs = readFileSync(join(RAIZ, "app", "ferramentas", "simulador-irs", "page.tsx"), "utf8");
-    expect(landing).toMatch(/demo\.hero\.faixa/);
     expect(irs).toMatch(/demo\.irs\.faixa/);
+  });
+
+  it("as cinco leituras da homepage montam «O passo seguinte», e a casca já não o monta", () => {
+    // O bloco viveu na casca comum, depois da bússola — um só ponto de
+    // montagem, e o pior sítio da página: a seguir ao último ato da leitura
+    // ninguém lá chegava. Um anúncio que ninguém vê não é discreto, é
+    // inútil, e a fronteira que o bloco explica também não chegava a
+    // ninguém.
+    //
+    // Passou a ser montado por cada leitura, no fim do arco de próximos
+    // passos. O preço dessa mudança é este: cinco pontos de montagem em vez
+    // de um, e uma leitura nova pode nascer sem ele. É o que este teste
+    // impede — a regra passa a ser estrutural e não disciplina.
+    for (const rel of [
+      join("components", "descobrir", "HomepageDescobrir.tsx"),
+      join("components", "preco", "HomepagePreco.tsx"),
+      join("components", "foco", "recibos", "HomepageRecibos.tsx"),
+      join("components", "foco", "empresa", "HomepageEmpresa.tsx"),
+      join("components", "foco", "salario", "HomepageSalario.tsx"),
+    ]) {
+      const fonte = readFileSync(join(RAIZ, rel), "utf8");
+      expect(fonte, `${rel} não monta «O passo seguinte»`).toMatch(
+        /<PassoSeguinteHomepage\s+superficie="demo\.hero\.faixa"/,
+      );
+      // E monta-o ANTES dos planos: o bloco pertence ao arco de próximos
+      // passos, não ao fim da página. Se um dia descer para depois do FAQ ou
+      // da bússola, volta a não ser visto.
+      const iBloco = fonte.indexOf("<PassoSeguinteHomepage");
+      const iPrecos = fonte.indexOf("<Precos />");
+      expect(iPrecos, `${rel} deixou de montar os planos`).toBeGreaterThan(-1);
+      expect(iBloco, `${rel} monta o bloco depois dos planos`).toBeLessThan(iPrecos);
+    }
+
+    // E a casca deixou de o montar — duas montagens dariam a secção a dobrar.
+    const casca = readFileSync(join(RAIZ, "components", "foco", "HomepageFocoShell.tsx"), "utf8");
+    const codigoDaCasca = casca
+      .split("\n")
+      .filter((l) => !l.trim().startsWith("//") && !l.trim().startsWith("*"))
+      .join("\n");
+    expect(codigoDaCasca).not.toMatch(/<PassoSeguinteHomepage/);
   });
 
   it("o bloco da homepage é servidor, rotula antes do clique e não fica com o clique do contabilista", () => {

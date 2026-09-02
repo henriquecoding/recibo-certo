@@ -42,6 +42,24 @@
 //  sem a secção deixar de fazer o seu trabalho: quem faz o quê, quem paga
 //  para estar aqui, e para onde vai quem precisa de um profissional.
 //
+//  ── E porque é que NÃO vive no fim da página ─────────────────────────
+//  Viveu, na casca comum às cinco entradas, a seguir à bússola. Era o sítio
+//  mais fácil de montar — um só ponto — e o pior de todos para o que a
+//  secção faz: a seguir ao último ato da leitura, depois do FAQ, das fontes
+//  e da bússola, quem lá chega já fechou o separador. Um anúncio que ninguém
+//  vê não é discreto, é inútil; e a fronteira que a secção explica também
+//  não chegava a ninguém.
+//
+//  Passou a ser montada por CADA leitura, no fim do arco «o que fazer a
+//  seguir» — a seguir à secção de Percurso, antes dos pilares e dos planos.
+//  É o sítio onde as cinco páginas já falam de próximos passos, portanto a
+//  secção lê-se como a continuação da anterior e não como uma interrupção:
+//  o Percurso diz o que vem a seguir DENTRO do produto, e isto diz quem faz
+//  o que fica de fora.
+//
+//  As cinco montagens são verificadas por `parcerias:demo` — uma leitura que
+//  se esqueça dela reprova.
+//
 //  Componente de SERVIDOR, sem uma linha de JavaScript no cliente.
 // ═══════════════════════════════════════════════════════════════════════
 
@@ -57,12 +75,21 @@ const CARTAO = "rounded-4xl border p-5 shadow-card sm:p-6";
 const ROTULO = "texto-micro font-bold uppercase tracking-[.14em]";
 const SELO = "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-2xl";
 
+/**
+ * A moldura é sempre a mesma nas cinco leituras — quem monta não a escolhe.
+ *
+ * Esteve como `className` aberto, e isso é um convite a que cada página lhe
+ * dê o seu espaçamento: cinco secções iguais com cinco ritmos diferentes, e
+ * ninguém repara até estarem lado a lado. Sem padding no topo de propósito:
+ * a secção de Percurso, que vem sempre antes, já fecha com `py-24`.
+ */
+const MOLDURA =
+  "rc-home-deferred rc-home-deferred--medium px-4 pb-10 sm:px-6 sm:pb-14";
+
 export default async function PassoSeguinteHomepage({
   superficie,
-  className = "",
 }: {
   superficie: Extract<Superficie, "demo.hero.faixa">;
-  className?: string;
 }) {
   // Falha fechado, e diz porquê no log do build: ver `anuncio.server.ts`.
   // Quando a parceria está desligada ficam as duas faixas nossas, e a secção
@@ -70,7 +97,7 @@ export default async function PassoSeguinteHomepage({
   const anuncio = await anuncioDaSuperficie(superficie);
 
   return (
-    <section aria-labelledby="passo-seguinte-titulo" className={className}>
+    <section aria-labelledby="passo-seguinte-titulo" className={MOLDURA}>
       <div className="mx-auto max-w-6xl">
         <header className="max-w-2xl">
           <p className="eyebrow mb-3 text-brand">O passo seguinte</p>
@@ -176,10 +203,14 @@ export default async function PassoSeguinteHomepage({
                 <FizDisclosure texto={anuncio.divulgacao} className="mt-3" />
               </div>
 
-              {/* `max-w-2xl` e não largura livre: a 1152px o cartaz de 1,91:1
+              {/* `max-w-xl` e não largura livre: a 1152px o cartaz de 1,91:1
                   desenhava 600px de altura e a página acabava num painel
-                  publicitário do tamanho de um ecrã. */}
-              <FizCriativoImagem href={anuncio.href} className="mx-auto w-full max-w-2xl" />
+                  publicitário do tamanho de um ecrã. Foi `max-w-2xl` enquanto
+                  a secção vivia no fim da página; agora que ela está no meio
+                  da leitura, o cartaz tem de caber sem a interromper — e um
+                  degrau abaixo tira-lhe também a folga vertical que sobrava
+                  ao lado da nossa coluna de texto. */}
+              <FizCriativoImagem href={anuncio.href} className="mx-auto w-full max-w-xl" />
             </div>
           </aside>
         )}

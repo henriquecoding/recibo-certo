@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/Icons";
 import Reveal from "@/components/ui/Reveal";
 import FilaPilares from "@/components/navegacao/FilaPilares";
+import PassoSeguinteHomepage from "@/components/parcerias/PassoSeguinteHomepage";
 import Precos from "@/components/Precos";
 import HeroFoco from "@/components/foco/HeroFoco";
 import Bussola from "@/components/foco/Bussola";
@@ -281,6 +282,11 @@ export default function HomepageRecibos({ dados }: { dados: DadosReciboHomepage 
           </LinkFocoIntencao>
         </div>
       </SeccaoFoco>
+
+      {/* Onde acabamos nós, quando é caso para um contabilista, e o cartaz do
+          parceiro na faixa que é dele. Aqui, no fim do arco de próximos
+          passos — e não no fundo da página, onde ninguém chegava. */}
+      <PassoSeguinteHomepage superficie="demo.hero.faixa" />
 
       <section className="rc-home-deferred rc-home-deferred--compact px-4 pb-8 sm:px-6 sm:pb-12">
         <div className="mx-auto max-w-6xl rounded-[2rem] border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-7">
