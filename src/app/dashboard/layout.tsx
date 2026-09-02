@@ -1,484 +1,55 @@
-"use client";
+import type { Metadata } from "next";
+import type { ReactNode } from "react";
+import DashboardShellClient from "@/components/dashboard/DashboardShellClient";
 
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import {
-  Logo,
-  LayoutGrid,
-  Receipt,
-  Invoice,
-  History,
-  Calendar,
-  Calculator,
-  ArrowLeft,
-  User,
-  Briefcase,
-  ShieldCheck,
-  Wallet,
-  Building,
-  Scale,
-  Gauge,
-  Swap,
-  Search,
-  MapPin,
-  ShoppingBag,
-  BookOpen,
-  Trophy,
-  Star,
-  Coin,
-  ChartProjection,
-  Menu,
-  Close,
-  LogOut,
-} from "@/components/ui/Icons";
-import ThemeToggle from "@/components/ui/ThemeToggle";
-import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
-import { useAuth } from "@/lib/supabase/auth";
-import { verificarAdmin } from "@/lib/supabase/admin";
-import { obterPerfil } from "@/lib/supabase/profile";
-import AccountBox from "@/components/dashboard/AccountBox";
-import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
-import type { ComponentType, ReactNode } from "react";
-import MotionProvider from "@/components/ui/motion/MotionProvider";
-import { PerfilProvider } from "@/lib/perfil";
-
-interface NavItem {
-  href: string;
-  label: string;
-  short: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
-  /** Link para fora do shell do dashboard (página de marketing/ferramenta). */
-  externo?: boolean;
-}
-interface NavGroup {
-  titulo: string;
-  itens: NavItem[];
-}
-
-// ── Modelo de navegação único (cobre TODO o site) ─────────────────────────
-// Usado pela sidebar (desktop) e pelo menu completo (telemóvel) → paridade.
-const GRUPOS: NavGroup[] = [
-  {
-    titulo: "Gestão",
-    itens: [
-      { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-      { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
-      // Uma taxonomia só: cenários simulados, recibos registados, receitas
-      // agregadas. A gestão de recibos era o destino do CTA e do onboarding e
-      // não estava na navegação de lado nenhum (RC-P2-01).
-      { href: "/dashboard/recibos", label: "Recibos registados", short: "Recibos", icon: Invoice },
-      { href: "/dashboard/receitas", label: "Receitas", short: "Receitas", icon: History },
-      // Ninguém põe preço a um produto: põe preço a um catálogo. A
-      // pergunta que só aparece com a lista à frente — qual deles está
-      // mesmo a pagar as contas? — não tinha sítio nenhum onde ser feita.
-      { href: "/dashboard/precos", label: "Os meus preços", short: "Preços", icon: Coin },
-      { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-      // «Os meus casos» é a porta de entrada; «O meu contabilista» é o que
-      // existe DEPOIS de uma proposta aceite. A ordem diz isso.
-      { href: "/dashboard/casos", label: "Os meus casos", short: "Casos", icon: Briefcase },
-      { href: "/dashboard/contabilista", label: "O meu contabilista", short: "Contabilista", icon: User },
-    ],
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O PAINEL ESTAVA `index,follow` E A CANONICALIZAR PARA A HOMEPAGE     │
+ * │                                                                     │
+ * │ Não era uma fuga de dados — o que a pessoa tem cá é local ou está    │
+ * │ atrás de RLS, e um robot autenticado não existe. Era uma superfície  │
+ * │ de indexação incoerente: `/dashboard`, `/dashboard/precos` e         │
+ * │ `/dashboard/cenarios` respondiam com o TÍTULO da homepage e          │
+ * │ declaravam `/` como canonical, o que ensina aos motores de pesquisa  │
+ * │ que estas rotas de trabalho pessoal são duplicados da página de      │
+ * │ entrada. Herdavam-no do layout raiz sem ninguém decidir isso.        │
+ * │                                                                     │
+ * │ Passam a dizer o que são: páginas privadas, `noindex,nofollow`, sem  │
+ * │ canonical, e com título próprio. As páginas PÚBLICAS das mesmas      │
+ * │ ferramentas continuam indexáveis e com canonical próprio — são elas  │
+ * │ a porta, não isto.                                                   │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const metadata: Metadata = {
+  title: {
+    default: "Painel",
+    template: "%s | Recibo Certo",
   },
-  {
-    titulo: "Simuladores",
-    itens: [
-      { href: "/dashboard/recibos-verdes", label: "Recibos verdes", short: "Recibos verdes", icon: Receipt },
-      { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
-      { href: "/dashboard/recibo-vencimento", label: "Recibo de vencimento", short: "Vencimento", icon: Wallet },
-      // Antes de «abrir empresa», e não depois: o negócio começa antes da
-      // empresa, e a forma jurídica é a última decisão. A ordem da lista
-      // diz isso — quem chega aqui a pensar em abrir sociedade passa
-      // primeiro pelo sítio onde descobre se as contas fecham.
-      { href: "/dashboard/negocio", label: "Projeto de negócio", short: "Negócio", icon: ChartProjection },
-      { href: "/dashboard/empresa", label: "Abrir empresa", short: "Empresa", icon: Building },
-      { href: "/dashboard/herancas", label: "Heranças e sucessões", short: "Heranças", icon: Scale },
-      { href: "/dashboard/comparar", label: "Comparar cenários", short: "Comparar", icon: Scale },
-      { href: "/dashboard/regime-simplificado", label: "Regime simplificado", short: "Simplificado", icon: Gauge },
-      { href: "/dashboard/ato-isolado", label: "Ato isolado ou atividade", short: "Ato isolado", icon: Swap },
-    ],
+  // `null` remove o canonical herdado da raiz (que aponta para `/`).
+  alternates: { canonical: null },
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: { index: false, follow: false },
   },
-  {
-    titulo: "Ferramentas",
-    itens: [
-      { href: "/dashboard/auditoria-recibo", label: "Auditoria do recibo", short: "Auditoria", icon: ShieldCheck },
-      { href: "/dashboard/classificar-atividade", label: "Classificar atividade", short: "Atividade", icon: Search },
-      { href: "/dashboard/mapa-contabilistas", label: "Mapa de preços por região", short: "Mapa", icon: MapPin },
-      { href: "/ferramentas/payout-mor", label: "Recibo Merchant of Record", short: "Payout", icon: ShoppingBag, externo: true },
-      { href: "/ferramentas", label: "Todas as ferramentas", short: "Tools", icon: Briefcase, externo: true },
-    ],
-  },
-  {
-    titulo: "Aprender",
-    itens: [
-      { href: "/guias", label: "Guias fiscais", short: "Guias", icon: BookOpen, externo: true },
-      { href: "/quiz-fiscal", label: "Quiz Fiscal", short: "Quiz", icon: Trophy, externo: true },
-    ],
-  },
-  {
-    titulo: "Conta",
-    itens: [
-      { href: "/dashboard/perfil", label: "O meu perfil", short: "Perfil", icon: User },
-      { href: "/dashboard/conta", label: "A minha conta", short: "Conta", icon: ShieldCheck },
-      { href: "/dashboard/upgrade", label: "Plano e subscrição", short: "Plano", icon: Star },
-    ],
-  },
-];
+};
 
-// Itens primários da barra inferior (telemóvel). O 5.º slot é o botão "Menu".
-const PRIMARIOS: NavItem[] = [
-  { href: "/dashboard", label: "Visão geral", short: "Início", icon: LayoutGrid },
-  { href: "/dashboard/cenarios", label: "Os meus cenários", short: "Cenários", icon: Receipt },
-  { href: "/dashboard/prazos", label: "Prazos fiscais", short: "Prazos", icon: Calendar },
-  { href: "/dashboard/simulador", label: "Simulador de IRS", short: "IRS", icon: Calculator },
-];
-
-function AdminLink({ mobile }: { mobile?: boolean }) {
-  const { user } = useAuth();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    if (!user) { setIsAdmin(false); return; }
-    verificarAdmin(user.id)
-      .then(setIsAdmin)
-      .catch((erro) => { console.error("[painel] verificarAdmin falhou", erro); setIsAdmin(false); });
-  }, [user]);
-
-  if (!isAdmin) return null;
-
-  if (mobile) {
-    return (
-      <Link
-        href="/admin"
-        aria-label="Painel de administração"
-        className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
-      >
-        <ShieldCheck size={16} />
-      </Link>
-    );
-  }
-  return null;
-}
-
-function isActive(pathname: string, href: string): boolean {
-  if (!href.startsWith("/dashboard")) return false;
-  return href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-}
-
-/** Item de navegação (linha) — partilhado pela sidebar e pelo menu móvel. */
-function NavLink({
-  item,
-  active,
-  onNavigate,
-  variante = "menu",
-}: {
-  item: NavItem;
-  active: boolean;
-  onNavigate?: () => void;
-  variante?: "menu" | "recurso";
-}) {
-  const Icon = item.icon;
-  return (
-    <Link
-      href={item.href}
-      onClick={onNavigate}
-      aria-current={active ? "page" : undefined}
-      className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-150 ${
-        active
-          ? "bg-brand font-semibold text-white shadow-sm"
-          : variante === "recurso"
-            ? "text-stone-400 hover:bg-stone-50 hover:text-stone-700 dark:hover:bg-stone-800/60"
-            : "text-stone-500 hover:bg-stone-50 hover:text-stone-800 dark:hover:bg-stone-800/60"
-      }`}
-    >
-      <Icon size={18} className="flex-shrink-0" />
-      <span className="flex-1 truncate">{item.label}</span>
-      {item.externo && !active && <ArrowLeft size={13} className="flex-shrink-0 -rotate-[135deg] text-stone-300" aria-hidden />}
-    </Link>
-  );
-}
-
+/**
+ * O layout do painel é servidor. Tudo o que precisa de estado — rota ativa,
+ * grupos recolhíveis, menu do telemóvel, sessão — vive na ilha cliente.
+ */
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const pathname = usePathname();
-  const [menuAberto, setMenuAberto] = useState(false);
-  const { user, sair } = useAuth();
-  const [avatarUrl, setAvatarUrl] = useState("");
-
-  useEffect(() => {
-    if (!user) { setAvatarUrl(""); return; }
-    // Mostra já a foto do OAuth (Google/etc.), se existir, e depois prefere a
-    // foto configurada no perfil quando ela existir.
-    const meta = (user.user_metadata?.avatar_url || user.user_metadata?.picture || "") as string;
-    if (meta) setAvatarUrl(meta);
-    obterPerfil(user.id)
-      .then((p) => { if (p.avatarUrl) setAvatarUrl(p.avatarUrl); })
-      .catch((erro) => console.error("[painel] obterPerfil falhou", erro));
-  }, [user]);
-
-  // Fecha o menu ao mudar de rota.
-  useEffect(() => {
-    setMenuAberto(false);
-  }, [pathname]);
-
-  // ── Diálogo modal a sério (RC-P2-04) ───────────────────────────────────
-  // Fechava com Escape e bloqueava o scroll, mas o foco continuava a passear
-  // pelo fundo: quem navega com teclado ou leitor de ecrã saía do menu sem
-  // dar por isso, e ao fechar o foco ficava perdido no topo da página.
-  const painelMenuRef = useRef<HTMLDivElement | null>(null);
-  const focoAnteriorRef = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    if (!menuAberto) return;
-
-    focoAnteriorRef.current = document.activeElement as HTMLElement | null;
-    const painel = painelMenuRef.current;
-
-    const focaveis = () =>
-      Array.from(
-        painel?.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((el) => el.offsetParent !== null);
-
-    // Foco inicial dentro do painel.
-    focaveis()[0]?.focus();
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMenuAberto(false);
-        return;
-      }
-      if (e.key !== "Tab") return;
-      const lista = focaveis();
-      if (lista.length === 0) return;
-      const primeiro = lista[0];
-      const ultimo = lista[lista.length - 1];
-      const ativo = document.activeElement as HTMLElement | null;
-      // Ciclo fechado: o Tab não sai do painel em nenhuma das direções.
-      if (e.shiftKey && (ativo === primeiro || !painel?.contains(ativo))) {
-        e.preventDefault();
-        ultimo.focus();
-      } else if (!e.shiftKey && (ativo === ultimo || !painel?.contains(ativo))) {
-        e.preventDefault();
-        primeiro.focus();
-      }
-    };
-
-    document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-      // Devolve o foco a quem abriu o menu.
-      focoAnteriorRef.current?.focus?.();
-    };
-  }, [menuAberto]);
-
   return (
-      <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[256px_1fr]">
-
-        {/* ─── Sidebar (desktop) ─────────────────────────────────── */}
-        <aside className="sticky top-0 hidden h-screen flex-col border-r border-stone-100 bg-white lg:flex">
-          <div className="flex-shrink-0 border-b border-stone-100 px-6 py-5">
-            <Link href="/" aria-label="Recibo Certo — início">
-              <Logo />
-            </Link>
-          </div>
-
-          <div className="flex-shrink-0 px-3 pt-3">
-            <BuscaTrigger />
-          </div>
-
-          <nav className="flex flex-1 flex-col overflow-y-auto px-3 pt-4 pb-2">
-            {GRUPOS.map((grupo) => (
-              <div key={grupo.titulo} className="mb-3">
-                <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-500 dark:text-stone-400">
-                  {grupo.titulo}
-                </p>
-                <ul className="flex flex-col gap-0.5">
-                  {grupo.itens.map((item) => (
-                    <li key={item.href}>
-                      <NavLink
-                        item={item}
-                        active={isActive(pathname, item.href)}
-                        variante={grupo.titulo === "Gestão" || grupo.titulo === "Conta" ? "menu" : "recurso"}
-                      />
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </nav>
-
-          <div className="flex-shrink-0 space-y-3 border-t border-stone-100 px-3 py-4">
-            <AccountBox />
-            <div className="flex items-center justify-between px-1">
-              <Link
-                href="/"
-                className="flex items-center gap-1.5 rounded-xl px-2.5 py-1.5 text-xs text-stone-400 transition-colors hover:bg-stone-50 hover:text-stone-700"
-              >
-                <ArrowLeft size={12} />
-                Voltar ao site
-              </Link>
-              <SinoNotificacoes />
-              <ThemeToggle />
-            </div>
-          </div>
-        </aside>
-
-        {/* ─── Top bar (mobile) ───────────────────────────────────── */}
-        <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3.5 backdrop-blur-xl lg:hidden">
-          <Link href="/" aria-label="Recibo Certo — início">
-            <Logo small />
-          </Link>
-          <div className="flex items-center gap-2">
-            <BuscaTrigger compacto />
-            <AdminLink mobile />
-            <ThemeToggle />
-            <Link
-              href="/dashboard/perfil"
-              aria-label="Perfil"
-              className="relative flex h-9 w-9 items-center justify-center rounded-xl overflow-hidden bg-brand/10 text-brand transition-colors hover:bg-brand hover:text-white"
-            >
-              {avatarUrl ? (
-                <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="36px" unoptimized />
-              ) : (
-                <User size={16} />
-              )}
-            </Link>
-          </div>
-        </header>
-
-        {/* ─── Conteúdo ─────────────────────────────────────────── */}
-        <main className="min-h-screen p-5 pb-24 sm:p-6 lg:p-10 lg:pb-10">
-          <PerfilProvider><MotionProvider>{children}</MotionProvider></PerfilProvider>
-        </main>
-
-        {/* ─── Bottom nav (mobile): 4 primários + Menu ───────────── */}
-        <nav
-          className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-stone-100 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
-          aria-label="Navegação principal"
-        >
-          {PRIMARIOS.map((item) => {
-            const active = isActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${
-                  active ? "text-brand" : "text-stone-400 hover:text-stone-600"
-                }`}
-              >
-                <span className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${active ? "bg-brand/10" : ""}`}>
-                  <Icon size={19} />
-                </span>
-                {item.short}
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setMenuAberto(true)}
-            aria-haspopup="dialog"
-            aria-expanded={menuAberto}
-            aria-label="Abrir menu completo"
-            className={`flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors ${menuAberto ? "text-brand" : "text-stone-400 hover:text-stone-600"}`}
-          >
-            <span className={`flex h-8 w-8 items-center justify-center rounded-xl transition-colors ${menuAberto ? "bg-brand/10" : ""}`}>
-              <Menu size={19} />
-            </span>
-            Menu
-          </button>
-        </nav>
-
-        {/* ─── Menu completo (mobile) — folha inferior com TODOS os recursos ─── */}
-        {menuAberto && (
-          <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true" aria-label="Menu completo">
-            <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-              onClick={() => setMenuAberto(false)}
-              aria-hidden
-            />
-            <div ref={painelMenuRef} className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-4xl bg-cream shadow-float">
-              <div className="flex shrink-0 items-center justify-between border-b border-stone-100 px-5 py-4">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-light text-brand"><Menu size={16} /></span>
-                  <p className="text-sm font-semibold text-stone-800">Tudo o que tens</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMenuAberto(false)}
-                  aria-label="Fechar menu"
-                  className="flex h-9 w-9 items-center justify-center rounded-xl text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-                >
-                  <Close size={18} />
-                </button>
-              </div>
-
-              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-                {GRUPOS.map((grupo) => (
-                  <div key={grupo.titulo}>
-                    <p className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest text-stone-400">
-                      {grupo.titulo}
-                    </p>
-                    <ul className="flex flex-col gap-0.5">
-                      {grupo.itens.map((item) => (
-                        <li key={item.href}>
-                          <NavLink
-                            item={item}
-                            active={isActive(pathname, item.href)}
-                            onNavigate={() => setMenuAberto(false)}
-                            variante={grupo.titulo === "Gestão" ? "menu" : "recurso"}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-
-                {user && (
-                  <div className="rounded-2xl border border-stone-100 bg-white p-3">
-                    <div className="flex items-center gap-3 mb-2.5">
-                      <div className="relative h-10 w-10 flex-shrink-0">
-                        {avatarUrl ? (
-                          <Image src={avatarUrl} alt="Perfil" fill className="rounded-xl object-cover" sizes="40px" unoptimized />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-dark">
-                            <span className="text-sm font-semibold text-white">{(user.email || "U").charAt(0).toUpperCase()}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-stone-700">{user.email?.split("@")[0] || "Utilizador"}</p>
-                        <p className="truncate text-xs text-stone-400">{user.email}</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => { setMenuAberto(false); sair(); }}
-                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-stone-200 px-3 py-2.5 text-xs font-semibold text-stone-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                    >
-                      <LogOut size={14} />
-                      Terminar sessão
-                    </button>
-                  </div>
-                )}
-
-                <div className="flex items-center justify-between rounded-2xl border border-stone-100 bg-white px-4 py-3">
-                  <Link href="/" onClick={() => setMenuAberto(false)} className="flex items-center gap-1.5 text-xs font-medium text-stone-500">
-                    <ArrowLeft size={13} /> Voltar ao site
-                  </Link>
-                  <ThemeToggle />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+    <>
+      {/* Saltar a navegação é o primeiro atalho de teclado de qualquer
+          página com uma sidebar de nove destinos. */}
+      <a
+        href="#conteudo-painel"
+        className="sr-only text-sm font-semibold text-white focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[70] focus:rounded-xl focus:bg-brand focus:px-4 focus:py-2"
+      >
+        Saltar para o conteúdo
+      </a>
+      <DashboardShellClient>{children}</DashboardShellClient>
+    </>
   );
 }

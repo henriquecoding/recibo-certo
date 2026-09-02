@@ -22,6 +22,26 @@ export const FERRAMENTAS_ATIVAS: ToolDefinition[] = CATALOGO_FERRAMENTAS.filter(
 /** A contagem real (§2.3). Guias e Quiz não entram — não são ferramentas. */
 export const TOTAL_FERRAMENTAS = FERRAMENTAS_ATIVAS.length;
 
+/**
+ * As ferramentas que o PAINEL aloja.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O TIPO PREVIA A SUPERFÍCIE E O CONSUMO IGNORAVA-A                    │
+ * │                                                                     │
+ * │ `ToolSurface` inclui `"dashboard"` desde sempre. Mas o hub do painel │
+ * │ chamava `agruparPorObjetivo()` sem lista, e o valor por omissão      │
+ * │ dessa função é `FERRAMENTAS_ATIVAS` — a superfície `hub`, que é a    │
+ * │ PÚBLICA. Ou seja: o painel mostrava as ferramentas públicas e a sua  │
+ * │ própria superfície nunca era lida.                                   │
+ * │                                                                     │
+ * │ Isto é uma falha de contrato, não de apresentação: o tipo prometia   │
+ * │ uma fonte única e o consumo criava uma segunda regra implícita.      │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const FERRAMENTAS_DO_PAINEL: ToolDefinition[] = CATALOGO_FERRAMENTAS.filter(
+  (f) => f.surfaces.includes("dashboard"),
+);
+
 export const porId = (id: string): ToolDefinition | undefined =>
   CATALOGO_FERRAMENTAS.find((f) => f.id === id);
 

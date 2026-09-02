@@ -27,6 +27,7 @@ import { migrarNegocioV1ParaV2 } from "@/lib/negocio/migracoes/v1-v2";
 import type { ContextoNegocio } from "@/lib/negocio/tipos";
 import { chaveAtiva } from "./cofre";
 import { gravarChave, lerChave, removerChave } from "./persistencia";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 const CHAVE = () => chaveAtiva("negocio");
 
@@ -106,10 +107,12 @@ export function gravarRascunhoNegocio(contexto: ContextoNegocio): void {
     CHAVE(),
     JSON.stringify({ versao: ENVELOPE_NEGOCIO_VERSAO, contexto } satisfies EnvelopeNegocio),
   );
+  anunciarMudanca("negocio");
 }
 
 export function limparRascunhoNegocio(): void {
   removerChave(CHAVE());
+  anunciarMudanca("negocio");
 }
 
 /** Há trabalho por retomar? Peek não-destrutivo, para o convite de retoma. */

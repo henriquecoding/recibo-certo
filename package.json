@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.154.0",
+  "version": "2.155.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -13,6 +13,7 @@
     "busca:indice:check": "node scripts/gen-busca-indice.mjs --check",
     "bussola:e2e": "node scripts/verificar-bussola.mjs",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
+    "cenarios:rls": "bash scripts/testar-cenarios.sh",
     "cobertura:check": "vitest run src/lib/__tests__/negocio-descoberta-cobertura.test.ts --reporter=verbose",
     "concelhos:check": "node scripts/gen-concelhos.mjs --check",
     "concelhos:gen": "node scripts/gen-concelhos.mjs",
@@ -104,8 +105,8 @@
     "test:watch": "vitest",
     "vencimento:e2e": "node scripts/verificar-vencimento.mjs",
     "versao:check": "node scripts/check-versao.mjs",
-    "visivel:e2e": "node scripts/verificar-visivel.mjs",
-    "versao:fix": "node scripts/check-versao.mjs --fix"
+    "versao:fix": "node scripts/check-versao.mjs --fix",
+    "visivel:e2e": "node scripts/verificar-visivel.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

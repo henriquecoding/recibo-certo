@@ -15,6 +15,7 @@
 
 import { lerChave, gravarChave, removerChave } from "./persistencia";
 import { chaveAtiva } from "./cofre";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 const CHAVE = () => chaveAtiva("precos-guardados");
 
@@ -41,6 +42,24 @@ export interface PrecoGuardado<T = unknown> {
   contexto: T;
   /** Os campos que tinham sido respondidos. */
   respondidos: string[];
+  /**
+   * O ano fiscal com que ESTE resultado foi calculado.
+   *
+   * ┌───────────────────────────────────────────────────────────────┐
+   * │ RECALCULAR PARA LER NÃO É O MESMO QUE SUBSTITUIR (ADR-07)      │
+   * │                                                               │
+   * │ A lista recalcula os preços guardados com as regras de hoje,   │
+   * │ e isso é útil: é o que permite comparar. O que não podia       │
+   * │ acontecer — e acontecia — era esse número aparecer sem dizer   │
+   * │ que já não é o mesmo com que a decisão foi tomada. Um preço    │
+   * │ de 2026 lido com as regras de 2027 é outro preço; sem o ano    │
+   * │ guardado, ninguém consegue notar a diferença.                  │
+   * │                                                               │
+   * │ Opcional porque os itens gravados antes disto não o têm — e    │
+   * │ um item antigo continua a ser um item, não um erro.            │
+   * └───────────────────────────────────────────────────────────────┘
+   */
+  anoFiscal?: number;
 }
 
 interface Envelope<T> {
@@ -70,6 +89,7 @@ export function guardarPreco<T>(item: PrecoGuardado<T>): PrecoGuardado<T>[] {
   const semEste = atuais.filter((i) => i.id !== item.id);
   const novos = [item, ...semEste].slice(0, MAXIMO_GUARDADOS);
   gravarChave(CHAVE(), JSON.stringify({ versao: 1, itens: novos } satisfies Envelope<T>));
+  anunciarMudanca("precos-guardados");
   return novos;
 }
 
@@ -77,8 +97,10 @@ export function apagarPrecoGuardado<T>(id: string): PrecoGuardado<T>[] {
   const novos = lerPrecosGuardados<T>().filter((i) => i.id !== id);
   if (novos.length === 0) {
     removerChave(CHAVE());
+    anunciarMudanca("precos-guardados");
     return [];
   }
   gravarChave(CHAVE(), JSON.stringify({ versao: 1, itens: novos } satisfies Envelope<T>));
+  anunciarMudanca("precos-guardados");
   return novos;
 }

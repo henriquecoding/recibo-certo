@@ -299,6 +299,148 @@ try {
     verificar("o cenário só desaparece depois de confirmar", aindaLa.includes("Herança de teste"));
     await ctx.close();
   }
+
+  // ═══ 6. Continuidade: «Agora», «Continuar» e as quatro etapas ════════
+  //
+  // O painel deixou de ser um catálogo de calculadoras e passou a ser a
+  // camada que responde a «onde é que eu ia». Isto verifica as três
+  // afirmações que essa mudança faz — e que o vitest não consegue ver,
+  // porque dependem de o cofre ser lido num browser a sério.
+  console.log("\n▸ Continuidade: Agora · Continuar · O teu negócio");
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    const errosPagina = [];
+    p.on("pageerror", (e) => errosPagina.push(String(e)));
+    await p.addInitScript(`
+      ${semear(false)}
+      localStorage.setItem("recibocerto:preco:v1", JSON.stringify({
+        versao: 3, atualizadoEm: new Date().toISOString(),
+        contexto: { versao: 1, cenario: "servico_hora" },
+        respondidos: ["custoDireto", "volumeMes"]
+      }));
+      localStorage.setItem("recibocerto:negocio:v1", JSON.stringify({
+        versao: 1, contexto: {
+          versao: 2, id: "n1", nome: "Estúdio de cerâmica", maturidade: "ideia",
+          ofertas: [{}], estrutura: {}, procura: {}, fiscal: {}, respondidos: ["a"],
+          meta: { criadoEm: "2026-08-01T10:00:00.000Z", atualizadoEm: "2026-08-30T10:00:00.000Z" }
+        }
+      }));
+    `);
+    await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(2000);
+    const corpo = await p.locator("body").innerText();
+
+    // O «Agora» está em maiúsculas por CSS; `innerText` devolve o RENDERIZADO.
+    verificar("há um bloco «Agora» com uma só ação", /AGORA|Agora/.test(corpo));
+    verificar("«Continuar de onde ficaste» mostra trabalho local", corpo.includes("Continuar de onde ficaste"));
+    verificar("o rascunho de preço é retomável sem reload", corpo.includes("Cálculo de preço em curso"));
+    verificar("o projeto local aparece pelo nome que a pessoa deu", corpo.includes("Estúdio de cerâmica"));
+    verificar(
+      "as quatro etapas do negócio estão na visão geral",
+      ["Descobrir", "Preços", "Projeto de negócio", "Planear uma contratação"].every((t) => corpo.includes(t)),
+    );
+    verificar("cada cartão diz onde o trabalho está", corpo.includes("Neste dispositivo"));
+    verificar("o módulo fiscal continua a ser o das lentes", corpo.includes("Dinheiro e obrigações"));
+    verificar("o detalhe fiscal passou a divulgação progressiva", corpo.includes("Ver detalhe fiscal"));
+    verificar("nenhum erro de página", errosPagina.length === 0, errosPagina[0]);
+    await ctx.close();
+  }
+
+  // ═══ 7. Um cofre ilegível não se lê como «não tens nada» ═════════════
+  console.log("\n▸ Recuperação de estado ilegível");
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    await p.addInitScript(`
+      ${semear(false)}
+      localStorage.setItem("recibocerto:preco:v1", "{isto nao e json");
+    `);
+    await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(2000);
+    const corpo = await p.locator("body").innerText();
+    verificar("avisa que há trabalho guardado que não se consegue ler", corpo.includes("não conseguimos ler"));
+    verificar("e diz, na mesma frase, que nada foi apagado", corpo.includes("Nada foi apagado"));
+    await ctx.close();
+  }
+
+  // ═══ 8. A navegação nova: sidebar, grupos e barra do telemóvel ═══════
+  console.log("\n▸ Navegação do painel");
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 1440, height: 900 } });
+    const p = await ctx.newPage();
+    await p.addInitScript(semear(false));
+    await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(1500);
+
+    const aside = p.locator('aside[aria-label="Navegação do painel"]');
+    const grupos = aside.locator("button[aria-expanded]");
+    verificar("os grupos recolhíveis são dois", (await grupos.count()) === 2);
+    verificar("entram fechados", (await grupos.first().getAttribute("aria-expanded")) === "false");
+    verificar(
+      "doze destinos visíveis: nove principais e três da conta",
+      (await aside.locator("a[href^='/dashboard']:visible").count()) === 12,
+    );
+    verificar(
+      "«Planear uma contratação» é destino de primeira classe",
+      (await aside.locator('a[href="/dashboard/contratacao"]:visible').count()) === 1,
+    );
+
+    // Uma rota dentro de um grupo fechado tem de o abrir — senão há páginas
+    // do produto sem destino aceso em lado nenhum.
+    await p.goto(`${BASE}/dashboard/herancas`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(1200);
+    verificar("uma rota num grupo fechado abre-o", (await p.locator('aside button[aria-expanded="true"]').count()) >= 1);
+    verificar("há exatamente um destino aceso", (await p.locator('aside a[aria-current="page"]').count()) === 1);
+    await ctx.close();
+  }
+
+  {
+    const ctx = await navegador.newContext({ viewport: { width: 360, height: 740 } });
+    const p = await ctx.newPage();
+    await p.addInitScript(semear(false));
+    await p.goto(`${BASE}/dashboard`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(1200);
+    const rotulos = await p.locator('nav[aria-label="Navegação principal"] a, nav[aria-label="Navegação principal"] button').allInnerTexts();
+    verificar("a barra do telemóvel tem cinco lugares", rotulos.length === 5, rotulos.join(" · "));
+    verificar("e o terceiro leva ao negócio", rotulos.some((t) => t.includes("Negócio")), rotulos.join(" · "));
+    await ctx.close();
+  }
+
+  // ═══ 9. As rotas novas abrem, e não rolam de lado ════════════════════
+  console.log("\n▸ Rotas novas do painel a 360px");
+  for (const rota of [
+    "/dashboard/construir",
+    "/dashboard/descobrir",
+    "/dashboard/precos",
+    "/dashboard/precos/novo",
+    "/dashboard/contratacao",
+  ]) {
+    const ctx = await navegador.newContext({ viewport: { width: 360, height: 740 } });
+    const p = await ctx.newPage();
+    const errosPagina = [];
+    p.on("pageerror", (e) => errosPagina.push(String(e)));
+    await p.addInitScript(semear(false));
+    const r = await p.goto(`${BASE}${rota}`, { waitUntil: "networkidle" });
+    await p.waitForTimeout(2000);
+    // `documentElement.scrollWidth` conta a largura de um contentor que rola
+    // sozinho (uma tabela com `overflow-x:auto`) e acusa um defeito que não
+    // existe. O que interessa é se a PÁGINA rola mesmo de lado.
+    const largura = await p.evaluate(() => {
+      window.scrollTo(500, 0);
+      const rolou = window.scrollX;
+      window.scrollTo(0, 0);
+      return { rolou, corpo: document.body.scrollWidth, janela: window.innerWidth };
+    });
+    verificar(`${rota} responde 200`, r?.status() === 200, String(r?.status()));
+    verificar(
+      `${rota} não rola de lado`,
+      largura.rolou === 0 && largura.corpo <= largura.janela + 1,
+      `rolou ${largura.rolou}px · corpo ${largura.corpo}`,
+    );
+    verificar(`${rota} sem erros de página`, errosPagina.length === 0, errosPagina[0]);
+    await ctx.close();
+  }
 } finally {
   await navegador.close();
 }

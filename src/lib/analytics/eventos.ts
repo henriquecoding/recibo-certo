@@ -56,6 +56,9 @@ export type Rota = "fiz" | "contabilista" | "sem_parceiro" | "plus";
  * em inglês é deliberado: são chaves de um sistema de medição partilhado
  * com ferramentas externas, não copy de interface (essa é toda em pt-PT).
  */
+import type { EstadoTrabalho, TipoTrabalho } from "@/lib/dashboard/work-items/tipos";
+import type { MotivoAgora } from "@/lib/dashboard/work-items/agregar";
+
 export type NomeEvento =
   | "guide_view"
   | "simulator_start"
@@ -126,7 +129,34 @@ export type NomeEvento =
   | "hiring_export_generated"
   | "hiring_support_opened"
   | "hiring_share_created"
-  | "hiring_share_revoked";
+  | "hiring_share_revoked"
+  // ── Painel: continuidade (§16.1 do relatório do dashboard) ──────────
+  // O painel não media nada do que este trabalho existe para melhorar:
+  // se a retoma é visível, se é útil, e se as etapas se ligam umas às
+  // outras. Sem estes quatro, simplificar a navegação seria adivinhar.
+  //
+  // Nenhum deles transporta título, id, montante, atividade ou concelho.
+  // Transportam a ETAPA, o ESTADO e o MOTIVO — enums fechados, definidos
+  // no contrato de trabalho e na regra do «Agora».
+  | "dashboard_view"
+  | "dashboard_workspace_opened"
+  | "dashboard_continue_clicked"
+  | "dashboard_next_action_clicked";
+
+export type PercursoSalario = "trabalhador" | "empregador";
+export type ObjetivoContratacao =
+  | "employer_budget"
+  | "target_net"
+  | "known_offer"
+  | "required_capacity";
+export type CertezaContratacao = "exact" | "range";
+/** Nível de confiança da decisão patronal. Nunca acompanha valores pessoais. */
+export type ProntidaoContratacao =
+  | "incomplete"
+  | "estimated"
+  | "personalized"
+  | "validated";
+export type ProjecaoContratacao = "personalized_projection" | "reference_scenarios";
 
 /** Propriedades de cada evento. O `Payload` de um evento é o seu contrato. */
 export interface PayloadsEvento {
@@ -396,6 +426,32 @@ export interface PayloadsEvento {
   hiring_support_opened: ContextoContratacao & { support_id: string };
   hiring_share_created: ContextoContratacao;
   hiring_share_revoked: ContextoContratacao;
+
+  // ── Painel: continuidade ────────────────────────────────────────────
+  dashboard_view: {
+    /** Havia trabalho por retomar quando o painel abriu. */
+    has_work: boolean;
+    /** Quantos itens — a contagem, nunca quais. */
+    work_items: number;
+    /** A lente fiscal ativa. É um perfil, não uma etapa. */
+    fiscal_lens: "recibos" | "vencimento" | "empresa";
+  };
+  dashboard_workspace_opened: {
+    workspace: TipoTrabalho;
+    entrypoint: "overview" | "sidebar" | "hub_movel";
+    state: EstadoTrabalho | "vazio";
+  };
+  dashboard_continue_clicked: {
+    workspace: TipoTrabalho;
+    state: EstadoTrabalho;
+    source: "dispositivo" | "conta";
+    /** A posição na lista. Diz se «Continuar» está no sítio certo. */
+    position: number;
+  };
+  dashboard_next_action_clicked: {
+    /** Porque foi ESTA a ação escolhida. Enum da regra de prioridade. */
+    reason: MotivoAgora;
+  };
 }
 
 /** Telemóvel, tablet ou secretária — pela largura, não pelo user-agent. */
@@ -414,21 +470,6 @@ interface ContextoTrocaFoco {
   prepared: boolean;
   latency_bucket: string;
 }
-
-export type PercursoSalario = "trabalhador" | "empregador";
-export type ObjetivoContratacao =
-  | "employer_budget"
-  | "target_net"
-  | "known_offer"
-  | "required_capacity";
-export type CertezaContratacao = "exact" | "range";
-/** Nível de confiança da decisão patronal. Nunca acompanha valores pessoais. */
-export type ProntidaoContratacao =
-  | "incomplete"
-  | "estimated"
-  | "personalized"
-  | "validated";
-export type ProjecaoContratacao = "personalized_projection" | "reference_scenarios";
 
 export interface ContextoContratacao {
   device: ClasseViewport;
@@ -473,6 +514,26 @@ export interface DefinicaoEvento {
 }
 
 export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
+  dashboard_view: {
+    disparo: "Visão geral do painel utilizável (cofre lido), com consentimento.",
+    serve: "Denominador da continuidade: quantas sessões chegam com trabalho por retomar.",
+    origem: "cliente",
+  },
+  dashboard_workspace_opened: {
+    disparo: "Abertura de Descobrir, Preços, Projeto ou Contratação a partir do painel.",
+    serve: "Que destinos merecem estar sempre visíveis, e por que porta se entra neles.",
+    origem: "cliente",
+  },
+  dashboard_continue_clicked: {
+    disparo: "Clique numa retoma da secção «Continuar de onde ficaste».",
+    serve: "Se a retoma é visível e útil — a métrica que justifica esta reestruturação.",
+    origem: "cliente",
+  },
+  dashboard_next_action_clicked: {
+    disparo: "Clique na ação única do bloco «Agora».",
+    serve: "Se a regra de prioridade escolhe a ação que a pessoa queria mesmo.",
+    origem: "cliente",
+  },
   guide_view: {
     disparo: "Guia visto, com consentimento de medição concedido.",
     serve: "Que conteúdo traz decisões, e não apenas visitas.",

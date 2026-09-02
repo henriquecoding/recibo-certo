@@ -614,9 +614,13 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     highlight: "Dados oficiais, sem score mágico",
     status: "beta",
     cta: "Descobrir o que testar",
+    // A promessa estava escrita e o código não a cumpria: o tipo previa a
+    // superfície `dashboard` e a ferramenta não a declarava, por isso o
+    // painel mostrava-a — quando a mostrava — pela lista PÚBLICA do hub.
+    dashboardHref: "/dashboard/descobrir",
     relatedToolIds: ["calcular-preco", "recibos-verdes", "simulador-empresa", "comparar-regimes"],
     relatedGuideSlugs: ["abrir-atividade", "abrir-empresa", "regime-simplificado"],
-    surfaces: ["hub", "homepage", "search", "sitemap"],
+    surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 90,
     searchGroup: "Decisores",
     dominio: "descoberta",
@@ -656,9 +660,12 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     highlight: "Novo motor de preço",
     status: "novo",
     cta: "Calcular o meu preço",
+    // O motor é o mesmo das duas portas (ADR-05): a pública, indexável, e
+    // esta, dentro do painel, onde o rascunho e os guardados já vivem.
+    dashboardHref: "/dashboard/precos/novo",
     relatedToolIds: ["recibos-verdes", "regime-simplificado", "seguranca-social", "simulador-empresa"],
     relatedGuideSlugs: ["iva-recibos-verdes", "regime-simplificado", "despesas-dedutiveis"],
-    surfaces: ["hub", "homepage", "search", "sitemap"],
+    surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 92,
     searchGroup: "Ferramentas",
     dominio: "preco",

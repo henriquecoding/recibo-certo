@@ -11,7 +11,12 @@ function contarSinos(caminho: string): number {
 
 describe("SinoNotificacoes — uma subscrição Realtime por layout", () => {
   it("o dashboard monta exatamente um sino", () => {
-    expect(contarSinos("app/dashboard/layout.tsx")).toBe(1);
+    // O sino vive no rodapé da sidebar desde que o `layout.tsx` do painel
+    // se dividiu em shell servidor + ilha cliente. A garantia é a mesma:
+    // UMA subscrição Realtime, e o layout continua a montar a sidebar uma
+    // só vez.
+    expect(contarSinos("components/dashboard/Sidebar.tsx")).toBe(1);
+    expect(contarSinos("app/dashboard/layout.tsx")).toBe(0);
   });
 
   it("o painel do contabilista monta exatamente um sino", () => {

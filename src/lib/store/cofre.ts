@@ -98,6 +98,10 @@ export const FORA_DO_COFRE: Record<string, string> = {
   "recibocerto:abrir-cookies": "Sinal interno para reabrir o painel de cookies.",
   "recibocerto:atribuicao": "Atribuição de campanha, deliberadamente do aparelho e sem identidade.",
   "recibocerto:export-usos:v1": "Contador de exportações por aparelho, sem conteúdo nenhum.",
+  "recibocerto:painel-grupos-abertos":
+    "Que grupos da sidebar ficam abertos. É geometria do aparelho, como o tema — e não diz o que a pessoa tem lá dentro.",
+  "recibocerto:store-changed":
+    "NÃO é uma chave de armazenamento: é o nome do evento que avisa o painel de que um cofre mudou. Transporta o nome do domínio e mais nada — ver `lib/dashboard/eventos.ts`.",
 };
 
 export type Dominio = keyof typeof DOMINIOS;

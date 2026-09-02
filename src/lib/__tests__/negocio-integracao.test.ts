@@ -282,8 +282,11 @@ describe("negocio:regressao", () => {
   });
 
   it("a página do estúdio no dashboard está na navegação", () => {
-    const layout = ler("src/app/dashboard/layout.tsx");
-    expect(layout).toContain("/dashboard/negocio");
+    // A navegação do painel deixou de viver dentro do `layout.tsx` (que
+    // passou a ser um Server Component com a metadata) e passou a ser um
+    // manifesto de dados puros, lido pela sidebar e pelo telemóvel.
+    const manifesto = ler("src/lib/dashboard/navegacao.ts");
+    expect(manifesto).toContain("/dashboard/negocio");
     expect(() => ler("src/app/dashboard/negocio/page.tsx")).not.toThrow();
   });
 

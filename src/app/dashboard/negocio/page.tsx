@@ -19,7 +19,7 @@ export default async function Page({
 
   return (
     <PaginaFerramenta
-      eyebrow="Simuladores"
+      eyebrow="O teu negócio"
       titulo="Projeto de negócio"
       descricao="O que vais vender, quanto precisa de custar, quantas consegues vender e o que essa operação aguenta pagar. A forma jurídica é a última decisão, não a primeira."
     >
