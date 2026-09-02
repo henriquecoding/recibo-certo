@@ -16,6 +16,14 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.155.1",
+    data: "2026-09-02",
+    titulo: "O separador do browser volta a dizer a marca em todas as páginas do painel",
+    itens: [
+      "Duas páginas do painel — «Os meus preços» e «O meu trabalho» — ganharam nome próprio no separador do browser na versão anterior, e ao ganhá-lo tiraram o nome da marca às páginas por baixo delas: «Calcular um preço» aparecia sozinho, sem o «Recibo Certo» que todas as outras têm. Corrigido.",
+    ],
+  },
+  {
     version: "2.155.0",
     data: "2026-09-02",
     titulo: "O painel deixou de ser uma lista de calculadoras e passou a saber onde ficaste",
