@@ -106,8 +106,7 @@
     "vencimento:e2e": "node scripts/verificar-vencimento.mjs",
     "versao:check": "node scripts/check-versao.mjs",
     "versao:fix": "node scripts/check-versao.mjs --fix",
-    "visivel:e2e": "node scripts/verificar-visivel.mjs",
-    "zona:e2e": "node scripts/verificar-zona-risco.mjs"
+    "visivel:e2e": "node scripts/verificar-visivel.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

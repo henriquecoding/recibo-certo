@@ -9,9 +9,15 @@
 //  já saber que ele existe; e a única menção a salário nas outras leituras
 //  mandava quem tem negócio simular o recibo de vencimento DELE.
 //
+//  E uma segunda vez, em ponto pequeno: a correção inicial tratou três
+//  leituras e esqueceu a raiz — `/`, que desenha o MESMO percurso noutro
+//  ficheiro. O teste percorria a lista que ele próprio escrevia, portanto
+//  não podia apanhar a página que faltava. Agora percorre `ORIGENS_ARCO`,
+//  e exige que as leituras conhecidas sejam exatamente essas.
+//
 //  Estes testes prendem as quatro propriedades que fecham o buraco:
-//   ① o passo aparece nas três leituras de negócio;
-//   ② a moldura vem de UMA tabela, não de copy repetida em três páginas;
+//   ① o passo aparece em TODAS as leituras do arco;
+//   ② a moldura vem de UMA tabela, não de copy repetida em cada página;
 //   ③ o lado patronal tem percurso próprio e passagem explicada;
 //   ④ o guia e a ferramenta da mesma decisão conhecem-se um ao outro.
 //
@@ -32,18 +38,40 @@ import {
   ORIGENS_ARCO,
   PASSO_CONTRATACAO,
   hrefPlaneador,
+  type OrigemArcoContratacao,
 } from "@/lib/foco/arco-contratacao";
 
 const SRC = join(__dirname, "..", "..");
 const read = (...partes: string[]) => readFileSync(join(SRC, ...partes), "utf8");
 
-const PAGINAS = {
+/**
+ * A leitura de cada origem, indexada pela MESMA chave de `ORIGENS_ARCO`.
+ *
+ * ── Porque é que este mapa é `Record` e não um objeto solto ───────────
+ *
+ * A primeira versão listava três páginas à mão e a raiz — `/`, que desenha
+ * o mesmo percurso noutro ficheiro — ficou de fora sem nada reprovar: o
+ * teste percorria as origens que ele próprio conhecia. Tipar o mapa contra
+ * `OrigemArcoContratacao` faz o TypeScript exigir uma entrada por origem,
+ * e o `it` por origem exige o cartão. Uma origem nova sem leitura deixa de
+ * poder passar em silêncio, que foi exatamente o defeito.
+ */
+const PAGINAS: Record<OrigemArcoContratacao, string> = {
+  descobrir: read("components", "descobrir", "HomepageDescobrir.tsx"),
   preco: read("components", "preco", "HomepagePreco.tsx"),
   recibos: read("components", "foco", "recibos", "HomepageRecibos.tsx"),
   empresa: read("components", "foco", "empresa", "HomepageEmpresa.tsx"),
-} as const;
+};
 
-describe("① o passo de contratar está nas três leituras de negócio", () => {
+describe("① o passo de contratar está em TODAS as leituras do arco", () => {
+  it("as origens declaradas e as leituras com cartão são a mesma lista", () => {
+    // A raiz — a leitura «Descobrir» — desenha o percurso 01/02/03 num
+    // ficheiro próprio e foi a que ficou esquecida. Esta asserção existe
+    // para que «faltou uma página» seja uma falha, e não uma descoberta
+    // feita a olhar para o ecrã.
+    expect(Object.keys(PAGINAS).sort()).toEqual([...ORIGENS_ARCO].sort());
+  });
+
   for (const origem of ORIGENS_ARCO) {
     it(`«${origem}» mostra o cartão da quarta etapa`, () => {
       expect(
@@ -55,7 +83,7 @@ describe("① o passo de contratar está nas três leituras de negócio", () => 
   }
 
   it("e o cartão não custa JavaScript a nenhuma delas", () => {
-    // As três rotas têm budget de bundle medido (`homepage:chunks:check`).
+    // As quatro rotas têm budget de bundle medido (`homepage:chunks:check`).
     // Um cartão de percurso é markup: se precisar de cliente, é porque
     // alguém lhe pôs estado que ele não devia ter.
     const cartao = read("components", "foco", "CartaoContratacao.tsx");
@@ -64,12 +92,12 @@ describe("① o passo de contratar está nas três leituras de negócio", () => 
   });
 });
 
-describe("② a moldura vem da tabela, não de três páginas", () => {
+describe("② a moldura vem da tabela, não de cada página", () => {
   it("nenhuma das leituras escreve o destino à mão", () => {
     for (const [origem, fonte] of Object.entries(PAGINAS)) {
       expect(
         fonte.includes(PASSO_CONTRATACAO.ferramenta),
-        `${origem} voltou a escrever o href do planeador — é assim que três ` +
+        `${origem} voltou a escrever o href do planeador — é assim que os ` +
           "percursos começam a discordar",
       ).toBe(false);
     }

@@ -29,6 +29,16 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
     ],
   },
   {
+    version: "2.157.1",
+    data: "2026-09-02",
+    titulo: "A página inicial também mostra o passo de contratar",
+    itens: [
+      "A versão 2.156.0 pôs a contratação como quarta etapa nas leituras do preço, dos recibos verdes e da empresa — e deixou de fora a página inicial, que desenha exatamente o mesmo percurso. Ficou corrigido: quem vê «Descobrir é o princípio da decisão» passa a ver também onde é que o percurso acaba.",
+      "Ali a moldura é outra, e de propósito: contratar não é para quem ainda está a validar uma hipótese. O cartão diz que fica longe, e porque é que aparece à mesma — o custo de um posto de trabalho muda o que a hipótese tem de gerar para valer a pena.",
+      "Também aqui a nota do salário passa a dizer de que lado fala: receber um salário é que é o percurso paralelo.",
+    ],
+  },
+  {
     version: "2.157.0",
     data: "2026-09-02",
     titulo: "A zona de risco passou a apagar mesmo tudo o que dizia apagar",
