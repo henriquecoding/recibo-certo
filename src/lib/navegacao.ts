@@ -276,7 +276,6 @@ export const SECOES: EntradaMenu[] = [
   },
   {
     id: "quiz",
-    topo: true,
     label: "Quiz Fiscal",
     href: "/quiz-fiscal",
     desc: "Testa o que sabes, com a fonte de cada resposta.",
@@ -285,7 +284,6 @@ export const SECOES: EntradaMenu[] = [
   },
   {
     id: "contabilistas",
-    topo: true,
     label: "Contabilistas",
     href: "/contabilistas",
     desc: "O único sítio daqui que acaba com uma pessoa do outro lado.",
@@ -294,7 +292,6 @@ export const SECOES: EntradaMenu[] = [
   },
   {
     id: "planos",
-    topo: true,
     label: "Planos",
     href: "/precos",
     desc: "O que é grátis, o que é Plus e o que a FIZ executa.",

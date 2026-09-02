@@ -10,9 +10,21 @@ import { assessMarketEconomics } from "@/lib/negocio/market/pricing-adapter";
 import { newHypothesis } from "@/lib/negocio/market/hipoteses";
 import { OPPORTUNITY_TEMPLATES } from "@/lib/negocio/market/opportunities";
 import { guardarHipotese, lerHipotese } from "@/lib/store/hipoteses-mercado";
+import { useHandoffDaBusca } from "@/components/busca/useHandoffDaBusca";
+import type { TipoEntidade } from "@/lib/busca/esquema";
 import { ArrowLeft, Calculator, Receipt, Sparkle } from "@/components/ui/Icons";
 
 type Vista = "liquido" | "preco";
+
+/**
+ * O que esta página aceita da pesquisa — e tem de coincidir com o que a
+ * ferramenta declara em `catalogo.ts` (`aceitaEntidades`). O teste
+ * `busca:handoff` reprova se os dois deixarem de concordar: uma promessa
+ * do catálogo sem consumidor do lado de cá é um preenchimento que nunca
+ * acontece.
+ */
+const DESTINO_BUSCA = "ferramenta:recibos-verdes";
+const ACEITA_BUSCA: TipoEntidade[] = ["valor", "periodicidade"];
 
 type PrecoTransferido = BaseFiscalDoPreco & { nome?: string };
 
@@ -29,6 +41,32 @@ export default function RecibosVerdesStudio() {
     searchParams.get("modo") === "preco" ? "preco" : "liquido",
   );
   const [transferido, setTransferido] = useState<PrecoTransferido | null>(null);
+
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ O CONTEXTO QUE VEM DA PESQUISA — E QUE NUNCA ESTEVE NO ENDEREÇO    │
+   * │                                                                   │
+   * │ Quem escreveu «quanto me fica de 1 200 € por mês» na barra do      │
+   * │ cabeçalho já disse o valor. Voltar a pedi-lo aqui é fazer a mesma  │
+   * │ pergunta duas vezes — e é o que transforma um «caminho preparado»  │
+   * │ numa promessa que o destino não cumpre.                            │
+   * │                                                                   │
+   * │ O valor chega por `sessionStorage`, com dez minutos de validade e  │
+   * │ consumo único; no endereço viaja um identificador opaco e mais     │
+   * │ nada. Ver o quadro em `lib/busca/handoff.ts` para as quatro razões │
+   * │ por que uma query string estava fora de questão.                   │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  const contexto = useHandoffDaBusca(DESTINO_BUSCA, ACEITA_BUSCA);
+  const daBusca = useMemo(() => {
+    const valor = typeof contexto?.valor === "number" ? contexto.valor : null;
+    if (!valor || valor <= 0) return null;
+    // Sem periodicidade não se assume nenhuma: a pesquisa só transporta o
+    // valor depois de a pessoa ter respondido «por mês» ou «por ano».
+    if (contexto?.periodicidade === "ano") return { mensal: undefined, anual: valor };
+    if (contexto?.periodicidade === "mes") return { mensal: valor, anual: undefined };
+    return null;
+  }, [contexto]);
 
   // O `?h=` só é aceite quando corresponde a uma hipótese CURADA. Um id
   // arbitrário no URL não pode criar entradas no cofre de quem abre o
@@ -178,11 +216,19 @@ export default function RecibosVerdesStudio() {
               </div>
             </section>
           ) : null}
+          {/* O preço transferido do motor de formação de preço manda sobre
+              o contexto da pesquisa: é mais recente e foi calculado aqui. */}
           <SimuladorIntegrado
-            key={transferido ? `${transferido.mensal}:${transferido.anual}` : "sem-preco"}
+            key={
+              transferido
+                ? `${transferido.mensal}:${transferido.anual}`
+                : daBusca
+                  ? `busca:${daBusca.mensal ?? ""}:${daBusca.anual ?? ""}`
+                  : "sem-preco"
+            }
             vista="rv"
-            valorInicial={transferido?.mensal}
-            faturacaoAnualInicial={transferido?.anual}
+            valorInicial={transferido?.mensal ?? daBusca?.mensal}
+            faturacaoAnualInicial={transferido?.anual ?? daBusca?.anual}
           />
         </div>
       )}

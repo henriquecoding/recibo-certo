@@ -738,6 +738,24 @@ html:not(.dark) .animate-pulse .bg-stone-100 {
 }
 
 /* ════════════════════════════════════════════════════════════════════
+   `hidden` ESCONDE — MESMO COM UMA CLASSE DE `display` NO MESMO ELEMENTO
+
+   O preflight do Tailwind dá `display:none` ao atributo `[hidden]`. É um
+   selector de atributo — especificidade (0,1,0) — exactamente a mesma de
+   `.flex`, `.grid` ou `.block`. Empate resolvido pela ordem, e as utilities
+   vêm depois: um `<div hidden className="flex …">` fica com `hidden === true`
+   no DOM e CONTINUA desenhado no ecrã.
+
+   Aconteceu na lingueta do cabeçalho, e a única forma de dar por isso era
+   medir `getClientRects()` — olhar para a propriedade `hidden` dizia que
+   estava escondida. Neste projecto `hidden` nunca significa outra coisa
+   senão «não mostres isto», por isso a regra fecha o empate de vez.
+   ════════════════════════════════════════════════════════════════════ */
+[hidden] {
+  display: none !important;
+}
+
+/* ════════════════════════════════════════════════════════════════════
    DARK MODE CINEMATOGRÁFICO
    Camada de override ativada pela classe .dark no <html>. Remapeia apenas
    os neutros (não toca em text-white, bg-brand ou cores inline da marca),
@@ -1181,7 +1199,8 @@ html:not(.dark) .animate-pulse .bg-stone-100 {
   .dark [class~="focus:border-brand"]:focus:not([class*="dark:focus:border-"]),
   .dark [class~="focus:border-brand-dark"]:focus:not([class*="dark:focus:border-"]),
   .dark [class~="focus-within:border-brand"]:focus-within:not([class*="dark:focus-within:border-"]),
-  .dark [class*="hover:border-brand/"]:hover:not([class*="dark:hover:border-"]) {
+  .dark [class*="hover:border-brand/"]:hover:not([class*="dark:hover:border-"]),
+  .dark .group:hover [class*="group-hover:border-brand/"]:not([class*="dark:group-hover:border-"]) {
     border-color: #347460;
   }
   .dark [class~="hover:border-stone-200"]:hover:not([class*="dark:hover:border-"]) {

@@ -38,7 +38,8 @@ import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 import { TETO_DIALOGO, TETO_POPOVER } from "@/lib/busca/pontuar";
 import { CHROME_MOVEL, CHROME_SECRETARIA, focarPrimeiroResultado, useVoltarAoCampo } from "./motor";
 import { useFecharAoSair } from "./ancoragem";
-import { ChipsIntencao, CorpoResultados, EstadoAcessivel, FormularioBusca, RodapeBusca } from "./partes";
+import { CorpoResultados, EstadoAcessivel, FormularioBusca, RodapeBusca } from "./partes";
+import { NotaPrivacidade } from "./moldura";
 import { useControladorBusca } from "./useControladorBusca";
 
 /**
@@ -255,8 +256,26 @@ function PainelPesquisaInterno({
         data-variante={variante}
         role="search"
         aria-label="Pesquisa no Recibo Certo"
-        className={`flex flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5 ${
-          movel ? "rc-dock-painel-movel" : "rc-dock-painel"
+        /**
+         * ┌───────────────────────────────────────────────────────────────┐
+         * │ NA SECRETÁRIA JÁ NÃO HÁ CARTÃO — HÁ O CARTÃO                   │
+         * │                                                               │
+         * │ A variante de secretária vive DENTRO do cartão do cabeçalho e  │
+         * │ cresce em fluxo: sem cantos próprios, sem contorno, sem sombra │
+         * │ e sem anel. Tê-los era desenhar um segundo cartão a nascer de  │
+         * │ dentro do primeiro — e bastavam dois píxeis de desalinhamento  │
+         * │ para se ver em qualquer captura de ecrã.                        │
+         * │                                                               │
+         * │ A do telemóvel continua a ser uma superfície própria: ali ela  │
+         * │ nasce de uma barra encostada ao fundo do ecrã e cresce para    │
+         * │ cima, sobre a página, e precisa de uma aresta que a separe do  │
+         * │ que está por baixo.                                            │
+         * └───────────────────────────────────────────────────────────────┘
+         */
+        className={`flex flex-col ${
+          movel
+            ? "rc-dock-painel-movel overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-float ring-1 ring-black/5 dark:border-stone-700 dark:bg-stone-900 dark:ring-white/5"
+            : "max-h-[min(42rem,calc(100dvh-var(--rc-header-alto)-1rem))]"
         }`}
       >
         {/**
@@ -272,11 +291,25 @@ function PainelPesquisaInterno({
          * │ escreve.                                                       │
          * └───────────────────────────────────────────────────────────────┘
          */}
-        <div
-          className={`shrink-0 border-stone-100 dark:border-stone-800 ${
-            movel ? "order-3 border-t" : "border-b"
-          }`}
-        >
+        <div className={`shrink-0 ${movel ? "order-3" : ""}`}>
+          {/**
+           * ┌───────────────────────────────────────────────────────────┐
+           * │ «ENTRADA · 01» — E PORQUE A ETAPA TEM NÚMERO               │
+           * │                                                           │
+           * │ A superfície tem duas etapas e elas acontecem no mesmo     │
+           * │ ecrã: escrever, e ver o que foi entendido. Sem numeração,  │
+           * │ a segunda lê-se como «mais uma secção» — e a pessoa não    │
+           * │ tem como saber que aquilo é uma CONSEQUÊNCIA do que        │
+           * │ escreveu, e não um bloco que já lá estava.                 │
+           * │                                                           │
+           * │ É a mesma gramática que a página de descoberta já usa      │
+           * │ («ENTRADA · 01 · MOTOR · 02 · SAÍDA · 03»). Uma segunda    │
+           * │ convenção para dizer a mesma coisa seria ensinar duas.     │
+           * └───────────────────────────────────────────────────────────┘
+           */}
+          <p className="texto-micro px-4 pt-2 font-bold uppercase tracking-widest text-stone-400 dark:text-stone-500">
+            Entrada · 01
+          </p>
           <FormularioBusca
             controlador={controlador}
             inputRef={input}
@@ -285,21 +318,24 @@ function PainelPesquisaInterno({
             aoDescer={() => focarPrimeiroResultado(lista.current)}
             compacto
           />
-        </div>
-
-        <div className={`shrink-0 ${movel ? "order-2" : ""}`}>
-          <ChipsIntencao controlador={controlador} inputRef={input} />
+          <div className="px-4 pb-2">
+            <NotaPrivacidade />
+          </div>
         </div>
 
         {/* `min-h-0` é o que permite ao filho rolar dentro de um flex column:
             sem isso o conteúdo empurra a caixa e o painel cresce sem fim. */}
-        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${movel ? "order-1" : ""}`}>
+        <div
+          className={`min-h-0 flex-1 overflow-y-auto overscroll-contain border-stone-100 dark:border-stone-800 ${
+            movel ? "order-1" : "border-t"
+          }`}
+        >
           <CorpoResultados controlador={controlador} aoFechar={aoFechar} listaRef={lista} />
         </div>
 
         {/* O rodapé com as teclas fica em cima no telemóvel, entre os
-            resultados e os filtros: em baixo ficaria entre o campo e o
-            teclado, que é o pior sítio possível para texto de 11 px. */}
+            resultados e o campo: em baixo ficaria entre o campo e o
+            teclado, que é o pior sítio possível para texto pequeno. */}
         <div className={movel ? "order-0" : ""}>
           <RodapeBusca controlador={controlador} />
         </div>

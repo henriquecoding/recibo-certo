@@ -143,6 +143,17 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   **Regra absoluta:** nenhuma copy diz «verificado» ou «validado» sem o estado
   do release por trás. `userReviewedInputs`, `policyApproved` e
   `calculationReproducible` são três coisas diferentes.
+- `src/lib/busca/` — ★ a pesquisa global. `esquema.ts` é o contrato (leve, entra
+  no bundle do cabeçalho); `documentos.ts` DERIVA o índice das fontes canónicas
+  (manifestos, catálogo de ferramentas, `prazos.ts`, `navegacao.ts`) e é pesado —
+  só o build, `/pesquisar` e os testes o podem importar; `pontuar.ts` ordena
+  (texto + sinais de tarefa aplicados DEPOIS do limiar); `reconhecer.ts` lê a
+  frase sem inventar; `plano.ts` decide o que a interface pode AFIRMAR;
+  `handoff.ts` transporta o contexto em `sessionStorage` — nunca no endereço.
+  **Regra absoluta:** a consulta não sai do dispositivo. Verificado por
+  `busca:fronteira` (grafo de imports), `busca:handoff` e a barreira de `pii.ts`.
+  A moldura vive em `src/components/busca/moldura.tsx` e é uma REGIÃO no fluxo:
+  sem véu, sem `aria-modal`, sem portal — fixado em `busca-moldura.test.ts`.
 - `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.
 - `src/lib/routing.ts` — motor de routing comercial (FIZ / contabilista / Plus /
   sem parceiro) e as fronteiras que nunca se atravessam.

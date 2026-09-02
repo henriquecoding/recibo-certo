@@ -84,14 +84,26 @@ export type NomeEvento =
   | "return_7d"
   | "return_30d"
   // ── Cabeçalho e pesquisa global (§15 da auditoria do cabeçalho) ──────
-  // Sete eventos, e nenhum transporta o que foi escrito. Sem eles não há
+  // Onze eventos, e nenhum transporta o que foi escrito. Sem eles não há
   // como provar descoberta, relevância nem tempo até valor — e a auditoria
   // dá 4/10 a esta dimensão precisamente por não existir contrato nenhum.
+  //
+  // Os seis últimos chegaram com a moldura canónica: medem a DECISÃO (que
+  // família, que confiança, que pergunta, que caminho aberto) e não a
+  // leitura. É a diferença entre saber se a pesquisa está a resolver
+  // perguntas e saber o que as pessoas escreveram — e só a primeira é
+  // nossa para saber.
   | "header_search_open"
   | "header_search_submit"
   | "header_search_result_click"
   | "header_search_zero_results"
   | "header_search_abandon"
+  | "header_search_intent_recognized"
+  | "header_search_clarification_shown"
+  | "header_search_clarification_answered"
+  | "header_search_prepared_action_open"
+  | "header_search_alternate_path_click"
+  | "header_search_professional_support_open"
   | "header_nav_click"
   | "header_overlay_conflict"
   | "focus_switch_ack"
@@ -287,6 +299,61 @@ export interface PayloadsEvento {
     had_query: boolean;
     result_count_bucket: string;
     duration_bucket: string;
+  };
+
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ A MOLDURA MEDE-SE PELO QUE DECIDIU, NUNCA PELO QUE LEU             │
+   * │                                                                   │
+   * │ O reconhecimento é a parte do produto que toca no texto mais       │
+   * │ sensível que existe aqui: a frase que a pessoa escreveu. O que     │
+   * │ estes seis eventos transportam é a FORMA da decisão — família,     │
+   * │ intenção, confiança, quantas entidades, que pergunta se fez, que   │
+   * │ opção fechada foi escolhida — e nunca o conteúdo dela.             │
+   * │                                                                   │
+   * │ Não há aqui um campo onde um valor caiba. Não é disciplina: a      │
+   * │ barreira de `pii.ts` recusa qualquer chave com «valor» no nome, e  │
+   * │ o `PlanoBusca` — que é o que estes eventos leem — também não       │
+   * │ transporta valores, só tipos de entidade.                          │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  header_search_intent_recognized: ContextoBusca & {
+    /** A família de decisão reconhecida, ou `nenhum`. Nunca a frase. */
+    domain: string;
+    intent: string;
+    /** `pronto` · `clarificar` · `reconhecido` · `sem_caminho`. */
+    plan_state: string;
+    confidence: string;
+    renderer: string;
+    /** QUANTAS entidades se reconheceram. Nunca quais eram os valores. */
+    entity_count: number;
+  };
+  header_search_clarification_shown: ContextoBusca & {
+    /** O tipo da pergunta — uma união fechada, não a pergunta escrita. */
+    kind: string;
+    domain: string;
+  };
+  header_search_clarification_answered: ContextoBusca & {
+    kind: string;
+    /** O id da opção: `mes`, `ano`, `nao-sei`, … Sempre de um conjunto fechado. */
+    answer: string;
+  };
+  header_search_prepared_action_open: ContextoBusca & {
+    document_id: string;
+    renderer: string;
+    confidence: string;
+    /** Quantos campos de contexto viajaram. Nunca o que estava neles. */
+    handoff_field_count: number;
+  };
+  header_search_alternate_path_click: ContextoBusca & {
+    document_id: string;
+    rank: number;
+  };
+  header_search_professional_support_open: ContextoBusca & {
+    /** `true` quando o apoio era o caminho principal, e não a faixa. */
+    as_primary: boolean;
+    /** Quantos filtros estruturados seguiram. Nunca quais eram. */
+    filter_count: number;
   };
   header_nav_click: { item_id: string; viewport_class: ClasseViewport };
   header_overlay_conflict: {
@@ -559,6 +626,36 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   header_search_abandon: {
     disparo: "Pesquisa fechada sem clique em nenhum resultado.",
     serve: "Abandono com consulta — onde a pesquisa promete e não entrega.",
+    origem: "cliente",
+  },
+  header_search_intent_recognized: {
+    disparo: "Plano compilado para uma consulta estabilizada.",
+    serve: "Que percentagem das perguntas reais produz um caminho — e com que confiança.",
+    origem: "cliente",
+  },
+  header_search_clarification_shown: {
+    disparo: "A moldura fez uma pergunta antes de encaminhar.",
+    serve: "Se as perguntas são raras (como devem ser) e quais é que aparecem.",
+    origem: "cliente",
+  },
+  header_search_clarification_answered: {
+    disparo: "A pessoa respondeu à pergunta da moldura.",
+    serve: "Taxa de resposta por pergunta — uma que ninguém responde é um obstáculo.",
+    origem: "cliente",
+  },
+  header_search_prepared_action_open: {
+    disparo: "Clique na ação principal da moldura.",
+    serve: "A métrica central: quantas perguntas acabam num caminho aberto.",
+    origem: "cliente",
+  },
+  header_search_alternate_path_click: {
+    disparo: "Clique numa alternativa em vez da ação principal.",
+    serve: "Sinal de que a recomendação principal pode estar errada.",
+    origem: "cliente",
+  },
+  header_search_professional_support_open: {
+    disparo: "Clique no apoio profissional a partir da pesquisa.",
+    serve: "Quando é que a resposta certa é uma pessoa, e não uma ferramenta.",
     origem: "cliente",
   },
   header_nav_click: {

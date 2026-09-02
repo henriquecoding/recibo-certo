@@ -29,6 +29,46 @@ export function tokens(valor: string): string[] {
 }
 
 /**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ AS PALAVRAS DE LIGAÇÃO CONTAVAM PARA A COBERTURA — E ISSO CUSTAVA    │
+ * │ RESULTADOS INTEIROS                                                  │
+ * │                                                                     │
+ * │ A pontuação por palavras divide pelo número de palavras da consulta: │
+ * │ quem cobre metade da pergunta vale metade. É a regra que impede      │
+ * │ «abrir empresa» de devolver tudo o que fala de empresa — e é boa.    │
+ * │                                                                     │
+ * │ Mas contava «no», «de» e «para» como se fossem assunto. «Contabilista│
+ * │ em Lisboa para IVA» tem cinco palavras, das quais duas são ligação:  │
+ * │ o diretório de contabilistas acertava numa das cinco, ficava com 20% │
+ * │ de cobertura, caía abaixo do limiar e a pesquisa respondia «sem      │
+ * │ resultados» a uma pergunta que tem uma resposta óbvia. Quanto mais   │
+ * │ natural a frase, pior o resultado — exactamente ao contrário do que  │
+ * │ uma pesquisa em linguagem natural tem de fazer.                      │
+ * │                                                                     │
+ * │ A lista é curta e fechada de propósito: só artigos, preposições e    │
+ * │ contracções. Nenhuma palavra que possa ser assunto («conta» não está │
+ * │ aqui; «no» está). E só se aplica à CONSULTA — o texto do documento   │
+ * │ continua inteiro, para uma frase exacta continuar a valer o que vale.│
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+const PALAVRAS_DE_LIGACAO = new Set([
+  "a", "ao", "aos", "as", "com", "da", "das", "de", "do", "dos", "e", "em",
+  "na", "nas", "no", "nos", "o", "os", "ou", "para", "por", "um", "uma", "uns", "umas",
+]);
+
+/**
+ * Os tokens de uma CONSULTA — sem as palavras de ligação.
+ *
+ * Se a consulta for só ligações («o que»), devolve-se a lista completa: é
+ * melhor pontuar por elas do que não pontuar de todo.
+ */
+export function tokensDeConsulta(valor: string): string[] {
+  const todos = tokens(valor);
+  const uteis = todos.filter((t) => !PALAVRAS_DE_LIGACAO.has(t));
+  return uteis.length > 0 ? uteis : todos;
+}
+
+/**
  * `true` quando `a` e `b` estão a UMA edição de distância (ou são iguais).
  *
  * ┌─────────────────────────────────────────────────────────────────────┐

@@ -30,3 +30,35 @@ export const ESPECIALIDADES = [
 ] as const;
 
 export type Especialidade = (typeof ESPECIALIDADES)[number];
+
+/**
+ * OS NOMES DOS PARÂMETROS DO DIRETÓRIO, num sítio só.
+ *
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ PORQUE VIVEM AQUI E JÁ NÃO EM `diretorio.ts`                         │
+ * │                                                                     │
+ * │ Mudar um destes muda links que já foram partilhados — por isso       │
+ * │ sempre estiveram num sítio só, à vista. O que mudou foi QUEM         │
+ * │ precisa deles: a pesquisa global reconhece «contabilista no Porto    │
+ * │ para IVA» e tem de construir o endereço do diretório com filtros     │
+ * │ estruturados.                                                       │
+ * │                                                                     │
+ * │ `diretorio.ts` importa o cliente Supabase. Se a pesquisa fosse lá    │
+ * │ buscar os nomes dos parâmetros, levava o SDK inteiro para o chunk    │
+ * │ do painel — o mesmo defeito de grafo que o ponto P1-02 corrigiu no   │
+ * │ cabeçalho, repetido uma camada abaixo. Este ficheiro não importa     │
+ * │ nada, e é essa a razão de ser dele.                                 │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export const PARAMS = {
+  procura: "q",
+  distrito: "distrito",
+  especialidade: "especialidade",
+  modalidade: "modalidade",
+  idioma: "idioma",
+  vagas: "vagas",
+  occ: "occ",
+  linkedin: "linkedin",
+  ordem: "ordem",
+  pagina: "pagina",
+} as const;

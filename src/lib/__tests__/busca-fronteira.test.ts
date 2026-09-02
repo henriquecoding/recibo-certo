@@ -118,6 +118,36 @@ describe("busca:fronteira", () => {
     expect(nomes).not.toContain("components/busca/useControladorBusca.ts");
   });
 
+  it("o reconhecimento e o plano ficam locais — sem catálogo, sem SDK", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ A PROMESSA «TUDO FICA NESTE DISPOSITIVO» É UM GRAFO DE IMPORTS │
+    // │                                                               │
+    // │ O reconhecimento lê a frase que a pessoa escreveu — a mais     │
+    // │ sensível de todo o produto. Basta uma importação do cliente    │
+    // │ Supabase nesta cadeia para a superfície passar a poder falar   │
+    // │ com um servidor enquanto alguém escreve, e a promessa da barra │
+    // │ («Pesquisa global · Tudo fica neste dispositivo») deixa de ser │
+    // │ verdadeira sem uma única linha de copy mudar.                  │
+    // │                                                               │
+    // │ Também não pode arrastar `fiscal-data.ts`: a pesquisa NÃO      │
+    // │ calcula imposto. Se o catálogo fiscal aparecer aqui, é porque  │
+    // │ alguém começou a calcular no sítio errado.                     │
+    // └───────────────────────────────────────────────────────────────┘
+    const cadeia = [...grafoEstatico([
+      join(SRC, "lib", "busca", "reconhecer.ts"),
+      join(SRC, "lib", "busca", "plano.ts"),
+    ])].map(rel);
+
+    expect(cadeia.filter((n) => n.includes("supabase"))).toEqual([]);
+    expect(cadeia.filter((n) => n.includes("fiscal-data"))).toEqual([]);
+    expect(cadeia.filter((n) => n === "lib/busca/documentos.ts")).toEqual([]);
+    expect(cadeia.filter((n) => n.startsWith("lib/guias/"))).toEqual([]);
+    // O motor fiscal e os motores de negócio são pesados e não têm nada
+    // que fazer numa frase por interpretar.
+    expect(cadeia.filter((n) => n.startsWith("lib/negocio/"))).toEqual([]);
+    expect(cadeia.filter((n) => n.startsWith("lib/motor/"))).toEqual([]);
+  });
+
   it("o lançador só conhece o esquema e o carregador — nunca os documentos", () => {
     const doLancador = [...grafoEstatico([join(SRC, "components", "busca", "LancadorBusca.tsx")])].map(rel);
     expect(doLancador).toContain("lib/busca/indice.ts");

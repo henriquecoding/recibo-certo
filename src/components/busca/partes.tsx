@@ -18,12 +18,16 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Briefcase,
   Calculator,
+  Calendar,
   ChevronRight,
   Close,
   Coin,
   History,
+  Info,
   Search,
+  ShieldCheck,
   Trophy,
   Warning,
 } from "@/components/ui/Icons";
@@ -36,6 +40,14 @@ import {
   type TipoDoc,
 } from "@/lib/busca/esquema";
 import { MIN_CARACTERES, type ResultadoBusca } from "@/lib/busca/pontuar";
+import {
+  CaminhoPreparado,
+  ContextoDoPlano,
+  FaixaApoio,
+  LinhaInterpretacao,
+  NotaPrivacidade,
+  OutrosCaminhos,
+} from "./moldura";
 import { useAtalhoDoSistema } from "./motor";
 import type { ControladorBusca } from "./useControladorBusca";
 
@@ -59,6 +71,9 @@ const ICONE_TIPO: Record<TipoDoc, IconT> = {
   atividade: Search,
   quiz: Trophy,
   plano: Coin,
+  obrigacao: Calendar,
+  pagina: Info,
+  apoio: Briefcase,
 };
 
 /**
@@ -152,9 +167,20 @@ export function FormularioBusca({
         // `/pesquisar?q=` — uma página vazia como resposta a um Enter.
         if (controlador.consulta.trim().length < MIN_CARACTERES) e.preventDefault();
       }}
-      className={`flex shrink-0 items-center gap-3 px-4 ${compacto ? "h-[var(--rc-dock-h)]" : "px-5 py-4"}`}
+      className={`mx-4 mt-1 flex shrink-0 items-center gap-3 rounded-2xl border border-stone-200 bg-white px-2.5 dark:border-stone-700 dark:bg-stone-900 ${
+        compacto ? "h-[var(--rc-dock-h)]" : "py-2"
+      }`}
     >
-      <Search size={compacto ? 18 : 20} className="flex-shrink-0 text-brand" aria-hidden />
+      {/* A lupa num quadrado com contorno — a mesma forma que tem na barra
+          fechada. Sem ela, o ícone mudava de sítio e de tamanho no instante
+          em que a barra vira campo, que é o único instante em que ninguém
+          devia reparar em nada. */}
+      <span
+        aria-hidden
+        className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-brand dark:border-stone-700"
+      >
+        <Search size={16} />
+      </span>
 
       <label htmlFor={id} className="sr-only">
         Pesquisar no Recibo Certo
@@ -188,6 +214,47 @@ export function FormularioBusca({
         todos e Escape para fechar.
       </p>
 
+      {/**
+       * ┌───────────────────────────────────────────────────────────────┐
+       * │ «RESOLVER» É A MESMA COISA QUE O ENTER — E TINHA DE SER         │
+       * │                                                               │
+       * │ Um botão ao lado de um campo que faça uma coisa DIFERENTE da   │
+       * │ tecla Enter é a forma mais rápida de ensinar que a tecla não   │
+       * │ serve. Por isso é o mesmo caminho: com um caminho preparado,   │
+       * │ os dois abrem-no; sem ele, os dois vão à pesquisa completa.    │
+       * │                                                               │
+       * │ E é uma LIGAÇÃO quando há destino, não um botão: um destino    │
+       * │ com endereço dá `⌘+clique`, «abrir noutro separador» e a       │
+       * │ pré-visualização do URL na barra de estado. Um botão com       │
+       * │ `router.push` deita fora as três.                              │
+       * └───────────────────────────────────────────────────────────────┘
+       */}
+      {controlador.temConsulta &&
+        (controlador.hrefPrincipal && controlador.plano?.estado === "pronto" ? (
+          <Link
+            prefetch={false}
+            href={controlador.hrefPrincipal}
+            onClick={(e) => {
+              if (controlador.plano?.principal) {
+                controlador.aoEscolherAcao(controlador.plano.principal, 1, "principal");
+              }
+              if (!isCliqueModificado(e)) aoFechar();
+            }}
+            className="focus-marca flex h-9 flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-brand-dark no-underline transition-colors hover:bg-brand-light/60 dark:text-brand dark:hover:bg-brand/15"
+          >
+            Resolver
+            <ArrowRight size={13} aria-hidden />
+          </Link>
+        ) : (
+          <button
+            type="submit"
+            className="focus-marca flex h-9 flex-shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-semibold text-stone-600 transition-colors hover:bg-stone-100 hover:text-brand-dark dark:text-stone-300 dark:hover:bg-stone-800 dark:hover:text-brand"
+          >
+            Resolver
+            <ArrowRight size={13} aria-hidden />
+          </button>
+        ))}
+
       {controlador.consulta && (
         <button
           type="button"
@@ -195,10 +262,9 @@ export function FormularioBusca({
             controlador.limparConsulta();
             inputRef.current?.focus();
           }}
-          aria-label="Limpar pesquisa"
-          className="focus-marca flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700 dark:hover:bg-stone-800"
+          className="focus-marca flex h-9 flex-shrink-0 items-center rounded-lg px-2 text-xs font-medium text-stone-500 transition-colors hover:bg-stone-100 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-200"
         >
-          <Close size={16} />
+          Limpar
         </button>
       )}
 
@@ -387,6 +453,7 @@ function TituloGrupo({ children }: { children: ReactNode }) {
 function EstadoInicial({ controlador, aoFechar }: { controlador: ControladorBusca; aoFechar: () => void }) {
   return (
     <div className="space-y-4 p-4">
+      <NotaPrivacidade />
       {controlador.recentes.length > 0 && (
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -500,6 +567,79 @@ function EstadoErro({ controlador, aoFechar }: { controlador: ControladorBusca; 
   );
 }
 
+/* ─── Sem caminho ──────────────────────────────────────────────────── */
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ «SEM RESULTADOS» É UM ESTADO ÚTIL — SE FOR NAVEGÁVEL                 │
+ * │                                                                     │
+ * │ A versão anterior dizia «sem resultados» e oferecia uma ligação para │
+ * │ os guias. Ficava-se por aí: quem escreveu uma pergunta que o         │
+ * │ catálogo não conhece recebia uma frase e um beco.                    │
+ * │                                                                     │
+ * │ Passa a dizer o que é verdade (não encontrámos um caminho SEGURO —   │
+ * │ e não «não existe»), a manter a consulta no campo, a oferecer três   │
+ * │ famílias e a pesquisa completa. O apoio profissional aparece como    │
+ * │ alternativa, nunca como fuga automática: quem não encontrou o que    │
+ * │ procurava não pediu, por isso, para falar com um contabilista.       │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+function SemCaminho({
+  controlador,
+  aoFechar,
+  listaRef,
+}: {
+  controlador: ControladorBusca;
+  aoFechar: () => void;
+  listaRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const FAMILIAS = [
+    { href: "/ferramentas", label: "Simular um valor" },
+    { href: "/guias", label: "Perceber uma regra" },
+    { href: "/dashboard/prazos", label: "Ver prazos e obrigações" },
+  ];
+
+  return (
+    <div ref={listaRef} className="space-y-3 p-4">
+      <div className="text-center">
+        <Search size={24} className="mx-auto mb-2 text-stone-300" aria-hidden />
+        <p className="text-sm font-semibold text-stone-800 dark:text-stone-200">
+          Não encontrámos um caminho seguro para «{controlador.consulta.trim()}».
+        </p>
+        <p className="texto-mini mt-1 text-stone-600 dark:text-stone-400">
+          Preferimos dizer isto a mandar-te para a página mais parecida.
+        </p>
+      </div>
+
+      <div className="grid gap-1.5 sm:grid-cols-3">
+        {FAMILIAS.map((f) => (
+          <Link
+            prefetch={false}
+            key={f.href}
+            href={f.href}
+            data-resultado
+            onClick={(e) => !isCliqueModificado(e) && aoFechar()}
+            className="focus-marca flex min-h-[44px] items-center justify-center rounded-xl border border-stone-200 px-3 text-center text-xs font-semibold text-stone-700 no-underline transition-colors hover:border-brand/40 dark:border-stone-700 dark:text-stone-300"
+          >
+            {f.label}
+          </Link>
+        ))}
+      </div>
+
+      <Link
+        prefetch={false}
+        href={controlador.hrefTodos}
+        onClick={(e) => !isCliqueModificado(e) && aoFechar()}
+        className="focus-marca flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl text-sm font-semibold text-brand-dark no-underline dark:text-brand"
+      >
+        Procurar em todo o site <ArrowRight size={13} aria-hidden />
+      </Link>
+
+      <FaixaApoio controlador={controlador} aoFechar={aoFechar} />
+    </div>
+  );
+}
+
 /* ─── Corpo ────────────────────────────────────────────────────────── */
 
 export function CorpoResultados({
@@ -533,20 +673,68 @@ export function CorpoResultados({
     );
   }
 
-  if (total === 0) {
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ A MOLDURA SÓ APARECE QUANDO HÁ UM CAMINHO PARA MOSTRAR               │
+   * │                                                                     │
+   * │ Com um caminho principal — porque o primeiro resultado se destacou,  │
+   * │ ou porque pertence à família que a frase nomeou — a superfície       │
+   * │ mostra UMA acção, no máximo uma pergunta e as alternativas em        │
+   * │ segundo plano.                                                       │
+   * │                                                                     │
+   * │ Sem caminho, volta a ser a lista agrupada de sempre. Não é um estado │
+   * │ degradado: é a resposta honesta a uma pergunta ambígua. Coroar o     │
+   * │ primeiro de uma lista empatada seria dizer a alguém que vai decidir  │
+   * │ dinheiro que existe uma certeza que não existe — e a diferença entre │
+   * │ as duas superfícies é exactamente essa.                              │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
+  const plano = controlador.plano;
+  if (plano && (plano.principal || plano.clarificacao)) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 py-10 text-center">
-        <Search size={26} className="mb-2 text-stone-300" aria-hidden />
-        <p className="text-sm text-stone-600 dark:text-stone-400">Sem resultados para «{consulta.trim()}».</p>
-        <p className="mt-1 text-xs text-stone-500 dark:text-stone-500">
-          Experimenta menos palavras, ou abre{" "}
-          <Link prefetch={false} href="/guias" onClick={(e) => !isCliqueModificado(e) && aoFechar()} className="font-semibold text-brand-dark underline dark:text-brand">
-            todos os guias
-          </Link>
-          .
-        </p>
+      <div ref={listaRef} className="space-y-3 p-3">
+        <LinhaInterpretacao controlador={controlador} />
+
+        {/* Uma coluna no telemóvel; a confirmação ao lado só a partir de
+            `lg`, que é onde há largura para as duas sem espremer nenhuma. */}
+        <div className="grid gap-3 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+          <CaminhoPreparado controlador={controlador} aoFechar={aoFechar} />
+          <ContextoDoPlano controlador={controlador} />
+        </div>
+
+        {/**
+         * ┌─────────────────────────────────────────────────────────────┐
+         * │ AS DUAS SAÍDAS PARTILHAM UMA BARRA, SEPARADAS POR UMA RÉGUA  │
+         * │                                                             │
+         * │ «Outros caminhos» e «Apoio profissional» são as duas coisas  │
+         * │ que uma pessoa faz quando o caminho principal não serve: vai │
+         * │ por outra porta, ou fala com alguém. Empilhados, o segundo   │
+         * │ lia-se como a conclusão da resposta — e o apoio humano não é │
+         * │ a conclusão de nada: é uma alternativa.                       │
+         * │                                                             │
+         * │ Lado a lado, com uma régua entre eles, dizem o que são: duas │
+         * │ saídas do mesmo nível. Empilham no telemóvel, onde não há    │
+         * │ largura para duas colunas legíveis.                           │
+         * └─────────────────────────────────────────────────────────────┘
+         */}
+        <div className="flex flex-col gap-3 border-t border-stone-100 pt-3 lg:flex-row lg:items-center dark:border-stone-800">
+          <OutrosCaminhos controlador={controlador} aoFechar={aoFechar} />
+          <span aria-hidden className="hidden w-px self-stretch bg-stone-100 lg:block dark:bg-stone-800" />
+          <FaixaApoio controlador={controlador} aoFechar={aoFechar} />
+        </div>
       </div>
     );
+  }
+
+  /**
+   * Sem caminho E sem pergunta. Vem DEPOIS da moldura de propósito: uma
+   * consulta como «1200 €» não devolve documento nenhum — nenhum título
+   * fala de mil e duzentos — e mesmo assim tem uma pergunta a fazer. Se
+   * este ramo viesse primeiro, respondia «sem resultados» a quem escreveu
+   * a única coisa que a pesquisa reconheceu.
+   */
+  if (total === 0) {
+    return <SemCaminho controlador={controlador} aoFechar={aoFechar} listaRef={listaRef} />;
   }
 
   // A posição é global na lista visível — é o `rank` que a medição regista,
@@ -617,26 +805,43 @@ export function EstadoAcessivel({ id, mensagem }: { id: string; mensagem: string
   );
 }
 
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ A ÚLTIMA LINHA DIZ DUAS COISAS, E AS DUAS SÃO PROMESSAS              │
+ * │                                                                     │
+ * │ À esquerda, o contrato de teclado: quais são as teclas e o que       │
+ * │ fazem. À direita, o contrato de privacidade — a MESMA frase que      │
+ * │ aparece por baixo do campo, repetida no fim de propósito: quem       │
+ * │ chegou ao fundo do painel percorreu a resposta toda e é aí que       │
+ * │ decide clicar. É no momento da decisão que a promessa conta.         │
+ * │                                                                     │
+ * │ A contagem de resultados saiu daqui. Com um caminho preparado em     │
+ * │ cima, «31 resultados» no rodapé é uma segunda métrica de sucesso a   │
+ * │ competir com a primeira — e a que interessa está no botão.           │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
 export function RodapeBusca({ controlador }: { controlador: ControladorBusca }) {
   const atalho = useAtalhoDoSistema();
   return (
-    <div className="flex shrink-0 items-center justify-between gap-3 border-t border-stone-100 px-5 py-2.5 text-[11px] text-stone-600 dark:border-stone-800 dark:text-stone-400">
-      <span className="flex items-center gap-1.5">
-        <span className="hidden sm:inline">Enter abre a página de resultados</span>
-        <span className="sm:hidden">Enter: ver todos</span>
+    <div className="texto-mini flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-stone-100 px-5 py-2.5 text-stone-600 dark:border-stone-800 dark:text-stone-400">
+      <span className="flex items-center gap-2">
+        <span className="flex items-center gap-1">
+          <kbd className="not-italic">↑↓</kbd> Navegar
+        </span>
         <ChevronRight size={10} className="text-stone-300" aria-hidden />
-        Esc fecha
+        <span>Enter abrir</span>
+        <ChevronRight size={10} className="text-stone-300" aria-hidden />
+        <span>Esc fechar</span>
+        {!controlador.temConsulta && atalho && (
+          <span className="ml-1 hidden items-center rounded-md border border-stone-200 px-1.5 py-0.5 font-semibold text-stone-400 sm:inline-flex dark:border-stone-700">
+            {atalho}
+          </span>
+        )}
       </span>
-      {controlador.temConsulta && controlador.estado === "pronto" && (
-        <span className="whitespace-nowrap font-semibold tabular-nums text-brand-dark dark:text-brand">
-          {controlador.totalSemTeto} resultado{controlador.totalSemTeto !== 1 ? "s" : ""}
-        </span>
-      )}
-      {!controlador.temConsulta && atalho && (
-        <span className="hidden items-center gap-1 rounded-md border border-stone-200 px-1.5 py-0.5 font-semibold text-stone-400 sm:inline-flex dark:border-stone-700">
-          {atalho}
-        </span>
-      )}
+      <span className="flex items-center gap-1.5">
+        <ShieldCheck size={12} className="flex-none text-brand" aria-hidden />
+        A consulta não sai deste dispositivo
+      </span>
     </div>
   );
 }

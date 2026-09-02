@@ -107,8 +107,25 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
     anunciarEstadoBusca(aberto);
   }, [aberto]);
 
+  /**
+   * ┌─────────────────────────────────────────────────────────────────────┐
+   * │ O PAINEL DEIXOU DE FLUTUAR POR CIMA DO CARTÃO — É O CARTÃO           │
+   * │                                                                     │
+   * │ Era `position:absolute` com forma própria: cantos, contorno, sombra  │
+   * │ e um anel — um segundo cartão a nascer de dentro do primeiro, com    │
+   * │ dois milímetros de desalinhamento a denunciá-lo em qualquer captura  │
+   * │ de ecrã. Duas superfícies com forma própria, uma dentro da outra, a  │
+   * │ dizerem as duas «eu é que sou o contentor».                          │
+   * │                                                                     │
+   * │ Passa a crescer EM FLUXO dentro do cartão do cabeçalho, que é o que  │
+   * │ o desenho aprovado mostra: uma só superfície, da marca até à linha   │
+   * │ das teclas. Não empurra a página — o cabeçalho é `fixed` e o         │
+   * │ espaçador reserva sempre a mesma altura —, e o corpo do painel rola  │
+   * │ por dentro quando não cabe.                                          │
+   * └─────────────────────────────────────────────────────────────────────┘
+   */
   return (
-    <div className="relative h-[var(--rc-dock-h)] w-full">
+    <div className="w-full">
       {aberto ? (
         <PainelPesquisa id={ID_PAINEL} idCampo={idCampo} aoFechar={fechar} aoFecharComFoco={fecharComFoco} />
       ) : (
@@ -136,7 +153,7 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
             e.preventDefault();
             abrir();
           }}
-          className="focus-marca group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-full border border-stone-200 bg-white pl-5 pr-2.5 text-left no-underline transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:hover:border-brand/40"
+          className="focus-marca group flex h-[var(--rc-dock-h)] w-full items-center gap-3 rounded-2xl border border-stone-200 bg-white pl-2.5 pr-2.5 text-left no-underline transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-sm dark:border-stone-700 dark:bg-stone-900 dark:hover:border-brand/40"
         >
           {/**
            * UMA lupa, e não duas. A barra tinha o ícone à esquerda e um
@@ -144,8 +161,18 @@ export function LancadorBusca({ inputId }: { inputId?: string }) {
            * significado a ocupar as duas extremidades do elemento central do
            * cabeçalho (P2-02). O lado direito passa a dizer o atalho, que é
            * informação que ainda não estava em lado nenhum.
+           *
+           * A lupa vive num quadrado com contorno — a mesma forma que ela
+           * tem com o painel aberto. Sem ele, o ícone saltava de sítio no
+           * instante em que a barra virava campo, que é o único instante em
+           * que ninguém devia reparar em nada.
            */}
-          <Search size={17} className="flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand" aria-hidden />
+          <span
+            aria-hidden
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-stone-200 text-stone-400 transition-colors group-hover:border-brand/40 group-hover:text-brand dark:border-stone-700"
+          >
+            <Search size={16} />
+          </span>
           <span className="min-w-0 flex-1 truncate text-sm text-stone-500 dark:text-stone-400">
             O que precisas de resolver?
           </span>

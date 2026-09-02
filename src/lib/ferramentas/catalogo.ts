@@ -90,6 +90,8 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 97,
     searchGroup: "Simuladores",
+    dominio: "recibos",
+    aceitaEntidades: ["valor", "periodicidade"],
   },
   {
     id: "simulador-irs",
@@ -125,6 +127,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 95,
     searchGroup: "Simuladores",
+    dominio: "obrigacoes",
   },
   {
     id: "recibo-vencimento",
@@ -159,6 +162,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 92,
     searchGroup: "Simuladores",
+    dominio: "salario",
   },
   {
     id: "planeador-contratacao",
@@ -195,6 +199,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "dashboard", "search", "sitemap"],
     searchPriority: 93,
     searchGroup: "Simuladores",
+    dominio: "salario",
   },
   {
     id: "regime-simplificado",
@@ -227,6 +232,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 85,
     searchGroup: "Simuladores",
+    dominio: "recibos",
   },
   {
     id: "seguranca-social",
@@ -261,6 +267,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "search", "sitemap"],
     searchPriority: 88,
     searchGroup: "Simuladores",
+    dominio: "obrigacoes",
   },
   {
     id: "irs-jovem",
@@ -295,6 +302,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "search", "sitemap"],
     searchPriority: 84,
     searchGroup: "Simuladores",
+    dominio: "obrigacoes",
   },
 
   // ── Comparar e decidir ─────────────────────────────────────────────
@@ -331,6 +339,8 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 93,
     searchGroup: "Simuladores",
+    dominio: "comparar",
+    aceitaEntidades: ["valor", "periodicidade", "base"],
   },
   {
     id: "simulador-empresa",
@@ -368,6 +378,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 88,
     searchGroup: "Simuladores",
+    dominio: "empresa",
   },
   {
     id: "ato-isolado",
@@ -400,6 +411,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 72,
     searchGroup: "Decisores",
+    dominio: "recibos",
   },
   {
     id: "simulador-herancas",
@@ -433,6 +445,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 74,
     searchGroup: "Simuladores",
+    dominio: "patrimonio",
   },
 
   // ── Verificar se está certo ────────────────────────────────────────
@@ -467,6 +480,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 78,
     searchGroup: "Ferramentas",
+    dominio: "salario",
   },
   {
     id: "classificar-atividade",
@@ -499,6 +513,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 80,
     searchGroup: "Ferramentas",
+    dominio: "recibos",
   },
 
   // ── Preparar uma obrigação · Encontrar apoio ───────────────────────
@@ -533,6 +548,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "dashboard", "search", "sitemap"],
     searchPriority: 60,
     searchGroup: "Ferramentas",
+    dominio: "recibos",
   },
   {
     id: "mapa-contabilistas",
@@ -565,6 +581,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 70,
     searchGroup: "Ferramentas",
+    dominio: "apoio",
   },
 
   // ── Descobrir e decidir o negócio ─────────────────────────────────
@@ -602,6 +619,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "search", "sitemap"],
     searchPriority: 90,
     searchGroup: "Decisores",
+    dominio: "descoberta",
   },
 
   // ── Decidir quanto cobrar ──────────────────────────────────────────
@@ -643,6 +661,7 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     surfaces: ["hub", "homepage", "search", "sitemap"],
     searchPriority: 92,
     searchGroup: "Ferramentas",
+    dominio: "preco",
   },
 ];
 

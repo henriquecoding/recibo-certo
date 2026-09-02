@@ -179,22 +179,52 @@ describe("navegacao:barra-de-seccoes", () => {
     // │ navegações principais — o problema que a reestruturação foi    │
     // │ resolver. Se alguém lhes der o mesmo peso, isto reprova.        │
     // └───────────────────────────────────────────────────────────────┘
-    // A bandeja e o relevo do pilar aceso são da navegação, não daqui: esta
-    // fila são ligações soltas sobre o cartão, sem contentor nenhum.
-    // `rounded-full bg-stone-100` e não só a cor: um `hover:bg-stone-100`
-    // nestas ligações é uma lavagem de rato, não uma bandeja.
+    // A faixa e a pastilha do pilar aceso são da navegação, não daqui: esta
+    // fila são ligações soltas sobre o cartão, sem contentor nenhum e sem
+    // fundo no estado aceso. `rounded-full bg-stone-100` e não só a cor: um
+    // `hover:bg-stone-100` nestas ligações é uma lavagem de rato.
     expect(SECBAR).not.toContain("rounded-full bg-stone-100");
     expect(SECBAR).not.toContain("shadow-card");
-    expect(CAPSULA).toContain("rounded-full bg-stone-100");
-    expect(CAPSULA).toContain("shadow-card");
+    // A faixa tem largura de cartão e é delimitada por hairlines — é ela o
+    // contentor da navegação. A barra de secções não pode ganhar um.
+    expect(semComentarios(SECBAR)).not.toContain("border-y");
+    // O pilar aceso levanta-se com fundo próprio; o destino aceso desta fila
+    // só muda de peso e de cor. Se alguém lhe der fundo, voltam a ser duas
+    // navegações principais — que é o defeito que isto guarda.
+    const pintura = semComentarios(SECBAR).slice(semComentarios(SECBAR).indexOf("${BASE} ${"));
+    const ramoAceso = /\?\s*"([^"]+)"/.exec(pintura)?.[1] ?? "";
+    expect(ramoAceso, "o ramo aceso da barra de secções não foi encontrado").toContain(
+      "font-semibold",
+    );
+    expect(ramoAceso, "o destino aceso da barra ganhou fundo próprio").not.toMatch(/\bbg-/);
+    expect(CAPSULA).toContain("border-y border-stone-100");
+    expect(CAPSULA).toMatch(/ATIVO =[\s\S]{0,160}bg-stone-100/);
   });
 
-  it("«Sugestões» é uma acção e não finge ser um destino", () => {
-    // Os outros levam a uma página; este abre uma caixa de escrita. Uma
-    // régua separa-os, e é um `<button>` e não uma `<a>`.
-    expect(SECBAR).toContain("abrirFeedback");
-    expect(SECBAR).toContain('type="button"');
-    expect(SECBAR).toMatch(/w-px[\s\S]{0,400}abrirFeedback/);
+  it("«Sugestões» é uma acção e por isso saiu da fila dos destinos", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ UMA ACÇÃO NO MEIO DE DESTINOS ENSINA A COISA ERRADA            │
+    // │                                                               │
+    // │ Esteve nesta fila, separada por uma régua. A régua dizia que a │
+    // │ natureza mudava ali — mas continuava a ser um lugar de topo    │
+    // │ ocupado por algo que não muda de rota. A fila do topo passou a │
+    // │ ser só os DOIS índices do produto, e a acção desceu para onde  │
+    // │ se procura uma acção sobre o produto: a folha do menu e o menu │
+    // │ da conta.                                                      │
+    // │                                                               │
+    // │ Sair da barra não pode significar desaparecer. As duas portas  │
+    // │ ficam pinadas aqui.                                            │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(semComentarios(SECBAR)).not.toContain("abrirFeedback");
+    expect(semComentarios(SECBAR)).not.toContain("<button");
+    for (const [nome, fonte] of [
+      ["folha do menu", MENU],
+      ["menu da conta", ler("components", "header", "MenuConta.tsx")],
+    ] as const) {
+      expect(semComentarios(fonte), `«Sugestões» não tem porta na ${nome}`).toContain(
+        "abrirFeedback",
+      );
+    }
   });
 
   it("acende como qualquer outro destino, e pela mesma função", () => {
@@ -204,6 +234,58 @@ describe("navegacao:barra-de-seccoes", () => {
     // cabeçalho dizem a um leitor de ecrã que há duas navegações iguais.
     expect(SECBAR).toContain('aria-label="Secções"');
     expect(CAPSULA).toContain('aria-label="Principal"');
+  });
+});
+
+describe("navegacao:apoio-no-topo", () => {
+  const APOIO = ler("components", "navegacao", "AtalhoApoio.tsx");
+
+  it("o destino DERIVA da fonte única — não está escrito à mão", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ DAR FORMA PRÓPRIA A UMA ENTRADA NÃO A TIRA DA LISTA            │
+    // │                                                               │
+    // │ `href="/contabilistas"` escrito aqui seria uma sexta cópia da  │
+    // │ navegação — o defeito que o topo deste ficheiro descreve, só   │
+    // │ que com um cartão bonito à volta. O bloco lê `SECOES` e morre  │
+    // │ em silêncio (`return null`) se a secção deixar de existir.     │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(semComentarios(APOIO)).not.toContain('"/contabilistas"');
+    expect(APOIO).toContain('SECOES.find((s) => s.id === "contabilistas")');
+    expect(APOIO).toContain("if (!APOIO) return null;");
+    expect(SECOES.some((s) => s.id === "contabilistas")).toBe(true);
+    // Acende pela mesma função que todos os outros destinos acendem.
+    expect(APOIO).toContain("hrefAtivo(pathname)");
+    expect(APOIO).toContain('aria-current={ativo ? "page" : undefined}');
+  });
+
+  it("tem estatuto sem virar a ACÇÃO do cabeçalho", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ UMA SÓ ACÇÃO PRINCIPAL POR CABEÇALHO                           │
+    // │                                                               │
+    // │ O preenchimento de marca é dela — «Começar Grátis» / «Painel», │
+    // │ à direita. Este bloco distingue-se por contorno, ícone em      │
+    // │ círculo e uma segunda linha que diz o que se lá vai fazer. Se  │
+    // │ ganhar `bg-brand`, passam a ser duas acções principais e       │
+    // │ nenhuma delas é a principal.                                   │
+    // └───────────────────────────────────────────────────────────────┘
+    // Preenchimento SÓLIDO de marca — `bg-brand/10` e `bg-brand-light/60` são
+    // lavagens de estado aceso, não um botão. É o sólido que confunde.
+    const pintura = semComentarios(APOIO);
+    expect(pintura).not.toMatch(/\bbg-brand(?![\w/-])/);
+    expect(pintura).not.toMatch(/\bbg-brand-(dark|deep)\b/);
+    expect(pintura).toContain("rounded-2xl border");
+  });
+
+  it("não é uma sexta entrada a competir na linha de baixo", () => {
+    // A linha de baixo tem cinco pilares e é a navegação. Este bloco fica na
+    // linha de CIMA, ao centro, e some no espaço estreito em vez de espremer
+    // as duas zonas laterais — em telemóvel o apoio vive na folha do menu.
+    expect(NAV).toContain("<AtalhoApoio />");
+    expect(NAV).toMatch(/hidden[^"]*xl:flex[\s\S]{0,80}<AtalhoApoio \/>/);
+    expect(semComentarios(CAPSULA)).not.toContain("AtalhoApoio");
+    // Que «contabilistas» não é pilar já não é preciso afirmar aqui: o tipo
+    // de `PILARES` não tem esse `id`, e o compilador reprova antes do teste.
+    expect(PILARES.map((p) => p.href)).not.toContain("/contabilistas");
   });
 });
 
