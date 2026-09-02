@@ -171,7 +171,12 @@ export type ToolId =
   | "simulador-herancas" | "payout-mor" | "comparador" | "quiz-fiscal" | "calculadora"
   // O painel de prazos é a continuação natural de tudo o que tem data
   // marcada — IMI, IMT, declarações periódicas. Entrou com a expansão.
-  | "prazos";
+  | "prazos"
+  // O planeador de contratação existia no catálogo e não existia AQUI: os
+  // guias não tinham como o recomendar, e o de «Contratar a primeira
+  // pessoa» — que é literalmente o mesmo trabalho — mandava simular o
+  // recibo de vencimento, que é o lado do trabalhador.
+  | "planeador-contratacao";
 
 export const TOOL_HREFS: Record<ToolId, string> = {
   "simulador-irs": "/ferramentas/simulador-irs",
@@ -182,6 +187,7 @@ export const TOOL_HREFS: Record<ToolId, string> = {
   "regime-simplificado": "/ferramentas/regime-simplificado",
   "classificar-atividade": "/ferramentas/classificar-atividade",
   "simulador-empresa": "/ferramentas/simulador-empresa",
+  "planeador-contratacao": "/ferramentas/planeador-contratacao",
   "simulador-herancas": "/ferramentas/simulador-herancas",
   "payout-mor": "/ferramentas/payout-mor",
   comparador: "/ferramentas/comparar-regimes",
@@ -911,7 +917,11 @@ export const GUIDE_MANIFESTS: GuideManifest[] = [
     audiences: ["COMPANY"], effectiveFrom: DE,
     engineBindings: ["SS_DEPENDENTE", "SMN", "SUBSIDIO_REFEICAO", "SEGURO_ACIDENTES_TRABALHO_ESTIMATIVA"],
     relatedGuideIds: ["recibo-vencimento", "subsidios-ferias-natal", "salario-gerente-ou-dividendos", "trabalho-suplementar"],
-    relatedToolIds: ["recibo-vencimento", "simulador-empresa"],
+    // À cabeça, e não por simpatia: este guia diz o que custa, o que se
+    // comunica e por que ordem — e a ferramenta que faz essa conta com os
+    // números de quem lê não estava aqui. O guia mandava simular o recibo
+    // de vencimento, que é o lado do trabalhador.
+    relatedToolIds: ["planeador-contratacao", "recibo-vencimento", "simulador-empresa"],
     fizAction: { topic: "COMPANY", intent: "FIND_ACCOUNTANT", requiredCapability: "company.first-hire", dataPolicy: "CONSENTED_HANDOFF", fallbackLabel: "Preparar a contratação com a FIZ", exigeRevisaoHumana: true },
     seo: { description: "Contratar o primeiro trabalhador: custo real acima do salário (TSU de 23,75%, 14 meses, subsídio de refeição, seguro de acidentes), comunicação à Segurança Social e período experimental.", aliases: ["contratar primeiro funcionário", "quanto custa um trabalhador", "tsu 23,75", "comunicar admissão segurança social", "seguro de acidentes de trabalho obrigatório"], schema: ["Article", "HowTo"] },
     owner: EQUIPA, reviewer: REVISOR_PENDENTE, lastReviewedAt: NOVOS_REVISTO, status: "draft",

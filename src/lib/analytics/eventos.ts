@@ -471,10 +471,29 @@ interface ContextoTrocaFoco {
   latency_bucket: string;
 }
 
+/**
+ * De onde veio quem está a planear uma contratação.
+ *
+ * As três entradas `arco-*` existem porque contratar deixou de se alcançar
+ * só pelo foco do salário: é o quarto passo do arco do negócio e tem
+ * cartão próprio nas leituras do preço, dos recibos verdes e da empresa
+ * (`lib/foco/arco-contratacao.ts`). Sem as distinguir, a única resposta
+ * possível a «qual dos passos traz quem contrata?» era «ferramenta».
+ *
+ * É vocabulário fechado: a origem vem de um parâmetro da rota validado
+ * contra esta lista, nunca do texto que estiver no URL.
+ */
+export type OrigemContexto =
+  | "salario"
+  | "ferramenta"
+  | "arco-preco"
+  | "arco-recibos"
+  | "arco-empresa";
+
 export interface ContextoContratacao {
   device: ClasseViewport;
   theme: "claro" | "escuro";
-  source: "salario" | "ferramenta";
+  source: OrigemContexto;
 }
 
 interface AcaoResultado {

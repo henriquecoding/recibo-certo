@@ -195,7 +195,12 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     dashboardHref: "/dashboard/contratacao",
     cta: "Planear a contratação",
     relatedToolIds: ["recibo-vencimento", "simulador-empresa", "calcular-preco"],
-    relatedGuideSlugs: ["recibo-vencimento", "subsidios-ferias-natal"],
+    // `contratar-primeiro-trabalhador` é o guia desta decisão — comunicação
+    // da admissão, seguro, forma escrita, ordem dos passos — e as duas
+    // peças não se conheciam: o guia não apontava para a ferramenta e a
+    // ferramenta não apontava para o guia. Quem chegava a um ficava sem o
+    // outro, que é a metade que lhe faltava.
+    relatedGuideSlugs: ["contratar-primeiro-trabalhador", "recibo-vencimento", "subsidios-ferias-natal"],
     surfaces: ["hub", "dashboard", "search", "sitemap"],
     searchPriority: 93,
     searchGroup: "Simuladores",
@@ -373,7 +378,13 @@ export const CATALOGO_FERRAMENTAS: ToolDefinition[] = [
     // vender não tem esse número — e a relação estava declarada só num
     // sentido (o motor de descoberta apontava para aqui, aqui não
     // apontava para lá).
-    relatedToolIds: ["descobrir-negocio", "comparar-regimes", "recibos-verdes", "mapa-contabilistas"],
+    // E `planeador-contratacao` no fim pela razão inversa: é o passo que
+    // vem DEPOIS. Uma sociedade quase nunca se abre para ficar uma pessoa,
+    // e o custo do primeiro posto não estava alcançável a partir daqui.
+    relatedToolIds: [
+      "descobrir-negocio", "comparar-regimes", "recibos-verdes",
+      "mapa-contabilistas", "planeador-contratacao",
+    ],
     relatedGuideSlugs: ["abrir-empresa", "unipessoal-vs-eni", "tributacao-autonoma"],
     surfaces: ["hub", "homepage", "dashboard", "search", "sitemap"],
     searchPriority: 88,
@@ -741,6 +752,29 @@ export const PERCURSOS: ToolPathway[] = [
       { toolId: "calcular-preco", note: "Fixa o preço que cobre custos, impostos e margem." },
       { toolId: "comparar-regimes", note: "Recibos verdes ou sociedade — com o ponto de viragem." },
       { toolId: "simulador-empresa", note: "Se compensar a sociedade: IRC, dividendos e custos de operação." },
+    ],
+  },
+  {
+    // ┌──────────────────────────────────────────────────────────────┐
+    // │ `percursosCom("planeador-contratacao")` devolvia uma lista    │
+    // │ vazia: a ferramenta mais cara de todas as que este produto    │
+    // │ acompanha não pertencia a percurso nenhum, e por isso a sua   │
+    // │ página nunca dizia de onde se vem nem para onde se vai. É o   │
+    // │ mesmo defeito que o percurso acima corrigiu para as duas      │
+    // │ ferramentas de negócio.                                       │
+    // │                                                              │
+    // │ A ordem é a da decisão real: primeiro o que o posto obriga a  │
+    // │ faturar, depois o que ele custa, e só no fim o recibo que a   │
+    // │ proposta vai gerar — que é a parte que quem contrata só vê    │
+    // │ quando já disse um número em voz alta.                        │
+    // └──────────────────────────────────────────────────────────────┘
+    id: "contratar-a-primeira-pessoa",
+    title: "Contratar a primeira pessoa",
+    outcome: "Sabes o que o posto custa por inteiro, o que obriga a faturar e o que a pessoa recebe.",
+    steps: [
+      { toolId: "calcular-preco", note: "Confirma que o preço aguenta mais uma pessoa a ser paga todos os meses." },
+      { toolId: "planeador-contratacao", note: "Custo do posto, calendário do primeiro ano e capacidade necessária." },
+      { toolId: "recibo-vencimento", note: "O recibo que a tua proposta vai gerar, visto do lado de quem o recebe." },
     ],
   },
   {

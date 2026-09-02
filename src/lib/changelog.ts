@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.156.0",
+    data: "2026-09-02",
+    titulo: "Contratar alguém deixou de ser um passo escondido e passou a fazer parte do percurso",
+    itens: [
+      "Planear uma contratação já existia, mas só se alcançava por um botão dentro da página do salário — quem estava a decidir entre recibos verdes e empresa nunca via que havia um passo a seguir. Passa a aparecer como quarta etapa nas três leituras de negócio: depois do preço, depois do recibo e depois da decisão de abrir empresa.",
+      "Cada uma diz a razão que lhe pertence: no preço, que o posto de trabalho tem de caber no que cobras; nos recibos verdes, que contratar não obriga a abrir sociedade; na empresa, que uma sociedade raramente se abre para ficar uma pessoa.",
+      "A página do preço dizia «Salário é um percurso paralelo» e mandava simular o recibo de vencimento — que é o lado de quem recebe. A frase passa a dizer de que lado fala, e o lado de quem contrata ganhou o seu próprio caminho.",
+      "Quem escolhe «para quem contrata» deixa de ficar sem percurso: a página passa a mostrar de onde vem este passo, o que fazer a seguir, e avisa que daí para baixo o ecrã fala do lado de quem recebe o salário — com um caminho de volta.",
+      "O guia «Contratar a primeira pessoa» e o planeador faziam o mesmo trabalho e não se conheciam: o guia mandava simular um recibo de vencimento e o planeador não referia o guia. Passam a apontar um para o outro.",
+      "O planeador não pertencia a percurso nenhum no centro de ferramentas. Ganhou um: confirmar o preço, planear o posto e ver o recibo que a proposta vai gerar.",
+    ],
+  },
+  {
     version: "2.155.1",
     data: "2026-09-02",
     titulo: "O separador do browser volta a dizer a marca em todas as páginas do painel",
