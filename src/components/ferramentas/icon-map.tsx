@@ -22,6 +22,10 @@ import {
   // traduz esse componente numa chave e o cliente resolve-a aqui — sem
   // arrastar os manifestos, que trazem o catálogo da expansão atrás.
   Calendar, Warning, Home, Heart,
+  // Acrescentados para o MANIFESTO DO PAINEL (`lib/dashboard/navegacao.ts`),
+  // que transporta a chave pela mesma razão que o catálogo: o manifesto é
+  // lido pelo layout servidor e não pode arrastar a árvore de ícones.
+  LayoutGrid, Invoice, History, Star,
 } from "@/components/ui/Icons";
 
 export type IconeFerramenta = React.ComponentType<{ size?: number; className?: string }>;
@@ -34,6 +38,7 @@ export const ICONES_FERRAMENTAS: Record<string, IconeFerramenta> = {
   Clock, Briefcase, Globe, Target, Gift, Laptop, ChartProjection, Lightbulb, Coin,
   FileSign,
   Calendar, Warning, Home, Heart,
+  LayoutGrid, Invoice, History, Star,
 };
 
 /**

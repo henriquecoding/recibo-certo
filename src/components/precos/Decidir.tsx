@@ -27,7 +27,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { fmt, pct } from "@/lib/format";
 import type { ContextoPreco, ResultadoPreco } from "@/lib/pricing";
-import { cenarioPorChave } from "@/lib/pricing";
+import { cenarioPorChave, REVISAO_PRICING } from "@/lib/pricing";
 import { guardarPreco } from "@/lib/store/precos-guardados";
 import { registarAcaoResultado } from "./medicao";
 import { ArrowRight, Check, Copy, Download } from "@/components/ui/Icons";
@@ -60,6 +60,9 @@ export default function Decidir({
       lucroMensal: resultado.margem.lucroMensal,
       contexto: { ...contexto, produto: { ...contexto.produto, nome: rotulo } },
       respondidos: [...respondidos],
+      // Qual o conjunto de regras que produziu ESTE número. Sem isto, um
+      // preço relido no ano seguinte parece o mesmo e não é (ADR-07).
+      anoFiscal: Number(REVISAO_PRICING.slice(0, 4)),
     });
     registarAcaoResultado("guardar");
     setGuardado(true);

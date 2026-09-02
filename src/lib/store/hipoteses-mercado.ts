@@ -21,6 +21,7 @@ import type { MarketHypothesis, MarketProof } from "@/lib/negocio/market/hipotes
 import { marketRegion, type MarketRegion } from "@/lib/negocio/market/geografia";
 import { chaveAtiva } from "./cofre";
 import { gravarChave, lerChave, removerChave } from "./persistencia";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 const CHAVE = () => chaveAtiva("hipoteses-mercado");
 
@@ -107,6 +108,7 @@ export function gravarHipoteses(hipoteses: readonly MarketHypothesis[]): void {
       hipoteses: [...hipoteses],
     } satisfies EnvelopeHipoteses),
   );
+  anunciarMudanca("hipoteses");
 }
 
 export function lerHipotese(templateId: string): MarketHypothesis | undefined {
@@ -131,4 +133,5 @@ export function apagarHipotese(templateId: string): MarketHypothesis[] {
 
 export function limparHipoteses(): void {
   removerChave(CHAVE());
+  anunciarMudanca("hipoteses");
 }

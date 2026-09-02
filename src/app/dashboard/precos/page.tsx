@@ -32,6 +32,7 @@ import {
 } from "@/lib/store/precos-guardados";
 import { cenarioPorChave, precificar, type ContextoPreco } from "@/lib/pricing";
 import { ArrowRight, Coin, Close, Warning, Info } from "@/components/ui/Icons";
+import RascunhoEmCurso from "./RascunhoEmCurso";
 
 type Ordem = "recentes" | "margem" | "mes";
 
@@ -92,7 +93,18 @@ export default function PrecosGuardadosPage() {
           Os produtos e serviços a que já puseste preço, lado a lado. Os números são recalculados com as taxas de hoje —
           um preço guardado o ano passado não pode comparar-se com um de agora sem isso.
         </p>
+        <Link
+          href="/dashboard/precos/novo"
+          className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:shadow-float motion-reduce:transition-none"
+        >
+          Calcular um preço
+          <ArrowRight size={15} />
+        </Link>
       </header>
+
+      {/* O rascunho a decorrer vem PRIMEIRO: quem chega aqui a meio de um
+          cálculo não pode ter de descobrir sozinho que ele ainda existe. */}
+      <RascunhoEmCurso />
 
       {!carregado ? (
         <div className="h-40 animate-pulse rounded-4xl bg-stone-100 dark:bg-stone-800/50" />
@@ -221,10 +233,10 @@ export default function PrecosGuardadosPage() {
                     <td className="py-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Link
-                          href={`/ferramentas/calcular-preco?c=${l.item.cenario}`}
+                          href={`/dashboard/precos/${encodeURIComponent(l.item.id)}`}
                           className="inline-flex min-h-[36px] items-center gap-1 rounded-lg px-2 text-xs font-semibold text-brand-dark underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:text-brand-mint"
                         >
-                          Abrir
+                          Rever
                           <ArrowRight size={11} />
                         </Link>
                         <button
@@ -275,7 +287,7 @@ function Vazio() {
         que é quando a pergunta interessante aparece: qual deles está mesmo a pagar as contas?
       </p>
       <Link
-        href="/ferramentas/calcular-preco"
+        href="/dashboard/precos/novo"
         className="mt-4 inline-flex min-h-[40px] items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
       >
         Calcular um preço

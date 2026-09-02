@@ -115,12 +115,15 @@ export default function CenariosPage() {
       {/* Cabeçalho */}
       <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="eyebrow mb-2 text-brand">Gestão</div>
-          <h1 className="display-2 font-display font-semibold text-stone-800 dark:text-stone-100">Os meus cenários</h1>
+          <div className="eyebrow mb-2 text-brand">Principal</div>
+          {/* «Cenários» era o nome do OBJETO que a base de dados guarda. O
+              que a pessoa tem aqui é trabalho: preços, projetos, planos de
+              contratação e simulações. O nome passa a ser o dela. */}
+          <h1 className="display-2 font-display font-semibold text-stone-800 dark:text-stone-100">O meu trabalho</h1>
           <p className="mt-2 max-w-2xl text-[15px] leading-relaxed text-stone-500 dark:text-stone-400">
-            Os cenários dos simuladores completos — recibos verdes, salário, empresa, IRS e heranças — num só lugar.
-            Cada um guarda todos os dados que preencheste, para reabrires e continuares de onde ficaste. As
-            ferramentas rápidas (comparador, ato isolado, auditoria de recibo) calculam mas não guardam cenário.
+            Tudo o que guardaste dos simuladores completos — recibos verdes, salário, empresa, contratação, IRS e
+            heranças — num só lugar. Cada um conserva os dados que preencheste, para reabrires e continuares de onde
+            ficaste. As ferramentas rápidas (comparador, ato isolado, auditoria de recibo) calculam mas não guardam.
           </p>
         </div>
         {cenarios.length > 0 && podeExportar && (

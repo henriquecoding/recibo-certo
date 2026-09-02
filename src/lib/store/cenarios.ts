@@ -43,6 +43,7 @@ import {
 import { chaveAtiva } from "./cofre";
 import { destinoDosDados, aindaSemDestino } from "./persistencia";
 import { marcarReaberturaDe } from "@/lib/store/reabertura";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 export type TipoCenario = "recibos" | "vencimento" | "contratacao" | "empresa" | "irs" | "herancas" | "negocio";
 
@@ -149,7 +150,11 @@ function readLocal(): Cenario[] {
 }
 
 function writeLocal(xs: Cenario[]): Resultado<void> {
-  return gravarChave(STORAGE_KEY(), JSON.stringify(xs));
+  const r = gravarChave(STORAGE_KEY(), JSON.stringify(xs));
+  // O painel observa o trabalho em curso; sem aviso, o separador do lado
+  // continuava a mostrar a lista de antes. Só o NOME do domínio viaja.
+  if (r.ok) anunciarMudanca("cenarios");
+  return r;
 }
 
 function uid(): string {

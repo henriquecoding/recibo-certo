@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.154.0",
+    data: "2026-09-02",
+    titulo: "O painel deixou de ser uma lista de calculadoras e passou a saber onde ficaste",
+    itens: [
+      "O painel abria sempre com a mesma pergunta fiscal, mesmo para quem tinha chegado a meio de um cálculo de preço ou com uma hipótese de negócio a testar. Passa a abrir com uma única próxima ação — escolhida por regra: um prazo a fechar vem antes de tudo, depois o que ficou por ler, depois o que está a meio.",
+      "Nova secção «Continuar de onde ficaste»: até três trabalhos por retomar, com o estado em palavras, a data, e onde é que cada um está — neste dispositivo ou na tua conta. Nada disto sai do aparelho para aparecer aqui.",
+      "«O teu negócio» ganhou as quatro etapas lado a lado, com estado real em vez de anúncios: Descobrir, Preços, Projeto de negócio e Planear uma contratação. Antes, Descobrir não tinha destino nenhum no painel e o planeador de contratação estava enterrado entre nove simuladores.",
+      "Descobrir passa a ter casa no painel (não só a página pública): o perfil, as análises e as hipóteses que guardaste ficam à vista quando voltas — e continuam, como sempre, só neste dispositivo.",
+      "Preços deixou de ser uma lista e passou a ser um sítio de trabalho: o cálculo a meio aparece no topo, cada preço guardado tem página própria e mostra lado a lado o resultado com que decidiste e o que darias com as regras de hoje. Atualizar é uma decisão tua, com o botão à frente — nunca acontece sozinho.",
+      "A navegação lateral tinha 27 destinos, todos abertos ao mesmo tempo, com títulos de grupo a 10 píxeis. Passa a ter nove à vista e dois grupos que se abrem quando é preciso — e se estiveres numa página de um grupo fechado, ele abre sozinho. Nenhum destino se perdeu.",
+      "No telemóvel, a barra de baixo tinha quatro atalhos fiscais e nenhum caminho para o negócio. O terceiro lugar passa a ser «Negócio», com as quatro etapas e o estado de cada uma.",
+      "As páginas do painel diziam aos motores de pesquisa que eram cópias da página inicial. Passam a dizer o que são: páginas tuas, que não se indexam.",
+      "Quando um dado guardado no dispositivo não se consegue ler, o painel passa a dizê-lo — e a dizer que nada foi apagado — em vez de mostrar uma lista vazia, que se lia como «perdeste tudo».",
+    ],
+  },
+  {
     version: "2.153.0",
     data: "2026-09-02",
     titulo: "No telemóvel: os contabilistas passam a estar à vista, e a pesquisa deixa de esconder o que escreves",

@@ -27,6 +27,7 @@ import { ATIVOS } from "@/lib/negocio/descoberta/contexto/perguntas";
 import { INSTANTANEO_VERSAO, type InstantaneoDescoberta } from "@/lib/negocio/descoberta/historico/instantaneos";
 import { chaveAtiva } from "./cofre";
 import { gravarChave, lerChave, removerChave, type Resultado } from "./persistencia";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 const CHAVE_PERFIL = () => chaveAtiva("perfil-descoberta");
 const CHAVE_INSTANTANEOS = () => chaveAtiva("instantaneos-descoberta");
@@ -214,11 +215,16 @@ export function guardarPerfil(
   agora: () => string = () => new Date().toISOString(),
 ): Resultado<void> {
   const envelope: EnvelopePerfil = { versao: 1, contexto, guardadoEm: agora() };
-  return gravarChave(CHAVE_PERFIL(), JSON.stringify(envelope));
+  const resultado = gravarChave(CHAVE_PERFIL(), JSON.stringify(envelope));
+  // Só se anuncia o que ficou mesmo gravado: um aviso sobre uma escrita
+  // que falhou punha o painel a mostrar trabalho que não existe.
+  if (resultado.ok) anunciarMudanca("descoberta");
+  return resultado;
 }
 
 export function apagarPerfil(): void {
   removerChave(CHAVE_PERFIL());
+  anunciarMudanca("descoberta");
 }
 
 // ── INSTANTÂNEOS ─────────────────────────────────────────────────────
@@ -255,9 +261,11 @@ export function guardarInstantaneo(instantaneo: InstantaneoDescoberta): readonly
     .sort((esquerda, direita) => direita.geradoEm.localeCompare(esquerda.geradoEm))
     .slice(0, MAXIMO_INSTANTANEOS);
   gravarChave(CHAVE_INSTANTANEOS(), JSON.stringify({ versao: 1, instantaneos: proximos }));
+  anunciarMudanca("descoberta");
   return proximos;
 }
 
 export function apagarInstantaneos(): void {
   removerChave(CHAVE_INSTANTANEOS());
+  anunciarMudanca("descoberta");
 }

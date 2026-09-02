@@ -17,6 +17,7 @@
 
 import { lerChave, gravarChave, removerChave } from "./persistencia";
 import { chaveAtiva } from "./cofre";
+import { anunciarMudanca } from "@/lib/dashboard/eventos";
 
 const CHAVE = () => chaveAtiva("preco");
 
@@ -29,10 +30,31 @@ const CHAVE = () => chaveAtiva("preco");
  * tipo.
  */
 export interface EnvelopePreco<T> {
-  versao: 2;
+  versao: 3;
   contexto: T;
   respondidos: readonly string[];
+  /**
+   * ISO da última gravação.
+   *
+   * ┌───────────────────────────────────────────────────────────────┐
+   * │ SEM DATA NÃO HÁ «CONTINUAR DE ONDE FICASTE»                    │
+   * │                                                               │
+   * │ O envelope v2 sabia o que estava a meio e não sabia de quando. │
+   * │ Um painel que ordena trabalho por recência não conseguia pôr o │
+   * │ rascunho de preço na fila — a única coisa que podia fazer era  │
+   * │ inventar uma data, e uma data inventada num cartão é           │
+   * │ indistinguível de uma verdadeira.                              │
+   * │                                                               │
+   * │ Um envelope v2 continua a ler-se (a migração é na leitura, e   │
+   * │ nunca se apaga a chave antiga no mesmo ciclo). Fica sem data   │
+   * │ até à gravação seguinte, e o painel diz isso em vez de fingir. │
+   * └───────────────────────────────────────────────────────────────┘
+   */
+  atualizadoEm: string;
 }
+
+/** A versão que se escreve hoje. A leitura aceita as anteriores. */
+export const ENVELOPE_PRECO_VERSAO = 3;
 
 /**
  * Lê o contexto guardado. Devolve `null` a qualquer sinal de estranheza —
@@ -62,7 +84,7 @@ export function lerContextoPreco<T extends { versao: number }>(versaoEsperada: n
  */
 export function lerEnvelopePreco<T extends { versao: number }>(
   versaoContexto: number,
-): { contexto: T; respondidos: string[] } | null {
+): { contexto: T; respondidos: string[]; atualizadoEm: string | null } | null {
   const bruto = lerChave(CHAVE());
   if (!bruto) return null;
   try {
@@ -71,16 +93,20 @@ export function lerEnvelopePreco<T extends { versao: number }>(
 
     const env = lido as Partial<EnvelopePreco<T>> & { versao?: number };
 
-    if (env.versao === 2 && env.contexto && (env.contexto as T).versao === versaoContexto) {
+    // v3 e v2 têm a mesma forma; a v3 acrescenta a data. Aceitar as duas é
+    // o que impede que meia hora de custos introduzidos desapareça só
+    // porque o esquema cresceu.
+    if ((env.versao === 3 || env.versao === 2) && env.contexto && (env.contexto as T).versao === versaoContexto) {
       return {
         contexto: env.contexto as T,
         respondidos: Array.isArray(env.respondidos) ? env.respondidos.filter((r) => typeof r === "string") : [],
+        atualizadoEm: typeof env.atualizadoEm === "string" ? env.atualizadoEm : null,
       };
     }
 
     // v1: o contexto era gravado à cabeça, sem envelope.
     if (env.versao === versaoContexto) {
-      return { contexto: lido as T, respondidos: [] };
+      return { contexto: lido as T, respondidos: [], atualizadoEm: null };
     }
 
     return null;
@@ -90,9 +116,18 @@ export function lerEnvelopePreco<T extends { versao: number }>(
 }
 
 export function gravarContextoPreco(contexto: unknown, respondidos: readonly string[] = []): void {
-  gravarChave(CHAVE(), JSON.stringify({ versao: 2, contexto, respondidos } satisfies EnvelopePreco<unknown>));
+  const envelope: EnvelopePreco<unknown> = {
+    versao: ENVELOPE_PRECO_VERSAO,
+    contexto,
+    respondidos,
+    atualizadoEm: new Date().toISOString(),
+  };
+  const r = gravarChave(CHAVE(), JSON.stringify(envelope));
+  // Só se anuncia o que ficou mesmo gravado (§12.3).
+  if (r.ok) anunciarMudanca("preco");
 }
 
 export function limparContextoPreco(): void {
   removerChave(CHAVE());
+  anunciarMudanca("preco");
 }
