@@ -1,9 +1,9 @@
 {
   "_meta": {
     "schema": 1,
-    "appVersion": "2.154.0",
+    "appVersion": "2.155.0",
     "fiscalYear": 2026,
-    "engineHash": "sha256:92e47aca471c596e9b7a4e082131291e3777f9891d91ffa25c3f34fbec3521a1"
+    "engineHash": "sha256:e6804b8177bdffcc8464a6b45a48fce5b73ef5b07c293b3c9df46414faec55b2"
   },
   "dados": {
     "bruto": 1500,
@@ -38,7 +38,13 @@
       "encargosPublicosMaximos": 15120,
       "custoHoraProdutiva": 33.95,
       "receitaAnualNecessaria": 61384.62,
-      "horasProdutivasAno": 1175.2
+      "horasProdutivasAno": 1175.2,
+      "parcelas": {
+        "salarioEsubsidios": 29772.82,
+        "refeicao": 2356.2,
+        "tsuPatronal": 7070.98,
+        "posto": 700
+      }
     }
   }
 }

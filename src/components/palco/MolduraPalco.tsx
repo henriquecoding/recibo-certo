@@ -302,8 +302,25 @@ export default function MolduraPalco({
                     }}
                   />
                 </span>
+                {/* ┌─────────────────────────────────────────────────────┐
+                    │ O `tracking` SÓ A PARTIR DE `sm`, E A PALAVRA QUEBRA│
+                    │                                                     │
+                    │ Quatro colunas iguais a 360 px dão ~71 px cada, e a │
+                    │ 320 px ~61 px. Um rótulo de oito letras em maiúscu- │
+                    │ las no piso de 12 px não cabe lá — e como não há    │
+                    │ espaço onde quebrar, a palavra SAÍA da célula e     │
+                    │ encostava à seguinte: «ORÇAMENTOPACOTE», medido a   │
+                    │ 360 px. O `overflow: clip` de `[data-palco]` impede │
+                    │ a página de rolar de lado, portanto nada acusava.   │
+                    │                                                     │
+                    │ Os 0,025em espalhados por oito letras valem ~2,4 px │
+                    │ e não chegam para resolver sozinhos: é a quebra que │
+                    │ garante que dois rótulos nunca se tocam, seja qual  │
+                    │ for a palavra. É a mesma lição do `CartaoLiquido`   │
+                    │ do palco da Empresa, aplicada onde ela nasceu.      │
+                    └─────────────────────────────────────────────────────┘ */}
                 <span
-                  className={`mt-1.5 block text-center texto-micro font-bold uppercase leading-tight tracking-wide transition-colors sm:text-left sm:text-[11px] ${
+                  className={`mt-1.5 block text-center texto-micro font-bold uppercase leading-tight tracking-normal transition-colors [overflow-wrap:anywhere] sm:text-left sm:text-[11px] sm:tracking-wide ${
                     indice === ato
                       ? pele.rotuloAtivo
                       : indice < ato

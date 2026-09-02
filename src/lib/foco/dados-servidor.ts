@@ -222,6 +222,17 @@ export function dadosContratacao(): DadosContratacao {
   const resultado = preparacao.result;
   const liquido = resultado.workerOutcome.monthlyReference;
   const encargos = resultado.publicCharges.total;
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A REPARTIÇÃO É DO MOTOR, NÃO DO PALCO                             │
+  // │                                                                   │
+  // │ O ato do pacote mostra o orçamento a partir-se nas parcelas do    │
+  // │ posto. Sem isto, o palco teria de as compor à mão — multiplicar   │
+  // │ a refeição pelos dias, aplicar 23,75% ao bruto — e seria a        │
+  // │ terceira cópia da mesma aritmética, livre de divergir das outras  │
+  // │ duas no dia em que uma taxa mudasse. `breakdown` já existe no     │
+  // │ resultado e é a mesma soma que produz `annualStabilized`.         │
+  // └───────────────────────────────────────────────────────────────────┘
+  const parcelas = resultado.employerCost.breakdown;
 
   return {
     orcamentoAnual,
@@ -255,6 +266,26 @@ export function dadosContratacao(): DadosContratacao {
     horasProdutivasAno: resultado.capacity
       ? resultado.capacity.annualProductiveHoursHundredths / 100
       : null,
+    parcelas: {
+      salarioEsubsidios: parcelas.cashCompensation.cents / 100,
+      refeicao: parcelas.mealAllowance.cents / 100,
+      tsuPatronal: parcelas.employerSocialSecurity.cents / 100,
+      // Tudo o que o posto obriga e é RECORRENTE. `equipment` e
+      // `recruitment` ficam de fora porque são custos de arranque e o
+      // total que a cena reparte é `annualStabilized`, o ano recorrente —
+      // somá-los aqui punha a barra composta a exceder o próprio total.
+      // Que as quatro parcelas continuem a somar `custoAnual` é uma
+      // asserção de `coreografia-contratacao.test.ts`, não uma esperança.
+      posto:
+        (parcelas.accidentInsurance.cents +
+          parcelas.healthAndSafety.cents +
+          parcelas.benefits.cents +
+          parcelas.training.cents +
+          parcelas.software.cents +
+          parcelas.remoteWork.cents +
+          parcelas.other.cents) /
+        100,
+    },
   };
 }
 
