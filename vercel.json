@@ -33,6 +33,10 @@
     {
       "path": "/api/cron/lembrar-casos",
       "schedule": "45 8 * * *"
+    },
+    {
+      "path": "/api/email/guardiao",
+      "schedule": "0 8 * * *"
     }
   ]
 }

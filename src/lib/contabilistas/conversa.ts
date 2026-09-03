@@ -238,14 +238,25 @@ export function escutarMensagens(
 
 // ─── Notificações ──────────────────────────────────────────────────────
 
-export type TipoNotificacao =
-  | "vinculo_pedido" | "vinculo_aceite" | "mensagem"
-  | "consulta_pedida" | "consulta_confirmada" | "consulta_cancelada"
-  | "partilha_recebida" | "cupao_ganho" | "candidatura_decidida";
+// O tipo vem do catálogo, e o catálogo é comparado com o SQL por
+// `npm run avisos:check`. Escrito à mão aqui, ficou nove tipos atrás da
+// base de dados — e um `switch` sobre ele dava-se por exaustivo enquanto
+// dez tipos caíam no `default`.
+export type { TipoNotificacao } from "@/lib/notificacoes/catalogo";
+import type { TipoNotificacao } from "@/lib/notificacoes/catalogo";
 
 export interface Notificacao {
   id: string;
-  tipo: TipoNotificacao;
+  /**
+   * Um `string` e não `TipoNotificacao` de propósito, do lado de fora.
+   *
+   * O que chega aqui vem da base de dados, e a base de dados pode ser mais
+   * nova do que o JavaScript que um telemóvel tem em cache. Prometer a
+   * união fechada seria mentir ao TypeScript sobre dados de runtime; quem
+   * lê usa `descreverNotificacao()`, que sabe o que fazer com um tipo que
+   * ainda não conhece.
+   */
+  tipo: TipoNotificacao | (string & {});
   titulo: string;
   corpo: string | null;
   url: string | null;
@@ -256,7 +267,7 @@ export interface Notificacao {
 function paraNotificacao(l: Linha): Notificacao {
   return {
     id: l.id as string,
-    tipo: l.tipo as TipoNotificacao,
+    tipo: l.tipo as string,
     titulo: l.titulo as string,
     corpo: (l.corpo as string | null) ?? null,
     url: (l.url as string | null) ?? null,
