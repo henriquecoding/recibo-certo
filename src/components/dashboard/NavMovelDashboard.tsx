@@ -24,6 +24,7 @@ import type { User } from "@supabase/supabase-js";
 import { ArrowLeft, Close, Menu, LogOut } from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import BotaoNovidades from "@/components/novidades/BotaoNovidades";
 import LinkNav from "@/components/dashboard/LinkNav";
 import {
   GRUPOS_DASHBOARD,
@@ -259,7 +260,12 @@ export default function NavMovelDashboard({
                 >
                   <ArrowLeft size={13} /> Voltar ao site
                 </Link>
-                <ThemeToggle />
+                <div className="flex items-center gap-1.5">
+                  {/* Ao lado do tema, como em todo o resto do produto — e a
+                      folha fecha antes de pedir, porque o painel é modal. */}
+                  <BotaoNovidades aoAbrir={fecharMenu} />
+                  <ThemeToggle />
+                </div>
               </div>
             </div>
           </div>

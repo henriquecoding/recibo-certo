@@ -7,7 +7,9 @@
 //  │ O DEFEITO QUE ISTO EXISTE PARA TORNAR IMPOSSÍVEL (P0-05)             │
 //  │                                                                     │
 //  │ Na primeira visita, «Novidades & Atualizações» aparecia POR CIMA das │
-//  │ preferências de cookies — e o foco ficava no diálogo de baixo. Havia │
+//  │ preferências de cookies — e o foco ficava no diálogo de baixo. (Esse │
+//  │ painel deixou entretanto de abrir sozinho — regra 10 do CLAUDE.md —  │
+//  │ mas a invariante continua a ser desta casa e vale para todos.) Havia │
 //  │ dois conjuntos de controlos com `aria-modal="true"` no mesmo         │
 //  │ documento: a pessoa via uma superfície e o teclado estava noutra. É  │
 //  │ dos poucos defeitos que bloqueia o produto por inteiro, e nenhum dos │
@@ -45,8 +47,13 @@ export type NomeOverlay =
  * ação destrutiva: é a única pergunta do produto cuja resposta não se
  * desfaz, e tapá-la com o que quer que seja seria pedir uma decisão sobre
  * uma frase que a pessoa deixou de ver. Depois vem o que a PESSOA pediu —
- * se carregou em «Pesquisar», é isso que tem de aparecer. As novidades
- * ficam em último: são a única coisa aqui que ninguém pediu.
+ * se carregou em «Pesquisar», é isso que tem de aparecer.
+ *
+ * As novidades ficam em último, e a razão MUDOU (regra 10 do CLAUDE.md).
+ * Eram a única coisa aqui que ninguém pedia — abriam-se sozinhas a cada
+ * versão nova. Hoje só abrem a pedido, como tudo o resto, e mesmo assim
+ * ficam no fim: é um painel informativo, e informação nunca justifica
+ * tirar do ecrã uma superfície onde alguém já está a trabalhar.
  */
 export const PRIORIDADE: Record<NomeOverlay, number> = {
   cookies: 100,

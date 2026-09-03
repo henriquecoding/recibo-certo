@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  CHANGELOG do popup "Novidades & Atualizações".
+//  CHANGELOG do painel "Novidades & Atualizações".
 //
 //  O histórico anterior a 2.51.0 vive em `changelog-historico/`. A separação
 //  evita regravar quase 200 KB de prosa para acrescentar uma linha nova, sem
@@ -15,6 +15,18 @@ import { APP_VERSION, type EntradaChangelog } from "./version";
 import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
+  {
+    version: "2.159.0",
+    data: "2026-09-03",
+    titulo: "As novidades deixaram de aparecer sem serem chamadas — passaram a ser um botão ao lado do tema",
+    itens: [
+      "«Novidades & Atualizações» abria-se sozinho a cada versão nova. Era uma vez por versão, nunca a cada refresh — e mesmo assim era a única coisa neste produto que interrompia quem tinha vindo fazer outra coisa: uma janela sobre outro assunto, por cima do ecrã, com o teclado preso lá dentro até a fechar. Acabou.",
+      "A informação continua toda lá, à distância de um toque: há um botão novo, ao lado do que troca entre tema claro e escuro, e é ele que abre o painel. No telemóvel e no computador, no mesmo sítio — no cabeçalho da folha de navegação, no menu «Conta» e também no painel.",
+      "Quando há uma versão que ainda não viste, o botão ganha um ponto. É o mesmo aviso de antes, sem tapar nada: quem quer saber carrega, quem não quer nunca mais é interrompido. O ponto apaga-se assim que o painel aparece — atualizar a página com ele aberto não o volta a acender.",
+      "Nada disto é uma promessa: o painel já não tem sequer forma de saber que versão é que viste, e o código que o traz para o ecrã só corre depois de alguém carregar no botão. Um popup que nunca é montado não pode aparecer.",
+      "O painel em si está igual: abre no mês corrente, com a versão nova em destaque, e os meses anteriores continuam a só carregar quando se clica neles.",
+    ],
+  },
   {
     version: "2.158.0",
     data: "2026-09-02",

@@ -1,11 +1,16 @@
 "use client";
 
-// Popup "Novidades & Atualizações".
+// Painel "Novidades & Atualizações".
 //
-// ⚠️ REGRA IMUTÁVEL (CLAUDE.md, regra 10) — QUANDO APARECE: só na PRIMEIRA
-// visita de sempre e quando surge uma versão NOVA. Nunca a cada refresh. A
-// garantia está no primeiro efeito, palavra por palavra: a versão é marcada
-// como vista NO INSTANTE em que o popup é mostrado, não só ao fechar.
+// ⚠️ REGRA 10 (CLAUDE.md) — NÃO É UM POPUP, E NÃO PODE VOLTAR A SÊ-LO.
+// Isto não abre sozinho: nem na primeira visita, nem quando há versão nova,
+// nem nunca. A ÚNICA porta é `EVENTO_ABRIR_NOVIDADES`, disparado pelo botão
+// que vive ao lado do seletor de tema (`novidades/BotaoNovidades.tsx`). Não
+// há aqui nenhuma leitura da versão guardada a decidir abrir — a versão só é
+// lida para acender o ponto do botão, e isso vive noutro ficheiro.
+// A segunda metade da regra fica: a versão é marcada como vista NO INSTANTE
+// em que o painel é mostrado, não só ao fechar, para que atualizar a página
+// com ele aberto não volte a acender o ponto.
 //
 // ⚠️ REGRA INEGOCIÁVEL (CLAUDE.md, regra 11) — O QUE CARREGA AO ABRIR: só o
 // MÊS ATUAL. Os meses anteriores entram fechados, como um grupo com o nome do
@@ -22,7 +27,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { m, AnimatePresence } from "motion/react";
 import { Close, Sparkle, ChevronDown } from "@/components/ui/Icons";
-import { APP_VERSION, VERSAO_STORAGE_KEY } from "@/lib/version";
+import { APP_VERSION } from "@/lib/version";
+import {
+  EVENTO_ABRIR_NOVIDADES,
+  marcarNovidadesVistas,
+} from "@/components/novidades/abrir";
 import {
   carregarIndice,
   carregarMes,
@@ -34,31 +43,52 @@ import {
 import { useModalA11y } from "@/hooks/useModalA11y";
 import { useOverlay } from "@/components/overlays/CoordenadorOverlays";
 
-export default function NovidadesModal() {
-  const [querAbrir, setAberto] = useState(false);
+export default function NovidadesModal({
+  /**
+   * `true` quando este componente foi montado PELO pedido — o loader de
+   * `IntentOverlays` só o traz do outro lado da fronteira dinâmica depois de
+   * o evento chegar, e sem isto o primeiro clique perdia-se enquanto o chunk
+   * viajava. É o mesmo padrão do feedback e do consentimento.
+   */
+  abrirInicialmente = false,
+}: { abrirInicialmente?: boolean }) {
+  const [querAbrir, setAberto] = useState(abrirInicialmente);
+
+  const fechar = useCallback(() => {
+    // A marca já foi posta no instante em que o painel apareceu (efeito
+    // abaixo). Aqui é rede de segurança, para o caso de algo ter falhado lá.
+    marcarNovidadesVistas();
+    setAberto(false);
+  }, []);
 
   /**
-   * ⚠️ REGRA IMUTÁVEL (regra 10) × COORDENADOR DE OVERLAYS (P0-05)
+   * ⚠️ REGRA 10 × COORDENADOR DE OVERLAYS (P0-05)
    *
-   * As duas encaixam, e a ordem importa. A regra diz que a versão é
-   * marcada como vista NO INSTANTE EM QUE O POPUP É MOSTRADO — e é isso
-   * que continua a acontecer, no efeito mais abaixo, quando `aberto`
-   * passa a verdadeiro.
+   * `iniciadoPeloUtilizador: true` porque agora é sempre verdade: a única
+   * forma de chegar aqui é alguém ter carregado no botão. Deixou de haver
+   * abertura automática, e com ela deixou de haver a colisão que a auditoria
+   * encontrou — o painel a montar-se por cima do diálogo de cookies com o
+   * foco preso em baixo. Hoje isso não pode acontecer porque nada abre isto
+   * sem um gesto.
    *
-   * O que muda é o que significa «mostrado». Antes, a marca era posta no
-   * momento da DECISÃO — e a auditoria encontrou o caso em que a decisão
-   * e a exibição não coincidem: na primeira visita o popup era montado
-   * por cima do diálogo de cookies, com o foco preso em baixo. A pessoa
-   * nunca o leu, e a versão ficava marcada como vista à mesma. Agora
-   * espera pela vaga: com o consentimento por decidir, isto não abre —
-   * e como não abre, também não se dá por visto.
+   * A prioridade continua a ser a mais baixa da tabela (ver
+   * `CoordenadorOverlays.tsx`): pedido ou não, este painel nunca toma o lugar
+   * de uma superfície que já esteja no ecrã.
    *
-   * `iniciadoPeloUtilizador: false` é o que o põe no fim da fila. É a
-   * única superfície aqui que ninguém pediu.
+   * O quarto argumento é o que arruma o caso contrário: se um gesto com mais
+   * prioridade levar a vaga (a pesquisa, o consentimento), este fecha-se em
+   * vez de ficar invisível a querer abrir — e a reaparecer sozinho mais tarde,
+   * que é exactamente o comportamento de popup que esta versão eliminou.
    */
-  const aberto = useOverlay("novidades", querAbrir, { modal: true, iniciadoPeloUtilizador: false });
-  // `null` = ainda a carregar. A DECISÃO de abrir NÃO depende disto: é tomada
-  // e persistida no efeito abaixo, com a versão que vem do módulo leve.
+  const aberto = useOverlay(
+    "novidades",
+    querAbrir,
+    { modal: true, iniciadoPeloUtilizador: true },
+    fechar,
+  );
+
+  // `null` = ainda a carregar. NADA aqui decide abrir: a abertura vem sempre
+  // de fora, pelo evento.
   const [indice, setIndice] = useState<IndiceNovidades | null>(null);
   /** Meses já carregados, por chave. Nunca há um pedido repetido. */
   const [meses, setMeses] = useState<Record<string, MesCompleto>>({});
@@ -69,34 +99,30 @@ export default function NovidadesModal() {
   const [expandida, setExpandida] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // ⚠️ REGRA IMUTÁVEL do popup de Novidades (não alterar sem autorização):
-  // o popup só pode aparecer (1) na primeira visita de sempre e (2) quando
-  // surge uma NOVA versão (APP_VERSION muda no changelog). Nunca a cada
-  // refresh. Aqui decide-se apenas SE se quer abrir.
+  /**
+   * ⚠️ REGRA 10 — A ÚNICA PORTA DE ENTRADA.
+   *
+   * Um `addEventListener` e mais nada: sem leitura de versão, sem
+   * temporizador, sem `requestIdleCallback`. Enquanto estiver montado, volta
+   * a abrir sempre que alguém carregar no botão — fechar e reabrir não paga
+   * outro chunk nem outro pedido do índice.
+   */
   useEffect(() => {
-    try {
-      if (localStorage.getItem(VERSAO_STORAGE_KEY) !== APP_VERSION) setAberto(true);
-    } catch {
-      // ignore
-    }
+    const abrir = () => setAberto(true);
+    window.addEventListener(EVENTO_ABRIR_NOVIDADES, abrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_NOVIDADES, abrir);
   }, []);
 
-  // ⚠️ REGRA IMUTÁVEL, segunda metade: a versão é marcada como vista NO
-  // INSTANTE em que o popup é mostrado — não apenas ao fechar. Assim,
-  // atualizar a página com ele aberto não o faz reaparecer para a mesma
-  // versão. Voltar a abrir, só com versão nova.
+  // ⚠️ REGRA 10, segunda metade: a versão é marcada como vista NO INSTANTE em
+  // que o painel é MOSTRADO — não apenas ao fechar. Atualizar a página com
+  // ele aberto não volta a acender o ponto do botão.
   useEffect(() => {
     if (!aberto) return;
-    try {
-      localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
-    } catch {
-      // ignore
-    }
+    marcarNovidadesVistas();
   }, [aberto]);
 
-  // Carrega o índice só depois de a decisão de abrir estar tomada. Se falhar,
-  // o popup fecha-se em silêncio — nunca fica um diálogo vazio a bloquear a
-  // página.
+  // Carrega o índice só depois de o painel estar a abrir. Se falhar, fecha-se
+  // em silêncio — nunca fica um diálogo vazio a bloquear a página.
   useEffect(() => {
     if (!aberto || indice) return;
     let vivo = true;
@@ -122,16 +148,6 @@ export default function NovidadesModal() {
       return atuais;
     });
   }, []);
-
-  function fechar() {
-    // Redundante (já marcado ao mostrar), mas mantém a garantia se algo falhar.
-    try {
-      localStorage.setItem(VERSAO_STORAGE_KEY, APP_VERSION);
-    } catch {
-      // ignore
-    }
-    setAberto(false);
-  }
 
   // Escape + scroll-lock + focus-trap + restauro de foco.
   useModalA11y(aberto, fechar, dialogRef);

@@ -20,6 +20,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Logo } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import BotaoNovidades from "@/components/novidades/BotaoNovidades";
 import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import AccountBox from "@/components/dashboard/AccountBox";
 import { BuscaTrigger } from "@/components/busca/BuscaTrigger";
@@ -160,6 +161,9 @@ export default function Sidebar({ pathname }: { pathname: string }) {
             Voltar ao site
           </Link>
           <SinoNotificacoes />
+          {/* Ao lado do tema, como em todo o resto do produto — ver
+              `novidades/BotaoNovidades.tsx` e a regra 10 do CLAUDE.md. */}
+          <BotaoNovidades />
           <ThemeToggle />
         </div>
       </div>
