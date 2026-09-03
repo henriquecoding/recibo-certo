@@ -330,6 +330,8 @@ const GRUPOS_DE_PAGINAS = ["Confiar", "Legal"] as const;
 const ALIASES_DE_PAGINA: Record<string, string[]> = {
   "/metodologia": ["metodologia", "como calculam", "de onde vêm os números", "fórmulas", "rigor"],
   "/estado-dos-dados": ["estado dos dados", "atualizado", "que ano", "verificado", "fontes"],
+  "/fontes-fiscais": ["fontes fiscais", "fontes oficiais", "de onde vem esta taxa", "base legal", "artigo da lei", "onde está escrito"],
+  "/perguntas-frequentes": ["perguntas frequentes", "faq", "dúvidas", "dúvidas frequentes", "perguntas", "ajuda"],
   "/changelog-fiscal": ["alterações fiscais", "o que mudou na lei", "novidades fiscais", "orçamento do estado"],
   "/privacidade": ["privacidade", "dados pessoais", "rgpd", "o que guardam", "cookies"],
   "/termos": ["termos", "condições", "termos de utilização", "responsabilidade"],
@@ -386,6 +388,26 @@ const documentosPaginas = (): DocumentoBusca[] => {
       descricao: "O índice completo dos guias, por etapa e por obrigação.",
       href: "/guias",
       aliases: ALIASES_DE_PAGINA["/guias"],
+      grupo: "Ir para",
+      intencoes: ["compreender"],
+      perfis: ["todos"],
+      dominio: "produto",
+      renderer: "direct_route",
+      prioridade: 40,
+    },
+    // As perguntas frequentes vivem no grupo «Aprender» do menu, que não
+    // entra em `GRUPOS_DE_PAGINAS` — as suas outras entradas são
+    // ferramentas, e indexá-lo inteiro punha cada uma delas duas vezes no
+    // índice. Entra explicitamente, como os dois índices acima, porque
+    // «dúvidas» e «faq» são das consultas que uma pesquisa fiscal tem
+    // mesmo de saber responder.
+    {
+      id: "pagina:perguntas-frequentes",
+      tipo: "pagina",
+      titulo: "Perguntas frequentes",
+      descricao: "As dúvidas mais comuns sobre recibos verdes, salário e impostos — respondidas com as taxas oficiais.",
+      href: "/perguntas-frequentes",
+      aliases: ALIASES_DE_PAGINA["/perguntas-frequentes"],
       grupo: "Ir para",
       intencoes: ["compreender"],
       perfis: ["todos"],

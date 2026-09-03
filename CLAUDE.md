@@ -180,6 +180,14 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/components/ui/` — primitivas (Button, Badge, InfoTip, ActivityCombobox, Reveal, CountUp, ThemeToggle, Icons…).
 - `scripts/check-fiscal-data.mjs` + `.github/workflows/` — monitor fiscal + auditoria de segurança.
 - `scripts/verificar-movel.mjs` — ★ o portão do telemóvel (`npm run movel:e2e`). Ver a regra 5b.
+- `src/lib/__tests__/ligacoes-internas.test.ts` — ★ o portão das ligações
+  (`npm run ligacoes:check`). Reprova qualquer `href` interno cuja rota não
+  exista, ou cuja âncora a página de destino não renderize — a âncora é
+  verificada contra o GRAFO DE IMPORTS dessa página, não contra os ids do
+  projeto. Existe porque `/#faq`, `/#fontes` e `/#calculadora` sobreviveram
+  à reescrita da homepage em doze sítios sem falhar build, tipo ou teste: uma
+  âncora morta não dá 404, entrega o topo da página em silêncio. O rodapé tem
+  a regra mais apertada — só aponta para PÁGINAS, nunca para âncoras.
 - `DESIGN.md` — design system documentado.
 
 ## Próximos passos conhecidos

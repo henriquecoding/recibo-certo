@@ -225,7 +225,7 @@ export default function RecibosPage() {
             </p>
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/#calculadora"
+                href="/dashboard/recibos-verdes"
                 className="btn-shine inline-flex items-center justify-center gap-2 rounded-2xl bg-brand px-5 py-3 text-sm font-semibold text-white shadow-glow transition-all hover:bg-brand-dark hover:shadow-float"
               >
                 <Sparkle size={14} />
@@ -541,7 +541,7 @@ export default function RecibosPage() {
           <div className="flex items-center justify-between rounded-2xl border border-dashed border-stone-200 bg-stone-50/50 px-5 py-4 dark:border-stone-700 dark:bg-stone-800/30">
             <p className="text-sm text-stone-500 dark:text-stone-400">Adiciona mais recibos a partir da calculadora</p>
             <Link
-              href="/#calculadora"
+              href="/dashboard/recibos-verdes"
               className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand transition-colors hover:text-brand-dark"
             >
               Ir para a calculadora <ArrowRight size={13} />

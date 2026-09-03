@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.161.0",
+    data: "2026-09-03",
+    titulo: "As perguntas frequentes e as fontes fiscais voltaram — e agora têm página própria",
+    itens: [
+      "No rodapé, «Perguntas frequentes» e «Fontes fiscais» não levavam a lado nenhum. As duas viviam dentro da página inicial e saíram de lá quando ela foi reescrita; as ligações ficaram, e a partir daí quem carregasse era devolvido ao topo da página inicial sem aviso nenhum — nem sequer uma página de erro, que pelo menos se percebe.",
+      "Voltaram as duas, e desta vez como páginas a sério, com endereço próprio: as dezoito perguntas frequentes e a lista completa das 166 fontes que sustentam cada taxa usada nos cálculos. Já não podem desaparecer numa reescrita da página inicial.",
+      "A página das fontes mostra, para cada uma, quantos valores assentam nela — e separa o que é publicação oficial do Estado do que é consolidação ou apoio profissional. Preferimos dizê-lo a chamar «oficial» a tudo.",
+      "As perguntas ficam todas escritas na página, abertas ou fechadas: dão para ler, procurar na página e enviar a alguém, mesmo em ligações fracas.",
+      "Ao mesmo tempo, mais oito ligações do site apontavam para uma calculadora que também tinha deixado de existir naquele sítio — incluindo a primeira sugestão que aparece ao abrir a pesquisa. Todas corrigidas para a ferramenta certa.",
+      "Para não voltar a acontecer, a publicação passa a ser bloqueada quando uma ligação interna aponta para uma página que não existe, ou para um ponto de uma página que já não está lá.",
+    ],
+  },
+  {
     version: "2.160.0",
     data: "2026-09-03",
     titulo: "O sino dos avisos estava a recusar avisos — e a recusa desfazia o que os tinha causado",
