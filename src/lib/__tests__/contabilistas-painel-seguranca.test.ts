@@ -110,7 +110,14 @@ describe("redesign do painel profissional", () => {
     expect(CSS).toMatch(/\.mobileItem \{[^}]*flex: 1 1/);
   });
 
-  it("não regressa para dois sinos Realtime no mesmo layout", () => {
+  it("continua a montar o sino, uma vez, no cabeçalho do painel", () => {
+    // Já não é uma regra sobre canais Realtime: desde que o estado saiu do
+    // componente para `lib/notificacoes/loja.ts`, dois sinos no ecrã são
+    // uma subscrição só — o canal abre ao primeiro subscritor e fecha ao
+    // último. Ver `notificacoes.test.ts`.
+    //
+    // O que isto ainda guarda é o desenho: UM sino no cabeçalho, e não um
+    // segundo escondido numa secção qualquer a dizer outra contagem.
     expect((LAYOUT.match(/<SinoNotificacoes \/>/g) ?? []).length).toBe(1);
   });
 

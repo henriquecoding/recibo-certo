@@ -133,7 +133,11 @@ export default function PreVisualizacaoFizPage() {
               O que acontece depois de um resultado. O resumo da simulação é o que o handoff
               transporta — sempre campo a campo, escolhido pelo utilizador.
             </p>
-            <div className="overflow-x-auto rounded-3xl border border-stone-200 dark:border-stone-700">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Simuladores — a tabela rola na horizontal"
+              className="focus-marca overflow-x-auto rounded-3xl border border-stone-200 dark:border-stone-700">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-stone-50 dark:bg-stone-800/50">
                   <tr>
@@ -173,7 +177,11 @@ export default function PreVisualizacaoFizPage() {
             <p className="mb-3 text-sm text-stone-500 dark:text-stone-400">
               Uma ação por Guia, resolvida por capacidade. Nenhum URL da FIZ escrito à mão.
             </p>
-            <div className="overflow-x-auto rounded-3xl border border-stone-200 dark:border-stone-700">
+            <div
+              tabIndex={0}
+              role="region"
+              aria-label="Guias — a tabela rola na horizontal"
+              className="focus-marca overflow-x-auto rounded-3xl border border-stone-200 dark:border-stone-700">
               <table className="w-full min-w-[640px] text-sm">
                 <thead className="bg-stone-50 dark:bg-stone-800/50">
                   <tr>

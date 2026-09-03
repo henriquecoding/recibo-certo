@@ -56,6 +56,12 @@ export const REVISOES_MANUAIS: Record<string, string> = {
   "/metodologia": DATA_LAST_REVIEW,
   "/estado-dos-dados": DATA_LAST_REVIEW,
   "/changelog-fiscal": DATA_LAST_REVIEW,
+  // As duas que saíram da homepage e ganharam rota. Ambas DERIVAM da
+  // revisão fiscal e não da data da publicação: o que muda materialmente
+  // nelas é o conteúdo que mostram — as fontes e os valores citados nas
+  // respostas — e não o dia em que passaram a ter endereço próprio.
+  "/fontes-fiscais": DATA_LAST_REVIEW,
+  "/perguntas-frequentes": DATA_LAST_REVIEW,
   // A plataforma de contabilistas. Estas datas estiveram ausentes de
   // propósito até ao dia do merge — a data material de uma página é o dia
   // em que ela é publicada, e escrevê-la antes disso era inventar uma

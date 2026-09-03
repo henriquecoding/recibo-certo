@@ -378,13 +378,34 @@ export default function ZonaDeRisco() {
   return (
     <section
       aria-labelledby="zona-risco"
-      className="mt-6 overflow-hidden rounded-4xl border border-clay-border bg-clay-bg/40 dark:bg-clay-bg/20"
+      // ┌───────────────────────────────────────────────────────────────┐
+      // │ A ÚNICA SUPERFÍCIE ESCURA FORA DA ESCALA — e a legenda pagava  │
+      // │                                                               │
+      // │ `dark:bg-clay-bg/20` dava #43423D: um cartão bem mais claro    │
+      // │ do que o #292524 contra o qual TODA a escala de cinzentos foi  │
+      // │ calibrada (ver o bloco do `.dark .text-stone-400` em           │
+      // │ globals.css). A legenda `text-stone-500` caía a 4,12:1 — e a   │
+      // │ `dark:text-stone-400` que a acompanha, se algum dia ganhasse a │
+      // │ especificidade, daria 3,23:1.                                  │
+      // │                                                               │
+      // │ Era esta a única `dark:bg-clay-bg/*` do projeto, contra 783    │
+      // │ usos do par `text-stone-500 dark:text-stone-400`: o desvio     │
+      // │ estava na superfície, não no texto. A 0,08 a superfície volta  │
+      // │ a #282924 — dentro da escala — e passa a 5,97:1 com o tom que  │
+      // │ de facto pinta e 4,68:1 com o outro. O calor da argila         │
+      // │ mantém-se; o modo claro (`/40`) não é tocado.                  │
+      // └───────────────────────────────────────────────────────────────┘
+      className="mt-6 overflow-hidden rounded-4xl border border-clay-border bg-clay-bg/40 dark:bg-clay-bg/[0.08]"
     >
       <div className="border-b border-clay-border px-5 py-4 sm:px-6">
         <h2 id="zona-risco" className="flex items-center gap-2 text-sm font-bold text-clay-text">
           <Warning size={15} /> Zona de risco
         </h2>
-        <p className="mt-1 text-xs leading-relaxed text-clay-text/80">
+        {/* Sem `/80`: o `clay-text` está calibrado para dar EXATAMENTE o
+            mínimo AA sobre esta superfície (4,75:1). Diluí-lo a 80 % baixa-o
+            para 3,30:1 — a opacidade não é decoração quando o token já está
+            no limite. O peso visual vem do tamanho e do `font-bold` do h2. */}
+        <p className="mt-1 text-xs leading-relaxed text-clay-text">
           Escolhe exatamente o que queres apagar. Tudo o que está aqui é imediato e não tem forma
           de voltar atrás — descarrega antes o que quiseres guardar.
         </p>
@@ -434,7 +455,7 @@ export default function ZonaDeRisco() {
              e o único que existe para quem não tem conta. ────────────── */}
       <div className="divide-y divide-clay-border/60">
         <div className="px-5 py-4 sm:px-6">
-          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-clay-text/70">
+          <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-clay-text">
             <Laptop size={13} /> Neste dispositivo
           </h3>
           <p className="texto-mini mt-0.5 text-stone-500 dark:text-stone-400">
@@ -490,7 +511,7 @@ export default function ZonaDeRisco() {
 
             {grupos.map((g) => (
               <fieldset key={g.id} className="px-5 py-4 sm:px-6">
-                <legend className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-clay-text/70">
+                <legend className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-clay-text">
                   <Cloud size={13} /> {g.titulo}
                 </legend>
                 <p className="texto-mini mt-0.5 text-stone-500 dark:text-stone-400">{g.descricao}</p>

@@ -130,12 +130,18 @@ async function main() {
       const nAtrasados = atrasados.reduce((soma, [, n]) => soma + n, 0);
 
       info.push(
-        `Frescura: ${total} parâmetros em ${porData.length} datas de verificação. ` +
-          `Mais antiga: ${porData[0][0]} (${porData[0][1]} parâmetros, ${dias(porData[0][0])} dias antes da revisão).`
+        // NÃO é o total de parâmetros: é quantas VEZES cada constante `REV_*`
+        // aparece no código. Os parâmetros nascidos dentro de ciclos ou `map`
+        // contam uma vez pela constante e várias no registo, por isso este
+        // número fica abaixo do `PARAMETROS_TODOS.length` que as páginas
+        // publicam. Serve para ver a DISTRIBUIÇÃO por data, não para contar.
+        `Frescura: ${total} usos de constantes de data em ${porData.length} datas de verificação ` +
+          `(o total publicado vem de PARAMETROS_TODOS, e é maior). ` +
+          `Mais antiga: ${porData[0][0]} (${porData[0][1]} usos, ${dias(porData[0][0])} dias antes da revisão).`
       );
       if (nAtrasados > 0) {
         warnings.push(
-          `${nAtrasados} parâmetro(s) foram verificados há mais de ${FOLGA_DIAS} dias face a ` +
+          `${nAtrasados} uso(s) de data foram verificados há mais de ${FOLGA_DIAS} dias face a ` +
             `DATA_LAST_REVIEW (${lastReview}): ${atrasados.map(([d, n]) => `${d} (${n})`).join(", ")}. ` +
             "A interface anuncia a revisão global — reverificar ou registar a razão de continuarem válidos."
         );

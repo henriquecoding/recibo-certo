@@ -7363,6 +7363,16 @@ export const PARAMETROS_AUDITADOS: readonly Sourced<unknown>[] = [
     PRAZOS_ANUAIS_EMPRESA.modelo22, PRAZOS_ANUAIS_EMPRESA.ies, PRAZOS_ANUAIS_EMPRESA.aprovacaoContas,
 ];
 
+/**
+ * Avisos que NÃO bloqueiam o build, mas que o `fiscal:check` mostra.
+ *
+ * Separados dos erros de propósito: um dado incoerente é impossível e tem de
+ * parar tudo; um dado apenas VELHO é possível e pode até estar certo — o que
+ * não pode é ficar velho em silêncio enquanto a interface anuncia uma data
+ * de revisão recente.
+ */
+const avisosDeFrescura: string[] = [];
+
 export function assertFiscalDataIntegrity(): void {
   const erros: string[] = [];
   const EPS = 0.01;
@@ -8285,16 +8295,6 @@ export function assertFiscalDataIntegrity(): void {
     );
   }
 }
-
-/**
- * Avisos que NÃO bloqueiam o build, mas que o `fiscal:check` mostra.
- *
- * Separados dos erros de propósito: um dado incoerente é impossível e tem de
- * parar tudo; um dado apenas VELHO é possível e pode até estar certo — o que
- * não pode é ficar velho em silêncio enquanto a interface anuncia uma data
- * de revisão recente.
- */
-const avisosDeFrescura: string[] = [];
 
 export function avisosDeIntegridadeFiscal(): readonly string[] {
   return avisosDeFrescura;

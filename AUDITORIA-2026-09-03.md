@@ -9,7 +9,7 @@
 
 ---
 
-> ## Estado da remediação — 3 de setembro de 2026, versão 2.159.0
+> ## Estado da remediação — 3 de setembro de 2026, versão 2.162.0
 >
 > **Este relatório foi executado.** Todos os P0 e P1 estão corrigidos e
 > verificados; os P2 e P3 estão fechados com duas exceções declaradas no fim
@@ -24,7 +24,7 @@
 > | **P0-2** `hierarquia:e2e` reprovava | **Feito** — **era um defeito do portão** | ver nota abaixo |
 > | **P1-1** crawlers vs. autoridade | **Feito** — treino bloqueado, resposta permitida | medido por User-Agent |
 > | **P1-2** `/llms.txt` a devolver 403 | **Feito** — isento no proxy | 200 a todos os agentes |
-> | **P1-3** marca duplicada no título | **Feito** — 22 páginas (19 + 3 que o teste encontrou) | teste que reprova |
+> | **P1-3** marca duplicada no título | **Feito** — 24 páginas (19 + 3 que o teste encontrou + 2 que ele apanhou na fusão) | teste que reprova |
 > | **P1-4** `/precos` sem `<h1>` | **Feito** — nível por contexto | verificado no HTML |
 > | **P1-5** interruptor sem nome | **Feito** — `aria-labelledby` | axe: 0 |
 > | **P1-6** contrastes abaixo de AA | **Feito** — 17 pares corrigidos | axe: 0 em 42 rotas |
@@ -32,13 +32,13 @@
 > | **P1-8** GeoJSON do GitHub | **Feito** — auto-alojado, 291 KB → 4,2 KB | `nuts:geo:check` |
 > | **P1-9** terceiros não declarados | **Feito** — secção «Mapas» na privacidade | — |
 > | **P1-10** «a consulta não sai do dispositivo» | **Por decidir** — **por decidir** — ver abaixo | — |
-> | **P1-11** 13 portões fora do CI | **Feito** — todos ligados | 25/25 verdes |
+> | **P1-11** 13 portões fora do CI | **Feito** — 13 + 5 encontrados depois (4 ligados, 1 isento por boa razão) | 37/38 estáticos verdes; `rls:check` pré-existente na `main` (ver nº 6) |
 > | **P2-1** 36% dos parâmetros fora do portão | **Feito** — registo automático: 535/535 | — |
 > | **P2-2** `TODAY` e a frescura invisível | **Feito** — renomeado + controlo no `fiscal:check` | — |
 > | **P2-4/6/7/9/10/11/12** | **Feito** — todos | — |
 > | **P3-1/4/5/6** | **Feito** — todos | — |
 >
-> ### Três coisas que a execução revelou e o relatório não sabia
+> ### Sete coisas que a execução revelou e o relatório não sabia
 >
 > 1. **O P0-2 não era o que parecia.** As superfícies de `/inicio/preco` e
 >    `/inicio/recibos` não estavam mal desenhadas: o portão é que lia o
@@ -62,6 +62,125 @@
 >    escuro, `text-stone-400` (#8A887E) dá 4,26:1 sobre o cartão — 870
 >    utilizações em 259 ficheiros. Corrigi-las uma a uma seria um diff que
 >    ninguém revê. Uma linha em `globals.css` (#94928A) fecha-as todas.
+>
+> 4. **Os portões valem-se sozinhos — e provaram-no na fusão.** Ao trazer o
+>    `main` (que entretanto avançou sete commits e ganhou duas páginas novas,
+>    `/fontes-fiscais` e `/perguntas-frequentes`), **as duas páginas traziam de
+>    volta dois dos defeitos que este relatório tinha acabado de fechar**: a
+>    marca duplicada no `<title>` e a injeção de JSON-LD por `JSON.stringify`.
+>    O primeiro foi apanhado por um portão — o teste de títulos reprovou a
+>    fusão e nomeou as duas linhas. O segundo **não foi**, porque eu tinha
+>    corrigido os 30 sítios e testado o serializador, mas nunca escrito a regra
+>    que obriga a usá-lo. Passou a existir
+>    (`src/lib/__tests__/jsonld-injecao.test.ts`), e foi verificada a reproduzir
+>    o defeito antes de passar. É a diferença entre corrigir e fechar: o que só
+>    foi corrigido volta com a próxima página.
+>
+> 5. **O P1-11 estava mal fechado — e o portão que o fechava tinha o mesmo
+>    buraco.** «Treze portões nunca correm em lado nenhum» foi dado por
+>    resolvido com um portão novo, o `ci:scripts`, que verifica que todo o
+>    `npm run <x>` dos workflows existe no `package.json`. Só que essa é a
+>    direção fácil. A direção que interessa é a inversa — **todo o portão do
+>    `package.json` corre a partir do CI** — e essa continuava sem quem a
+>    obrigasse. Uma varredura completa encontrou mais **cinco** portões órfãos
+>    (`marca:check`, `concelhos:geo:check`, `auth:moldes:check`,
+>    `quiz:meta:check` e o `nuts:geo:check` **escrito nesta mesma remediação
+>    para fechar o P1-8**). Escrever o portão e ligá-lo eram dois passos, e o
+>    segundo não tinha quem o obrigasse — exatamente o defeito que o P1-11
+>    descrevia.
+>
+>    Quatro foram ligados ao passo estático do CI. O quinto,
+>    `concelhos:geo:check`, quase foi o mesmo erro outra vez, só que ao
+>    contrário: fazer um portão órfão correr sem primeiro perguntar SE devia
+>    correr ali. Faz 306 pedidos ao Nominatim — um por concelho — e a
+>    primeira corrida contra o próprio workflow (feita localmente antes de
+>    confiar nele) apanhou um 429 a meio, porque o guião não tem o
+>    soft-fail-em-rede-indisponível que o `nuts:geo:check` já tinha (a
+>    diferença entre «a rede falhou» e «o ficheiro está desatualizado» — a
+>    mesma distinção que mantém `procura:nuts2:check` fora do CI de PRs).
+>    Um serviço público, limitado por taxa e partilhado por todos os
+>    runners do GitHub, não pertence a um portão que bloqueia PRs. Ficou de
+>    fora do passo, isento no `ci:scripts` com a razão escrita — a mesma
+>    disciplina que os dois diagnósticos originais (`fronteira`,
+>    `homepage:atribuicao`) já seguiam. O `ci:scripts` passou a verificar as
+>    duas direções. Verificado a reprovar: retirar um dos quatro passos
+>    ligados, OU apagar a isenção do quinto sem motivo, volta a pôr o
+>    portão vermelho.
+>
+> 6. **`rls:check` reprova — e não é desta remediação.** A junção com a
+>    `main` trouxe uma migração (`20260902120000_cenarios_descoberta_e_preco.sql`)
+>    cujo próprio bloco de verificação — «as quatro políticas de sempre
+>    continuam lá» — reprova dentro do arreio de testes «esquema completo».
+>    Isolado num worktree limpo de `origin/main`, sem nenhuma alteração desta
+>    remediação, **o mesmo `FALHOU` acontece** — confirma que é um defeito
+>    pré-existente, alheio a este trabalho.
+>
+>    A causa não é uma política RLS a menos em produção: é o PRÓPRIO ARREIO
+>    de teste. `testar-rls.sh` cria uma base sintética a partir de 042-099 +
+>    datadas ≥ 20260814, excluindo de propósito `017_cenarios.sql` e
+>    `20260813_planos_operacionais.sql` (que dependem de migrações 001-041
+>    que o arreio não tem). Sem essas duas, a tabela `cenarios` nasce do
+>    stub genérico em `00-arreio-supabase.sql` — uma política solta,
+>    `cenarios_dono` — e não das quatro reais que `20260902120000` verifica.
+>    Em produção, onde as migrações aplicam por ordem desde a 001, as
+>    quatro existem; é só o atalho sintético do arreio que não as tem.
+>
+>    Corrigi-lo bem — sem reabrir os avisos que o próprio arreio documenta
+>    terem custado caro no passado — pede o mesmo cuidado que os
+>    comentários desse ficheiro já pedem, e não uma linha apressada dentro
+>    de um commit de fusão. Fica registado aqui, e não bloqueia este
+>    merge: é um buraco no arreio de teste, não uma política em falta em
+>    produção.
+>
+> 7. **Alargar a varredura de acessibilidade encontrou o defeito mais caro de
+>    todos — e não era de cor.** A varredura original cobria 42 rotas. Alargada
+>    a 52 (uma por família de rota, incluindo `/admin`, `/contabilista` e as
+>    páginas de conta, que nunca tinham sido medidas), apanhou quatro coisas:
+>
+>    · **`/redefinir-password` não abria de todo.** `if (!supabaseConfigurado)`
+>      — sem os parênteses. Uma referência a função é sempre verdadeira, por
+>      isso a guarda NUNCA disparava e o `getSupabase()` a seguir era sempre
+>      chamado; sem as variáveis do Supabase definidas, atirava dentro de um
+>      `useEffect` e levava a página inteira para a fronteira de erro do
+>      Next — ecrã «This page couldn't load», em inglês, sem `<title>` e sem
+>      `lang`. Na página de RECUPERAR A PALAVRA-PASSE, que é onde está quem já
+>      não consegue entrar. É o único dos 28 sítios que chamam
+>      `supabaseConfigurado` a que faltavam os parênteses; os outros 27
+>      chamam-na. Corrigido e verificado: a página passa a mostrar «Este link
+>      já não serve», em português, com título e `lang`, e sem erro nenhum
+>      na consola.
+>
+>    · **A «Zona de risco» tinha a única superfície escura fora da escala.**
+>      `dark:bg-clay-bg/20` dava #43423D, bem mais claro do que o #292524
+>      contra o qual toda a escala de cinzentos foi calibrada — a legenda caía
+>      a 4,12:1. Era a única `dark:bg-clay-bg/*` do projeto, contra 783 usos
+>      do par `text-stone-500 dark:text-stone-400`: o desvio estava na
+>      superfície, não no texto.
+>
+>    · **O mesmo componente diluía um token já no limite.** `text-clay-text`
+>      está calibrado para dar EXATAMENTE o mínimo AA (4,75:1); a `/80` e a
+>      `/70` baixavam-no a 3,30:1 e 2,79:1. Opacidade não é decoração quando o
+>      token já está no limite.
+>
+>    · **Duas tabelas roláveis da pré-visualização da FIZ** não se alcançavam
+>      pelo teclado — o mesmo defeito que o P2-4 tinha fechado no `LegalPage`,
+>      noutro componente.
+>
+>    · E, assim que a `/redefinir-password` voltou a abrir, apareceu o que
+>      estava escondido por trás do ecrã de erro: a ligação para o apoio,
+>      dentro de um parágrafo a `text-stone-400`, era distinguida **só pela
+>      cor** — o verde da marca não chega aos 3:1 contra o texto à volta
+>      (WCAG 1.4.1). Passou a ter sublinhado permanente. Um defeito que
+>      nenhuma varredura anterior podia ter encontrado, porque a página nunca
+>      chegava a desenhar-se.
+>
+>    E uma lição sobre o próprio método: sete das violações relatadas na
+>    primeira passagem eram **artefactos da medição**, não defeitos. O axe
+>    corria 400 ms depois do `domcontentloaded` e apanhava cores a meio de uma
+>    transição — daí um `#499177` que não é nem o verde claro nem o escuro, e
+>    dois cinzentos DIFERENTES para o mesmo elemento em duas passagens. Com
+>    1200 ms de assentamento, `/guias` e `/ferramentas/calcular-preco` dão
+>    zero. Um portão que mede a meio de uma animação não mede nada.
 >
 > ### O que fica por fazer, e porquê
 >

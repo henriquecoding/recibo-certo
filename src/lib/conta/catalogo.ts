@@ -398,6 +398,7 @@ export const FORA_DO_CATALOGO: Record<string, string> = {
   partner_link_clicks: "Cliques sem identidade.",
   partner_events: "Eventos de webhook do parceiro, chaveados pela ligação, e saem com ela.",
   billing_customers: "A ligação entre a conta e o cliente na Stripe. Sai em cascata com a própria conta; apagá-la à parte deixava uma subscrição viva sem dono, e a cobrança a seguir sem a quem devolver.",
+  preferencias_avisos: "A escolha de receber ou não avisos por email. Sai em cascata com a conta; apagá-la à parte não apagaria nada — voltaria a LIGAR os emails, porque a ausência de linha é «sim». Uma opção de apagar que faz o contrário do que quem a escolhe espera não devia existir. Muda-se no interruptor da própria página de conta.",
   guide_partner_routes: "Configuração de routing.",
   recibos_vencimento_legado: "Não existe; nome reservado.",
 };

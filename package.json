@@ -1,12 +1,14 @@
 {
   "name": "recibo-certo",
-  "version": "2.159.0",
+  "version": "2.162.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
     "afinidade:e2e": "node scripts/verificar-afinidade.mjs",
     "auth:moldes": "node scripts/gen-moldes-auth.mjs",
     "auth:moldes:check": "node scripts/gen-moldes-auth.mjs --check",
+    "avisos:check": "node scripts/check-notificacoes.mjs && vitest run src/lib/__tests__/notificacoes.test.ts",
+    "avisos:tipos": "node scripts/check-notificacoes.mjs",
     "build": "next build",
     "busca:check": "vitest run src/lib/__tests__/busca-cabecalho.test.ts src/lib/__tests__/busca-fronteira.test.ts && node scripts/gen-busca-indice.mjs --check",
     "busca:indice": "node scripts/gen-busca-indice.mjs",
@@ -60,6 +62,7 @@
     "homepage:snapshots:check": "node scripts/gen-homepage-focos.mjs --check",
     "homepage:visual": "node scripts/verificar-visual-homepage.mjs",
     "homepage:visual:update": "node scripts/verificar-visual-homepage.mjs --update",
+    "ligacoes:check": "vitest run src/lib/__tests__/ligacoes-internas.test.ts",
     "marca:check": "node scripts/gen-marca.mjs --check",
     "marca:gen": "node scripts/gen-marca.mjs",
     "market:check": "vitest run src/lib/__tests__/negocio-market-*.test.ts",

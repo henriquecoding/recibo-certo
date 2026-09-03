@@ -1040,10 +1040,17 @@ export function LogoMark({ size = 28, className }: IconProps) {
 export function Logo({ small = false }: { small?: boolean }): ReactNode {
   const sz = small ? 24 : 28;
   const text = small ? "text-sm" : "text-[1.1rem]";
+  // `shrink-0` na marca: num contentor apertado, o `flex` encolhia o SVG —
+  // e um logótipo que muda de tamanho conforme o que está ao lado deixa de
+  // ser um logótipo. Quem cede é a palavra, que corta em vez de deformar.
+  // (Medido no cabeçalho do painel a 320px, onde a marca passava de 24 px
+  // para 15 px sem ninguém decidir isso.)
   return (
-    <div className="flex items-center gap-2">
-      <LogoMark size={sz} />
-      <span className={`font-display font-semibold text-stone-800 dark:text-stone-100 ${text}`}>
+    <div className="flex min-w-0 items-center gap-2">
+      <LogoMark size={sz} className="shrink-0" />
+      <span
+        className={`truncate font-display font-semibold text-stone-800 dark:text-stone-100 ${text}`}
+      >
         Recibo <span className="text-brand">Certo</span>
       </span>
     </div>

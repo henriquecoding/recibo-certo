@@ -25,8 +25,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LayoutGrid, Megaphone, User } from "@/components/ui/Icons";
+import { ChevronDown, LayoutGrid, Megaphone, Sparkle, User } from "@/components/ui/Icons";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import { abrirNovidades } from "@/components/novidades/abrir";
+import { useNovidadesPorVer } from "@/hooks/useNovidadesPorVer";
 import { abrirFeedback } from "@/components/feedback/abrir";
 import { useAuth } from "@/lib/supabase/auth";
 
@@ -34,6 +36,7 @@ export function MenuConta({ avatarUrl }: { avatarUrl: string }) {
   const { abrirModal, disponivel, user } = useAuth();
   const pathname = usePathname();
   const [aberto, setAberto] = useState(false);
+  const novidadesPorVer = useNovidadesPorVer();
   const caixa = useRef<HTMLDivElement>(null);
   const botao = useRef<HTMLButtonElement>(null);
   const id = useId();
@@ -119,6 +122,34 @@ export function MenuConta({ avatarUrl }: { avatarUrl: string }) {
             className="focus-marca flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm text-stone-700 transition-colors hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
           >
             <Megaphone size={16} className="text-stone-400" aria-hidden /> Sugestões e suporte
+          </button>
+
+          {/* ┌───────────────────────────────────────────────────────────┐
+              │ «NOVIDADES» É UMA LINHA, E NÃO UM POPUP (regra 10)          │
+              │                                                            │
+              │ O painel aparecia sozinho a cada versão nova — a única      │
+              │ superfície do produto que interrompia quem tinha vindo      │
+              │ fazer outra coisa. Passa a estar aqui, encostado ao tema,   │
+              │ com um ponto quando há versão por ver. O menu não é modal,  │
+              │ por isso não há vaga a libertar: basta fechá-lo.            │
+              └───────────────────────────────────────────────────────────┘ */}
+          <button
+            type="button"
+            data-novidades-gatilho
+            aria-haspopup="dialog"
+            onClick={() => {
+              setAberto(false);
+              abrirNovidades();
+            }}
+            className="focus-marca flex min-h-[44px] w-full items-center gap-2.5 rounded-xl px-3 text-left text-sm text-stone-700 transition-colors hover:bg-stone-50 dark:text-stone-300 dark:hover:bg-stone-800"
+          >
+            <Sparkle size={16} className="text-stone-400" aria-hidden /> Novidades e atualizações
+            {novidadesPorVer && (
+              <span className="ml-auto flex items-center gap-1.5 text-[11px] font-semibold text-brand-dark dark:text-brand">
+                <span className="h-2 w-2 rounded-full bg-brand" aria-hidden />
+                Novo
+              </span>
+            )}
           </button>
 
           <div className="mt-1 flex items-center justify-between gap-2 border-t border-stone-100 px-3 pt-2 dark:border-stone-800">

@@ -1,3 +1,32 @@
+// ═══════════════════════════════════════════════════════════════════════
+//  GUARDIÃO FISCAL — o aviso do limite de isenção de IVA
+//  ---------------------------------------------------------------------
+//  ⚠️ ESTA ROTA NUNCA TINHA CORRIDO EM PRODUÇÃO.
+//
+//  Existia desde a migração 007, com tabela de idempotência, paginação,
+//  confirmação de plano e um template de email escrito. E era `POST`, sem
+//  entrada nenhuma em `vercel.json`. Os Cron Jobs do Vercel fazem GET e só
+//  GET: nem chamavam esta rota, nem podiam. Nada falhava — simplesmente
+//  nada acontecia, e a funcionalidade que o Plus vende («avisamos-te antes
+//  de passares o limite») nunca avisou ninguém.
+//
+//  Duas correções, e as duas são precisas:
+//    · um handler GET (o POST fica, para quem a chame à mão);
+//    · a entrada em `vercel.json`, sem a qual continuava a não correr.
+//
+//  ── E passa a acender o sino ───────────────────────────────────────
+//
+//  Só saía por email. Quem tivesse os avisos filtrados, ou lesse no
+//  telemóvel e arquivasse, ficava sem nada — e voltava ao painel sem
+//  encontrar em lado nenhum a informação que o produto lhe tinha mandado.
+//
+//  O sino recebe o mesmo aviso, pela porta única (`avisar_utilizador_uma_vez`),
+//  com a mesma garantia de não repetir: uma chave por ano e por nível. É o
+//  primeiro tipo de aviso deste produto que não depende de haver um
+//  contabilista do outro lado — ou seja, o primeiro que interessa à
+//  generalidade de quem cá está.
+// ═══════════════════════════════════════════════════════════════════════
+
 import { NextRequest, NextResponse } from "next/server";
 import { enviarEmail } from "@/lib/email/send";
 import { emailGuardiaoFiscal, URL_GERIR_AVISOS, type NivelGuardiao } from "@/lib/email/templates";
@@ -5,6 +34,10 @@ import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { cronAutorizado } from "@/lib/cron-auth";
 import { supabaseAdmin } from "@/lib/supabase/server-admin";
 import { concedePlus, type OrigemConcessao } from "@/lib/stripe/precos-autorizados";
+import { chaveGuardiao } from "@/lib/notificacoes/catalogo";
+
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const LIMIT = IVA_ISENCAO_LIMITE.value;
 const THRESHOLDS: { nivel: NivelGuardiao; ratio: number }[] = [
@@ -134,17 +167,87 @@ export async function POST(req: NextRequest) {
   // vez não cabia no tempo do cron e os últimos da fila nunca chegavam a ser
   // avisados. A decisão continua igual — só o patamar atual mais alto, e nunca
   // um que já tenha sido enviado este ano.
-  const porEnviar = userIds.flatMap((userId) => {
+  //
+  // A decisão de QUEM está num patamar deixou de exigir email: o sino avisa
+  // toda a gente que lá esteja, e o email só quem tem endereço. Eram a mesma
+  // lista, e isso significava que uma conta sem email em `profiles` não
+  // recebia aviso nenhum — nem o que não precisa de email nenhum.
+  const noPatamar = userIds.flatMap((userId) => {
     const total = billed.get(userId) ?? 0;
-    const email = emails.get(userId);
-    if (!email) return [];
     const ratio = total / LIMIT;
     // Quem entra já acima do limite não deve receber, nos crons seguintes,
     // alertas progressivamente menos graves.
     const threshold = THRESHOLDS.find((item) => ratio >= item.ratio);
     if (!threshold) return [];
-    if (alreadySent.has(`${userId}:${threshold.nivel}`)) return [];
-    return [{ userId, email, total, ratio, nivel: threshold.nivel }];
+    return [{ userId, total, ratio, nivel: threshold.nivel }];
+  });
+
+  // ── O sino ────────────────────────────────────────────────────────
+  //
+  // Antes do email, e independente dele. A deduplicação é da base de
+  // dados (`chave` única por conta) e não desta lista: o cron corre todos
+  // os dias e a mesma pessoa continua acima de 80% todos os dias.
+  //
+  // Uma falha aqui não pode impedir o email — são dois canais, e o que
+  // interessa é que pelo menos um chegue. Fica registada e segue.
+  let acesos = 0;
+  for (const lote of emPedacos(noPatamar, ENVIOS_EM_PARALELO)) {
+    const resultados = await Promise.all(lote.map(async (item) => {
+      const pct = Math.round(item.ratio * 100);
+      const { data, error } = await sb.rpc("avisar_utilizador_uma_vez", {
+        p_destino: item.userId,
+        p_tipo: "guardiao_iva",
+        p_titulo: item.nivel === "ultrapassado"
+          ? "Passaste o limite de isenção de IVA"
+          : `Já faturaste ${pct}% do limite de isenção de IVA`,
+        p_corpo: item.nivel === "ultrapassado"
+          ? "A isenção termina. Altera o regime no Portal das Finanças para não levares coima."
+          : `Faltam ${Math.max(0, LIMIT - item.total).toLocaleString("pt-PT", {
+              style: "currency", currency: "EUR", maximumFractionDigits: 0,
+            })} para o limite.`,
+        p_url: "/dashboard",
+        p_chave: chaveGuardiao(year, item.nivel),
+      });
+      if (error) {
+        console.error("[email/guardiao] sino:", error.message);
+        return false;
+      }
+      return data === true;
+    }));
+    acesos += resultados.filter(Boolean).length;
+  }
+
+  // ── O email ───────────────────────────────────────────────────────
+  //
+  // Esta rota não passa pela fila de `notificacoes` — tem template próprio
+  // e livro de registo próprio (`alertas_guardiao`) —, por isso o gatilho
+  // que respeita a preferência de email não a apanha. Pergunta-se aqui, em
+  // lote: uma consulta por pessoa num cron de mil seriam mil consultas.
+  //
+  // Falhar a pergunta NÃO é «manda a toda a gente»: um erro que resulta em
+  // email para quem o desligou é o pior lado por onde errar, e é o que
+  // leva ao botão de spam. Sem resposta, este ciclo não manda email
+  // nenhum — o sino já acendeu, e amanhã tenta outra vez.
+  const { data: optIn, error: erroOptIn } = await sb.rpc("contas_com_avisos_por_email", {
+    p_users: noPatamar.map((i) => i.userId),
+  });
+  if (erroOptIn) {
+    console.error("[email/guardiao] preferências:", erroOptIn.message);
+    return NextResponse.json({
+      erro: "Não foi possível confirmar quem quer avisos por email.",
+      acesos, noPatamar: noPatamar.length, enviados: 0,
+    }, { status: 503 });
+  }
+  const podeReceberEmail = new Set(
+    ((optIn ?? []) as { user_id: string }[]).map((r) => r.user_id),
+  );
+
+  const porEnviar = noPatamar.flatMap((item) => {
+    const email = emails.get(item.userId);
+    if (!email) return [];
+    if (!podeReceberEmail.has(item.userId)) return [];
+    if (alreadySent.has(`${item.userId}:${item.nivel}`)) return [];
+    return [{ ...item, email }];
   });
 
   for (const lote of emPedacos(porEnviar, ENVIOS_EM_PARALELO)) {
@@ -178,5 +281,29 @@ export async function POST(req: NextRequest) {
     });
     if (error) console.error("[email/guardiao] Emails enviados sem ledger local:", error.message);
   }
-  return NextResponse.json({ enviados: records.length, utilizadoresProcessados: userIds.length, ano: year });
+
+  // Contagens, nunca destinatários: isto fica nos registos da Vercel.
+  console.info("[email/guardiao]", {
+    processados: userIds.length, noPatamar: noPatamar.length,
+    acesos, enviados: records.length, ano: year,
+  });
+  return NextResponse.json({
+    enviados: records.length,
+    acesos,
+    noPatamar: noPatamar.length,
+    utilizadoresProcessados: userIds.length,
+    ano: year,
+  });
+}
+
+/**
+ * O Cron Job do Vercel faz GET, e só GET.
+ *
+ * Era esta a razão de a rota nunca ter corrido: estava só em `POST`, e
+ * portanto não havia agendamento possível — nem sequer um que falhasse de
+ * forma visível. O corpo é o mesmo; o `POST` fica para quem a dispare à
+ * mão a partir de um terminal.
+ */
+export async function GET(req: NextRequest) {
+  return POST(req);
 }

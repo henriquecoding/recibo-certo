@@ -355,6 +355,7 @@ export const MENU_GRUPOS: GrupoMenu[] = [
       { label: "Classificar atividade", href: "/ferramentas/classificar-atividade", desc: "Retenção, coeficiente e SS por profissão.", icone: "Search" },
       { label: "Mapa de preços por região", href: "/ferramentas/mapa-contabilistas", desc: "Contabilistas, notários e advogados.", icone: "MapPin" },
       { label: "Comparar regimes", href: "/ferramentas/comparar-regimes", desc: "Recibos verdes, contrato ou empresa, lado a lado.", icone: "Scale" },
+      { label: "Perguntas frequentes", href: "/perguntas-frequentes", desc: "As dúvidas mais comuns, respondidas com as taxas oficiais.", icone: "Info" },
     ],
   },
   {
@@ -362,6 +363,16 @@ export const MENU_GRUPOS: GrupoMenu[] = [
     entradas: [
       { label: "Metodologia", href: "/metodologia", desc: "Como calculamos e o que nunca fazemos." },
       { label: "Estado dos dados", href: "/estado-dos-dados", desc: "O que foi verificado, quando e com que fonte." },
+      // ┌─────────────────────────────────────────────────────────────────┐
+      // │ «FONTES FISCAIS» ENTRA AQUI PORQUE PERDEU A CASA QUE TINHA       │
+      // │                                                                 │
+      // │ Vivia numa secção da homepage, e o rodapé apontava-lhe a âncora  │
+      // │ `/#fontes` em três sítios. A homepage foi reescrita, a secção    │
+      // │ saiu, e as três ligações passaram a entregar o topo da página    │
+      // │ sem dar erro nenhum. Agora é uma rota — e está no menu, que é a  │
+      // │ fonte de onde a pesquisa deriva as páginas institucionais.        │
+      // └─────────────────────────────────────────────────────────────────┘
+      { label: "Fontes fiscais", href: "/fontes-fiscais", desc: "Cada taxa com artigo, endereço oficial e data de verificação." },
       { label: "Alterações fiscais", href: "/changelog-fiscal", desc: "O que mudou na lei e o que mudámos por causa disso." },
     ],
   },

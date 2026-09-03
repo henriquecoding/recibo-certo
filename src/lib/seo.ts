@@ -144,6 +144,16 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/metodologia",      changeFrequency: "monthly", priority: 0.7 },
   { path: "/estado-dos-dados", changeFrequency: "weekly",  priority: 0.7 },
   { path: "/changelog-fiscal", changeFrequency: "weekly",  priority: 0.7 },
+  //
+  // As duas que estiveram a viver dentro da homepage. Eram secções com
+  // âncora (`/#faq`, `/#fontes`), o que as tornava impossíveis de submeter:
+  // uma âncora não é uma URL indexável, é um sítio dentro de outra. Quando
+  // a homepage foi reescrita à volta dos focos, desapareceram — e ninguém
+  // deu por isso porque uma âncora morta entrega o topo da página em vez de
+  // um 404. Com rota própria passam a poder ser citadas, submetidas e
+  // encontradas pelo nome, que é como as pessoas as procuram.
+  { path: "/fontes-fiscais",       changeFrequency: "weekly",  priority: 0.7 },
+  { path: "/perguntas-frequentes", changeFrequency: "monthly", priority: 0.7 },
   { path: "/privacidade", changeFrequency: "yearly", priority: 0.3 },
   { path: "/termos",      changeFrequency: "yearly", priority: 0.3 },
   { path: "/cookies",     changeFrequency: "yearly", priority: 0.3 },

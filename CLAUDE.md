@@ -65,23 +65,35 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
    (`recibocerto_plus_*`), as chaves idempotentes, os `User-Agent`
    (`ReciboCertoLinkCheck/1.0`) e a pasta `ReciboCerto-Fiscal-Engine/`.
    Não inventar testemunhos nem métricas.
-9. **Changelog a cada merge para `main`.** Sobe `APP_VERSION` e acrescenta uma
-   entrada (pt-PT, voltada ao utilizador) NO TOPO de `CHANGELOG` em
-   `src/lib/version.ts` — é o que alimenta o popup "Novidades & Atualizações".
-   `assertChangelogIntegrity()` falha o build e o workflow `changelog-check.yml`
-   falha o PR se esqueceres.
-10. **Popup "Novidades" — comportamento IMUTÁVEL (não mudar sem autorização).**
-   Só pode aparecer (a) na primeira visita de sempre e (b) quando há uma versão
-   nova (`APP_VERSION` muda). NUNCA a cada refresh. A versão é marcada como vista
-   no instante em que o popup é mostrado (ver `NovidadesModal.tsx`), não só ao
-   fechar — atualizar a página com ele aberto não o pode fazer reaparecer.
-11. **Popup "Novidades" — carregamento por mês (INEGOCIÁVEL).** Ao abrir, o popup
-   só pode carregar o **mês atual**. Os meses anteriores entram fechados, como um
-   grupo com o nome do mês e a contagem de versões, e os dados desse mês só são
-   pedidos **quando a pessoa clica nesse grupo** — um pedido por mês, nunca em
-   lote e nunca à entrada. A regra vale por construção, não por disciplina:
-   `scripts/gen-novidades.mjs` escreve `public/novidades/indice.json` SEM as
-   entradas dos meses anteriores (só nome e contagem) e um
+9. **Changelog a cada merge para `main`.** Sobe `APP_VERSION` (em
+   `src/lib/version.ts`) e acrescenta uma entrada (pt-PT, voltada ao utilizador)
+   NO TOPO de `CHANGELOG`, que vive em `src/lib/changelog.ts` — é o que alimenta
+   o painel "Novidades & Atualizações" e o que acende o ponto do botão que o
+   abre. `assertChangelogIntegrity()` falha o build e o workflow
+   `changelog-check.yml` falha o PR se esqueceres. Depois de subir a versão,
+   corre `npm run versao:fix` (alinha o `package.json`) e `npm run novidades:gen`
+   (regenera `public/novidades/`, que é para commitar).
+10. **"Novidades & Atualizações" é PEDIDO, nunca um popup (decidido a
+   03/09/2026 pelo dono do projeto — substitui a regra anterior).** O painel
+   **não abre sozinho**: nem na primeira visita, nem quando há versão nova, nem
+   nunca. A única porta é o botão `BotaoNovidades`, que vive **ao lado do
+   seletor de tema** — na folha de navegação (a mesma no telemóvel e no
+   computador), no menu de conta do cabeçalho de secretária e no chrome do
+   painel. O sinal de que há coisas novas é um **ponto** no botão, nunca uma
+   superfície por cima do que a pessoa está a fazer. O ponto apaga-se no
+   instante em que o painel é **mostrado** (não só ao fechar), pelo que
+   atualizar a página com ele aberto não o volta a acender.
+   A regra vale por construção: `NovidadesModal.tsx` e o loader em
+   `IntentOverlays.tsx` **não podem** referir `VERSAO_STORAGE_KEY` — quem lê a
+   versão guardada é `hooks/useNovidadesPorVer.ts`, que só acende um ponto e não
+   abre nada. Coberto por `src/lib/__tests__/novidades-popup.test.ts`.
+11. **Painel "Novidades" — carregamento por mês (INEGOCIÁVEL).** Ao abrir, o
+   painel só pode carregar o **mês atual**. Os meses anteriores entram fechados,
+   como um grupo com o nome do mês e a contagem de versões, e os dados desse mês
+   só são pedidos **quando a pessoa clica nesse grupo** — um pedido por mês,
+   nunca em lote e nunca à entrada. A regra vale por construção, não por
+   disciplina: `scripts/gen-novidades.mjs` escreve `public/novidades/indice.json`
+   SEM as entradas dos meses anteriores (só nome e contagem) e um
    `public/novidades/meses/AAAA-MM.json` por mês. Nenhum componente as pode
    mostrar à entrada porque elas não estão lá. O changelog NUNCA volta a ser
    importado como módulo JavaScript pelo cliente. Coberto por
@@ -160,11 +172,22 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
 - `src/lib/autoridade.ts` — anatomia de resultado e de página citável, benchmark de IA.
 - `src/lib/revisoes.ts` — data material de cada rota (o `lastmod` real do sitemap).
 - `src/lib/motion.ts` — variantes de animação.
-- `src/lib/version.ts` — ★ `APP_VERSION` + `CHANGELOG` do popup de Novidades (subir a cada merge para `main`; ver regra 9).
+- `src/lib/version.ts` — ★ `APP_VERSION` (subir a cada merge para `main`; ver regra 9).
+- `src/lib/changelog.ts` — ★ o `CHANGELOG` que alimenta «Novidades & Atualizações».
+- `src/components/novidades/` — ★ o botão que abre o painel (`BotaoNovidades.tsx`)
+  e a única porta de abertura (`abrir.ts`). Ver a regra 10.
 - `src/app/` — landing (`page.tsx`) + `dashboard/*` (visão geral, recibos, receitas, prazos, simulador, comparador) + `api/fiscal-data`.
 - `src/components/ui/` — primitivas (Button, Badge, InfoTip, ActivityCombobox, Reveal, CountUp, ThemeToggle, Icons…).
 - `scripts/check-fiscal-data.mjs` + `.github/workflows/` — monitor fiscal + auditoria de segurança.
 - `scripts/verificar-movel.mjs` — ★ o portão do telemóvel (`npm run movel:e2e`). Ver a regra 5b.
+- `src/lib/__tests__/ligacoes-internas.test.ts` — ★ o portão das ligações
+  (`npm run ligacoes:check`). Reprova qualquer `href` interno cuja rota não
+  exista, ou cuja âncora a página de destino não renderize — a âncora é
+  verificada contra o GRAFO DE IMPORTS dessa página, não contra os ids do
+  projeto. Existe porque `/#faq`, `/#fontes` e `/#calculadora` sobreviveram
+  à reescrita da homepage em doze sítios sem falhar build, tipo ou teste: uma
+  âncora morta não dá 404, entrega o topo da página em silêncio. O rodapé tem
+  a regra mais apertada — só aponta para PÁGINAS, nunca para âncoras.
 - `DESIGN.md` — design system documentado.
 
 ## Próximos passos conhecidos

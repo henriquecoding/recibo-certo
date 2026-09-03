@@ -58,6 +58,27 @@ const NAV_APRENDER = [
 // aqui, e não numa secção escondida: metodologia, cobertura dos dados e
 // histórico de correções são o que sustenta tudo o resto. Um site que
 // calcula impostos e não diz como o faz pede confiança sem a merecer.
+//
+// ┌───────────────────────────────────────────────────────────────────────┐
+// │ «PERGUNTAS FREQUENTES» E «FONTES FISCAIS» APONTAVAM PARA LADO NENHUM   │
+// │                                                                       │
+// │ Diziam `/#faq` e `/#fontes`. As duas secções viviam na homepage; a     │
+// │ homepage foi reescrita à volta dos cinco focos e elas saíram de lá —   │
+// │ `components/FAQ.tsx` ficou só ao serviço de `/precos` e                │
+// │ `components/Fontes.tsx` ficou órfão, sem ninguém a importá-lo.         │
+// │                                                                       │
+// │ A ligação não deu erro nenhum. É esse o problema: uma âncora para um   │
+// │ id que já não é renderizado não dá 404, não falha o build e não falha  │
+// │ teste nenhum — entrega a homepage pelo topo, exactamente como se a     │
+// │ pessoa não tivesse clicado. Três das quatro superfícies do rodapé      │
+// │ prometiam «cada taxa tem fonte» e as três levavam ao mesmo sítio: ao   │
+// │ princípio de outra coisa.                                              │
+// │                                                                       │
+// │ É a mesma classe do defeito P0-02 («Calculadora de recibos verdes» →   │
+// │ `/#calculadora`) e tem a mesma cura: o rodapé aponta para PÁGINAS.     │
+// │ `ligacoes-internas.test.ts` reprova qualquer href deste projeto cuja   │
+// │ rota não exista ou cuja âncora a página de destino não renderize.      │
+// └───────────────────────────────────────────────────────────────────────┘
 const NAV_EMPRESA = [
   { label: "Metodologia", href: "/metodologia" },
   { label: "Estado dos dados", href: "/estado-dos-dados" },
@@ -65,8 +86,8 @@ const NAV_EMPRESA = [
   { label: "Planos e preços", href: "/precos" },
   { label: "Investidores", href: "/investidores" },
   { label: "Dashboard", href: "/dashboard" },
-  { label: "Perguntas frequentes", href: "/#faq" },
-  { label: "Fontes fiscais", href: "/#fontes" },
+  { label: "Perguntas frequentes", href: "/perguntas-frequentes" },
+  { label: "Fontes fiscais", href: "/fontes-fiscais" },
   { label: "Privacidade", href: "/privacidade" },
   { label: "Termos de utilização", href: "/termos" },
 ];
@@ -269,7 +290,7 @@ export default function Footer() {
                 </p>
                 <Link
                   prefetch={false}
-                  href="/#fontes"
+                  href="/fontes-fiscais"
                   className="mt-2 inline-flex min-h-[36px] items-center gap-1 texto-mini font-semibold text-brand transition-colors hover:text-brand-dark"
                 >
                   Ver fontes <ArrowRight size={10} />
@@ -305,7 +326,7 @@ export default function Footer() {
                 {[
                   { label: "Privacidade", href: "/privacidade" },
                   { label: "Termos", href: "/termos" },
-                  { label: "Fontes", href: "/#fontes" },
+                  { label: "Fontes", href: "/fontes-fiscais" },
                 ].map((l) => (
                   <Link
                     prefetch={false}

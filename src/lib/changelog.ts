@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════
-//  CHANGELOG do popup "Novidades & Atualizações".
+//  CHANGELOG do painel "Novidades & Atualizações".
 //
 //  O histórico anterior a 2.51.0 vive em `changelog-historico/`. A separação
 //  evita regravar quase 200 KB de prosa para acrescentar uma linha nova, sem
@@ -16,11 +16,13 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.159.0",
+    version: "2.162.0",
     data: "2026-09-03",
     titulo: "Uma auditoria ao site inteiro — o que estava a falhar em silêncio passou a falhar à vista",
     itens: [
-      "Os textos que aparecem no separador do browser e nos resultados de pesquisa diziam a marca duas vezes em vinte e duas páginas: «Calculadora de recibos verdes 2026 | Recibo Certo | Recibo Certo». Foram todos corrigidos, e passou a haver uma verificação automática que impede a repetição de voltar.",
+      "A página que serve para recuperar a palavra-passe não abria. Em vez do formulário, aparecia um ecrã de erro em inglês — «This page couldn't load» — sem título e sem sequer dizer em que língua estava. Era uma linha a que faltavam dois parênteses, e estava precisamente na página a que só vai quem já não consegue entrar na conta. Passa a abrir, em português, e a explicar o que fazer quando o link já expirou.",
+      "Na mesma página de recuperação, a ligação para o apoio era assinalada apenas por ser verde. Quem não distingue essa cor do texto à volta não tinha como saber que era clicável. Passa a estar sublinhada.",
+      "Os textos que aparecem no separador do browser e nos resultados de pesquisa diziam a marca duas vezes em vinte e quatro páginas: «Calculadora de recibos verdes 2026 | Recibo Certo | Recibo Certo». Foram todos corrigidos, e passou a haver uma verificação automática que impede a repetição de voltar.",
       "A página de preços não tinha título principal. Para quem navega com leitor de ecrã, isso é chegar a uma página e não encontrar o nome dela; para um motor de busca, é perder o sinal mais forte do que a página trata. Passou a ter.",
       "O interruptor de sons do Quiz Fiscal não tinha nome nenhum para quem usa leitor de ecrã — era anunciado apenas como «interruptor, desligado». Passou a dizer o que faz.",
       "Onze cores de texto estavam abaixo do contraste mínimo de acessibilidade, entre os 1,3 e os 4,5 exigidos: o selo da parceria FIZ na página inicial, os números dos passos do simulador de IRS (praticamente invisíveis no modo escuro), rótulos do Quiz Fiscal e legendas sobre o verde da marca. Todas subiram acima do mínimo, nos dois temas.",
@@ -30,6 +32,48 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "Os mapas iam buscar as fronteiras das regiões a um repositório do GitHub, o que fazia o endereço de cada visitante chegar lá sem estar declarado em lado nenhum. Passaram a ser servidas por nós. E a política de privacidade passou a dizer, numa secção própria, que as páginas com mapa contactam a CARTO — o único domínio externo que o site usa.",
       "A ficha «Estado dos dados» dizia 344 parâmetros fiscais com base legal, fonte e data. São 535: a contagem só olhava para uma lista escrita à mão. Agora conta-os todos, porque todos passaram a ser verificados automaticamente.",
       "Motores de resposta como o ChatGPT, o Perplexity e o Claude estavam impedidos de ler o site — incluindo o ficheiro que existe precisamente para lhes explicar como o citar. Passam a poder ler e citar; o uso do conteúdo para treinar modelos continua bloqueado, como sempre esteve.",
+      "Na «Zona de risco» — a secção onde se apaga o que é teu — o texto explicativo estava abaixo do contraste mínimo em modo escuro, e dois títulos estavam abaixo do mínimo em modo claro. É o pior sítio possível para se ler mal: é onde se decide o que desaparece para sempre. Corrigido nos dois temas.",
+      "Duas tabelas da página de pré-visualização da FIZ rolavam para o lado e não se conseguiam alcançar só com o teclado — as colunas da direita ficavam fora do alcance de quem não usa rato. Passaram a estar na ordem de tabulação, com nome próprio para quem as ouve.",
+      "Cinco verificações automáticas de qualidade existiam, passavam e nunca corriam — nenhuma publicação as chamava. Entre elas estava a que garante que os mapas das regiões continuam a ser servidos por nós, escrita nesta mesma revisão. Quatro passaram a correr; a quinta pedia 306 pedidos a um serviço externo limitado por taxa a cada publicação, e ficou de fora por essa razão — escrita, para não voltar a parecer esquecimento. A regra deixou de depender de alguém se lembrar: a publicação é bloqueada se uma verificação ficar de fora sem dizer porquê."    ],
+  },
+  {
+    version: "2.161.0",
+    data: "2026-09-03",
+    titulo: "As perguntas frequentes e as fontes fiscais voltaram — e agora têm página própria",
+    itens: [
+      "No rodapé, «Perguntas frequentes» e «Fontes fiscais» não levavam a lado nenhum. As duas viviam dentro da página inicial e saíram de lá quando ela foi reescrita; as ligações ficaram, e a partir daí quem carregasse era devolvido ao topo da página inicial sem aviso nenhum — nem sequer uma página de erro, que pelo menos se percebe.",
+      "Voltaram as duas, e desta vez como páginas a sério, com endereço próprio: as dezoito perguntas frequentes e a lista completa das 166 fontes que sustentam cada taxa usada nos cálculos. Já não podem desaparecer numa reescrita da página inicial.",
+      "A página das fontes mostra, para cada uma, quantos valores assentam nela — e separa o que é publicação oficial do Estado do que é consolidação ou apoio profissional. Preferimos dizê-lo a chamar «oficial» a tudo.",
+      "As perguntas ficam todas escritas na página, abertas ou fechadas: dão para ler, procurar na página e enviar a alguém, mesmo em ligações fracas.",
+      "Ao mesmo tempo, mais oito ligações do site apontavam para uma calculadora que também tinha deixado de existir naquele sítio — incluindo a primeira sugestão que aparece ao abrir a pesquisa. Todas corrigidas para a ferramenta certa.",
+      "Para não voltar a acontecer, a publicação passa a ser bloqueada quando uma ligação interna aponta para uma página que não existe, ou para um ponto de uma página que já não está lá.",
+    ],
+  },
+  {
+    version: "2.160.0",
+    data: "2026-09-03",
+    titulo: "O sino dos avisos estava a recusar avisos — e a recusa desfazia o que os tinha causado",
+    itens: [
+      "Quatro tipos de aviso que o site escreve todos os dias não cabiam na tabela que os guarda. E como o aviso é escrito na mesma operação que o facto que o causa — de propósito, para nunca haver um sem o outro —, a recusa do aviso desfazia o facto: um contabilista não conseguia enviar uma proposta, um pagamento pago no cartão não ficava registado, um patamar de comissão comprado não era aplicado, e o lembrete diário dos casos sem resposta morria antes de lembrar seja quem for. Está corrigido.",
+      "Dois avisos tinham deixado de sair por email sem que ninguém tivesse decidido isso: a mudança de local de uma consulta — precisamente o que faz alguém aparecer na porta errada — e a resposta a uma proposta de valor. Voltam a sair.",
+      "A lista de tipos de aviso deixou de ser copiada à mão de sítio para sítio. Passa a nascer de um só lado, e há duas verificações automáticas — uma no código, outra contra uma base de dados a sério — que reprovam a publicação se voltarem a divergir. Era essa cópia à mão que tinha causado tudo o que está acima.",
+      "O sino não existia no telemóvel. Vivia na barra lateral, que só aparece em ecrãs grandes: quem abrisse o painel no telemóvel não tinha onde ver um pedido de consulta por decidir. Passa a estar no cabeçalho, ao lado da pesquisa e do tema — e abre como folha inferior, inteira, em vez de ficar com metade escondida atrás da barra de navegação.",
+      "Cada aviso passa a mostrar um ícone que diz de que assunto se trata, e a distinguir o que pede uma decisão do que é só para saber.",
+      "Quando a leitura dos avisos falhava, o painel dizia «Nada por aqui. Avisamos-te quando houver» — a mesma frase de quem realmente não tem nada. Passa a dizer que não conseguiu ler, com um botão para tentar outra vez. Também deixou de ficar preso aos 30 mais recentes: há «ver mais antigos».",
+      "Abrir o sino com o teclado deixava o foco no botão e a lista inalcançável. Agora o foco entra no painel, o Tab fica lá dentro, o Escape fecha e o foco volta ao sítio de onde saiu. E o «há 5 min» de cada aviso atualiza-se sozinho em vez de ficar preso na hora em que o painel abriu.",
+      "O Guardião Fiscal — o aviso de que estás a chegar ao limite de isenção de IVA — nunca tinha corrido. O agendamento que o devia acordar não existia, e a rota estava escrita de uma forma que nenhum agendamento conseguia chamar. Passa a correr uma vez por dia, e o aviso passa a aparecer também no sino, e não só no email: é o primeiro aviso deste produto que não depende de haver um contabilista do outro lado.",
+    ],
+  },
+  {
+    version: "2.159.0",
+    data: "2026-09-03",
+    titulo: "As novidades deixaram de aparecer sem serem chamadas — passaram a ser um botão ao lado do tema",
+    itens: [
+      "«Novidades & Atualizações» abria-se sozinho a cada versão nova. Era uma vez por versão, nunca a cada refresh — e mesmo assim era a única coisa neste produto que interrompia quem tinha vindo fazer outra coisa: uma janela sobre outro assunto, por cima do ecrã, com o teclado preso lá dentro até a fechar. Acabou.",
+      "A informação continua toda lá, à distância de um toque: há um botão novo, ao lado do que troca entre tema claro e escuro, e é ele que abre o painel. No telemóvel e no computador, no mesmo sítio — no cabeçalho da folha de navegação, no menu «Conta» e também no painel.",
+      "Quando há uma versão que ainda não viste, o botão ganha um ponto. É o mesmo aviso de antes, sem tapar nada: quem quer saber carrega, quem não quer nunca mais é interrompido. O ponto apaga-se assim que o painel aparece — atualizar a página com ele aberto não o volta a acender.",
+      "Nada disto é uma promessa: o painel já não tem sequer forma de saber que versão é que viste, e o código que o traz para o ecrã só corre depois de alguém carregar no botão. Um popup que nunca é montado não pode aparecer.",
+      "O painel em si está igual: abre no mês corrente, com a versão nova em destaque, e os meses anteriores continuam a só carregar quando se clica neles.",
     ],
   },
   {

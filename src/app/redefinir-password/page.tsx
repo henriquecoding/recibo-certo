@@ -39,7 +39,7 @@ export default function RedefinirPassword() {
   const [aProcessar, setAProcessar] = useState(false);
 
   useEffect(() => {
-    if (!supabaseConfigurado) { setEstado("sem-sessao"); return; }
+    if (!supabaseConfigurado()) { setEstado("sem-sessao"); return; }
     const sb = getSupabase();
     let vivo = true;
 
@@ -117,7 +117,13 @@ export default function RedefinirPassword() {
             </Link>
             <p className="mt-4 text-xs text-stone-400 dark:text-stone-500">
               Se continuar a falhar, escreve para{" "}
-              <a href={mailtoApoio("Não consigo recuperar a palavra-passe")} className="text-brand hover:underline dark:text-brand-mint">
+              {/* Sublinhado PERMANENTE, e não só no `hover`: dentro de um
+                  bloco de texto a `text-stone-400` o verde da marca não chega
+                  aos 3:1 contra o texto à volta, e a cor passa a ser a única
+                  coisa que diz que aquilo é uma ligação (WCAG 1.4.1). É o
+                  mesmo `underline underline-offset-2` que o resto do site já
+                  usa nas ligações dentro de prosa. */}
+              <a href={mailtoApoio("Não consigo recuperar a palavra-passe")} className="text-brand underline underline-offset-2 dark:text-brand-mint">
                 {EMAIL_APOIO}
               </a>.
             </p>
