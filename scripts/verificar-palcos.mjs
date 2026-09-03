@@ -671,9 +671,33 @@ async function verificarArranquePorEtapas(navegador) {
     `legenda: «${noEcra}»`,
   );
 
-  // E ACABA — a rede de segurança do `timeout` do `requestIdleCallback`.
-  await p.waitForTimeout(CENA_EMPRESA);
-  const fim = await legenda();
+  // E ACABA — mas espera-se ATÉ acabar, em vez de dormir um orçamento fixo.
+  //
+  // Era `waitForTimeout(CENA_EMPRESA)` seguido de UMA leitura. Os quatro atos
+  // somam 11 400 ms e a constante dá 12 500 — 9,6 % de margem — só que a cena
+  // não arranca no `load`: arranca quando o `requestIdleCallback` dá licença
+  // («visível + browser livre»). Num runner com seis jobs em paralelo essa
+  // licença chega tarde, e os atos avançam devagar por contenção de CPU. O
+  // resultado era uma reprovação que não dizia nada sobre o produto: a cena
+  // TINHA arrancado (a asserção acima passou) e ainda ia no 1.º ato quando o
+  // relógio do teste esgotava.
+  //
+  // A garantia que interessa é «a cena chega ao fim», não «a cena chega ao fim
+  // em 12,5 segundos». Esperar pelo ESTADO mede a garantia; dormir mede o
+  // runner. O teto continua a existir — três vezes a cena — por isso uma cena
+  // que nunca acaba continua a reprovar, e é mais rápido no caso normal,
+  // porque devolve assim que a legenda muda em vez de dormir sempre tudo.
+  const fim = await p
+    .waitForFunction(
+      () =>
+        /concluída/i.test(
+          document.querySelector("#palco-empresa-titulo + p")?.innerText ?? "",
+        ),
+      null,
+      { timeout: CENA_EMPRESA * 3 },
+    )
+    .then(() => legenda())
+    .catch(() => legenda());
   verificar(
     /concluída/i.test(fim),
     "[arranque] e chega ao fim depois de arrancar",
