@@ -33,6 +33,7 @@ import { m, AnimatePresence } from "motion/react";
 import { LogoMark, Close, ArrowRight, LayoutGrid, Megaphone, ChevronRight } from "@/components/ui/Icons";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import BotaoNovidades from "@/components/novidades/BotaoNovidades";
 import { useAuth } from "@/lib/supabase/auth";
 import { abrirFeedback } from "@/components/feedback/abrir";
 import { SuperficieModal } from "@/components/overlays/SuperficieModal";
@@ -135,8 +136,16 @@ export default function MenuCompleto({
                 botão que abre esta folha — a 360 px não cabiam os dois. O
                 custo tinha de ser um toque, não uma caça: no fim da folha
                 obrigava a rolar por quatro grupos de destinos; aqui está
-                visível no instante em que a folha abre. */}
+                visível no instante em que a folha abre. O botão das novidades
+                entrou ao lado dele pela mesma razão, e substituiu o popup que
+                aparecia sozinho a cada versão (regra 10 do CLAUDE.md). */}
             <div className="flex items-center gap-1.5">
+              {/* «Novidades» ao lado do tema — os dois controlos que não são
+                  destinos, no mesmo canto, no telemóvel e no computador. Fecha
+                  esta folha antes de pedir: o painel é `aria-modal` e o
+                  coordenador nunca deixa dois no ecrã (e a folha vale mais na
+                  tabela de prioridades, portanto não bastava pedir). */}
+              <BotaoNovidades aoAbrir={aoFechar} />
               <ThemeToggle />
               <button
                 type="button"

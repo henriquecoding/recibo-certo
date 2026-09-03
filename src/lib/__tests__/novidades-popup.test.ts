@@ -1,12 +1,13 @@
-// As duas regras do popup "Novidades & Atualizações", fixadas em código.
+// As duas regras de «Novidades & Atualizações», fixadas em código.
 //
 // Estas verificações existem porque as duas regras são fáceis de partir sem
-// que nada pareça errado: o popup continua a abrir, continua bonito, e a
-// única diferença é que passa a custar dez vezes mais — ou a aparecer em cada
-// refresh, que foi o que já aconteceu uma vez.
+// que nada pareça errado: o painel continua a abrir, continua bonito, e a
+// única diferença é que passa a custar dez vezes mais — ou a aparecer sozinho
+// outra vez, que foi o que já aconteceu duas vezes.
 //
-//  · REGRA 10 (imutável) — quando aparece: primeira visita de sempre, ou
-//    versão nova. Nunca a cada refresh.
+//  · REGRA 10 — é PEDIDO, nunca um popup. Não abre sozinho: nem na primeira
+//    visita, nem quando há versão nova, nem nunca. A única porta é o botão que
+//    vive ao lado do seletor de tema.
 //  · REGRA 11 (inegociável) — o que carrega ao entrar: só o mês atual. Os
 //    meses anteriores são grupos fechados e só carregam ao clique.
 //
@@ -18,62 +19,98 @@ import { describe, expect, it } from "vitest";
 
 const SRC = join(__dirname, "..", "..");
 const PUBLICO = join(SRC, "..", "public", "novidades");
+const ler = (...partes: string[]) => readFileSync(join(SRC, ...partes), "utf8");
 
-const MODAL = readFileSync(join(SRC, "components", "ui", "NovidadesModal.tsx"), "utf8");
-const LOADER = readFileSync(join(SRC, "lib", "novidades.ts"), "utf8");
+const MODAL = ler("components", "ui", "NovidadesModal.tsx");
+const LOADER = ler("lib", "novidades.ts");
+const LOADERS = ler("components", "ui", "IntentOverlays.tsx");
+const PORTA = ler("components", "novidades", "abrir.ts");
+const BOTAO = ler("components", "novidades", "BotaoNovidades.tsx");
+const PONTO = ler("hooks", "useNovidadesPorVer.ts");
 const indice = JSON.parse(readFileSync(join(PUBLICO, "indice.json"), "utf8"));
 
-// O bloco que DECIDE se o popup quer abrir: efeito com `[]`, só localStorage.
-const DECISAO = MODAL.slice(
-  MODAL.indexOf("localStorage.getItem(VERSAO_STORAGE_KEY)"),
-  MODAL.indexOf("}, []);"),
-);
-// O bloco que MARCA a versão como vista quando o popup é mostrado.
+// O bloco que MARCA a versão como vista quando o painel é mostrado.
 const MARCA = MODAL.slice(MODAL.indexOf("if (!aberto) return;"), MODAL.indexOf("}, [aberto]);"));
 
-describe("Regra 10 · quando o popup aparece (IMUTÁVEL)", () => {
-  it("decide pela versão vista, sem depender de nada que possa falhar", () => {
-    expect(DECISAO).toMatch(/localStorage\.getItem\(VERSAO_STORAGE_KEY\) !== APP_VERSION/);
-    expect(DECISAO).toMatch(/setAberto\(true\)/);
-    // Se um dia alguém lhe meter um `await`/`then`, uma falha de rede passa a
-    // poder engolir o popup de uma versão inteira.
-    expect(DECISAO).not.toMatch(/await|\.then\(|carregar/);
+describe("Regra 10 · o painel é PEDIDO, nunca um popup", () => {
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A REGRA MUDOU, E MUDOU POR DECISÃO DO DONO DO PROJETO              │
+  // │                                                                   │
+  // │ A anterior dizia «só na primeira visita e quando há versão nova» — │
+  // │ e era cumprida à risca. O que ela não resolvia era o custo de      │
+  // │ existir de todo: um diálogo modal, sobre outro assunto, por cima   │
+  // │ de quem tinha vindo calcular um recibo, com o teclado preso lá     │
+  // │ dentro até o fechar. Uma vez por versão continua a ser uma vez a   │
+  // │ mais quando ninguém o pediu.                                       │
+  // │                                                                   │
+  // │ Agora a informação está a um toque, ao lado do tema, com um ponto  │
+  // │ quando há versão por ver. Estes testes garantem que o caminho de   │
+  // │ volta — «só desta vez abrimos sozinhos» — não existe no código.    │
+  // └───────────────────────────────────────────────────────────────────┘
+
+  it("nada no painel lê a versão guardada para decidir abrir", () => {
+    // A garantia é estrutural: sem acesso à chave, não há como comparar
+    // versões — e sem comparar versões não há popup automático possível.
+    expect(MODAL).not.toMatch(/VERSAO_STORAGE_KEY/);
+    expect(MODAL).not.toMatch(/localStorage\.getItem/);
   });
 
-  it("marca a versão no INSTANTE em que o popup é mostrado", () => {
-    // ┌───────────────────────────────────────────────────────────────────┐
-    // │ A REGRA NÃO MUDOU — MUDOU O QUE «MOSTRADO» SIGNIFICA               │
-    // │                                                                   │
-    // │ A marca era escrita no bloco da DECISÃO. Enquanto decidir e        │
-    // │ mostrar foram a mesma coisa, chegava; deixaram de ser quando o     │
-    // │ coordenador de overlays passou a poder adiar este popup para       │
-    // │ depois do consentimento (P0-05 da auditoria do cabeçalho).         │
-    // │                                                                   │
-    // │ Antes disso, a auditoria encontrou o caso mau: na primeira visita  │
-    // │ o popup montava POR CIMA do diálogo de cookies, com o foco preso   │
-    // │ em baixo — a pessoa nunca o leu e a versão ficava marcada na       │
-    // │ mesma. Marcar quando é MOSTRADO é a mesma regra, aplicada ao       │
-    // │ instante certo, e é mais estrita do que era.                       │
-    // │                                                                   │
-    // │ O que continua exactamente igual: a marca não espera pelo fecho.   │
-    // │ Atualizar a página com o popup aberto não o faz reaparecer.        │
-    // └───────────────────────────────────────────────────────────────────┘
+  it("nem o loader que o traz do outro lado da fronteira dinâmica", () => {
+    // Era aqui que vivia o `requestIdleCallback` que o montava sozinho.
+    expect(LOADERS).not.toMatch(/VERSAO_STORAGE_KEY/);
+    expect(LOADERS).not.toMatch(/requestIdleCallback/);
+    expect(LOADERS).toContain("EVENTO_ABRIR_NOVIDADES");
+    expect(LOADERS).toContain("<NovidadesModal abrirInicialmente />");
+  });
+
+  it("a única porta de entrada é o evento, e ninguém o dispara sozinho", () => {
+    expect(MODAL).toMatch(/window\.addEventListener\(EVENTO_ABRIR_NOVIDADES/);
+    // `abrirNovidades` é a única coisa no módulo que dispara o evento, e é uma
+    // função exportada — não corre em nenhum efeito nem temporizador.
+    const disparos = PORTA.match(/dispatchEvent\(new Event\(EVENTO_ABRIR_NOVIDADES\)\)/g) ?? [];
+    expect(disparos).toHaveLength(1);
+    expect(PORTA).not.toMatch(/setTimeout|requestIdleCallback|addEventListener/);
+  });
+
+  it("o botão vive ao lado do seletor de tema — no telemóvel e no computador", () => {
+    // A folha da navegação é UM componente com duas geometrias: garantir aqui
+    // é garantir nos dois ecrãs. Ver `navegacao/MenuCompleto.tsx`.
+    const folha = ler("components", "navegacao", "MenuCompleto.tsx");
+    expect(folha).toMatch(/<BotaoNovidades aoAbrir=\{aoFechar\} \/>\s*\n\s*<ThemeToggle \/>/);
+
+    // E no menu de conta do cabeçalho de secretária, que é a outra superfície
+    // onde o tema vive.
+    const conta = ler("components", "header", "MenuConta.tsx");
+    expect(conta).toContain("abrirNovidades()");
+    expect(conta).toContain("<ThemeToggle />");
+  });
+
+  it("a folha fecha-se antes de pedir — nunca dois `aria-modal` no ecrã", () => {
+    // O painel é modal e o coordenador só deixa um. Sem `aoAbrir`, o pedido
+    // era recusado em silêncio e o botão não fazia nada.
+    expect(BOTAO).toContain("aoAbrir?.()");
+    expect(MODAL).toMatch(/iniciadoPeloUtilizador:\s*true/);
+    // E quem perde a vaga arruma-se, em vez de reaparecer sozinho mais tarde.
+    expect(MODAL).toMatch(/useOverlay\(\s*"novidades",[\s\S]*?fechar,\s*\)/);
+  });
+
+  it("marca a versão no INSTANTE em que o painel é mostrado", () => {
+    // Continua a ser a mesma garantia de sempre, agora aplicada ao ponto do
+    // botão: atualizar a página com o painel aberto não o volta a acender.
     expect(MARCA, "falta o efeito que marca a versão ao mostrar").toBeTruthy();
-    expect(MARCA).toMatch(/localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/);
-    // Depende de `aberto` — a permissão do coordenador — e de mais nada.
+    expect(MARCA).toContain("marcarNovidadesVistas()");
     expect(MODAL).toMatch(/\}, \[aberto\]\);/);
   });
 
   it("o fecho volta a marcar, como rede de segurança", () => {
-    expect(MODAL.slice(MODAL.indexOf("function fechar()"))).toMatch(
-      /localStorage\.setItem\(VERSAO_STORAGE_KEY, APP_VERSION\)/,
+    expect(MODAL.slice(MODAL.indexOf("const fechar = useCallback"))).toContain(
+      "marcarNovidadesVistas()",
     );
   });
 
-  it("não abre por cima de outro modal — pede vaga ao coordenador", () => {
-    // A outra metade da mesma garantia: um popup que não pode ser lido não
-    // se pode dar por visto.
-    expect(MODAL).toMatch(/useOverlay\("novidades",\s*querAbrir,\s*\{\s*modal:\s*true,\s*iniciadoPeloUtilizador:\s*false\s*\}\)/);
+  it("quem lê a versão guardada só acende um ponto — não abre nada", () => {
+    expect(PONTO).toContain("haNovidadesPorVer");
+    expect(PONTO).not.toMatch(/EVENTO_ABRIR_NOVIDADES|abrirNovidades/);
   });
 });
 
@@ -125,7 +162,7 @@ describe("Regra 11 · o que carrega ao entrar (INEGOCIÁVEL)", () => {
     }
   });
 
-  it("o índice é pequeno — é o custo de ENTRAR no popup", () => {
+  it("o índice é pequeno — é o custo de ENTRAR no painel", () => {
     const kb = Buffer.byteLength(JSON.stringify(indice)) / 1024;
 
     // O que interessa medir é a RAZÃO entre entrar e carregar tudo, não um
@@ -162,7 +199,7 @@ describe("Regra 11 · o que carrega ao entrar (INEGOCIÁVEL)", () => {
     expect(LOADER).toMatch(/\/novidades\/meses\/\$\{chave\}\.json/);
     expect(LOADER).not.toMatch(/corpo\.json/);
 
-    // No modal, o único caminho de entrada de dados além do índice é
+    // No painel, o único caminho de entrada de dados além do índice é
     // `pedirMes`, e é sempre disparado por uma ação: clique no grupo do mês,
     // ou intenção de abrir uma entrada do mês atual.
     expect(MODAL).toMatch(/const pedirMes = useCallback\(\(chave: string\)/);

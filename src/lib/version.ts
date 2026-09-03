@@ -1,19 +1,21 @@
-// Versão da app + changelog do popup "Novidades & Atualizações".
+// Versão da app + changelog do painel "Novidades & Atualizações".
 //
 // ⚠️ REGRA: a cada merge para `main`, sobe `APP_VERSION` e acrescenta uma
-// entrada NO TOPO de `CHANGELOG`. O popup só reaparece a um utilizador quando
-// `APP_VERSION` muda (guarda a última vista em localStorage). Se esqueceres:
+// entrada NO TOPO de `CHANGELOG`. É `APP_VERSION` que acende o ponto do botão
+// «Novidades» a quem ainda não viu esta versão. Se esqueceres:
 //   · `assertChangelogIntegrity()` (em baixo) FALHA o build;
 //   · o workflow `.github/workflows/changelog-check.yml` FALHA o PR para main.
 //
-// ⚠️ REGRA IMUTÁVEL do comportamento do popup (NÃO alterar sem autorização):
-// o popup "Novidades" só pode aparecer (1) na PRIMEIRA visita de sempre e
-// (2) quando há uma NOVA versão (este `APP_VERSION` muda). Nunca a cada refresh.
-// A garantia vive em `NovidadesModal.tsx`: a versão é marcada como vista no
-// INSTANTE em que o popup é mostrado (não só ao fechar), pelo que atualizar a
-// página com ele aberto nunca o faz reaparecer para a mesma versão.
+// ⚠️ REGRA 10 (CLAUDE.md) — «Novidades & Atualizações» NÃO É UM POPUP.
+// Não abre sozinho: nem na primeira visita, nem quando há versão nova, nem
+// nunca. A única porta é o botão que vive ao lado do seletor de tema
+// (`components/novidades/BotaoNovidades.tsx`). O que esta versão comanda é o
+// PONTO desse botão: `VERSAO_STORAGE_KEY` guarda a última versão vista, e
+// `hooks/useNovidadesPorVer.ts` compara-a com esta. A marca é posta no
+// INSTANTE em que o painel é mostrado (não só ao fechar), pelo que atualizar a
+// página com ele aberto não volta a acender o ponto.
 
-export const APP_VERSION = "2.158.0";
+export const APP_VERSION = "2.159.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {

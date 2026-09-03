@@ -28,13 +28,16 @@ describe("overlays por intenção", () => {
     expect(LOADERS).toContain("EVENTO_BUSCA_ABRIR");
     expect(LOADERS).toContain("ABRIR_PREFERENCIAS_EVENT");
     expect(LOADERS).toContain("EVENTO_ABRIR_FEEDBACK");
-    expect(LOADERS).toContain("VERSAO_STORAGE_KEY");
+    // Novidades deixou de ser a abertura automática: passou a ter um evento
+    // como toda a gente (regra 10 do CLAUDE.md).
+    expect(LOADERS).toContain("EVENTO_ABRIR_NOVIDADES");
   });
 
   it("não perde a primeira ação enquanto o import dinâmico chega", () => {
     expect(LOADERS).toContain("<BuscaOverlay abrirInicialmente />");
     expect(LOADERS).toContain("<CookieConsent abrirInicialmente={abrirInicialmente} />");
     expect(LOADERS).toContain("<FeedbackModal pedidoInicial={pedidoInicial} />");
+    expect(LOADERS).toContain("<NovidadesModal abrirInicialmente />");
   });
 });
 
@@ -113,5 +116,8 @@ describe("coordenador:quem-perde-arruma-se", () => {
     expect(ler("components", "navegacao", "MenuCompleto.tsx")).toMatch(/useOverlay\("menu"[\s\S]*?aoFechar\)/);
     expect(ler("components", "busca", "BuscaGlobal.tsx")).toMatch(/useOverlay\("busca"[\s\S]*?fechar\)/);
     expect(ler("components", "busca", "PainelPesquisa.tsx")).toMatch(/useOverlay\("busca"[\s\S]*?aoFechar\)/);
+    // O painel de novidades passou a ser pedido por um gesto — e, como todos
+    // os outros, pode perder a vaga para um gesto com mais prioridade.
+    expect(ler("components", "ui", "NovidadesModal.tsx")).toMatch(/useOverlay\(\s*"novidades",[\s\S]*?fechar,\s*\)/);
   });
 });

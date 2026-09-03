@@ -12,7 +12,7 @@ import {
   lerConsentimento,
 } from "@/lib/cookie-consent";
 import { useAuth } from "@/lib/supabase/auth";
-import { APP_VERSION, VERSAO_STORAGE_KEY } from "@/lib/version";
+import { EVENTO_ABRIR_NOVIDADES } from "@/components/novidades/abrir";
 
 const marcarCarregamento = (id: string) => {
   if (typeof performance === "undefined") return;
@@ -77,8 +77,8 @@ const NovidadesModal = dynamic(async () => {
     import("@/components/ui/NovidadesModal"),
     import("@/components/ui/motion/MotionProvider"),
   ]);
-  return function NovidadesComMovimento() {
-    return <MotionProvider><Modal /></MotionProvider>;
+  return function NovidadesComMovimento(props: { abrirInicialmente?: boolean }) {
+    return <MotionProvider><Modal {...props} /></MotionProvider>;
   };
 }, { ssr: false });
 
@@ -158,42 +158,30 @@ function FeedbackIntentLoader() {
 }
 
 /**
- * Novidades é a única abertura automática. Mesmo assim, só o loader leve
- * consulta a versão; o modal e o índice entram em idle e apenas quando há
- * efetivamente uma versão por mostrar.
+ * ⚠️ REGRA 10 (CLAUDE.md) — NOVIDADES DEIXOU DE SER UMA ABERTURA AUTOMÁTICA.
+ *
+ * Era a única do produto: montava-se sozinha, num momento livre do browser,
+ * sempre que houvesse uma versão por mostrar. Agora é igual ao feedback — nada
+ * atravessa a fronteira dinâmica antes de alguém carregar no botão que vive
+ * ao lado do seletor de tema. Não há aqui leitura da versão guardada: quem a
+ * lê é o ponto do botão (`hooks/useNovidadesPorVer.ts`), que não abre nada.
+ *
+ * Isto é também o que passou a impedir o defeito por construção. Um popup que
+ * nunca é montado não pode aparecer por cima do consentimento.
  */
 function NewsIntentLoader() {
-  const [montar, setMontar] = useState(false);
+  const [pedido, setPedido] = useState(false);
 
   useEffect(() => {
-    let precisa = false;
-    try {
-      precisa = localStorage.getItem(VERSAO_STORAGE_KEY) !== APP_VERSION;
-    } catch {
-      precisa = true;
-    }
-    if (!precisa) return;
+    if (pedido) return;
+    const abrir = () => setPedido(true);
+    window.addEventListener(EVENTO_ABRIR_NOVIDADES, abrir);
+    return () => window.removeEventListener(EVENTO_ABRIR_NOVIDADES, abrir);
+  }, [pedido]);
 
-    let cancelado = false;
-    let id: number;
-    const ric = (window as unknown as {
-      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
-    }).requestIdleCallback;
-    id = ric
-      ? ric(() => !cancelado && setMontar(true), { timeout: 2500 })
-      : window.setTimeout(() => !cancelado && setMontar(true), 1200);
-
-    return () => {
-      cancelado = true;
-      const cic = (window as unknown as {
-        cancelIdleCallback?: (handle: number) => void;
-      }).cancelIdleCallback;
-      if (ric && cic) cic(id);
-      else clearTimeout(id);
-    };
-  }, []);
-
-  return montar ? <NovidadesModal /> : null;
+  // `abrirInicialmente` para o primeiro clique não se perder enquanto o chunk
+  // viaja — o mesmo que a pesquisa, os cookies e o feedback fazem.
+  return pedido ? <NovidadesModal abrirInicialmente /> : null;
 }
 
 /**

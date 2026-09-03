@@ -556,7 +556,11 @@ describe("cabecalho:recursos", () => {
 describe("overlays:prioridade", () => {
   it("o consentimento vem primeiro e as novidades por último", () => {
     // P0-05: na primeira visita, «Novidades» aparecia por cima das
-    // preferências de cookies e o foco ficava no diálogo de baixo.
+    // preferências de cookies e o foco ficava no diálogo de baixo. Hoje o
+    // painel só abre a pedido (regra 10), o que fecha essa porta na origem —
+    // mas a prioridade fica a mais baixa da tabela na mesma: pedido ou não,
+    // um painel informativo nunca toma o lugar de uma superfície que já
+    // esteja no ecrã.
     expect(PRIORIDADE.cookies).toBeGreaterThan(PRIORIDADE.busca);
     expect(PRIORIDADE.cookies).toBeGreaterThan(PRIORIDADE.auth);
     expect(PRIORIDADE.novidades).toBeLessThan(PRIORIDADE.auth);
