@@ -38,7 +38,7 @@
 > | **P2-4/6/7/9/10/11/12** | **Feito** — todos | — |
 > | **P3-1/4/5/6** | **Feito** — todos | — |
 >
-> ### Sete coisas que a execução revelou e o relatório não sabia
+> ### Oito coisas que a execução revelou e o relatório não sabia
 >
 > 1. **O P0-2 não era o que parecia.** As superfícies de `/inicio/preco` e
 >    `/inicio/recibos` não estavam mal desenhadas: o portão é que lia o
@@ -181,6 +181,31 @@
 >    dois cinzentos DIFERENTES para o mesmo elemento em duas passagens. Com
 >    1200 ms de assentamento, `/guias` e `/ferramentas/calcular-preco` dão
 >    zero. Um portão que mede a meio de uma animação não mede nada.
+>
+> 8. **O CI da `main` estava vermelho por DUAS razões, e só uma era
+>    conhecida.** A remediação corrigiu a primeira (o P0-1b: duas ligações com
+>    o mesmo nome acessível reprovavam o `verificar-contratacao.mjs`). Isso
+>    fez o pipeline avançar para além do ponto onde morria há muitas corridas
+>    — e o que estava atrás apareceu:
+>
+>    · **`palcos:e2e`** reprovava numa asserção que media o RELÓGIO e não a
+>      garantia. Os quatro atos da cena somam 11 400 ms e o orçamento do teste
+>      dava 12 500 (9,6 % de margem), mas a cena só arranca quando o
+>      `requestIdleCallback` dá licença — e num runner com seis jobs em
+>      paralelo essa licença chega tarde. A cena TINHA arrancado e ainda ia no
+>      1.º ato quando o relógio esgotava. Corrigido: a asserção passa a
+>      esperar pelo ESTADO, com teto de três vezes a cena. Continua a reprovar
+>      uma cena que não acaba (verificado com condição impossível e teto
+>      curto), e é mais rápida no caso normal.
+>
+>    · **O orçamento de desempenho do Chromium** (`desempenho:ci`) está
+>      excedido: `ready` 136/228,6 ms contra um orçamento de 100/200 ms
+>      (`ORCAMENTO_TROCA.base`). Isto reprova TAMBÉM na `main` anterior a esta
+>      remediação, e **NÃO foi corrigido aqui**, de propósito: as duas saídas
+>      seriam otimizar a homepage (mudança de produto, grande) ou afrouxar o
+>      orçamento — e afrouxar um orçamento para o CI ficar verde é exatamente
+>      o que transforma um portão em decoração. O número está aqui para ser
+>      decidido por quem é dono do produto, não por quem quer o verde.
 >
 > ### O que fica por fazer, e porquê
 >
