@@ -684,9 +684,25 @@ async function verificarArranquePorEtapas(navegador) {
   //
   // A garantia que interessa é «a cena chega ao fim», não «a cena chega ao fim
   // em 12,5 segundos». Esperar pelo ESTADO mede a garantia; dormir mede o
-  // runner. O teto continua a existir — três vezes a cena — por isso uma cena
-  // que nunca acaba continua a reprovar, e é mais rápido no caso normal,
-  // porque devolve assim que a legenda muda em vez de dormir sempre tudo.
+  // runner — e devolve assim que a legenda muda, em vez de dormir sempre tudo.
+  //
+  // ⚠️ ISTO NÃO CORRIGIU A REPROVAÇÃO DO CI, e o teto encurtou por causa
+  // disso. A primeira explicação — «a margem de 9,6 % não chega num runner
+  // carregado» — está DESMENTIDA: com três vezes a cena (37,5 s) a legenda
+  // continuou no 1.º ato. Uma cena que não avança em 37,5 s não está lenta,
+  // está parada, e esperar mais só torna a mesma reprovação oito minutos
+  // mais lenta. Ficam ainda por explicar, e por reproduzir:
+  //
+  //   · não é o relógio a suspender por sair de vista — no local, depois do
+  //     mesmo scroll, `[data-palco-suspenso]` está vazio;
+  //   · não é contenção de CPU — a 6× de estrangulamento a cena acaba;
+  //   · localmente a suíte inteira passa, aqui e no CI o passo 15 reprova.
+  //
+  // O que ainda não foi possível reproduzir é a CONDIÇÃO do CI: nas sondas
+  // locais a 1.ª asserção («fora do ecrã a cena não arranca») comportou-se
+  // ao contrário do arreio — a cena já tinha arrancado —, o que quer dizer
+  // que a sonda não estava a montar o mesmo cenário que o teste. Enquanto
+  // isso não for reproduzido, qualquer explicação é palpite.
   const fim = await p
     .waitForFunction(
       () =>
@@ -694,7 +710,7 @@ async function verificarArranquePorEtapas(navegador) {
           document.querySelector("#palco-empresa-titulo + p")?.innerText ?? "",
         ),
       null,
-      { timeout: CENA_EMPRESA * 3 },
+      { timeout: Math.round(CENA_EMPRESA * 1.5) },
     )
     .then(() => legenda())
     .catch(() => legenda());

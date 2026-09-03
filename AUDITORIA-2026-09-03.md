@@ -188,15 +188,34 @@
 >    fez o pipeline avançar para além do ponto onde morria há muitas corridas
 >    — e o que estava atrás apareceu:
 >
->    · **`palcos:e2e`** reprovava numa asserção que media o RELÓGIO e não a
->      garantia. Os quatro atos da cena somam 11 400 ms e o orçamento do teste
->      dava 12 500 (9,6 % de margem), mas a cena só arranca quando o
->      `requestIdleCallback` dá licença — e num runner com seis jobs em
->      paralelo essa licença chega tarde. A cena TINHA arrancado e ainda ia no
->      1.º ato quando o relógio esgotava. Corrigido: a asserção passa a
->      esperar pelo ESTADO, com teto de três vezes a cena. Continua a reprovar
->      uma cena que não acaba (verificado com condição impossível e teto
->      curto), e é mais rápida no caso normal.
+>    · **`palcos:e2e` continua a reprovar, e a minha primeira explicação
+>      estava ERRADA.** Disse que era a margem de 9,6 % a não chegar num
+>      runner carregado, e mudei a asserção para esperar pelo ESTADO em vez do
+>      relógio, com teto de três vezes a cena. **Não corrigiu nada**: com
+>      37,5 s a legenda continuou no 1.º ato. Uma cena que não avança em
+>      37,5 s não está lenta — está parada. A explicação da margem está
+>      desmentida pela própria correção que ela motivou.
+>
+>      O que ficou apurado, e o que não:
+>
+>      — o relógio dos atos é `requestAnimationFrame` e SUSPENDE quando a
+>        moldura sai de vista (`threshold: 0.01`, marca `data-palco-suspenso`)
+>        ou quando o documento fica escondido. Era a hipótese seguinte, e
+>        **não se confirma**: localmente, depois do mesmo scroll, não há um
+>        único `[data-palco-suspenso]`;
+>      — **não é contenção de CPU**: a 6× de estrangulamento a cena acaba;
+>      — na mesma corrida do CI, três outras cenas (`empresa`, `salario`,
+>        `contratacao`) chegam ao fim. Só o sub-teste `[arranque]` — o que
+>        rebobina a cena ao entrar no ecrã — é que fica preso.
+>
+>      **Limite honesto desta investigação:** nas sondas locais a 1.ª
+>      asserção comportou-se ao contrário do arreio (a cena já tinha
+>      arrancado quando devia estar no estado servido), o que significa que
+>      as sondas não montaram o mesmo cenário que o teste. Sem reproduzir a
+>      condição, qualquer explicação é palpite — e já houve um. A asserção
+>      ficou a esperar pelo estado, que é a forma certa de a escrever, com o
+>      teto encurtado para 1,5× para não tornar a mesma reprovação oito
+>      minutos mais lenta.
 >
 >    · **O orçamento de desempenho do Chromium** (`desempenho:ci`) está
 >      excedido: `ready` 136/228,6 ms contra um orçamento de 100/200 ms
