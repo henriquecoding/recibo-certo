@@ -33,6 +33,7 @@ import { obterPerfil } from "@/lib/supabase/profile";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { PerfilProvider } from "@/lib/perfil";
 import Sidebar from "@/components/dashboard/Sidebar";
+import SinoNotificacoes from "@/components/contabilistas/SinoNotificacoes";
 import NavMovelDashboard from "@/components/dashboard/NavMovelDashboard";
 
 function LigacaoAdmin() {
@@ -98,13 +99,36 @@ export default function DashboardShellClient({ children }: { children: ReactNode
     <div className="min-h-screen bg-cream lg:grid lg:grid-cols-[272px_1fr]">
       <Sidebar pathname={pathname} />
 
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-5 py-3.5 backdrop-blur-xl lg:hidden dark:border-stone-800">
-        <Link href="/" aria-label="Recibo Certo — início">
+      {/* `px-4` e `gap-1.5` abaixo de `sm`, e não `px-5`/`gap-2`: a linha
+          ganhou o sino, e a 320px o que sobrava não chegava — o `flex`
+          não transbordava, ENCOLHIA o logótipo (115 px → 104 px, e para
+          76 px com o atalho de administração ao lado). Medido, não
+          estimado. */}
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-stone-100 bg-cream/85 px-4 py-3.5 backdrop-blur-xl sm:px-5 lg:hidden dark:border-stone-800">
+        {/* `min-w-0` + `shrink`: quando um administrador abre isto num ecrã
+            de 320px são cinco alvos numa linha, e nessa altura alguma coisa
+            tem de ceder. Cede a PALAVRA — que corta —, nunca a marca, que
+            é `shrink-0`, e nunca a página, que não pode rolar de lado. */}
+        <Link
+          href="/"
+          aria-label="Recibo Certo — início"
+          className="flex min-w-0 shrink items-center overflow-hidden"
+        >
           <Logo small />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <BuscaTrigger compacto />
           <LigacaoAdmin />
+          {/* O sino vivia SÓ no rodapé da `Sidebar`, que é `hidden lg:flex`.
+              No telemóvel — onde a maior parte das pessoas abre isto — não
+              existia: um pedido de consulta por decidir ficava invisível
+              até alguém abrir um portátil.
+
+              Dois sinos montados ao mesmo tempo já não são dois canais
+              Realtime: o estado saiu do componente para `lib/notificacoes/
+              loja.ts`, que abre o canal ao primeiro subscritor e fecha-o ao
+              último. Ver o cabeçalho da loja. */}
+          <SinoNotificacoes />
           <ThemeToggle />
           <Link
             href="/dashboard/perfil"
