@@ -16,7 +16,7 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
-    version: "2.160.0",
+    version: "2.161.0",
     data: "2026-09-03",
     titulo: "As perguntas frequentes e as fontes fiscais voltaram — e agora têm página própria",
     itens: [
@@ -26,6 +26,21 @@ const NOVAS_ENTRADAS: EntradaChangelog[] = [
       "As perguntas ficam todas escritas na página, abertas ou fechadas: dão para ler, procurar na página e enviar a alguém, mesmo em ligações fracas.",
       "Ao mesmo tempo, mais oito ligações do site apontavam para uma calculadora que também tinha deixado de existir naquele sítio — incluindo a primeira sugestão que aparece ao abrir a pesquisa. Todas corrigidas para a ferramenta certa.",
       "Para não voltar a acontecer, a publicação passa a ser bloqueada quando uma ligação interna aponta para uma página que não existe, ou para um ponto de uma página que já não está lá.",
+    ],
+  },
+  {
+    version: "2.160.0",
+    data: "2026-09-03",
+    titulo: "O sino dos avisos estava a recusar avisos — e a recusa desfazia o que os tinha causado",
+    itens: [
+      "Quatro tipos de aviso que o site escreve todos os dias não cabiam na tabela que os guarda. E como o aviso é escrito na mesma operação que o facto que o causa — de propósito, para nunca haver um sem o outro —, a recusa do aviso desfazia o facto: um contabilista não conseguia enviar uma proposta, um pagamento pago no cartão não ficava registado, um patamar de comissão comprado não era aplicado, e o lembrete diário dos casos sem resposta morria antes de lembrar seja quem for. Está corrigido.",
+      "Dois avisos tinham deixado de sair por email sem que ninguém tivesse decidido isso: a mudança de local de uma consulta — precisamente o que faz alguém aparecer na porta errada — e a resposta a uma proposta de valor. Voltam a sair.",
+      "A lista de tipos de aviso deixou de ser copiada à mão de sítio para sítio. Passa a nascer de um só lado, e há duas verificações automáticas — uma no código, outra contra uma base de dados a sério — que reprovam a publicação se voltarem a divergir. Era essa cópia à mão que tinha causado tudo o que está acima.",
+      "O sino não existia no telemóvel. Vivia na barra lateral, que só aparece em ecrãs grandes: quem abrisse o painel no telemóvel não tinha onde ver um pedido de consulta por decidir. Passa a estar no cabeçalho, ao lado da pesquisa e do tema — e abre como folha inferior, inteira, em vez de ficar com metade escondida atrás da barra de navegação.",
+      "Cada aviso passa a mostrar um ícone que diz de que assunto se trata, e a distinguir o que pede uma decisão do que é só para saber.",
+      "Quando a leitura dos avisos falhava, o painel dizia «Nada por aqui. Avisamos-te quando houver» — a mesma frase de quem realmente não tem nada. Passa a dizer que não conseguiu ler, com um botão para tentar outra vez. Também deixou de ficar preso aos 30 mais recentes: há «ver mais antigos».",
+      "Abrir o sino com o teclado deixava o foco no botão e a lista inalcançável. Agora o foco entra no painel, o Tab fica lá dentro, o Escape fecha e o foco volta ao sítio de onde saiu. E o «há 5 min» de cada aviso atualiza-se sozinho em vez de ficar preso na hora em que o painel abriu.",
+      "O Guardião Fiscal — o aviso de que estás a chegar ao limite de isenção de IVA — nunca tinha corrido. O agendamento que o devia acordar não existia, e a rota estava escrita de uma forma que nenhum agendamento conseguia chamar. Passa a correr uma vez por dia, e o aviso passa a aparecer também no sino, e não só no email: é o primeiro aviso deste produto que não depende de haver um contabilista do outro lado.",
     ],
   },
   {

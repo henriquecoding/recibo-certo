@@ -10,6 +10,7 @@ import { descreverEstado } from "@/lib/stripe/precos-autorizados";
 import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Google, History, Linkedin, Lock, LogOut, ShieldCheck, Warning } from "@/components/ui/Icons";
 import FizConnectionCard from "@/components/fiz/FizConnectionCard";
 import AvisoCancelamento from "@/components/conta/AvisoCancelamento";
+import AvisosPorEmail from "@/components/conta/AvisosPorEmail";
 import ZonaDeRisco from "@/components/conta/ZonaDeRisco";
 
 const campo =
@@ -121,6 +122,12 @@ export default function ContaPage() {
             {/* Ligação ao parceiro de execução fiscal. Só aparece quando a
                 integração está ativa — e nunca depende do plano Plus. */}
             <FizConnectionCard />
+
+            {/* O rodapé de cada email deste produto diz «Gerir ou desligar
+                os avisos» e aponta para aqui — e o `List-Unsubscribe` que o
+                Gmail mostra também. Até agora não havia nada nesta página
+                que desligasse o que quer que fosse. */}
+            <AvisosPorEmail />
 
             <section
               aria-labelledby="conta-perfil-fiscal"
