@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.161.0",
+  "version": "2.162.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -99,6 +99,7 @@
     "rls:check": "bash scripts/testar-rls.sh",
     "security:boundary": "node scripts/check-security-boundary.mjs",
     "seo:audit": "node scripts/seo-audit.mjs",
+    "sino:e2e": "node scripts/verificar-sino.mjs",
     "skills:check": "node scripts/sync-skills-fiscal.mjs --check",
     "skills:sync": "node scripts/sync-skills-fiscal.mjs",
     "start": "next start",

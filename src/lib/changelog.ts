@@ -16,6 +16,18 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.162.0",
+    data: "2026-09-03",
+    titulo: "O painel dos avisos nunca chegou a ver-se — e a versão passada só corrigiu um terço do problema",
+    itens: [
+      "A versão 2.160.0 pôs o sino no telemóvel, onde não existia. O que não se sabia, porque nunca ninguém tinha aberto aquilo num ecrã a sério com sessão iniciada, é que havia mais duas razões para o painel não aparecer — e cada uma delas bastava sozinha.",
+      "A primeira: o painel era desenhado completamente transparente. Sempre, em qualquer ecrã. O texto estava todo lá, o botão respondia, e não havia nada para ver.",
+      "A segunda: no computador abria por baixo do fundo do ecrã. O sino está no rodapé da barra lateral — que ocupa a altura toda —, e o painel abria para baixo a partir dali. Media-se zero por cento visível em janelas de 768, 900 e 1080 pixels.",
+      "As duas estão corrigidas. No computador o painel passa a abrir para cima quando não há espaço em baixo, e nunca fica mais alto do que o espaço que existe. E a animação de entrada deixou de poder falhar da forma que falhava.",
+      "Nada disto dava erro. Passava em todas as verificações que leem o conteúdo da página, porque o conteúdo estava lá — o que faltava era estar pintado. Ficou uma verificação nova que abre mesmo o sino num browser, com sessão, e pergunta o que está no ecrã: trinta e oito coisas, incluindo se o painel é visível, se cabe na janela e se fica por cima da barra de navegação.",
+    ],
+  },
+  {
     version: "2.161.0",
     data: "2026-09-03",
     titulo: "As perguntas frequentes e as fontes fiscais voltaram — e agora têm página própria",

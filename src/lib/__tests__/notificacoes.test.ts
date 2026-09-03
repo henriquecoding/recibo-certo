@@ -228,6 +228,45 @@ describe("Defeito 3 · o sino existe no telemóvel", () => {
     expect(LOJA).toMatch(/ouvintes\.size === 0/);
   });
 
+  it("o painel não depende do `motion` para ser visível", () => {
+    // ⚠️ O DEFEITO QUE SÓ UM BROWSER APANHOU. O painel era um `m.div`, e o
+    // `MotionProvider` do painel envolve só o `<main>` — o sino vive no
+    // cabeçalho e na barra lateral, fora dele. Sem as features do
+    // LazyMotion, um `m.*` não anima: fica no `initial`, que era
+    // `opacity: 0`. Medido no browser: `opacity: 0` para sempre.
+    //
+    // A entrada é CSS, que não tem estado inicial por onde falhar.
+    expect(SINO).not.toMatch(/from "motion\/react"/);
+    expect(SINO).not.toMatch(/<m\.\w+/);
+    expect(SINO).not.toMatch(/AnimatePresence/);
+    expect(SINO).toMatch(/rc-dialogo-entrada/);
+    expect(SINO).toMatch(/rc-overlay-entrada/);
+
+    // E as classes existem mesmo, com `prefers-reduced-motion` tratado.
+    const css = readFileSync(join(SRC, "app", "globals.css"), "utf8");
+    expect(css).toMatch(/\.rc-dialogo-entrada \{ animation:/);
+    expect(css).toMatch(/\.rc-overlay-entrada \{ animation:/);
+    const reduzido = css.slice(css.indexOf(".rc-dialogo-entrada { animation:"));
+    expect(reduzido).toMatch(/prefers-reduced-motion: reduce/);
+  });
+
+  it("a pastilha sabe abrir para CIMA quando não há espaço em baixo", () => {
+    // O sino vive no rodapé de uma barra lateral `h-screen`: `top-12`
+    // punha o painel 48px abaixo de um botão que está sempre no fundo da
+    // janela. Medido: 0% visível a 768, 900 e 1080px de altura.
+    //
+    // A decisão é por MEDIÇÃO e não por sítio — o mesmo componente vive
+    // também no cabeçalho do painel de contabilista, onde abre para baixo.
+    expect(SINO).toMatch(/ancoragem\?\.paraCima/);
+    expect(SINO).toMatch(/sm:bottom-12 sm:top-auto/);
+    expect(SINO).toMatch(/sm:bottom-auto sm:top-12/);
+    expect(SINO).toMatch(/getBoundingClientRect\(\)/);
+    // E a altura nunca passa do espaço que existe — senão a correção
+    // trocava «abaixo da dobra» por «acima dela».
+    expect(SINO).toMatch(/alturaMax/);
+    expect(SINO).toMatch(/window\.innerHeight \* 0\.7/);
+  });
+
   it("no telemóvel a folha sai por portal, e não fica atrás da barra de baixo", () => {
     // O sino vive num cabeçalho `sticky z-40`, que é um contexto de
     // empilhamento: nenhum `z-index` de um filho seu passa por cima da

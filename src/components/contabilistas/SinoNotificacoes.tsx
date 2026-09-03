@@ -13,22 +13,33 @@
 //  vezes, e mesmo assim chega tarde.
 //
 //  ┌─────────────────────────────────────────────────────────────────────┐
-//  │ TRÊS COISAS QUE ESTAVAM ERRADAS, E PORQUE NÃO DAVAM ERRO             │
+//  │ ESTE PAINEL NUNCA CHEGOU A VER-SE. TRÊS RAZÕES INDEPENDENTES.        │
 //  │                                                                     │
-//  │ 1. NÃO EXISTIA NO TELEMÓVEL. Vivia no rodapé da `Sidebar`, que é     │
-//  │    `hidden lg:flex`. Quem abrisse o painel no telemóvel — a maioria  │
-//  │    — não tinha sino nenhum, e um pedido de consulta por decidir      │
-//  │    ficava invisível até alguém abrir um portátil.                    │
+//  │ Nenhuma delas dava erro. O botão abria, o `aria-expanded` passava a  │
+//  │ `true`, o painel existia no DOM com o texto todo lá dentro — e não   │
+//  │ havia nada no ecrã. Só se apanham com um browser, com sessão, a      │
+//  │ medir o que está pintado.                                            │
 //  │                                                                     │
-//  │ 2. O PAINEL FICAVA ATRÁS DA BARRA DE BAIXO. O sino vive num          │
-//  │    cabeçalho `sticky z-40`, que é um contexto de empilhamento:       │
-//  │    nenhum `z-index` de um filho seu passa por cima da navegação      │
-//  │    inferior, que é irmã do cabeçalho e vem depois no DOM. Daí o      │
-//  │    portal — o mesmo remédio, e a mesma razão, do dock da pesquisa.   │
+//  │ 1. `opacity: 0`, SEMPRE. O painel era um `m.div` do `motion`, e o    │
+//  │    `MotionProvider` do painel envolve só o `<main>` — o sino vive no │
+//  │    cabeçalho e na barra lateral, FORA dele. Sem as features do       │
+//  │    LazyMotion, um `m.*` não anima: fica congelado no `initial`, que  │
+//  │    aqui era `opacity: 0, y: 8, scale: 0.99`. Medido no browser:      │
+//  │    `opacity: 0; transform: translateY(8px) scale(0.99)`, para        │
+//  │    sempre. Por isso a entrada passou a ser CSS (`rc-dialogo-entrada` │
+//  │    em `globals.css`), que não tem estado inicial por onde falhar —   │
+//  │    e de caminho tira o `motion` do chrome do painel.                 │
 //  │                                                                     │
-//  │ 3. O ERRO DA LEITURA ERA ENGOLIDO. `catch(() => {})`: uma falha de   │
-//  │    rede dava exatamente o mesmo ecrã que «não tens avisos». O pior   │
-//  │    resultado possível, porque é indistinguível do bom.               │
+//  │ 2. ABRIA INTEIRO ABAIXO DA DOBRA, no computador. Ver `ancoragem`.   │
+//  │                                                                     │
+//  │ 3. NÃO EXISTIA NO TELEMÓVEL. Vivia no rodapé da `Sidebar`, que é     │
+//  │    `hidden lg:flex`. E, posto no cabeçalho, ficava atrás da barra    │
+//  │    de navegação inferior — daí o portal, o mesmo remédio e a mesma   │
+//  │    razão do dock da pesquisa.                                        │
+//  │                                                                     │
+//  │ E uma quarta, que se via mas mentia: O ERRO DA LEITURA ERA ENGOLIDO  │
+//  │ (`catch(() => {})`), e uma falha de rede dava o mesmo ecrã que «não  │
+//  │ tens avisos».                                                        │
 //  └─────────────────────────────────────────────────────────────────────┘
 //
 //  ⚠️ NÃO ESCREVER `dark:` NOS NEUTROS. Este ficheiro não tem uma única
@@ -48,10 +59,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, m } from "motion/react";
-import { EASE } from "@/lib/motion";
 import { useAuth } from "@/lib/supabase/auth";
 import { useNotificacoes } from "@/hooks/useNotificacoes";
 import { descreverNotificacao } from "@/lib/notificacoes/catalogo";
@@ -102,6 +111,56 @@ export default function SinoNotificacoes() {
     consulta.addEventListener("change", ler);
     return () => consulta.removeEventListener("change", ler);
   }, []);
+
+  // ── Para onde é que a pastilha abre ───────────────────────────────
+  //
+  // ┌─────────────────────────────────────────────────────────────────────┐
+  // │ NO COMPUTADOR, O PAINEL ABRIA INTEIRO ABAIXO DA DOBRA                │
+  // │                                                                     │
+  // │ Medido, num browser, com sessão: janela de 900px, botão em y=848,    │
+  // │ painel de 907 a 1483 — VISÍVEL 0%. E o mesmo a 768px e a 1080px,     │
+  // │ porque o sino vive no RODAPÉ de uma barra lateral `h-screen`: por    │
+  // │ mais alta que seja a janela, o botão está sempre no fundo dela, e    │
+  // │ `top-12` põe o painel 48px ABAIXO disso.                             │
+  // │                                                                     │
+  // │ Não dava erro nenhum. O botão abria, o `aria-expanded` passava a     │
+  // │ `true`, o painel existia no DOM — e não havia nada para ver. Somado  │
+  // │ a não existir no telemóvel, o sino não era alcançável em lado        │
+  // │ nenhum.                                                             │
+  // │                                                                     │
+  // │ É o mesmo remédio do `MenuFlutuante` do painel modular, e pela mesma │
+  // │ razão: um menu no fundo do ecrã tem de saber virar-se para cima.     │
+  // └─────────────────────────────────────────────────────────────────────┘
+  //
+  // A decisão é por medição e não por sítio: o mesmo componente vive no
+  // rodapé da barra lateral (abre para cima) e no cabeçalho do painel de
+  // contabilista (abre para baixo). Fixá-la num dos dois partia o outro.
+  const [ancoragem, setAncoragem] = useState<{ paraCima: boolean; alturaMax: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!aberto || ehFolha) { setAncoragem(null); return; }
+    const alvo = botao.current;
+    if (!alvo) return;
+
+    const medir = () => {
+      const r = alvo.getBoundingClientRect();
+      const MARGEM = 16;
+      // O painel encosta-se ao botão a 12 (3rem) de distância, dos dois lados.
+      const abaixo = window.innerHeight - r.bottom - MARGEM - 12;
+      const acima = r.top - MARGEM - 12;
+      const paraCima = abaixo < acima;
+      setAncoragem({
+        paraCima,
+        // Nunca mais alto do que o espaço que existe — senão a correção
+        // trocava «abaixo da dobra» por «acima dela».
+        alturaMax: Math.max(180, Math.min(paraCima ? acima : abaixo, window.innerHeight * 0.7)),
+      });
+    };
+
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [aberto, ehFolha]);
 
   // ── Fechar ao clicar fora ─────────────────────────────────────────
   useEffect(() => {
@@ -193,7 +252,7 @@ export default function SinoNotificacoes() {
   const rotulo = porLer > 0 ? `Notificações: ${porLer} por ler` : "Notificações";
 
   const conteudo = (
-    <AnimatePresence>
+    <>
       {aberto && (
         <>
           {/* O véu é do telemóvel. Acima de `sm` a pastilha vive ancorada
@@ -201,22 +260,24 @@ export default function SinoNotificacoes() {
           <div
             aria-hidden
             onClick={fechar}
-            className="fixed inset-0 z-[65] bg-black/40 backdrop-blur-[2px] sm:hidden"
+            className="rc-overlay-entrada fixed inset-0 z-[65] bg-black/40 backdrop-blur-[2px] sm:hidden"
           />
-          <m.div
+          <div
             ref={painel}
             tabIndex={-1}
             role="dialog"
             aria-label="Notificações"
-            initial={{ opacity: 0, y: 8, scale: 0.99 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.99, transition: { duration: 0.15 } }}
-            transition={{ duration: 0.25, ease: EASE }}
             // Telemóvel: folha inferior, como o resto dos modais do
             // produto — `max-h-[85dvh]`, `safe-area`, corpo com
             // `min-h-0 overflow-y-auto`. A partir de `sm`, pastilha
-            // ancorada à direita do botão.
-            className="fixed inset-x-0 bottom-0 z-[70] flex max-h-[85dvh] flex-col overflow-hidden rounded-t-4xl border border-stone-200 bg-white shadow-float focus:outline-none sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-12 sm:z-50 sm:max-h-[70vh] sm:w-80 sm:rounded-3xl"
+            // ancorada ao botão — para baixo ou para cima, conforme o
+            // espaço que houver (ver `ancoragem`).
+            className={`rc-dialogo-entrada fixed inset-x-0 bottom-0 z-[70] flex max-h-[85dvh] flex-col overflow-hidden rounded-t-4xl border border-stone-200 bg-white shadow-float focus:outline-none sm:absolute sm:inset-x-auto sm:right-0 sm:z-50 sm:w-80 sm:rounded-3xl ${
+              ancoragem?.paraCima
+                ? "sm:bottom-12 sm:top-auto"
+                : "sm:bottom-auto sm:top-12"
+            }`}
+            style={ancoragem ? { maxHeight: `${Math.round(ancoragem.alturaMax)}px` } : undefined}
           >
             <header className="flex shrink-0 items-center justify-between gap-2 border-b border-stone-100 px-4 py-3">
               <h2 className="font-display text-base text-ink">Notificações</h2>
@@ -296,10 +357,10 @@ export default function SinoNotificacoes() {
                 </>
               )}
             </div>
-          </m.div>
+          </div>
         </>
       )}
-    </AnimatePresence>
+    </>
   );
 
   return (
