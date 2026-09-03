@@ -134,11 +134,16 @@ export function PassoContabilista({
               className={`rounded-xl px-2 py-2 text-center transition-all ${
                 regimeAtual === r.id
                   ? `${r.cor} bg-white dark:bg-stone-800 shadow-sm font-semibold ring-1 ring-stone-200/60 dark:ring-stone-700`
-                  : "text-stone-400"
+                  : "text-stone-500 dark:text-stone-400"
               }`}
             >
               <p className="text-[11px] leading-tight">{r.label}</p>
-              <p className="text-[10px] tabular-nums opacity-70">{r.sub}</p>
+              {/* `opacity-70` sobre um texto que já é claro compõe-se com o
+                  fundo e derruba o contraste: `text-stone-400` a 70% dá
+                  1,76:1 sobre o papel, e mesmo o do regime ativo ficava em
+                  2,92:1. A hierarquia vem do TAMANHO (10px contra 11px) e do
+                  peso, que não custam legibilidade nenhuma. */}
+              <p className="text-[10px] tabular-nums text-stone-500 dark:text-stone-400">{r.sub}</p>
             </div>
           ))}
         </div>

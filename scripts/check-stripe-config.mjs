@@ -96,10 +96,37 @@ const problemas = [];
 const avisos = [];
 const oks = [];
 
+// ┌───────────────────────────────────────────────────────────────────────┐
+// │ «NÃO CONFIGURADO» NÃO É O MESMO QUE «CONFIGURADO E ERRADO»             │
+// │                                                                       │
+// │ Antes, um ambiente sem segredos reprovava com o mesmo código de saída │
+// │ de uma conta Stripe com o webhook a apontar para o domínio errado.    │
+// │ Consequência prática: este portão nunca pôde entrar no CI, porque no  │
+// │ CI não há segredos — e assim ficou anos a não correr em lado nenhum,  │
+// │ que é a única forma garantida de não apanhar nada.                    │
+// │                                                                       │
+// │ Passa a haver dois estados:                                           │
+// │   · nenhum segredo definido → é um ambiente sem Stripe. Avisa e sai   │
+// │     com 0. O CI corre-o em todos os PR e não mente sobre o que viu.   │
+// │   · pelo menos um definido → alguém quis ligar isto. A partir daí     │
+// │     falta um segredo É uma falha, porque metade da configuração é     │
+// │     pior do que nenhuma: cobra-se e não se processa o evento.         │
+// └───────────────────────────────────────────────────────────────────────┘
+const definidas = VARIAVEIS.filter(([nome]) => process.env[nome]?.trim());
+const ambienteSemStripe = definidas.length === 0;
+
 // ── 1. As variáveis de ambiente ────────────────────────────────────────
-for (const [nome, consequencia] of VARIAVEIS) {
-  if (process.env[nome]?.trim()) oks.push(`${nome} definida`);
-  else problemas.push(`${nome} não está definida — ${consequencia}.`);
+if (ambienteSemStripe) {
+  avisos.push(
+    "Nenhum segredo da Stripe está definido — este ambiente não fala com a Stripe. " +
+      `As ${VARIAVEIS.length} variáveis e os webhooks ficaram POR VERIFICAR; ` +
+      "não confundas isso com estarem bem.",
+  );
+} else {
+  for (const [nome, consequencia] of VARIAVEIS) {
+    if (process.env[nome]?.trim()) oks.push(`${nome} definida`);
+    else problemas.push(`${nome} não está definida — ${consequencia}.`);
+  }
 }
 
 // ── 2. Os webhooks, contra a Stripe ────────────────────────────────────
@@ -170,7 +197,9 @@ if (problemas.length > 0) {
 }
 
 console.log(
-  avisos.length > 0
-    ? "Configuração da Stripe sem falhas conhecidas, com verificações por fazer (ver avisos)."
-    : "Configuração da Stripe verificada.",
+  ambienteSemStripe
+    ? "Ambiente sem Stripe configurada — nada foi verificado, e é isso que este resultado diz."
+    : avisos.length > 0
+      ? "Configuração da Stripe sem falhas conhecidas, com verificações por fazer (ver avisos)."
+      : "Configuração da Stripe verificada.",
 );

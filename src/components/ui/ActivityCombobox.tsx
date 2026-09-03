@@ -508,6 +508,11 @@ export default function ActivityCombobox({
           aria-expanded={open}
           aria-controls={listId}
           aria-autocomplete="list"
+          // O `placeholder` NÃO é um nome acessível: desaparece assim que se
+          // escreve, e há leitores de ecrã que nunca o anunciam. Este campo
+          // tinha `role="combobox"` e todo o `aria-*` da lista — e nenhum
+          // nome. Era anunciado como «caixa combinada» e mais nada.
+          aria-label="Procura a tua profissão ou atividade"
           value={inputDisplay}
           placeholder="Procura a tua profissão ou atividade…"
           onChange={(e) => setQuery(e.target.value)}

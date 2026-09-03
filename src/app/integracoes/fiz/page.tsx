@@ -21,7 +21,9 @@ import { CAMPOS_NUNCA_ENVIADOS } from "@/lib/fiz/handoff-fields";
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "Recibo Certo e FIZ: como funciona a parceria",
+  // `absolute`: a marca abre a frase. Com o template, o separador dizia
+  // «Recibo Certo e FIZ: … | Recibo Certo».
+  title: { absolute: "Recibo Certo e FIZ: como funciona a parceria" },
   description:
     "O Recibo Certo explica, calcula e prepara. A FIZ executa: faturação certificada, declarações e prazos. Onde acaba um e começa o outro, e o que acontece aos teus dados.",
   alternates: { canonical: "https://www.recibocerto.pt/integracoes/fiz" },

@@ -274,15 +274,72 @@ async function construir() {
   //
   // `checkedAt` e `retrievedAt` também saem da conta, e pela mesma razão:
   // são carimbos de quando perguntámos, não do que a fonte respondeu.
+  //
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ `evaluatedAt` FALTAVA, E ISSO TORNAVA O PORTÃO IMPOSSÍVEL          │
+  // │                                                                   │
+  // │ `gate.evaluatedAt` é o carimbo de quando o gate de evidência foi   │
+  // │ avaliado — muda a cada corrida, tal como os outros três, e não     │
+  // │ estava na lista. O hash mudava SEMPRE, mesmo com dados idênticos:  │
+  // │ três corridas seguidas deram b488b66e…, 11e59d1f… e 923b6d82…      │
+  // │                                                                   │
+  // │ O `--check` não podia passar. Não conseguia distinguir «a fonte    │
+  // │ mudou» de «voltámos a perguntar», e portanto respondia sempre      │
+  // │ «desatualizado» — que é o mesmo que não responder nada. Correndo   │
+  // │ com `continue-on-error` num workflow agendado, ninguém deu conta.  │
+  // └───────────────────────────────────────────────────────────────────┘
+  // A lista completa dos carimbos de RELÓGIO. `sourceHealth.lastRunAt` e
+  // `lastSuccessfulRunAt` faltavam também: dizem quando corremos, não o que
+  // a fonte respondeu. Com os seis fora, duas corridas seguidas sobre os
+  // mesmos dados dão o mesmo hash — que é a única coisa que faz de um hash
+  // um portão em vez de um número.
+  const CARIMBOS = new Set([
+    "geradoEm",
+    "checkedAt",
+    "retrievedAt",
+    "evaluatedAt",
+    "lastRunAt",
+    "lastSuccessfulRunAt",
+  ]);
   const semCarimbos = JSON.stringify(documento, (chave, valor) =>
-    chave === "geradoEm" || chave === "checkedAt" || chave === "retrievedAt" ? undefined : valor,
+    CARIMBOS.has(chave) ? undefined : valor,
   );
   documento.contentHash = `sha256:${createHash("sha256").update(semCarimbos).digest("hex")}`;
   return documento;
 }
 
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ «NÃO CONSEGUI PERGUNTAR» NÃO É «ESTÁ DESATUALIZADO»                  │
+// │                                                                     │
+// │ Este gerador fala com uma fonte externa a cada execução. Quando ela  │
+// │ não responde — proxy, manutenção, 403 de rate limit — a exceção      │
+// │ subia sem tratamento e o `--check` morria com um traço de pilha do   │
+// │ Node. Quem o corre à mão fica sem saber se o repositório está mal ou │
+// │ se foi só a rede, e um portão que confunde as duas coisas ou reprova │
+// │ pelo proxy de alguém, ou aprende-se a ignorá-lo.                     │
+// │                                                                     │
+// │ Em `--check`, uma falha de rede passa a AVISO com saída 0: ficou por │
+// │ verificar, e o texto di-lo. A gerar (sem `--check`) continua a ser   │
+// │ erro — aí a rede é o trabalho.                                       │
+// └─────────────────────────────────────────────────────────────────────┘
 const conferir = process.argv.includes("--check");
-const documento = await construir();
+
+async function tentar(fn) {
+  try {
+    return await fn();
+  } catch (erro) {
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    if (!conferir) {
+      console.error(`\u2717 ${mensagem}`);
+      process.exit(1);
+    }
+    console.warn(`  aviso\u00b7 N\u00e3o foi poss\u00edvel falar com a fonte (${mensagem}).`);
+    console.warn("         Ficou POR VERIFICAR se o ficheiro est\u00e1 em dia \u2014 n\u00e3o confundas com estar bem.");
+    process.exit(0);
+  }
+}
+
+const documento = await tentar(construir);
 const serializado = `${JSON.stringify(documento, null, 2)}\n`;
 const contarObs = (doc) => doc.pilotos.reduce((soma, item) => soma + item.observations.length, 0);
 

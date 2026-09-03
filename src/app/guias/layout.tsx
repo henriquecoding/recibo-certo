@@ -10,6 +10,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 import { GUIDE_MANIFESTS, HUB_GRUPOS, type GuideManifest, type HubGroup } from "@/lib/guias/manifests";
 import { guiaSemCorpo } from "@/lib/guias/expansao/derivar";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
+import { jsonLd } from "@/lib/jsonld";
 
 // ─────────────────────────────────────────────────────────────────────────
 //  Navegação dos Guias — DERIVADA dos manifestos.
@@ -82,7 +83,7 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">

@@ -69,6 +69,20 @@ export const PASSO_CONTRATACAO = Object.freeze({
   guia: "/guias/contratar-primeiro-trabalhador",
   cta: "Planear uma contratação",
   ctaLeitura: "Ver o percurso de quem contrata",
+  /**
+   * O mesmo destino, dito de outra maneira — e a diferença NÃO é estética.
+   *
+   * A leitura patronal (`/inicio/salario?percurso=empregador`) mostra ao
+   * mesmo tempo o CTA do herói e o cartão «Estás aqui» do arco. Os dois
+   * apontam para o planeador, e enquanto os dois diziam `cta` a página
+   * ficava com DUAS ligações de nome acessível idêntico: na lista de
+   * ligações de um leitor de ecrã são duas entradas indistinguíveis, e no
+   * Playwright são uma violação de modo estrito que reprovava o portão.
+   *
+   * Quem já está no cartão do passo não precisa de ler outra vez o nome do
+   * passo — precisa de saber o que o botão abre.
+   */
+  ctaPassoAtual: "Abrir o planeador",
 });
 
 /** O parâmetro que leva a origem até à medição, sem sair do vocabulário. */

@@ -22,7 +22,9 @@ import type { ReactNode } from "react";
 // `index: true`. Nada mais neste ficheiro precisa de mudar.
 
 export const metadata: Metadata = {
-  title: "Investir no Recibo Certo — a camada de decisão fiscal em Portugal",
+  // `absolute`: a marca está dentro da frase, e o template deixava-a com
+  // 80 caracteres e a marca duas vezes — o Google corta aos ~60.
+  title: { absolute: "Investir no Recibo Certo — a camada de decisão fiscal em Portugal" },
   description:
     "O que o Recibo Certo é hoje, para quem, como ganha dinheiro e o que a ronda compra. " +
     "Com definição, fonte e data em cada número — e o que ainda não medimos identificado como tal.",

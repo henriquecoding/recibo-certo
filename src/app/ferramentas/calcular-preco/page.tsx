@@ -8,6 +8,7 @@ import { fmt } from "@/lib/format";
 import { IVA_TAXAS, IVA_ISENCAO_LIMITE, SS_TAXA, SS_COEFICIENTE } from "@/lib/fiscal-data";
 import { REDUCAO_PRECO_30_DIAS, LIVRE_RESOLUCAO, PRECO_AO_CONSUMIDOR, REVISAO_PRICING } from "@/lib/pricing";
 import { ArrowRight, ExternalLink, Info } from "@/components/ui/Icons";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("calcular-preco")!;
 
@@ -97,7 +98,7 @@ export default async function CalcularPrecoPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFAQSchema(FAQ)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(generateFAQSchema(FAQ)) }}
       />
       <ToolShell
         tool={TOOL}

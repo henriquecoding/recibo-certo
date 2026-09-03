@@ -90,28 +90,89 @@ exigir(
 const robots = ler("src/app/robots.ts");
 const politica = ler("src/lib/crawler-policy.ts");
 const proxy = ler("src/proxy.ts");
-const agentesEssenciais = [
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ TREINO E RESPOSTA SÃO DUAS LISTAS, E O PORTÃO GUARDA AS DUAS         │
+// │                                                                     │
+// │ Antes, este bloco exigia que TODOS os agentes — incluindo os         │
+// │ motores de resposta — estivessem na lista de bloqueados. Era o       │
+// │ portão a impor a decisão errada: enquanto vigorasse, qualquer        │
+// │ tentativa de reabrir a citação em ChatGPT Search ou Perplexity       │
+// │ reprovava aqui, e o programa de autoridade não tinha por onde        │
+// │ existir.                                                            │
+// │                                                                     │
+// │ Passa a verificar o que interessa mesmo: que o TREINO continua       │
+// │ bloqueado, que a RESPOSTA continua permitida, e que as duas listas   │
+// │ não se cruzam. Um agente que apareça nas duas é uma decisão por      │
+// │ tomar, não uma configuração válida.                                  │
+// └─────────────────────────────────────────────────────────────────────┘
+const treinoEssencial = [
   "GPTBot",
-  "OAI-SearchBot",
-  "ChatGPT-User",
   "ClaudeBot",
-  "Claude-SearchBot",
-  "PerplexityBot",
+  "anthropic-ai",
   "Google-Extended",
   "Applebot-Extended",
   "meta-externalagent",
   "CCBot",
+  "Bytespider",
 ];
-for (const agente of agentesEssenciais) {
-  exigir(politica.includes(`"${agente}"`), `Agente essencial removido da política: ${agente}`);
+const respostaEssencial = [
+  "OAI-SearchBot",
+  "ChatGPT-User",
+  "Claude-SearchBot",
+  "Claude-User",
+  "PerplexityBot",
+  "Perplexity-User",
+];
+
+const bloco = (nome) => {
+  const i = politica.indexOf(`export const ${nome} = [`);
+  if (i < 0) return "";
+  return politica.slice(i, politica.indexOf("] as const;", i));
+};
+const blocoBloqueados = bloco("AGENTES_EXTRACAO_BLOQUEADOS");
+const blocoPermitidos = bloco("AGENTES_RESPOSTA_PERMITIDOS");
+
+exigir(blocoBloqueados.length > 0, "A lista AGENTES_EXTRACAO_BLOQUEADOS desapareceu da política.");
+exigir(blocoPermitidos.length > 0, "A lista AGENTES_RESPOSTA_PERMITIDOS desapareceu da política.");
+
+for (const agente of treinoEssencial) {
+  exigir(
+    blocoBloqueados.includes(`"${agente}"`),
+    `Agente de TREINO fora da lista de bloqueados: ${agente}`,
+  );
+  exigir(
+    !blocoPermitidos.includes(`"${agente}"`),
+    `Agente de treino na lista de permitidos: ${agente}`,
+  );
 }
+for (const agente of respostaEssencial) {
+  exigir(
+    blocoPermitidos.includes(`"${agente}"`),
+    `Motor de RESPOSTA fora da lista de permitidos: ${agente}`,
+  );
+  exigir(
+    !blocoBloqueados.includes(`"${agente}"`),
+    `Motor de resposta na lista de bloqueados — o programa de autoridade deixa de poder existir: ${agente}`,
+  );
+}
+
 exigir(
   robots.includes("AGENTES_EXTRACAO_BLOQUEADOS") && robots.includes('disallow: "/"'),
   "robots.ts deixou de bloquear a lista central de crawlers.",
 );
 exigir(
+  robots.includes("AGENTES_RESPOSTA_PERMITIDOS"),
+  "robots.ts deixou de declarar os motores de resposta.",
+);
+exigir(
   proxy.includes("agenteDeExtracaoBloqueado") && proxy.includes("status: 403"),
   "Proxy deixou de aplicar bloqueio HTTP aos crawlers declarados.",
+);
+// O `/llms.txt` diz a um modelo COMO citar. Recusá-lo a quem ele se dirige é
+// a contradição que este portão passa a impedir.
+exigir(
+  proxy.includes('"/llms.txt"'),
+  "O proxy voltou a recusar o /llms.txt aos agentes a quem ele se dirige.",
 );
 
 // Local-first é uma fronteira de privacidade: o quiz corrige no browser, o

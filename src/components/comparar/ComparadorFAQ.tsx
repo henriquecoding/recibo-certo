@@ -96,7 +96,7 @@ export default function ComparadorFAQ() {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-stone-800 dark:text-stone-100">{cenario.titulo}</h3>
-                <p className="text-[11px] text-stone-400">{cenario.sub}</p>
+                <p className="text-[11px] text-stone-400 dark:text-stone-300">{cenario.sub}</p>
               </div>
             </div>
 

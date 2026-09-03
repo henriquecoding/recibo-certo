@@ -10,7 +10,7 @@ import { fmt } from "@/lib/format";
 const TOOL = porId("regime-simplificado")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora regime simplificado IRS 2026 | Recibo Certo",
+  title: "Calculadora regime simplificado IRS 2026",
   description: "Calcula o teu IRS como trabalhador independente em regime simplificado: coeficiente, rendimento tributável, imposto estimado e taxa efetiva. Atualizado para 2026.",
   keywords: ["regime simplificado IRS", "coeficiente IRS", "recibos verdes imposto", "calculadora IRS 2026"],
   alternates: { canonical: `https://www.recibocerto.pt${TOOL.canonicalHref}` },

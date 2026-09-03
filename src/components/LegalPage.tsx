@@ -130,12 +130,31 @@ export function ListaCheck({ items }: { items: string[] }) {
 export function Tabela({
   colunas,
   linhas,
+  rotulo,
 }: {
   colunas: string[];
   linhas: string[][];
+  /** O que a tabela mostra. Vira o nome da região rolável. */
+  rotulo?: string;
 }) {
   return (
-    <div className="mt-3 overflow-x-auto rounded-2xl border border-stone-200 dark:border-stone-700">
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ UMA CAIXA QUE ROLA TEM DE SE ALCANÇAR PELO TECLADO             │
+    // │                                                               │
+    // │ A 360px estas tabelas rolam de lado. Sem nada focável lá       │
+    // │ dentro — e não há: são células de texto — quem navega só com   │
+    // │ teclado nunca chega às colunas da direita. É WCAG 2.1.1, e o   │
+    // │ axe apanha-o como `scrollable-region-focusable`.               │
+    // │                                                               │
+    // │ `tabIndex={0}` põe a caixa na ordem de tabulação; `role`       │
+    // │ + `aria-label` dizem ao leitor de ecrã o que é aquilo, para    │
+    // │ não anunciar «grupo» e mais nada.                              │
+    // └───────────────────────────────────────────────────────────────┘
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label={rotulo ?? "Tabela — rola na horizontal"}
+      className="focus-marca mt-3 overflow-x-auto rounded-2xl border border-stone-200 dark:border-stone-700">
       <table className="w-full text-[13px]">
         <thead>
           <tr className="border-b border-stone-200 bg-stone-50 dark:border-stone-700 dark:bg-stone-800/50">
@@ -230,9 +249,24 @@ export default function LegalPage({
             </div>
           </div>
 
-          {/* Mobile TOC */}
-          <div className="mt-8 rounded-2xl border border-stone-800 bg-stone-900/60 p-4 lg:hidden">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-stone-500">
+          {/* ┌───────────────────────────────────────────────────────────┐
+              │ ÍNDICE DO TELEMÓVEL — TINHA A PALETA ESCURA ESCRITA À MÃO   │
+              │                                                           │
+              │ `border-stone-800 bg-stone-900/60`, e as pastilhas         │
+              │ `border-stone-700 bg-stone-800 text-stone-400`, sem uma    │
+              │ única variante `dark:`. Em modo CLARO isto desenhava uma   │
+              │ caixa preta no meio de uma página creme, com o texto a     │
+              │ 2,60:1 — abaixo do mínimo AA a 11px, e a partir a regra    │
+              │ de ouro que diz que o claro não parte.                     │
+              │                                                           │
+              │ Passava despercebido por duas razões que se somam: é       │
+              │ `lg:hidden`, portanto não existe no ecrã onde se           │
+              │ desenvolve, e vive em seis páginas que ninguém revisita —  │
+              │ termos, privacidade, cookies, metodologia, estado dos      │
+              │ dados e changelog fiscal.                                  │
+              └───────────────────────────────────────────────────────────┘ */}
+          <div className="mt-8 rounded-2xl border border-stone-200 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-900/60 lg:hidden">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-stone-500 dark:text-stone-400">
               Neste documento
             </p>
             <div className="flex flex-wrap gap-2">
@@ -240,7 +274,7 @@ export default function LegalPage({
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className="rounded-lg border border-stone-700 bg-stone-800 px-2.5 py-1 text-[11px] font-medium text-stone-400 transition-colors hover:border-brand/40 hover:text-brand-mint"
+                  className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-[11px] font-medium text-stone-700 transition-colors hover:border-brand/40 hover:text-brand-dark dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300 dark:hover:text-brand-mint"
                 >
                   {item.label}
                 </a>

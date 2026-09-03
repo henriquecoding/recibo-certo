@@ -16,6 +16,23 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.159.0",
+    data: "2026-09-03",
+    titulo: "Uma auditoria ao site inteiro — o que estava a falhar em silêncio passou a falhar à vista",
+    itens: [
+      "Os textos que aparecem no separador do browser e nos resultados de pesquisa diziam a marca duas vezes em vinte e duas páginas: «Calculadora de recibos verdes 2026 | Recibo Certo | Recibo Certo». Foram todos corrigidos, e passou a haver uma verificação automática que impede a repetição de voltar.",
+      "A página de preços não tinha título principal. Para quem navega com leitor de ecrã, isso é chegar a uma página e não encontrar o nome dela; para um motor de busca, é perder o sinal mais forte do que a página trata. Passou a ter.",
+      "O interruptor de sons do Quiz Fiscal não tinha nome nenhum para quem usa leitor de ecrã — era anunciado apenas como «interruptor, desligado». Passou a dizer o que faz.",
+      "Onze cores de texto estavam abaixo do contraste mínimo de acessibilidade, entre os 1,3 e os 4,5 exigidos: o selo da parceria FIZ na página inicial, os números dos passos do simulador de IRS (praticamente invisíveis no modo escuro), rótulos do Quiz Fiscal e legendas sobre o verde da marca. Todas subiram acima do mínimo, nos dois temas.",
+      "O índice que aparece no telemóvel nos Termos, na Privacidade, nos Cookies, na Metodologia e no Estado dos dados estava desenhado com as cores do modo escuro mesmo em modo claro — uma caixa preta no meio de uma página clara, com texto quase ilegível. Passou a acompanhar o tema.",
+      "As tabelas que rolam para o lado nessas páginas não se conseguiam alcançar só com o teclado. Passaram a estar na ordem de tabulação, com nome próprio para quem as ouve.",
+      "Quem tem o sistema em modo escuro recebia o site em modo claro na primeira visita, e só saía de lá se encontrasse o interruptor. O site passa a seguir a preferência do sistema — e continua a respeitar a escolha de quem escolheu.",
+      "Os mapas iam buscar as fronteiras das regiões a um repositório do GitHub, o que fazia o endereço de cada visitante chegar lá sem estar declarado em lado nenhum. Passaram a ser servidas por nós. E a política de privacidade passou a dizer, numa secção própria, que as páginas com mapa contactam a CARTO — o único domínio externo que o site usa.",
+      "A ficha «Estado dos dados» dizia 344 parâmetros fiscais com base legal, fonte e data. São 535: a contagem só olhava para uma lista escrita à mão. Agora conta-os todos, porque todos passaram a ser verificados automaticamente.",
+      "Motores de resposta como o ChatGPT, o Perplexity e o Claude estavam impedidos de ler o site — incluindo o ficheiro que existe precisamente para lhes explicar como o citar. Passam a poder ler e citar; o uso do conteúdo para treinar modelos continua bloqueado, como sempre esteve.",
+    ],
+  },
+  {
     version: "2.158.0",
     data: "2026-09-02",
     titulo: "A página inicial volta a dizer quem faz o quê a seguir — e o anúncio do parceiro deixa de disputar o lugar dos contabilistas",

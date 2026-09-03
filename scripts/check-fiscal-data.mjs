@@ -97,7 +97,50 @@ async function main() {
     }
   }
   if (today && lastReview && today > lastReview) {
-    warnings.push(`TODAY (${today}) é posterior a DATA_LAST_REVIEW (${lastReview}). Confirmar coerência das datas.`);
+    warnings.push(`REV_BASE_2026_06 (${today}) é posterior a DATA_LAST_REVIEW (${lastReview}). Confirmar coerência das datas.`);
+  }
+
+  // ┌───────────────────────────────────────────────────────────────────────┐
+  // │ FRESCURA — a distância entre o que se ANUNCIA e o que se verificou     │
+  // │                                                                       │
+  // │ A verificação acima só olha para a data MAIS RECENTE. Um ficheiro em   │
+  // │ que 85 parâmetros estão parados em junho e um só foi tocado em         │
+  // │ setembro passa nela sem uma palavra — e é exatamente o estado real     │
+  // │ deste ficheiro. A interface anuncia «revisto a 01/09»; para 16% dos    │
+  // │ parâmetros isso quer dizer «alguém reviu outra coisa nesse dia».       │
+  // │                                                                       │
+  // │ Isto conta quantos parâmetros usam cada constante de data e mostra a   │
+  // │ distribuição. Não é uma reprovação: um parâmetro estável pode ficar    │
+  // │ anos certo sem mudar. É deixar de ser invisível.                       │
+  // └───────────────────────────────────────────────────────────────────────┘
+  const FOLGA_DIAS = 120;
+  if (lastReview && datasVerificacao.length > 0) {
+    // Quantos parâmetros usam cada constante `REV_*`.
+    const usos = new Map();
+    for (const [, nome] of src.matchAll(/^const ([A-Z_0-9]+) = "\d{4}-\d{2}-\d{2}";/gm)) {
+      const n = [...src.matchAll(new RegExp(`\\b${nome}\\b`, "g"))].length - 1;
+      const data = (src.match(new RegExp(`^const ${nome} = "(\\d{4}-\\d{2}-\\d{2})";`, "m")) || [])[1];
+      if (data && n > 0) usos.set(data, (usos.get(data) ?? 0) + n);
+    }
+    const porData = [...usos.entries()].sort();
+    if (porData.length > 0) {
+      const total = porData.reduce((soma, [, n]) => soma + n, 0);
+      const dias = (d) => Math.round((new Date(lastReview) - new Date(d)) / 86400000);
+      const atrasados = porData.filter(([d]) => dias(d) > FOLGA_DIAS);
+      const nAtrasados = atrasados.reduce((soma, [, n]) => soma + n, 0);
+
+      info.push(
+        `Frescura: ${total} parâmetros em ${porData.length} datas de verificação. ` +
+          `Mais antiga: ${porData[0][0]} (${porData[0][1]} parâmetros, ${dias(porData[0][0])} dias antes da revisão).`
+      );
+      if (nAtrasados > 0) {
+        warnings.push(
+          `${nAtrasados} parâmetro(s) foram verificados há mais de ${FOLGA_DIAS} dias face a ` +
+            `DATA_LAST_REVIEW (${lastReview}): ${atrasados.map(([d, n]) => `${d} (${n})`).join(", ")}. ` +
+            "A interface anuncia a revisão global — reverificar ou registar a razão de continuarem válidos."
+        );
+      }
+    }
   }
 
   // 3) Acessibilidade das fontes (opcional).

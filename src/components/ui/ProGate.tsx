@@ -73,7 +73,7 @@ export default function ProGate({
       </div>
 
       {/* Camada de desbloqueio — em fluxo, define a altura (não corta o texto). */}
-      <div className="relative z-10 flex flex-col items-center justify-center gap-2 bg-white/55 px-5 py-7 text-center dark:bg-stone-900/55">
+      <div className="relative z-10 flex flex-col items-center justify-center gap-2 border-y border-stone-200/60 bg-white/55 px-5 py-7 text-center dark:border-stone-700/60 dark:bg-stone-900/55">
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-light text-brand">
           <Lock size={18} />
         </span>

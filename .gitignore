@@ -25,8 +25,11 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+# `.env*` e não só `.env`/`.env*.local`: um `.env.production` ou um
+# `.env.staging` não estavam cobertos e entrariam num `git add -A` sem
+# um aviso. A exceção é o exemplo, que é para estar versionado.
+.env*
+!.env.example
 
 # vercel
 .vercel

@@ -142,7 +142,7 @@ describe("a doca do telemóvel cabe no ecrã", () => {
   it("a doca declara exatamente tantas colunas quantas as secções", () => {
     // O acoplamento que partiu o telemóvel: a grelha e a lista viviam em
     // sítios diferentes e ninguém as comparava.
-    const layout = readFileSync(join(SRC, "app", "admin", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "admin", "MolduraAdmin.tsx"), "utf8");
     expect(layout).toContain(`grid-cols-${SECCOES_ADMIN.length}`);
   });
 
@@ -156,14 +156,14 @@ describe("a doca do telemóvel cabe no ecrã", () => {
   it("a doca respeita a área segura do telemóvel", () => {
     // As outras duas molduras já o faziam. Sem isto, a última linha fica
     // por baixo do indicador de gestos.
-    const layout = readFileSync(join(SRC, "app", "admin", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "admin", "MolduraAdmin.tsx"), "utf8");
     expect(layout).toContain("env(safe-area-inset-bottom)");
   });
 
   it("o conteúdo reserva espaço para a doca", () => {
     // `pb-24` (96 px) era para uma barra de uma linha e ficou a servir uma
     // de duas. O `main` tem de reservar mais do que a doca ocupa.
-    const layout = readFileSync(join(SRC, "app", "admin", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "admin", "MolduraAdmin.tsx"), "utf8");
     expect(layout).toMatch(/<main[^>]*\bpb-2[8-9]|<main[^>]*\bpb-3\d/);
   });
 });
@@ -329,7 +329,7 @@ describe("as três superfícies leem a mesma arrumação", () => {
   it("o layout não escreve uma segunda lista de destinos", () => {
     // A regressão que isto impede: alguém acrescenta um destino à doca e
     // esquece a barra lateral, e as duas passam a discordar.
-    const layout = readFileSync(join(SRC, "app", "admin", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "admin", "MolduraAdmin.tsx"), "utf8");
     expect(layout).toContain("SECCOES_ADMIN");
     // O `NAV` inline que existia antes tinha `href:` e `label:` no layout.
     const codigo = layout.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
@@ -339,7 +339,7 @@ describe("as três superfícies leem a mesma arrumação", () => {
   it("as duas navegações fixas têm nome", () => {
     // Duas `<nav>` sem `aria-label` anunciam-se as duas como «navegação», e
     // quem ouve não sabe qual é qual.
-    const layout = readFileSync(join(SRC, "app", "admin", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "admin", "MolduraAdmin.tsx"), "utf8");
     const navs = layout.match(/<nav\b[^>]*>/g) ?? [];
     const semNome = navs.filter((n) => !n.includes("aria-label"));
     expect(semNome, `<nav> sem aria-label: ${semNome.join(" | ")}`).toEqual([]);

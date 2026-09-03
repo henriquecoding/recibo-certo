@@ -26,11 +26,12 @@ import {
   SS_TAXA, SS_COEFICIENTE, SS_BASE_MAX_MENSAL, SS_MIN_MENSAL, IAS_VALUE,
 } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("seguranca-social")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora Segurança Social trabalhador independente 2026 | Recibo Certo",
+  title: "Calculadora Segurança Social trabalhador independente 2026",
   description:
     "Quanto declarar e quanto pagar de Segurança Social por mês, como trabalhador independente: média do trimestre, coeficiente, ajuste de ±25%, mínimos e máximos, e o calendário de declaração e pagamento em 2026.",
   keywords: [
@@ -94,9 +95,9 @@ export default function FerramentaSegurancaSocialPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(howToSchema) }} />
 
       <ToolShell
         tool={TOOL}

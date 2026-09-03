@@ -429,7 +429,7 @@ export default function ComparadorCenarios() {
         </span>
         <div>
           <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">Comparar cenários</p>
-          <p className="text-[11px] text-stone-400">Descobre o melhor caminho para o teu rendimento · estimativa 2026</p>
+          <p className="text-[11px] text-stone-400 dark:text-stone-300">Descobre o melhor caminho para o teu rendimento · estimativa 2026</p>
         </div>
       </div>
 
@@ -437,7 +437,7 @@ export default function ComparadorCenarios() {
       <div className="rounded-3xl border border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-900/50 p-5 sm:p-6">
         {/* Valor + label */}
         <div className="flex items-end justify-between gap-2 mb-1">
-          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
+          <p className="text-xs font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wide dark:text-stone-300">
             Rendimento anual ilíquido
           </p>
           <div className="flex items-baseline gap-1">
@@ -456,7 +456,7 @@ export default function ComparadorCenarios() {
             <span className="font-display text-lg font-semibold text-stone-400">€</span>
           </div>
         </div>
-        <p className="text-right text-[11px] text-stone-400 mb-5">/ano · arrasta o slider ou edita o valor</p>
+        <p className="text-right text-[11px] text-stone-400 dark:text-stone-300 mb-5">/ano · arrasta o slider ou edita o valor</p>
 
         {/* Dica — desaparece após 1.ª interação */}
         <AnimatePresence>
@@ -470,7 +470,7 @@ export default function ComparadorCenarios() {
               <m.span
                 animate={{ x: [-3, 3, -3] }}
                 transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
-                className="flex items-center gap-1 text-brand/60 dark:text-brand/50 text-xs font-semibold"
+                className="flex items-center gap-1 text-brand dark:text-brand-mint/75 text-xs font-semibold"
               >
                 <ChevronLeft size={11} />
                 Arraste para ajustar
@@ -569,7 +569,7 @@ export default function ComparadorCenarios() {
             </span>
           ) : (
             empEstavel != null && (
-              <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+              <span className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
                 <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
                 {empOscila
                   ? `Empresa alterna com os recibos verdes até ~${fmtK(empOscila.ate)}`
@@ -601,7 +601,7 @@ export default function ComparadorCenarios() {
         {/* Inputs secundários */}
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor="cmp-despesas" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+            <label htmlFor="cmp-despesas" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
               Despesas de atividade{" "}
               <InfoTip label="Só recibos verdes e empresa">
                 Despesas documentadas da atividade. Aplicam-se aos recibos verdes e à empresa; um
@@ -619,11 +619,11 @@ export default function ComparadorCenarios() {
                 placeholder="0"
                 className={campo}
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€/ano</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 dark:text-stone-300">€/ano</span>
             </div>
           </div>
           <div>
-            <span className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+            <span className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
               Dependentes{" "}
               <InfoTip label="Categoria A">Afeta a retenção de IRS do cenário por conta de outrem.</InfoTip>
             </span>
@@ -670,7 +670,7 @@ export default function ComparadorCenarios() {
             <div id="cmp-afinar" className="mt-3 space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="cmp-estado-civil" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  <label htmlFor="cmp-estado-civil" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                     Situação familiar
                   </label>
                   <select
@@ -685,7 +685,7 @@ export default function ComparadorCenarios() {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="cmp-regiao" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  <label htmlFor="cmp-regiao" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                     Região{" "}
                     <InfoTip label="Tabelas próprias">
                       A Madeira e os Açores têm tabelas de retenção e taxas de IVA próprias.
@@ -704,7 +704,7 @@ export default function ComparadorCenarios() {
                 </div>
               </div>
 
-              <label className="flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400">
+              <label className="flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400 dark:text-stone-300">
                 <input
                   type="checkbox"
                   checked={conjunta}
@@ -717,7 +717,7 @@ export default function ComparadorCenarios() {
               </label>
 
               <div>
-                <label className="flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400">
+                <label className="flex items-start gap-2.5 text-xs text-stone-600 dark:text-stone-400 dark:text-stone-300">
                   <input
                     type="checkbox"
                     checked={irsJovem}
@@ -731,7 +731,7 @@ export default function ComparadorCenarios() {
                 </label>
                 {irsJovem && (
                   <div className="mt-2 pl-6">
-                    <label htmlFor="cmp-jovem-ano" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                    <label htmlFor="cmp-jovem-ano" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                       Ano de benefício
                     </label>
                     <select
@@ -751,7 +751,7 @@ export default function ComparadorCenarios() {
               {/* Deduções à coleta comuns — aplicadas aos TRÊS cenários, ou a
                   nenhum. Aplicá-las só a um era um enviesamento invisível. */}
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
+                <p className="mb-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                   Deduções à coleta{" "}
                   <InfoTip label="Aplicadas aos três cenários">
                     Saúde, educação e despesas gerais entram no apuramento de IRS dos três cenários — não só de um.
@@ -776,7 +776,7 @@ export default function ComparadorCenarios() {
                           placeholder="0"
                           className={campo}
                         />
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€</span>
+                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 dark:text-stone-300">€</span>
                       </div>
                     </div>
                   ))}
@@ -786,7 +786,7 @@ export default function ComparadorCenarios() {
               {/* Custos da empresa — pontos 2.3 e 2.4 */}
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="cmp-contabilista" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  <label htmlFor="cmp-contabilista" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                     Contabilista da empresa{" "}
                     <InfoTip label="Obrigatório numa Lda.">
                       Uma sociedade precisa de Contabilista Certificado. A avença típica anda entre {AVENCA_SOCIEDADE.min} €
@@ -803,11 +803,11 @@ export default function ComparadorCenarios() {
                       onChange={(e) => setContabilistaStr(soDecimal(e.target.value))}
                       className={campo}
                     />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">€/ano</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 dark:text-stone-300">€/ano</span>
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="cmp-derrama" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  <label htmlFor="cmp-derrama" className="mb-1.5 block text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                     Derrama municipal{" "}
                     <InfoTip label="Varia com o município">
                       Cada município fixa a sua taxa, até ao teto legal de {(DERRAMA_MAX.value * 100).toLocaleString("pt-PT")}%.
@@ -824,14 +824,14 @@ export default function ComparadorCenarios() {
                       onChange={(e) => setDerramaPctStr(soDecimal(e.target.value))}
                       className={campo}
                     />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400">%</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-stone-400 dark:text-stone-300">%</span>
                   </div>
                 </div>
               </div>
 
               {/* Base de comparação — ponto 2.7 */}
               <div>
-                <p className="mb-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
+                <p className="mb-1.5 text-xs font-semibold text-stone-600 dark:text-stone-400 dark:text-stone-300">
                   Comparar por{" "}
                   <InfoTip label="Duas perguntas diferentes">
                     «Tenho esta proposta de salário» compara pelo ilíquido. «O meu cliente tem este orçamento» compara pelo
@@ -892,7 +892,7 @@ export default function ComparadorCenarios() {
                 </span>
                 <div>
                   <p className="text-sm font-semibold text-stone-800 dark:text-stone-100">{c.titulo}</p>
-                  <p className="text-[11px] text-stone-400">{c.sub}</p>
+                  <p className="text-[11px] text-stone-400 dark:text-stone-300">{c.sub}</p>
                 </div>
               </div>
               <m.p
@@ -904,7 +904,7 @@ export default function ComparadorCenarios() {
               >
                 {fmt(liquido)}
               </m.p>
-              <p className="mt-1 text-xs text-stone-400">líquido/ano · {pct(cargas[c.chave])} de carga fiscal</p>
+              <p className="mt-1 text-xs text-stone-400 dark:text-stone-300">líquido/ano · {pct(cargas[c.chave])} de carga fiscal</p>
               <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-stone-700">
                 <m.div
                   className={`h-full rounded-full ${melhor ? "bg-gradient-to-r from-brand to-brand-dark" : "bg-stone-300 dark:bg-stone-600"}`}
@@ -951,9 +951,9 @@ export default function ComparadorCenarios() {
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand">
               <ChartProjection size={14} />
             </span>
-            <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">Para onde vai cada euro</h3>
+            <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400 dark:text-stone-300">Para onde vai cada euro</h3>
           </div>
-          <p className="mb-5 text-xs text-stone-400">Mesma altura porque parte do mesmo ilíquido — o verde vivo é o que te fica; os tons mais escuros são imposto.</p>
+          <p className="mb-5 text-xs text-stone-400 dark:text-stone-300">Mesma altura porque parte do mesmo ilíquido — o verde vivo é o que te fica; os tons mais escuros são imposto.</p>
 
           <div className="flex items-end justify-around gap-4 sm:gap-8" style={{ height: 230 }}>
             {CARTOES.map((c) => {
@@ -1012,7 +1012,7 @@ export default function ComparadorCenarios() {
                   key={c.chave}
                   className={`rounded-2xl border p-4 ${melhor ? "border-brand/40 bg-brand/5 dark:bg-brand/10" : "border-stone-100 dark:border-stone-700 bg-white dark:bg-stone-800"}`}
                 >
-                  <p className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400">
+                  <p className="mb-3 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-stone-400 dark:text-stone-300">
                     <c.Icon size={13} className="text-stone-400" /> {c.titulo}
                   </p>
                   <dl className="space-y-1.5 text-xs">
@@ -1046,7 +1046,7 @@ export default function ComparadorCenarios() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand/10 text-brand">
             <Calendar size={14} />
           </span>
-          <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400">
+          <h3 className="text-xs font-bold uppercase tracking-[0.15em] text-stone-500 dark:text-stone-400 dark:text-stone-300">
             Calendário fiscal por cenário
           </h3>
         </div>
@@ -1061,7 +1061,7 @@ export default function ComparadorCenarios() {
                       <span className="text-xs font-medium text-stone-600 dark:text-stone-300">{it.label}</span>
                       <span className="whitespace-nowrap text-xs font-semibold tabular-nums text-stone-800 dark:text-stone-100">{it.valor}</span>
                     </div>
-                    <p className="text-[11px] text-stone-400">{it.quando}</p>
+                    <p className="text-[11px] text-stone-400 dark:text-stone-300">{it.quando}</p>
                   </li>
                 ))}
               </ul>
@@ -1070,7 +1070,7 @@ export default function ComparadorCenarios() {
         </div>
       </div>
 
-      <p className="mt-5 text-xs leading-relaxed text-stone-400">
+      <p className="mt-5 text-xs leading-relaxed text-stone-400 dark:text-stone-300">
         Estimativa de ordem de grandeza para o mesmo rendimento anual ilíquido. Os três cenários são medidos pelo IRS
         efetivamente devido no ano — na Categoria A isso é o apuramento, não a retenção mensal, que é só um
         adiantamento. A Categoria A assume salário em 14 meses (sem subsídio de refeição); os recibos verdes usam o

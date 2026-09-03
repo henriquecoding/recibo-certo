@@ -184,6 +184,25 @@ const MEDIDOR = () => {
     if (rect.width < 48 || rect.height < 28) continue;
     if (rect.bottom < 0 || rect.top > window.innerHeight * 3) continue;
 
+    // ┌──────────────────────────────────────────────────────────────┐
+    // │ A PÁGINA NÃO É UMA SUPERFÍCIE SOBRE A PÁGINA                  │
+    // │                                                              │
+    // │ O invólucro que pinta o fundo do documento (`min-h-screen     │
+    // │ bg-cream`, `flex min-h-screen flex-col bg-cream               │
+    // │ dark:bg-stone-900`) tem, por definição, quase nenhum          │
+    // │ contraste contra o `body` — são a MESMA cor, e o `body` só    │
+    // │ existe por baixo dele. Contava como «superfície por           │
+    // │ desenhar» e chegava a valer 16,7% de uma página inteira,      │
+    // │ empurrando a medição do que interessa para o ruído.           │
+    // │                                                              │
+    // │ Uma faixa de secção a toda a largura (`bg-sand` sobre         │
+    // │ `bg-cream`, 1440×400) continua a contar: essa É uma           │
+    // │ superfície sobre outra, e a subtileza dela é uma escolha      │
+    // │ que se mede. O que sai é só o que tem a altura da janela      │
+    // │ inteira — a tela, não o que está desenhado nela.              │
+    // └──────────────────────────────────────────────────────────────┘
+    if (rect.width >= window.innerWidth - 1 && rect.height >= window.innerHeight) continue;
+
     const cs = getComputedStyle(el);
     if (cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0") continue;
     // Elementos posicionados fora do fluxo com opacidade 0 (painéis fechados).
@@ -230,7 +249,35 @@ const MEDIDOR = () => {
 
     const anel = anelDaSombra(cs.boxShadow);
     const contrasteAnel = anel ? contraste(compor(anel, fundoPai), fundoPai) : 0;
-    const temSombraDifusa = cs.boxShadow !== "none" && !anel;
+    // ┌──────────────────────────────────────────────────────────────┐
+    // │ `shadow-none` DO TAILWIND NÃO É `box-shadow: none`            │
+    // │                                                              │
+    // │ Com o sistema de variáveis do Tailwind (ring + shadow), a     │
+    // │ classe `shadow-none` computa para três camadas TRANSPARENTES: │
+    // │   rgba(0,0,0,0) 0px 0px 0px 0px, …, …                         │
+    // │ que é visualmente idêntico a `none` e diferente dele como     │
+    // │ string. Comparar com "none" dava `temSombraDifusa = true`, e  │
+    // │ isso bastava para o elemento passar por «superfície» e entrar │
+    // │ na contagem com melhor = 0 — ou seja, como INVISÍVEL.         │
+    // │                                                              │
+    // │ Foi assim que a régua de perguntas do herói reprovou os dois  │
+    // │ percursos a 1440px: a partir de `sm:` ela DEIXA de ser um     │
+    // │ cartão de propósito (`sm:border-0 sm:bg-transparent           │
+    // │ sm:shadow-none`) e passa a ser uma fila de passos em texto.   │
+    // │ Não tem pista visível porque não é para ter — quatro          │
+    // │ elementos que não se propõem a nada contavam como quatro      │
+    // │ superfícies por desenhar.                                     │
+    // │                                                              │
+    // │ Uma sombra sem uma única camada opaca não é uma sombra.        │
+    // └──────────────────────────────────────────────────────────────┘
+    const temSombraVisivel = (sombra) => {
+      if (!sombra || sombra === "none") return false;
+      return sombra.split(/,(?![^(]*\))/).some((camada) => {
+        const cor = analisar(camada);
+        return Boolean(cor) && cor.a > 0.02;
+      });
+    };
+    const temSombraDifusa = temSombraVisivel(cs.boxShadow) && !anel;
 
     const degrau = temFundo ? contraste(fundoProprio, fundoPai) : 0;
 
@@ -404,6 +451,22 @@ async function correr() {
         );
       } else {
         ok(`${nome}: modo claro com ${claro.pctInvisiveis}% de superfícies invisíveis`);
+      }
+
+      // ①-b O escuro tem o MESMO tecto, e por uma razão simples: as três
+      // asserções abaixo mediam sempre o claro contra o escuro, o que
+      // supunha que o escuro estava bem. Estava a deixar passar 16,7% numa
+      // página — dois avisos que, no escuro, eram `stone-800/60` sobre
+      // `stone-900` a 1,037:1, ou seja invisíveis, e o portão media a
+      // distância entre eles e o claro em vez de os apanhar.
+      if (escuro.pctInvisiveis > 8) {
+        mal(
+          `${nome}: ${escuro.pctInvisiveis}% das superfícies do modo ESCURO não têm ` +
+            `pista visível (limite 8%). Piores: ` +
+            escuro.piores.map((x) => `${x.melhor}·${x.classe.slice(0, 42)}`).join(" | "),
+        );
+      } else {
+        ok(`${nome}: modo escuro com ${escuro.pctInvisiveis}% de superfícies invisíveis`);
       }
 
       // ② E o claro não pode ficar atrás do escuro por mais de 3 pontos.

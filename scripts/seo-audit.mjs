@@ -181,8 +181,16 @@ for (const file of pages) {
   // a forma errada.
   const derivaEmTempoDeExecucao = /export\s+(?:async\s+)?function\s+generateMetadata/.test(txt);
   const dinamica = derivaDoManifesto || derivaEmTempoDeExecucao;
-  const temTitle = dinamica || /\btitle\s*:/.test(txt) || /\btitle\s*:/.test(txtLayout);
-  const temDesc = dinamica || /\bdescription\s*:/.test(txt) || /\bdescription\s*:/.test(txtLayout);
+  // Uma terceira forma legítima: `export const metadata = umHelper("x")`.
+  // É o que as cinco rotas de foco fazem (`metadataDoFoco`), e o portão
+  // acusava-as de não terem metadados quando têm — servem título e descrição
+  // próprios, verificados no HTML. Um aviso permanente e falso é pior do que
+  // aviso nenhum: ensina a ignorar a linha em que ele aparece.
+  const porHelper =
+    /export const metadata\s*=\s*\w+\s*\(/.test(txt) ||
+    /export const metadata\s*=\s*\w+\s*\(/.test(txtLayout);
+  const temTitle = dinamica || porHelper || /\btitle\s*:/.test(txt) || /\btitle\s*:/.test(txtLayout);
+  const temDesc = dinamica || porHelper || /\bdescription\s*:/.test(txt) || /\bdescription\s*:/.test(txtLayout);
   // Uma página `noindex` não vai aparecer em resultado nenhum; cobrá-la por
   // não ter description é pedir-lhe que se venda a um público que ela recusa.
   const noindex = /index:\s*false/.test(txt) || /index:\s*false/.test(txtLayout);
@@ -198,6 +206,72 @@ if (semMeta.length) {
   );
 } else {
   oks.push("Todas as páginas públicas têm metadados próprios.");
+}
+
+// ── 4. Comprimento dos metadados (aviso) ─────────────────────────────────────
+//
+// ┌───────────────────────────────────────────────────────────────────────────┐
+// │ O QUE ESTE PORTÃO NÃO VIA                                                  │
+// │                                                                           │
+// │ A verificação acima pergunta se a página TEM título e descrição. Nunca     │
+// │ perguntou que forma têm. Foi por isso que dezanove páginas públicas        │
+// │ chegaram a servir «… | Recibo Certo | Recibo Certo» durante meses sem      │
+// │ um único aviso — a marca duas vezes na mesma linha, e o portão a dizer     │
+// │ que estava tudo bem.                                                       │
+// │                                                                           │
+// │ A duplicação da marca é agora um TESTE                                     │
+// │ (`src/lib/__tests__/metadata-titulos.test.ts`), que reprova. O             │
+// │ comprimento fica aqui como AVISO, e de propósito: o Google trunca por      │
+// │ volta dos 60 e dos 160 caracteres, mas truncar não é penalizar, e um       │
+// │ título longo pode ser a melhor escolha editorial. O que não pode é ser     │
+// │ invisível — e era.                                                         │
+// └───────────────────────────────────────────────────────────────────────────┘
+const MAX_TITULO = 60;
+const MAX_DESCRICAO = 160;
+const longos = { titulo: [], descricao: [] };
+
+for (const abs of walk(APP)) {
+  if (!abs.endsWith("page.tsx")) continue;
+  const rel = abs.slice(APP.length + 1);
+  if (rel.includes("[")) continue;
+  const route = "/" + rel.replace(/\/?page\.tsx$/, "");
+  if (route.startsWith("/admin") || route.startsWith("/dashboard") || route.startsWith("/contabilista/")) continue;
+  const txt = readFileSync(abs, "utf8");
+  if (/index:\s*false/.test(txt)) continue;
+
+  // Só o `title` do objeto de topo (dois espaços de indentação). O do
+  // `openGraph` não vai para o separador nem para os resultados.
+  const mt = txt.match(/^ {2}title: "([^"]+)"/m);
+  if (mt) {
+    // O template da raiz acrescenta 15 caracteres (« | Recibo Certo»).
+    const comprimento = mt[1].length + " | Recibo Certo".length;
+    if (comprimento > MAX_TITULO) longos.titulo.push({ route, comprimento });
+  }
+  const md = txt.match(/^ {2}description:\s*\n?\s*"([^"]+)"/m);
+  if (md && md[1].length > MAX_DESCRICAO) {
+    longos.descricao.push({ route, comprimento: md[1].length });
+  }
+}
+
+const piores = (lista) =>
+  lista.sort((a, b) => b.comprimento - a.comprimento).slice(0, 5)
+    .map((x) => `${x.route} (${x.comprimento})`).join(", ");
+
+if (longos.titulo.length || longos.descricao.length) {
+  if (longos.titulo.length) {
+    warns.push(
+      `${longos.titulo.length} título(s) acima de ${MAX_TITULO} caracteres — o Google trunca. ` +
+        `Piores: ${piores(longos.titulo)}.`,
+    );
+  }
+  if (longos.descricao.length) {
+    warns.push(
+      `${longos.descricao.length} descrição(ões) acima de ${MAX_DESCRICAO} caracteres. ` +
+        `Piores: ${piores(longos.descricao)}.`,
+    );
+  }
+} else {
+  oks.push(`Títulos e descrições dentro de ${MAX_TITULO}/${MAX_DESCRICAO} caracteres.`);
 }
 
 // ── Relatório ────────────────────────────────────────────────────────────────

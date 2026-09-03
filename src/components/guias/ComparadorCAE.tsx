@@ -203,7 +203,7 @@ export function ComparadorCAE({ comPlanoFiz = false }: { comPlanoFiz?: boolean }
       ) : (
         <div className="rounded-2xl border border-dashed border-stone-200 dark:border-stone-700 p-8 text-center">
           <p className="text-sm text-stone-400 mb-1">Pesquisa a tua atividade acima</p>
-          <p className="text-xs text-stone-300 dark:text-stone-600">
+          <p className="text-xs text-stone-500 dark:text-stone-400">
             Verás a retenção, o coeficiente e a base de Segurança Social aplicável.
           </p>
         </div>

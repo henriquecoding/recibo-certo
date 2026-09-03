@@ -41,6 +41,13 @@ utilizador.
 | GitHub | Repositório privado | Bom ponto de partida; colaboradores e tokens ainda precisam de mínimo privilégio |
 | Licença | Não existia `LICENSE` | Um terceiro não recebia uma autorização open source, mas a intenção e os limites não estavam inequívocos |
 | Crawlers | GPTBot, ClaudeBot, Google-Extended, Meta, Perplexity e outros estavam explicitamente autorizados | Conteúdo disponível para treino, grounding e indexação de IA |
+
+> **Revisto em setembro de 2026.** O bloqueio passou a distinguir **treino**
+> (bloqueado) de **resposta** (permitido) — ver `src/lib/crawler-policy.ts` e
+> `docs/ESTRATEGIA.md` §6. A reserva de TDM não muda: continua no `robots.txt`,
+> no cabeçalho `tdm-reservation`, no HTML e no TDMRep. O que muda é que um
+> motor que lê para responder AGORA a uma pessoa, e devolve uma citação com
+> ligação, deixou de ser tratado como um corpus de treino.
 | Quiz | O cliente importa o banco completo, incluindo `correta`, para jogar e corrigir localmente | O bundle público permite reconstruir o banco; é o custo assumido de não enviar respostas nem exigir conta |
 | Landing do quiz | Cada categoria publicava 20 respostas certas e explicações em HTML e JSON-LD | Extração em massa sem sequer jogar |
 | Motores fiscais | Fórmulas e tabelas executam no cliente por desenho de privacidade | A lógica enviada ao browser é observável, mas os valores pessoais não saem do dispositivo; muitos dados base são lei e factos públicos |

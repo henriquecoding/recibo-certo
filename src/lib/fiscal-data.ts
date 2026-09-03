@@ -764,6 +764,32 @@ export interface Sourced<T> {
   note?: string;
 }
 
+// ═══════════════════════════════════════════════════════════════════════
+//  O REGISTO — a única lista que não pode ficar desatualizada
+//  ---------------------------------------------------------------------
+//  ┌─────────────────────────────────────────────────────────────────────┐
+//  │ PORQUE ISTO DEIXOU DE SER UMA LISTA ESCRITA À MÃO                    │
+//  │                                                                     │
+//  │ A asserção de integridade percorria `PARAMETROS_AUDITADOS`, uma      │
+//  │ lista curada. Media-se: 535 parâmetros `Sourced` no ficheiro, 344    │
+//  │ na lista. **192 — 36% — ficavam de fora dos três controlos**:        │
+//  │ fonte registada, data válida, e data não posterior à revisão global. │
+//  │                                                                     │
+//  │ Entre os que ficavam de fora: os pagamentos por conta de IRS, as     │
+//  │ coimas do RGIT, a residência fiscal, o representante fiscal, os      │
+//  │ não residentes, o regime de isenção de IVA, a declaração periódica.  │
+//  │ Nada disso está errado hoje — mas o comentário no topo deste         │
+//  │ ficheiro promete que «é impossível publicar dados internamente       │
+//  │ inconsistentes», e para 192 parâmetros isso não era verdade.         │
+//  │                                                                     │
+//  │ Acrescentar os 192 à mão resolvia o dia e não o problema: a lista    │
+//  │ voltava a divergir no parâmetro seguinte. Como TODO `Sourced` nasce  │
+//  │ aqui — não há forma de construir um sem passar por `sv()` —, o       │
+//  │ registo faz-se sozinho e não pode ficar incompleto.                  │
+//  └─────────────────────────────────────────────────────────────────────┘
+
+const REGISTO: Sourced<unknown>[] = [];
+
 function sv<T>(
   value: T,
   legalBasis: string,
@@ -771,10 +797,36 @@ function sv<T>(
   lastVerified: string,
   note?: string
 ): Sourced<T> {
-  return { value, legalBasis, source, lastVerified, note };
+  const parametro: Sourced<T> = { value, legalBasis, source, lastVerified, note };
+  REGISTO.push(parametro as Sourced<unknown>);
+  return parametro;
 }
 
-const TODAY = "2026-06-11";
+/**
+ * TODOS os parâmetros com proveniência, sem exceção e sem curadoria.
+ *
+ * É esta a lista que a asserção de integridade percorre, e é a ela que as
+ * páginas públicas devem perguntar «quantos parâmetros têm base legal, fonte
+ * e data?» — porque agora a resposta é «todos».
+ */
+export const PARAMETROS_TODOS: readonly Sourced<unknown>[] = REGISTO;
+
+/**
+ * Data-base da revisão de junho de 2026.
+ *
+ * Chamava-se `REV_BASE_2026_06`, e o nome era uma armadilha: quem acrescentava um
+ * parâmetro escrevia `REV_BASE_2026_06` por reflexo, a pensar «hoje», e ficava com a
+ * data de 11 de junho congelada num valor verificado meses depois. Hoje há
+ * 85 parâmetros com esta data — entre eles o IAS, as taxas de retenção do
+ * Art. 101.º, o IRC geral e o de PME — enquanto a `DATA_LAST_REVIEW` que a
+ * interface mostra diz 1 de setembro.
+ *
+ * O nome passa a dizer o que a constante é: uma data histórica. Para um
+ * parâmetro verificado agora, criar (ou usar) uma constante `REV_*` com a
+ * data real. `assertFiscalDataIntegrity()` avisa quando a distância cresce
+ * demais — ver o controlo de frescura no fim do ficheiro.
+ */
+const REV_BASE_2026_06 = "2026-06-11";
 // Verificação das taxas regionais de IRS (Madeira e Açores) contra a tabela
 // publicada para 2026 e os diplomas regionais que a fixam.
 const REV_REGIOES = "2026-08-19";
@@ -841,7 +893,7 @@ export const IAS = sv(
   537.13,
   "Indexante dos Apoios Sociais (IAS) 2026",
   "segSocialGov",
-  TODAY,
+  REV_BASE_2026_06,
   "Base de cálculo de limites da Segurança Social e do teto do IRS Jovem."
 );
 
@@ -858,27 +910,27 @@ export const RETENCAO: Record<TipoAtividade, Sourced<number>> = {
     0.23,
     "Art. 101.º, n.º 1, al. a) CIRS · Art. 151.º CIRS",
     "art101cirs",
-    TODAY,
+    REV_BASE_2026_06,
     "Profissões liberais. Reduzida de 25% para 23% pelo OE2025; mantém-se em 2026."
   ),
   outros: sv(
     0.115,
     "Art. 101.º CIRS — atividades não previstas no Art. 151.º",
     "art101cirs",
-    TODAY
+    REV_BASE_2026_06
   ),
   vendas: sv(
     0,
     "Vendas de bens/mercadorias — não sujeitas a retenção na fonte",
     "art101cirs",
-    TODAY,
+    REV_BASE_2026_06,
     "A retenção na fonte incide sobre prestações de serviços, não sobre vendas de bens."
   ),
   diretosAutor: sv(
     0.165,
     "Art. 101.º CIRS — direitos de autor e propriedade intelectual",
     "art101cirs",
-    TODAY
+    REV_BASE_2026_06
   ),
 };
 
@@ -910,7 +962,7 @@ export const DISPENSA_RETENCAO_LIMITE = sv(
   15000,
   "Art. 101.º-B, n.º 1, al. a) CIRS",
   "art101bCirs",
-  TODAY,
+  REV_BASE_2026_06,
   "Quem prevê faturar menos do que este valor no ano pode dispensar a retenção na fonte."
 );
 
@@ -974,7 +1026,7 @@ export const IVA_ISENCAO_LIMITE = sv(
   15000,
   "Art. 53.º CIVA",
   "portalFinancasIVA",
-  TODAY,
+  REV_BASE_2026_06,
   "Volume de negócios anual abaixo do qual há isenção de IVA."
 );
 
@@ -983,7 +1035,7 @@ export const IVA_ISENCAO_EXCESSO = sv(
   18750,
   "Art. 53.º / Art. 58.º CIVA — excesso de 25% sobre o limiar",
   "portalFinancasIVA",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export type Regiao = "continente" | "madeira" | "acores";
@@ -1000,19 +1052,19 @@ export const IVA_TAXAS: Record<Regiao, Sourced<Record<EscalaoIVA, number>>> = {
     { reduzida: 0.06, intermedia: 0.13, normal: 0.23 },
     "Art. 18.º CIVA — Portugal continental",
     "occIVA",
-    TODAY
+    REV_BASE_2026_06
   ),
   madeira: sv(
     { reduzida: 0.04, intermedia: 0.12, normal: 0.22 },
     "Art. 18.º CIVA — Região Autónoma da Madeira (DLR 6/2024/M: reduzida 4% desde out/2024)",
     "occIVA",
-    TODAY
+    REV_BASE_2026_06
   ),
   acores: sv(
     { reduzida: 0.04, intermedia: 0.09, normal: 0.16 },
     "Art. 18.º CIVA — Região Autónoma dos Açores",
     "occIVA",
-    TODAY
+    REV_BASE_2026_06
   ),
 };
 
@@ -1066,7 +1118,7 @@ export const IVA_ESPERADO_POR_CATEGORIA: Sourced<Record<CategoriaSimuladorRV, At
   },
   "Art. 18.º CIVA — taxa aplicável por natureza da operação (Listas I e II anexas ao CIVA): serviços não listados à taxa normal; restauração/alojamento à taxa intermédia (Verba 3.1 da Lista II); direitos de autor de obra própria isentos (Art. 9.º, n.º 16 CIVA).",
   "art18civa",
-  TODAY,
+  REV_BASE_2026_06,
   "Taxa HABITUAL da categoria, não uma garantia. «outras» reúne serviços diversos — a maioria é normal (23%), mas alguns (ex.: explicações/ensino, Art. 9.º) podem ser isentos; por isso o simulador só assinala «confirma com o contabilista» quando a taxa escolhida difere da habitual."
 );
 
@@ -1094,7 +1146,7 @@ export const SS_TAXA = sv(
   0.214,
   "Art. 168.º do Código Contributivo — taxa contributiva do TI",
   "segSocialGov",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Coeficiente do rendimento relevante consoante a natureza da atividade. */
@@ -1102,12 +1154,12 @@ export type BaseSS = "servicos" | "bens";
 /** Conjunto fechado das bases, para validar dados persistidos (RC-P1-12). */
 export const BASES_SS = ["servicos", "bens"] as const;
 export const SS_COEFICIENTE: Record<BaseSS, Sourced<number>> = {
-  servicos: sv(0.7, "Art. 162.º Código Contributivo — prestação de serviços", "segSocialGov", TODAY),
+  servicos: sv(0.7, "Art. 162.º Código Contributivo — prestação de serviços", "segSocialGov", REV_BASE_2026_06),
   bens: sv(
     0.2,
     "Art. 162.º Código Contributivo — produção/venda de bens, hotelaria e restauração",
     "segSocialGov",
-    TODAY
+    REV_BASE_2026_06
   ),
 };
 
@@ -1121,7 +1173,7 @@ export const SS_BASE_MAX_MENSAL = sv(
   6445.56,
   "Limite de 12 × IAS ao rendimento relevante mensal médio",
   "segSocialGov",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /**
@@ -1149,7 +1201,7 @@ export const SS_ISENCAO_PRIMEIRO_ANO_MESES = sv(
   12,
   "Art. 157.º Código Contributivo — isenção nos primeiros 12 meses de atividade",
   "segSocialGov",
-  TODAY,
+  REV_BASE_2026_06,
   "Aplica-se a quem não teve atividade independente nos 3 anos anteriores."
 );
 
@@ -1172,7 +1224,7 @@ export const SS_ACUMULACAO_LIMITE_IAS = sv(
   4,
   "Art. 157.º n.º 1 al. a) Código Contributivo — dispensa até 4 × IAS de rendimento relevante mensal médio",
   "segSocialGov",
-  TODAY,
+  REV_BASE_2026_06,
   "Acima do limite contribui-se sobre o excedente, sem contribuição mínima. Depende ainda de a remuneração do trabalho dependente ser ≥ 1 × IAS."
 );
 
@@ -1181,7 +1233,7 @@ export const SS_ACUMULACAO_LIMITE_MENSAL = sv(
   Math.round(SS_ACUMULACAO_LIMITE_IAS.value * IAS.value * 100) / 100,
   "Art. 157.º n.º 1 al. a) Código Contributivo — 4 × IAS",
   "segSocialGov",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -1192,12 +1244,12 @@ export const REGIME_SIMPLIFICADO = {
     200000,
     "Art. 28.º CIRS — limite de rendimento bruto do regime simplificado",
     "art68cirs",
-    TODAY
+    REV_BASE_2026_06
   ),
-  coefServicos151: sv(0.75, "Art. 31.º, n.º 1, al. b) CIRS — serviços do Art. 151.º", "art31", TODAY),
-  coefOutrosServicos: sv(0.35, "Art. 31.º, n.º 1, al. c) CIRS — outras prestações de serviços", "art31", TODAY),
-  coefVendas: sv(0.15, "Art. 31.º, n.º 1, al. a) CIRS — vendas de bens, restauração e hotelaria", "art31", TODAY),
-  coefPropIntelectual: sv(0.95, "Art. 31.º, n.º 1, al. d) CIRS — propriedade intelectual/industrial", "art31", TODAY),
+  coefServicos151: sv(0.75, "Art. 31.º, n.º 1, al. b) CIRS — serviços do Art. 151.º", "art31", REV_BASE_2026_06),
+  coefOutrosServicos: sv(0.35, "Art. 31.º, n.º 1, al. c) CIRS — outras prestações de serviços", "art31", REV_BASE_2026_06),
+  coefVendas: sv(0.15, "Art. 31.º, n.º 1, al. a) CIRS — vendas de bens, restauração e hotelaria", "art31", REV_BASE_2026_06),
+  coefPropIntelectual: sv(0.95, "Art. 31.º, n.º 1, al. d) CIRS — propriedade intelectual/industrial", "art31", REV_BASE_2026_06),
   // O AL em moradia ou apartamento está EXPRESSAMENTE EXCLUÍDO da al. a) —
   // a das atividades hoteleiras — e cai por isso na regra geral das
   // prestações de serviços da al. c). Lido no articulado a 2026-08-06; até
@@ -1215,19 +1267,19 @@ export const REGIME_SIMPLIFICADO = {
     REV_PATRIMONIO,
     "A delimitação das áreas é municipal e muda: verifica-se por morada, na câmara do concelho. A al. h) não consta do n.º 2, pelo que não permite a dedução autónoma das contribuições obrigatórias."
   ),
-  coefTransparencia: sv(1.0, "Art. 31.º, n.º 1, al. g) CIRS — serviços a sociedade onde detém ≥ 5%", "art31", TODAY),
+  coefTransparencia: sv(1.0, "Art. 31.º, n.º 1, al. g) CIRS — serviços a sociedade onde detém ≥ 5%", "art31", REV_BASE_2026_06),
   coefSubsidiosNaoExploracao: sv(
     0.3,
     "Art. 31.º, n.º 1, al. e) CIRS — subsídios ou subvenções não destinados à exploração",
     "art31",
-    TODAY,
+    REV_BASE_2026_06,
     "Tributados em 1/5 no ano de recebimento e em cada um dos quatro anos seguintes."
   ),
   coefSubsidiosExploracao: sv(
     0.1,
     "Art. 31.º, n.º 1, al. f) CIRS — subsídios destinados à exploração e restantes rendimentos da categoria B",
     "art31",
-    TODAY
+    REV_BASE_2026_06
   ),
 };
 
@@ -1933,22 +1985,22 @@ export const REDUCAO_COEFICIENTE_ANO = sv<Record<number, number>>(
   { 1: 0.5, 2: 0.25 },
   "Art. 31.º, n.º 10 CIRS — redução de 50% (1.º ano) e 25% (2.º ano)",
   "art31",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
 //  IRS JOVEM — isenção progressiva (categorias A e B)
 // ═══════════════════════════════════════════════════════════════════════
 export const IRS_JOVEM = {
-  idadeMax: sv(35, "Regime IRS Jovem — até 35 anos no último dia do ano", "art12bCirs", TODAY),
+  idadeMax: sv(35, "Regime IRS Jovem — até 35 anos no último dia do ano", "art12bCirs", REV_BASE_2026_06),
   /** Teto anual de rendimento isento = 55 × IAS. */
-  tetoIAS: sv(55, "Teto anual de isenção = 55 × IAS", "art12bCirs", TODAY),
+  tetoIAS: sv(55, "Teto anual de isenção = 55 × IAS", "art12bCirs", REV_BASE_2026_06),
   /** Percentagem de isenção por ano de obtenção de rendimentos (1 a 10). */
   isencaoPorAno: sv<Record<number, number>>(
     { 1: 1.0, 2: 0.75, 3: 0.75, 4: 0.75, 5: 0.5, 6: 0.5, 7: 0.5, 8: 0.25, 9: 0.25, 10: 0.25 },
     "Regime IRS Jovem — 100% (1.º), 75% (2.º–4.º), 50% (5.º–7.º), 25% (8.º–10.º)",
     "art12bCirs",
-    TODAY
+    REV_BASE_2026_06
   ),
 };
 
@@ -2040,7 +2092,7 @@ export const ESCALOES_IRS = sv<EscalaoIRS[]>(
   ],
   "Art. 68.º CIRS — escalões 2026 (Portugal continental)",
   "art68cirs",
-  TODAY,
+  REV_BASE_2026_06,
   "Taxas marginais. Confirmar anualmente contra a tabela oficial da AT."
 );
 
@@ -2124,7 +2176,7 @@ export const DEDUCAO_ESPECIFICA_CATB = sv(
   Math.round(Math.max(DEDUCAO_ESPECIFICA_FLOOR, DEDUCAO_ESPECIFICA_IAS_MULT * IAS.value) * 100) / 100,
   "Art. 25.º / 31.º CIRS — máx(4.104 €; 8,54 × IAS)",
   "occRegimeSimplificado",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Limiar de despesas a justificar no regime simplificado (coef. 0,75 e 0,35). */
@@ -2132,7 +2184,7 @@ export const REGIME_15PCT = sv(
   0.15,
   "Art. 31.º CIRS — 15% do rendimento bruto a justificar com despesas",
   "occRegimeSimplificado",
-  TODAY,
+  REV_BASE_2026_06,
   "Parte de 15% do bruto não justificada com despesas é acrescida ao rendimento tributável."
 );
 
@@ -2165,7 +2217,7 @@ export const MINIMO_EXISTENCIA = sv(
   ) / 100,
   "Art. 70.º, n.º 1 CIRS — máx(12 880 €; 1,5 × 14 × IAS)",
   "art70cirs",
-  TODAY,
+  REV_BASE_2026_06,
   "Valor de referência. O abatimento é calculado pela fórmula por troços do artigo 70.º."
 );
 
@@ -2177,12 +2229,12 @@ export const MINIMO_EXISTENCIA = sv(
  * artigo 70.º do CIRS; 2,2 é o multiplicador da exclusão do n.º 4, al. a).
  */
 export const MINIMO_EXISTENCIA_FORMULA = {
-  coeficienteTrocoIntermedio: sv(2.6, "Art. 70.º, n.º 2, al. b) CIRS", "art70cirs", TODAY),
-  coeficienteTrocoSuperior: sv(1.35, "Art. 70.º, n.º 2, al. c) CIRS", "art70cirs", TODAY),
-  divisorPatamarL: sv(3.6, "Art. 70.º, n.º 3 CIRS", "art70cirs", TODAY),
-  limiteDespesasGeraisPorTitular: sv(250, "Art. 70.º, n.º 5, al. c) e Art. 78.º-B, n.º 1 CIRS", "art70cirs", TODAY),
-  multiplicadorExclusaoRendimentoAgregado: sv(2.2, "Art. 70.º, n.º 4, al. a) CIRS", "art70cirs", TODAY),
-  multiplicadorIASExclusao: sv(14, "Art. 70.º, n.º 4 CIRS", "art70cirs", TODAY),
+  coeficienteTrocoIntermedio: sv(2.6, "Art. 70.º, n.º 2, al. b) CIRS", "art70cirs", REV_BASE_2026_06),
+  coeficienteTrocoSuperior: sv(1.35, "Art. 70.º, n.º 2, al. c) CIRS", "art70cirs", REV_BASE_2026_06),
+  divisorPatamarL: sv(3.6, "Art. 70.º, n.º 3 CIRS", "art70cirs", REV_BASE_2026_06),
+  limiteDespesasGeraisPorTitular: sv(250, "Art. 70.º, n.º 5, al. c) e Art. 78.º-B, n.º 1 CIRS", "art70cirs", REV_BASE_2026_06),
+  multiplicadorExclusaoRendimentoAgregado: sv(2.2, "Art. 70.º, n.º 4, al. a) CIRS", "art70cirs", REV_BASE_2026_06),
+  multiplicadorIASExclusao: sv(14, "Art. 70.º, n.º 4 CIRS", "art70cirs", REV_BASE_2026_06),
 } as const;
 
 /**
@@ -2193,10 +2245,10 @@ export const MINIMO_EXISTENCIA_FORMULA = {
  * taxas gerais do Art. 68.º.
  */
 export const ADICIONAL_SOLIDARIEDADE = {
-  limiar1: sv(80000, "Art. 68.º-A, n.º 1, al. a) CIRS — 1.º limiar do adicional de solidariedade", "art68aCirs", TODAY),
-  limiar2: sv(250000, "Art. 68.º-A, n.º 1, al. b) CIRS — 2.º limiar do adicional de solidariedade", "art68aCirs", TODAY),
-  taxa1: sv(0.025, "Art. 68.º-A, n.º 1, al. a) CIRS — taxa de 2,5% entre 80 000 € e 250 000 €", "art68aCirs", TODAY),
-  taxa2: sv(0.05, "Art. 68.º-A, n.º 1, al. b) CIRS — taxa de 5% acima de 250 000 €", "art68aCirs", TODAY),
+  limiar1: sv(80000, "Art. 68.º-A, n.º 1, al. a) CIRS — 1.º limiar do adicional de solidariedade", "art68aCirs", REV_BASE_2026_06),
+  limiar2: sv(250000, "Art. 68.º-A, n.º 1, al. b) CIRS — 2.º limiar do adicional de solidariedade", "art68aCirs", REV_BASE_2026_06),
+  taxa1: sv(0.025, "Art. 68.º-A, n.º 1, al. a) CIRS — taxa de 2,5% entre 80 000 € e 250 000 €", "art68aCirs", REV_BASE_2026_06),
+  taxa2: sv(0.05, "Art. 68.º-A, n.º 1, al. b) CIRS — taxa de 5% acima de 250 000 €", "art68aCirs", REV_BASE_2026_06),
 };
 
 /**
@@ -2222,15 +2274,15 @@ export const IRC_TAXA_GERAL = sv(
   0.19,
   "Art. 87.º, n.º 1 CIRC conjugado com a norma transitória do Art. 3.º, n.º 2 da Lei n.º 64/2025, de 7 de novembro — 19% nos períodos de tributação iniciados em 2026 (o corpo do artigo prevê 17%, mas só a partir de 2028)",
   "art87circ",
-  TODAY
+  REV_BASE_2026_06
 );
 export const IRC_TAXA_PME = sv(
   0.15,
   "Art. 87.º, n.º 2 CIRC (redação da Lei n.º 64/2025, de 7 de novembro) — taxa reduzida PME nos primeiros 50 000 € de matéria coletável, aplicável aos períodos iniciados em ou após 1/1/2026 (Art. 3.º, n.º 4 da mesma lei)",
   "art87circ",
-  TODAY
+  REV_BASE_2026_06
 );
-export const IRC_LIMITE_PME = sv(50000, "Art. 87.º CIRC — limiar da taxa reduzida PME", "art87circ", TODAY);
+export const IRC_LIMITE_PME = sv(50000, "Art. 87.º CIRC — limiar da taxa reduzida PME", "art87circ", REV_BASE_2026_06);
 
 // ─── Constituir a sociedade: quanto custa o registo ────────────────────
 //  ┌──────────────────────────────────────────────────────────────────┐
@@ -2300,12 +2352,12 @@ export const CAPITAL_SOCIAL_MINIMO_POR_SOCIO = sv(
   "csc",
   REV_CONSTITUICAO
 );
-export const DERRAMA_MAX = sv(0.015, "Derrama municipal — taxa máxima legal sobre o lucro tributável", "art87circ", TODAY);
+export const DERRAMA_MAX = sv(0.015, "Derrama municipal — taxa máxima legal sobre o lucro tributável", "art87circ", REV_BASE_2026_06);
 export const DIVIDENDOS_TAXA = sv(
   0.28,
   "Art. 71.º CIRS — taxa liberatória sobre dividendos distribuídos",
   "art71cirs",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /**
@@ -2667,14 +2719,14 @@ export const CATEGORIA_F = {
     0.25,
     "Art. 72.º, n.º 1 CIRS — taxa especial dos rendimentos prediais (habitação)",
     "art72",
-    TODAY
+    REV_BASE_2026_06
   ),
   /** Taxa autónoma sobre arrendamento não habitacional (comércio, escritórios…). */
   taxaNaoHabitacao: sv(
     0.28,
     "Art. 72.º CIRS — rendimentos prediais de arrendamento não habitacional",
     "rendasPrediais",
-    TODAY
+    REV_BASE_2026_06
   ),
   /**
    * Redução da taxa (em pontos percentuais, expressos como fração) por duração
@@ -3205,8 +3257,8 @@ export function efeitoFiscal(a: Atividade): EfeitoFiscal {
 // ═══════════════════════════════════════════════════════════════════════
 //  DEDUÇÕES À COLETA (IRS) — valores 2026
 // ═══════════════════════════════════════════════════════════════════════
-export const DEDUCAO_DEPENDENTE = sv(600, "Art. 78.º-A CIRS — por dependente com mais de 3 anos", "art78aCirs", TODAY);
-export const DEDUCAO_DEPENDENTE_BEBE = sv(726, "Art. 78.º-A CIRS — por dependente até 3 anos", "art78aCirs", TODAY);
+export const DEDUCAO_DEPENDENTE = sv(600, "Art. 78.º-A CIRS — por dependente com mais de 3 anos", "art78aCirs", REV_BASE_2026_06);
+export const DEDUCAO_DEPENDENTE_BEBE = sv(726, "Art. 78.º-A CIRS — por dependente até 3 anos", "art78aCirs", REV_BASE_2026_06);
 
 /**
  * Dedução adicional por dependente com deficiência ≥ 60% (Art. 87.º CIRS).
@@ -3216,7 +3268,7 @@ export const DEDUCAO_DEPENDENTE_DEFICIENCIA = sv(
   Math.round(2.5 * IAS.value * 100) / 100,
   "Art. 87.º CIRS — 2,5 × IAS por dependente com grau de incapacidade ≥ 60%",
   "portalFinancasArt87",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export interface DeducaoLimitada {
@@ -3227,19 +3279,19 @@ export const DEDUCAO_DESP_GERAIS = sv<DeducaoLimitada>(
   { taxa: 0.35, limite: 250 },
   "Art. 78.º-B CIRS — despesas gerais familiares: 35% até 250 €/sujeito",
   "art78aCirs",
-  TODAY
+  REV_BASE_2026_06
 );
 export const DEDUCAO_SAUDE = sv<DeducaoLimitada>(
   { taxa: 0.15, limite: 1000 },
   "Art. 78.º-C CIRS — saúde: 15% até 1.000 €",
   "art78aCirs",
-  TODAY
+  REV_BASE_2026_06
 );
 export const DEDUCAO_EDUCACAO = sv<DeducaoLimitada>(
   { taxa: 0.3, limite: 800 },
   "Art. 78.º-D CIRS — educação: 30% até 800 €",
   "art78aCirs",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Dedução de rendas habitação permanente (Art. 78.º-E CIRS): 15% até 900 € (Lei 36/2024). */
@@ -3247,7 +3299,7 @@ export const DEDUCAO_RENDAS = sv<DeducaoLimitada>(
   { taxa: 0.15, limite: 900 },
   "Art. 78.º-E CIRS — rendas de habitação permanente: 15% até 900 € (Lei 36/2024, rendimentos de 2026)",
   "art78aCirs",
-  TODAY,
+  REV_BASE_2026_06,
   "Limite atualizado pela Lei 36/2024: 700 € em 2025, 900 € em 2026, 1.000 € a partir de 2027."
 );
 
@@ -3259,19 +3311,19 @@ export const DEDUCAO_DEPENDENTE_3MAIS = sv(
   900,
   "Art. 78.º-A n.º 6 CIRS — 2.º dependente e seguintes até 6 anos (900 €)",
   "art78aCirs",
-  TODAY,
+  REV_BASE_2026_06,
   "Na lei: 900 € por dependente a partir do 2.º, até 6 anos. O simulador aplica-a a partir do 3.º (simplificação conservadora — não recolhe faixa 3–6 anos)."
 );
 
 /** Divisor do rendimento na tributação conjunta dos casados/unidos de facto. */
-export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal (divisão por 2)", "art78aCirs", TODAY);
+export const QUOCIENTE_CONJUGAL = sv(2, "Art. 69.º CIRS — quociente conjugal (divisão por 2)", "art78aCirs", REV_BASE_2026_06);
 
 /** Limite global das deduções à coleta (Art. 78.º, n.º 7), escalonado. */
 export const LIMITE_GLOBAL_DEDUCOES = sv(
   { semLimiteAte: 8342, limiteAlto: 2500, limiteBaixo: 1000, escalaoSuperior: 80000 },
   "Art. 78.º, n.º 7 CIRS — sem limite até 8.342 € (1.º escalão Art. 68.º 2026); entre 1.000 € e 2.500 € até 80.000 € (Art. 68.º-A); 1.000 € acima",
   "art78aCirs",
-  TODAY,
+  REV_BASE_2026_06,
   "semLimiteAte = 1.º escalão Art. 68.º (8.342 € em 2026); escalaoSuperior = 1.º escalão Art. 68.º-A (80.000 €, fixo)."
 );
 
@@ -3285,7 +3337,7 @@ export const LIMITE_GLOBAL_MAJORACAO_DEPENDENTES = sv(
   { minDependentes: 3, porDependente: 0.05 },
   "Art. 78.º, n.º 8 CIRS — limites do n.º 7 majorados em 5% por dependente nos agregados com três ou mais",
   "art78aCirs",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3303,7 +3355,7 @@ export const TA_THRESHOLDS = sv(
   { t1: 37500, t2: 45000 },
   "Art. 88.º, n.os 3 e 11 CIRC — limiares do custo de aquisição (OE2025)",
   "occTA",
-  TODAY,
+  REV_BASE_2026_06,
   "Thresholds anteriores (até 2024): €27 500 e €35 000. Atualizados pelo OE2025."
 );
 
@@ -3320,7 +3372,7 @@ export const TA_VIATURAS_COMBUSTAO = sv<TAViaturasTaxas>(
   { ate37500: 0.08, ate45000: 0.25, acima45000: 0.32 },
   "Art. 88.º, n.º 3 CIRC — viaturas ligeiras de passageiros a gasóleo/gasolina (OE2025)",
   "occTA",
-  TODAY,
+  REV_BASE_2026_06,
   "Taxas anteriores (até 2024): 10% / 17,5% / 35%. Substituídas pelo OE2025."
 );
 
@@ -3328,7 +3380,7 @@ export const TA_VIATURAS_PHEV = sv<TAViaturasTaxas>(
   { ate37500: 0.025, ate45000: 0.075, acima45000: 0.15 },
   "Art. 88.º, n.º 11 CIRC — viaturas PHEV (Euro 6e-bis, < 80 g CO₂/km) — OE2026",
   "occTA",
-  TODAY,
+  REV_BASE_2026_06,
   "Nova categoria OE2026 para híbridos plug-in conformes Euro 6e-bis. Threshold = custo de aquisição."
 );
 
@@ -3361,7 +3413,7 @@ export const TA_REPRESENTACAO = sv(
   0.10,
   "Art. 88.º, n.º 7 CIRC — despesas de representação: 10%",
   "occTA",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Ajudas de custo e quilómetros em viatura própria (n.º 9 do Art. 88.º). */
@@ -3369,7 +3421,7 @@ export const TA_AJUDAS_CUSTO = sv(
   0.05,
   "Art. 88.º, n.º 9 CIRC — ajudas de custo e quilómetros em viatura própria: 5%",
   "occTA",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Despesas não documentadas (n.º 1 do Art. 88.º). */
@@ -3377,7 +3429,7 @@ export const TA_NAO_DOCUMENTADAS = sv(
   0.50,
   "Art. 88.º, n.º 1 CIRC — despesas não documentadas: 50%",
   "occTA",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /**
@@ -3389,7 +3441,7 @@ export const TA_AGRAVAMENTO_PREJUIZO = sv(
   0.10,
   "Art. 88.º, n.º 14 CIRC — agravamento de 10 p.p. em caso de prejuízo fiscal",
   "occTA",
-  TODAY,
+  REV_BASE_2026_06,
   "Exceção: não se aplica nos primeiros 3 anos ou se houve lucro em ≥1 dos 3 exercícios anteriores."
 );
 
@@ -3402,28 +3454,28 @@ export const RFAI_TAXA_INTERIOR = sv(
   0.30,
   "Art. 23.º CFI — 30% do investimento elegível nas regiões Norte, Centro, Alentejo, Açores e Madeira (até €15 M)",
   "cfi",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export const RFAI_TAXA_INTERIOR_EXCEDENTE = sv(
   0.10,
   "Art. 23.º CFI — 10% sobre a parcela do investimento que exceda €15 M nas regiões interiores",
   "cfi",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export const RFAI_TAXA_LITORAL = sv(
   0.10,
   "Art. 23.º CFI — 10% do investimento elegível nas regiões de Lisboa e Algarve",
   "cfi",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export const RFAI_LIMITE_INVESTIMENTO_INTERIOR = sv(
   15_000_000,
   "Art. 23.º CFI — limiar de €15 000 000 para aplicação da taxa de 30%",
   "occRFAI",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /**
@@ -3434,7 +3486,7 @@ export const RFAI_LIMITE_COLETA = sv(
   0.50,
   "Art. 24.º CFI — dedução limitada a 50% da coleta IRC (100% nos primeiros 3 anos)",
   "occRFAI",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Exercícios seguintes em que o saldo não deduzido pode ser reportado. */
@@ -3442,7 +3494,7 @@ export const RFAI_REPORTE_ANOS = sv(
   10,
   "Art. 24.º CFI — saldo não deduzido reportável por 10 exercícios seguintes",
   "occRFAI",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3669,7 +3721,7 @@ export const SIFIDE_TAXA_INCREMENTAL = sv(
   0.50,
   "Art. 36.º CFI — taxa incremental de 50% do aumento de despesas I&D face à média dos 2 anos anteriores",
   "occSIFIDE",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /** Montante máximo do incremento elegível para a taxa incremental. */
@@ -3677,7 +3729,7 @@ export const SIFIDE_TETO_INCREMENTAL = sv(
   1_500_000,
   "Art. 36.º CFI — incremento de despesas I&D elegível limitado a €1 500 000",
   "occSIFIDE",
-  TODAY
+  REV_BASE_2026_06
 );
 
 /**
@@ -3688,14 +3740,14 @@ export const SIFIDE_MAJORACAO_PME_JOVEM = sv(
   0.15,
   "Art. 36.º CFI — majoração de 15% para PME < 2 exercícios sem histórico incremental (taxa efetiva 47,5%)",
   "occSIFIDE",
-  TODAY
+  REV_BASE_2026_06
 );
 
 export const SIFIDE_REPORTE_ANOS = sv(
   12,
   "Art. 37.º CFI — crédito não deduzido por insuficiência de coleta reportável por 12 exercícios",
   "occSIFIDE",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3715,7 +3767,7 @@ export const IFICI_PRAZO_ANOS = sv(
   10,
   "Art. 58.º-A EBF — prazo máximo de 10 exercícios consecutivos",
   "occIFICI",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -3765,7 +3817,7 @@ export const DEDUCAO_DEFICIENCIA_COLETA = sv(
   Math.round(4 * IAS.value * 100) / 100,
   "Art. 87.º CIRS — dedução à coleta de 4 × IAS por sujeito passivo com grau ≥ 60%",
   "portalFinancasArt87",
-  TODAY,
+  REV_BASE_2026_06,
   "Valor 2026: 4 × €537,13 = €2 148,52. Acumula com a exclusão Art. 56.º-A."
 );
 
@@ -3889,7 +3941,7 @@ export const MOE_BASE_MINIMA_MENSAL = sv(
   IAS.value,
   "Art. 55.º Código Contributivo — base de incidência mínima dos MOE = 1 × IAS",
   "segSocialGov",
-  TODAY,
+  REV_BASE_2026_06,
   "Não se aplica em acumulação com outra atividade com base contributiva ≥ 1 IAS, nem a pensionistas."
 );
 
@@ -3898,7 +3950,7 @@ export const SS_MIN_MENSAL = sv(
   20,
   "Art. 168.º Código Contributivo — contribuição mínima mensal",
   "segSocialGov",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -4379,7 +4431,7 @@ export const DIV_INCLUSAO_ENGLOBAMENTO = sv(
   0.5,
   "Art. 40.º-A CIRS — englobamento: só 50% dos dividendos de entidades residentes é incluído no rendimento coletável",
   "art40aCirs",
-  TODAY
+  REV_BASE_2026_06
 );
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -8163,8 +8215,9 @@ export function assertFiscalDataIntegrity(): void {
     }
   }
 
-  // 6) Proveniência obrigatória: fonte registada + data válida em cada parâmetro.
-  const sourced: readonly Sourced<unknown>[] = PARAMETROS_AUDITADOS;
+  // 6) Proveniência obrigatória: fonte registada + data válida em cada
+  //    parâmetro. O REGISTO, e não a lista curada — ver a nota no topo.
+  const sourced: readonly Sourced<unknown>[] = PARAMETROS_TODOS;
   sourced.forEach((p) => {
     if (!(p.source in SOURCES)) erros.push(`Fonte não registada: ${p.legalBasis}.`);
     if (!isIsoDate(p.lastVerified)) erros.push(`Data de verificação inválida: ${p.legalBasis}.`);
@@ -8179,11 +8232,72 @@ export function assertFiscalDataIntegrity(): void {
     }
   });
 
+  // 7) A lista curada tem de ser um SUBCONJUNTO do registo. Se alguém lá
+  //    puser um objeto que não nasceu em `sv()`, ele escapa aos controlos
+  //    todos — que era exatamente o buraco que o registo veio fechar.
+  {
+    const noRegisto = new Set<unknown>(PARAMETROS_TODOS);
+    const intrusos = PARAMETROS_AUDITADOS.filter((p) => !noRegisto.has(p));
+    if (intrusos.length > 0) {
+      erros.push(
+        `PARAMETROS_AUDITADOS tem ${intrusos.length} entrada(s) que não passaram por sv(): ` +
+          intrusos.map((p) => p.legalBasis).slice(0, 5).join(" · ")
+      );
+    }
+  }
+
+  // 8) FRESCURA — a distância entre o que se diz e o que se fez.
+  //
+  //    `DATA_LAST_REVIEW` é a data que a secção «Fontes» mostra e que o
+  //    `/llms.txt` publica. A asserção acima só impedia o sentido contrário
+  //    (um parâmetro mais recente do que a revisão); nada impedia a distância
+  //    crescer para sempre. Hoje há 85 parâmetros parados em 11/06 enquanto a
+  //    interface anuncia 01/09 — quase três meses de diferença que ninguém
+  //    tinha por onde ver.
+  //
+  //    O limiar não bloqueia o build: um parâmetro estável (o número de
+  //    prestações do Art. 102.º) pode ficar anos sem mudar sem estar errado.
+  //    Bloquear seria transformar a asserção numa fonte de ruído até alguém
+  //    lhe mexer no número para a calar. Avisa — e é o `fiscal:check` que
+  //    conta, ordena e mostra a lista.
+  {
+    const DIAS_DE_FOLGA = 180;
+    const revisao = Date.parse(`${DATA_LAST_REVIEW}T00:00:00Z`);
+    if (Number.isFinite(revisao)) {
+      const velhos = sourced.filter((p) => {
+        if (!isIsoDate(p.lastVerified)) return false;
+        const dias = (revisao - Date.parse(`${p.lastVerified}T00:00:00Z`)) / 86_400_000;
+        return dias > DIAS_DE_FOLGA;
+      });
+      if (velhos.length > 0) {
+        avisosDeFrescura.push(
+          `${velhos.length} parâmetro(s) com verificação mais de ${DIAS_DE_FOLGA} dias anterior a ` +
+            `DATA_LAST_REVIEW (${DATA_LAST_REVIEW}). O mais antigo: ` +
+            `${velhos.map((p) => p.lastVerified).sort()[0]}.`
+        );
+      }
+    }
+  }
+
   if (erros.length > 0) {
     throw new Error(
       `[fiscal-data] Dados fiscais inconsistentes — build bloqueado:\n - ${erros.join("\n - ")}`
     );
   }
+}
+
+/**
+ * Avisos que NÃO bloqueiam o build, mas que o `fiscal:check` mostra.
+ *
+ * Separados dos erros de propósito: um dado incoerente é impossível e tem de
+ * parar tudo; um dado apenas VELHO é possível e pode até estar certo — o que
+ * não pode é ficar velho em silêncio enquanto a interface anuncia uma data
+ * de revisão recente.
+ */
+const avisosDeFrescura: string[] = [];
+
+export function avisosDeIntegridadeFiscal(): readonly string[] {
+  return avisosDeFrescura;
 }
 
 // Corre na importação do módulo: qualquer página que o use falha o build

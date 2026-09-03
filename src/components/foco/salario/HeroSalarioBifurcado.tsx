@@ -189,7 +189,7 @@ export default function HeroSalarioBifurcado({
                 href={PASSO_CONTRATACAO.ferramenta}
                 className="focus-marca mt-5 inline-flex min-h-[40px] items-center gap-1.5 text-xs font-semibold text-brand-dark no-underline dark:text-brand-mint"
               >
-                {PASSO_CONTRATACAO.cta} <ArrowRight size={13} />
+                {PASSO_CONTRATACAO.ctaPassoAtual} <ArrowRight size={13} />
               </Link>
             </div>
 

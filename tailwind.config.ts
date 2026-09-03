@@ -306,6 +306,41 @@ const config: Config = {
         // aqui um valor solto substituía a família inteira e apagava
         // `text-brand-dark`, `-deep`, `-light` e `-mint` do CSS gerado.
         brand: { ...MARCA, DEFAULT: "#147455" },
+        // ┌──────────────────────────────────────────────────────────┐
+        // │ O 700 DA FIZ ESCREVE, E ESCREVIA A 3,58:1                 │
+        // │                                                          │
+        // │ O comentário da paleta de preenchimento diz que «os tons  │
+        // │ 700–900 existem para garantir contraste AA de texto sobre │
+        // │ as superfícies claras». O 700 (#A87F0B) não garantia: dá  │
+        // │ 3,58:1 sobre `fiz-50`, 3,43 sobre `fiz-100` e 3,06 sobre  │
+        // │ o papel — e é o selo «Parceria FIZ», a 10 e 12px em       │
+        // │ negrito, onde o mínimo é 4,5:1.                            │
+        // │                                                          │
+        // │ #7F5F08 é o mesmo dourado um degrau abaixo e passa nos    │
+        // │ quatro fundos onde escreve: 5,76 · 5,52 · 4,92 · 5,93.    │
+        // │                                                          │
+        // │ Aqui e não em `colors`: o 700 nunca preenche nem faz      │
+        // │ borda (procurado — zero ocorrências). No escuro,          │
+        // │ `.dark .text-fiz-700` tem o seu próprio tom e não passa   │
+        // │ por aqui.                                                 │
+        // └──────────────────────────────────────────────────────────┘
+        fiz: { 700: "#7F5F08" },
+        // ┌──────────────────────────────────────────────────────────┐
+        // │ O SAGE DO QUIZ TAMBÉM ESCREVE, E ESCREVIA A 3,51:1        │
+        // │                                                          │
+        // │ `quiz-sage` (#768771) preenche, faz borda E escreve — a   │
+        // │ localização, os rótulos de categoria e as legendas, a     │
+        // │ 11–12px sobre os pergaminhos: 3,51 sobre #FAF4EC, 3,32    │
+        // │ sobre #F7EDE1, 3,11 sobre #F0E6DA. Nenhum chega a 4,5.    │
+        // │                                                          │
+        // │ #5C6B57 é o mesmo verde-acinzentado dois degraus abaixo   │
+        // │ e passa nos três: 5,20 · 4,91 · 4,61. Os preenchimentos   │
+        // │ e as bordas que usam `quiz-sage` ficam na cor de sempre.  │
+        // └──────────────────────────────────────────────────────────┘
+        // O `sage-dark` escreve nas mesmas superfícies e tinha o mesmo
+        // problema, um degrau acima: 4,50 · 4,25 · 3,99. #52664B passa nos
+        // três com folga (5,72 · 5,40 · 5,07) e continua a ser o mesmo verde.
+        quiz: { sage: "#5C6B57", "sage-dark": "#52664B" },
       },
       fontFamily: {
         display: ["var(--font-playfair)", "Georgia", "serif"],

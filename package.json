@@ -1,6 +1,6 @@
 {
   "name": "recibo-certo",
-  "version": "2.158.0",
+  "version": "2.159.0",
   "private": true,
   "scripts": {
     "afinidade:check": "vitest run src/lib/__tests__/contabilistas-afinidade.test.ts",
@@ -14,6 +14,7 @@
     "bussola:e2e": "node scripts/verificar-bussola.mjs",
     "cabecalho:e2e": "node scripts/verificar-cabecalho.mjs",
     "cenarios:rls": "bash scripts/testar-cenarios.sh",
+    "ci:scripts": "node scripts/check-scripts-workflows.mjs",
     "cobertura:check": "vitest run src/lib/__tests__/negocio-descoberta-cobertura.test.ts --reporter=verbose",
     "concelhos:check": "node scripts/gen-concelhos.mjs --check",
     "concelhos:gen": "node scripts/gen-concelhos.mjs",
@@ -75,6 +76,8 @@
     "navegacao:e2e": "node scripts/verificar-navegacao.mjs",
     "negocio:e2e": "node scripts/verificar-negocio-empresa.mjs",
     "novidades:check": "node scripts/gen-novidades.mjs --check",
+    "nuts:geo": "node scripts/gen-nuts-geo.mjs",
+    "nuts:geo:check": "node scripts/gen-nuts-geo.mjs --check",
     "novidades:gen": "node scripts/gen-novidades.mjs",
     "oferta:concelhos": "node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs",
     "oferta:concelhos:check": "node --max-old-space-size=2048 scripts/gen-oferta-concelhos.mjs --check",
@@ -106,7 +109,8 @@
     "vencimento:e2e": "node scripts/verificar-vencimento.mjs",
     "versao:check": "node scripts/check-versao.mjs",
     "versao:fix": "node scripts/check-versao.mjs --fix",
-    "visivel:e2e": "node scripts/verificar-visivel.mjs"
+    "visivel:e2e": "node scripts/verificar-visivel.mjs",
+    "zona:e2e": "node scripts/verificar-zona-risco.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

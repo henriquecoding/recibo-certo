@@ -189,8 +189,38 @@ export function concelhosDaRegiao(regiao: MarketRegion): readonly Concelho[] {
   return corpo;
 }
 
+// ┌─────────────────────────────────────────────────────────────────────┐
+// │ «NÃO CONSEGUI PERGUNTAR» NÃO É «ESTÁ DESATUALIZADO»                  │
+// │                                                                     │
+// │ Este gerador fala com uma fonte externa a cada execução. Quando ela  │
+// │ não responde — proxy, manutenção, 403 de rate limit — a exceção      │
+// │ subia sem tratamento e o `--check` morria com um traço de pilha do   │
+// │ Node. Quem o corre à mão fica sem saber se o repositório está mal ou │
+// │ se foi só a rede, e um portão que confunde as duas coisas ou reprova │
+// │ pelo proxy de alguém, ou aprende-se a ignorá-lo.                     │
+// │                                                                     │
+// │ Em `--check`, uma falha de rede passa a AVISO com saída 0: ficou por │
+// │ verificar, e o texto di-lo. A gerar (sem `--check`) continua a ser   │
+// │ erro — aí a rede é o trabalho.                                       │
+// └─────────────────────────────────────────────────────────────────────┘
 const conferir = process.argv.includes("--check");
-const gerado = await gerar();
+
+async function tentar(fn) {
+  try {
+    return await fn();
+  } catch (erro) {
+    const mensagem = erro instanceof Error ? erro.message : String(erro);
+    if (!conferir) {
+      console.error(`\u2717 ${mensagem}`);
+      process.exit(1);
+    }
+    console.warn(`  aviso\u00b7 N\u00e3o foi poss\u00edvel falar com a fonte (${mensagem}).`);
+    console.warn("         Ficou POR VERIFICAR se o ficheiro est\u00e1 em dia \u2014 n\u00e3o confundas com estar bem.");
+    process.exit(0);
+  }
+}
+
+const gerado = await tentar(gerar);
 
 if (conferir) {
   let atual = "";

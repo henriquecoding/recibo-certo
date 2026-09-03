@@ -42,7 +42,10 @@ import {
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "Ser contabilista no Recibo Certo | Recibo Certo",
+  // `absolute` porque a marca já está DENTRO da frase. Com o template da
+  // raiz (`%s | Recibo Certo`) o separador do browser dizia «Ser contabilista
+  // no Recibo Certo | Recibo Certo» — a marca duas vezes na mesma linha.
+  title: { absolute: "Ser contabilista no Recibo Certo" },
   description:
     "Recebe casos de trabalhadores independentes, responde com propostas, marca consultas e sincroniza a agenda. Comissão que desce com o trabalho feito, e 5% permanentes para os primeiros dez.",
   alternates: { canonical: "/contabilistas/candidatura" },

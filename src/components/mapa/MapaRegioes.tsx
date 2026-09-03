@@ -164,7 +164,17 @@ function resumoRegiao(filtro: FiltroMapa, regiaoId: string): string {
 }
 
 // ── Fronteiras NUTS II oficiais (Eurostat Nuts2json, WGS84) ─────────────────
-const GEO_URL = "https://raw.githubusercontent.com/eurostat/Nuts2json/master/pub/v2/2021/4326/20M/nutsrg_2.json";
+/**
+ * As fronteiras vêm da PRÓPRIA origem, não de `raw.githubusercontent.com`.
+ *
+ * Antes, o browser de cada visitante ia buscá-las a um ramo `master` de um
+ * repositório de terceiros: sem SLA, com limitação de débito, mutável, e a
+ * entregar o IP de quem visita a um destinatário que a política de
+ * privacidade não declarava. O ficheiro traz agora só as sete regiões que
+ * estes mapas usam — 4,2 KB em vez de 291 — e é gerado e commitado por
+ * `npm run nuts:geo`, com a proveniência lá dentro.
+ */
+const GEO_URL = "/geo/nuts2-pt.json";
 const NUTS2_REGIAO: Record<string, string> = {
   PT11: "norte",
   PT16: "centro",

@@ -21,7 +21,7 @@
 // sai, (c) a data. Sem os três, `assertMetrica` recusa.
 
 import { assertMetrica, type MetricaInvestidor } from "../_lib/evidence";
-import { PARAMETROS_AUDITADOS, SOURCES, ATIVIDADES } from "@/lib/fiscal-data";
+import { PARAMETROS_TODOS, SOURCES, ATIVIDADES } from "@/lib/fiscal-data";
 import { GUIA_SLUGS, FERRAMENTA_SLUGS } from "@/lib/seo";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 
@@ -35,7 +35,7 @@ export const DATA_REFERENCIA = "2026-08-11";
 // próprio produto é o oposto do que esta reescrita procura.
 const guiasPublicados = GUIA_SLUGS.length;
 const ferramentas = FERRAMENTA_SLUGS.length;
-const parametrosVerificados = PARAMETROS_AUDITADOS.length;
+const parametrosVerificados = PARAMETROS_TODOS.length;
 const fontesOficiais = Object.keys(SOURCES).length;
 
 /**

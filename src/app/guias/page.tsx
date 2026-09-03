@@ -4,7 +4,7 @@ import GuiasIndex from "@/components/guias/GuiasIndex";
 import { Calculator, Briefcase, ChevronRight, ArrowRight } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Guias fiscais e laborais 2026 | Recibo Certo",
+  title: "Guias fiscais e laborais 2026",
   description:
     "Guias práticos sobre IRS, Segurança Social, IVA, IRC e direitos laborais para trabalhadores independentes, por conta de outrem e empresas em Portugal — com base legal e taxas oficiais de 2026.",
   keywords: [

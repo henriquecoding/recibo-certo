@@ -6,7 +6,7 @@ import { precoPlusFormatado, precoVitalicioFormatado } from "@/lib/entitlements"
 import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export const metadata: Metadata = {
-  title: "Termos de Utilização — Recibo Certo",
+  title: "Termos de Utilização",
   description:
     "Termos e condições de utilização da plataforma Recibo Certo. Calculadora de recibos verdes gratuita para trabalhadores independentes em Portugal.",
   alternates: { canonical: "/termos" },

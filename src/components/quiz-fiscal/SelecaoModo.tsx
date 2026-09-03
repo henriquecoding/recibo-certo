@@ -56,8 +56,8 @@ const BORDER = "var(--quiz-card-border, #E8DBCB)";
 const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
 const ACTIVE_BORDER = "var(--quiz-card-active-border, #4D6243)";
 const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
-const TEXT_MID = "var(--quiz-muted, #607757)";
-const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const TEXT_MID = "var(--quiz-muted, #52664B)";
+const TEXT_MUTED = "var(--quiz-muted, #706052)";
 const TAG_BG = "var(--quiz-tag-bg, #ece4d8)";
 const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
 const STAT_BG = "var(--quiz-stat-bg, #FAF4EC)";
@@ -322,7 +322,7 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span style={{ color: TEXT_MID }}><Sparkle size={12} /></span>
-                  <span className="text-[11px] font-semibold" style={{ color: TEXT_MUTED }}>Sons</span>
+                  <span id="rot-sons-quiz" className="text-[11px] font-semibold" style={{ color: TEXT_MUTED }}>Sons</span>
                 </div>
                 <button
                   type="button"
@@ -331,6 +331,11 @@ export default function SelecaoModo({ onComecar, energiaRestante = 5, energiaTot
                   style={{ backgroundColor: config.somAtivo ? QD : DOT_EMPTY }}
                   role="switch"
                   aria-checked={config.somAtivo}
+                  // Um `role="switch"` sem texto dentro não tem nome
+                  // acessível: o leitor de ecrã anunciava «interruptor,
+                  // desligado» e mais nada. A etiqueta visível está ao lado,
+                  // num irmão — associa-se por id, e não se duplica texto.
+                  aria-labelledby="rot-sons-quiz"
                 >
                   <span
                     className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all"

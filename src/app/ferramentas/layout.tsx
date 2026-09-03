@@ -27,6 +27,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 import { porHref } from "@/lib/ferramentas";
 import { LARGURA_POR_LAYOUT } from "@/components/ferramentas/ToolShell";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
+import { jsonLd } from "@/lib/jsonld";
 
 export default function FerramentasLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -48,7 +49,7 @@ export default function FerramentasLayout({ children }: { children: ReactNode })
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }}
       />
       <Nav />
       <div className="min-h-screen bg-cream dark:bg-stone-950">

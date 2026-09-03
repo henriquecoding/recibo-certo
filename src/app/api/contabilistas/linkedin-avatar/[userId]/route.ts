@@ -66,8 +66,41 @@ export async function GET(
       return new NextResponse(null, { status: 413 });
     }
 
-    const bytes = await resposta.arrayBuffer();
-    if (bytes.byteLength > MAX_BYTES) return new NextResponse(null, { status: 413 });
+    // ┌───────────────────────────────────────────────────────────────────┐
+    // │ O TETO TEM DE TRAVAR ENQUANTO CHEGA, NÃO DEPOIS DE TER CHEGADO     │
+    // │                                                                   │
+    // │ `arrayBuffer()` lê o corpo INTEIRO para memória e só depois se     │
+    // │ media o tamanho. Com `content-length` a mentir — ou simplesmente   │
+    // │ ausente, que é legítimo numa resposta em pedaços — um servidor a   │
+    // │ enviar sem fim enchia a função antes de a verificação existir.     │
+    // │                                                                   │
+    // │ O anfitrião está em lista de permissão, e por isso a               │
+    // │ probabilidade é baixa; mas o custo de a probabilidade não ser      │
+    // │ zero é a função inteira, e ler em pedaços custa dez linhas.        │
+    // └───────────────────────────────────────────────────────────────────┘
+    const leitor = resposta.body?.getReader();
+    if (!leitor) return new NextResponse(null, { status: 502 });
+
+    const pedacos: Uint8Array[] = [];
+    let recebidos = 0;
+    for (;;) {
+      const { done, value } = await leitor.read();
+      if (done) break;
+      if (!value) continue;
+      recebidos += value.byteLength;
+      if (recebidos > MAX_BYTES) {
+        await leitor.cancel().catch(() => {});
+        return new NextResponse(null, { status: 413 });
+      }
+      pedacos.push(value);
+    }
+
+    const bytes = new Uint8Array(recebidos);
+    let posicao = 0;
+    for (const pedaco of pedacos) {
+      bytes.set(pedaco, posicao);
+      posicao += pedaco.byteLength;
+    }
 
     return new NextResponse(bytes, {
       status: 200,

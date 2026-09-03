@@ -261,7 +261,7 @@ export default function InvestidoresPage() {
           titulo="O que ainda não medimos com rigor, não publicamos."
           descricao="Estas são as métricas que decidem um investimento. Cada uma está definida — o que conta, o que não conta, com que cadência — e nenhuma tem número aqui porque nenhuma tem hoje uma fonte que um terceiro possa auditar. Partilhamo-las na conversa, com o método à frente."
         >
-          <div className="overflow-x-auto">
+          <div tabIndex={0} role="region" aria-label="Métricas de tração, definição e estado de divulgação" className="focus-marca overflow-x-auto">
             <table className="w-full min-w-[34rem] text-left text-[13px]">
               <caption className="sr-only">Métricas de tração, definição e estado de divulgação</caption>
               <thead>
@@ -362,7 +362,7 @@ export default function InvestidoresPage() {
           <h3 className="mt-10 font-display text-lg font-semibold text-ink">
             Sensibilidade ao preço
           </h3>
-          <div className="mt-3 overflow-x-auto">
+          <div tabIndex={0} role="region" aria-label="ARR potencial em três cenários de preço" className="focus-marca mt-3 overflow-x-auto">
             <table className="w-full min-w-[28rem] text-left text-[13px]">
               <caption className="sr-only">ARR potencial em três cenários de preço</caption>
               <thead>
@@ -411,7 +411,7 @@ export default function InvestidoresPage() {
           titulo="Vendemos inteligência e distribuição, não faturação."
           descricao={CONCORRENCIA_NOTA}
         >
-          <div className="overflow-x-auto">
+          <div tabIndex={0} role="region" aria-label="Matriz de posicionamento face a produtos adjacentes" className="focus-marca overflow-x-auto">
             <table className="w-full min-w-[40rem] text-left text-[13px]">
               <caption className="sr-only">Matriz de posicionamento face a produtos adjacentes</caption>
               <thead>

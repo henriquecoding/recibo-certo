@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { AGENTES_EXTRACAO_BLOQUEADOS } from "@/lib/crawler-policy";
+import { AGENTES_EXTRACAO_BLOQUEADOS, AGENTES_RESPOSTA_PERMITIDOS } from "@/lib/crawler-policy";
 // RC-CFG-001: a origem vive em `origem.ts` e mais lado nenhum. Este ficheiro
 // re-declarava `https://www.recibocerto.pt` à mão — o valor até coincidia, mas
 // era a mesma duplicação que já pôs o canónico e os `redirect_uri` de OAuth em
@@ -41,8 +41,13 @@ const PRIVADAS = [
 /**
  * Política deliberada:
  *  - Googlebot e Bingbot continuam a poder indexar títulos e URLs;
- *  - crawlers declarados de IA, treino, datasets e scraping comercial recebem
- *    Disallow total e são também recusados por src/proxy.ts;
+ *  - crawlers de TREINO, datasets e scraping comercial recebem Disallow
+ *    total e são também recusados por src/proxy.ts;
+ *  - os motores de RESPOSTA (OAI-SearchBot, PerplexityBot, Claude-SearchBot,
+ *    DuckAssistBot) e os pedidos iniciados por uma pessoa (ChatGPT-User,
+ *    Perplexity-User, Claude-User) têm secção própria e são permitidos: são
+ *    eles que citam, e é a citação que o programa de autoridade persegue.
+ *    A separação está explicada em `src/lib/crawler-policy.ts`;
  *  - a reserva TDM é repetida no header HTTP, HTML e TDMRep.
  *
  * robots.txt é uma instrução para agentes cooperantes, não autenticação.
@@ -65,6 +70,16 @@ export default function robots(): MetadataRoute.Robots {
         allow: "/",
         disallow: PRIVADAS,
       },
+      // Os motores de resposta ficam com secção própria em vez de caírem
+      // no `*`. Duas razões: a decisão fica LEGÍVEL no ficheiro servido, em
+      // vez de se deduzir de uma ausência; e cada um recebe também a lista
+      // de rotas privadas, que é o que um crawler que só lê a sua própria
+      // secção precisa de ver.
+      ...AGENTES_RESPOSTA_PERMITIDOS.map((userAgent) => ({
+        userAgent,
+        allow: "/",
+        disallow: PRIVADAS,
+      })),
       ...AGENTES_EXTRACAO_BLOQUEADOS.map((userAgent) => ({
         userAgent,
         disallow: "/",

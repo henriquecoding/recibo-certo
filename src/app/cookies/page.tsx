@@ -5,7 +5,7 @@ import LegalPage, {
 import { EMAIL_APOIO, mailtoApoio } from "@/lib/contacto";
 
 export const metadata: Metadata = {
-  title: "Política de Cookies — Recibo Certo",
+  title: "Política de Cookies",
   description:
     "Como o Recibo Certo utiliza cookies, armazenamento local e medição de desempenho consentida, sem publicidade comportamental.",
   alternates: { canonical: "/cookies" },

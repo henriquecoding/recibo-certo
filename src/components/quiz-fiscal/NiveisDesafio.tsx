@@ -12,12 +12,16 @@ const PARCHMENT = "var(--quiz-card-bg, #F7EDE1)";
 const BORDER = "var(--quiz-card-border, #E8DBCB)";
 const ACTIVE_BG = "var(--quiz-card-active-bg, #e4ede0)";
 const TEXT_HEAD = "var(--quiz-heading, #1C3A22)";
-const TEXT_MID = "var(--quiz-muted, #607757)";
-const TEXT_MUTED = "var(--quiz-muted, #8a7a6a)";
+const TEXT_MID = "var(--quiz-muted, #52664B)";
+const TEXT_MUTED = "var(--quiz-muted, #706052)";
 const ALT_ROW = "var(--quiz-stat-bg, #f3ead9)";
 const DOT_EMPTY = "var(--quiz-dot-empty, #d4c4b0)";
 const VERDE_NIVEL = "var(--quiz-level, #415439)";
-const GOLD = "var(--quiz-gold, #C07828)";
+// #C07828 escrevia a 3,17:1 sobre a pastilha dourada (#FEF3C7), a 9px em
+// negrito — onde o mínimo é 4,5:1. #96591B é o mesmo âmbar dois degraus
+// abaixo: 5,04:1. Só o TEXTO muda; o fogo, as barras de energia e os
+// preenchimentos continuam no #C07828 de sempre (ver `Quiz.tsx`).
+const GOLD = "var(--quiz-gold, #96591B)";
 
 function HexNivel({ n, size = 36, fontSize = 13, alcancado = false }: {
   n: number; size?: number; fontSize?: number; alcancado?: boolean;
@@ -57,7 +61,7 @@ export default function NiveisDesafio() {
           <Trophy size={20} className="text-amber-300" />
           <div>
             <h2 className="text-[15px] font-bold text-white">Tabela de Níveis</h2>
-            <p className="text-[11px] text-white/60">Ganha XP em cada quiz para subir de nível</p>
+            <p className="text-[11px] text-white/75">Ganha XP em cada quiz para subir de nível</p>
           </div>
         </div>
 
@@ -191,7 +195,7 @@ export default function NiveisDesafio() {
           <Gift size={20} className="text-amber-300" />
           <div>
             <h2 className="text-[15px] font-bold text-white">Desafio Plus</h2>
-            <p className="text-[11px] text-amber-200/70">Ganha 3 meses de Plus gratuitamente</p>
+            <p className="text-[11px] text-amber-200/85">Ganha 3 meses de Plus gratuitamente</p>
           </div>
         </div>
 

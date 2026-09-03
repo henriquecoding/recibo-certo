@@ -3,6 +3,7 @@ import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import type { FocoHomepage } from "@/lib/foco-homepage";
 import { PerfilProvider } from "@/lib/perfil";
+import { jsonLd } from "@/lib/jsonld";
 import {
   generateBreadcrumbSchema,
   generateOrganizationSchema,
@@ -10,7 +11,7 @@ import {
   generateWebSiteSchema,
 } from "@/lib/seo";
 
-const jsonLd = {
+const grafoJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     generateWebSiteSchema(),
@@ -32,7 +33,7 @@ export default function HomepageFocoShell({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(grafoJsonLd) }}
       />
       <div id="top">
         <Nav foco={foco} />

@@ -3,11 +3,12 @@ import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import { generateSoftwareApplicationSchema } from "@/lib/seo";
 import Wizard from "./Wizard";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("payout-mor")!;
 
 export const metadata: Metadata = {
-  title: "Recibo verde ao Merchant of Record (Paddle, Lemon Squeezy) | Recibo Certo",
+  title: "Recibo verde ao Merchant of Record (Paddle, Lemon Squeezy)",
   description:
     "Guia passo-a-passo para emitir o recibo mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação e 100 % do payout líquido. Dados do adquirente e fundamento legal incluídos.",
   keywords: [
@@ -30,7 +31,7 @@ export default function PayoutMorPage() {
   const appSchema = generateSoftwareApplicationSchema();
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
       <ToolShell
         tool={TOOL}
         subtitulo="Emite o recibo verde mensal ao Paddle ou Lemon Squeezy com IVA em autoliquidação — 100 % do payout líquido, com o fundamento legal de cada campo."

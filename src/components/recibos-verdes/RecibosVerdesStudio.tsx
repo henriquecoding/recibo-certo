@@ -131,7 +131,7 @@ export default function RecibosVerdesStudio() {
             </span>
             <span>
               <strong className="block text-sm">Já sei quanto vou faturar</strong>
-              <span className={`mt-0.5 block text-xs ${vista === "liquido" ? "text-white/75" : "text-stone-500 dark:text-stone-400"}`}>
+              <span className={`mt-0.5 block text-xs ${vista === "liquido" ? "text-white/95" : "text-stone-500 dark:text-stone-400"}`}>
                 Do valor do recibo ao líquido real
               </span>
             </span>
@@ -152,7 +152,7 @@ export default function RecibosVerdesStudio() {
             </span>
             <span>
               <strong className="block text-sm">Ainda não sei quanto cobrar</strong>
-              <span className={`mt-0.5 block text-xs ${vista === "preco" ? "text-white/75" : "text-stone-500 dark:text-stone-400"}`}>
+              <span className={`mt-0.5 block text-xs ${vista === "preco" ? "text-white/95" : "text-stone-500 dark:text-stone-400"}`}>
                 Custos, tempo, margem e impostos primeiro
               </span>
             </span>

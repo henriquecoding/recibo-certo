@@ -140,7 +140,12 @@ function Passo0({ onProximo }: { onProximo: () => void }) {
       {/* Tabela comparativa */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-stone-400 mb-2">Comparação</p>
-        <div className="overflow-x-auto rounded-3xl border border-stone-100 dark:border-stone-800">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Comparação entre a rota tradicional e o Merchant of Record"
+          className="focus-marca overflow-x-auto rounded-3xl border border-stone-100 dark:border-stone-800"
+        >
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-stone-100 dark:border-stone-800 bg-stone-50 dark:bg-stone-800/50">

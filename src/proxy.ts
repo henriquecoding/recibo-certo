@@ -2,9 +2,20 @@ import { NextResponse, type NextRequest } from "next/server";
 import { agenteDeExtracaoBloqueado } from "@/lib/crawler-policy";
 import { normalizarFocoHomepage, ROTA_POR_FOCO } from "@/lib/foco-homepage";
 
+/**
+ * Caminhos que dizem o que é permitido — e que por isso têm de ser sempre
+ * legíveis, incluindo por quem está a ser recusado.
+ *
+ * `/llms.txt` entrou aqui depois de se medir o óbvio: o ficheiro existe
+ * EXCLUSIVAMENTE para explicar a um modelo de linguagem como citar o Recibo
+ * Certo, e devolvia 403 a todos eles. Eram 3,9 KB escritos para um público
+ * que não os podia ler. Recusar o conteúdo é uma decisão; recusar as
+ * instruções sobre como o usar é só uma contradição.
+ */
 const SINAIS_DE_DIREITOS = new Set([
   "/robots.txt",
   "/.well-known/tdmrep.json",
+  "/llms.txt",
 ]);
 
 /**

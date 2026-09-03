@@ -17,11 +17,12 @@ import { porId } from "@/lib/ferramentas";
 import { generateFAQSchema, generateSoftwareApplicationSchema } from "@/lib/seo";
 import { ArrowRight } from "@/components/ui/Icons";
 import ComparadorLazy from "./lazy";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("comparar-regimes")!;
 
 export const metadata: Metadata = {
-  title: "Recibos verdes, contrato ou empresa? Comparador 2026 | Recibo Certo",
+  title: "Recibos verdes, contrato ou empresa? Comparador 2026",
   description:
     "Para o mesmo rendimento anual, compara o líquido como trabalhador por conta de outrem, em recibos verdes ou através de uma empresa. Ponto de viragem, obrigações, proteção social e custo de contabilista — com as regras de 2026.",
   keywords: [
@@ -69,8 +70,8 @@ export default function FerramentaCompararRegimesPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
 
       <ToolShell
         tool={TOOL}

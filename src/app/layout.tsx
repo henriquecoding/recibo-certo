@@ -173,7 +173,29 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(function(){try{if(localStorage.getItem('recibocerto:theme')==='dark'){document.documentElement.classList.add('dark')}}catch(e){}})()",
+              // ┌──────────────────────────────────────────────────────┐
+              // │ A ESCOLHA GANHA AO SISTEMA; O SISTEMA GANHA AO NADA   │
+              // │                                                      │
+              // │ Isto só olhava para o `localStorage`. Quem tem o      │
+              // │ sistema em escuro — e é a maioria de quem tem o tema  │
+              // │ configurado — recebia o site CLARO na primeira        │
+              // │ visita, e só saía de lá se descobrisse o interruptor  │
+              // │ no rodapé. O `darkMode: "class"` do Tailwind não      │
+              // │ implica ignorar `prefers-color-scheme`: implica que   │
+              // │ é este script a decidir, e ele pode perguntar.        │
+              // │                                                      │
+              // │ A ordem importa e é esta: uma escolha explícita       │
+              // │ («light» ou «dark») ganha sempre; só na ausência dela │
+              // │ se pergunta ao sistema. Assim quem escolheu o claro   │
+              // │ num portátil em modo escuro continua a ver o claro.   │
+              // │                                                      │
+              // │ Continua inline e síncrono no `<head>` pela razão de  │
+              // │ sempre: um `.dark` aplicado depois da primeira        │
+              // │ pintura é um flash branco.                            │
+              // └──────────────────────────────────────────────────────┘
+              "(function(){try{var t=localStorage.getItem('recibocerto:theme');" +
+                "if(t==='dark'||(!t&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches))" +
+                "{document.documentElement.classList.add('dark')}}catch(e){}})()",
           }}
         />
       </head>

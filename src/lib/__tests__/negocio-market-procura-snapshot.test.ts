@@ -8,6 +8,8 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import bruto from "@/lib/negocio/market/bulk/dados/procura-nuts2.json";
 import { comInstantaneoPorBaixo, PROCURA_COMMITADA, tendenciaDe } from "@/lib/negocio/market/procura-nuts2";
@@ -19,15 +21,54 @@ describe("procura commitada · o ficheiro é o que o gerador escreveu", () => {
     expect(PROCURA_COMMITADA!.pilotos.length).toBeGreaterThan(0);
   });
 
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ A LISTA DE CARIMBOS VEM DO GERADOR, NÃO DE UMA CÓPIA               │
+  // │                                                                   │
+  // │ Este teste tinha a regra escrita à mão — «geradoEm, checkedAt,     │
+  // │ retrievedAt» — e o gerador tinha a mesma lista noutro ficheiro.    │
+  // │ Duas cópias da mesma regra divergem, e divergiram: faltavam        │
+  // │ `evaluatedAt`, `lastRunAt` e `lastSuccessfulRunAt` nas DUAS, o     │
+  // │ que fazia o hash mudar a cada corrida e o `--check` reprovar       │
+  // │ sempre, dissesse o que dissesse o ficheiro.                        │
+  // │                                                                   │
+  // │ Passa a ler a lista da FONTE do gerador. Se lá acrescentarem um    │
+  // │ carimbo e se esquecerem daqui, este teste acompanha; se apagarem   │
+  // │ a lista, ele reprova em vez de assumir uma versão sua.             │
+  // └───────────────────────────────────────────────────────────────────┘
+  const carimbosDoGerador = (): string[] => {
+    const fonte = readFileSync(
+      join(process.cwd(), "scripts", "gen-procura-nuts2.mjs"),
+      "utf8",
+    );
+    const bloco = fonte.match(/const CARIMBOS = new Set\(\[([\s\S]*?)\]\);/);
+    if (!bloco) throw new Error("O gerador deixou de declarar `const CARIMBOS = new Set([...])`.");
+    return [...bloco[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  };
+
+  it("a lista de carimbos do gerador cobre os campos de relógio conhecidos", () => {
+    const carimbos = carimbosDoGerador();
+    for (const esperado of [
+      "geradoEm",
+      "checkedAt",
+      "retrievedAt",
+      "evaluatedAt",
+      "lastRunAt",
+      "lastSuccessfulRunAt",
+    ]) {
+      expect(carimbos, `carimbo de relógio fora do hash: ${esperado}`).toContain(esperado);
+    }
+  });
+
   it("o contentHash bate com os dados", () => {
     // A mesma conta do gerador: cobre os dados e NÃO os carimbos de
     // quando perguntámos. Sem isto, o job commitava a cada corrida só
     // para dizer que os números continuam iguais — e uma escrita
     // truncada passaria despercebida.
+    const carimbos = new Set(carimbosDoGerador());
     const documento = bruto as unknown as Record<string, unknown>;
     const { contentHash, ...semHash } = documento;
     const semCarimbos = JSON.stringify(semHash, (chave, valor) =>
-      chave === "geradoEm" || chave === "checkedAt" || chave === "retrievedAt" ? undefined : valor,
+      carimbos.has(chave) ? undefined : valor,
     );
     expect(`sha256:${createHash("sha256").update(semCarimbos).digest("hex")}`).toBe(contentHash);
   });

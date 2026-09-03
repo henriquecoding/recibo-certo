@@ -7,7 +7,7 @@ import { DESTINOS } from "@/components/contabilistas/navegacao";
 const SRC = join(__dirname, "..", "..");
 const RAIZ = join(SRC, "..");
 const ler = (...partes: string[]) => readFileSync(join(SRC, ...partes), "utf8");
-const LAYOUT = ler("app", "contabilista", "layout.tsx");
+const LAYOUT = ler("components", "contabilista", "MolduraContabilista.tsx");
 const TRABALHO = ler("app", "contabilista", "trabalho", "page.tsx");
 const CSS = ler("app", "contabilista", "painel.module.css");
 const MIGRACAO = readFileSync(

@@ -4,6 +4,7 @@ import { metadataDoGuia } from "@/lib/guias/metadata";
 import Link from "next/link";
 import { IVA_ISENCAO_LIMITE } from "@/lib/fiscal-data";
 import { generateArticleSchema, generateFAQSchema } from "@/lib/seo";
+import { jsonLd } from "@/lib/jsonld";
 
 const PATH = "/guias/fatura-vs-recibo";
 const LIMITE_IVA = `${IVA_ISENCAO_LIMITE.value.toLocaleString("pt-PT")} €`;
@@ -63,11 +64,11 @@ export default function FaturaVsReciboPage() {
     <GuiaLayout slug="fatura-vs-recibo">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(articleSchema) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateFAQSchema(FAQS)) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(generateFAQSchema(FAQS)) }}
       />
 
       <section className="mb-10">

@@ -3,11 +3,12 @@ import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import { generateSoftwareApplicationSchema } from "@/lib/seo";
 import { DecisorAtoVsAtividade } from "@/components/guias/DecisorAtoVsAtividade";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("ato-isolado")!;
 
 export const metadata: Metadata = {
-  title: "Ato isolado ou abrir atividade? Decisor interativo 2026 | Recibo Certo",
+  title: "Ato isolado ou abrir atividade? Decisor interativo 2026",
   description:
     "Responde a 4 perguntas e fica a saber se deves emitir um ato isolado ou abrir atividade nas Finanças — com o raciocínio explicado e os próximos passos. Gratuito e imediato.",
   keywords: ["ato isolado", "abrir atividade", "recibos verdes", "trabalhador independente"],
@@ -26,7 +27,7 @@ export default function FerramentaAtoIsoladoPage() {
   const appSchema = generateSoftwareApplicationSchema();
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
       <ToolShell
         tool={TOOL}
         subtitulo="Responde às perguntas abaixo. Em menos de um minuto sabes qual é a opção certa para a tua situação — e porquê."

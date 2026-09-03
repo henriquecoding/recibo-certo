@@ -18,7 +18,7 @@
 //  divergir dele.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { DATA_LAST_REVIEW, PARAMETROS_AUDITADOS, SOURCES } from "@/lib/fiscal-data";
+import { DATA_LAST_REVIEW, PARAMETROS_TODOS, SOURCES } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { CLUSTERS } from "@/lib/clusters";
 import { FERRAMENTA_SLUGS, GUIA_SLUGS, SITE_URL } from "@/lib/seo";
@@ -44,7 +44,7 @@ export function GET() {
 - Território: Portugal
 - Ano fiscal coberto: ${FISCAL_YEAR}
 - Última revisão dos parâmetros fiscais: ${DATA_LAST_REVIEW}
-- Parâmetros com base legal, fonte oficial e data de verificação: ${PARAMETROS_AUDITADOS.length}
+- Parâmetros com base legal, fonte oficial e data de verificação: ${PARAMETROS_TODOS.length}
 - Fontes oficiais registadas: ${Object.keys(SOURCES).length}
 - Guias publicados: ${publicados}
 - Ferramentas públicas: ${FERRAMENTA_SLUGS.length}

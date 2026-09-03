@@ -17,6 +17,7 @@ import { ArrowRight } from "@/components/ui/Icons";
 import { generateFAQSchema, generateSoftwareApplicationSchema } from "@/lib/seo";
 import { IRS_JOVEM, IAS_VALUE } from "@/lib/fiscal-data";
 import { fmt, pct } from "@/lib/format";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("irs-jovem")!;
 
@@ -31,7 +32,7 @@ const ISENCOES = [
 ];
 
 export const metadata: Metadata = {
-  title: "Simulador IRS Jovem 2026 — sou elegível e quanto poupo? | Recibo Certo",
+  title: "Simulador IRS Jovem 2026 — sou elegível e quanto poupo?",
   description:
     "Descobre se és elegível para o IRS Jovem em 2026 e quanto o benefício muda no teu imposto: ano de carreira, percentagem de isenção, teto em IAS traduzido para euros e comparação lado a lado com e sem o benefício.",
   keywords: [
@@ -82,8 +83,8 @@ export default function FerramentaIRSJovemPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
 
       <ToolShell
         tool={TOOL}
@@ -95,7 +96,12 @@ export default function FerramentaIRSJovemPage() {
                 Isenções por ano de carreira
                 <InfoTip label="Art. 12.º-B CIRS">{IRS_JOVEM.isencaoPorAno.legalBasis}</InfoTip>
               </h2>
-              <div className="overflow-x-auto rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6">
+              <div
+                tabIndex={0}
+                role="region"
+                aria-label="Percentagem de isenção do IRS Jovem e teto de rendimento excluído, por ano de carreira"
+                className="focus-marca overflow-x-auto rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900 sm:p-6"
+              >
                 <table className="w-full min-w-[22rem] text-sm">
                   <caption className="sr-only">
                     Percentagem de isenção do IRS Jovem e teto de rendimento excluído, por ano de carreira

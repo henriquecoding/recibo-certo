@@ -342,6 +342,38 @@ export default function PrivacidadePage() {
           subprocessadores de pagamento e email só tratam dados quando crias conta, subscreves,
           ativas alertas ou nos escreves.
         </Nota>
+
+        <Sub title="Mapas — o único terceiro que o teu browser contacta diretamente">
+          <p>
+            As páginas com mapa carregam os mosaicos da{" "}
+            <a
+              href="https://carto.com/privacy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-brand hover:underline dark:text-brand-mint"
+            >
+              CARTO
+            </a>
+            , sobre dados do OpenStreetMap. São imagens pedidas pelo teu browser, não por nós — e
+            isso significa que o teu <strong className="text-stone-700 dark:text-stone-200">endereço IP</strong>{" "}
+            chega à CARTO, tal como chegaria se abrisses o site deles. Não lhes enviamos mais nada:
+            nem quem és, nem o que simulaste, nem o que procuraste.
+          </p>
+          <p>
+            A CARTO não é um subprocessador — não trata dados por nossa conta, e por isso não está
+            na tabela acima. É um <strong className="text-stone-700 dark:text-stone-200">destinatário</strong>,
+            e o artigo 13.º, n.º 1, alínea e) do RGPD obriga-nos a dizer-te que existe. É o que esta
+            secção faz.
+          </p>
+          <Lista
+            items={[
+              "Acontece apenas nas páginas com mapa: o mapa de contabilistas, o de preços por região, o de «onde operar» e o perfil de um contabilista com morada.",
+              "Nenhuma outra página do Recibo Certo contacta um domínio externo.",
+              "As fronteiras das regiões (Eurostat/NUTS) são servidas por nós, do nosso próprio domínio — deixaram de vir do GitHub em setembro de 2026, precisamente para não haver mais um destinatário a receber o teu IP.",
+              "Se preferires não contactar a CARTO, basta não abrir as páginas com mapa: nenhuma funcionalidade fiscal depende delas.",
+            ]}
+          />
+        </Sub>
       </Section>
 
       {/* Partilha com a FIZ — parceiro de execução fiscal */}

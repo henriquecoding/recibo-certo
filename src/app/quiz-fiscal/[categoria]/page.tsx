@@ -22,6 +22,7 @@ import {
 import { generateBreadcrumbSchema, SITE_URL } from "@/lib/seo";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import QuizCategoriaCTA from "@/components/quiz-fiscal/QuizCategoriaCTA";
+import { jsonLd } from "@/lib/jsonld";
 
 /** Perguntas mostradas em HTML por página. O jogo tem o banco completo. */
 const AMOSTRA = 5;
@@ -83,7 +84,7 @@ export default async function QuizCategoriaPage(
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumbSchema) }} />
 
       <nav aria-label="Caminho" className="mb-6 text-xs text-stone-500 dark:text-stone-400">
         <ol className="flex flex-wrap items-center gap-1.5">

@@ -9,6 +9,7 @@ import { DATA_LAST_REVIEW } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { generateBreadcrumbSchema } from "@/lib/seo";
 import { EMAIL_APOIO } from "@/lib/contacto";
+import { jsonLd } from "@/lib/jsonld";
 
 // ─────────────────────────────────────────────────────────────────────
 //  §10.3 do relatório estratégico — programa de autoridade.
@@ -69,7 +70,7 @@ export default function MetodologiaPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }}
       />
       <LegalPage
         title="Metodologia"

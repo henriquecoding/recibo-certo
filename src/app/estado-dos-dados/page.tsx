@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import LegalPage, { Section, Sub, Nota, Lista, Tabela } from "@/components/LegalPage";
-import { DATA_LAST_REVIEW, PARAMETROS_AUDITADOS, SOURCES } from "@/lib/fiscal-data";
+import { DATA_LAST_REVIEW, PARAMETROS_TODOS, SOURCES } from "@/lib/fiscal-data";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
 import { GUIDE_MANIFESTS } from "@/lib/guias/manifests";
 import { HISTORICO_GUIAS } from "@/lib/guias/historico";
@@ -10,6 +10,7 @@ import { BLOCOS_PAINEL, KPIS, kpi } from "@/lib/analytics/painel";
 import { MOTORES_BENCHMARK, PROMPTS_BENCHMARK } from "@/lib/autoridade";
 import { revisaoDosGuias } from "@/lib/revisoes";
 import { generateBreadcrumbSchema } from "@/lib/seo";
+import { jsonLd } from "@/lib/jsonld";
 
 // ─────────────────────────────────────────────────────────────────────
 //  §10.3 — «/estado-dos-dados com versões, cobertura, fontes, limitações».
@@ -62,11 +63,14 @@ export default function EstadoDosDadosPage() {
   ]);
 
   // ── Contagens reais ────────────────────────────────────────────────
-  const nParametros = PARAMETROS_AUDITADOS.length;
+  // `PARAMETROS_TODOS` e não a lista curada: desde que o registo passou a
+  // ser feito pelo próprio `sv()`, TODOS os parâmetros têm base legal, fonte
+  // e data — e publicar 344 quando são 535 subestimava o que está feito.
+  const nParametros = PARAMETROS_TODOS.length;
   const nFontes = Object.keys(SOURCES).length;
-  const fontesUsadas = new Set(PARAMETROS_AUDITADOS.map((p) => p.source)).size;
+  const fontesUsadas = new Set(PARAMETROS_TODOS.map((p) => p.source)).size;
 
-  const verificacoes = PARAMETROS_AUDITADOS.map((p) => p.lastVerified).sort();
+  const verificacoes = PARAMETROS_TODOS.map((p) => p.lastVerified).sort();
   const verificacaoMaisAntiga = verificacoes[0] ?? DATA_LAST_REVIEW;
 
   const vivos = GUIDE_MANIFESTS.filter((m) => m.status !== "archived");
@@ -94,7 +98,7 @@ export default function EstadoDosDadosPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }}
       />
       <LegalPage
         title="Estado dos dados"

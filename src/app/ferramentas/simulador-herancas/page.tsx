@@ -3,11 +3,12 @@ import ToolShell from "@/components/ferramentas/ToolShell";
 import { porId } from "@/lib/ferramentas";
 import SimuladorHerancaLazy from "./lazy";
 import { generateFAQSchema } from "@/lib/seo";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("simulador-herancas")!;
 
 export const metadata: Metadata = {
-  title: "Simulador de Heranças e Sucessões 2026 — partilha e Imposto do Selo | Recibo Certo",
+  title: "Simulador de Heranças e Sucessões 2026 — partilha e Imposto do Selo",
   description:
     "Descobre quem herda o quê e quanto se paga de Imposto do Selo em Portugal (2026). A família direta é isenta. Meação, legítima e quota disponível, partilha e comparação herança vs doação. Guiado e gratuito.",
   keywords: [
@@ -58,7 +59,7 @@ export default function SimuladorHerancasPage() {
   const faqSchema = generateFAQSchema(FAQS);
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
 
       <ToolShell
         tool={TOOL}

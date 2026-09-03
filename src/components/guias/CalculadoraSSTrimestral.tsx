@@ -83,11 +83,19 @@ export function CalculadoraSSTrimestral() {
           { label: "Mês 3", value: mes3, set: setMes3 },
         ].map(({ label, value, set }) => (
           <div key={label}>
-            <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1.5">
+            {/* A etiqueta é dinâmica (um campo por mês), por isso o id
+                deriva dela: sem `htmlFor`, os três campos ficavam sem nome
+                acessível e um leitor de ecrã anunciava «caixa de texto» três
+                vezes seguidas. */}
+            <label
+              htmlFor={`ss-${label.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-")}`}
+              className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-1.5"
+            >
               {label}
             </label>
             <div className="relative">
               <LocalizedNumberInput
+                id={`ss-${label.toLowerCase().normalize("NFD").replace(/[^a-z0-9]+/g, "-")}`}
                 value={value}
                 onValueChange={set}
                 min={0}

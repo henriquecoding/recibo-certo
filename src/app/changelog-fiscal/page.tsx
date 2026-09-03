@@ -5,6 +5,7 @@ import { HISTORICO_GUIAS, ROTULO_ALTERACAO, type AlteracaoGuia } from "@/lib/gui
 import { manifesto } from "@/lib/guias/manifests";
 import { DATA_LAST_REVIEW } from "@/lib/fiscal-data";
 import { generateBreadcrumbSchema } from "@/lib/seo";
+import { jsonLd } from "@/lib/jsonld";
 
 // ─────────────────────────────────────────────────────────────────────
 //  §10.3 — «/changelog-fiscal com histórico de correções».
@@ -80,7 +81,7 @@ export default function ChangelogFiscalPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumb) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }}
       />
       <LegalPage
         title="Changelog fiscal"

@@ -291,12 +291,30 @@ semanticamente claro e mais útil do que uma paráfrase genérica. O próprio Go
 afirma que as práticas essenciais de SEO continuam válidas para AI features e que
 não é preciso schema especial.
 
-**Controlo de rastreio** (`src/app/robots.ts`): OAI-SearchBot (pesquisa do
-ChatGPT), GPTBot (treino — decisão **separada**; bloqueá-lo não exclui a
-pesquisa), ChatGPT-User (pedido iniciado por uma pessoa), PerplexityBot,
-Googlebot e Google-Extended. Alterações a robots demoram a propagar-se — a
-documentação da OpenAI fala em cerca de 24 horas. **Validar por logs, não por um
-testador de robots.**
+**Controlo de rastreio** (`src/lib/crawler-policy.ts`, aplicado em
+`src/app/robots.ts` e `src/proxy.ts`): duas listas, e a fronteira entre elas é
+**o que o agente faz com o conteúdo**.
+
+| Bloqueado — treino, datasets, scraping | Permitido — resposta e pedido de uma pessoa |
+|---|---|
+| GPTBot, ClaudeBot, anthropic-ai, Google-Extended, Applebot-Extended, Google-CloudVertexBot, meta-external*, Amazonbot, cohere-ai, Bytespider, PanguBot | OAI-SearchBot, ChatGPT-User |
+| CCBot, AI2Bot, Timpibot, Omgili*, Diffbot, ImagesiftBot, PetalBot, YouBot, GoogleOther | Claude-SearchBot, Claude-User |
+| AhrefsBot, SemrushBot, MJ12bot, BLEXBot, DotBot | PerplexityBot, Perplexity-User, DuckAssistBot |
+
+Um corpus de treino não cita; um motor de resposta cita, com ligação. É essa a
+razão da linha, e não uma preferência por fornecedor.
+
+> **Histórico, para não se repetir.** Entre a decisão de proteção de ativos
+> (`docs/PROTECAO-ATIVOS.md`) e setembro de 2026, a lista foi **uma só** e
+> bloqueou também os motores de resposta — incluindo no `/llms.txt`, que existe
+> precisamente para lhes explicar como citar. O programa da §10.4 continuou a
+> medir mensalmente uma taxa de citação que estava fixada em zero por
+> construção. A separação estava escrita aqui e nunca chegou ao código.
+> `scripts/check-security-boundary.mjs` passa a guardar as duas listas e a
+> reprovar se voltarem a cruzar-se.
+
+Alterações a robots demoram a propagar-se — a documentação da OpenAI fala em
+cerca de 24 horas. **Validar por logs, não por um testador de robots.**
 
 **Arquitetura de página citável** e **anatomia de resultado**: em
 `src/lib/autoridade.ts`, publicadas em `/metodologia`. As seis camadas de

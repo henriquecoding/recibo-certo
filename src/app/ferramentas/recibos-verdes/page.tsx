@@ -21,11 +21,12 @@ import {
 } from "@/lib/seo";
 import { ArrowRight } from "@/components/ui/Icons";
 import SimuladorRecibosVerdesLazy from "./lazy";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("recibos-verdes")!;
 
 export const metadata: Metadata = {
-  title: "Calculadora de recibos verdes 2026 — quanto recebes mesmo | Recibo Certo",
+  title: "Calculadora de recibos verdes 2026 — quanto recebes mesmo",
   description:
     "Do valor faturado ao líquido real: IRS, retenção na fonte, Segurança Social e IVA dos recibos verdes em 2026. Descobre quanto reservar para impostos e quanto fica mesmo para ti. Grátis e sem conta.",
   keywords: [
@@ -90,9 +91,9 @@ export default function FerramentaRecibosVerdesPage() {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(howToSchema) }} />
 
       <ToolShell
         tool={TOOL}

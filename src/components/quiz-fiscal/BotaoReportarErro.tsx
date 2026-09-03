@@ -10,7 +10,7 @@ const QUIZ_DARK = "#3a5232";
 const BOOK_BG = "#faf6ef";
 const BORDER = "#d4c4b0";
 const TEXT_HEAD = "#1C3A22";
-const TEXT_MUTED = "#8a7a6a";
+const TEXT_MUTED = "#706052";
 
 /** XP atribuído a quem descreve o erro (mínimo de caracteres exigido). */
 const REPORT_XP = 15;

@@ -13,6 +13,7 @@ import { resolverAcaoDoGuia } from "@/lib/fiz/guide-routing.server";
 import { manifestoObrigatorio, ARQUETIPOS } from "@/lib/guias/manifests";
 import { aplicabilidade } from "@/lib/guias/aplicabilidade";
 import { generateArticleSchema, SITE_URL } from "@/lib/seo";
+import { jsonLd } from "@/lib/jsonld";
 
 // ═══════════════════════════════════════════════════════════════════════
 //  ESQUELETO COMUM DE UM GUIA (anatomia do ponto 6.3 da auditoria)
@@ -79,9 +80,9 @@ export default async function GuiaLayout({ slug, children, descricaoHero }: Guia
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(article) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(article) }} />
       {howTo && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howTo) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(howTo) }} />
       )}
 
       <GuiaHero

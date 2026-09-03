@@ -126,19 +126,19 @@ export default function EntradaPlaneador({ tool }: { tool: ToolDefinition }) {
       <ul className="relative grid border-t border-white/10 bg-black/10 sm:grid-cols-2 lg:grid-cols-4">
         <li className="flex min-h-[58px] items-center gap-2.5 border-b border-white/10 px-5 py-3 sm:border-r lg:border-b-0 lg:px-6">
           <Clock size={15} className="flex-none text-brand-mint" />
-          <span className="text-xs text-white/60"><strong className="block text-white">Cerca de {tool.estimatedMinutes} min</strong>ao teu ritmo</span>
+          <span className="text-xs text-white/75"><strong className="block text-white">Cerca de {tool.estimatedMinutes} min</strong>ao teu ritmo</span>
         </li>
         <li className="flex min-h-[58px] items-center gap-2.5 border-b border-white/10 px-5 py-3 lg:border-b-0 lg:border-r lg:px-6">
           <ShieldCheck size={15} className="flex-none text-brand-mint" />
-          <span className="text-xs text-white/60"><strong className="block text-white">Grátis e sem conta</strong>simular não guarda</span>
+          <span className="text-xs text-white/75"><strong className="block text-white">Grátis e sem conta</strong>simular não guarda</span>
         </li>
         <li className="flex min-h-[58px] items-center gap-2.5 border-b border-white/10 px-5 py-3 sm:border-b-0 sm:border-r lg:px-6">
           <Lock size={15} className="flex-none text-brand-mint" />
-          <span className="text-xs text-white/60"><strong className="block text-white">Cálculo no dispositivo</strong>dados ficam contigo</span>
+          <span className="text-xs text-white/75"><strong className="block text-white">Cálculo no dispositivo</strong>dados ficam contigo</span>
         </li>
         <li className="flex min-h-[58px] items-center gap-2.5 px-5 py-3 lg:px-6">
           <Briefcase size={15} className="flex-none text-brand-mint" />
-          <span className="text-xs text-white/60"><strong className="block text-white">Referência fiscal de {tool.fiscalYear}</strong>revista a {dataPT(tool.reviewedAt)}</span>
+          <span className="text-xs text-white/75"><strong className="block text-white">Referência fiscal de {tool.fiscalYear}</strong>revista a {dataPT(tool.reviewedAt)}</span>
         </li>
       </ul>
     </header>

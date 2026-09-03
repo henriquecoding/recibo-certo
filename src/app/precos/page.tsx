@@ -9,6 +9,7 @@ import { generateBreadcrumbSchema } from "@/lib/seo";
 import { faqs } from "@/lib/faq";
 import MotionProvider from "@/components/ui/motion/MotionProvider";
 import { PerfilProvider } from "@/lib/perfil";
+import { jsonLd } from "@/lib/jsonld";
 
 export const metadata: Metadata = {
   title: "Planos e Preços — Calculadora Grátis ou Plus",
@@ -38,7 +39,7 @@ export const metadata: Metadata = {
   },
 };
 
-const jsonLd = {
+const grafoJsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
@@ -73,13 +74,14 @@ export default function PrecosPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(grafoJsonLd) }}
       />
       <div id="top">
         <Nav />
         <main className="pt-8">
           <PerfilProvider><MotionProvider>
-          <Precos />
+          {/* Aqui a secção É a página: o título dela é o `<h1>`. */}
+          <Precos nivelTitulo="h1" />
           {/* O slot público que faltava: a tabela `anuncios` tinha CRUD e
               pré-visualização no admin desde a migração 004 e NADA no site a
               consumia. Os anúncios existiam e não apareciam. */}

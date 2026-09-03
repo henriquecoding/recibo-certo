@@ -7,7 +7,7 @@ import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResu
 const TOOL = porId("mapa-contabilistas")!;
 
 export const metadata: Metadata = {
-  title: "Mapa de preços por região 2026: contabilistas, notários e advogados | Recibo Certo",
+  title: "Mapa de preços por região 2026: contabilistas, notários e advogados",
   description:
     "Quanto custa um contabilista, um notário ou um advogado em Portugal? Um único mapa interativo com filtros: avenças de contabilistas, atos notariais com preços, consultas de advogados e benefícios fiscais por região.",
   keywords: [

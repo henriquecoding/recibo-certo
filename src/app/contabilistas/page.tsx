@@ -6,7 +6,7 @@ import DiretorioComoFunciona from "./DiretorioComoFunciona";
 import { ArrowRight, ShieldCheck } from "@/components/ui/Icons";
 
 export const metadata: Metadata = {
-  title: "Encontrar contabilista | Recibo Certo",
+  title: "Encontrar contabilista",
   description:
     "Encontra contabilistas por área de trabalho, localização e atendimento online ou presencial. Consulta o perfil profissional e pede vínculo, sem plano pago.",
   // Os filtros são estados de uso, não páginas: a canónica é sempre a

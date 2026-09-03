@@ -32,7 +32,9 @@ import { FormularioPagina } from "./FormularioPagina";
 // ═══════════════════════════════════════════════════════════════════════
 
 export const metadata: Metadata = {
-  title: "Pesquisar no Recibo Certo — ferramentas, guias e atividades",
+  // `absolute`: idem. E esta página é `robots: index:false`, por isso o
+  // título é para quem tem o separador aberto, não para os resultados.
+  title: { absolute: "Pesquisar no Recibo Certo — ferramentas, guias e atividades" },
   description:
     "Procura em todos os simuladores, guias fiscais e atividades do Art. 151.º do Recibo Certo. Resultados por intenção: simular, compreender ou cumprir.",
   alternates: { canonical: `${SITE_URL}/pesquisar` },

@@ -217,7 +217,11 @@ export function ajusteBaseValido(ajuste?: number): number {
   if (ajuste === undefined || !Number.isFinite(ajuste)) return 0;
   const { limite, passo } = SS_AJUSTE_BASE.value;
   const aparado = Math.max(-limite, Math.min(limite, ajuste));
-  return Math.round(aparado / passo) * passo;
+  // `Math.round(0,15 / 0,05) * 0,05` dá 0.15000000000000002 em vírgula
+  // flutuante. O valor entra depois num `(1 + ajuste)` que multiplica o
+  // rendimento relevante, e a Segurança Social não conhece percentagens com
+  // dezassete casas. Duas casas é a precisão do passo legal (5%).
+  return Number((Math.round(aparado / passo) * passo).toFixed(2));
 }
 
 /**
@@ -502,15 +506,26 @@ export function rendimentoTributavelSimplificado(
 export function limiteGlobalDeducoes(coletavel: number, dependentes = 0): number {
   const g = LIMITE_GLOBAL_DEDUCOES.value;
   const maj = LIMITE_GLOBAL_MAJORACAO_DEPENDENTES.value;
-  const n = Math.max(0, Math.floor(dependentes));
+  // Era a única função desta família sem `sanitize()` à entrada: `NaN`
+  // entrava e `NaN` saía, e ia parar ao objeto de resultado que o
+  // exportador de documentos lê. Nunca chegou a produzir um documento
+  // errado — `limitado = somaBruta > limiteGlobal` dá `false` com `NaN` e o
+  // exportador devolve `null` —, mas isso é o defeito a ser travado por
+  // acidente de uma comparação, e não por decisão de ninguém.
+  const rendimento = sanitize(coletavel);
+  const n = Math.max(0, Math.floor(sanitize(dependentes)));
   const majoracao = n >= maj.minDependentes ? 1 + maj.porDependente * n : 1;
-  if (coletavel <= g.semLimiteAte) return Infinity;
-  const base =
-    coletavel >= g.escalaoSuperior
+  // `Infinity` é a sentinela de «não há teto» e é intencional: abaixo do
+  // primeiro escalão o Art. 78.º n.º 7 não limita as deduções. Fica
+  // documentado aqui porque um `Infinity` que viaja num objeto de resultado
+  // parece sempre um erro a quem o encontra pela primeira vez.
+  if (rendimento <= g.semLimiteAte) return Infinity;
+  const teto =
+    rendimento >= g.escalaoSuperior
       ? g.limiteBaixo
       : g.limiteBaixo +
-        (g.limiteAlto - g.limiteBaixo) * ((g.escalaoSuperior - coletavel) / (g.escalaoSuperior - g.semLimiteAte));
-  return base * majoracao;
+        (g.limiteAlto - g.limiteBaixo) * ((g.escalaoSuperior - rendimento) / (g.escalaoSuperior - g.semLimiteAte));
+  return teto * majoracao;
 }
 
 /** Escalão aplicado no cálculo progressivo do IRS. */

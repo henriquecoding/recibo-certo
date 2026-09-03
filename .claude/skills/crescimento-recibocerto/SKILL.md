@@ -86,8 +86,16 @@ handoff FIZ.
 ## Ao mexer em SEO ou indexação
 
 - `lastmod` vem de `revisoes.ts` (data material), não de `new Date()`.
-- `robots.ts` declara explicitamente OAI-SearchBot, GPTBot, ChatGPT-User,
-  PerplexityBot, Google-Extended. É uma decisão registada, não um esquecimento.
+- A política de crawlers vive em `src/lib/crawler-policy.ts` e são **duas
+  listas**: treino/datasets/scraping ficam BLOQUEADOS (GPTBot, ClaudeBot,
+  Google-Extended, CCBot, AhrefsBot…); os motores de RESPOSTA e os pedidos
+  iniciados por uma pessoa ficam PERMITIDOS (OAI-SearchBot, ChatGPT-User,
+  Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User,
+  DuckAssistBot). É uma decisão registada, não um esquecimento — e a linha é
+  «um corpus não cita, um motor de resposta cita».
+- Não somar um motor de resposta à lista de bloqueados sem ler
+  `docs/ESTRATEGIA.md` §6: já aconteceu uma vez, e anulou em silêncio o
+  programa de autoridade inteiro. `npm run security:boundary` reprova.
 - Rota pública nova entra em `PUBLIC_ROUTES` (`src/lib/seo.ts`) **e** ganha data
   em `REVISOES_MANUAIS` se não derivar de outra coisa.
 

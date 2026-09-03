@@ -63,11 +63,12 @@ export function SimuladorIRSJovem() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
+          <label htmlFor="irsj-rendimento" className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
             Rendimento coletável anual (Cat. B)
           </label>
           <div className="relative">
             <LocalizedNumberInput
+              id="irsj-rendimento"
               value={rendimento}
               onValueChange={setRendimento}
               min={0}
@@ -83,6 +84,7 @@ export function SimuladorIRSJovem() {
             step={1000}
             value={rendimento}
             onChange={(e) => setRendimento(Number(e.target.value))}
+            aria-label="Rendimento coletável anual — ajuste com o cursor"
             className="w-full mt-2 accent-brand"
           />
         </div>

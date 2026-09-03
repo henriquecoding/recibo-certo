@@ -20,6 +20,6 @@ describe("SinoNotificacoes — uma subscrição Realtime por layout", () => {
   });
 
   it("o painel do contabilista monta exatamente um sino", () => {
-    expect(contarSinos("app/contabilista/layout.tsx")).toBe(1);
+    expect(contarSinos("components/contabilista/MolduraContabilista.tsx")).toBe(1);
   });
 });

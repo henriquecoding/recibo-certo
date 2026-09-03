@@ -111,8 +111,19 @@ async function calcular(page) {
       new URL(page.url()).searchParams.get("percurso") === "empregador",
       "a escolha atualiza a query sem recarregar",
     );
+    // Um só. O quarto passo do arco trouxe uma segunda ligação para o mesmo
+    // destino, e enquanto as duas diziam «Planear uma contratação» a página
+    // ficava com dois nomes acessíveis iguais — indistinguíveis na lista de
+    // ligações de um leitor de ecrã, e violação de modo estrito aqui. A
+    // contagem fica como asserção, para o defeito não voltar em silêncio.
+    const ctaPercurso = page.getByRole("link", { name: /Planear uma contratação/ });
     verificar(
-      await page.getByRole("link", { name: /Planear uma contratação/ }).getAttribute("href") === "/ferramentas/planeador-contratacao",
+      await ctaPercurso.count() === 1,
+      "há uma só ligação «Planear uma contratação» na leitura patronal",
+      `encontradas ${await ctaPercurso.count()}`,
+    );
+    verificar(
+      await ctaPercurso.first().getAttribute("href") === "/ferramentas/planeador-contratacao",
       "o CTA acompanha o percurso",
     );
     verificar(await page.getByText("Régua do orçamento anual").count() === 1, "o palco patronal mostra orçamento, pacote e capacidade");

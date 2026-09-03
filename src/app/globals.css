@@ -3,6 +3,13 @@
 @tailwind utilities;
 
 :root {
+  /* O par do `color-scheme: dark` que a camada `.dark` declara. Sem ele, um
+     sistema operativo em modo escuro pinta as barras de deslocamento, os
+     campos de formulário e os menus nativos em escuro POR CIMA da página
+     clara — e agora que o tema segue a preferência do sistema quando não há
+     escolha guardada, quem escolhe explicitamente o claro num sistema
+     escuro é exatamente o caso que passa por aqui. */
+  color-scheme: light;
   /* O papel da página. Segue o token `cream` do `tailwind.config.ts` — ver
      lá a nota longa sobre porque desceu de #F5F4F0 (era o degrau que
      faltava, e não as bordas). Escrito aqui à mão porque o `body` precisa
@@ -878,8 +885,24 @@ html:not(.dark) .animate-pulse .bg-stone-100 {
   .dark .text-stone-500 {
     color: #a8a69c;
   }
+  /* ┌──────────────────────────────────────────────────────────────┐
+     │ 4,26:1 SOBRE O CARTÃO, E 870 SÍTIOS A LÊ-LO                    │
+     │                                                                │
+     │ #8A887E dava 4,92:1 sobre o papel escuro (#1C1917) e passava   │
+     │ — mas sobre o CARTÃO (#292524), que é onde a maior parte das   │
+     │ legendas vive, caía para 4,26:1. Abaixo dos 4,5:1 que texto    │
+     │ pequeno exige, e por uma margem pequena o suficiente para      │
+     │ ninguém ver a olho.                                            │
+     │                                                                │
+     │ São 870 utilizações de `text-stone-400` com texto pequeno em   │
+     │ 259 ficheiros. Corrigi-las uma a uma seria um diff que         │
+     │ ninguém revê, e a próxima nasceria errada na mesma: o defeito  │
+     │ não está nos 870 sítios, está neste valor. #94928A dá 4,87:1   │
+     │ sobre o cartão e 5,61:1 sobre o papel, e mantém a ordem da     │
+     │ escala no escuro (300 #6A6860 · 400 #94928A · 500 #A8A69C).    │
+     └──────────────────────────────────────────────────────────────┘ */
   .dark .text-stone-400 {
-    color: #8a887e;
+    color: #94928a;
   }
   .dark .text-stone-300 {
     color: #6a6860;
@@ -1337,12 +1360,46 @@ html:not(.dark) .animate-pulse .bg-stone-100 {
   .dark [class*="border-categoria-areia-border/"] { border-color: rgb(122 85 39 / 0.7); }
 
   /* Sombras mais profundas no escuro */
+  /* O sage do quiz escreve dos dois lados, e as réguas são opostas: sobre o
+     pergaminho (#FAF4EC) precisa de descer, sobre o fundo escuro (#181B16)
+     precisa de subir. O `textColor.quiz.sage` do config trata do claro
+     (#5C6B57, 5,20:1); sem esta linha o mesmo valor ia para o escuro e dava
+     3,06:1. #8FA089 é o mesmo verde-acinzentado dois degraus ACIMA: 6,26:1. */
+  .dark .text-quiz-sage {
+    color: #8fa089;
+  }
+
   .dark .shadow-card {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -16px rgba(0, 0, 0, 0.6);
   }
   .dark .shadow-lift,
   .dark .shadow-soft {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 24px 48px -20px rgba(0, 0, 0, 0.7);
+  }
+
+  /* ┌────────────────────────────────────────────────────────────────┐
+     │ O RESET RESPONSIVO DA SOMBRA TEM DE VENCER A CAMADA ESCURA      │
+     │                                                                │
+     │ As duas regras acima são `.dark .shadow-card` — dois níveis de  │
+     │ classe. Um utilitário do Tailwind é UM nível, e a media query   │
+     │ não acrescenta especificidade nenhuma. Resultado: um elemento   │
+     │ que é cartão no telemóvel e deixa de o ser a partir de `sm:`    │
+     │ (`shadow-card … sm:shadow-none`) perdia o fundo e a borda no    │
+     │ desktop, como é suposto, e FICAVA COM A SOMBRA — uma sombra     │
+     │ sem nada que a projete, sobre um fundo da mesma cor.            │
+     │                                                                │
+     │ Foi assim que a régua de perguntas do herói ficou, em modo      │
+     │ escuro a partir de 640px, com cinco manchas por baixo de cinco  │
+     │ passos transparentes. No modo claro não acontecia — ali o       │
+     │ `sm:shadow-none` não disputa com ninguém.                       │
+     │                                                                │
+     │ Esta regra devolve a decisão a quem a escreveu no componente:   │
+     │ dois níveis de classe, e depois das outras no ficheiro.         │
+     └────────────────────────────────────────────────────────────────┘ */
+  @media (min-width: 640px) {
+    .dark .sm\:shadow-none {
+      box-shadow: none;
+    }
   }
 
   /* Scrollbar discreta no escuro */

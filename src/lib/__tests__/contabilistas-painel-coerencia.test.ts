@@ -303,7 +303,7 @@ describe("painel modular — o que estava cortado e o que não fazia nada", () =
 
 describe("o telemóvel do painel — chegar à pesquisa, e conseguir sair", () => {
   const ler = (...p: string[]) => readFileSync(join(SRC, ...p), "utf8");
-  const LAYOUT = ler("app", "contabilista", "layout.tsx");
+  const LAYOUT = ler("components", "contabilista", "MolduraContabilista.tsx");
   const BUSCA = ler("components", "contabilistas", "BuscaDoPainel.tsx");
   const CSS = ler("app", "contabilista", "painel.module.css");
 

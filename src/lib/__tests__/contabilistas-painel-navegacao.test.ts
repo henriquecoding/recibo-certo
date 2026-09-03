@@ -115,7 +115,7 @@ describe("nenhuma página do painel fica sem caminho", () => {
     // Uma pesquisa que só chegasse ao nível de cima obrigava a passar por
     // uma secção — o trabalho que ela existe para poupar.
     expect(DESTINOS.length).toBeGreaterThanOrEqual(SECCOES.length);
-    const layout = readFileSync(join(SRC, "app", "contabilista", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "contabilista", "MolduraContabilista.tsx"), "utf8");
     expect(layout).toContain("destinos={DESTINOS}");
   });
 
@@ -198,7 +198,7 @@ describe("a doca do telemóvel cabe no ecrã", () => {
     // gesto, e não sobre `scrollIntoView`: o layout continua a usá-lo para
     // trazer à vista um campo que a proteção de texto recusou, e esse é
     // outro assunto.
-    const layout = readFileSync(join(SRC, "app", "contabilista", "layout.tsx"), "utf8");
+    const layout = readFileSync(join(SRC, "components", "contabilista", "MolduraContabilista.tsx"), "utf8");
     const codigo = layout.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     expect(codigo).not.toContain('inline: "center"');
   });

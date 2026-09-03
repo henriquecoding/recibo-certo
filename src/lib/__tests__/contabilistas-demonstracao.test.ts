@@ -534,8 +534,8 @@ describe("a semente acompanha o calendário de quem a abre", () => {
 // ─── 4. A moldura ──────────────────────────────────────────────────────
 
 describe("a moldura diz onde a pessoa está", () => {
-  const LAYOUT_PAINEL = ler("app", "contabilista", "layout.tsx");
-  const LAYOUT_ADMIN = ler("app", "admin", "layout.tsx");
+  const LAYOUT_PAINEL = ler("components", "contabilista", "MolduraContabilista.tsx");
+  const LAYOUT_ADMIN = ler("components", "admin", "MolduraAdmin.tsx");
 
   it("a demonstração é anunciada em todos os ecrãs do painel", () => {
     // No layout, e não em cada página: quem entra por ligação direta no

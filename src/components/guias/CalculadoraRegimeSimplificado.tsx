@@ -75,11 +75,15 @@ export function CalculadoraRegimeSimplificado({ comPlanoFiz = false }: { comPlan
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
+          {/* `htmlFor` + `id`: o `<label>` existia mas não estava ligado a
+              nada — visualmente parecia uma etiqueta, e para um leitor de
+              ecrã o campo não tinha nome nenhum. */}
+          <label htmlFor="rs-bruto" className="block text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">
             Faturação bruta anual
           </label>
           <div className="relative">
             <LocalizedNumberInput
+              id="rs-bruto"
               value={bruto}
               onValueChange={setBruto}
               min={0}
@@ -95,6 +99,7 @@ export function CalculadoraRegimeSimplificado({ comPlanoFiz = false }: { comPlan
             step={1000}
             value={bruto}
             onChange={(e) => setBruto(Number(e.target.value))}
+            aria-label="Faturação bruta anual — ajuste com o cursor"
             className="w-full mt-2 accent-brand"
           />
         </div>

@@ -13,11 +13,12 @@ import {
 } from "@/lib/seo";
 import { SimuladorIRSLazy, DemoIRSLazy } from "./lazy";
 import FizFaixaDemo from "@/components/fiz/FizFaixaDemo";
+import { jsonLd } from "@/lib/jsonld";
 
 const TOOL = porId("simulador-irs")!;
 
 export const metadata: Metadata = {
-  title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo | Recibo Certo",
+  title: "Simulador de IRS 2026 — calcula o teu IRS anual passo a passo",
   description:
     "Simula o IRS anual de 2026 em Portugal: trabalho dependente, recibos verdes, pensões, capitais, rendas, mais-valias e estrangeiro. Deduções à coleta, tributação conjunta, escalões e memória de cálculo — guiado, gratuito e com as taxas oficiais.",
   keywords: [
@@ -155,9 +156,9 @@ export default function SimuladorIRSLandingPage() {
   });
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(howToSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faqSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(appSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(howToSchema) }} />
 
       <ToolShell
         tool={TOOL}
@@ -193,7 +194,11 @@ export default function SimuladorIRSLandingPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {PASSOS.map((p) => (
                   <div key={p.n} className="rounded-4xl border border-stone-100 bg-white p-5 shadow-card dark:border-stone-800 dark:bg-stone-900">
-                    <div className="font-display text-3xl font-semibold text-brand/30">{p.n}</div>
+                    {/* `/30` dava 1,56:1 no claro e 1,30:1 no escuro — um numeral que
+                        não se vê não é discreto, é um acidente. `/75` e a menta
+                        a `/45` põem os dois acima de 3:1 (é texto grande, 30px)
+                        sem deixarem de ser um fundo do cartão. */}
+                    <div className="font-display text-3xl font-semibold text-brand/75 dark:text-brand-mint/45">{p.n}</div>
                     <h3 className="mt-2 text-[15px] font-semibold text-stone-800 dark:text-stone-100">{p.titulo}</h3>
                     <p className="mt-1 text-sm leading-relaxed text-stone-500 dark:text-stone-400">{p.desc}</p>
                   </div>
@@ -240,11 +245,17 @@ export default function SimuladorIRSLandingPage() {
             {/* ── CTA final ──────────────────────────────────────────── */}
             <section className="overflow-hidden rounded-4xl border border-brand bg-brand p-7 text-white shadow-glow sm:p-9">
               <div className="relative">
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-green-50 backdrop-blur">
+                {/* `bg-white/10` ACLARAVA o verde por baixo e levava o chip a
+                    3,98:1 com o texto — clarear o fundo de um texto claro é
+                    trabalhar contra o próprio contraste. `bg-black/10` escurece-o
+                    e dá 5,67:1, com a mesma leitura de vidro. */}
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-black/10 px-3 py-1 text-xs font-semibold text-green-50 backdrop-blur">
                   <Sparkle size={12} /> Pronto em minutos
                 </div>
                 <h2 className="font-display mt-3 text-2xl font-semibold sm:text-3xl">Descobre já o teu IRS de 2026</h2>
-                <p className="mt-2 max-w-xl text-green-50/80">
+                {/* `/80` dava 3,68:1 a 16px, onde o mínimo é 4,5. Sem a
+                    transparência: 4,80:1. */}
+                <p className="mt-2 max-w-xl text-green-50">
                   Simula, compara cenários e percebe exatamente para onde vai cada euro — antes de entregares a declaração.
                 </p>
                 <a

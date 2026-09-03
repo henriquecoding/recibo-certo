@@ -22,7 +22,7 @@ export default function QuizCategoriaCTA({
       <p className="text-sm font-semibold text-brand-dark dark:text-brand">
         Testa-te em {rotulo}
       </p>
-      <p className="mt-1 text-xs leading-relaxed text-brand-dark/75 dark:text-brand/70">
+      <p className="mt-1 text-xs leading-relaxed text-brand-dark dark:text-brand-mint/85">
         Sessões de 5 a 20 perguntas, com cronómetro ou com explicações passo a passo.
       </p>
       <Link

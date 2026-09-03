@@ -32,7 +32,7 @@ import AtalhosIntencao from "@/components/ferramentas/AtalhosIntencao";
 import { TOTAL_PERGUNTAS_META } from "@/lib/quiz-fiscal/quiz-meta";
 
 export const metadata: Metadata = {
-  title: `Ferramentas fiscais 2026 — ${TOTAL_FERRAMENTAS} simuladores e calculadoras | Recibo Certo`,
+  title: `Ferramentas fiscais 2026 — ${TOTAL_FERRAMENTAS} simuladores e calculadoras`,
   description:
     "Simula, compara e confirma valores com regras portuguesas verificadas para 2026: recibos verdes, salário líquido, IRS anual, Segurança Social, empresa, heranças e mais. Grátis, sem conta e com os cálculos no teu dispositivo.",
   keywords: [

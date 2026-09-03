@@ -89,15 +89,33 @@ function MatrizCelula({ valor }: { valor: boolean | string }) {
   return <span className="text-xs text-stone-500">{valor}</span>;
 }
 
-export default function Precos() {
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O NÍVEL DO TÍTULO É DO CONTEXTO, NÃO DA SECÇÃO                       │
+ * │                                                                     │
+ * │ Esta secção entra em seis sítios: as cinco leituras da homepage —    │
+ * │ onde já existe um `<h1>` no herói e ela é uma secção entre outras —  │
+ * │ e a página `/precos`, onde ela É a página.                           │
+ * │                                                                     │
+ * │ Enquanto o título era sempre `<h2>`, a `/precos` ficava sem `<h1>`   │
+ * │ nenhum: quem navega por cabeçalhos com leitor de ecrã não             │
+ * │ encontrava o título da página, e o motor de busca perdia o sinal     │
+ * │ mais forte de tema — numa página de conversão.                       │
+ * │                                                                     │
+ * │ `display-2` continua a ser a classe: é um tamanho, não um nível.     │
+ * │ Muda a semântica, não muda um pixel.                                 │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+export default function Precos({ nivelTitulo = "h2" }: { nivelTitulo?: "h1" | "h2" } = {}) {
   const mostrarFiz = fizAtiva();
+  const Titulo = nivelTitulo;
 
   return (
     <section id="precos" className="rc-home-deferred rc-home-deferred--xlarge scroll-mt-24 px-4 py-14 sm:px-6 sm:py-20">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-8 text-center">
           <div className="eyebrow mb-3 text-brand">Planos</div>
-          <h2 className="font-display display-2 font-semibold text-ink">Um plano só. Duas formas de pagar.</h2>
+          <Titulo className="font-display display-2 font-semibold text-ink">Um plano só. Duas formas de pagar.</Titulo>
           <p className="mx-auto mt-3 max-w-lg text-stone-500">
             Calcular, simular e ler os guias é grátis para sempre. O Plus é para quem quer guardar,
             comparar e exportar — e é exatamente o mesmo Plus, pagues todos os meses ou uma vez só.
@@ -183,7 +201,7 @@ export default function Precos() {
               {/* Dito aqui, e não escondido nos Termos: quem está a decidir
                   se subscreve tem direito a saber o que acontece aos dados
                   se um dia sair. */}
-              <p className="mt-4 flex items-start gap-2 rounded-2xl bg-stone-50 px-3.5 py-3 text-xs leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+              <p className="mt-4 flex items-start gap-2 rounded-2xl border border-stone-200/70 bg-stone-50 px-3.5 py-3 text-xs leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">
                 <span className="mt-0.5 flex-shrink-0 text-stone-400"><Lock size={13} /></span>
                 <span>
                   Se cancelares, o que está guardado na nuvem é apagado dos nossos servidores{" "}
@@ -245,7 +263,7 @@ export default function Precos() {
 
               {/* O número é calculado a partir dos dois preços. Escrito à mão,
                   ficava falso no dia em que um deles mudasse. */}
-              <p className="mt-4 rounded-2xl bg-stone-50 px-3.5 py-2.5 text-xs leading-relaxed text-stone-500 dark:bg-stone-800/60 dark:text-stone-400">
+              <p className="mt-4 rounded-2xl border border-stone-200/70 bg-stone-50 px-3.5 py-2.5 text-xs leading-relaxed text-stone-500 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-400">
                 Compensa a partir de {mesesCompensa} meses de utilização. Abaixo disso, o mensal sai
                 mais barato — e podes começar por aí.
               </p>

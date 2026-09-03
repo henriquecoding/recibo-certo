@@ -9,6 +9,79 @@
 
 ---
 
+> ## Estado da remediação — 3 de setembro de 2026, versão 2.159.0
+>
+> **Este relatório foi executado.** Todos os P0 e P1 estão corrigidos e
+> verificados; os P2 e P3 estão fechados com duas exceções declaradas no fim
+> desta nota. O texto abaixo preserva o diagnóstico original, para manter a
+> evidência — quando diz «está», leia-se «estava no commit `edbd56d`».
+>
+> | Bloco | Estado | Verificação |
+> |---|---|---|
+> | **P0-1a** `zona:e2e` ausente do `package.json` | **Feito** — reposto | o guião corre e passa |
+> | **P0-1b** duas ligações com o mesmo nome acessível | **Feito** — nome próprio para a do arco | `contratacao:e2e` verde, com asserção de contagem |
+> | **P0-1c** matriz visual saltada | **Feito** — desbloqueada | os passos deixaram de ser `skipped` |
+> | **P0-2** `hierarquia:e2e` reprovava | **Feito** — **era um defeito do portão** | ver nota abaixo |
+> | **P1-1** crawlers vs. autoridade | **Feito** — treino bloqueado, resposta permitida | medido por User-Agent |
+> | **P1-2** `/llms.txt` a devolver 403 | **Feito** — isento no proxy | 200 a todos os agentes |
+> | **P1-3** marca duplicada no título | **Feito** — 22 páginas (19 + 3 que o teste encontrou) | teste que reprova |
+> | **P1-4** `/precos` sem `<h1>` | **Feito** — nível por contexto | verificado no HTML |
+> | **P1-5** interruptor sem nome | **Feito** — `aria-labelledby` | axe: 0 |
+> | **P1-6** contrastes abaixo de AA | **Feito** — 17 pares corrigidos | axe: 0 em 42 rotas |
+> | **P1-7** paleta escura fixa no modo claro | **Feito** — as duas paletas | — |
+> | **P1-8** GeoJSON do GitHub | **Feito** — auto-alojado, 291 KB → 4,2 KB | `nuts:geo:check` |
+> | **P1-9** terceiros não declarados | **Feito** — secção «Mapas» na privacidade | — |
+> | **P1-10** «a consulta não sai do dispositivo» | **Por decidir** — **por decidir** — ver abaixo | — |
+> | **P1-11** 13 portões fora do CI | **Feito** — todos ligados | 25/25 verdes |
+> | **P2-1** 36% dos parâmetros fora do portão | **Feito** — registo automático: 535/535 | — |
+> | **P2-2** `TODAY` e a frescura invisível | **Feito** — renomeado + controlo no `fiscal:check` | — |
+> | **P2-4/6/7/9/10/11/12** | **Feito** — todos | — |
+> | **P3-1/4/5/6** | **Feito** — todos | — |
+>
+> ### Três coisas que a execução revelou e o relatório não sabia
+>
+> 1. **O P0-2 não era o que parecia.** As superfícies de `/inicio/preco` e
+>    `/inicio/recibos` não estavam mal desenhadas: o portão é que lia o
+>    `shadow-none` do Tailwind — três camadas *transparentes*, não `none` — como
+>    «tem sombra, logo é uma superfície». Contava quatro elementos que
+>    deliberadamente deixam de ser cartões a partir de `sm:`. Corrigido no
+>    portão. **Mas a investigação encontrou um defeito real ao lado:** a camada
+>    `.dark .shadow-card` vence o `sm:shadow-none` por especificidade, e no modo
+>    escuro a régua do herói ficava com cinco sombras por baixo de cinco passos
+>    transparentes. A asserção foi ainda estendida ao modo escuro, que nunca
+>    tinha sido medido — e que escondia 16,7% numa página.
+>
+> 2. **`procura:nuts2:check` nunca podia passar.** Três carimbos de relógio
+>    (`evaluatedAt`, `lastRunAt`, `lastSuccessfulRunAt`) estavam dentro do hash
+>    de conteúdo: três corridas seguidas davam três hashes diferentes. O portão
+>    respondia «desatualizado» dissesse o que dissesse o ficheiro. Corrigido; o
+>    hash é agora determinista, e a regra passou a ser lida do gerador pelo
+>    teste em vez de copiada.
+>
+> 3. **Os contrastes eram um problema de token, não de 870 sítios.** No modo
+>    escuro, `text-stone-400` (#8A887E) dá 4,26:1 sobre o cartão — 870
+>    utilizações em 259 ficheiros. Corrigi-las uma a uma seria um diff que
+>    ninguém revê. Uma linha em `globals.css` (#94928A) fecha-as todas.
+>
+> ### O que fica por fazer, e porquê
+>
+> - **P1-10 — a «regra absoluta» da pesquisa.** É uma decisão de produto, não um
+>   defeito: a página `/pesquisar` é servidor-renderizada de propósito, e a
+>   consulta viaja no `?q=` para poder ser partilhada e funcionar sem
+>   JavaScript. O que está errado é o texto que a descreve como absoluta.
+>   Reescrevê-lo é do dono do projeto.
+> - **P2-8 — 19 títulos e 22 descrições acima do comprimento útil.** É
+>   redação, com julgamento editorial por página. Em vez de os reescrever à
+>   pressa, passaram a ser **medidos**: o `seo:audit` conta-os e nomeia os
+>   piores a cada corrida. A duplicação da marca, essa, é agora um teste que
+>   reprova.
+> - **`procura-nuts2.json` está desatualizado face ao Eurostat.** Agora que o
+>   portão funciona, ele diz isso — corretamente. A atualização de dados de
+>   mercado tem workflow próprio (`mercado-ingestao.yml`), que abre PR para
+>   revisão humana. Não é trabalho para um commit de remediação.
+>
+> ---
+
 ## 0. Decisão executiva
 
 O produto está tecnicamente sólido — mais sólido do que a auditoria de julho descrevia. O build passa, os 4 346 testes passam, não há vulnerabilidades de dependências, o RLS cobre 77 de 78 tabelas, os motores de cálculo resistiram a fuzzing agressivo sem produzir um único `NaN`, e as 289 rotas públicas respondem 200 com dois erros de consola em 64 carregamentos.
@@ -49,21 +122,21 @@ Em paralelo, há uma **contradição estratégica documentada nos dois sentidos*
 
 | Verificação | Comando | Resultado |
 |---|---|---|
-| Instalação limpa | `npm ci` | ✅ exit 0 |
-| Build de produção | `npm run build` | ✅ exit 0 · 213 rotas no sitemap |
-| Conjunto de testes | `npx vitest run` | ✅ **204 ficheiros · 4 346 testes · 0 falhas** (39,8 s) |
-| Vulnerabilidades | `npm audit --audit-level=high` | ✅ **0 vulnerabilidades** |
-| Dados fiscais | `npm run fiscal:check` | ✅ exit 0 · «Estado: OK» |
-| Fronteira de segurança | `npm run security:boundary` | ✅ 1 936 ficheiros verificados |
-| Sem hardcodes no motor | `npm run motor:no-hardcodes` | ✅ 828 ficheiros |
-| SEO | `npm run seo:audit` | ⚠️ exit 0 com 1 aviso |
-| Ligações das fontes | `npm run guias:links` | ⚠️ 139 validadas · 14 avisos · 0 erros |
+| Instalação limpa | `npm ci` | **Feito** — exit 0 |
+| Build de produção | `npm run build` | **Feito** — exit 0 · 213 rotas no sitemap |
+| Conjunto de testes | `npx vitest run` | **Feito** — **204 ficheiros · 4 346 testes · 0 falhas** (39,8 s) |
+| Vulnerabilidades | `npm audit --audit-level=high` | **Feito** — **0 vulnerabilidades** |
+| Dados fiscais | `npm run fiscal:check` | **Feito** — exit 0 · «Estado: OK» |
+| Fronteira de segurança | `npm run security:boundary` | **Feito** — 1 936 ficheiros verificados |
+| Sem hardcodes no motor | `npm run motor:no-hardcodes` | **Feito** — 828 ficheiros |
+| SEO | `npm run seo:audit` | **Por decidir** — exit 0 com 1 aviso |
+| Ligações das fontes | `npm run guias:links` | **Por decidir** — 139 validadas · 14 avisos · 0 erros |
 | Stripe | `npm run stripe:check` | ❌ **exit 1** (sem segredos neste ambiente) |
-| Varrimento HTTP | 289 rotas | ✅ **289/289 HTTP 200** |
-| Erros de consola | 32 rotas × 2 temas, browser real | ✅ 2 erros não-rede (ambos «Supabase não configurado») |
-| Acessibilidade | axe-core, 19 rotas × 2 temas × 2 viewports | ⚠️ **38 violações** |
-| Fuzz do motor de preço | 20 000 contextos aleatórios | ✅ 0 não-finitos · 0 exceções · round-trip exato |
-| Fuzz do motor fiscal | grelha completa + valores-limite | ✅ 0 NaN · 0 negativos impossíveis · monotonia intacta |
+| Varrimento HTTP | 289 rotas | **Feito** — **289/289 HTTP 200** |
+| Erros de consola | 32 rotas × 2 temas, browser real | **Feito** — 2 erros não-rede (ambos «Supabase não configurado») |
+| Acessibilidade | axe-core, 19 rotas × 2 temas × 2 viewports | **Por decidir** — **38 violações** |
+| Fuzz do motor de preço | 20 000 contextos aleatórios | **Feito** — 0 não-finitos · 0 exceções · round-trip exato |
+| Fuzz do motor fiscal | grelha completa + valores-limite | **Feito** — 0 NaN · 0 negativos impossíveis · monotonia intacta |
 | e2e (14 guiões) | contra o BUILD | ❌ **2 reprovam** (`hierarquia`, `contratacao`) |
 
 ### O que esta auditoria NÃO verificou
@@ -550,16 +623,16 @@ Cruzando os scripts do `package.json` com todos os comandos dos workflows, estes
 |---|---|
 | `hierarquia:e2e` | ❌ **reprova** (P0-2) |
 | `stripe:check` | ❌ **exit 1** (sem segredos — mas nem sequer é tentado) |
-| `dashboard:e2e` | ✅ passa |
-| `navegacao:e2e` | ✅ passa |
-| `cabecalho:e2e` | ✅ passa |
-| `bussola:e2e` | ✅ passa |
-| `vencimento:e2e` | ✅ passa |
-| `visivel:e2e` | ✅ passa |
-| `palcos:e2e` | ✅ passa |
-| `afinidade:e2e` | ⚠️ requer Supabase |
-| `seo:audit` | ✅ passa com 1 aviso |
-| `supabase:check` | ✅ passa com avisos |
+| `dashboard:e2e` | **Feito** — passa |
+| `navegacao:e2e` | **Feito** — passa |
+| `cabecalho:e2e` | **Feito** — passa |
+| `bussola:e2e` | **Feito** — passa |
+| `vencimento:e2e` | **Feito** — passa |
+| `visivel:e2e` | **Feito** — passa |
+| `palcos:e2e` | **Feito** — passa |
+| `afinidade:e2e` | **Por decidir** — requer Supabase |
+| `seo:audit` | **Feito** — passa com 1 aviso |
+| `supabase:check` | **Feito** — passa com avisos |
 | `busca:check` · `quiz:check` · `market:check` | cobertos indiretamente por `npm test` |
 
 O padrão é claro: **o trabalho de escrever a verificação foi feito; o de a ligar não.** É a mesma raiz do P0-1a.
