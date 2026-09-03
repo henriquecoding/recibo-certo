@@ -83,7 +83,7 @@ export default function Stats() {
       <div className="mx-auto mt-4 max-w-5xl text-center">
         <Link
           prefetch={false}
-          href="/#fontes"
+          href="/fontes-fiscais"
           className="focus-marca inline-flex min-h-[36px] items-center gap-1.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:text-brand-dark dark:hover:text-brand sm:min-h-[24px]"
         >
           <Bank size={12} className="text-brand" />

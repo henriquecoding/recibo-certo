@@ -29,7 +29,11 @@ export interface Sugestao {
 }
 
 const INDEPENDENTES: Sugestao[] = [
-  { id: "s-calculadora", titulo: "Calculadora de recibos verdes", pergunta: "Quanto vou receber?", href: "/#calculadora" },
+  // O destino é a rota CANÓNICA da ferramenta, e não `/#calculadora` — uma
+  // âncora que a homepage deixou de renderizar quando foi reescrita à volta
+  // dos focos. A pesquisa é a superfície onde isto mais custava: a primeira
+  // sugestão que uma pessoa vê ao abrir o painel devolvia o topo da homepage.
+  { id: "s-calculadora", titulo: "Calculadora de recibos verdes", pergunta: "Quanto vou receber?", href: "/ferramentas/recibos-verdes" },
   { id: "s-iva", titulo: "IVA nos recibos verdes", pergunta: "Tenho de cobrar IVA?", href: "/guias/iva-recibos-verdes" },
   { id: "s-prazos", titulo: "Calendário fiscal", pergunta: "O que tenho de entregar, e quando?", href: "/dashboard/prazos" },
 ];

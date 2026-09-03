@@ -205,15 +205,34 @@ export default function LegalPage({
         />
 
         <div className="relative z-10 mx-auto max-w-5xl px-5 pb-14 pt-10 sm:px-8 sm:pb-16 sm:pt-12">
+          {/* ┌──────────────────────────────────────────────────────────┐
+              │ ESTE CABEÇALHO VIVIA ABAIXO DO PISO DO TELEMÓVEL          │
+              │                                                          │
+              │ A sobrancelha e o rótulo do índice estavam a 10px fixos e │
+              │ as pastilhas do índice a 11px — abaixo dos 12px que a     │
+              │ regra 5b exige a 360px. O caminho de volta media 92×16,   │
+              │ menos de metade do alvo mínimo de 36px.                    │
+              │                                                          │
+              │ Nada disto foi apanhado porque `movel:e2e` mede as CINCO  │
+              │ rotas da homepage, e este molde não é nenhuma delas — mas │
+              │ é o de oito páginas (metodologia, estado dos dados,       │
+              │ fontes, perguntas frequentes, changelog, privacidade,     │
+              │ termos, cookies).                                         │
+              │                                                          │
+              │ A cura é a que o design system prescreve: uma CLASSE de   │
+              │ piso (`.texto-micro` / `.texto-mini` — 12px no telemóvel, │
+              │ 10/11px a partir de `sm:`), e não um tamanho afinado à    │
+              │ mão. O aspeto em ecrã largo fica igual ao que era.         │
+              └──────────────────────────────────────────────────────────┘ */}
           <Link
             href="/"
-            className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-stone-500 transition-colors hover:text-brand-mint"
+            className="mb-6 inline-flex min-h-[36px] items-center gap-1.5 text-xs font-medium text-stone-500 transition-colors hover:text-brand-mint"
           >
             <ArrowLeft size={12} />
             Recibo Certo
           </Link>
 
-          <div className="mb-1 text-[10px] font-bold uppercase tracking-widest text-brand-mint/60">
+          <div className="mb-1 texto-micro font-bold uppercase tracking-widest text-brand-mint/60">
             {eyebrow}
           </div>
           <h1 className="font-display text-3xl font-bold text-white sm:text-4xl">{title}</h1>
@@ -232,7 +251,7 @@ export default function LegalPage({
 
           {/* Mobile TOC */}
           <div className="mt-8 rounded-2xl border border-stone-800 bg-stone-900/60 p-4 lg:hidden">
-            <p className="mb-3 text-[10px] font-bold uppercase tracking-widest text-stone-500">
+            <p className="mb-3 texto-micro font-bold uppercase tracking-widest text-stone-500">
               Neste documento
             </p>
             <div className="flex flex-wrap gap-2">
@@ -240,7 +259,7 @@ export default function LegalPage({
                 <a
                   key={item.id}
                   href={`#${item.id}`}
-                  className="rounded-lg border border-stone-700 bg-stone-800 px-2.5 py-1 text-[11px] font-medium text-stone-400 transition-colors hover:border-brand/40 hover:text-brand-mint"
+                  className="inline-flex min-h-[36px] items-center rounded-lg border border-stone-700 bg-stone-800 px-2.5 py-1 texto-mini font-medium text-stone-400 transition-colors hover:border-brand/40 hover:text-brand-mint sm:min-h-0"
                 >
                   {item.label}
                 </a>

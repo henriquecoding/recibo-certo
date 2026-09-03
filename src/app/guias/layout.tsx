@@ -138,7 +138,7 @@ export default function GuiasLayout({ children }: { children: ReactNode }) {
                     Faz as contas à tua situação com os simuladores gratuitos, com as taxas oficiais.
                   </p>
                   <Link
-                    href="/#calculadora"
+                    href="/ferramentas"
                     className="mt-3 inline-flex min-h-[36px] items-center gap-1.5 text-xs font-semibold text-brand transition-colors hover:text-brand-dark"
                   >
                     <Megaphone size={13} /> Abrir simuladores
