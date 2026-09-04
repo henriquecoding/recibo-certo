@@ -57,6 +57,7 @@ import { usePathname } from "next/navigation";
 import { iconeDe } from "@/components/ferramentas/icon-map";
 import { PILARES, hrefDaSuperficiePilar } from "@/lib/navegacao";
 import { DockMovel } from "@/components/busca/DockMovel";
+import { useBuscaAberta } from "@/components/busca/motor";
 import ChromeMobileMarca from "@/components/ChromeMobileMarca";
 import { medirNavegacao } from "@/lib/busca/medicao";
 import { useQuizAJogar } from "@/hooks/useQuizAJogar";
@@ -94,10 +95,60 @@ export default function ChromeMobile() {
   const foco = focoDaRotaHomepage(pathname);
   const reduzMovimento = usePrefereMovimentoReduzido();
   const { pendente, preparar, iniciar } = useIntencaoFocos();
-  const [compacto, setCompacto] = useState(false);
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ O CHROME NÃO SE RECOLHE COM A PESQUISA ABERTA — E ESTA LINHA É UM  │
+   * │ DEFEITO INTEIRO                                                    │
+   * │                                                                   │
+   * │ Este estado chamava-se `compacto` e mandava directamente no        │
+   * │ `{!compacto ? <DockMovel /> : null}`. Recolher DESMONTA o dock —   │
+   * │ não o esconde, tira-o da árvore — e isso apagava a pesquisa a      │
+   * │ meio do gesto de a usar:                                          │
+   * │                                                                   │
+   * │   1. a pessoa toca na barra e o painel abre;                       │
+   * │   2. o campo recebe foco e o teclado virtual sobe;                 │
+   * │   3. o browser ROLA a página para pôr o campo à vista — tem de o   │
+   * │      fazer, porque a barra vive no fundo do ecrã e o teclado       │
+   * │      acabou de ocupar essa faixa;                                  │
+   * │   4. esse scroll é uma descida de mais de 10 px, portanto este     │
+   * │      ouvinte recolhe o chrome;                                     │
+   * │   5. o dock desmonta e a pesquisa desaparece — barra, painel e     │
+   * │      tudo — sem erro nenhum e sem nada no ecrã que o explique.     │
+   * │                                                                   │
+   * │ Um passo do produto a cancelar o passo anterior. E não era uma     │
+   * │ regra por descobrir: o cabeçalho de secretária já a tinha          │
+   * │ (`Nav.tsx`, `corpoVisivel = … || buscaAberta`). Estava escrita     │
+   * │ numa superfície e não na outra — que é como as duas versões da     │
+   * │ mesma coisa divergem sempre, com a do telemóvel a ficar para trás  │
+   * │ porque é a que quase ninguém revê.                                 │
+   * │                                                                   │
+   * │ DERIVADO e não um efeito: o desmontar tem de estar impedido JÁ no  │
+   * │ render em que a pesquisa abre. Com um efeito a repor o estado      │
+   * │ haveria um commit pelo meio com o dock fora da árvore — e um       │
+   * │ commit chega para levar o painel, o foco e o que estivesse escrito.│
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  const [recolhidoPorScroll, setRecolhidoPorScroll] = useState(false);
+  const buscaAberta = useBuscaAberta();
+  const compacto = recolhidoPorScroll && !buscaAberta;
   const ultimaPosicao = useRef(0);
 
   useEffect(() => {
+    /**
+     * Com a pesquisa aberta o ouvinte NEM CHEGA A EXISTIR.
+     *
+     * Deixá-lo a correr e filtrar o resultado com o `compacto` derivado
+     * resolvia o ecrã e deixava uma armadilha: o scroll do teclado punha
+     * `recolhidoPorScroll` a verdade em silêncio, e fechar a pesquisa
+     * fazia o chrome desaparecer no mesmo instante — inclusive a barra a
+     * quem `DockMovel` devolve o foco ao fechar com Escape.
+     *
+     * Não o registar tem uma segunda vantagem, e é a que decide: ao
+     * fechar, o efeito volta a correr e refaz a `ultimaPosicao` a partir
+     * de onde a página ficou. O scroll de regresso do teclado a fechar
+     * deixa de se ler como um gesto de quem estava a ler.
+     */
+    if (buscaAberta) return;
     ultimaPosicao.current = window.scrollY;
     let frame = 0;
     const aoRolar = () => {
@@ -105,9 +156,9 @@ export default function ChromeMobile() {
       frame = requestAnimationFrame(() => {
         const atual = window.scrollY;
         const diferenca = atual - ultimaPosicao.current;
-        if (atual < 72) setCompacto(false);
-        else if (diferenca > 10) setCompacto(true);
-        else if (diferenca < -10) setCompacto(false);
+        if (atual < 72) setRecolhidoPorScroll(false);
+        else if (diferenca > 10) setRecolhidoPorScroll(true);
+        else if (diferenca < -10) setRecolhidoPorScroll(false);
         ultimaPosicao.current = atual;
       });
     };
@@ -116,7 +167,7 @@ export default function ChromeMobile() {
       cancelAnimationFrame(frame);
       window.removeEventListener("scroll", aoRolar);
     };
-  }, [pathname]);
+  }, [pathname, buscaAberta]);
 
   // O chrome sai do caminho enquanto há uma pergunta no ecrã — e o de cima
   // lê exactamente a mesma coisa. Ver `hooks/useQuizAJogar.ts`.
