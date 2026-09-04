@@ -56,10 +56,20 @@ export default async function ProximoPassoDoGuia({ slug }: { slug: string }) {
   // A ordem no ecrã é a ordem da hierarquia, e o PORTE acompanha-a. Um
   // cartão cheio por baixo de outro cartão cheio não é uma segunda opção:
   // é a mesma decisão pedida duas vezes, e é assim que se perde as duas.
+  // ⚠️ `tom="sobrio"` nas DUAS chamadas, e é deliberado: dentro de um Guia a
+  //    FIZ nunca assenta no painel amarelo a toda a largura.
+  //
+  //    Não é uma despromoção — o rótulo, o destino, o logótipo e a
+  //    divulgação são os mesmos, e nos guias de execução a FIZ continua a
+  //    LIDERAR, com `h2` e botão cheio. É que um Guia é texto, e um painel
+  //    de marca no fim de um texto lê-se como anúncio antes de se ler como
+  //    passo seguinte. Com duas saídas no fim da página, a mais berrante
+  //    ganhava sempre — e quem escolhe a rota passava a ser a cor e não o
+  //    `escolherRota()`.
   if (passo.principal === "fiz") {
     return (
       <>
-        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="principal" />
+        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="principal" tom="sobrio" />
         {passo.secundario === "contabilista" && (
           <DossieDoGuia projecao={projecao} variante="secundaria" rota="fiz" />
         )}
@@ -76,7 +86,7 @@ export default async function ProximoPassoDoGuia({ slug }: { slug: string }) {
         rota="contabilista"
       />
       {passo.secundario === "fiz" && (
-        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="secundaria" />
+        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="secundaria" tom="sobrio" />
       )}
     </>
   );

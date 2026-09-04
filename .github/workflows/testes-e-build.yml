@@ -133,8 +133,11 @@ jobs:
       - name: Configuração da Stripe (avisa sem segredos, reprova se estiver errada)
         run: npm run stripe:check
 
+      # Distingue «encontrou vulnerabilidades» de «não falou com o registo».
+      # O `npm audit` direto devolvia 1 nos dois casos, e a 04/09 reprovou
+      # dois jobs por causa de um 503 do npmjs.org. Ver o cabeçalho do guião.
       - name: Auditoria de dependências (0 vulnerabilidades altas)
-        run: npm audit --audit-level=high
+        run: npm run auditoria:deps
 
   homepage-performance:
     name: Homepage · ${{ matrix.browser }}

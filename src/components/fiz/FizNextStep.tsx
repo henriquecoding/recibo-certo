@@ -76,6 +76,35 @@ interface FizNextStepProps {
    * clique» não é uma questão de porte.
    */
   variante?: "principal" | "secundaria";
+  /**
+   * A SUPERFÍCIE em que o bloco assenta — coisa diferente do peso.
+   *
+   * `marca` é o cartão tinto de amarelo de sempre, e continua a ser o que
+   * sai por omissão nas superfícies que já o usavam: a homepage, as
+   * ferramentas, os resultados. Aí o bloco É a página, ou uma das duas
+   * coisas que a página tem.
+   *
+   * `sobrio` assenta na superfície neutra do site. Existe por causa dos
+   * GUIAS, e por uma razão que não é estética:
+   *
+   *   · um Guia é conteúdo editorial, e a regra da casa é que a relação
+   *     comercial se declara — não que se pinta. `FizDisclosure` continua
+   *     onde estava, com o mesmo texto;
+   *   · `MONETIZACAO_PROIBIDA` proíbe tratamento publicitário «dentro de
+   *     resultados, páginas de elevada ansiedade ou fluxos de dados
+   *     pessoais», e metade destes guias são exatamente isso — penhoras,
+   *     execuções fiscais, dívidas, despedimento;
+   *   · e porque um painel amarelo a toda a largura no fim de um artigo
+   *     lê-se como anúncio antes de se ler como passo seguinte. Passou a
+   *     haver duas saídas no fim de um Guia: se a mais berrante for a do
+   *     parceiro, a hierarquia que `escolherRota()` calculou perde para a
+   *     cor, e quem decide deixa de ser o motor.
+   *
+   * O que NÃO muda com o tom: o rótulo aprovado, o destino, o logótipo, a
+   * divulgação e o botão continuam a ser os da FIZ. Baixar o volume não é
+   * esconder — é deixar de gritar dentro de um texto.
+   */
+  tom?: "marca" | "sobrio";
 }
 
 const NUNCA_ENVIADOS_PADRAO = [
@@ -89,6 +118,7 @@ export default function FizNextStep({
   camposPropostos = [],
   camposNuncaEnviados = NUNCA_ENVIADOS_PADRAO,
   variante = "principal",
+  tom = "marca",
 }: FizNextStepProps) {
   const [acao, setAcao] = useState<AcaoResolvida | null>(acaoInicial);
   const [carregado, setCarregado] = useState(acaoInicial !== null);
@@ -169,14 +199,18 @@ export default function FizNextStep({
   const quieto = variante === "secundaria";
   const Titulo = quieto ? "h3" : "h2";
 
+  // O tom decide a SUPERFÍCIE; a variante decide o PESO. São dois eixos, e
+  // separá-los é o que permite a um Guia ter a FIZ a liderar sem que o fim
+  // do artigo passe a ser um painel amarelo.
+  const superficie =
+    tom === "sobrio" || quieto
+      ? "border-stone-200 bg-white dark:border-stone-700 dark:bg-stone-900"
+      : "border-fiz-200 bg-fiz-50";
+
   return (
     <section
       aria-labelledby={`fiz-proximo-${slug}`}
-      className={
-        quieto
-          ? "mt-4 overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card dark:border-stone-700 dark:bg-stone-900"
-          : "mt-8 overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 shadow-card"
-      }
+      className={`overflow-hidden rounded-4xl shadow-card border ${superficie} ${quieto ? "mt-4" : "mt-8"}`}
     >
       <div className="p-5 sm:p-6">
         <div className="mb-2 flex flex-wrap items-center gap-2">

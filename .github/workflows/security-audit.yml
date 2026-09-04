@@ -41,12 +41,17 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
+      # O guião distingue «encontrou vulnerabilidades» (reprova, e é para
+      # isso que existe) de «não falou com o registo» (repete, e se nem
+      # assim, avisa que a auditoria NÃO foi feita em vez de a dar por
+      # feita). Sem essa distinção, um 503 do npmjs.org abria issue de
+      # segurança a dizer que havia vulnerabilidades que ninguém viu.
       - name: npm audit (falha em high+)
         id: audit
         shell: bash
         run: |
           set +e
-          npm audit --audit-level=high | tee audit-report.txt
+          npm run auditoria:deps 2>&1 | tee audit-report.txt
           echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
 
       - name: Abrir issue em vulnerabilidade high (apenas no agendamento)
