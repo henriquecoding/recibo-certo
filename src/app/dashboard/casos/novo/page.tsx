@@ -20,7 +20,7 @@
 //     servidor porque é lá que a garantia mora.
 // ═══════════════════════════════════════════════════════════════════════
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { m, AnimatePresence } from "framer-motion";
@@ -35,6 +35,9 @@ import {
   AREAS, URGENCIAS, SITUACAO_MIN, SITUACAO_MAX, TETO_DE_ENCAMINHAMENTOS,
   nifValido, submeterCaso, type AreaDoCaso, type UrgenciaDoCaso,
 } from "@/lib/contabilistas/casos";
+import { consumirPassagem } from "@/lib/guias/dossie/handoff";
+import { anexarAoCaso } from "@/lib/guias/dossie/dados";
+import type { DossieDeGuia } from "@/lib/guias/dossie";
 
 const PASSOS = ["O que precisas", "Descreve a situação", "Quem és"] as const;
 
@@ -57,6 +60,31 @@ export default function DescreverCaso() {
   /** Desligado por omissão: partilhar a ficha de contactos é uma decisão. */
   const [partilharContactos, setPartilharContactos] = useState(false);
 
+  // ACHADO A10 — abrir um caso custava uma redação.
+  //
+  // `situacao` tem mínimo de 20 caracteres e é obrigatória; mais assunto,
+  // área, nome, NIF e email. Quem acabou de ler um guia sobre penhoras
+  // tinha de reescrever em prosa o que acabou de ler.
+  //
+  // A passagem traz o assunto, a área e a descrição já compostos a partir
+  // do dossiê — e ela continua a poder mudar cada palavra. Não é um
+  // formulário preenchido por nós: é um rascunho. O dossiê fica em memória
+  // e anexa-se ao caso depois de o caso existir.
+  const [dossieDaPassagem, setDossieDaPassagem] = useState<DossieDeGuia | null>(null);
+
+  useEffect(() => {
+    const carga = consumirPassagem();
+    if (!carga) return;
+    setArea(carga.area);
+    setAssunto(carga.assunto);
+    setSituacao(carga.situacao);
+    setDossieDaPassagem(carga.dossie);
+    // Começa no passo da descrição: a área já vem escolhida, e voltar a
+    // pedir-lha seria pedir-lhe que classificasse o que acabámos de
+    // classificar.
+    setPasso(1);
+  }, []);
+
   const nifOk = useMemo(() => nif.length === 0 || nifValido(nif), [nif]);
 
   const podeAvancar =
@@ -73,8 +101,14 @@ export default function DescreverCaso() {
       orcamentoCents: orcamento ? Math.round(Number(orcamento.replace(",", ".")) * 100) : null,
       partilharContactos,
     });
+    if (r.erro) { setAEnviar(false); avisos.erro(r.erro); return; }
+
+    // O dossiê entra DEPOIS de o caso existir — e não é condição de nada:
+    // se falhar, o caso fica criado e a pessoa não perde o que escreveu.
+    // Um anexo que faça a submissão falhar seria pior do que não o ter.
+    if (r.id && dossieDaPassagem) await anexarAoCaso(r.id, dossieDaPassagem);
     setAEnviar(false);
-    if (r.erro) { avisos.erro(r.erro); return; }
+
     avisos.sucesso(`Caso ${r.referencia} guardado.`, {
       detalhe: "Ainda não seguiu para ninguém — escolhe a quem o queres enviar.",
       duracaoMs: 9000,
@@ -115,6 +149,18 @@ export default function DescreverCaso() {
         {TETO_DE_ENCAMINHAMENTOS} contabilistas certificados — e se houver mais do que
         uma proposta, decides.
       </p>
+
+      {dossieDaPassagem && (
+        <p className="mt-4 flex items-start gap-2.5 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-xs leading-relaxed text-stone-600 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-300">
+          <Check size={15} className="mt-0.5 shrink-0 text-brand" aria-hidden />
+          <span>
+            Escrevemos o assunto e a descrição a partir do guia{" "}
+            <strong>«{dossieDaPassagem.guia.titulo}»</strong> — muda o que quiseres. O
+            dossiê completo (base legal, elementos e pontos que dependem do teu caso) segue
+            anexo ao caso.
+          </span>
+        </p>
+      )}
 
       {/* ⚠️ Dito antes de se escrever, e não numa nota de rodapé. */}
       <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-brand-light px-4 py-3 text-xs leading-relaxed text-brand-dark">

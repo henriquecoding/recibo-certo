@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { EstadoVinculo, TipoPartilha } from "./tipos";
+import { CAMPOS_DO_DOSSIE } from "@/lib/guias/dossie/fronteira";
 
 /**
  * Versão do texto de consentimento em vigor. Fica gravada em cada partilha:
@@ -137,6 +138,10 @@ export const CAMPOS_PARTILHA: Record<TipoPartilha, readonly string[]> = {
     "ano", "produto", "pvp", "precoLiquido", "iva", "taxaIvaPct", "margemPct",
     "faixaMinima", "faixaRecomendada", "faixaConfortavel", "regimeIva", "perfil", "notas",
   ],
+  // Delega, não copia. A fronteira fina — que campos pode ter um item de
+  // cada secção, e que padrões nunca podem aparecer num texto — vive em
+  // `guias/dossie/fronteira.ts` e já correu antes de o dossiê chegar aqui.
+  dossie_guia: CAMPOS_DO_DOSSIE,
 };
 
 export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
@@ -150,6 +155,7 @@ export const ROTULO_PARTILHA: Record<TipoPartilha, string> = {
   resumo_anual: "Resumo anual",
   plano_negocio: "Projeto de negócio",
   preco_calculado: "Preço calculado",
+  dossie_guia: "Dossiê de guia",
 };
 
 export interface ConteudoSanitizado {

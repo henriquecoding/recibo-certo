@@ -5,6 +5,7 @@
 // momento — a partir daí desaparece daqui, sem depender deste ecrã.
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, m } from "motion/react";
 import { usarFicha } from "@/components/contabilistas/usarFicha";
 import EstadoVazio from "@/components/contabilistas/EstadoVazio";
@@ -23,10 +24,17 @@ export default function PartilhasPage() {
   const [aberto, setAberto] = useState<string | null>(null);
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const [erro, setErro] = useState<string | null>(null);
+  const [dossies, setDossies] = useState(0);
 
   const carregar = useCallback(async (id: string) => {
     try {
-      setLista(await listarPartilhas({ contabilistaId: id }));
+      // Os dossiês de guia ficam de fora, e têm página própria. O corpo de
+      // um dossiê são secções com proveniência por item — a tabela de
+      // chave/valor deste ecrã mostrava-o como «Seccoes: [object Object]»,
+      // que é pior do que não o mostrar.
+      const todas = await listarPartilhas({ contabilistaId: id });
+      setLista(todas.filter((p) => p.tipo !== "dossie_guia"));
+      setDossies(todas.filter((p) => p.tipo === "dossie_guia").length);
       // Sem isto, uma falha momentânea deixava a faixa vermelha no ecrã
       // para sempre — mesmo depois de a leitura seguinte correr bem.
       setErro(null);
@@ -69,6 +77,21 @@ export default function PartilhasPage() {
       {erro && (
         <p role="alert" className="flex items-start gap-2 rounded-2xl bg-clay-bg px-4 py-3 text-sm text-clay-text">
           <Warning size={16} className="mt-0.5 shrink-0" aria-hidden /> {erro}
+        </p>
+      )}
+
+      {dossies > 0 && (
+        <p className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm leading-relaxed text-stone-600">
+          {dossies === 1
+            ? "Recebeste também 1 dossiê de guia — um caso preparado a partir de um guia do site."
+            : `Recebeste também ${dossies} dossiês de guia — casos preparados a partir de guias do site.`}{" "}
+          <Link
+            href="/contabilista/dossies"
+            className="font-semibold text-brand-dark underline underline-offset-2 dark:text-brand"
+          >
+            Abrir a consola
+          </Link>
+          .
         </p>
       )}
 

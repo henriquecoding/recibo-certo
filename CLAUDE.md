@@ -166,6 +166,16 @@ Next.js 16 (App Router, Turbopack) · React 19 · TypeScript strict · Tailwind 
   `busca:fronteira` (grafo de imports), `busca:handoff` e a barreira de `pii.ts`.
   A moldura vive em `src/components/busca/moldura.tsx` e é uma REGIÃO no fluxo:
   sem véu, sem `aria-modal`, sem portal — fixado em `busca-moldura.test.ts`.
+- `src/lib/guias/dossie/` — ★ **motor de dossiê de guia**: o segundo destino de
+  um Guia, que leva o CASO ao contabilista em vez de um link. `tipos.ts` é o
+  contrato (leve, atravessa a fronteira cliente/servidor); `projecao.servidor.ts`
+  DERIVA as secções dos catálogos e é `server-only`; `compor.ts`, `perguntas.ts`,
+  `fronteira.ts`, `impressao.ts`, `area.ts`, `pedido.ts` e `formatos/` são puros;
+  `dados.ts` transporta os três destinos (partilha, caso, ligação opaca).
+  **Regra absoluta:** nenhum item chega ao ecrã do contabilista sem
+  `Proveniencia`, e nada é reescrito — o `texto` de um item é a string
+  publicada no guia. Verificado por `npm run dossie:check`. Ver
+  `docs/architecture/motor-dossie-de-guia.md`.
 - `src/lib/clusters.ts` — os oito clusters de decisão, ICPs e inventário dos guias.
 - `src/lib/routing.ts` — motor de routing comercial (FIZ / contabilista / Plus /
   sem parceiro) e as fronteiras que nunca se atravessam.

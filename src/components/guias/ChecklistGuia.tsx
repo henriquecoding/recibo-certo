@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/supabase/auth";
+import type { ItemDePedido } from "@/lib/guias/dossie/tipos";
 import { Check, LayoutGrid } from "@/components/ui/Icons";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -9,13 +11,29 @@ import { Check, LayoutGrid } from "@/components/ui/Icons";
 //
 //  O progresso fica em localStorage por Guia — sem conta, sem sincronização
 //  e sem bloqueio: é uma ajuda, não uma funcionalidade paga.
+//
+//  ⚠️ A VOLTA (§8.4 do motor de dossiê). Quando o contabilista pede
+//  elementos a partir do dossiê deste guia, os itens pedidos aparecem AQUI,
+//  na linha certa, com o prazo. É a continuidade que fecha o ciclo: a
+//  pessoa volta ao mesmo sítio onde marcou os itens e encontra lá o
+//  trabalho, em vez de o ir procurar a um painel que não sabe que existe.
+//
+//  Sem conta — que é a maior parte de quem lê isto — o componente comporta-se
+//  exatamente como antes: não faz pedido nenhum e não muda um pixel.
 // ─────────────────────────────────────────────────────────────────────────
 
 const chaveDe = (slug: string) => `recibocerto:guias:checklist:${slug}`;
 
+const dataCurta = (iso: string) => {
+  const [ano, mes, dia] = iso.slice(0, 10).split("-");
+  return dia && mes && ano ? `${dia}/${mes}` : iso;
+};
+
 export default function ChecklistGuia({ slug, itens }: { slug: string; itens: string[] }) {
   const [feitos, setFeitos] = useState<number[]>([]);
   const [hidratado, setHidratado] = useState(false);
+  const [pedidos, setPedidos] = useState<Map<number, ItemDePedido>>(new Map());
+  const { user, disponivel } = useAuth();
 
   useEffect(() => {
     try {
@@ -29,6 +47,26 @@ export default function ChecklistGuia({ slug, itens }: { slug: string; itens: st
     }
     setHidratado(true);
   }, [slug]);
+
+  // Importado dinamicamente: quem não tem conta não paga o custo de uma
+  // camada de dados que nunca vai usar.
+  useEffect(() => {
+    if (!user || !disponivel) return;
+    let vivo = true;
+    void (async () => {
+      try {
+        const [{ meusPedidos }, { pedidosPorPosicao }] = await Promise.all([
+          import("@/lib/guias/dossie/dados"),
+          import("@/lib/guias/dossie/pedido"),
+        ]);
+        const abertos = (await meusPedidos(slug)).filter((p) => p.estado !== "fechado");
+        if (vivo) setPedidos(pedidosPorPosicao(abertos));
+      } catch {
+        // Uma falha de rede não pode partir a checklist. Fica como estava.
+      }
+    })();
+    return () => { vivo = false; };
+  }, [slug, user, disponivel]);
 
   const alternar = (indice: number) => {
     setFeitos((atual) => {
@@ -64,6 +102,7 @@ export default function ChecklistGuia({ slug, itens }: { slug: string; itens: st
         <ul className="space-y-1.5">
           {itens.map((item, indice) => {
             const feito = feitos.includes(indice);
+            const pedido = pedidos.get(indice);
             return (
               <li key={item}>
                 <label className="flex min-h-[44px] cursor-pointer items-start gap-3 rounded-2xl px-2 py-2 transition-colors hover:bg-stone-50 dark:hover:bg-stone-800/50">
@@ -81,12 +120,25 @@ export default function ChecklistGuia({ slug, itens }: { slug: string; itens: st
                   >
                     {feito && <Check size={12} />}
                   </span>
-                  <span
-                    className={`min-w-0 flex-1 text-sm leading-relaxed transition-colors ${
-                      feito ? "text-stone-400 line-through" : "text-stone-700 dark:text-stone-300"
-                    }`}
-                  >
-                    {item}
+                  <span className="min-w-0 flex-1">
+                    <span
+                      className={`block text-sm leading-relaxed transition-colors ${
+                        feito ? "text-stone-400 line-through" : "text-stone-700 dark:text-stone-300"
+                      }`}
+                    >
+                      {item}
+                    </span>
+                    {pedido && pedido.estado === "pedido" && (
+                      <span className="texto-mini mt-1 block font-medium text-brand-dark dark:text-brand">
+                        Pedido pelo teu contabilista
+                        {pedido.prazo ? ` · até ${dataCurta(pedido.prazo)}` : ""}
+                      </span>
+                    )}
+                    {pedido && pedido.estado === "entregue" && (
+                      <span className="texto-mini mt-1 block text-stone-400">
+                        Já entregaste isto ao teu contabilista.
+                      </span>
+                    )}
                   </span>
                 </label>
               </li>

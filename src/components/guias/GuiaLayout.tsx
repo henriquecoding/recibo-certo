@@ -8,8 +8,7 @@ import GuiasRelacionados from "./GuiasRelacionados";
 import FontesGuia from "./FontesGuia";
 import HistoricoGuia from "./HistoricoGuia";
 import NotaDisclaimer from "./NotaDisclaimer";
-import FizNextStep from "@/components/fiz/FizNextStep";
-import { resolverAcaoDoGuia } from "@/lib/fiz/guide-routing.server";
+import ProximoPassoDoGuia from "./ProximoPassoDoGuia";
 import { manifestoObrigatorio, ARQUETIPOS } from "@/lib/guias/manifests";
 import { aplicabilidade } from "@/lib/guias/aplicabilidade";
 import { generateArticleSchema, SITE_URL } from "@/lib/seo";
@@ -19,7 +18,7 @@ import { jsonLd } from "@/lib/jsonld";
 //  ESQUELETO COMUM DE UM GUIA (anatomia do ponto 6.3 da auditoria)
 //  ---------------------------------------------------------------------
 //    1. Resposta curta          6. Checklist
-//    2. Aplicabilidade          7. Próximo passo (FIZ, quando existe)
+//    2. Aplicabilidade          7. Próximo passo (uma ação, com motivo)
 //    3. Resultado personalizado 8. Ferramentas relacionadas
 //    4. Regra explicada         9. Fontes por autoridade
 //    5. Simulação/exemplo      10. Alterações · 11. Revisão
@@ -43,14 +42,6 @@ interface GuiaLayoutProps {
 export default async function GuiaLayout({ slug, children, descricaoHero }: GuiaLayoutProps) {
   const m = manifestoObrigatorio(slug);
   const a = aplicabilidade(slug);
-
-  // Resolvido AQUI, no servidor, e não por `fetch` na montagem do componente.
-  // Em modo LIGACAO o destino é conhecido no momento em que a página é
-  // renderizada: manter o pedido custava um round-trip por visita em 54
-  // Guias, um salto de layout, e nenhum link para quem tem JavaScript
-  // desligado. `resolverAcaoDoGuia` nunca lança — devolve sempre um estado
-  // renderizável, ou `null`.
-  const acaoInicial = await resolverAcaoDoGuia({ slug, placement: "NEXT_STEP" });
 
   const article = generateArticleSchema({
     headline: m.title,
@@ -98,7 +89,10 @@ export default async function GuiaLayout({ slug, children, descricaoHero }: Guia
       {children}
 
       {a && <ChecklistGuia slug={slug} itens={a.checklist} />}
-      <FizNextStep slug={slug} acaoInicial={acaoInicial} />
+      {/* Uma ação principal, escolhida por `escolherRota()` e com o motivo
+          à vista. Substitui a chamada direta a `FizNextStep`, que era a
+          página a escolher a rota — ver `ProximoPassoDoGuia`. */}
+      <ProximoPassoDoGuia slug={slug} />
       <SimuladoresRelacionados slug={slug} />
       <GuiasRelacionados slug={slug} />
       <FontesGuia slug={slug} />

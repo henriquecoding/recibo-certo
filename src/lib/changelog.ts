@@ -16,6 +16,22 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.165.0",
+    data: "2026-09-04",
+    titulo: "No fim de um guia passa a haver uma porta para o contabilista — e o que segue é um dossiê, não um link",
+    itens: [
+      "Os 169 guias do site diziam-te, várias vezes, para confirmares com um contabilista certificado. Nenhum te dava por onde. A única ligação que existia — repetida nos 169 — mandava-te para o registo público da Ordem, à procura de um desconhecido noutro sítio, enquanto aqui já havia diretório verificado, casos, propostas e agenda a funcionar.",
+      "Passa a haver um botão no fim de cada guia: «Levar isto a um contabilista». O que segue não é um endereço — é um dossiê do teu caso, preparado a partir daquele guia, com a resposta curta, a base legal citada com artigo e ligação, os elementos a reunir com o estado que marcaste na checklist, as datas com prazo, e os pontos que aquele guia diz que dependem do caso concreto.",
+      "Nada disso é escrito por nós no momento. É o texto que já está publicado no guia, item a item, cada um com a origem à vista — se veio da lei, do motor fiscal, do registo editorial ou de uma resposta tua. E fica preso à versão do guia que leste: três semanas depois, quem o abrir sabe sobre que texto se falou, e vê o que mudou desde então.",
+      "Escolhes o que segue, secção a secção. O que desligares não é escondido na leitura — não chega a ser preparado. E há uma parte que nasce sempre desligada: a última simulação que fizeste, porque é a única com valores teus.",
+      "Três destinos, todos gratuitos e nenhum a exigir plano. Ao contabilista que já tens ligado aqui. A um contabilista certificado da plataforma, com o caso já escrito a partir do dossiê — deixaste de ter de reescrever em prosa o que acabaste de ler. Ou, para o mais comum de todos, ao teu contabilista de sempre, que não usa a plataforma: uma ligação privada que ele abre sem conta, que vale 30 dias, que te diz quantas vezes foi aberta, e que cortas quando quiseres.",
+      "Se preferires não usar plataforma nenhuma, levas o ficheiro: Markdown para colar, CSV para folha de cálculo, .ics para meter os prazos na agenda, ou JSON. Todos levam a versão do guia e uma impressão digital do conteúdo, e todos dizem, no fim, o que aquilo não é: um parecer.",
+      "Do outro lado, o contabilista não recebe uma parede de texto. Recebe o caso em dez linhas — situação, enquadramento, o que o guia responde, o que falta — e sete vistas onde escolhe item a item o que precisa: copiar as citações, exportar os prazos, ou pedir-te os elementos em falta. E o pedido volta ao sítio onde faz sentido: à checklist do próprio guia, na linha certa, com prazo.",
+      "O que nunca vai no dossiê: nome, NIF, email, telefone, morada ou documentos. Um dossiê é sobre o assunto, não sobre ti — e isso é verificado por testes que bloqueiam a publicação, não prometido num rodapé.",
+      "Havia ainda uma incoerência a corrigir: 29 guias declaravam «falar com um contabilista» e mandavam essa intenção para um parceiro de execução. Agora a hierarquia é a que estava escrita desde o princípio — quando o guia marca matéria que depende do caso concreto, o contabilista vem primeiro, e o parceiro fica em segunda linha, em texto, com o motivo à vista. Os 112 guias que não tinham passo seguinte nenhum passam a ter um.",
+    ],
+  },
+  {
     version: "2.164.0",
     data: "2026-09-04",
     titulo: "Carregar num sítio para ver uma coisa e aterrar no rodapé — acabou",
