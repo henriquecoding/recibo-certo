@@ -60,6 +60,18 @@ export default function HeroSalarioBifurcado({
     });
     const params = new URLSearchParams(window.location.search);
     params.set("percurso", percurso);
+    /**
+     * O ÚNICO `scroll: false` que sobrevive no produto — e sobrevive porque
+     * não é uma navegação.
+     *
+     * É um `replace` para a MESMA rota, a trocar um parâmetro que diz qual
+     * dos dois percursos está escolhido. A pessoa não pediu outra página:
+     * carregou num interruptor que está à vista. Levá-la ao topo aqui seria
+     * mover-lhe o ecrã por baixo do dedo.
+     *
+     * A regra que distingue os dois casos está em `navegacao-scroll.test.ts`:
+     * muda de ROTA, abre no princípio; muda de PARÂMETRO na mesma rota, fica.
+     */
     router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
   };
 

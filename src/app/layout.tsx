@@ -8,6 +8,7 @@ import { CoordenadorOverlays } from "@/components/overlays/CoordenadorOverlays";
 import { AvisosProvider } from "@/components/ui/Avisos";
 import { ConfirmacaoProvider } from "@/components/ui/Confirmar";
 import ChromeMobile from "@/components/ChromeMobile";
+import AbrirNoPrincipio from "@/components/navegacao/AbrirNoPrincipio";
 import BotaoTopo from "@/components/ui/BotaoTopo";
 import Medicao from "@/components/Medicao";
 import ControladorPrefetchFocos from "@/components/foco/ControladorPrefetchFocos";
@@ -233,6 +234,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                         </ControladorPrefetchFocos>
                         {/* Voltar ao topo — global em todo o site público;
                             esconde-se sozinho no /dashboard e no /admin. */}
+                        {/* Uma navegação abre a página no princípio — a
+                            garantia que o Next só dá por heurística. Ver o
+                            quadro em `navegacao/AbrirNoPrincipio.tsx`. */}
+                        <AbrirNoPrincipio />
                         <BotaoTopo />
                         <Medicao />
                         <IntentOverlays />
