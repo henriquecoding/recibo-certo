@@ -506,4 +506,40 @@ describe("dossie:copy", () => {
     expect(RODAPE_DOSSIE).toMatch(/Não é parecer/);
     expect(RODAPE_DOSSIE).toMatch(/contabilista certificado/);
   });
+
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ QUEM ABRE SEM CONTA É O CONTABILISTA, NÃO A PESSOA                 │
+  // │                                                                   │
+  // │ O cartão dizia «Gratuito, sem plano e sem conta obrigatória» por   │
+  // │ baixo de «Levar este caso a um contabilista». Lia-se como se       │
+  // │ ligar-se a um contabilista não exigisse conta — e exige, nos TRÊS  │
+  // │ destinos:                                                         │
+  // │                                                                   │
+  // │   · D1 só aparece com vínculo ativo, que exige sessão;             │
+  // │   · D2 diz «Entrar e preparar o caso» a quem não tem sessão;       │
+  // │   · D3 só é composto com `p.autenticado`, e a ligação não podia    │
+  // │     nascer sem isso: `dossie_ligacoes.cliente_id` é NOT NULL       │
+  // │     REFERENCES auth.users, com `WITH CHECK (cliente_id =           │
+  // │     auth.uid())` no INSERT.                                       │
+  // │                                                                   │
+  // │ Sem conta abre-se o dossiê do OUTRO lado (é essa a promessa de     │
+  // │ D3) e leva-se o FICHEIRO. São duas coisas, e a frase juntava-as.   │
+  // └───────────────────────────────────────────────────────────────────┘
+  it("não promete ligar a um contabilista sem conta — os três destinos exigem sessão", () => {
+    const DOSSIE = readFileSync(
+      join(SRC, "components", "guias", "dossie", "DossieDoGuia.tsx"),
+      "utf8",
+    );
+
+    expect(DOSSIE).not.toMatch(/sem conta obrigatória/i);
+    expect(DOSSIE).not.toMatch(/sem (sequer )?criar conta/i);
+
+    // Onde a copy fala de dispensar conta, tem de estar a falar do
+    // FICHEIRO — que é a única coisa que se leva sem sessão.
+    const frases = DOSSIE.split("\n")
+      .filter((l) => !l.trimStart().startsWith("//") && !l.trimStart().startsWith("*"))
+      .filter((l) => /\bconta\b/i.test(l));
+    expect(frases.length).toBeGreaterThan(0);
+    for (const frase of frases) expect(frase).toMatch(/ficheiro/i);
+  });
 });

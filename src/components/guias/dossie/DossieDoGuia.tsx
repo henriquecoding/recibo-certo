@@ -166,8 +166,8 @@ export default function DossieDoGuia({ projecao, variante, motivo, rota = "conta
             </div>
 
             <p className="mt-3 texto-mini leading-relaxed text-stone-500 dark:text-stone-400">
-              Não custa nada e não precisas de plano nenhum. Podes levar o ficheiro sem sequer
-              criar conta.
+              Não custa nada e não exige plano nenhum. Levar o ficheiro não pede conta; enviar
+              a um contabilista pede.
             </p>
           </div>
         </section>
@@ -207,7 +207,8 @@ export default function DossieDoGuia({ projecao, variante, motivo, rota = "conta
           </div>
 
           <p className="mt-3 texto-mini leading-relaxed text-stone-500 dark:text-stone-400">
-            Gratuito, sem plano e sem conta obrigatória.
+            Gratuito e sem plano. Levar o ficheiro não pede conta; enviar a um contabilista
+            pede.
           </p>
         </section>
       )}
