@@ -43,7 +43,7 @@
 
 import type { ComponentType } from "react";
 import {
-  Award, Briefcase, Calendar, Gift, Invoice, LayoutGrid, PaperClip,
+  Award, BookOpen, Briefcase, Calendar, Gift, Invoice, LayoutGrid, PaperClip,
   Settings, Target, User, Wallet,
 } from "@/components/ui/Icons";
 
@@ -140,6 +140,17 @@ export const SECCOES: readonly SeccaoDoPainel[] = [
         Icon: PaperClip,
         descricao: "Simulações que os clientes escolheram enviar-te.",
         porResponder: (c) => c.partilhasPorLer,
+      },
+      {
+        // Um dossiê não é uma simulação: é o caso de alguém, projetado a
+        // partir de um guia, com a base legal e os elementos por reunir. A
+        // consola é outra — seleciona-se, extrai-se e pede-se — e por isso
+        // tem porta própria.
+        href: "/contabilista/dossies",
+        label: "Dossiês de guia",
+        curto: "Dossiês",
+        Icon: BookOpen,
+        descricao: "Casos que os clientes prepararam a partir de um guia.",
       },
     ],
   },

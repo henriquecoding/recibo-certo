@@ -29,6 +29,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import type { EstadoConfianca, Rota } from "@/lib/analytics/eventos";
+import type { Archetype } from "@/lib/guias/manifests";
 
 export type MotivoRota =
   | "confianca_insuficiente"
@@ -63,6 +64,21 @@ export interface SinaisDoUtilizador {
    * própria escolheu, e para quem pode enviar o resultado sem custo nenhum.
    */
   temContabilistaVinculado?: boolean;
+
+  // ── Sinais de Guia (motor de dossiê, §5.3) ───────────────────────────
+  //
+  //  Até aqui `escolherRota()` nunca era chamado num Guia: quem escolhia a
+  //  rota era a página — FIZ, sempre que houvesse `fizAction`, sem sinais,
+  //  sem motivo legível e sem a guarda de confiança. A skill de crescimento
+  //  diz o contrário em letras grandes: «a hierarquia dos CTAs não é
+  //  escolhida pela página».
+
+  /** Arquétipo do guia que a pessoa está a ler. */
+  arquetipoDoGuia?: Archetype;
+  /** Quantas afirmações deste guia exigem revisão especializada. */
+  afirmacoesPorRever?: number;
+  /** Progresso da checklist: 0..1. Sinal de intenção, não de valor. */
+  preparacao?: number;
 }
 
 export interface Encaminhamento {
@@ -141,6 +157,23 @@ export function escolherRota(s: SinaisDoUtilizador): Encaminhamento {
   //    `PARTILHA_NUNCA_EXIGE_PLUS` em `contabilistas/vinculo.ts`).
   if (s.temContabilistaVinculado === true) {
     return monta("contabilista", "contabilista_vinculado");
+  }
+
+  // 2b. O guia diz, ele próprio, que isto precisa de julgamento.
+  //
+  //     `review_required` não é uma opinião do produto: é uma marca
+  //     editorial posta por quem escreveu o guia, revista no build, e que
+  //     já é MOSTRADA ao leitor em `EstadoRevisaoGuia` («contém matéria que
+  //     depende do caso concreto»). Mandar essa pessoa executar seria
+  //     mandá-la fazer sozinha exatamente o que o texto acabou de dizer que
+  //     não deve fazer sozinha.
+  //
+  //     É o argumento mais honesto que o produto tem: a rota nasce do
+  //     texto, não do preço. Entra aqui — depois do contabilista que a
+  //     pessoa já tem, antes da FIZ — porque é uma razão de matéria, e
+  //     razões de matéria vencem razões de escopo.
+  if ((s.afirmacoesPorRever ?? 0) > 0) {
+    return monta("contabilista", "caso_exige_profissional");
   }
 
   // 3. Julgamento profissional. §13.2: «Apenas casos fora da rota FIZ ou

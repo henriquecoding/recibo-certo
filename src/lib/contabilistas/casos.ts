@@ -35,9 +35,12 @@
 
 import { getSupabase } from "@/lib/supabase/client";
 
-export type AreaDoCaso =
-  | "irs" | "iva" | "contabilidade_organizada" | "inicio_atividade"
-  | "seguranca_social" | "empresa" | "herancas" | "outro";
+// As áreas vivem em `areas.ts` — puro, sem base de dados atrás — e são
+// reexportadas aqui para nada do que já as importava ter de mudar. Ver o
+// cabeçalho desse ficheiro: o motor de dossiê precisa do vocabulário sem
+// precisar da camada de dados.
+export { AREAS, tituloDaArea, type AreaDoCaso } from "./areas";
+import type { AreaDoCaso } from "./areas";
 
 export type UrgenciaDoCaso = "normal" | "prazo_proximo" | "urgente";
 
@@ -63,18 +66,6 @@ export function mensagemVisivel(estado: EstadoMensagem): boolean {
 export type EstadoProposta =
   | "enviada" | "lida" | "aceite" | "desconto_pedido"
   | "recusada" | "expirada" | "substituida";
-
-/** As áreas, como a pessoa as lê. Nunca o valor da base de dados. */
-export const AREAS: { id: AreaDoCaso; titulo: string; ajuda: string }[] = [
-  { id: "irs", titulo: "IRS", ajuda: "Declaração anual, reembolsos, retenções." },
-  { id: "iva", titulo: "IVA", ajuda: "Declarações periódicas, isenções, regularizações." },
-  { id: "inicio_atividade", titulo: "Início de atividade", ajuda: "Abrir atividade, escolher CAE, primeiro ano." },
-  { id: "seguranca_social", titulo: "Segurança Social", ajuda: "Escalões, isenções, trimestrais." },
-  { id: "contabilidade_organizada", titulo: "Contabilidade organizada", ajuda: "Passar de simplificado, ou já lá estar." },
-  { id: "empresa", titulo: "Empresa", ajuda: "Constituir sociedade, IRC, distribuição de lucros." },
-  { id: "herancas", titulo: "Heranças", ajuda: "Partilhas, imposto do selo, imóveis." },
-  { id: "outro", titulo: "Outra coisa", ajuda: "Descreve na tua situação." },
-];
 
 export const URGENCIAS: { id: UrgenciaDoCaso; titulo: string; ajuda: string }[] = [
   { id: "normal", titulo: "Sem pressa", ajuda: "Quero resolver, mas não há data à vista." },

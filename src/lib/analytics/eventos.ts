@@ -61,6 +61,26 @@ import type { MotivoAgora } from "@/lib/dashboard/work-items/agregar";
 
 export type NomeEvento =
   | "guide_view"
+  // ── Motor de dossiê de guia (§9 do relatório do motor) ──────────────
+  //
+  // Oito eventos, e o que os justifica é uma pergunta que não tinha
+  // resposta possível: de `/guias/*` só saía `guide_view`, e por isso não
+  // se sabia — nem se PODIA saber — que guias geram procura de
+  // profissional. Havia eventos `accountant_*` declarados que os Guias
+  // nunca disparavam.
+  //
+  // `guide_dossier_extract` é o que responde à pergunta que decide o
+  // futuro do motor: das sete vistas da consola, quais é que os
+  // contabilistas usam mesmo. Se ao fim de um trimestre só três forem
+  // usadas, cortam-se as outras quatro.
+  | "guide_dossier_start"
+  | "guide_dossier_ready"
+  | "guide_dossier_sent"
+  | "guide_dossier_opened"
+  | "guide_dossier_extract"
+  | "guide_dossier_request"
+  | "guide_dossier_request_answered"
+  | "guide_dossier_revoked"
   | "simulator_start"
   | "simulator_step"
   | "simulator_complete"
@@ -165,6 +185,76 @@ export interface PayloadsEvento {
     cluster: ClusterId | "sem_cluster";
     /** ISO date da última revisão editorial do guia — não a data do build. */
     reviewed_at: string;
+  };
+  /**
+   * ┌───────────────────────────────────────────────────────────────────┐
+   * │ OS OITO DO DOSSIÊ: A FORMA, NUNCA O CONTEÚDO                       │
+   * │                                                                   │
+   * │ `guide_id` é um slug público — está no URL de toda a gente. O que  │
+   * │ nunca entra é o que a pessoa respondeu, a nota que escreveu, o     │
+   * │ destinatário, ou qualquer valor fiscal: contagens em balde         │
+   * │ (`section_count`, `item_count`) dizem tudo o que o painel precisa  │
+   * │ sem dizer nada sobre o caso.                                      │
+   * │                                                                   │
+   * │ E nenhum evento leva `guide_id` e dados fiscais no mesmo sítio —   │
+   * │ é a regra 2 deste ficheiro, aplicada onde é mais fácil quebrá-la.  │
+   * └───────────────────────────────────────────────────────────────────┘
+   */
+  guide_dossier_start: {
+    guide_id: string;
+    /** `contabilista` ou `fiz` — a rota que o guia mostrou. */
+    route: Rota;
+    user_state: EstadoConta;
+  };
+  guide_dossier_ready: {
+    guide_id: string;
+    /** Quantas secções a pessoa deixou seguir. Um número, nunca quais. */
+    section_count: number;
+    /** Quantas perguntas ficaram em «não sei». */
+    unknown_count: number;
+  };
+  guide_dossier_sent: {
+    guide_id: string;
+    /** `vinculo`, `caso` ou `ligacao` — o destino, nunca o destinatário. */
+    destination: string;
+    consent_version: string;
+    section_count: number;
+  };
+  guide_dossier_opened: {
+    guide_id: string;
+    destination: string;
+    /** Quantas vezes já tinha sido aberto. Serve a taxa de leitura real. */
+    open_count: number;
+  };
+  guide_dossier_extract: {
+    guide_id: string;
+    /** A vista de onde se extraiu: `elementos`, `julgamento`, … */
+    view: string;
+    /** `copiar`, `exportar`, `pedir`, `perguntar`. */
+    action: string;
+    /** Formato, quando a ação o tem. */
+    format?: string;
+    item_count: number;
+  };
+  guide_dossier_request: {
+    guide_id: string;
+    item_count: number;
+    /** Quantos itens foram escritos pelo profissional, e não pelo guia. */
+    authored_count: number;
+    /** Havia prazo em algum item? Um sim/não, nunca a data. */
+    has_deadline: boolean;
+  };
+  guide_dossier_request_answered: {
+    guide_id: string;
+    /** `entregue`, `nao_aplica` ou `dispensado`. */
+    outcome: string;
+    item_count: number;
+  };
+  guide_dossier_revoked: {
+    guide_id: string;
+    destination: string;
+    /** Balde de dias desde o envio (§8.2: só baldes). */
+    age_bucket: string;
   };
   simulator_start: {
     tool_id: string;
@@ -558,6 +648,46 @@ export const CATALOGO: Record<NomeEvento, DefinicaoEvento> = {
   guide_view: {
     disparo: "Guia visto, com consentimento de medição concedido.",
     serve: "Que conteúdo traz decisões, e não apenas visitas.",
+    origem: "cliente",
+  },
+  guide_dossier_start: {
+    disparo: "Folha de composição do dossiê aberta a partir de um Guia.",
+    serve: "Que guias geram procura de profissional — a pergunta que só tinha `guide_view` para responder.",
+    origem: "cliente",
+  },
+  guide_dossier_ready: {
+    disparo: "Dossiê composto e pronto a seguir, antes de a pessoa escolher o destino.",
+    serve: "Onde se desiste na composição, e quantas secções sobrevivem à escolha.",
+    origem: "cliente",
+  },
+  guide_dossier_sent: {
+    disparo: "Passagem feita: partilha ao vínculo, dossiê no caso, ou ligação criada.",
+    serve: "Volume por destino — e se o destino de quem já tem contabilista fora da plataforma é mesmo usado.",
+    origem: "cliente",
+  },
+  guide_dossier_opened: {
+    disparo: "Dossiê aberto pelo destinatário. Contado no servidor, na rota que serve o conteúdo.",
+    serve: "Taxa de leitura real: quantos dos que seguem chegam mesmo a ser lidos.",
+    origem: "servidor",
+  },
+  guide_dossier_extract: {
+    disparo: "Extração com seleção numa das vistas da consola.",
+    serve: "QUE SECÇÕES VALEM — a pergunta que decide quais das sete vistas sobrevivem.",
+    origem: "cliente",
+  },
+  guide_dossier_request: {
+    disparo: "Pedido de elementos enviado ao cliente a partir da consola.",
+    serve: "Se o motor gera trabalho ou só leitura.",
+    origem: "cliente",
+  },
+  guide_dossier_request_answered: {
+    disparo: "Cliente marcou um item pedido como entregue, dispensado ou não aplicável.",
+    serve: "Se o ciclo fecha — a única medida de que a volta serve para alguma coisa.",
+    origem: "cliente",
+  },
+  guide_dossier_revoked: {
+    disparo: "Passagem revogada pela pessoa que a criou.",
+    serve: "Sinal de confiança: quanto do que segue é retirado, e ao fim de quanto tempo.",
     origem: "cliente",
   },
   simulator_start: {

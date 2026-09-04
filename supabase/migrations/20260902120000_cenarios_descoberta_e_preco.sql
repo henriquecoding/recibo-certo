@@ -278,17 +278,41 @@ BEGIN
   -- E as quatro políticas de sempre continuam lá: esta migração não as
   -- toca, e uma delas ter desaparecido pelo caminho é a coisa mais cara
   -- que podia acontecer sem dar erro.
-  SELECT string_agg(p, ', ') INTO em_falta
-  FROM unnest(ARRAY[
-    'cenarios_select_own', 'cenarios_insert_plus',
-    'cenarios_update_plus', 'cenarios_delete_own'
-  ]) AS p
-  WHERE NOT EXISTS (
-    SELECT 1 FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'cenarios' AND policyname = p
-  );
-  IF em_falta IS NOT NULL THEN
-    RAISE EXCEPTION 'políticas RLS em falta em public.cenarios: %', em_falta;
+  --
+  -- ⚠️ A verificação está PRESA à migração que cria essas políticas, e não
+  --    ao nome delas. Quem as cria é `20260813_planos_operacionais.sql`, e
+  --    essa é da aplicação base: depende das migrações 001-041 e está
+  --    deliberadamente FORA do arreio de RLS (ver o corte `DATADA_DESDE`
+  --    em `scripts/testar-rls.sh`, que só aplica as da plataforma). O
+  --    resultado era um arreio vermelho desde 02/09 a acusar políticas em
+  --    falta numa base onde ninguém as podia ter criado — um alarme que
+  --    não é sobre o que diz ser, e que por isso se aprende a ignorar.
+  --
+  --    O sinal de que a linhagem é a de produção é `current_user_has_plus`:
+  --    nasce na mesma migração e é usada por duas destas políticas, por
+  --    isso não há base onde as políticas existam e a função não. Onde ela
+  --    existe, a asserção corre exatamente como antes — em produção nada
+  --    afrouxa. Onde não existe, diz-se o que ficou por verificar, em vez
+  --    de se fingir que se verificou.
+  IF EXISTS (
+    SELECT 1 FROM pg_proc p
+      JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'private' AND p.proname = 'current_user_has_plus'
+  ) THEN
+    SELECT string_agg(p, ', ') INTO em_falta
+    FROM unnest(ARRAY[
+      'cenarios_select_own', 'cenarios_insert_plus',
+      'cenarios_update_plus', 'cenarios_delete_own'
+    ]) AS p
+    WHERE NOT EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = 'cenarios' AND policyname = p
+    );
+    IF em_falta IS NOT NULL THEN
+      RAISE EXCEPTION 'políticas RLS em falta em public.cenarios: %', em_falta;
+    END IF;
+  ELSE
+    RAISE NOTICE 'private.current_user_has_plus() não existe — 20260813_planos_operacionais não corre nesta base. As quatro políticas de cenarios ficaram POR VERIFICAR, e não confirmadas.';
   END IF;
 END
 $verificacao$;

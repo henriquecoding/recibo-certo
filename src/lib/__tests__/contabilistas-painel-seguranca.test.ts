@@ -102,8 +102,10 @@ describe("redesign do painel profissional", () => {
    */
   it("mantém todos os destinos sem os comprimir numa grelha de seis", () => {
     // O número continua fixado de propósito: é o que apanha um destino
-    // removido por acidente.
-    expect(DESTINOS).toHaveLength(10);
+    // removido por acidente. Subiu para 11 com «Dossiês de guia», que é o
+    // segundo destino de um Guia a chegar ao painel — ver
+    // `docs/architecture/motor-dossie-de-guia.md`.
+    expect(DESTINOS).toHaveLength(11);
     expect(LAYOUT).not.toContain("grid-cols-6");
     // E a doca continua a ser uma fila que se adapta, não uma grelha fixa:
     // os lugares crescem para encher a linha em vez de serem espremidos.

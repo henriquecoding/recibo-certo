@@ -313,6 +313,18 @@ export const NAV_DASHBOARD: ItemNavDashboard[] = [
     visibilidade: "recolhivel",
   },
   {
+    // As ligações de dossiê vivem à parte de «O meu contabilista» porque
+    // servem exatamente quem NÃO tem contabilista na plataforma — e essa
+    // página começa por devolver «ainda não tens ninguém ligado».
+    id: "dossies",
+    label: "Dossiês que enviei",
+    curto: "Dossiês",
+    href: "/dashboard/dossies",
+    icone: "BookOpen",
+    seccao: "apoio",
+    visibilidade: "recolhivel",
+  },
+  {
     id: "auditoria",
     label: "Auditoria do recibo",
     curto: "Auditoria",

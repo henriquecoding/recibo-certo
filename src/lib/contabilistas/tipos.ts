@@ -79,7 +79,17 @@ export type TipoPartilha =
    * custos unitários, margem e markup exatos, e nada disso é preciso para
    * um contabilista opinar sobre o preço final. Só a conclusão segue.
    */
-  | "preco_calculado";
+  | "preco_calculado"
+  /**
+   * Dossiê de um Guia: a projeção versionada do que a pessoa leu, mais o
+   * que ela respondeu e marcou.
+   *
+   * É o único tipo cuja lista branca não é escrita em `vinculo.ts` —
+   * delega em `CAMPOS_DO_DOSSIE`, porque o dossiê já tem uma fronteira
+   * própria (`guias/dossie/fronteira.ts`) que corre secção a secção e item
+   * a item. Duas listas para a mesma coisa é uma para divergir.
+   */
+  | "dossie_guia";
 
 export type EstadoCupao = "disponivel" | "usado" | "expirado";
 

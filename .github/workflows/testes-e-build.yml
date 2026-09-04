@@ -60,6 +60,15 @@ jobs:
       - name: Coerência dos dados fiscais nas skills
         run: npm run skills:check
 
+      # O dossiê de um Guia é uma PROJEÇÃO de conteúdo publicado, e é essa a
+      # promessa inteira: o que o contabilista lê é o que está no guia, com
+      # a fonte ao lado. Uma promessa dessas parte-se em silêncio — basta
+      # alguém acrescentar um resumo «para ficar mais legível», ou um campo
+      # novo numa secção. Corre-se à parte do conjunto por causa do log: os
+      # seis portões dizem qual falhou sem ter de se abrir o relatório.
+      - name: Motor de dossiê — projeção, fidelidade, fronteira, áreas e copy
+        run: npm run dossie:check
+
       # Os tipos de aviso vivem em SQL (a restrição de `notificacoes.tipo`) e
       # em TypeScript (a união do catálogo), e nada os obrigava a concordar.
       # Divergiram: quatro tipos que a produção escrevia eram recusados pela
@@ -124,8 +133,11 @@ jobs:
       - name: Configuração da Stripe (avisa sem segredos, reprova se estiver errada)
         run: npm run stripe:check
 
+      # Distingue «encontrou vulnerabilidades» de «não falou com o registo».
+      # O `npm audit` direto devolvia 1 nos dois casos, e a 04/09 reprovou
+      # dois jobs por causa de um 503 do npmjs.org. Ver o cabeçalho do guião.
       - name: Auditoria de dependências (0 vulnerabilidades altas)
-        run: npm audit --audit-level=high
+        run: npm run auditoria:deps
 
   homepage-performance:
     name: Homepage · ${{ matrix.browser }}

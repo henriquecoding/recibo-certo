@@ -321,9 +321,27 @@ export const CONJUNTOS: Conjunto[] = [
       { nome: "caso_encaminhamentos", posse: { por: "pende", de: "casos" } },
       { nome: "caso_documentos", posse: { por: "pende", de: "casos" } },
       { nome: "caso_contactos", posse: { por: "pende", de: "casos" } },
+      // O dossiê de um guia anexado ao caso. Sai com ele, em cascata: é
+      // uma cópia do que a pessoa leu, e sem o caso não é de ninguém.
+      { nome: "caso_dossies", posse: { por: "pende", de: "casos" } },
       { nome: "casos", posse: { por: "coluna", coluna: "cliente_id" } },
     ],
     ficheiros: [{ balde: "contabilista-anexos", prefixo: "vinculo" }],
+  },
+
+  {
+    id: "dossies", grupo: "contabilista",
+    titulo: "Dossiês de guia que enviaste",
+    descricao: "As ligações que criaste para levar um guia ao teu contabilista, mesmo que ele não use a plataforma. Enquanto existirem, quem tiver o endereço consegue ler o dossiê — e os pedidos de elementos que vieram de lá saem com elas.",
+    tabelas: [
+      { nome: "dossie_pedido_itens", posse: { por: "pende", de: "dossie_pedidos" } },
+      // Pende da ORIGEM — partilha, dossiê do caso ou ligação — e as três
+      // cascateiam. A ligação é a que fica aqui porque é a única que não
+      // sai por nenhum outro conjunto.
+      { nome: "dossie_pedidos", posse: { por: "pende", de: "dossie_ligacoes" } },
+      { nome: "dossie_acessos", posse: { por: "pende", de: "dossie_ligacoes" } },
+      { nome: "dossie_ligacoes", posse: { por: "coluna", coluna: "cliente_id" } },
+    ],
   },
 
   // ── Avisos ────────────────────────────────────────────────────────
