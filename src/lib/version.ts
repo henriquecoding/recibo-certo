@@ -15,7 +15,7 @@
 // INSTANTE em que o painel é mostrado (não só ao fechar), pelo que atualizar a
 // página com ele aberto não volta a acender o ponto.
 
-export const APP_VERSION = "2.162.0";
+export const APP_VERSION = "2.163.0";
 export const VERSAO_STORAGE_KEY = "recibocerto:changelog_visto";
 
 export interface EntradaChangelog {

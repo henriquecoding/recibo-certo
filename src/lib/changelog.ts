@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.163.0",
+    data: "2026-09-04",
+    titulo: "A barra de pesquisa do telemóvel desaparecia quando se tocava nela para escrever",
+    itens: [
+      "No telemóvel, tocar na barra de pesquisa fazia-a desaparecer. Não abria e fechava: sumia — a barra, o painel que tinha acabado de abrir e o que já estivesse escrito. A pessoa carregava para procurar uma coisa e ficava com um ecrã sem pesquisa nenhuma, sem erro e sem nada que explicasse o que se tinha passado.",
+      "A causa era o próprio gesto a cancelar-se a si mesmo. A barra vive no fundo do ecrã, e é aí que o teclado do telemóvel abre; para pôr o campo à vista, o browser tem de rolar a página para baixo. Ora a barra de baixo recolhe-se quando se desce na página — de propósito, para dar espaço a quem está a ler — e recolher-se, ali, quer dizer sair do ecrã. O teclado a abrir era lido como quem estava a rolar para ler.",
+      "O cabeçalho do computador já sabia disto há muito: com a pesquisa aberta, não se recolhe. A regra estava escrita numa das duas superfícies e não na outra, e a que ficou para trás foi a do telemóvel — como quase sempre, porque é a que menos se revê. Passa a ser a mesma regra nas duas, e a publicação é bloqueada se uma delas a voltar a perder.",
+      "Havia ainda uma segunda maneira de a barra desaparecer, mais curta e mais difícil de apanhar: quando se toca, a barra dá lugar ao painel de resultados, que é descarregado só nesse momento. Numa rede móvel má isso é quase um segundo em que não estava lá nem uma coisa nem a outra. Agora a barra fica no ecrã até o painel chegar de facto para a substituir — e o primeiro toque já começa a trazê-lo, em vez de esperar pelo segundo.",
+    ],
+  },
+  {
     version: "2.162.0",
     data: "2026-09-03",
     titulo: "Uma auditoria ao site inteiro — o que estava a falhar em silêncio passou a falhar à vista",

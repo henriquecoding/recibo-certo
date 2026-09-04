@@ -81,8 +81,135 @@ import { useTecladoVirtual } from "./ancoragem";
 const ID_PAINEL = "rc-busca-painel-movel";
 const ID_CAMPO = "rc-busca-movel";
 
-/** A mesma fronteira do lançador de secretária: o painel é outro chunk. */
-const PainelPesquisa = dynamic(() => import("./PainelPesquisa"), { ssr: false, loading: () => null });
+/**
+ * A mesma fronteira do lançador de secretária: o painel é outro chunk.
+ *
+ * O `import()` está numa constante para poder ser chamado DUAS vezes — aqui
+ * e no gesto que mostra intenção. A segunda chamada não repete trabalho: um
+ * módulo já pedido devolve a mesma promessa.
+ */
+const importarPainel = () => import("./PainelPesquisa");
+
+/**
+ * Preparar a pesquisa por INTENÇÃO — o índice E o painel.
+ *
+ * Preparava só o índice, e o índice era o chunk que NÃO estava no caminho
+ * crítico do primeiro toque: o painel é que é. No telemóvel o sinal é o
+ * primeiro toque, que chega antes do `click`; é a janela que há para
+ * encurtar a espera de quem está numa rede má.
+ *
+ * O `catch` não é zelo: uma promessa de módulo rejeitada sem tratamento é
+ * um erro não capturado na consola de quem só passou o dedo por cima. Se
+ * falhar, o `dynamic` volta a tentar por sua conta ao abrir.
+ */
+const prepararPesquisa = () => {
+  prepararIndice();
+  importarPainel().catch(() => {});
+};
+
+/**
+ * A BARRA FECHADA — escrita UMA vez, para os dois estados em que aparece.
+ *
+ * Aparece fechada (o estado normal) e aparece enquanto o painel vem a
+ * caminho (o `loading` do `dynamic`). Escrevê-la duas vezes era a forma
+ * garantida de as duas divergirem — e a segunda, que só se vê numa rede
+ * má, é a que ninguém revê.
+ *
+ * `aoAbrir` é o que muda entre os dois: com ele, o toque abre o painel;
+ * sem ele — porque o painel ainda está a chegar — a ligação faz o que uma
+ * ligação faz e leva a `/pesquisar`. Nunca fica um alvo morto debaixo do
+ * dedo.
+ */
+function BarraFechada({ aoAbrir }: { aoAbrir?: () => void }) {
+  return (
+    <div className="flex h-full w-full items-stretch gap-2">
+      <Link
+        href="/pesquisar"
+        id={ID_CAMPO}
+        // Marcador do gatilho móvel: é por aqui que o diálogo global
+        // devolve o foco nos sítios onde ele ainda responde.
+        data-busca-gatilho="movel"
+        aria-label="Pesquisar no Recibo Certo"
+        aria-expanded={false}
+        aria-controls={ID_PAINEL}
+        /**
+         * Preparar por INTENÇÃO, e não à entrada: descarregar o catálogo
+         * em todas as visitas para servir quem procura numa minoria
+         * delas piora exactamente as ligações que este dock existe para
+         * respeitar. No telemóvel o sinal é o primeiro toque, que chega
+         * antes do `click`. Ver `prepararPesquisa`.
+         */
+        onTouchStart={prepararPesquisa}
+        onPointerEnter={prepararPesquisa}
+        onFocus={prepararPesquisa}
+        onClick={(e) => {
+          // `⌘/Ctrl/Shift/Alt + clique` e o botão do meio pertencem ao
+          // browser — são as formas de abrir noutro separador.
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          // Sem `aoAbrir` — o painel está a caminho e ainda não há nada
+          // para abrir — a ligação vale por si e leva a `/pesquisar`.
+          if (!aoAbrir) return;
+          e.preventDefault();
+          aoAbrir();
+        }}
+        className="focus-marca group flex h-[var(--rc-dock-movel-h)] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-4 text-left no-underline shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-200 hover:border-brand/40 active:border-brand/60 dark:border-stone-700 dark:bg-stone-900/95 dark:hover:border-brand/40"
+      >
+        <Search
+          size={17}
+          className="flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand"
+          aria-hidden
+        />
+        {/* A mesma frase do lançador de secretária. São a mesma
+            pesquisa: dizer «Pesquisar…» aqui e «O que precisas de
+            resolver?» lá faria parecer duas coisas diferentes a quem
+            usa o produto nos dois sítios.
+
+            `stone-600` e não `stone-500`: sobre o `cream` da barra o
+            500 dá 4,42:1 e a régua da WCAG AA é 4,5:1. */}
+        <span className="min-w-0 flex-1 truncate text-sm text-stone-600 dark:text-stone-400">
+          O que precisas de resolver?
+        </span>
+        {/**
+         * NÃO acrescentar aqui um quadrado verde com uma lupa. É o
+         * desenho óbvio para um dock de telemóvel e foi exactamente o
+         * que saiu do lançador de secretária (P2-02): o mesmo ícone nas
+         * duas extremidades do mesmo elemento é duas vezes o mesmo
+         * significado. Lá o lado direito passou a dizer o atalho de
+         * teclado; aqui não há atalho a dizer, e um lugar vazio é
+         * melhor do que um repetido.
+         */}
+      </Link>
+      <AtalhoApoioMovel />
+    </div>
+  );
+}
+
+/**
+ * ┌─────────────────────────────────────────────────────────────────────┐
+ * │ O `loading` ERA `() => null`, E ISSO É A BARRA A DESAPARECER         │
+ * │                                                                     │
+ * │ A barra fechada e o painel são o mesmo lugar: `aberto` troca um pelo │
+ * │ outro. Com `loading: () => null`, entre o toque e o chunk chegar não │
+ * │ havia NENHUM dos dois — a caixa ficava vazia e a pesquisa            │
+ * │ desaparecia do ecrã. Medido numa rede móvel má: ~900 ms de nada, no  │
+ * │ instante exacto em que a pessoa acabou de tocar para escrever. O     │
+ * │ diagnóstico dela é o óbvio e o certo: «carreguei e sumiu».           │
+ * │                                                                     │
+ * │ O `loading` passa a ser a PRÓPRIA barra fechada. Enquanto o painel   │
+ * │ não chega, o que está lá é o que já lá estava — nada se move, nada   │
+ * │ pisca, e quem tocar outra vez continua a ter debaixo do dedo uma     │
+ * │ ligação para `/pesquisar`, que é a pesquisa inteira numa página.     │
+ * │ É a mesma razão de isto ser uma ligação e não um botão, aplicada ao  │
+ * │ estado que faltava.                                                 │
+ * │                                                                     │
+ * │ Sem `id` duplicado: o painel e este substituto NUNCA coexistem —     │
+ * │ enquanto o `loading` está no ecrã, o painel ainda não montou.        │
+ * └─────────────────────────────────────────────────────────────────────┘
+ */
+const PainelPesquisa = dynamic(importarPainel, {
+  ssr: false,
+  loading: () => <BarraFechada />,
+});
 
 export function DockMovel() {
   const pathname = usePathname();
@@ -197,62 +324,7 @@ export function DockMovel() {
               aoFecharComFoco={fecharComFoco}
             />
           ) : (
-            <div className="flex h-full w-full items-stretch gap-2">
-            <Link
-              href="/pesquisar"
-              id={ID_CAMPO}
-              // Marcador do gatilho móvel: é por aqui que o diálogo global
-              // devolve o foco nos sítios onde ele ainda responde.
-              data-busca-gatilho="movel"
-              aria-label="Pesquisar no Recibo Certo"
-              aria-expanded={false}
-              aria-controls={ID_PAINEL}
-              /**
-               * Preparar o índice por INTENÇÃO, e não à entrada: descarregar
-               * o catálogo em todas as visitas para servir quem procura numa
-               * minoria delas piora exactamente as ligações que este dock
-               * existe para respeitar. No telemóvel o sinal é o primeiro
-               * toque, que chega antes do `click`.
-               */
-              onTouchStart={prepararIndice}
-              onPointerEnter={prepararIndice}
-              onFocus={prepararIndice}
-              onClick={(e) => {
-                // `⌘/Ctrl/Shift/Alt + clique` e o botão do meio pertencem ao
-                // browser — são as formas de abrir noutro separador.
-                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-                e.preventDefault();
-                abrir();
-              }}
-              className="focus-marca group flex h-[var(--rc-dock-movel-h)] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-stone-200 bg-white/95 px-4 text-left no-underline shadow-lift backdrop-blur-xl transition-[border-color,box-shadow] duration-200 hover:border-brand/40 active:border-brand/60 dark:border-stone-700 dark:bg-stone-900/95 dark:hover:border-brand/40"
-            >
-              <Search
-                size={17}
-                className="flex-shrink-0 text-stone-400 transition-colors group-hover:text-brand"
-                aria-hidden
-              />
-              {/* A mesma frase do lançador de secretária. São a mesma
-                  pesquisa: dizer «Pesquisar…» aqui e «O que precisas de
-                  resolver?» lá faria parecer duas coisas diferentes a quem
-                  usa o produto nos dois sítios.
-
-                  `stone-600` e não `stone-500`: sobre o `cream` da barra o
-                  500 dá 4,42:1 e a régua da WCAG AA é 4,5:1. */}
-              <span className="min-w-0 flex-1 truncate text-sm text-stone-600 dark:text-stone-400">
-                O que precisas de resolver?
-              </span>
-              {/**
-               * NÃO acrescentar aqui um quadrado verde com uma lupa. É o
-               * desenho óbvio para um dock de telemóvel e foi exactamente o
-               * que saiu do lançador de secretária (P2-02): o mesmo ícone nas
-               * duas extremidades do mesmo elemento é duas vezes o mesmo
-               * significado. Lá o lado direito passou a dizer o atalho de
-               * teclado; aqui não há atalho a dizer, e um lugar vazio é
-               * melhor do que um repetido.
-               */}
-            </Link>
-            <AtalhoApoioMovel />
-            </div>
+            <BarraFechada aoAbrir={abrir} />
           )}
         </div>
       </div>

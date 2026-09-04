@@ -48,6 +48,7 @@ const BUSCA_GLOBAL = ler("components", "busca", "BuscaGlobal.tsx");
 const BOTAO_TOPO = ler("components", "ui", "BotaoTopo.tsx");
 const CSS = ler("app", "globals.css");
 const LAYOUT = ler("app", "layout.tsx");
+const NAV = ler("components", "Nav.tsx");
 
 describe("chrome-movel:barra", () => {
   it("os lugares DERIVAM da fonte única — não são uma segunda lista", () => {
@@ -301,6 +302,77 @@ describe("chrome-movel:dock", () => {
     // pelo grafo de imports, está em `busca-fronteira.test.ts`.)
     expect(DOCK).toContain('from "@/lib/busca/indice"');
     expect(DOCK).not.toContain("lib/busca/documentos");
+  });
+});
+
+describe("chrome-movel:recolher", () => {
+  it("o chrome NÃO se recolhe com a pesquisa aberta", () => {
+    // ┌───────────────────────────────────────────────────────────────┐
+    // │ O DEFEITO QUE ISTO EXISTE PARA TORNAR IMPOSSÍVEL               │
+    // │                                                               │
+    // │ Recolher DESMONTA o dock (`{!compacto ? <DockMovel /> : null}`)│
+    // │ — não o esconde, tira-o da árvore. E a pessoa que toca na      │
+    // │ barra provoca ela própria o recolher, sem saber:               │
+    // │                                                               │
+    // │   toque → painel abre → campo recebe foco → teclado virtual    │
+    // │   sobe → o browser ROLA a página para pôr o campo à vista →    │
+    // │   isso é uma descida de mais de 10 px → o chrome recolhe →     │
+    // │   o dock desmonta → a pesquisa desaparece.                     │
+    // │                                                               │
+    // │ Barra, painel e o que estivesse escrito, tudo. Sem erro, sem   │
+    // │ aviso, e no instante exacto em que a pessoa acabou de tocar    │
+    // │ para escrever — o relato dela é «carreguei e sumiu».            │
+    // │                                                               │
+    // │ Medido: a 360 e a 320 px, nos dois temas, um scroll de 90 px   │
+    // │ com o painel aberto deixava o ecrã sem barra e sem painel.      │
+    // └───────────────────────────────────────────────────────────────┘
+    expect(CHROME).toContain("useBuscaAberta");
+    // DERIVADO, e não um efeito a repor o estado: com um efeito haveria
+    // um commit pelo meio com o dock fora da árvore, e um commit chega
+    // para levar o painel e o foco.
+    expect(CHROME).toContain("const compacto = recolhidoPorScroll && !buscaAberta;");
+    expect(semComentarios(CHROME)).not.toMatch(/setCompacto\s*\(/);
+  });
+
+  it("o ouvinte de scroll nem se regista com a pesquisa aberta", () => {
+    // Filtrar só o resultado resolvia o ecrã e deixava uma armadilha: o
+    // scroll do teclado punha o estado a verdade em silêncio, e FECHAR a
+    // pesquisa fazia o chrome desaparecer no mesmo instante — inclusive a
+    // barra a quem o `DockMovel` devolve o foco ao fechar com Escape.
+    expect(CHROME).toContain("if (buscaAberta) return;");
+    expect(CHROME).toContain("}, [pathname, buscaAberta]);");
+  });
+
+  it("as duas superfícies leem o MESMO sinal", () => {
+    // O cabeçalho de secretária já tinha a regra (`corpoVisivel = … ||
+    // buscaAberta`) e o telemóvel não. Foi assim que as duas versões da
+    // mesma coisa divergiram — e a do telemóvel é sempre a que fica para
+    // trás, porque é a que quase ninguém revê.
+    for (const [nome, fonte] of [
+      ["ChromeMobile", CHROME],
+      ["Nav", NAV],
+    ] as const) {
+      expect(fonte, `${nome} tem de ler o estado da pesquisa`).toContain("useBuscaAberta()");
+    }
+  });
+
+  it("a barra não sai do ecrã enquanto o painel vem a caminho", () => {
+    // O painel entra por `next/dynamic`, e a barra e o painel são o mesmo
+    // lugar: `aberto` troca um pelo outro. Com `loading: () => null` não
+    // havia NENHUM dos dois entre o toque e o chunk chegar — medido numa
+    // rede móvel má, ~900 ms de caixa vazia. É o mesmo relato, por outra
+    // via, e a mesma razão de isto ser uma ligação e não um botão.
+    // `semComentarios` porque o quadro do `DockMovel` CITA o antigo
+    // `loading: () => null` para explicar o defeito que ele causava —
+    // apagar a explicação seria a saída errada. Ver a nota no topo.
+    expect(semComentarios(DOCK)).not.toContain("loading: () => null");
+    expect(DOCK).toContain("loading: () => <BarraFechada />");
+    // Escrita UMA vez para os dois estados: uma segunda cópia da barra é
+    // uma cópia que só se vê numa rede má, e que ninguém revê.
+    expect(DOCK.match(/data-busca-gatilho="movel"/g)).toHaveLength(1);
+    // E o toque prepara também o chunk do painel — era só o índice, que é
+    // justamente o que NÃO está no caminho crítico do primeiro toque.
+    expect(DOCK).toContain("importarPainel().catch(() => {});");
   });
 });
 
