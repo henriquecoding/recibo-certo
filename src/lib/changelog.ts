@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.165.1",
+    data: "2026-09-04",
+    titulo: "Uma frase dizia que levar o caso a um contabilista não exigia conta. Exige",
+    itens: [
+      "No fim de cada guia, por baixo de «Levar este caso a um contabilista», estava escrito «gratuito, sem plano e sem conta obrigatória». As duas primeiras são verdade e continuam a ser. A terceira estava a juntar duas coisas diferentes: sem conta levas o FICHEIRO — o dossiê em Markdown, CSV, .ics ou JSON, para entregares como quiseres. Para o enviar por aqui a um contabilista, seja ao que já tens, seja a um da plataforma, seja pela ligação privada, precisas de entrar na tua conta.",
+      "Quem continua a abrir sem conta é o contabilista do outro lado: a ligação privada foi feita exatamente para isso, e é dela que a promessa era verdadeira. A frase é que a estendia a quem a cria.",
+      "Corrigida nos dois cartões, e passou a haver um teste que bloqueia a publicação se alguém voltar a escrever que ligar-se a um contabilista dispensa conta.",
+      "Ao mesmo tempo, um aperto na base de dados que não muda nada do que vês: as cinco tabelas novas do dossiê já tinham a porta fechada ao visitante anónimo pelas regras de acesso, e passam a ter também os privilégios retirados. É a diferença entre uma fechadura e uma parede — e a casa já tinha decidido, há muito, que quer as duas.",
+    ],
+  },
+  {
     version: "2.165.0",
     data: "2026-09-04",
     titulo: "No fim de um guia passa a haver uma porta para o contabilista — e o que segue é um dossiê, não um link",
