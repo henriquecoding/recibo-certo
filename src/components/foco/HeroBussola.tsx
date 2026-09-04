@@ -689,7 +689,7 @@ const Linha = memo(function Linha({
         href={ROTA_POR_FOCO[foco.id]}
         data-foco-destino={foco.id}
         prefetch={false}
-        scroll={false}
+        // Sem `scroll={false}`: muda de rota. Ver `ChromeMobile.tsx`.
         tabIndex={comTab ? 0 : -1}
         aria-current={ativo ? "true" : undefined}
         aria-busy={pendente === foco.id || undefined}

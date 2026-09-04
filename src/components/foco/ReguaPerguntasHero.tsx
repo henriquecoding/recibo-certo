@@ -46,7 +46,7 @@ export default function ReguaPerguntasHero({ focoAtivo }: { focoAtivo: FocoHomep
                 href={href}
                 data-foco-destino={item.id}
                 prefetch={false}
-                scroll={false}
+                // Sem `scroll={false}`: muda de rota. Ver `ChromeMobile.tsx`.
                 aria-current={ativo ? "step" : undefined}
                 aria-busy={pendente === item.id || undefined}
                 onPointerEnter={() => preparar(item.id)}

@@ -167,7 +167,9 @@ describe("homepage: compatibilidade e intenção", () => {
     expect(ligacao).toContain('evento.key === "Enter"');
     expect(ligacao).toContain("evento.preventDefault()");
     expect(ligacao).toContain('iniciar(foco, "teclado")');
-    expect(ligacao).toContain("router.push(ROTA_POR_FOCO[foco], { scroll: false })");
+    // Sem `{ scroll: false }`: o caminho do teclado navega para outra rota e
+    // tem de abrir no princípio, como o do dedo. Ver `navegacao-scroll.test.ts`.
+    expect(ligacao).toContain("router.push(ROTA_POR_FOCO[foco])");
     expect(fonte).toContain("performance.now() - navegacaoAtual.inicio < 1_000");
     expect(fonte).toContain("__rcNavegacaoPendente");
     expect(fonte).toContain("lerNavegacaoPendente()");

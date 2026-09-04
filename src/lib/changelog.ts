@@ -16,6 +16,19 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.164.0",
+    data: "2026-09-04",
+    titulo: "Carregar num sítio para ver uma coisa e aterrar no rodapé — acabou",
+    itens: [
+      "Havia páginas que abriam a meio, ou no fim. Carregavas num resultado da pesquisa, ou num dos cinco separadores da barra de baixo, e em vez do princípio da página aparecia o rodapé — o fim de uma coisa que ainda não tinhas começado a ler. Não dava erro nenhum: a página certa abria, com o conteúdo certo. Só o sítio é que estava errado.",
+      "Medido no telemóvel, com a página a três quartos e a tocar num separador: cinco das dez combinações da barra de baixo abriam a página entre 64% e 88% da altura. Tocar em «Preço» a partir da página inicial aterrava a 88% — ou seja, no rodapé.",
+      "A causa eram cinco ligações que traziam a instrução de «não mexer no scroll» ao mudar de página. Entraram todas de uma vez, coladas a uma outra afinação que essa sim fazia sentido, e nenhuma tinha uma linha a justificá-la. Foram removidas.",
+      "Isso corrigiu a maior parte, e não tudo — o Next.js ainda decidia sozinho, por uma regra sua, que certas páginas «já estavam à vista» e não as punha no princípio. Passa a haver uma garantia única, para o site inteiro: mudar de página abre-a no princípio, e ponto.",
+      "Com três cuidados, porque a correcção ao contrário seria igualmente má: se pediste uma âncora, é a âncora que manda; se recarregaste a página a meio de uma leitura, ficas onde estavas; e se começaste a rolar, o site larga a página no primeiro toque — nada volta a mexer-se debaixo do teu dedo.",
+      "A verificação passou de 5 aterragens erradas em 25 percursos para zero, e há agora um teste que bloqueia a publicação se alguém voltar a desligar isto.",
+    ],
+  },
+  {
     version: "2.163.0",
     data: "2026-09-04",
     titulo: "A barra de pesquisa do telemóvel desaparecia quando se tocava nela para escrever",

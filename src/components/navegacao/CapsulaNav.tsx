@@ -106,7 +106,9 @@ export default function CapsulaNav({ foco = null }: { foco?: FocoHomepage | null
               //  pointerdown. Ele deduplica, respeita Save-Data/2g e mantém
               //  uma única operação especulativa em curso.
               prefetch={false}
-              scroll={false}
+              // Sem `scroll={false}`: uma navegação que muda de rota tem de
+              // pôr a página nova no princípio. Ver o quadro em
+              // `ChromeMobile.tsx` — esteve aqui e abria as páginas no rodapé.
               aria-label={pilar.label}
               aria-current={ativo ? "page" : undefined}
               aria-busy={pendente === pilar.id || undefined}

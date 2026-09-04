@@ -304,7 +304,30 @@ export default function ChromeMobile() {
             return (
               <Link
                 prefetch={false}
-                scroll={false}
+                // ┌───────────────────────────────────────────────────────┐
+                // │ NÃO VOLTAR A PÔR AQUI `scroll={false}`                 │
+                // │                                                       │
+                // │ Esteve aqui, colado ao `prefetch={false}` e sem uma    │
+                // │ linha a justificá-lo — os dois entraram no mesmo       │
+                // │ commit, e só o primeiro tinha razão escrita. O segundo │
+                // │ desliga o único trabalho que o Next faz por nós numa   │
+                // │ navegação: pôr a página nova no princípio.             │
+                // │                                                       │
+                // │ O efeito, medido a 390×780: com a página rolada a 75 % │
+                // │ e a tocar num pilar, a rota mudava e o scroll ficava   │
+                // │ onde estava — `/inicio/preco` a abrir a 88 % da        │
+                // │ altura, ou seja, no rodapé. Cinco de dez combinações   │
+                // │ de pilares aterravam entre 64 % e 88 %.                │
+                // │                                                       │
+                // │ É a pior forma de o produto falhar: a pessoa pede      │
+                // │ para VER uma coisa e recebe o fim de outra. E não dá   │
+                // │ erro nenhum — a rota está certa, o conteúdo está       │
+                // │ certo, só o sítio da página é que não.                 │
+                // │                                                       │
+                // │ O `onClick` abaixo continua a tratar do caso que o     │
+                // │ Next não trata: tocar no pilar onde JÁ se está não é   │
+                // │ navegação, e sem ele não voltava ao princípio.         │
+                // └───────────────────────────────────────────────────────┘
                 key={slot.id}
                 href={destino}
                 // O nome acessível é sempre o COMPLETO, mesmo quando o que

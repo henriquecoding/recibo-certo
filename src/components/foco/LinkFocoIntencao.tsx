@@ -44,7 +44,8 @@ export default function LinkFocoIntencao({ foco, className = "", ...props }: Pro
       href={ROTA_POR_FOCO[foco]}
       data-foco-destino={foco}
       prefetch={false}
-      scroll={false}
+      // Sem `scroll={false}`: muda de rota, logo abre no princípio.
+      // Ver o quadro em `ChromeMobile.tsx`.
       onPointerEnter={() => preparar(foco)}
       onFocus={() => preparar(foco)}
       onKeyDown={(evento) => {
@@ -65,7 +66,9 @@ export default function LinkFocoIntencao({ foco, className = "", ...props }: Pro
           // real e funcional sem JavaScript.
           requestAnimationFrame(() => {
             setTimeout(() => {
-              router.push(ROTA_POR_FOCO[foco], { scroll: false });
+              // Sem `{ scroll: false }`, pela mesma razão do `Link` acima: o
+              // caminho do teclado tem de aterrar onde o do dedo aterra.
+              router.push(ROTA_POR_FOCO[foco]);
             }, 0);
           });
         }
