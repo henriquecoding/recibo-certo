@@ -57,6 +57,25 @@ interface FizNextStepProps {
   /** Campos que este Guia propõe transferir, já com valores legíveis. */
   camposPropostos?: CampoConsentimento[];
   camposNuncaEnviados?: readonly string[];
+  /**
+   * O PESO deste bloco na página, não o seu conteúdo.
+   *
+   * `principal` é o cartão de sempre — tinta da FIZ, `h2`, botão cheio — e
+   * continua a ser o que sai por omissão em todas as superfícies que já o
+   * usavam. `secundaria` desenha o MESMO bloco, com a mesma divulgação,
+   * num porte que não compete com a ação que está por cima.
+   *
+   * Existe porque no fim de um Guia há duas saídas, e nunca podem ter o
+   * mesmo peso: duas ações iguais no fim de uma página é a forma garantida
+   * de ninguém clicar em nenhuma. Quando o guia marca matéria que depende
+   * do caso concreto, quem lidera é o contabilista e a FIZ recolhe — e
+   * quando não marca, é ao contrário.
+   *
+   * ⚠️ O que NÃO muda com esta variante é a divulgação da relação
+   * comercial: `FizDisclosure` aparece nas duas, porque «rotular antes do
+   * clique» não é uma questão de porte.
+   */
+  variante?: "principal" | "secundaria";
 }
 
 const NUNCA_ENVIADOS_PADRAO = [
@@ -69,6 +88,7 @@ export default function FizNextStep({
   acaoInicial = null,
   camposPropostos = [],
   camposNuncaEnviados = NUNCA_ENVIADOS_PADRAO,
+  variante = "principal",
 }: FizNextStepProps) {
   const [acao, setAcao] = useState<AcaoResolvida | null>(acaoInicial);
   const [carregado, setCarregado] = useState(acaoInicial !== null);
@@ -146,21 +166,41 @@ export default function FizNextStep({
 
   const indisponivelTemporario = acao.estado === "fiz_indisponivel";
 
+  const quieto = variante === "secundaria";
+  const Titulo = quieto ? "h3" : "h2";
+
   return (
     <section
       aria-labelledby={`fiz-proximo-${slug}`}
-      className="mt-8 overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 shadow-card"
+      className={
+        quieto
+          ? "mt-4 overflow-hidden rounded-4xl border border-stone-200 bg-white shadow-card dark:border-stone-700 dark:bg-stone-900"
+          : "mt-8 overflow-hidden rounded-4xl border border-fiz-200 bg-fiz-50 shadow-card"
+      }
     >
       <div className="p-5 sm:p-6">
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-fiz-700">Próximo passo</span>
-          <span aria-hidden className="text-fiz-400">·</span>
+          <span
+            className={`text-[11px] font-semibold uppercase tracking-wider ${
+              quieto ? "text-stone-400" : "text-fiz-700"
+            }`}
+          >
+            {quieto ? "Ou, para executar" : "Próximo passo"}
+          </span>
+          <span aria-hidden className={quieto ? "text-stone-300" : "text-fiz-400"}>·</span>
           <FizMarca size={15} />
         </div>
 
-        <h2 id={`fiz-proximo-${slug}`} className="font-display text-xl font-semibold text-ink">
+        <Titulo
+          id={`fiz-proximo-${slug}`}
+          className={
+            quieto
+              ? "font-display text-base font-semibold text-ink sm:text-lg"
+              : "font-display text-xl font-semibold text-ink"
+          }
+        >
           {indisponivelTemporario ? "Continuação temporariamente indisponível" : acao.rotulo}
-        </h2>
+        </Titulo>
 
         <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-stone-600 dark:text-stone-400">
           {indisponivelTemporario
@@ -184,7 +224,7 @@ export default function FizNextStep({
                 Sem diálogo de consentimento — não há nada a consentir,
                 porque não segue nada. */}
             {acao.estado === "disponivel_ligacao" && acao.destinoLigacao && (
-              <FizActionButton href={acao.destinoLigacao}>{acao.rotulo}</FizActionButton>
+              <FizActionButton variante={quieto ? "secundaria" : "primaria"} href={acao.destinoLigacao}>{acao.rotulo}</FizActionButton>
             )}
 
             {acao.estado === "disponivel_por_ligar" && (
@@ -193,25 +233,25 @@ export default function FizNextStep({
                   <LinkIcon size={13} className="mt-0.5 flex-shrink-0 text-fiz-700" />
                   <span>Para veres o teu estado real, liga a tua conta FIZ. Sem ligação, mostramos apenas regras gerais.</span>
                 </p>
-                <FizActionButton href="/dashboard/conta?ligar=fiz">Ligar a minha conta FIZ</FizActionButton>
+                <FizActionButton variante={quieto ? "secundaria" : "primaria"} href="/dashboard/conta?ligar=fiz">Ligar a minha conta FIZ</FizActionButton>
               </div>
             )}
 
             {acao.estado === "disponivel_criar_conta" && (
               <>
                 {acao.requiresConsent && camposPropostos.length > 0 ? (
-                  <FizActionButton onClick={() => setDialogoAberto(true)}>{acao.rotulo}</FizActionButton>
+                  <FizActionButton variante={quieto ? "secundaria" : "primaria"} onClick={() => setDialogoAberto(true)}>{acao.rotulo}</FizActionButton>
                 ) : (
-                  <FizActionButton href="/dashboard/conta?ligar=fiz">{acao.rotulo}</FizActionButton>
+                  <FizActionButton variante={quieto ? "secundaria" : "primaria"} href="/dashboard/conta?ligar=fiz">{acao.rotulo}</FizActionButton>
                 )}
               </>
             )}
 
             {acao.estado === "disponivel_ligado" &&
               (acao.requiresConsent && camposPropostos.length > 0 ? (
-                <FizActionButton onClick={() => setDialogoAberto(true)}>{acao.rotulo}</FizActionButton>
+                <FizActionButton variante={quieto ? "secundaria" : "primaria"} onClick={() => setDialogoAberto(true)}>{acao.rotulo}</FizActionButton>
               ) : (
-                <FizActionButton href="/dashboard/conta?ligar=fiz">{acao.rotulo}</FizActionButton>
+                <FizActionButton variante={quieto ? "secundaria" : "primaria"} href="/dashboard/conta?ligar=fiz">{acao.rotulo}</FizActionButton>
               ))}
 
             {acao.estado === "requer_plano_fiz" && (

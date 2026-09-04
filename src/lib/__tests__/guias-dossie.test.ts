@@ -426,6 +426,64 @@ describe("dossie:passo", () => {
   });
 });
 
+describe("dossie:hierarquia", () => {
+  // ┌───────────────────────────────────────────────────────────────────┐
+  // │ SER MAIS LEVE NÃO É SER INVISÍVEL                                  │
+  // │                                                                   │
+  // │ A segunda saída de um Guia nasceu como uma linha de texto          │
+  // │ sublinhada, por baixo de um cartão amarelo com um botão cheio.     │
+  // │ Cumpria a regra («nunca duas ações do mesmo peso») e falhava o     │
+  // │ objetivo: existia no HTML e não existia no ecrã.                   │
+  // │                                                                   │
+  // │ A regra certa tem dois lados, e este teste guarda os dois: quem    │
+  // │ lidera tem porte de líder, e quem segue tem porte de segundo —     │
+  // │ mas os dois são cartões, com título, números e botão.             │
+  // └───────────────────────────────────────────────────────────────────┘
+  const ler = (p: string) => readFileSync(join(SRC, p), "utf8");
+  const conta = (texto: string, agulha: string) => texto.split(agulha).length - 1;
+
+  const DOSSIE = ler(join("components", "guias", "dossie", "DossieDoGuia.tsx"));
+  const PASSO = ler(join("components", "guias", "ProximoPassoDoGuia.tsx"));
+  const FIZ = ler(join("components", "fiz", "FizNextStep.tsx"));
+
+  it("cada saída tem um líder e, quando há segunda, um segundo", () => {
+    // Dois ramos — FIZ à frente, contabilista à frente — e em cada um
+    // exatamente uma ação com porte de líder.
+    expect(conta(PASSO, 'variante="principal"')).toBe(2);
+    expect(conta(PASSO, 'variante="secundaria"')).toBe(2);
+  });
+
+  it("a variante secundária do dossiê é um cartão, não uma linha sublinhada", () => {
+    expect(DOSSIE).toContain("<section");
+    // O botão que abre a folha existe nas duas variantes — e nunca como
+    // texto sublinhado, que foi o que a tornou invisível.
+    expect(DOSSIE).not.toMatch(/onClick=\{abrir\}[\s\S]{0,200}?underline/);
+    expect(conta(DOSSIE, "onClick={abrir}")).toBe(2);
+  });
+
+  it("os dois botões não têm o mesmo peso", () => {
+    // O líder leva o botão cheio (sem `variant`, que é `primary`); o
+    // segundo leva o de contorno.
+    expect(DOSSIE).toContain('<Button variant="secondary" size="sm" onClick={abrir}>');
+    expect(DOSSIE).toContain("<Button onClick={abrir}>");
+  });
+
+  it("o líder do dossiê tem o mesmo porte do cartão da FIZ", () => {
+    // Tinta própria, `h2` e `text-xl` — como o cartão da FIZ. Sem isto, a
+    // rota escolhida em 147 guias aparecia mais fraca do que a alternativa.
+    expect(DOSSIE).toContain("bg-brand-light");
+    expect(DOSSIE).toMatch(/<h2[\s\S]{0,200}?font-display text-xl font-semibold/);
+    expect(FIZ).toContain("font-display text-xl font-semibold text-ink");
+  });
+
+  it("a FIZ sabe recolher — e a divulgação não recolhe com ela", () => {
+    expect(FIZ).toContain('variante?: "principal" | "secundaria"');
+    // A divulgação da relação comercial é uma só, fora de qualquer ramo:
+    // «rotular antes do clique» não é uma questão de porte.
+    expect(conta(FIZ, "<FizDisclosure")).toBe(1);
+  });
+});
+
 describe("dossie:copy", () => {
   it("as fronteiras estão escritas em código e não só no relatório", () => {
     expect(DOSSIE_NUNCA.length).toBeGreaterThanOrEqual(8);

@@ -53,10 +53,13 @@ export default async function ProximoPassoDoGuia({ slug }: { slug: string }) {
   // custava um round-trip por visita e nenhum link sem JavaScript.
   const acaoFiz = m.fizAction ? await resolverAcaoDoGuia({ slug, placement: "NEXT_STEP" }) : null;
 
+  // A ordem no ecrã é a ordem da hierarquia, e o PORTE acompanha-a. Um
+  // cartão cheio por baixo de outro cartão cheio não é uma segunda opção:
+  // é a mesma decisão pedida duas vezes, e é assim que se perde as duas.
   if (passo.principal === "fiz") {
     return (
       <>
-        <FizNextStep slug={slug} acaoInicial={acaoFiz} />
+        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="principal" />
         {passo.secundario === "contabilista" && (
           <DossieDoGuia projecao={projecao} variante="secundaria" rota="fiz" />
         )}
@@ -73,12 +76,8 @@ export default async function ProximoPassoDoGuia({ slug }: { slug: string }) {
         rota="contabilista"
       />
       {passo.secundario === "fiz" && (
-        <p className="mt-3 text-sm leading-relaxed text-stone-500 dark:text-stone-400">
-          Se o que queres é executar — emitir, faturar, declarar — a FIZ faz esse trabalho.
-          O bloco abaixo continua a ser o mesmo.
-        </p>
+        <FizNextStep slug={slug} acaoInicial={acaoFiz} variante="secundaria" />
       )}
-      {passo.secundario === "fiz" && <FizNextStep slug={slug} acaoInicial={acaoFiz} />}
     </>
   );
 }
