@@ -16,6 +16,15 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.166.1",
+    data: "2026-09-05",
+    titulo: "A proteção da conta dona passa a ser verificada a cada alteração, e não uma vez",
+    itens: [
+      "Nada muda no que vês. A proteção que impede um administrador de tirar a administração à conta dona do projeto já estava a funcionar; o que faltava era ela ficar guardada por um teste que corre sozinho.",
+      "Passou a haver um cenário que arranca uma base de dados a sério, aplica as migrações duas vezes e tenta, com sessão de outro administrador, as três coisas que teriam de ser recusadas — despromover a conta dona, marcar-se a si próprio como dona, e levantar a proteção de outra pessoa. Verifica também o que tem de continuar a passar: o caminho de recuperação, sem o qual perder o acesso à conta dona trancaria o projeto para sempre.",
+    ],
+  },
+  {
     version: "2.166.0",
     data: "2026-09-05",
     titulo: "A conta dona do projeto deixa de poder ser despromovida por quem recebeu dela a administração",
