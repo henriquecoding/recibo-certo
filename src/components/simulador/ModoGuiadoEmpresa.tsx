@@ -59,7 +59,6 @@ import {
   Globe,
   Laptop,
   Plane,
-  Lightbulb,
   Invoice,
   Coin,
 } from "@/components/ui/Icons";
@@ -139,9 +138,9 @@ import FizPlanoAcao from "@/components/fiz/FizPlanoAcao";
 import { situacaoIVA } from "@/lib/fiscal-iva";
 import SituacaoIVAPainel from "@/components/simulador/SituacaoIVA";
 import ContabilistasNoResultado from "@/components/diretorio/ContabilistasNoResultado";
+import PortaDescoberta from "@/components/simulador/PortaDescoberta";
 import EnviarAoContabilista from "@/components/contabilistas/EnviarAoContabilista";
 import { FISCAL_YEAR } from "@/lib/fiscal-year";
-import { registar } from "@/lib/analytics/cliente";
 import { GuiadoStepper } from "@/components/simulador/guiado-ui";
 
 // ─── Constantes fiscais — derivadas de fiscal-data.ts ────────────────────────
@@ -1182,37 +1181,12 @@ export default function ModoGuiadoEmpresa({
                       última decisão, não a primeira: o motor de descoberta
                       é que responde à pergunta que vem antes desta.
 
-                      É um `<Link>` e não um passo: muda de ferramenta, e
-                      fingir o contrário escondia para onde se vai. */}
-                  <Link
-                    href="/ferramentas/descobrir-negocio"
-                    onClick={() =>
-                      registar("simulator_step", {
-                        tool_id: "simulador-empresa",
-                        step_id: "sem_negocio_para_descoberta",
-                        outcome: "ok",
-                      })
-                    }
-                    className="group flex w-full items-center gap-3 rounded-3xl border-2 border-dashed border-stone-200 bg-stone-50/60 p-4 text-left transition-all hover:border-brand hover:bg-white hover:shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-brand dark:border-stone-700 dark:bg-stone-900/40 dark:hover:bg-stone-900"
-                  >
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-stone-100 text-stone-500 transition-colors group-hover:bg-brand group-hover:text-white dark:bg-stone-800">
-                      <Lightbulb size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-stone-800 dark:text-stone-100">
-                        Ainda não sei que negócio vou ter
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-relaxed text-stone-500 dark:text-stone-400">
-                        Descobre o que podes vender a partir do que sabes
-                        fazer, com sinais oficiais de mercado — e volta aqui
-                        com números que não são um palpite
-                      </span>
-                    </span>
-                    <ArrowRight
-                      size={16}
-                      className="flex-shrink-0 text-stone-300 transition-colors group-hover:text-brand"
-                    />
-                  </Link>
+                      Estava escrita aqui à mão, e por isso o simulador de
+                      recibos verdes — que faz a MESMA pergunta à entrada —
+                      não tinha porta nenhuma. Agora é uma primitiva
+                      partilhada, que também marca o bilhete de regresso:
+                      ver `PortaDescoberta`. */}
+                  <PortaDescoberta origem="simulador-empresa" />
                 </div>
               </>
             )}
@@ -1286,18 +1260,12 @@ export default function ModoGuiadoEmpresa({
                     o mesmo peso do botão principal seria insistir. Existe
                     para quem carregou no botão errado — e para quem, ao ler
                     os custos fixos de uma sociedade, percebe que ainda não
-                    tem receita nenhuma para os pagar. */}
-                <p className="mt-4 border-t border-stone-100 pt-4 text-center text-[11px] leading-relaxed text-stone-400 dark:border-stone-800">
-                  Ainda não decidiste o que a empresa vai vender?{" "}
-                  <Link
-                    href="/ferramentas/descobrir-negocio"
-                    className="font-semibold text-stone-500 underline underline-offset-2 transition-colors hover:text-brand dark:text-stone-400"
-                  >
-                    Descobre o negócio primeiro
-                  </Link>{" "}
-                  — os próximos passos pedem faturação e custos, e um palpite
-                  aqui vale um resultado de palpite.
-                </p>
+                    tem receita nenhuma para os pagar.
+
+                    Era um `<Link>` solto que não marcava o regresso: quem
+                    saísse por aqui não tinha caminho de volta, ao contrário
+                    de quem saísse pelo cartão. */}
+                <PortaDescoberta origem="simulador-empresa" variante="nota" />
               </>
             )}
           </div>

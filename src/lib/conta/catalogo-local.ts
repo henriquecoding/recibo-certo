@@ -119,6 +119,9 @@ export const CONJUNTOS_LOCAIS: ConjuntoLocal[] = [
   { id: "handoff-descoberta-negocio", grupo: "rascunhos", contar: "presenca",
     titulo: "Passagem da descoberta para o estúdio",
     descricao: "Leva o cenário de preço e o nome da oferta. Expira sozinha e é consumida uma vez." },
+  { id: "regresso-descoberta", grupo: "rascunhos", contar: "presenca",
+    titulo: "Caminho de volta ao simulador",
+    descricao: "Guarda apenas de que simulador saíste para ir descobrir o que fazer, para te oferecer o regresso. Não leva números nenhuns e expira sozinha." },
 ];
 
 /**

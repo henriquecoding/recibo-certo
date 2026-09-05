@@ -73,6 +73,7 @@ import {
   GuiadoVoltarLink,
   GuiadoNav,
 } from "@/components/simulador/guiado-ui";
+import PortaDescoberta from "@/components/simulador/PortaDescoberta";
 import GuardarCenarioDialog from "@/components/ui/GuardarCenarioDialog";
 import LocalizedNumberInput from "@/components/ui/LocalizedNumberInput";
 import { parseNumericDraft, sanitizeNumericDraft } from "@/lib/numeric-input";
@@ -988,7 +989,7 @@ export default function ModoGuiado({
           {jaTemAtividade === null && (
             <>
               <GuiadoCabecalho
-                titulo="Já tens atividade aberta?"
+                titulo="Em que ponto estás?"
                 subtitulo="Ajustamos o cálculo à tua situação — o 1.º e 2.º ano têm coeficiente reduzido e isenção de Segurança Social."
               />
               <div className="space-y-3">
@@ -1000,10 +1001,27 @@ export default function ModoGuiado({
                 />
                 <GuiadoOpcao
                   leading={<Sparkle size={18} />}
-                  titulo="Ainda não / estou a avaliar"
-                  descricao="Ajuda-me a perceber o que preciso"
+                  titulo="Ainda não — mas já sei o que vou fazer"
+                  descricao="Ajuda-me a perceber se preciso de abrir atividade"
                   onClick={() => setJaTemAtividade("nao")}
                 />
+
+                {/* ── A TERCEIRA PORTA ─────────────────────────────────
+                    Este simulador existe para responder a «de cada recibo,
+                    quanto fica mesmo para mim?» — e o passo 2 pede o valor
+                    faturado. Quem ainda não decidiu o que vai vender não
+                    tem esse valor, e as duas opções acima assumem as duas
+                    que já o tem: uma manda-a para o coeficiente, a outra
+                    para o decisor de ato isolado, que pergunta se o
+                    trabalho é pontual ou recorrente. Nenhuma das duas era
+                    a dela.
+
+                    Sem esta porta, a saída era inventar o número e sair
+                    daqui com IRS e Segurança Social calculados sobre um
+                    palpite, com a data de revisão fiscal por baixo. O
+                    simulador de empresa já tinha esta porta; este, que faz
+                    a mesma pergunta à entrada, não tinha nenhuma. */}
+                <PortaDescoberta origem="recibos-verdes" />
               </div>
             </>
           )}
@@ -1071,6 +1089,15 @@ export default function ModoGuiado({
                   // ATO_ISOLADO: fica no componente, mostra guia
                 }}
               />
+
+              {/* A segunda oportunidade de sair para a pergunta anterior.
+                  Uma linha de texto, não um cartão: quem chegou aqui já
+                  disse que sabe o que vai fazer, e repetir a proposta com
+                  o mesmo peso seria insistir. Existe para quem carregou no
+                  botão errado — e para quem, ao ver as perguntas do
+                  decisor («é um trabalho pontual ou vai repetir-se?»),
+                  percebe que ainda não tem trabalho nenhum em vista. */}
+              <PortaDescoberta origem="recibos-verdes" variante="nota" />
             </>
           )}
 
