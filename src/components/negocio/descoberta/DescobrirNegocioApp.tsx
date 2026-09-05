@@ -46,6 +46,7 @@ import { guardarHipotese, lerHipoteses } from "@/lib/store/hipoteses-mercado";
 import { guardarInstantaneo, guardarPerfil, lerInstantaneos, lerPerfilGuardado } from "@/lib/store/perfil-descoberta";
 import { registarProvaGuardada, useMedicaoDescoberta } from "../medicao-descoberta";
 import Configurador from "./Configurador";
+import RegressoAoSimulador from "./RegressoAoSimulador";
 import Resultados from "./Resultados";
 import { Spinner } from "@/components/ui/Icons";
 
@@ -368,40 +369,49 @@ export default function DescobrirNegocioApp() {
 
   if (fase === "resultados" && resultado) {
     return (
-      <Resultados
-        resultado={resultado}
-        onVoltar={() => setFase("contexto")}
-        onGuardarHipotese={guardarComoHipotese}
-        hipotesesGuardadas={hipotesesGuardadas}
-        hipotesePorId={hipotesePorId}
-        onProva={registarProva}
-        onGuardarPerfil={() => {
-          const resultadoGravacao = guardarPerfil(contexto);
-          if (resultadoGravacao.ok) setPerfilGuardado(true);
-        }}
-        perfilGuardado={perfilGuardado}
-        efeitosWhatIf={efeitosWhatIf}
-        onAplicarWhatIf={aplicarWhatIf}
-        diferenca={diferenca}
-        onReverMeios={reverMeios}
-        onAplicarRelaxamento={aplicarRelaxamento}
-        onFeedback={darFeedback}
-        onPedirOutras={pedirOutras}
-        onReporAprendizagem={reporAprendizagem}
-        onDesfazerUltimaEscolha={desfazerUltimaEscolha}
-        aExplorarMudancas={aExplorarMudancas}
-        onAlternarExploracaoDeMudancas={alternarExploracaoDeMudancas}
-        fontes={{
-          evidencia: aConsultarEvidencia ? "a-consultar" : erroEvidencia ? "indisponivel" : "ligada",
-          oferta: aConsultarOferta ? "a-consultar" : erroOferta ? "indisponivel" : "ligada",
-        }}
-        onRepetirFontes={repetirFontes}
-      />
+      <div className="space-y-4">
+        {/* Quem veio de um simulador guiado tem de saber que há para onde
+            voltar — e é aqui, com as hipóteses no ecrã, que isso interessa
+            mais. Ver `RegressoAoSimulador`. */}
+        <RegressoAoSimulador />
+        <Resultados
+          resultado={resultado}
+          onVoltar={() => setFase("contexto")}
+          onGuardarHipotese={guardarComoHipotese}
+          hipotesesGuardadas={hipotesesGuardadas}
+          hipotesePorId={hipotesePorId}
+          onProva={registarProva}
+          onGuardarPerfil={() => {
+            const resultadoGravacao = guardarPerfil(contexto);
+            if (resultadoGravacao.ok) setPerfilGuardado(true);
+          }}
+          perfilGuardado={perfilGuardado}
+          efeitosWhatIf={efeitosWhatIf}
+          onAplicarWhatIf={aplicarWhatIf}
+          diferenca={diferenca}
+          onReverMeios={reverMeios}
+          onAplicarRelaxamento={aplicarRelaxamento}
+          onFeedback={darFeedback}
+          onPedirOutras={pedirOutras}
+          onReporAprendizagem={reporAprendizagem}
+          onDesfazerUltimaEscolha={desfazerUltimaEscolha}
+          aExplorarMudancas={aExplorarMudancas}
+          onAlternarExploracaoDeMudancas={alternarExploracaoDeMudancas}
+          fontes={{
+            evidencia: aConsultarEvidencia ? "a-consultar" : erroEvidencia ? "indisponivel" : "ligada",
+            oferta: aConsultarOferta ? "a-consultar" : erroOferta ? "indisponivel" : "ligada",
+          }}
+          onRepetirFontes={repetirFontes}
+        />
+      </div>
     );
   }
 
   return (
     <div className="space-y-4">
+      {/* A mesma faixa na fase de contexto: quem veio de um simulador
+          ainda está a responder ao configurador quando muda de ideias. */}
+      <RegressoAoSimulador />
       {aAnalisar ? (
         <p className="flex items-center gap-2 rounded-4xl border border-stone-100 bg-white p-4 text-[12px] text-stone-500 dark:border-stone-800 dark:bg-stone-900">
           <Spinner size={14} className="animate-spin text-brand" /> A correr o motor…

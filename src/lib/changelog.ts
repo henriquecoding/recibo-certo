@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.167.0",
+    data: "2026-09-05",
+    titulo: "«E se eu ainda não souber o que vou vender?» — os dois simuladores passam a ter resposta para isso",
+    itens: [
+      "O simulador de recibos verdes começava por perguntar se já tens atividade aberta, e dava duas respostas possíveis: «sim» ou «ainda não / estou a avaliar». As duas assumem a mesma coisa — que já sabes o que vais fazer. Quem ainda não sabe não ficava sem resposta: escrevia um valor de faturação qualquer, e saía dali com IRS e Segurança Social calculados em cima de um palpite, com a data de revisão fiscal por baixo a dar-lhe ar de coisa apurada. Um número credível e errado é pior do que um erro à vista.",
+      "Passa a haver uma terceira porta, a mesma que o simulador de empresa já tinha: «ainda não sei o que vou vender» leva-te ao motor de descoberta, que é onde essa pergunta se responde — a partir do que já sabes fazer e de sinais oficiais de mercado, não de uma lista de ideias.",
+      "E deixou de ser uma viagem só de ida. Quando sais por essa porta, o motor de descoberta passa a saber de onde vieste e oferece-te o caminho de volta ao simulador que te mandou embora — durante o dia de trabalho, mesmo que recarregues a página. Podes dispensá-lo com um toque. O que fica guardado é só isso: de que simulador saíste. Nem faturação, nem competências, nem o passo em que ias — e nada disso vai parar ao endereço da página.",
+      "A porta também deixou de estar escrita à mão dentro de cada simulador. É agora a mesma peça nos dois, com a mesma pergunta à entrada («em que ponto estás?») e a mesma segunda oportunidade, em letra pequena, para quem só percebe a meio que ainda não tem o número que o passo seguinte lhe vai pedir.",
+    ],
+  },
+  {
     version: "2.166.0",
     data: "2026-09-05",
     titulo: "A conta dona do projeto deixa de poder ser despromovida por quem recebeu dela a administração",

@@ -79,6 +79,13 @@ export const DOMINIOS = {
   // (§10). TTL curto e consumo único, como qualquer ponte: ver
   // `store/handoff-descoberta-negocio.ts`.
   "handoff-descoberta-negocio": "recibocerto:handoff-descoberta-negocio:v1",
+  // O bilhete de regresso de quem saiu de um simulador guiado para o motor
+  // de descoberta porque ainda não sabia o que ia vender. Leva UM id de
+  // ferramenta e mais nada — nem faturação, nem competências, nem o passo
+  // em que ia. Está no cofre porque, por pouco que seja, diz alguma coisa
+  // sobre quem o escreveu: que foi descobrir o que fazer. Ver
+  // `store/regresso-descoberta.ts`.
+  "regresso-descoberta": "recibocerto:regresso-descoberta:v1",
 } as const;
 
 /**
