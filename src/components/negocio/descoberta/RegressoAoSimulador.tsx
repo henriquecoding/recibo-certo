@@ -26,6 +26,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth } from "@/lib/supabase/auth";
 import { registar } from "@/lib/analytics/cliente";
 import {
   PASSO_REGRESSO_ACEITE,
@@ -40,12 +41,37 @@ import {
 import { ArrowLeft, Close } from "@/components/ui/Icons";
 
 export default function RegressoAoSimulador() {
+  // ┌──────────────────────────────────────────────────────────────────┐
+  // │ DUAS COISAS, E AS DUAS SÃO PRECISAS                               │
+  // │                                                                  │
+  // │ ① ESPERAR pela sessão. Ler à montagem era procurar no cofre       │
+  // │   anónimo o bilhete de quem tem conta — não encontrar nada, e     │
+  // │   nunca mais voltar a procurar, porque o efeito corre uma vez.    │
+  // │                                                                  │
+  // │ ② PERGUNTAR de quem é o cofre em vez de deixar que o módulo o     │
+  // │   diga. Esperar sozinho NÃO chegava, e essa é a parte que não se  │
+  // │   adivinha: quem põe o cofre ativo é um `useEffect` do provider   │
+  // │   de autenticação, e os efeitos de um pai correm DEPOIS dos dos   │
+  // │   filhos. No commit em que a sessão resolve, este efeito corre    │
+  // │   primeiro e o `definirCofre` a seguir — `carregado` já era       │
+  // │   verdadeiro e o cofre ainda dizia «anónimo».                     │
+  // │                                                                  │
+  // │ Com o id em mãos, a ordem dos efeitos deixa de ser um pressuposto │
+  // │ deste ficheiro. Ver `store/regresso-descoberta.ts`.               │
+  // │                                                                  │
+  // │ O caso não é teórico: é abrir esta página num separador novo, ou  │
+  // │ recarregá-la a meio da descoberta — precisamente aquilo para que  │
+  // │ o bilhete é espreitado em vez de consumido. E falhava em          │
+  // │ silêncio: uma lista vazia dá-se a ver, um convite que nunca       │
+  // │ aparece não tem quem dê por ele.                                  │
+  // └──────────────────────────────────────────────────────────────────┘
+  const { user, carregado: sessaoPronta } = useAuth();
+  const userId = user?.id ?? null;
   const [origem, setOrigem] = useState<SimuladorDeOrigem | null>(null);
 
-  // Depois da montagem: o cofre é do browser, e ler no servidor daria
-  // sempre `null` e um salto de layout na hidratação.
   useEffect(() => {
-    const bilhete = espreitarRegressoAoSimulador();
+    if (!sessaoPronta) return;
+    const bilhete = espreitarRegressoAoSimulador(userId);
     if (!bilhete) return;
     setOrigem(bilhete);
     registar("simulator_step", {
@@ -53,13 +79,13 @@ export default function RegressoAoSimulador() {
       step_id: PASSO_REGRESSO_OFERECIDO,
       outcome: "ok",
     });
-  }, []);
+  }, [sessaoPronta, userId]);
 
   if (!origem) return null;
   const porta = PORTAS_DESCOBERTA[origem];
 
   const dispensar = () => {
-    consumirRegressoAoSimulador();
+    consumirRegressoAoSimulador(userId);
     setOrigem(null);
   };
 
@@ -75,7 +101,7 @@ export default function RegressoAoSimulador() {
         <Link
           href={porta.rota}
           onClick={() => {
-            consumirRegressoAoSimulador();
+            consumirRegressoAoSimulador(userId);
             registar("simulator_step", {
               tool_id: "descobrir-negocio",
               step_id: PASSO_REGRESSO_ACEITE,

@@ -20,7 +20,15 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { chaveNoCofre } from "@/lib/store/cofre";
+import {
+  REGRESSO_TTL_MS,
+  REGRESSO_VERSAO,
+  consumirRegressoAoSimulador,
+  espreitarRegressoAoSimulador,
+  guardarRegressoAoSimulador,
+} from "@/lib/store/regresso-descoberta";
 import {
   PASSO_REGRESSO_ACEITE,
   PASSO_REGRESSO_OFERECIDO,
@@ -159,8 +167,34 @@ describe("porta-descoberta:simuladores", () => {
 
 describe("porta-descoberta:regresso", () => {
   it("vive no cofre, não numa chave global", () => {
-    expect(ler(STORE)).toContain('chaveAtiva("regresso-descoberta")');
+    expect(ler(STORE)).toContain('chaveNoCofre("regresso-descoberta"');
     expect(ler("src/lib/store/cofre.ts")).toContain('"regresso-descoberta"');
+  });
+
+  it("o cofre é escolhido por quem chama, não pelo estado do módulo", () => {
+    // ┌────────────────────────────────────────────────────────────────┐
+    // │ ESTE É O DEFEITO QUE MAIS CUSTOU A VER, E O QUE MENOS SE VIA.   │
+    // │                                                                │
+    // │ `chaveAtiva()` lê o cofre ativo — estado de módulo posto por um │
+    // │ `useEffect` do provider de autenticação. E os efeitos de um pai │
+    // │ correm DEPOIS dos dos filhos, no mesmo commit: no instante em   │
+    // │ que a sessão de quem tem conta resolve, o convite espreita      │
+    // │ primeiro e o `definirCofre` corre a seguir. Resultado: lê-se o  │
+    // │ cofre anónimo, não se encontra bilhete nenhum, e o convite      │
+    // │ nunca aparece a quem tem conta.                                │
+    // │                                                                │
+    // │ Esperar por `carregado` NÃO resolve — quando ele fica           │
+    // │ verdadeiro, o cofre ainda diz «anónimo». Só recebendo o id é    │
+    // │ que a ordem dos efeitos deixa de ser um pressuposto.            │
+    // └────────────────────────────────────────────────────────────────┘
+    const store = codigo(STORE);
+    expect(store, "volta a depender do cofre ativo").not.toContain("chaveAtiva");
+
+    for (const f of [PORTA_UI, CONVITE]) {
+      const src = codigo(f);
+      expect(src, `${f} não pergunta quem está com sessão`).toContain("useAuth()");
+      expect(src, `${f} não passa o dono do cofre à store`).toContain("user?.id ?? null");
+    }
   });
 
   it("tem versão, prazo e consumo explícito", () => {
@@ -174,10 +208,40 @@ describe("porta-descoberta:regresso", () => {
   it("é espreitado para mostrar e consumido só ao voltar ou ao dispensar", () => {
     const src = codigo(CONVITE);
     expect(src, "consome à entrada — o convite evaporava-se ao primeiro F5").toContain(
-      "espreitarRegressoAoSimulador()",
+      "espreitarRegressoAoSimulador(userId)",
     );
-    const consumos = src.match(/consumirRegressoAoSimulador\(\)/g) ?? [];
+    const consumos = src.match(/consumirRegressoAoSimulador\(userId\)/g) ?? [];
     expect(consumos.length, "voltar e dispensar têm de consumir o bilhete").toBe(2);
+  });
+
+  it("espera pela sessão antes de tocar no cofre", () => {
+    // ┌────────────────────────────────────────────────────────────────┐
+    // │ O cofre ativo começa SEMPRE no anónimo e só sabe de quem é      │
+    // │ depois de a autenticação resolver a sessão. Ler à montagem sem  │
+    // │ esperar era, para quem tem conta, procurar no cofre errado —    │
+    // │ não encontrar nada, e nunca mais voltar a procurar, porque o    │
+    // │ efeito corre uma vez.                                          │
+    // │                                                                │
+    // │ E era invisível: uma lista vazia dá-se a ver, um convite que    │
+    // │ nunca aparece não tem quem dê por ele. Abrir a descoberta num   │
+    // │ separador novo, ou recarregá-la a meio, é o caso normal — é     │
+    // │ para ele que o bilhete é espreitado em vez de consumido.        │
+    // └────────────────────────────────────────────────────────────────┘
+    const src = codigo(CONVITE);
+    expect(src, "não espera pela sessão").toContain("useAuth()");
+    expect(src, "o efeito não é reavaliado quando a sessão resolve").toMatch(
+      /if \(!sessaoPronta\) return;[\s\S]*\}, \[sessaoPronta, userId\]\)/,
+    );
+  });
+
+  it("a corrida do lado da escrita é medida, não escondida", () => {
+    // Não se resolve escrevendo nos dois cofres (era pôr o que uma pessoa
+    // deixou à frente de quem usar o browser a seguir) nem atrasando a
+    // navegação. Fica limitada — perde-se um convite, nenhum dado — e
+    // separada de quem simplesmente não tem armazenamento.
+    const src = codigo(PORTA_UI);
+    expect(src).toContain("sessao_por_resolver");
+    expect(src).toContain("sem_armazenamento");
   });
 
   it("não leva nada além de uma direção", () => {
@@ -187,13 +251,25 @@ describe("porta-descoberta:regresso", () => {
     }
   });
 
-  it("não usa o URL, não faz rede e não toca em Supabase", () => {
+  it("não usa o URL, não faz rede e não leva o bilhete à nuvem", () => {
     for (const f of [STORE, PORTA_UI, CONVITE]) {
       const src = codigo(f);
       expect(src, `${f} escreve no URL`).not.toMatch(/searchParams\.set|pushState|replaceState/);
       expect(src, `${f} põe o destino numa query string`).not.toMatch(/\?(voltar|origem|from)=/);
       expect(src, `${f} faz rede`).not.toMatch(/\bfetch\s*\(/);
-      expect(src, `${f} toca em Supabase`).not.toMatch(/supabase/i);
+      // ── PORQUE É QUE ISTO NÃO PROÍBE A PALAVRA «supabase» ──────────
+      //  A primeira versão proibia-a, e reprovou a correção da corrida
+      //  com a sessão: saber QUEM está com sessão é o que diz em que
+      //  cofre se escreve, e esse contexto vive em `supabase/auth`. Ler o
+      //  contexto de autenticação é o oposto de mandar o bilhete para a
+      //  nuvem — o que se proíbe é o cliente e a base de dados.
+      expect(src, `${f} usa o cliente Supabase`).not.toMatch(/createClient|\bsb\(\)|\.from\(/);
+      const importsSupabase = src.match(/from "@\/lib\/supabase\/[^"]+"/g) ?? [];
+      for (const imp of importsSupabase) {
+        expect(imp, `${f} importa de Supabase algo que não é o contexto de sessão`).toBe(
+          'from "@/lib/supabase/auth"',
+        );
+      }
     }
   });
 
@@ -201,6 +277,98 @@ describe("porta-descoberta:regresso", () => {
     const app = codigo("src/components/negocio/descoberta/DescobrirNegocioApp.tsx");
     const usos = app.match(/<RegressoAoSimulador \/>/g) ?? [];
     expect(usos.length, "o convite tem de existir no contexto e nos resultados").toBe(2);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════
+//  3b. O BILHETE, EXERCITADO A SÉRIO
+//  ---------------------------------------------------------------------
+//  Os testes acima leem o código; estes correm-no. Passaram a ser
+//  possíveis porque o cofre deixou de ser estado de módulo e passou a ser
+//  um argumento — a mesma mudança que corrigiu o convite invisível.
+// ═══════════════════════════════════════════════════════════════════════
+
+/** Um `localStorage` de mentira, como o de `store-cofre.test.ts`. */
+function montarLocalStorage() {
+  const mapa = new Map<string, string>();
+  Object.defineProperty(globalThis, "window", {
+    value: {
+      localStorage: {
+        getItem: (k: string) => mapa.get(k) ?? null,
+        setItem: (k: string, v: string) => void mapa.set(k, v),
+        removeItem: (k: string) => void mapa.delete(k),
+        clear: () => mapa.clear(),
+        key: (i: number) => [...mapa.keys()][i] ?? null,
+        get length() {
+          return mapa.size;
+        },
+      },
+    },
+    configurable: true,
+    writable: true,
+  });
+  return mapa;
+}
+
+const ANA = "11111111-1111-1111-1111-111111111111";
+const BRUNO = "22222222-2222-2222-2222-222222222222";
+
+describe("porta-descoberta:bilhete", () => {
+  let mapa: Map<string, string>;
+  beforeEach(() => {
+    mapa = montarLocalStorage();
+  });
+
+  it("vai e volta", () => {
+    expect(guardarRegressoAoSimulador("simulador-empresa", ANA)).toBe(true);
+    expect(espreitarRegressoAoSimulador(ANA)).toBe("simulador-empresa");
+    // Espreitar não consome: é o que faz o convite sobreviver a um F5.
+    expect(espreitarRegressoAoSimulador(ANA)).toBe("simulador-empresa");
+    expect(consumirRegressoAoSimulador(ANA)).toBe("simulador-empresa");
+    expect(espreitarRegressoAoSimulador(ANA)).toBeNull();
+  });
+
+  it("o bilhete de uma pessoa não aparece a quem usar o browser a seguir", () => {
+    guardarRegressoAoSimulador("recibos-verdes", ANA);
+    expect(espreitarRegressoAoSimulador(BRUNO)).toBeNull();
+    expect(espreitarRegressoAoSimulador(null)).toBeNull();
+  });
+
+  it("guarda o id da ferramenta e mais nada", () => {
+    guardarRegressoAoSimulador("recibos-verdes", null);
+    const bruto = mapa.get(chaveNoCofre("regresso-descoberta", null));
+    expect(bruto).toBeDefined();
+    expect(Object.keys(JSON.parse(bruto!)).sort()).toEqual(["gravadoEm", "origem", "versao"]);
+  });
+
+  it("fora do prazo deixa de valer", () => {
+    const chave = chaveNoCofre("regresso-descoberta", null);
+    mapa.set(
+      chave,
+      JSON.stringify({
+        versao: REGRESSO_VERSAO,
+        gravadoEm: Date.now() - REGRESSO_TTL_MS - 1000,
+        origem: "simulador-empresa",
+      }),
+    );
+    expect(espreitarRegressoAoSimulador(null)).toBeNull();
+  });
+
+  it("recusa inteiro o que não reconhece — e nunca rebenta", () => {
+    const chave = chaveNoCofre("regresso-descoberta", null);
+    const lixo = [
+      "não é JSON",
+      JSON.stringify({ versao: 99, gravadoEm: Date.now(), origem: "simulador-empresa" }),
+      JSON.stringify({ versao: REGRESSO_VERSAO, gravadoEm: Date.now(), origem: "calculadora-secreta" }),
+      // Relógio trocado: um `gravadoEm` no futuro não é um bilhete válido.
+      JSON.stringify({ versao: REGRESSO_VERSAO, gravadoEm: Date.now() + 60_000, origem: "recibos-verdes" }),
+      JSON.stringify({ versao: REGRESSO_VERSAO, origem: "recibos-verdes" }),
+      JSON.stringify(null),
+    ];
+    for (const valor of lixo) {
+      mapa.set(chave, valor);
+      expect(espreitarRegressoAoSimulador(null), `aceitou «${valor.slice(0, 40)}»`).toBeNull();
+    }
   });
 });
 

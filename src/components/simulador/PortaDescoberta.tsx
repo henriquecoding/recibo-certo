@@ -31,6 +31,7 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import Link from "next/link";
+import { useAuth } from "@/lib/supabase/auth";
 import { registar } from "@/lib/analytics/cliente";
 import {
   PASSO_SAIDA,
@@ -52,23 +53,44 @@ interface PortaDescobertaProps {
   variante?: "cartao" | "nota";
 }
 
-/** O que se faz antes de sair, nas duas variantes. */
-function aoSair(origem: SimuladorDeOrigem) {
-  const guardou = guardarRegressoAoSimulador(origem);
-  // Nenhum valor sai daqui (§8.2): só que houve uma saída, e por que
-  // porta. `outcome` distingue quem vai poder voltar de quem não vai
-  // (modo privado, quota cheia) — sem isso, a taxa de regresso seria
-  // impossível de ler.
+/**
+ * O que se faz antes de sair, nas duas variantes.
+ *
+ * ── A CORRIDA COM A SESSÃO, DITA EM VOZ ALTA ───────────────────────
+ * O cofre ativo começa no anónimo e só sabe de quem é depois de a
+ * autenticação resolver a sessão. Quem tem conta e carregue nesta porta
+ * ANTES disso escreve o bilhete no cofre anónimo, e o convite do outro
+ * lado — que espera pela sessão, e bem — procura no cofre da conta e não
+ * o encontra.
+ *
+ * Não se resolve escrevendo nos dois: um cofre existe precisamente para
+ * o que uma pessoa deixou não aparecer a quem usar o browser a seguir, e
+ * a régua não muda por o dado ser pequeno. Também não se resolve
+ * atrasando a navegação, que seria pagar com o gesto de toda a gente uma
+ * corrida que quase ninguém corre — a porta vive dentro de um simulador
+ * que só monta depois da hidratação.
+ *
+ * Fica então limitada ao seu tamanho real (perde-se um convite de volta;
+ * nenhum dado se perde e nenhum aparece a quem não é dele) e, sobretudo,
+ * fica MEDIDA: `error_code` distingue-a de quem não tem armazenamento
+ * nenhum. Uma corrida invisível é a que ninguém corrige.
+ */
+function aoSair(origem: SimuladorDeOrigem, userId: string | null, sessaoPronta: boolean) {
+  const guardou = guardarRegressoAoSimulador(origem, userId);
+  // Nenhum valor sai daqui (§8.2): só que houve uma saída, por que porta,
+  // e se a pessoa vai poder voltar.
   registar("simulator_step", {
     tool_id: origem,
     step_id: PASSO_SAIDA,
-    outcome: guardou ? "ok" : "erro",
-    error_code: guardou ? undefined : "sem_armazenamento",
+    outcome: guardou && sessaoPronta ? "ok" : "erro",
+    error_code: !guardou ? "sem_armazenamento" : sessaoPronta ? undefined : "sessao_por_resolver",
   });
 }
 
 export default function PortaDescoberta({ origem, variante = "cartao" }: PortaDescobertaProps) {
   const porta = PORTAS_DESCOBERTA[origem];
+  const { user, carregado: sessaoPronta } = useAuth();
+  const userId = user?.id ?? null;
 
   if (variante === "nota") {
     return (
@@ -76,7 +98,7 @@ export default function PortaDescoberta({ origem, variante = "cartao" }: PortaDe
         Ainda não decidiste o que vais vender?{" "}
         <Link
           href={ROTA_DESCOBERTA}
-          onClick={() => aoSair(origem)}
+          onClick={() => aoSair(origem, userId, sessaoPronta)}
           className="font-semibold text-stone-600 underline underline-offset-2 transition-colors hover:text-brand focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-brand dark:text-stone-300"
         >
           Descobre o negócio primeiro
@@ -89,7 +111,7 @@ export default function PortaDescoberta({ origem, variante = "cartao" }: PortaDe
   return (
     <Link
       href={ROTA_DESCOBERTA}
-      onClick={() => aoSair(origem)}
+      onClick={() => aoSair(origem, userId, sessaoPronta)}
       className="group flex w-full items-center gap-3 rounded-3xl border-2 border-dashed border-stone-300 bg-stone-50/60 p-4 text-left transition-all hover:border-brand hover:bg-white hover:shadow-card focus:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 dark:border-stone-700 dark:bg-stone-900/40 dark:hover:bg-stone-900"
     >
       <span

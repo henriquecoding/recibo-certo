@@ -43,10 +43,35 @@
 // ═══════════════════════════════════════════════════════════════════════
 
 import { ehSimuladorDeOrigem, type SimuladorDeOrigem } from "@/lib/simuladores/porta-descoberta";
-import { chaveAtiva } from "./cofre";
+import { chaveNoCofre } from "./cofre";
 import { gravarChave, lerChave, removerChave } from "./persistencia";
 
-const CHAVE = () => chaveAtiva("regresso-descoberta");
+/**
+ * Quem está com sessão, dito por quem chama. `null` é o cofre anónimo.
+ *
+ * ┌──────────────────────────────────────────────────────────────────┐
+ * │ PORQUE É QUE ISTO NÃO USA `chaveAtiva()`                          │
+ * │                                                                  │
+ * │ `chaveAtiva` lê o cofre ativo, que é ESTADO DE MÓDULO posto pela  │
+ * │ camada de autenticação num `useEffect` do provider — e um efeito  │
+ * │ de um pai corre DEPOIS dos efeitos dos filhos, no mesmo commit.   │
+ * │                                                                  │
+ * │ Ou seja: no instante em que a sessão de quem tem conta resolve,   │
+ * │ o componente que espreita o bilhete corre primeiro e o            │
+ * │ `definirCofre` a seguir. Esperar por `carregado` não chega — na   │
+ * │ altura em que ele fica verdadeiro, o cofre ainda diz «anónimo».   │
+ * │ O convite de volta nunca apareceria a quem tem conta, e não       │
+ * │ apareceria em silêncio.                                          │
+ * │                                                                  │
+ * │ Isto não é uma corrida que se aperta com um `setTimeout`: é uma   │
+ * │ dependência de ordem entre efeitos, que muda com a árvore. Recebe │
+ * │ o id e a ordem deixa de importar — `chaveNoCofre` é pura, e é a   │
+ * │ mesma função com que a zona de risco conta o que está guardado.   │
+ * └──────────────────────────────────────────────────────────────────┘
+ */
+export type DonoDoCofre = string | null | undefined;
+
+const CHAVE = (userId: DonoDoCofre) => chaveNoCofre("regresso-descoberta", userId);
 
 /** A versão do envelope. Sobe quando a forma mudar. */
 export const REGRESSO_VERSAO = 1;
@@ -84,14 +109,17 @@ interface EnvelopeRegresso {
  * oferece o caminho de volta. Uma ferramenta que se recusa a abrir porque
  * não guardou uma conveniência é pior do que a conveniência que perdeu.
  */
-export function guardarRegressoAoSimulador(origem: SimuladorDeOrigem): boolean {
+export function guardarRegressoAoSimulador(
+  origem: SimuladorDeOrigem,
+  userId: DonoDoCofre,
+): boolean {
   if (!ehSimuladorDeOrigem(origem)) return false;
   const envelope: EnvelopeRegresso = {
     versao: REGRESSO_VERSAO,
     gravadoEm: Date.now(),
     origem,
   };
-  return gravarChave(CHAVE(), JSON.stringify(envelope)).ok;
+  return gravarChave(CHAVE(userId), JSON.stringify(envelope)).ok;
 }
 
 // ─── Ler ───────────────────────────────────────────────────────────────
@@ -103,8 +131,8 @@ export function guardarRegressoAoSimulador(origem: SimuladorDeOrigem): boolean {
  * ilegível, fora do prazo, ferramenta que este contrato não conhece. Um
  * estado que não se percebe nunca pode impedir a descoberta de abrir.
  */
-export function espreitarRegressoAoSimulador(): SimuladorDeOrigem | null {
-  const bruto = lerChave(CHAVE());
+export function espreitarRegressoAoSimulador(userId: DonoDoCofre): SimuladorDeOrigem | null {
+  const bruto = lerChave(CHAVE(userId));
   if (!bruto) return null;
 
   try {
@@ -132,12 +160,12 @@ export function espreitarRegressoAoSimulador(): SimuladorDeOrigem | null {
  * passa hoje também não passa amanhã, e deixá-lo lá garantia que voltava a
  * falhar em cada abertura.
  */
-export function consumirRegressoAoSimulador(): SimuladorDeOrigem | null {
-  const origem = espreitarRegressoAoSimulador();
-  limparRegressoAoSimulador();
+export function consumirRegressoAoSimulador(userId: DonoDoCofre): SimuladorDeOrigem | null {
+  const origem = espreitarRegressoAoSimulador(userId);
+  limparRegressoAoSimulador(userId);
   return origem;
 }
 
-export function limparRegressoAoSimulador(): void {
-  removerChave(CHAVE());
+export function limparRegressoAoSimulador(userId: DonoDoCofre): void {
+  removerChave(CHAVE(userId));
 }
