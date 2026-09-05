@@ -37,6 +37,8 @@ export interface ContaAdmin {
   email: string;
   nome: string | null;
   role: "admin" | "user";
+  /** Conta dona do projeto: o role não é alterável por outro administrador. */
+  protegido: boolean;
   criadoEm: string | null;
   ultimoAcesso: string | null;
   emailConfirmado: boolean;
@@ -64,7 +66,7 @@ export async function GET(req: NextRequest) {
 
   const { data: perfis, error } = await sb
     .from("profiles")
-    .select("id, email, nome, role, criado_em")
+    .select("id, email, nome, role, protegido, criado_em")
     .order("criado_em", { ascending: false })
     .limit(500);
   if (error) {
@@ -130,6 +132,7 @@ export async function GET(req: NextRequest) {
       email: (p.email as string) ?? "—",
       nome: (p.nome as string) ?? null,
       role: ((p.role as string) === "admin" ? "admin" : "user"),
+      protegido: p.protegido === true,
       criadoEm: (p.criado_em as string) ?? null,
       ultimoAcesso: auth?.ultimo ?? null,
       emailConfirmado: auth?.confirmado ?? false,
@@ -166,6 +169,38 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ erro: "Pedido inválido." }, { status: 400 });
   }
 
+  // O alvo lê-se ANTES de qualquer decisão: é a linha dele que diz se
+  // esta alteração sequer pode ser considerada.
+  const { data: antes } = await sb
+    .from("profiles")
+    .select("email, role, protegido")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!antes) {
+    return NextResponse.json({ erro: "Conta não encontrada." }, { status: 404 });
+  }
+
+  // A conta dona do projeto não é despromovível por quem recebeu dela a
+  // administração. Administrar não é um só nível: quem empresta o painel
+  // continua a ser quem o empresta, e um convidado não desfaz o convite.
+  //
+  // É aqui que esta fronteira vive, e não num gatilho, porque a base fala
+  // com esta rota como `service_role` e não distingue em nome de QUEM ela
+  // está a agir. Quem sabe isso é este processo — e é por isso que a
+  // recusa tem de ser dele. O gatilho `profiles_protegido_lock` fecha o
+  // outro caminho, o da escrita direta à tabela.
+  //
+  // A própria conta protegida não é impedida: quem quiser sair da
+  // administração pode fazê-lo, e continua a valer a trava do último
+  // administrador logo abaixo.
+  if (antes.protegido === true && ator.id !== id) {
+    return NextResponse.json(
+      { erro: "Esta é a conta dona do projeto. A sua administração não pode ser alterada por outro administrador." },
+      { status: 403 },
+    );
+  }
+
   // Nunca deixar a base sem administração: despromover o último admin
   // trancava toda a gente fora do painel, sem caminho de volta pela app.
   if (role === "user") {
@@ -180,12 +215,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
   }
-
-  const { data: antes } = await sb
-    .from("profiles")
-    .select("email, role")
-    .eq("id", id)
-    .maybeSingle();
 
   const { error } = await sb.from("profiles").update({ role }).eq("id", id);
   if (error) {

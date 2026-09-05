@@ -16,6 +16,17 @@ import { CHANGELOG as HISTORICO } from "./changelog-historico";
 
 const NOVAS_ENTRADAS: EntradaChangelog[] = [
   {
+    version: "2.166.0",
+    data: "2026-09-05",
+    titulo: "A conta dona do projeto deixa de poder ser despromovida por quem recebeu dela a administração",
+    itens: [
+      "O painel de administração deixava qualquer administrador tirar a administração a qualquer outro. A única trava era não ficar a plataforma sem nenhum — o que, havendo dois, não trava nada: o segundo despromovia o primeiro e ficava sozinho, e quem lhe tinha dado a chave perdia a entrada sem caminho de volta pela aplicação.",
+      "Administrar passa a ter dois níveis. Há a conta dona do projeto e há as contas a quem ela empresta o painel; estas fazem tudo o que aquela faz — menos mexer em quem lhes deu a chave. Na lista de contas, a conta dona aparece assinalada e sem botão, porque um botão que existe e falha só ensina a desconfiar do painel.",
+      "A recusa está escrita em três sítios, e não por gosto de repetir: no ecrã, para ser honesto; na rota, que é a única que sabe quem está a agir contra quem; e na própria base de dados, para o caso de alguém falar com ela sem passar pela rota. A marca de conta dona também não se concede nem se levanta pelo painel — se pudesse, bastavam dois pedidos para contornar tudo.",
+      "Ao mesmo tempo, uma correção que só se via de dentro: a função que cria o perfil de quem se regista estava, em produção, numa versão anterior à que o código já tinha — ainda dava administração automaticamente a quem se registasse com um endereço específico, e resolvia nomes de tabelas pelo caminho de quem a chamasse. Passa a criar sempre contas normais, com o caminho fixo. A administração concede-se onde deve: no painel, que regista quem a deu, a quem, e quando.",
+    ],
+  },
+  {
     version: "2.165.1",
     data: "2026-09-04",
     titulo: "Uma frase dizia que levar o caso a um contabilista não exigia conta. Exige",

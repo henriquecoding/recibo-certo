@@ -178,6 +178,16 @@ export default function ContasPage() {
               <span className="rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
                 É a tua conta
               </span>
+            ) : detalhe.protegido ? (
+              // A conta dona do projeto. O botão não fica desativado — não
+              // chega a existir: um botão apagado convida a carregar e a
+              // perguntar porquê, e a resposta já está escrita aqui.
+              // A recusa a sério mora na rota e no gatilho; isto é só
+              // honestidade no ecrã.
+              <span className="inline-flex items-center gap-2 rounded-xl bg-stone-100 px-3 py-2 text-xs font-semibold text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                <ShieldCheck size={12} />
+                Conta dona do projeto
+              </span>
             ) : (
               <button
                 type="button"
