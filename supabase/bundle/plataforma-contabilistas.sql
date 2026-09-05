@@ -6,14 +6,14 @@
 --
 --  PARA QUE SERVE
 --  --------------
---  Estas 57 migrações dependem umas das outras: a 046 usa tabelas
+--  Estas 59 migrações dependem umas das outras: a 046 usa tabelas
 --  que a 042 cria, a 052 altera tabelas que a 048 e a 051 criam, e a
 --  fronteira de contacto desfaz uma coluna que uma migração de agosto tinha
 --  acabado de pôr numa RPC. Aplicá-las fora de ordem dá «relation does not
 --  exist» no melhor dos casos, e o contacto do cliente de volta no pior.
 --
 --  Da primeira (042_plataforma_contabilistas.sql)
---  à última  (20260904140000_dossie_fecha_privilegios_de_anon.sql).
+--  à última  (20260905034936_a_conta_fundadora_nao_e_despromovivel.sql).
 --
 --  Este ficheiro tem-nas todas, pela ordem certa, num só bloco. Cola no
 --  editor de SQL do Supabase e corre uma vez.
@@ -16235,3 +16235,294 @@ $verificacao$;
 
 COMMENT ON TABLE public.dossie_ligacoes IS
   'Ligações opacas para o contabilista que está fora da plataforma. Guarda o sha-256 do token, nunca o token. `anon` não tem política nem privilégio: a leitura pública passa por `abrir_dossie_por_token`, com a chave de serviço.';
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260905034545_handle_new_user_repoe_o_fecho_da_019.sql           ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260905034545_handle_new_user_repoe_o_fecho_da_019.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  A 019 ESTÁ NO REGISTO, MAS NÃO ESTÁ NA FUNÇÃO
+--  ---------------------------------------------------------------------
+--  `supabase_migrations` diz que a 019 foi aplicada. A função que ela
+--  reescreveu diz o contrário: em produção, `handle_new_user()` é ainda a
+--  definição da 002/003 — sem `search_path` fixo, e com a promoção
+--  automática por email que a 019 §2 existia para tirar.
+--
+--    CASE WHEN NEW.email = 'admin@recibocerto.pt' THEN 'admin' ELSE 'user' END
+--
+--  Não é mistério: as migrações 001–053 foram aplicadas à mão no editor de
+--  SQL antes de haver registo, e o registo foi preenchido depois. Uma
+--  entrada em `supabase_migrations` é a afirmação de que algo correu, não a
+--  prova. Aqui as duas discordaram durante meses, e o que valia era a
+--  função.
+--
+--  ---------------------------------------------------------------------
+--  PORQUE É QUE A PROMOÇÃO POR EMAIL DEIXA DE FAZER FALTA
+--
+--  Quando a 002 a escreveu, era o único caminho para haver um admin. Hoje
+--  não é: `PATCH /api/admin/contas` promove e despromove, recusa deixar a
+--  base sem o último administrador, e escreve quem fez o quê a quem em
+--  `admin_auditoria` — com IP. A UI está em `/admin/contas`.
+--
+--  Um caminho que ninguém usa e que ninguém vê é pior do que um caminho a
+--  menos: promover por email não deixa rasto na auditoria, e faz depender
+--  de quem regista um endereço aquilo que devia depender de quem já é
+--  administrador. Esta migração não retira a capacidade de promover —
+--  move-a toda para o sítio onde ela fica registada.
+--
+--  ---------------------------------------------------------------------
+--  PORQUE É QUE `search_path = ''` NÃO PARTE O REGISTO DE CONTAS
+--
+--  Uma `SECURITY DEFINER` sem `search_path` resolve nomes pelo caminho de
+--  QUEM CHAMA. Fixá-lo em '' só parte um corpo que dependa dessa
+--  resolução, e este não depende: a única referência a um objeto é
+--  `public.profiles`, já qualificada. `NEW.id` e `NEW.email` são campos do
+--  registo do gatilho, não nomes a resolver. É a mesma disciplina da 011.
+--
+--  Forward-only e idempotente: a 019 continua a ser o registo histórico do
+--  dia em que a decisão foi tomada; o que muda, muda aqui.
+-- ═══════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  1. A FUNÇÃO, COMO A 019 A DEIXOU ESCRITA
+-- ═══════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, role)
+  VALUES (NEW.id, NEW.email, 'user')
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.handle_new_user() IS
+  'Cria o perfil de quem se regista, sempre com role ''user''. A administração concede-se em /admin/contas, que a regista em admin_auditoria — nunca por email no momento do registo.';
+
+--  `CREATE OR REPLACE` preserva as permissões existentes, e é por isso que
+--  o REVOKE da 011 é reafirmado e não presumido: se esta função alguma vez
+--  for recriada por engano num contexto que a conceda a `PUBLIC`, é esta
+--  linha que fecha outra vez.
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM anon, authenticated, public;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  2. A ASSERÇÃO — para a próxima discordância parar aqui
+-- ═══════════════════════════════════════════════════════════════════
+--  O que correu mal da primeira vez não foi escrever a 019: foi ninguém
+--  reparar que ela não tinha pegado. Uma asserção dentro da transação
+--  transforma isso num erro na aplicação em vez de num achado meses depois.
+DO $$
+DECLARE
+  v_config text[];
+  v_corpo  text;
+BEGIN
+  SELECT p.proconfig, pg_get_functiondef(p.oid)
+    INTO v_config, v_corpo
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+   WHERE n.nspname = 'public' AND p.proname = 'handle_new_user';
+
+  IF v_corpo IS NULL THEN
+    RAISE EXCEPTION 'handle_new_user() não existe — o gatilho de registo perdeu a função.';
+  END IF;
+
+  -- (a) `search_path` fixo. Sem isto, a função resolve nomes pelo caminho
+  --     de quem chama, e quem chama é o fluxo de registo.
+  IF v_config IS NULL OR NOT EXISTS (
+    SELECT 1 FROM unnest(v_config) AS c WHERE c LIKE 'search_path=%'
+  ) THEN
+    RAISE EXCEPTION 'handle_new_user() ficou sem search_path fixo.';
+  END IF;
+
+  -- (b) Nenhuma promoção por email. Procura o nome da coluna a ser
+  --     comparado com um literal 'admin' no corpo — que é a forma que a
+  --     002, a 003 e a 006 tinham em comum.
+  IF v_corpo ~* 'NEW\.email\s*(=|IN)' AND v_corpo ~* '''admin''' THEN
+    RAISE EXCEPTION
+      'handle_new_user() voltou a promover por email. A administração concede-se em /admin/contas, que a regista.';
+  END IF;
+END $$;
+
+COMMIT;
+
+-- ╔═════════════════════════════════════════════════════════════════════╗
+-- ║  20260905034936_a_conta_fundadora_nao_e_despromovivel.sql          ║
+-- ╚═════════════════════════════════════════════════════════════════════╝
+
+-- 20260905034936_a_conta_fundadora_nao_e_despromovivel.sql
+-- ═══════════════════════════════════════════════════════════════════════
+--  QUEM CONCEDE A ADMINISTRAÇÃO NÃO PODE PERDÊ-LA PARA QUEM A RECEBEU
+--  ---------------------------------------------------------------------
+--  `PATCH /api/admin/contas` deixa qualquer administrador despromover
+--  qualquer outro. A única trava é não ficar a base sem nenhum:
+--
+--    if (role === 'user') { se só houver 1 admin, recusa }
+--
+--  Com dois administradores, essa trava não trava nada. O segundo pode
+--  despromover o primeiro e ficar sozinho no painel — e o primeiro, que
+--  concedeu a administração, deixa de ter caminho de volta pela aplicação.
+--  Não é hipótese de laboratório: a conta fundadora e uma conta promovida
+--  à mão foi exatamente a situação que existiu aqui durante meses.
+--
+--  Administrar não é um só nível. Há a conta que é dona do projeto, e há
+--  as contas a quem ela empresta o painel. As segundas fazem tudo o que as
+--  primeiras fazem — menos mexer em quem lhes deu a chave.
+--
+--  ---------------------------------------------------------------------
+--  PORQUÊ UMA COLUNA, E NÃO UM ROLE NOVO
+--
+--  A tentação é `role = 'owner'`. Seria um erro caro: `is_admin()` testa
+--  `role = 'admin'`, e é ela que abre as políticas RLS de meia base de
+--  dados. Mudar o role da conta fundadora para outra coisa tirava-lhe, no
+--  mesmo instante, o acesso a tudo o que a proteção existe para lhe
+--  garantir.
+--
+--  A proteção é ORTOGONAL ao papel: `protegido` diz que aquele role não é
+--  de outro alterar, e não diz nada sobre o que a conta pode fazer.
+--  `is_admin()` fica intocada, e nenhuma política existente muda.
+--
+--  ---------------------------------------------------------------------
+--  ONDE ESTÁ A FRONTEIRA, E ONDE ELA NÃO PODE ESTAR
+--
+--  A rota administrativa fala com a base como `service_role`, onde
+--  `auth.uid()` é nulo — de propósito, para poder ler `auth.users` e
+--  escrever a auditoria. Um gatilho não distingue «a rota a agir em nome
+--  da Ana» de «a rota a agir em nome do João»: vê `service_role` nas duas.
+--
+--  Então a fronteira que compara ATOR com ALVO vive na rota, que é quem
+--  sabe os dois, e é lá que a recusa fica registada. O que este gatilho
+--  faz é a segunda tranca: fecha a escrita DIRETA, feita por um
+--  administrador autenticado que salte a rota e vá à tabela pelo
+--  PostgREST. Sem ele, a fronteira da rota seria uma porta com aviso ao
+--  lado de uma janela aberta.
+--
+--  Idempotente e forward-only.
+-- ═══════════════════════════════════════════════════════════════════════
+
+BEGIN;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  1. A MARCA
+-- ═══════════════════════════════════════════════════════════════════
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS protegido boolean NOT NULL DEFAULT false;
+
+COMMENT ON COLUMN public.profiles.protegido IS
+  'Conta dona do projeto: o seu role não é alterável por outro administrador, nem pela rota de administração nem por escrita direta. Só se concede e retira por SQL — nunca pelo painel.';
+
+-- ═══════════════════════════════════════════════════════════════════
+--  2. A TRANCA DE BAIXO
+-- ═══════════════════════════════════════════════════════════════════
+--  Duas coisas que um utilizador autenticado nunca faz, seja ele admin ou
+--  não:
+--
+--    (a) mexer no `role` de uma conta protegida que não é a dele;
+--    (b) mexer na própria marca `protegido`, de quem quer que seja —
+--        incluindo a dele. Uma proteção que o protegido possa levantar
+--        sozinho seria contornável em dois pedidos: levanta, despromove.
+--
+--  `auth.uid() IS NULL` (migrações, SQL editor, service_role) passa nas
+--  duas. É o caminho de recuperação, e é deliberado: se não houvesse
+--  nenhum, uma conta protegida cuja pessoa perdesse o acesso trancava o
+--  projeto para sempre.
+CREATE OR REPLACE FUNCTION public.enforce_profile_protegido()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  -- (a) o role de uma conta protegida, mexido por outra pessoa
+  IF OLD.protegido
+     AND NEW.role IS DISTINCT FROM OLD.role
+     AND auth.uid() IS NOT NULL
+     AND auth.uid() <> OLD.id THEN
+    RAISE EXCEPTION
+      'Esta é a conta dona do projeto. A sua administração não é alterável por outro administrador.';
+  END IF;
+
+  -- (b) a própria marca, mexida por quem quer que seja com sessão
+  IF NEW.protegido IS DISTINCT FROM OLD.protegido
+     AND auth.uid() IS NOT NULL THEN
+    RAISE EXCEPTION
+      'A marca de conta protegida não se concede nem se retira pela aplicação.';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION public.enforce_profile_protegido() IS
+  'Recusa que um administrador altere o role da conta dona do projeto, e que alguém com sessão mexa na marca `protegido`. Complementa a fronteira da rota /api/admin/contas, que é quem compara ator com alvo.';
+
+REVOKE EXECUTE ON FUNCTION public.enforce_profile_protegido() FROM anon, authenticated, public;
+
+DROP TRIGGER IF EXISTS profiles_protegido_lock ON public.profiles;
+CREATE TRIGGER profiles_protegido_lock
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_profile_protegido();
+
+-- ═══════════════════════════════════════════════════════════════════
+--  3. A CONTA DONA
+-- ═══════════════════════════════════════════════════════════════════
+--  Marcada por email UMA vez, aqui, e não por regra viva: nada no
+--  funcionamento da aplicação volta a olhar para este endereço. É o
+--  oposto da promoção automática que a migração anterior retirou — aquela
+--  decidia a cada registo, esta decide uma vez e fica escrita na linha.
+--
+--  Correr isto num projeto onde o endereço não exista não marca ninguém,
+--  não falha, e a alínea (a) da asserção abaixo diz que ficou por marcar.
+UPDATE public.profiles
+   SET protegido = true
+ WHERE email = 'admin@recibocerto.pt'
+   AND role = 'admin'
+   AND protegido = false;
+
+-- ═══════════════════════════════════════════════════════════════════
+--  4. AS ASSERÇÕES
+-- ═══════════════════════════════════════════════════════════════════
+DO $$
+DECLARE
+  v_protegidas int;
+  v_admins     int;
+BEGIN
+  SELECT count(*) FILTER (WHERE protegido),
+         count(*) FILTER (WHERE role = 'admin')
+    INTO v_protegidas, v_admins
+    FROM public.profiles;
+
+  -- (a) Uma proteção que não protege ninguém é uma coluna a mentir.
+  IF v_admins > 0 AND v_protegidas = 0 THEN
+    RAISE WARNING
+      'Há % administradores e nenhuma conta protegida. Marca a conta dona: UPDATE public.profiles SET protegido = true WHERE email = ''<o-teu-email>'';',
+      v_admins;
+  END IF;
+
+  -- (b) Proteger quem não administra não faz sentido nenhum: a marca só
+  --     diz respeito a alterações de `role`, e num perfil sem `admin` não
+  --     há nada para segurar.
+  IF EXISTS (SELECT 1 FROM public.profiles WHERE protegido AND role <> 'admin') THEN
+    RAISE EXCEPTION 'Há contas protegidas que não são administradores.';
+  END IF;
+
+  -- (c) O gatilho tem de estar mesmo pendurado. Criar a função e esquecer
+  --     o trigger deixaria a coluna a existir e a não travar nada.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger t
+      JOIN pg_class c ON c.oid = t.tgrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relname = 'profiles'
+       AND t.tgname = 'profiles_protegido_lock' AND NOT t.tgisinternal
+  ) THEN
+    RAISE EXCEPTION 'O gatilho profiles_protegido_lock não ficou instalado.';
+  END IF;
+END $$;
+
+COMMIT;
